@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Arychar extends XClz {
+public class Arychar extends XClz implements XStringable {
   public char[] _cs;
   public int _len;
   public Arychar() { _cs = new char[1]; }
@@ -55,5 +55,16 @@ public class Arychar extends XClz {
     for( int i=0; i<_len; i++ )
       sum += _cs[i];
     return (int)sum;
+  }
+
+  public Arychar appendTo(String str) {
+    throw XEC.TODO();
+  }
+
+  
+  // --- XStringable
+  @Override public int estimateStringLength() { return _len; }
+  @Override public Arychar appendTo(Arychar ary) {
+    throw XEC.TODO();
   }
 }

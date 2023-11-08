@@ -49,7 +49,7 @@ public abstract class XProp extends XClz {
       sb.p(" = ");
       MMethodPart mm = (MMethodPart)init;
       MethodPart meth = (MethodPart)mm._name2kid.get("=");
-      XClzBuilder X =  new XClzBuilder(mod,sb);
+      XClzBuilder X =  new XClzBuilder(sb);
       // Method has to be a no-args function, that is executed exactly once here.
       // Inline instead.
       X.jmethod_body_inline(meth,meth._name);
@@ -80,7 +80,7 @@ public abstract class XProp extends XClz {
     if( lazy ) {
       MMethodPart mm = (MMethodPart)pp._name2kid.get("->");
       MethodPart meth = (MethodPart)mm._name2kid.get("->");
-      XClzBuilder X =  new XClzBuilder(mod,sb);
+      XClzBuilder X =  new XClzBuilder(sb);
       X.jmethod(meth,pname+"$calc");
     }
 

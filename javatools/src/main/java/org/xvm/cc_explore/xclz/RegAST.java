@@ -25,7 +25,7 @@ class RegAST extends AST {
     };
     _type = switch( reg ) {
     case -4 ->  XType.VOID;  // A_DEFAULT
-    case -5 ->  X._type;     // A_THIS
+    case -5 ->  XClzBuilder.MOD_TYPE;                     // A_THIS
     case -10 -> XType.Base.make(X._meth._par._par._name); // A_STRUCT
     default -> X._ltypes.get(reg);
     };
