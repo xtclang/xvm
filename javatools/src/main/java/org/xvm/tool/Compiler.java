@@ -688,7 +688,7 @@ public class Compiler
             {
             List<File> path = (List<File>) values().get("L");
             return path == null
-                    ? Collections.EMPTY_LIST
+                    ? Collections.emptyList()
                     : path;
             }
 
@@ -700,7 +700,7 @@ public class Compiler
             {
             List<File> list = (List<File>) values().get(Trailing);
             return list == null
-                    ? Collections.EMPTY_LIST
+                    ? Collections.emptyList()
                     : list;
             }
 

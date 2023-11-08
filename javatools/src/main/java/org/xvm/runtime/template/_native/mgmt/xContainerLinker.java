@@ -174,7 +174,7 @@ public class xContainerLinker
                                        ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn)
         {
         NestedContainer containerNested = new NestedContainer(container,
-                moduleApp.getIdentityConstant(), Collections.EMPTY_LIST);
+                moduleApp.getIdentityConstant(), Collections.emptyList());
         return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
         }
 

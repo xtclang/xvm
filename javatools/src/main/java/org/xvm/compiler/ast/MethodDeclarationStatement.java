@@ -1012,7 +1012,7 @@ public class MethodDeclarationStatement
         int cDefaults = method.getDefaultParamCount();
         if (cDefaults > 0)
             {
-            StatementBlock block = adopt(new StatementBlock(Collections.EMPTY_LIST));
+            StatementBlock block = adopt(new StatementBlock(Collections.emptyList()));
 
             RootContext ctxMethod = new RootContext(block, method);
             Context     ctx       = ctxMethod.validatingContext();

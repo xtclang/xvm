@@ -3554,7 +3554,7 @@ public class Parser
                     }
                 else
                     {
-                    args = Collections.EMPTY_LIST;
+                    args = Collections.emptyList();
                     }
 
                 // parenthesized arguments after the dims
@@ -3563,7 +3563,7 @@ public class Parser
                     {
                     if (!argsTrailing.isEmpty())
                         {
-                        if (args == Collections.EMPTY_LIST)
+                        if (args == Collections.emptyList())
                             {
                             args = argsTrailing;
                             }
@@ -3849,7 +3849,7 @@ public class Parser
                 if (match(Id.R_PAREN) != null)
                     {
                     // zero-argument lambda
-                    return new LambdaExpression(Collections.EMPTY_LIST, expect(Id.LAMBDA),
+                    return new LambdaExpression(Collections.emptyList(), expect(Id.LAMBDA),
                             parseLambdaBody(), tokLParen.getStartPosition());
                     }
 
@@ -5026,7 +5026,7 @@ public class Parser
             Token tokTest = match(Id.IDENTIFIER);
             if (tokTest == null)
                 {
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
                 }
             else
                 {
@@ -5303,7 +5303,7 @@ public class Parser
             {
             if (match(Id.COMP_GT) != null)
                 {
-                types = Collections.EMPTY_LIST;
+                types = Collections.emptyList();
                 }
             else
                 {
@@ -5464,7 +5464,7 @@ public class Parser
         if (match(Id.L_PAREN, required) != null)
             {
             types = peek(Id.R_PAREN)
-                    ? Collections.EMPTY_LIST
+                    ? Collections.emptyList()
                     : parseTypeExpressionList(false);
             expect(Id.R_PAREN);
             }
@@ -5629,7 +5629,7 @@ public class Parser
         List<Parameter> listReturn;
         if (match(Id.VOID) != null)
             {
-            listReturn = Collections.EMPTY_LIST;
+            listReturn = Collections.emptyList();
             }
         else if (match(Id.L_PAREN) == null)
             {

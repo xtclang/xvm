@@ -201,7 +201,7 @@ public class ListExpression
         if (typeRequired != null && typeRequired.isA(pool.typeMap()) && exprs.isEmpty())
             {
             MapExpression exprNew =  new MapExpression(new NamedTypeExpression(this, typeRequired),
-                    Collections.EMPTY_LIST, Collections.EMPTY_LIST, getEndPosition());
+                    Collections.emptyList(), Collections.emptyList(), getEndPosition());
             return replaceThisWith(exprNew).validate(ctx, typeRequired, errs);
             }
 

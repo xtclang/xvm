@@ -101,7 +101,7 @@ public class AnonInnerClass
      */
     public List<CompositionNode> getCompositions()
         {
-        return m_listCompositions == null ? Collections.EMPTY_LIST : m_listCompositions;
+        return m_listCompositions == null ? Collections.emptyList() : m_listCompositions;
         }
 
     /**
@@ -109,7 +109,7 @@ public class AnonInnerClass
      */
     public List<AnnotationExpression> getAnnotations()
         {
-        return m_listAnnos == null ? Collections.EMPTY_LIST : m_listAnnos;
+        return m_listAnnos == null ? Collections.emptyList() : m_listAnnos;
         }
 
     /**

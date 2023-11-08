@@ -577,7 +577,7 @@ public abstract class RelationalTypeConstant
                             null,                   // typeExtends
                             null,                   // typeRebase
                             null,                   // typeInto
-                            Collections.EMPTY_LIST, // listProcess,
+                            Collections.emptyList(), // listProcess,
                             ListMap.EMPTY,          // listmapClassChain
                             ListMap.EMPTY,          // listmapDefaultChain
                             mergeProperties(info1, info2, errs),

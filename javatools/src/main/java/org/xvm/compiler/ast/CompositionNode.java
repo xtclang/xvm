@@ -523,7 +523,7 @@ public abstract class CompositionNode
             {
             if (vers == null)
                 {
-                return Collections.EMPTY_LIST;
+                return Collections.emptyList();
                 }
 
             List<Version> list = new ArrayList<>();

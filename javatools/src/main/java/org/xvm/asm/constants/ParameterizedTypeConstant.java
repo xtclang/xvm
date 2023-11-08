@@ -178,7 +178,7 @@ public class ParameterizedTypeConstant
     public List<TypeConstant> getParamTypes()
         {
         return m_atypeParams.length == 0
-                ? Collections.EMPTY_LIST
+                ? Collections.emptyList()
                 : Arrays.asList(m_atypeParams);
         }
 
