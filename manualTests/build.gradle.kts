@@ -52,6 +52,14 @@ sourceSets {
     }
 }
 
+tasks.processResources {
+    doLast {
+        logger.lifecycle("Resources: " + sourceSets.main.get().resources)
+        printTaskInputs()
+        printTaskOutputs()
+    }
+}
+
 xtc {
     printVersion()
 }

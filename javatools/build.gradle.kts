@@ -11,6 +11,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 plugins {
     id("org.xvm.build.java")
+    alias(libs.plugins.spotless)
     alias(libs.plugins.tasktree)
 }
 
@@ -44,6 +45,16 @@ dependencies {
     compileOnly(libs.javatools.utils) // We include the javautils utils in the Javatools uber-jar, so we need it only as compile only.
     testImplementation(libs.javatools.utils)
 }
+
+/*
+spotless {
+    java {
+        // TODO: Add more stringent code style here.
+        removeUnusedImports()
+        target("__/_.java")
+    }
+}
+*/
 
 val jar by tasks.existing(Jar::class) {
     archiveBaseName = "javatools"
@@ -96,9 +107,11 @@ val sanityCheckJar by tasks.registering {
         verifyJarFileContents(
             project,
             listOfNotNull(
-                "implicit.x",
-                "org/xvm/tool/Compiler",
-                "org/xvm/util/Severity"),
+                "implicit.x", // verify the implicits are in the jar
+                "org/xvm/tool/Compiler", // verify the javatools package is in there, including Compiler and Runner
+                "org/xvm/tool/Runner",
+                "org/xvm/util/Severity" // verify the
+            ),
             expectedEntryCount) // Check for files in both javatools_utils and javatools + implicit.x
 
         logger.info("$prefix Sanity check of javatools.jar completed successfully.")

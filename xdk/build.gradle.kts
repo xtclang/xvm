@@ -90,11 +90,6 @@ publishing {
     }
 }
 
-signing {
-    require(getXdkPropertyBoolean("org.xvm.publications.sign", false))
-    sign(publishing.publications["xdkArchive"])
-}
-
 val pluginPublication by tasks.registering {
     group = LifecycleBasePlugin.BUILD_GROUP
     // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.

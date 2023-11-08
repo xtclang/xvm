@@ -24,6 +24,7 @@ xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtcplugin" }
 tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }
 download = { id = "de.undercouch.download", version = "5.5.0" }
 versions = { id = "com.github.ben-manes.versions", version = "0.49.0" }
+spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
 #shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 #nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
 
