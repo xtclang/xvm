@@ -4025,7 +4025,7 @@ public class Parser
 
                 Token   tokData = null;
                 boolean fErr    = false;
-                if (fContents || resource != null && (fDir || resource instanceof File))
+                if (fContents || resource != null)
                     {
                     if (fBin)
                         {
