@@ -3563,7 +3563,7 @@ public class Parser
                     {
                     if (!argsTrailing.isEmpty())
                         {
-                        if (args == Collections.emptyList())
+                        if (args.isEmpty())
                             {
                             args = argsTrailing;
                             }

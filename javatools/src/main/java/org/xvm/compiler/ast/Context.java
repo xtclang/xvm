@@ -1632,7 +1632,7 @@ public class Context
         {
         Map<FormalConstant, TypeConstant> map = getFormalTypeMap(branch);
 
-        if (map == Collections.emptyMap())
+        if (map.isEmpty())
             {
             return switch (branch)
                 {
