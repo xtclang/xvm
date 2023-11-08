@@ -6,10 +6,12 @@ import java.io.FileInputStream
 import java.io.InputStreamReader
 import org.gradle.api.GradleException
 import org.gradle.api.Task
+import org.gradle.api.file.Directory
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.initialization.Settings
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.provider.Provider
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import java.text.SimpleDateFormat
@@ -325,11 +327,8 @@ val Project.compositeRootProjectDirectory
 val Project.compositeRootBuildDirectory
     get() = gradle.rootLayout.buildDirectory
 
-val Project.buildRepoDirectory
+val Project.buildRepoDirectory: Provider<Directory>
     get() = compositeRootBuildDirectory.dir("repo")
-
-val Project.buildSnapshotRepoDirectory
-    get() = compositeRootBuildDirectory.dir("snapshot-repo")
 
 val Project.xdkBuildLogic: XdkBuildLogic
     get() = XdkBuildLogic.resolve(this)

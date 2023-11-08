@@ -96,9 +96,11 @@ val sanityCheckJar by tasks.registering {
         verifyJarFileContents(
             project,
             listOfNotNull(
-                "implicit.x",
-                "org/xvm/tool/Compiler",
-                "org/xvm/util/Severity"),
+                "implicit.x", // verify the implicits are in the jar
+                "org/xvm/tool/Compiler", // verify the javatools package is in there, including Compiler and Runner
+                "org/xvm/tool/Runner",
+                "org/xvm/util/Severity" // verify the
+            ),
             expectedEntryCount) // Check for files in both javatools_utils and javatools + implicit.x
 
         logger.info("$prefix Sanity check of javatools.jar completed successfully.")

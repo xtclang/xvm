@@ -26,6 +26,8 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
          *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions/VERSION_ID
          * Delete a package version for an organization:
          *      DELETE: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions/VERSION_ID
+         * Get versions of a package for an organization:
+         *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions
          */
         const val GITHUB_PUBLICATION_NAME = "GitHub"
         const val GITHUB_HOST = "api.github.com"
@@ -58,6 +60,13 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             json?.forEach { node -> node[JSON_PACKAGE_NAME]?.asText()?.also { add(it) } }
         }.filter {
             it.contains(project.group.toString()) && it.contains(project.name)
+        }
+    }
+
+    fun queryXtcLangPackageVersions(packageName: String): List<String> {
+        val (_, json) = restCall(GET, "/orgs/$gitHubOrganization/packages/maven/$packageName/versions")
+        return buildList {
+            json?.forEach { node -> node[JSON_PACKAGE_NAME]?.asText()?.also { add(it) } }
         }
     }
 
@@ -103,11 +112,11 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
         return true
     }
 
-    private fun restCall(rmethod: Method, rpath: String, vararg params: Pair<String, String>): Pair<Response, JsonNode?> {
-        return http(method = rmethod) {
+    private fun restCall(mtd: Method, httpPath: String, vararg params: Pair<String, String>): Pair<Response, JsonNode?> {
+        return http(method = mtd) {
             scheme = SCHEME
             host = GITHUB_HOST
-            path = rpath //
+            path = httpPath
             header {
                 if (gitHubToken.isEmpty()) {
                     throw project.buildException("$prefix Could not resolve an access token for GitHub from the properties and/or environment.")
@@ -118,9 +127,9 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
                 params.forEach { (k, v) -> k to v }
             }
         }.use {
-            logger.info("$prefix REST $rmethod response status code: ${it.code()}")
+            logger.info("$prefix REST $mtd response status code: ${it.code()}")
             if (!it.isSuccessful) {
-                throw project.buildException("$prefix REST $rmethod response not successful: $it (code: ${it.code()})")
+                throw project.buildException("$prefix REST $mtd response not successful: $it (code: ${it.code()})")
             }
             it to runCatching { it.toJson() }.getOrNull()
         }

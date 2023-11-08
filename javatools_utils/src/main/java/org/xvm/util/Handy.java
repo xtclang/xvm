@@ -306,9 +306,7 @@ public final class Handy
      *
      * @param l   the long value
      * @param ab  the byte array to copy into
-     * @param ab  the byte array offset to write the long value at
-     *
-     * @return the byte array
+     * @param of  the byte array offset to write the long value at
      */
     public static void toByteArray(long l, byte[] ab, int of)
         {
@@ -713,6 +711,7 @@ public final class Handy
             }
         else
             {
+            assert !Character.isValidCodePoint(ch);
             return !Character.isValidCodePoint(ch) ||
                     Character.getType(ch) == Character.CONTROL ||
                     ch == '\u2028' || ch == '\u2029';
@@ -809,6 +808,7 @@ public final class Handy
      *
      * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format
      */
+    @SuppressWarnings("unused")
     public static String dateString(long cMillis)
         {
         Date date = new Date(cMillis);

@@ -19,7 +19,7 @@ dependencies {
     implementation(libs.javatools.utils)
 }
 
-internal val ucdZip = "http://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
+internal val ucdZip = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
 
 /**
  * Download the ucd zip file from the unicode site, if it does not exist.

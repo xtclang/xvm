@@ -124,7 +124,7 @@ public abstract class Launcher
         boolean fHelp = opts.parse(m_asArgs);
         if (Runtime.version().version().get(0) < 21)
             {
-            log(Severity.WARNING, "The required JVM version is 21; this JVM version ("
+            log(Severity.INFO, "The required JVM version is 21; this JVM version ("
                     + Runtime.version() + ") appears to be older");
             }
         else

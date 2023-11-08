@@ -74,7 +74,7 @@ dependencies {
 }
 
 internal val xvmDist = xdkBuildLogic.xdkDistribution()
-logger.lifecycle("$prefix **** Building XDK; semantic version: ${property("semanticVersion")} ***")
+logger.lifecycle("$prefix *** Building XDK; semantic version: ${property("semanticVersion")} ***")
 
 publishing {
     publications {
@@ -88,11 +88,6 @@ publishing {
             }
         }
     }
-}
-
-signing {
-    require(getXdkPropertyBoolean("org.xvm.publications.sign", false))
-    sign(publishing.publications["xdkArchive"])
 }
 
 val pluginPublication by tasks.registering {

@@ -28,11 +28,12 @@ The Ecstasy language supports first class modules, including versioning and cond
 class functions, including currying and partial application; type-safe object orientation,
 including support for auto-narrowing types, type-safe covariance, mixins, and duck-typed interfaces;
 complete type inference; first class immutable types; first class asynchronous services, including
-both automatic `async/await`-style and promises-based (`@Future`) programming models; and first 
+both automatic `async/await`-style and promises-based (`@Future`) programming models; and first
 class software containers, including resource injection and transitively-closed, immutable type
 systems. _And much, much more._
-   
-Read more at [https://xtclang.blogspot.com/](https://xtclang.blogspot.com/2016/11/welcome-to-ecstasy-language-first.html)
+
+Read more
+at [https://xtclang.blogspot.com/](https://xtclang.blogspot.com/2016/11/welcome-to-ecstasy-language-first.html)
 
 Follow us on Twitter [@xtclang](https://twitter.com/xtclang)
 
@@ -41,37 +42,41 @@ Find out more about [how you can contribute to Ecstasy](CONTRIBUTING.md).
 And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
 ## Installation
-                            
+
 For **macOS** and **Linux**:
 
 1. If you do not already have the `brew` command available, install [Homebrew](https://brew.sh/)
- 
-2. Add a "tap" to access the XDK CI builds, and install the latest XDK CI build: 
+
+2. Add a "tap" to access the XDK CI builds, and install the latest XDK CI build:
+
 ```
   brew tap xtclang/xvm && brew install xdk-latest
 ```
 
-3. To upgrade to the latest XDK CI build at any time:  
+3. To upgrade to the latest XDK CI build at any time:
+
 ```
   brew update && brew upgrade xdk-latest
 ```
 
 For **Windows**:
-      
+
 * Visit [http://xtclang.org/xdk-latest.html](http://xtclang.org/xdk-latest.html) to download a
-  Windows installer for the latest XDK build  
+  Windows installer for the latest XDK build
 
 Manual local build for **any computer** (for advanced users):
-      
+
 * Install Java (version 17 or later) and Gradle
 
 * Use `git` to obtain the XDK:
+
 ```
   git clone https://github.com/xtclang/xvm.git
 ```
-      
+
 * `cd` into the git repo (the directory will contain [these files](https://github.com/xtclang/xvm/))
   and execute the Gradle build:
+
 ```
   ./gradlew build
 ```
@@ -167,24 +172,24 @@ git push -f # if needed
 You should feel free to commit and push as much as you want in your local branch, if
 your workflow so requires. However, before submitting the finished branch as a pull
 request, do an interactive rebase and replace "pick" with "fixup" to merge any
-temporary commits with their predecessor. 
+temporary commits with their predecessor.
 
-* It is considered bad form to submit a pull request where there are unncessary 
-or intermediate commits, with vague descriptions. 
+* It is considered bad form to submit a pull request where there are unncessary
+  or intermediate commits, with vague descriptions.
 
-* It is considered bad form to submit a pull request where there are commits, which 
-do not build and test cleanly. This is important, because it enables things like 
-automating git bisection to narrow down commits that may have introduced bugs, 
-and it has various other benefits. The ideal state for master, should be that 
-you can check it out at any change in its commit history, and that it will build 
-and test clean on that head.
+* It is considered bad form to submit a pull request where there are commits, which
+  do not build and test cleanly. This is important, because it enables things like
+  automating git bisection to narrow down commits that may have introduced bugs,
+  and it has various other benefits. The ideal state for master, should be that
+  you can check it out at any change in its commit history, and that it will build
+  and test clean on that head.
 
 Most pull requests are small in scope, should and contain only one commit, when
 they are put up for review. If there are distinct unrelated commits, that both contribute
 to solving the issue you are working on, it's naturally fine to not squash those together,
-as it's easier to read and shows clear separation of concerns. 
+as it's easier to read and shows clear separation of concerns.
 
-If you need to get rid of temporary, broken, or unbuildable commits in your branch, 
+If you need to get rid of temporary, broken, or unbuildable commits in your branch,
 do an interactive rebase before you submit it for review. You can execute:
 
 ```
@@ -194,13 +199,13 @@ git rebase -i HEAD~n
 to do this, where *n* is the number of commits you are interested in modifying.
 
 *According to the git philosophy, branches should be thought of as private, plentiful
-and ephemeral. They should be created at the drop of a hat, and the branch should be 
-automatically or manually deleted after its changes have been merged to master. 
+and ephemeral. They should be created at the drop of a hat, and the branch should be
+automatically or manually deleted after its changes have been merged to master.
 A branch should never be reused.*
 
 The described approach is a good one to follow, since it moves any complicated source control
 issues completely to the author of a branch, without affecting master, and potentially
-breaking things for other developers. Having to modify the master branch, due to 
+breaking things for other developers. Having to modify the master branch, due to
 unintended merge state or changes having made their way into it, is a massively more
 complex problem than handling all conflicts and similar issues in the private local
 branches.
@@ -219,7 +224,7 @@ contribute and use the project by facilitating a healthy, active community, and 
 high-quality project. Whether you are looking to learn about language design and development,
 compiler technology, or the applicability of language design to the serverless cloud, we have a
 place for you here. Feel free to lurk. Feel free to fork the project. Feel free to contribute.
- 
+
 We only "_get one chance to make a good first impression_", and we are determined not to waste it.
 We will not ask developers to waste their time attempting to use an incomplete project, so if you
 are here for a work reason, it's probably still a bit too early for you to be using this for your
@@ -258,28 +263,28 @@ The project is organized as a number of subprojects, with the important ones to 
   at `xdk/lib/ecstasy.xtc`. This module contains portions of the Ecstasy tool chain, including the
   lexer and parser. (Ecstasy source files use an `.x` extension, and are compiled into a single
   module file with an `.xtc` extension.)
-  
-* The Java tool chain (including an Ecstasy compiler and interpreter) is located in the 
-  [xvm/javatools](./javatools) directory.  When the XDK is built, the resulting `.jar` file is
+
+* The Java tool chain (including an Ecstasy compiler and interpreter) is located in the
+  [xvm/javatools](./javatools) directory. When the XDK is built, the resulting `.jar` file is
   located at `xdk/javatools/javatools.jar`.
-  
+
 * There is an Ecstasy library in [xvm/javatools_bridge](./javatools_bridge) that is used by the Java
-  interpreter to boot-strap the runtime. When the XDK is built, the resulting module is located at 
+  interpreter to boot-strap the runtime. When the XDK is built, the resulting module is located at
   `xdk/javatools/javatools_bridge.xtc`.
-  
+
 * The wiki documentation is [online](https://github.com/xtclang/xvm/wiki). There is an
   [introduction to Ecstasy](https://github.com/xtclang/xvm/wiki/lang-intro) that is being written
   for new users. The wiki source code will (eventually) be found in the `xvm/wiki` project directory,
-  and (as a distributable) in the `xdk/doc` directory of the built XDK. 
-  
+  and (as a distributable) in the `xdk/doc` directory of the built XDK.
+
 * Various other directories will have a `README.md` file that explains their purpose.
 
 To download the entire project from the terminal, you will need
 [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) installed. From the terminal,
-go to the directory where you want to create a local copy of the Ecstasy project, and: 
+go to the directory where you want to create a local copy of the Ecstasy project, and:
 
     git clone https://github.com/xtclang/xvm.git
-    
+
 (There is excellent online documentation for git at
 [git-scm.com](https://git-scm.com/book/en/v2/Git-Basics-Getting-a-Git-Repository).)
 
@@ -288,7 +293,7 @@ included Gradle Wrapper from within the `xvm` directory, which is the recommende
 
     ./gradlew build
 
-Or on Windows: 
+Or on Windows:
 
     C:\> gradlew.bat build
 
@@ -298,16 +303,45 @@ This allows the Java compiler to automatically handle UTF-8 encoded files, and s
 source files used in the Ecstasy toolchain contain UTF-8 characters. Also, to change the default
 encoding used in Windows, go to the "Administrative" tab of the "Region" settings Window (also
 accessed from Control Panel), click the "Change system locale..." button and check the box labeled
-"Beta: Use UTF-8 for worldwide language support". 
+"Beta: Use UTF-8 for worldwide language support".
 
 Instructions for getting started can be found in our [Contributing to Ecstasy](CONTRIBUTING.md)
 document.
 
+## Cleaning the build
+
+You can clean everything in a build by running
+
+    ./gradlew clean  
+
+However, note that if you restart the build, a lot of intermediary outputs will be cached.
+The XDK and XTC plugin use the Gradle build system intrinsics to only compile what has provably
+mutated its outputs and inputs. This should be stable, and is by design. You should really never have to
+clean your build to test any incremental change. This is even true if you modify the plugin implementation
+in the XDK repo, as we are using included builds everywhere we should. The end goal is that any
+change will only require rebuilding, and that rebuild should only build exactly what is necessary.
+
+Should you, for any reason, need to clear the caches, and really start fresh, you can run the script
+
+./bin/purge-all-build-state.sh
+
+Or do the equivalent actions manually:
+
+*
+* Kill all Gradle daemons.
+* Close any open projects in your IDEs, to avoid restarting them with a large state change under the hood.
+* Delete the $GRADLE_USER_HOME/cache and $GRADLE_USER_HOME/daemons directories; note - this invalidates
+  caches for all Gradle builds on your current system, and rebuilds a new Gradle version.
+* Run 'git clean -xfd' in your build root. Note that this may also delete any IDE configuration that resides
+  in your build. You may want to preserve e.g. the ".idea" directory, and then you can do "git clean -xfd -e .idea"
+  or perform a dry run "git clean -xfdn", to see what will be deleted. Note that if you are at this level of
+  purging stuff, it's likely a bad idea to hang on to your IDE state anyway.
+
 ## Debugging the build
 
-The build should be debuggable through any IDE, for example IntelliJ, using its Gradle tooling API 
+The build should be debuggable through any IDE, for example IntelliJ, using its Gradle tooling API
 hook. You can run any task in the project in debug mode from within the IDE, with breakpoints in
-the build scripts and/or the underlying non-XTC code, for example in Javatools, to debug the 
+the build scripts and/or the underlying non-XTC code, for example in Javatools, to debug the
 compiler, runner or disassembler.
 
 ### Augmenting the build output
@@ -317,7 +351,7 @@ verbosity flags. For example, to run the build with more verbose output, use:
 
     ./gradlew build --info
 
-The build also supports Gradle build scans, which can be generated with: 
+The build also supports Gradle build scans, which can be generated with:
 
     ./gradlew build --scan
 
@@ -328,6 +362,40 @@ hazard.
 
 You can also combine the above flags, and use all other standard Gradle flags, like "--stacktrace",
 and so on.
+
+### Tasks
+
+To see the list of available tasks for the XDK build, use:
+
+    ./gradlew tasks
+
+#### Versioning and Publishing XDK artifacts
+
+* Use "publishLocal" to publish an XDK build to the local Maven repository and a build specific repository directory.
+* Use "publishRemote" to publish and XDK build to the xtclang organization package repo on GitHub (a GitHub token with
+  permissions is required).
+* Use "publish" to run both of the above tasks.
+
+*Note*: At the moment Publications have some raciness due to Gradle issues, so they will warn or abort, if you do not
+also run then with the "--no-parallel" flag.
+
+The version of the current XDK build is currently defined in the version catalog file located at
+"gradle/libs.versions.toml".
+
+The version of the XTC plugin needs to be same as the version of the XDK being built. This is a constraint
+that will be relaxed in the future, but right now, we use them to verify that rapidly release plugin versions
+work together with their XDK release. If you just use the XDK repository, the plugin and any other artifacts
+will be resolved as included builds, so it doesn't matter if there is version skew (except for sanity checks),
+when things are being tested.
+
+* Use "bumpProjectVersion" to change the version catalog to update to the next patch version.
+* Use "bumpProjectVersionToSnapshot" to change the version catalog to update to the next path version, setting
+  the version suffix to "-SNAPSHOT", which is the preferred version for any unreleased code. Typically the release
+  process uploads and tags an XDK shipment and an XTC Plugin shipment. After publishing a release and its
+  artifacts, the master branch should be updated to use a snapshot version. I.e. if we release XDK v1.0.2, the
+  next change in the master branch should change the version of the XDK and the XTC Plugin to XDK v1.0.3-SNAPSHOT.
+
+*TODO*: In the future we will also support tagging and publishing releases on GitHub, using JReleaser.
 
 ## Bleeding Edge for Developers
 
@@ -340,7 +408,7 @@ This copies the build from the xvm directory into the brew cellar, or other loca
 that is deduced from the location of the "xec" launcher on the system PATH.
 
 *Note*: this would be done after installing the XDK via brew, or through any other installation
-utility, depending on your platform. This will overwrite several libraries and files in any 
+utility, depending on your platform. This will overwrite several libraries and files in any
 local installation.
 
 For more information about the XTC DSL, please see the README.md file in the "plugin" project.

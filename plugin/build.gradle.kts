@@ -58,11 +58,6 @@ publishing {
     }
 }
 
-signing {
-    require(getXdkPropertyBoolean("org.xvm.publications.sign", false))
-    sign(publishing.publications["xtcPlugin"])
-}
-
 // TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
 gradlePlugin {
     // The built in pluginMaven publication can be disabled with "isAutomatedPublishing=false"

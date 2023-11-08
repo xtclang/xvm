@@ -10,11 +10,14 @@ plugins {
 }
 
 internal val Project.prefix get() = "[$name]"
+private val xdk = gradle.includedBuild("xdk")
+private val plugin = gradle.includedBuild("plugin")
+private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
 
 startBuildAggregator()
 
 fun startBuildAggregator() {
-    logger.lifecycle("$prefix Aggregating included builds:")
+    logger.lifecycle("$prefix Aggregating included build tasks:")
     gradle.includedBuilds.forEachIndexed { i, includedBuild ->
         logger.lifecycle("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
     }
@@ -22,10 +25,11 @@ fun startBuildAggregator() {
     val startParameter = gradle.startParameter
     val startParameterTasks: List<String> = startParameter.taskNames
     if (startParameterTasks.isNotEmpty()) {
-        logger.lifecycle("$prefix Start parameter tasks: $startParameterTasks")
-        if (startParameterTasks.size > 1) {
+        logger.info("$prefix Start parameter tasks: $startParameterTasks")
+        if (startParameterTasks.size > 1 && startParameterTasks.find { it.contains("taskTree") }.isNullOrEmpty()) { // exemption granted for taskTree, which needs another tasks to instrument, and that is not part of the build.
             val msg = "$prefix Multiple start parameter tasks are not guaranteed to work. Please run each task individually."
-            logger.warn(msg);
+            logger.error(msg)
+            throw GradleException(msg)
         }
     }
 
@@ -44,34 +48,15 @@ listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_N
     }
 }
 
-
-val includedBuildsWithPublications = gradle.includedBuilds.filter {
-    fun declaresPublications(name: String): Boolean {
-        return listOfNotNull("xdk", "plugin").contains(name)
-    }
-
-    fun hasPublishingPlugin(includedBuild: IncludedBuild): Boolean {
-        val name = includedBuild.name
-        val path = includedBuild.projectDir.path
-        if (path.contains("build-logic")) {
-            logger.info("$prefix Skipping publications for 'build-logic' project: $name")
-            return false
-        }
-        if (declaresPublications(name)) {
-            logger.info("$prefix Included build '$name' has publishing logic; connecting to :xvm:publish* tasks.")
-            return true
-        }
-        return false
-    }
-
-    hasPublishingPlugin(it)
-}
-
 /*
  * Register aggregated publication tasks to the top level project, to ensure we can publish both
  * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or
  * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
  * in local repositories.
+ *
+ * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
+ * output directory, which should be the case here. If not, we will have to put back the
+ * parallel check/task failure condition.
  */
 
 val publishRemote by tasks.registering {
@@ -80,19 +65,13 @@ val publishRemote by tasks.registering {
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
     }
-    doFirst {
-        checkParallel(name)
-    }
 }
 
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
     includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":publishLocal"))
-    }
-    doFirst {
-        checkParallel(name)
+        dependsOn(it.task(":$name"))
     }
 }
 
@@ -100,9 +79,6 @@ val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
-    doFirst {
-        checkParallel(name)
-    }
 }
 
 listOfNotNull("list", "delete").forEach { taskPrefix ->
@@ -113,9 +89,15 @@ listOfNotNull("list", "delete").forEach { taskPrefix ->
         includedBuildsWithPublications.forEach {
             dependsOn(it.task(":$taskName"))
         }
-        doFirst {
-            checkParallel(taskName)
-        }
+    }
+}
+
+val install by tasks.registering {
+    group = "distribution"
+    description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
+    dependsOn(xdk.task(":install"))
+    doLast {
+        logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
     }
 }
 
@@ -124,28 +106,6 @@ val installLocalDist by tasks.registering {
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(gradle.includedBuild("xdk").task(":installLocalDist"))
     doLast {
-        logger.lifecycle("$prefix Finished installLocalDist (overwrote existing XDK distribution).")
+        logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
     }
-}
-
-/*val releaseZip by tasks.registering(Zip::class) {
-    archiveVersion = version.toString()
-    dependsOn(publishLocal)
-    from(layout.buildDirectory.dir("repo")) {
-        exclude("__/_.sha256")
-        exclude("__/_.sha512")
-    }
-}*/
-
-fun checkParallel(taskName: String, shouldThrow: Boolean = true): Boolean {
-    if (gradle.startParameter.isParallelProjectExecutionEnabled) {
-        val name = "${project.path}$taskName"
-        val msg = "$prefix ERROR: Task '$taskName'; parallel project may be racy due to existing issues in Gradle. Please clean and re-run the task as './gradlew $name --no-parallel')"
-        logger.error(msg)
-        if (shouldThrow) {
-            throw GradleException(msg)
-        }
-        return false
-    }
-    return false
 }

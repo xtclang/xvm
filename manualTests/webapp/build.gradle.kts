@@ -11,6 +11,7 @@ dependencies {
 
 xtcCompile {
     verbose = true
+    forceRebuild = true
 }
 
 val runXtc by tasks.existing {
