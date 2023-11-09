@@ -283,7 +283,7 @@ public class SwitchAST
         int count = cases.length;
         writePackedLong(out, count);
         for (int i = 0; i < count; ++i) {
-            Constant value = (Constant) cases[i];
+            Constant value = cases[i];
             writePackedLong(out, value == null ? -1 : res.indexOf(value));
         }
 
@@ -331,8 +331,8 @@ public class SwitchAST
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder("switch (");
-        if (cond instanceof MultiExprAST meast) {
-            ExprAST[] exprs = meast.getExprs();
+        if (cond instanceof MultiExprAST meAst) {
+            ExprAST[] exprs = meAst.getExprs();
             for (ExprAST expr : exprs) {
                 buf.append(expr);
                 buf.append(", ");

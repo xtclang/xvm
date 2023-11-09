@@ -4456,7 +4456,7 @@ public class Parser
                     exprs.add(expr);
                     if (match(Id.COMMA) == null)
                         {
-                        if ("".equals(sType) && exprs.size() == 1)
+                        if (sType.isEmpty() && exprs.size() == 1)
                             {
                             // special handling for a map
                             if (peek().getId() == Id.ASN)
@@ -6147,7 +6147,7 @@ public class Parser
     /**
      * Require a token that is either an identifier or the "_" token.
      *
-     * @return a token that is either an identifier or the "_" token)
+     * @return a token that is either an identifier or the "_" token
      */
     protected Token expectNameOrAny()
         {

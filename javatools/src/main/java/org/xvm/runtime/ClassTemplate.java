@@ -1947,9 +1947,8 @@ public abstract class ClassTemplate
                                 // Until we have a better solution, let's choose a signature with a
                                 // simpler type, because it should've been the one chosen by the
                                 // compiler.
-                                TypeConstant typeParamBest = sigBest.getRawParams()[0];
-                                int          nBestDepth    = typeParamBest.getTypeDepth();
-                                int          nParamDepth   = typeParam.getTypeDepth();
+                                int nBestDepth  = sigBest.getRawParams()[0].getTypeDepth();
+                                int nParamDepth = typeParam.getTypeDepth();
 
                                 if (nParamDepth < nBestDepth)
                                     {

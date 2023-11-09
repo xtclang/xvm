@@ -95,12 +95,10 @@ public class TryCatchStmtAST
            .append(indentLines(body.toString(), "  "))
            .append("\n}");
 
-        if (catches.length > 0) {
-            for (BinaryAST catch_ : catches) {
-                buf.append(" catch (???) {\n")
-                   .append(indentLines(catch_.toString(), "  "))
-                   .append("\n}");
-            }
+        for (BinaryAST catch_ : catches) {
+            buf.append(" catch (???) {\n")
+               .append(indentLines(catch_.toString(), "  "))
+               .append("\n}");
         }
         return buf.toString();
     }

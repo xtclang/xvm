@@ -753,7 +753,7 @@ public class Token
         private static final Id[] IDs = Id.values();
 
         /**
-         * String representations of tokens that have constant representations, excluding context-
+         * String representations of tokens that have constant representations, excluding context
          * sensitive keywords.
          */
         private static final Map<String, Id> KEYWORDS = new HashMap<>();

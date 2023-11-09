@@ -734,7 +734,7 @@ public class Fiber
      */
     private static final AtomicLong s_counter = new AtomicLong();
 
-    enum FiberStatus
+    public enum FiberStatus
         {
         Initial           (3), // a new fiber has not been scheduled for execution yet
         Running           (4), // normal execution

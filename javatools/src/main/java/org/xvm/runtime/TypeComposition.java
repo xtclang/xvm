@@ -211,7 +211,7 @@ public interface TypeComposition
         }
 
     /**
-     * @return a list of field names (excluding potentially unassigned, lazy and transient)
+     * @return a map of field info (excluding potentially unassigned, lazy and transient)
      */
     Map<Object, ClassComposition.FieldInfo> getFieldLayout();
 

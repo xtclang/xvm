@@ -4,7 +4,6 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -390,13 +389,6 @@ public class Annotation
             }
 
         return sb.toString();
-        }
-
-    @Override
-    protected void dump(PrintWriter out, String sIndent)
-        {
-        out.print(sIndent);
-        out.println(this);
         }
 
 

@@ -1283,7 +1283,7 @@ public class CaseManager<CookieType>
 
                     if (constCase instanceof RangeConstant constRange)
                         {
-                        cCovered += constRange.size();
+                        cCovered += (int) constRange.size();
 
                         // compensate for all previous intersections with this range
                         for (Constant constPrev : m_listsetCase)

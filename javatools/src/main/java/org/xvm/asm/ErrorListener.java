@@ -195,12 +195,6 @@ public interface ErrorListener
             }
 
         @Override
-        public boolean isSilent()
-            {
-            return false;
-            }
-
-        @Override
         public String toString()
             {
             return "(Runtime error listener)";

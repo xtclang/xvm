@@ -427,7 +427,7 @@ public class ModuleInfo
                 else
                     {
                     String sExt = getExtension(binarySpec.getName());
-                    if (sExt != null && "xtc".equals(sExt))
+                    if ("xtc".equals(sExt))
                         {
                         binaryFile   = binarySpec;
                         binaryDir    = binarySpec.getParentFile();
@@ -467,7 +467,7 @@ public class ModuleInfo
                     }
 
                 String sExt = getExtension(binarySpec.getName());
-                if (sExt != null && "xtc".equals(sExt))
+                if ("xtc".equals(sExt))
                     {
                     binaryFile   = binarySpec;
                     binaryDir    = binarySpec.getParentFile();
@@ -2165,7 +2165,7 @@ public class ModuleInfo
     public static boolean isExplicitEcstasyFile(String sFile)
         {
         String sExt = getExtension(sFile);
-        return sExt != null && ("x".equalsIgnoreCase(sExt) || "xtc".equalsIgnoreCase(sExt));
+        return "x".equalsIgnoreCase(sExt) || "xtc".equalsIgnoreCase(sExt);
         }
 
     /**
@@ -2178,7 +2178,7 @@ public class ModuleInfo
     public static boolean isExplicitSourceFile(String sFile)
         {
         String sExt = getExtension(sFile);
-        return sExt != null && "x".equalsIgnoreCase(sExt);
+        return "x".equalsIgnoreCase(sExt);
         }
 
     /**
@@ -2191,7 +2191,7 @@ public class ModuleInfo
     public static boolean isExplicitCompiledFile(String sFile)
         {
         String sExt = getExtension(sFile);
-        return sExt != null && "xtc".equalsIgnoreCase(sExt);
+        return "xtc".equalsIgnoreCase(sExt);
         }
 
     /**

@@ -2922,7 +2922,7 @@ public class TypeCompositionStatement
     /**
      * Validate "extend" parameters and mark the constructor with constant arguments.
      *
-     * @return the MethodConstant for the super constructor; null if the validation failed
+     * @return false iff the validation failed and an error has been logged
      */
     private boolean validateSuperParameters(Context ctx, MethodStructure constructor,
                 MethodConstant idSuper, MethodStructure constructSuper,

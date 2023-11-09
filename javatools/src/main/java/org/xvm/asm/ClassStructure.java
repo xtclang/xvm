@@ -1275,7 +1275,7 @@ public class ClassStructure
         }
 
     /**
-     * @return true iff any contribution for this class has a cyclical dependency
+     * @return a contribution for this class that has a cyclical dependency; null otherwise
      */
     public Contribution hasCyclicalContribution()
         {

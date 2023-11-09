@@ -201,7 +201,7 @@ public abstract class Statement
      * @param ctx    the compilation context for the statement
      * @param errs   the error listener to log to
      *
-     * @return true iff the compilation can proceed
+     * @return the resulting statement (typically this) or null if the compilation cannot proceed
      */
     protected abstract Statement validateImpl(Context ctx, ErrorListener errs);
 
@@ -271,7 +271,7 @@ public abstract class Statement
      * Holder for BinaryAST objects as they percolate up the emit() call tree.
      * TODO get rid of this concept and add a getAST as per Expression tree
      */
-    static class AstHolder
+    public static class AstHolder
         {
         BinaryAST getAst(Statement stmt)
             {

@@ -645,7 +645,7 @@ public class ModuleStructure
      *     module is obtained and linked in by the linker.</li>
      * </ul>
      */
-    enum ModuleType
+    public enum ModuleType
         {
         Primary, Optional, Desired, Required, Embedded;
 

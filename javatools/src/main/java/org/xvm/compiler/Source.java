@@ -19,7 +19,6 @@ import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.readFileBytes;
 import static org.xvm.util.Handy.readFileChars;
-import static org.xvm.util.Handy.toPathString;
 
 
 /**
@@ -288,10 +287,9 @@ public class Source
                             | hexitValue(ach[of+7]) << 4
                             | hexitValue(ach[of+8]);
 
-                    // unfortunately Java does not support characters with code-
-                    // points beyond 16 bits; we could theoretically split this
-                    // up into a Unicode "surrogate pair", but that is not
-                    // supported by this class at this time
+                    // unfortunately Java does not support characters with codepoints beyond 16
+                    // bits; we could theoretically split this up into a Unicode "surrogate pair",
+                    // but that is not supported by this class at this time
                     ch  = nch > Character.MAX_VALUE ? '?' : (char) nch;
                     of        += 9;
                     cchAdjust += 9;

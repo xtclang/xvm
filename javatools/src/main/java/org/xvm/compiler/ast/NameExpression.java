@@ -3588,14 +3588,14 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Label}
+    protected enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, PropertySelf,
+    protected enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, PropertySelf,
                TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget, BjarneLambda}
 
     /**
@@ -3633,7 +3633,7 @@ public class NameExpression
      * 4) the property is on "left"
      *    (left must be not null)
      */
-    enum PropertyAccess {SingletonParent, Outer, This, Left}
+    protected enum PropertyAccess {SingletonParent, Outer, This, Left}
 
     /**
      * The chosen property access plan.

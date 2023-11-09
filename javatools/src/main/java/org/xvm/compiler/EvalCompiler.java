@@ -376,7 +376,7 @@ public class EvalCompiler
             }
 
         /**
-         * @return the list of indexes for lambda arguments
+         * @return the array of indexes for lambda arguments
          */
         public int[] getArguments()
             {
@@ -395,13 +395,6 @@ public class EvalCompiler
             {
             return f_source;
             }
-
-        @Override
-        public boolean isComponentNode()
-            {
-            return true;
-            }
-
 
         @Override
         public ComponentResolver getComponentResolver()

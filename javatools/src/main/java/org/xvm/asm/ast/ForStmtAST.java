@@ -8,7 +8,6 @@ import java.io.IOException;
 import org.xvm.util.Handy;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.ForStmt;
-import static org.xvm.util.Handy.indentLines;
 
 
 /**

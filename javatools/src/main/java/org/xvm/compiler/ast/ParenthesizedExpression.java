@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import org.xvm.asm.ast.ExprAST;
-
 
 /**
  * Used for parenthesized expressions.
@@ -53,12 +51,6 @@ public class ParenthesizedExpression
     public boolean isStandalone()
         {
         return expr.isStandalone();
-        }
-
-    @Override
-    public ExprAST getExprAST()
-        {
-        return expr.getExprAST();
         }
 
 

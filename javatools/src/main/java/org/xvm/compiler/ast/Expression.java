@@ -472,7 +472,7 @@ public abstract class Expression
 
             // the parent requires more than one type (conditionally), but this expression can only
             // return one; this can only be a "False" part of the conditional return; we'll check
-            // afterwards unless it's already caught by the validation logic
+            // afterward unless it's already caught by the validation logic
             }
 
         if (hasSingleValueImpl())

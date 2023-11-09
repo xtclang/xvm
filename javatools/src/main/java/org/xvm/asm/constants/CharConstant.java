@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -126,10 +127,7 @@ public class CharConstant
                 assert n >= 0 && n < 1000000;
 
                 char[] ach = new char[n];
-                for (int i = 0; i < n; ++i)
-                    {
-                    ach[i] = ch;
-                    }
+                Arrays.fill(ach, ch);
 
                 return getConstantPool().ensureStringConstant(new String(ach));
                 }

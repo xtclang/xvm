@@ -55,11 +55,6 @@ public class OuterExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(getExpr());
-        for (int i = 0; i < depth; ++i) {
-            buf.append(".outer");
-        }
-        return buf.toString();
+        return getExpr() + ".outer".repeat(Math.max(0, depth));
     }
 }

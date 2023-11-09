@@ -79,12 +79,6 @@ public class ErrorList
         return f_list.stream().anyMatch(info -> info.getCode().equals(sCode));
         }
 
-    @Override
-    public boolean isSilent()
-        {
-        return false;
-        }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 

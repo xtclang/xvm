@@ -267,8 +267,7 @@ public abstract class CompositionNode
             }
 
         /**
-         * @return true iff the incorporates clause is conditional based on the generic parameters
-         *         of the specified type
+         * @return list of constraints for conditional incorporates; null otherwise
          */
         public List<Parameter> getConstraints()
             {

@@ -238,7 +238,7 @@ public class AssignmentStatement
         }
 
     /**
-     * @return true iff the assignment statement uses the "=" operator
+     * @return the Category of the statement
      */
     public Category getCategory()
         {

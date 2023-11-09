@@ -1542,7 +1542,7 @@ public final class DebugConsole
     /**
      * Obtain the lambda's captures.
      */
-    protected ObjectHandle[] getArguments(Frame frame, MethodStructure lambda, int[] aiArgs)
+    private ObjectHandle[] getArguments(Frame frame, MethodStructure lambda, int[] aiArgs)
         {
         ObjectHandle[] ahArg = new ObjectHandle[lambda.getMaxVars()];
         for (int i = 0, c = aiArgs.length; i < c; i++)
@@ -2520,7 +2520,7 @@ public final class DebugConsole
     /**
      * A stash object for the debugger, that can be stored (for example) inside a frame.
      */
-    static class DebugStash
+    public static class DebugStash
         {
         /**
          * @return read-only var-expand-map (never null)

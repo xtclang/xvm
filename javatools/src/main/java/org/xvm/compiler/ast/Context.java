@@ -884,7 +884,7 @@ public class Context
             }
 
         // we need to call resolveRegisterType() even on registers that are local
-        // since some formal types could have been narrowed afterwards
+        // since some formal types could have been narrowed afterward
         if (arg instanceof Register reg)
             {
             arg = resolveRegisterType(branch, reg);

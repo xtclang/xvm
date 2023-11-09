@@ -25,7 +25,7 @@ public class TemplateExprAST
     TemplateExprAST() {}
 
     public TemplateExprAST(ExprAST[] exprs) {
-        assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);;
+        assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
 
         this.exprs = exprs;
     }
