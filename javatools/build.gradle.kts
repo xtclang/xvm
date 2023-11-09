@@ -11,7 +11,6 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 plugins {
     id("org.xvm.build.java")
-    alias(libs.plugins.spotless)
     alias(libs.plugins.tasktree)
 }
 
@@ -45,16 +44,6 @@ dependencies {
     compileOnly(libs.javatools.utils) // We include the javautils utils in the Javatools uber-jar, so we need it only as compile only.
     testImplementation(libs.javatools.utils)
 }
-
-/*
-spotless {
-    java {
-        // TODO: Add more stringent code style here.
-        removeUnusedImports()
-        target("__/_.java")
-    }
-}
-*/
 
 val jar by tasks.existing(Jar::class) {
     archiveBaseName = "javatools"

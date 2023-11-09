@@ -36,7 +36,7 @@ fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion 
     project.group = group
     project.version = version
 
-    logger.lifecycle("$prefix XDK Project '$name' versioned as: '$semanticVersion'")
+    logger.info("$prefix XDK Project '$name' versioned as: '$semanticVersion'")
     logger.info(
         """
         $prefix XDK Project '$name' versioned as: '$semanticVersion'
