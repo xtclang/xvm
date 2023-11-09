@@ -53,6 +53,10 @@ listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_N
  * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or
  * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
  * in local repositories.
+ *
+ * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
+ * output directory, which should be the case here. If not, we will have to put back the
+ * parallel check/task failure condition.
  */
 
 val publishRemote by tasks.registering {
@@ -60,9 +64,6 @@ val publishRemote by tasks.registering {
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
-    }
-    doFirst {
-        checkParallel(name)
     }
 }
 
@@ -72,18 +73,12 @@ val publishLocal by tasks.registering {
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":$name"))
     }
-    doFirst {
-        checkParallel(name)
-    }
 }
 
 val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
-    doFirst {
-        checkParallel(name, true)
-    }
 }
 
 listOfNotNull("list", "delete").forEach { taskPrefix ->
@@ -113,17 +108,4 @@ val installLocalDist by tasks.registering {
     doLast {
         logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
     }
-}
-
-fun checkParallel(taskName: String, shouldThrow: Boolean = true): Boolean {
-    if (gradle.startParameter.isParallelProjectExecutionEnabled) {
-        val name = "${project.path}$taskName"
-        val msg = "$prefix ERROR: Task '$taskName'; parallel project may be racy due to existing issues in Gradle. Please clean and re-run the task as './gradlew $name --no-parallel')"
-        logger.error(msg)
-        if (shouldThrow) {
-            throw GradleException(msg)
-        }
-        return false
-    }
-    return false
 }

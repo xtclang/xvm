@@ -78,14 +78,6 @@ tasks.withType<Sign>().configureEach {
     project.extra["signing.secretKeyRingFile"] = secretKeyRingFile
 }
 
-fun notParallel(taskName: String): Boolean {
-    if (xdkBuildLogic.isParallel) {
-        logger.warn("$prefix Parallel builds are not supported for '$taskName'. Task disabled.")
-        return false
-    }
-    return true
-}
-
 val listGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."

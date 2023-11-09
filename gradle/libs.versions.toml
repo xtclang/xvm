@@ -13,8 +13,8 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.41"
-xtcplugin = "0.4.41"
+xdk = "0.4.42"
+xtcplugin = "0.4.42"
 xdkgroup = "org.xvm"
 
 kohttp = "0.12.0"

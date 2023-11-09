@@ -150,7 +150,7 @@ fun changeVersion(current: SemanticVersion, next: SemanticVersion) {
         }
         toml.writeText(destLines.joinToString(ls, postfix = ls))
         logger.lifecycle("$prefix bumpProjectVersion updated TOML file: '$toml'")
-        logger.lifecycle("$prefix IMPORTANT: depending on your environment, a full rebuild may be required.")
+        logger.lifecycle("$prefix IMPORTANT: depending on your environment, a full clean and rebuild may be required.")
     } else {
         logger.error("$prefix bumpProjectVersion failed to find any changes to make.")
     }
