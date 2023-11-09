@@ -23,7 +23,7 @@ public class LinkedIterator<E>
      */
     public LinkedIterator(Iterator<E>... aIter)
         {
-        f_aIter = Objects.requireNonNullElse(aIter, new Iterator[0])
+        f_aIter = Objects.requireNonNullElse(aIter, new Iterator[0]);
         }
 
 
