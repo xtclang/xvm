@@ -2273,7 +2273,7 @@ public abstract class TypeConstant
                     }
                 mapProps.put(id, prop);
                 }
-            else if (prop.getName().equals("outer") && struct.isInstanceChild())
+            else if ("outer".equals(prop.getName()) && struct.isInstanceChild())
                 {
                 // the "outer" property should be available in the child structure at
                 // compile time and the outer reference will be supplied by the run-time
@@ -7462,7 +7462,7 @@ public abstract class TypeConstant
     private transient volatile TypeInfo m_typeinfo;
     private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
             AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
-    private transient final AtomicInteger m_cRecursiveDepth = new AtomicInteger();
+    private final transient AtomicInteger m_cRecursiveDepth = new AtomicInteger();
 
     /**
      * The last time that we checked the invalidations from the ConstantPool, we cached the number

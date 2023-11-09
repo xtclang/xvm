@@ -714,7 +714,7 @@ public abstract class ObjectHandle
         /**
          * Synthetic property holding a reference to a parent instance.
          */
-        public final static String OUTER = "$outer";
+        public static final String OUTER = "$outer";
         }
 
     public static class ExceptionHandle
@@ -1118,7 +1118,7 @@ public abstract class ObjectHandle
 
         private final int f_nHash;
 
-        private final static AtomicInteger s_hashCode = new AtomicInteger();
+        private static final AtomicInteger s_hashCode = new AtomicInteger();
         }
 
     /**

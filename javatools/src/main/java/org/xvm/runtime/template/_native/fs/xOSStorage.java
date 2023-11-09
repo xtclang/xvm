@@ -80,7 +80,7 @@ public class xOSStorage
     @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        if (idProp.getName().equals("fileStore"))
+        if ("fileStore".equals(idProp.getName()))
             {
             // optimize out the cross-service call
             return frame.assignValue(iReturn,

@@ -524,11 +524,11 @@ public class xConst
     protected static class Equals
             implements Frame.Continuation
         {
-        final private GenericHandle    hValue1;
-        final private GenericHandle    hValue2;
-        final private ClassComposition clzBase;
-        final private int              iReturn;
-        final private Iterator<Map.Entry<Object, FieldInfo>> iterFields;
+        private final GenericHandle    hValue1;
+        private final GenericHandle    hValue2;
+        private final ClassComposition clzBase;
+        private final int              iReturn;
+        private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public Equals(GenericHandle hValue1, GenericHandle hValue2,
                       ClassComposition clzBase, int iReturn)
@@ -622,11 +622,11 @@ public class xConst
     protected static class Compare
             implements Frame.Continuation
         {
-        final private GenericHandle    hValue1;
-        final private GenericHandle    hValue2;
-        final private ClassComposition clzBase;
-        final private int              iReturn;
-        final private Iterator<Map.Entry<Object, FieldInfo>> iterFields;
+        private final GenericHandle    hValue1;
+        private final GenericHandle    hValue2;
+        private final ClassComposition clzBase;
+        private final int              iReturn;
+        private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public Compare(GenericHandle hValue1, GenericHandle hValue2,
                        ClassComposition clzBase, int iReturn)
@@ -724,12 +724,12 @@ public class xConst
     protected static class HashCode
             implements Frame.Continuation
         {
-        final private GenericHandle    hConst;
-        final private ClassComposition clzBase;
-        final private boolean          fCache;
-        final private int              iReturn;
+        private final GenericHandle    hConst;
+        private final ClassComposition clzBase;
+        private final boolean          fCache;
+        private final int              iReturn;
         private       long             lResult;
-        final private Iterator<Map.Entry<Object, FieldInfo>> iterFields;
+        private final Iterator<Map.Entry<Object, FieldInfo>> iterFields;
 
         public HashCode(GenericHandle hConst, ClassComposition clzBase, boolean fCache, int iReturn)
             {

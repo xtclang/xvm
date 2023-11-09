@@ -400,14 +400,14 @@ public class MethodDeclarationStatement
 
                 if (fValidator)
                     {
-                    if (modifiers != null && modifiers.size() > 0)
+                    if (modifiers != null && !modifiers.isEmpty())
                         {
                         Token tok = modifiers.get(0);
                         errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
                             getSource(), tok.getStartPosition(), tok.getEndPosition());
                         return;
                         }
-                    if (params != null && params.size() > 0)
+                    if (params != null && !params.isEmpty())
                         {
                         params.get(0).log(errs, Severity.ERROR, Compiler.VALIDATOR_PARAMS_UNEXPECTED);
                         return;
@@ -582,7 +582,7 @@ public class MethodDeclarationStatement
                             {
                             Constant constReturn = type.getDefiningConstant();
                             if (constReturn.getFormat() == Format.Property
-                                    && ((PropertyConstant) constReturn).getName().equals("Referent"))
+                                    && "Referent".equals(((PropertyConstant) constReturn).getName()))
                                 {
                                 // replace the Referent with the actual property type
                                 param = new org.xvm.asm.Parameter(pool,

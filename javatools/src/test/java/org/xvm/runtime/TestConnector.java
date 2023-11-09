@@ -23,9 +23,12 @@ import org.xvm.util.Handy;
  *
  * TestConnector [module-source-path]+
  */
-public class TestConnector
+public final class TestConnector
     {
-    public static void main(String[] asArg) throws Exception
+        private TestConnector() {
+        }
+
+        public static void main(String[] asArg) throws Exception
         {
         if (asArg.length < 1)
             {

@@ -432,7 +432,7 @@ public class xRTKeyStore
                     assert key != null;
 
                     // unfortunately com.sun.crypto.provider.PBEKey is not public
-                    nType = key instanceof PBEKey || key.getClass().getSimpleName().equals("PBEKey")
+                    nType = key instanceof PBEKey || "PBEKey".equals(key.getClass().getSimpleName())
                             ? 3  // Password
                             : 1; // Secret
                     }
@@ -536,7 +536,7 @@ public class xRTKeyStore
                 }
 
             // unfortunately com.sun.crypto.provider.PBEKey is not public
-            if (key.getClass().getSimpleName().equals("PBEKey"))
+            if ("PBEKey".equals(key.getClass().getSimpleName()))
                 {
                 return frame.assignValues(aiReturn, xBoolean.TRUE,
                         xString.makeHandle(new String(key.getEncoded(), StandardCharsets.UTF_8)));

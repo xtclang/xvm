@@ -772,7 +772,7 @@ public class Token
             for (Id id : IDs)
                 {
                 String sText = id.TEXT;
-                if (sText != null && sText.length() > 0)
+                if (sText != null && !sText.isEmpty())
                     {
                     char ch = sText.charAt(0);
                     if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch == '_')
@@ -802,7 +802,7 @@ public class Token
          * A textual representation of the token, if it has a constant textual representation;
          * otherwise null.
          */
-        final public String TEXT;
+        public final String TEXT;
 
         /**
          * True if the token is context-sensitive, i.e. if it is not always a reserved word.

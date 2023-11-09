@@ -219,14 +219,14 @@ public class PropertyClassTypeConstant
     @Override
     public boolean containsGenericParam(String sName)
         {
-        return sName.equals("Referent")
+        return "Referent".equals(sName)
             || m_typeParent.containsGenericParam(sName);
         }
 
     @Override
     protected TypeConstant getGenericParamType(String sName, List<TypeConstant> listParams)
         {
-        TypeConstant type = sName.equals("Referent") && listParams.isEmpty()
+        TypeConstant type = "Referent".equals(sName) && listParams.isEmpty()
                 ? m_idProp.getType()
                 : null;
         return type == null

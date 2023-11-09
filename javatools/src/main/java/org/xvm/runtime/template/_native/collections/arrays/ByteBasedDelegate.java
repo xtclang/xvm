@@ -371,7 +371,7 @@ public abstract class ByteBasedDelegate
     /**
      * Make an element handle for the specified value.
      */
-    abstract protected ObjectHandle makeElementHandle(long lValue);
+    protected abstract ObjectHandle makeElementHandle(long lValue);
 
     /**
      * Make a canonical array handle.

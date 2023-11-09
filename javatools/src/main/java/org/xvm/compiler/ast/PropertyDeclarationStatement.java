@@ -274,9 +274,9 @@ public class PropertyDeclarationStatement
 
         if (name.isSpecial())
             {
-            if (!(sName.equals("outer")
+            if (!("outer".equals(sName)
                     && container.getIdentityConstant().getModuleConstant().isEcstasyModule()
-                    && container.getIdentityConstant().getPathString().equals("reflect.Outer.Inner")))
+                    && "reflect.Outer.Inner".equals(container.getIdentityConstant().getPathString())))
                 {
                 log(errs, Severity.ERROR, Compiler.NAME_RESERVED, sName);
                 return;

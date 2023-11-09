@@ -620,7 +620,7 @@ public abstract class Constant
      *
      * @return the hash
      */
-    abstract protected int computeHashCode();
+    protected abstract int computeHashCode();
 
     /**
      * Compute and store a non-zero hash of this constant.
@@ -1051,7 +1051,7 @@ public abstract class Constant
     /**
      * An empty array of constants.
      */
-    public final static Constant[] NO_CONSTS = new Constant[0];
+    public static final Constant[] NO_CONSTS = new Constant[0];
 
     /**
      * Cached hashCode or {@code 0}

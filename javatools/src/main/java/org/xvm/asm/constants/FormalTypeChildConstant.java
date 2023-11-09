@@ -118,7 +118,7 @@ public class FormalTypeChildConstant
             return m_typeConstraint = idProp.getConstraintType();
             }
 
-        return m_typeConstraint = sName.equals("OuterType") && typeConstraint.isVirtualChild()
+        return m_typeConstraint = "OuterType".equals(sName) && typeConstraint.isVirtualChild()
                 ? typeConstraint.getParentType()
                 : getConstantPool().typeObject();
         }

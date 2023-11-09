@@ -16,7 +16,7 @@ import org.xvm.runtime.template.xException;
 /**
  * Base class for native FPNumber (Float* and Dec*) support.
  */
-abstract public class BaseFP
+public abstract class BaseFP
         extends xNumber
     {
     public BaseFP(Container container, ClassStructure structure, int cBits)
@@ -122,12 +122,12 @@ abstract public class BaseFP
     /**
      * @return an ObjectHandle based on the specified byte array
      */
-    abstract protected ObjectHandle makeHandle(byte[] aBytes, int cBytes);
+    protected abstract ObjectHandle makeHandle(byte[] aBytes, int cBytes);
 
     /**
      * @return an ObjectHandle based on the specified double value
      */
-    abstract protected ObjectHandle makeHandle(double dValue);
+    protected abstract ObjectHandle makeHandle(double dValue);
 
 
     // ----- constants and fields ------------------------------------------------------------------

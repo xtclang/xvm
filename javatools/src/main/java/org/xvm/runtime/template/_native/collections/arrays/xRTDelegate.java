@@ -797,12 +797,12 @@ public class xRTDelegate
     protected static class Equals
             implements Frame.Continuation
         {
-        final private ObjectHandle[] ah1;
-        final private ObjectHandle[] ah2;
-        final private TypeConstant   typeEl;
-        final private int            cElements;
-        final private int[]          holder;
-        final private int            iReturn;
+        private final ObjectHandle[] ah1;
+        private final ObjectHandle[] ah2;
+        private final TypeConstant   typeEl;
+        private final int            cElements;
+        private final int[]          holder;
+        private final int            iReturn;
 
         public Equals(ObjectHandle[] ah1, ObjectHandle[] ah2, TypeConstant typeEl,
                       int cElements, int[] holder, int iReturn)

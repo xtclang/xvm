@@ -711,7 +711,7 @@ public class Compiler
         public File[] getResourceLocation()
             {
             ArrayList list = (ArrayList) values().get("r");
-            return list == null || list.size() == 0
+            return list == null || list.isEmpty()
                     ? ModuleInfo.NO_FILES
                     : (File[]) list.toArray(new File[0]);
             }

@@ -600,7 +600,7 @@ public abstract class RelationalTypeConstant
      *
      * @return a merged map
      */
-    abstract protected Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
      * Produce an array of mixin Annotations for a merge of the specified TypeInfos.
@@ -609,7 +609,7 @@ public abstract class RelationalTypeConstant
      *
      * @return a merged array
      */
-    abstract protected Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract Annotation[] mergeAnnotations(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
      * Produce a map of properties for a merge of the specified TypeInfos.
@@ -618,7 +618,7 @@ public abstract class RelationalTypeConstant
      *
      * @return a merged map
      */
-    abstract protected Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract Map<PropertyConstant, PropertyInfo> mergeProperties(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
      * Produce a map of methods for a merge of the specified TypeInfos.
@@ -627,7 +627,7 @@ public abstract class RelationalTypeConstant
      *
      * @return a merged map
      */
-    abstract protected Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract Map<MethodConstant, MethodInfo> mergeMethods(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
      * Produce a ListMap of children for a merge of the specified TypeInfos.
@@ -636,7 +636,7 @@ public abstract class RelationalTypeConstant
      *
      * @return a merged ListMap
      */
-    abstract protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+    protected abstract ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
 
     // ----- type comparison support ---------------------------------------------------------------

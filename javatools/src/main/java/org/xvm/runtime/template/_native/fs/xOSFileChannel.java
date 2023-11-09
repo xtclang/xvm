@@ -196,7 +196,7 @@ public class xOSFileChannel
     /**
      * The handle class.
      */
-    static public class ChannelHandle
+    public static class ChannelHandle
             extends ServiceHandle
         {
         public final FileChannel f_channel;

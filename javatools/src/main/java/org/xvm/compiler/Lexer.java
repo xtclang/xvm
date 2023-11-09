@@ -1584,7 +1584,7 @@ public class Lexer
                                                           aTokensOld[cTokens].getEndPosition()));
                                 }
 
-                            if (sb.length() > 0)
+                            if (!sb.isEmpty())
                                 {
                                 list.add(new Token(lPosStart, lPosEndText, Id.LIT_STRING, sb.toString()));
                                 sb = new StringBuilder();
@@ -1613,7 +1613,7 @@ public class Lexer
         if (fTemplate)
             {
             long lPosCur = source.getPosition();
-            if (sb.length() > 0)
+            if (!sb.isEmpty())
                 {
                 list.add(new Token(lPosStart, lPosCur, Id.LIT_STRING, sb.toString()));
                 }

@@ -780,7 +780,7 @@ public abstract class Utils
     /**
      * An abstract base for in-place operation support.
      */
-    public static abstract class AbstractInPlace
+    public abstract static class AbstractInPlace
             implements Frame.Continuation
         {
         protected ObjectHandle hValueOld;
@@ -1089,6 +1089,7 @@ public abstract class Utils
         }
 
     // the lambda for unary actions
+    @FunctionalInterface
     public interface UnaryAction
         {
         // invoke and place the result into A_LOCAL
@@ -1104,6 +1105,7 @@ public abstract class Utils
         }
 
     // the lambda for binary actions
+    @FunctionalInterface
     public interface BinaryAction
         {
         // invoke and place the result into A_LOCAL
@@ -1626,12 +1628,12 @@ public abstract class Utils
 
     // ----- constants -----------------------------------------------------------------------------
 
-    public final static ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
-    public final static StringHandle[] STRINGS_NONE = new StringHandle[0];
-    public final static String[]       NO_NAMES     = new String[0];
+    public static final ObjectHandle[] OBJECTS_NONE = new ObjectHandle[0];
+    public static final StringHandle[] STRINGS_NONE = new StringHandle[0];
+    public static final String[]       NO_NAMES     = new String[0];
 
-    public final static Frame.Continuation NEXT = frame -> Op.R_NEXT;
-    public final static Predicate          ANY  = t -> true;
+    public static final Frame.Continuation NEXT = frame -> Op.R_NEXT;
+    public static final Predicate          ANY  = t -> true;
 
     public  static ClassStructure    CONST_HELPER;
     private static ClassTemplate     ANNOTATION_TEMPLATE;

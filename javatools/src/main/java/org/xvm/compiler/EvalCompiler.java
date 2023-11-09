@@ -306,7 +306,7 @@ public class EvalCompiler
 
             if (!f_frame.f_function.isFunction())
                 {
-                if (sName.equals("this"))
+                if ("this".equals(sName))
                     {
                     Register reg = getThisRegister();
                     ensureNameMap().put(sName, reg);

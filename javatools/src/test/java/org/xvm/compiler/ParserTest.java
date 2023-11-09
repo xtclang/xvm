@@ -22,7 +22,7 @@ public class ParserTest
     public static void main(String[] args)
             throws Exception
         {
-        if (args.length < 1 || args[0].length() < 1)
+        if (args.length < 1 || args[0].isEmpty())
             {
             out("file name required");
             return;

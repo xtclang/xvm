@@ -252,7 +252,7 @@ public class xRTConnector
                 conn.addRequestProperty(entry.getKey(), entry.getValue());
                 }
 
-            if (sMethod.equals("PUT") || sMethod.equals("POST"))
+            if ("PUT".equals(sMethod) || "POST".equals(sMethod))
                 {
                 byte[] abData = ((ByteBasedDelegate) haBytes.getTemplate()).
                                             getBytes(haBytes, 0, haBytes.m_cSize, false);
@@ -296,7 +296,7 @@ public class xRTConnector
                     listResponseNames.add(sName);
                     listResponseValues.add(sValue);
 
-                    if (sName.equalsIgnoreCase("Content-Length"))
+                    if ("Content-Length".equalsIgnoreCase(sName))
                         {
                         nContentLength = Integer.parseInt(sValue);
                         }

@@ -96,15 +96,15 @@ public class ForStmtAST
     public String toString() {
         StringBuilder buf = new StringBuilder("for (");
         if (init != null) {
-            buf.append(init.toString());
+            buf.append(init);
         }
         buf.append("; ");
         if (cond != null) {
-            buf.append(cond.toString());
+            buf.append(cond);
         }
         buf.append("; ");
         if (update != null) {
-            buf.append(update.toString());
+            buf.append(update);
         }
         buf.append(") ");
         if (body == null) {

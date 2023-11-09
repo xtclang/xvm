@@ -304,7 +304,7 @@ public class xRTRandom
         return hService;
         }
 
-    static public class RandomHandle
+    public static class RandomHandle
             extends ServiceHandle
         {
         public final Random f_random;

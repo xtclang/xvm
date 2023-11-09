@@ -399,7 +399,7 @@ public class xRTClassTemplate
                 listContrib.size(), supplier, iReturn);
         }
 
-    static private int callCreateContrib(Frame frame, ComponentTemplateHandle hComponent,
+    private static int callCreateContrib(Frame frame, ComponentTemplateHandle hComponent,
                                          String sAction, TypeConstant typeContrib,
                                          ObjectHandle haParams, ObjectHandle hDelegatee,
                                          ObjectHandle haNames, ObjectHandle haTypes)

@@ -151,7 +151,7 @@ public class xLazyVar
         /**
          * Register the specified fiber as "allowed to assign".
          */
-        synchronized protected void registerAssign(Fiber fiber)
+        protected synchronized void registerAssign(Fiber fiber)
             {
             Set<Fiber> setInit = m_setInitFiber;
             if (setInit == null)

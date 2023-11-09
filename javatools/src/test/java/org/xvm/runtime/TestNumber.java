@@ -15,24 +15,24 @@ public class TestNumber
     {
     // ---- add ------------------------------------------------------------------------------------
 
-    final static long MAX64 = Long.MAX_VALUE;
-    final static long MIN64 = Long.MIN_VALUE;
+    static final long MAX64 = Long.MAX_VALUE;
+    static final long MIN64 = Long.MIN_VALUE;
 
-    final static LongLong MAX128L = new LongLong(-1, 0);
-    final static LongLong MIN128H = new LongLong(0, 1);  // MAX128L + 1
-    final static LongLong MAX128 = new LongLong(-1, MAX64);
-    final static LongLong MIN128 = new LongLong(0, MIN64);
+    static final LongLong MAX128L = new LongLong(-1, 0);
+    static final LongLong MIN128H = new LongLong(0, 1);  // MAX128L + 1
+    static final LongLong MAX128 = new LongLong(-1, MAX64);
+    static final LongLong MIN128 = new LongLong(0, MIN64);
 
-    final static long MAX63U = Long.MAX_VALUE;
-    final static long MIN64H = Long.MIN_VALUE; // MAX63U + 1
-    final static long MAX64U = -1L;
+    static final long MAX63U = Long.MAX_VALUE;
+    static final long MIN64H = Long.MIN_VALUE; // MAX63U + 1
+    static final long MAX64U = -1L;
 
-    final static long MAX32 = Integer.MAX_VALUE;
-    final static long MIN32 = Integer.MIN_VALUE;
+    static final long MAX32 = Integer.MAX_VALUE;
+    static final long MIN32 = Integer.MIN_VALUE;
 
-    final static long MAX32U = 0xFFFF_FFFFL;
-    final static long MIN32H = 0x8000_0000L;
-    final static long MAX31U = 0x7FFF_FFFFL;
+    static final long MAX32U = 0xFFFF_FFFFL;
+    static final long MIN32H = 0x8000_0000L;
+    static final long MAX31U = 0x7FFF_FFFFL;
 
     @Test
     public void test128Signed()

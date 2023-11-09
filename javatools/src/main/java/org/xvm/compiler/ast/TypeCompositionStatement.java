@@ -3302,7 +3302,7 @@ public class TypeCompositionStatement
                 case 2:         // in the text
                     if (isLineTerminator(ch))
                         {
-                        if (sb.length() > 0)
+                        if (!sb.isEmpty())
                             {
                             sb.append(LF);
                             }

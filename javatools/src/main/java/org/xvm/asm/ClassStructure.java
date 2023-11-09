@@ -984,7 +984,7 @@ public class ClassStructure
                     ModuleConstant  idDep      = moduleDep.getIdentityConstant();
                     String          sOldPath   = mapModulePaths.get(idDep);
                     String          sLocalPath = pkg.getIdentityConstant().getPathString();
-                    String          sNewPath   = sModulePath.length() == 0
+                    String          sNewPath   = sModulePath.isEmpty()
                                                ? sLocalPath
                                                : sModulePath + '.' + sLocalPath;
                     if (sOldPath == null)
@@ -3328,7 +3328,7 @@ public class ClassStructure
             boolean      fGet;
             Parameter[]  aParams;
             Parameter[]  aReturns;
-            if (sigAccessor.getName().equals("get"))
+            if ("get".equals(sigAccessor.getName()))
                 {
                 fGet     = true;
                 aParams  = Parameter.NO_PARAMS;
@@ -3835,7 +3835,7 @@ public class ClassStructure
           .append(", type-params=");
 
         final ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null || map.size() == 0)
+        if (map == null || map.isEmpty())
             {
             sb.append("none");
             }
@@ -3859,7 +3859,7 @@ public class ClassStructure
                 TypeConstant constType = entry.getValue();
 
                 // if constType is unresolved, we cannot call constType.isEcstasy("Object")
-                if (!constType.getValueString().equals("ecstasy:Object"))
+                if (!"ecstasy:Object".equals(constType.getValueString()))
                     {
                     sb.append(" extends ")
                       .append(constType);

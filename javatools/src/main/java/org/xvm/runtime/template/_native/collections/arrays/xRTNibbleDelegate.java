@@ -366,5 +366,5 @@ public class xRTNibbleDelegate
     /**
      * Caches Nibble handles.
      */
-    private final static ObjectHandle[] NIBBLES = new ObjectHandle[16];
+    private static final ObjectHandle[] NIBBLES = new ObjectHandle[16];
     }

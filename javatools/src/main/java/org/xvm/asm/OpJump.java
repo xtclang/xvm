@@ -140,5 +140,5 @@ public abstract class OpJump
     private Op m_opDest;
 
     // number of exits to simulate on the jump
-    transient protected int m_cExits;
+    protected transient int m_cExits;
     }

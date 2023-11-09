@@ -177,14 +177,14 @@ public class ModuleInfo
                         }
 
                     String name = dir.getName();
-                    if (   name.equalsIgnoreCase("src")
-                        || name.equalsIgnoreCase("source")
-                        || name.equalsIgnoreCase("main")
-                        || name.equalsIgnoreCase("test")
-                        || name.equalsIgnoreCase("x")
-                        || name.equalsIgnoreCase("ecstasy")
-                        || name.equalsIgnoreCase("build")
-                        || name.equalsIgnoreCase("target"))
+                    if (   "src".equalsIgnoreCase(name)
+                        || "source".equalsIgnoreCase(name)
+                        || "main".equalsIgnoreCase(name)
+                        || "test".equalsIgnoreCase(name)
+                        || "x".equalsIgnoreCase(name)
+                        || "ecstasy".equalsIgnoreCase(name)
+                        || "build".equalsIgnoreCase(name)
+                        || "target".equalsIgnoreCase(name))
                         {
                         dir = dir.getParentFile();
                         }
@@ -427,7 +427,7 @@ public class ModuleInfo
                 else
                     {
                     String sExt = getExtension(binarySpec.getName());
-                    if (sExt != null && sExt.equals("xtc"))
+                    if (sExt != null && "xtc".equals(sExt))
                         {
                         binaryFile   = binarySpec;
                         binaryDir    = binarySpec.getParentFile();
@@ -467,7 +467,7 @@ public class ModuleInfo
                     }
 
                 String sExt = getExtension(binarySpec.getName());
-                if (sExt != null && sExt.equals("xtc"))
+                if (sExt != null && "xtc".equals(sExt))
                     {
                     binaryFile   = binarySpec;
                     binaryDir    = binarySpec.getParentFile();
@@ -547,21 +547,21 @@ public class ModuleInfo
                 // e.g. src/main/x
                 File   nextDir = fromSrc.getParentFile();
                 String dirName = fromSrc.getName();
-                if (dirName.equalsIgnoreCase("x") || dirName.equalsIgnoreCase("ecstasy"))
+                if ("x".equalsIgnoreCase(dirName) || "ecstasy".equalsIgnoreCase(dirName))
                     {
                     fromSrc = nextDir;
                     nextDir = fromSrc.getParentFile();
                     dirName = fromSrc.getName();
                     }
 
-                if (dirName.equalsIgnoreCase("main") || dirName.equalsIgnoreCase("test"))
+                if ("main".equalsIgnoreCase(dirName) || "test".equalsIgnoreCase(dirName))
                     {
                     fromSrc = nextDir;
                     nextDir = fromSrc.getParentFile();
                     dirName = fromSrc.getName();
                     }
 
-                if (dirName.equalsIgnoreCase("src") || dirName.equalsIgnoreCase("source"))
+                if ("src".equalsIgnoreCase(dirName) || "source".equalsIgnoreCase(dirName))
                     {
                     fromSrc = nextDir;
                     }
@@ -573,7 +573,7 @@ public class ModuleInfo
                 // e.g. ./build/ or ./target/
                 File   nextDir = fromBin.getParentFile();
                 String dirName = dirBin.getName();
-                if (dirName.equalsIgnoreCase("build") || dirName.equalsIgnoreCase("target"))
+                if ("build".equalsIgnoreCase(dirName) || "target".equalsIgnoreCase(dirName))
                     {
                     fromBin = nextDir;
                     }
@@ -1982,7 +1982,7 @@ public class ModuleInfo
                     }
                 }
 
-            if (dir == null || path.length() == 0)
+            if (dir == null || path.isEmpty())
                 {
                 return dir;
                 }
@@ -1991,16 +1991,16 @@ public class ModuleInfo
             for (int i = 0, last = segments.length - 1; i <= last; ++i)
                 {
                 String segment = segments[i];
-                if (segment.length() == 0)
+                if (segment.isEmpty())
                     {
                     return null;
                     }
 
-                if (segment.equals("."))
+                if (".".equals(segment))
                     {
                     // nothing to do
                     }
-                else if (segment.equals(".."))
+                else if ("..".equals(segment))
                     {
                     dir = dir.getParent();
                     if (dir == null)
@@ -2165,7 +2165,7 @@ public class ModuleInfo
     public static boolean isExplicitEcstasyFile(String sFile)
         {
         String sExt = getExtension(sFile);
-        return sExt != null && (sExt.equalsIgnoreCase("x") || sExt.equalsIgnoreCase("xtc"));
+        return sExt != null && ("x".equalsIgnoreCase(sExt) || "xtc".equalsIgnoreCase(sExt));
         }
 
     /**
@@ -2178,7 +2178,7 @@ public class ModuleInfo
     public static boolean isExplicitSourceFile(String sFile)
         {
         String sExt = getExtension(sFile);
-        return sExt != null && sExt.equalsIgnoreCase("x");
+        return sExt != null && "x".equalsIgnoreCase(sExt);
         }
 
     /**
@@ -2191,7 +2191,7 @@ public class ModuleInfo
     public static boolean isExplicitCompiledFile(String sFile)
         {
         String sExt = getExtension(sFile);
-        return sExt != null && sExt.equalsIgnoreCase("xtc");
+        return sExt != null && "xtc".equalsIgnoreCase(sExt);
         }
 
     /**

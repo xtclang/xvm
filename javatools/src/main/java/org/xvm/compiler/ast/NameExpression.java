@@ -247,7 +247,7 @@ public class NameExpression
     @Override
     protected boolean usesSuper()
         {
-        return name.getValueText().equals("super") || left != null && left.usesSuper();
+        return "super".equals(name.getValueText()) || left != null && left.usesSuper();
         }
 
     @Override
@@ -255,12 +255,12 @@ public class NameExpression
         {
         // can only be "Name.Name.present" form
         if (left instanceof NameExpression exprName &&
-                amp == null && params == null && getName().equals("present"))
+                amp == null && params == null && "present".equals(getName()))
             {
             // left has to be all names
             while (exprName.left != null)
                 {
-                if (!exprName.getName().equals("present") && exprName.left instanceof NameExpression)
+                if (!"present".equals(exprName.getName()) && exprName.left instanceof NameExpression)
                     {
                     exprName = (NameExpression) exprName.left;
                     }
@@ -1129,7 +1129,7 @@ public class NameExpression
                     PropertyConstant idProp    = (PropertyConstant) argRaw;
                     Argument         argTarget = generateRefTarget(ctx, code, idProp, errs);
 
-                    if (idProp.getName().equals("outer"))
+                    if ("outer".equals(idProp.getName()))
                         {
                         TypeConstant typeTarget = argTarget.getType().resolveConstraints();
                         TypeConstant typeOuter  = typeTarget.isVirtualChild()
@@ -1385,7 +1385,7 @@ public class NameExpression
                         }
 
                     case This:
-                        if (idProp.getName().equals("outer"))
+                        if ("outer".equals(idProp.getName()))
                             {
                             code.add(new MoveThis(1, regTemp));
 
@@ -1441,7 +1441,7 @@ public class NameExpression
                 Argument         argTarget = generateRefTarget(ctx, code, idProp, errs);
                 Register         regRef;
 
-                if (idProp.getName().equals("outer"))
+                if ("outer".equals(idProp.getName()))
                     {
                     ConstantPool pool       = pool();
                     TypeConstant typeTarget = argTarget.getType().resolveConstraints();
@@ -2162,7 +2162,7 @@ public class NameExpression
         else // left is NOT null
             {
             // the "Type.this" construct is not supported; use "this.Type" instead
-            if (sName.equals("this"))
+            if ("this".equals(sName))
                 {
                 log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
                 return null;
@@ -2291,7 +2291,7 @@ public class NameExpression
                                     }
                                 typeLeft = typeData;
                                 }
-                            else if (sName.equals("OuterType") && typeData.isFormalType())
+                            else if ("OuterType".equals(sName) && typeData.isFormalType())
                                 {
                                 constFormal = (FormalConstant) typeData.getDefiningConstant();
                                 }
@@ -3261,7 +3261,7 @@ public class NameExpression
                     {
                     // 1) the "left" NameExpression must be identity mode, and
                     // 2) this NameExpression must NOT be ".this"
-                    if (!((NameExpression) left).isIdentityMode(ctx, true) || name.getValueText().equals("this"))
+                    if (!((NameExpression) left).isIdentityMode(ctx, true) || "this".equals(name.getValueText()))
                         {
                         return false;
                         }
@@ -3393,7 +3393,7 @@ public class NameExpression
         if (left instanceof NameExpression exprLeft)
             {
             // check that "this" is not "OuterThis"
-            if (exprLeft.getName().equals("this") &&
+            if ("this".equals(exprLeft.getName()) &&
                     (fRef || exprLeft.m_plan == Plan.None))
                 {
                 return PropertyAccess.This;

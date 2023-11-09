@@ -21,6 +21,7 @@ import static org.xvm.util.Handy.quotedString;
  * A listener for errors being reported about source code, compilation, assembly, or verification of
  * XVM structures.
  */
+@FunctionalInterface
 public interface ErrorListener
     {
     // ----- API -----------------------------------------------------------------------------------

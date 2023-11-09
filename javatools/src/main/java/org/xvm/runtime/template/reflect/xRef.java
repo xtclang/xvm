@@ -1081,7 +1081,7 @@ public class xRef
         /**
          * Synthetic property holding a referent.
          */
-        public final static String REFERENT = "$value";
+        public static final String REFERENT = "$value";
         }
 
     /***

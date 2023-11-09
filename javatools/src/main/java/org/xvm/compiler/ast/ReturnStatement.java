@@ -187,7 +187,7 @@ public class ReturnStatement
                                 m_fFutureReturn = true;
                                 }
                             else if (expr instanceof TupleExpression exprTuple &&
-                                    exprTuple.getExpressions().size() == 0 &&
+                                    exprTuple.getExpressions().isEmpty() &&
                                     exprTuple.getType().isImmutable())
                                 {
                                 // allow Tuple:()

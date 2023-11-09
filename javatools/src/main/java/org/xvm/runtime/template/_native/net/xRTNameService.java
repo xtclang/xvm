@@ -140,7 +140,7 @@ public class xRTNameService
                         InetAddress addr     = cfLookup.get();
                         String      sName    = addr.getHostName();
                         String      sNotName = addr.getHostAddress();
-                        if (sName != null && sName.length() > 0 && !sName.equals(sNotName))
+                        if (sName != null && !sName.isEmpty() && !sName.equals(sNotName))
                             {
                             return frameCaller.assignValues(aiReturn,
                                     xBoolean.TRUE, xString.makeHandle(sName));

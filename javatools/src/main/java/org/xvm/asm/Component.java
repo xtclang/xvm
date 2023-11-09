@@ -2455,7 +2455,7 @@ public abstract class Component
 
         // register the contributions
         List<Contribution> listContribs = m_listContribs;
-        if (listContribs != null  && listContribs.size() > 0)
+        if (listContribs != null  && !listContribs.isEmpty())
             {
             for (Contribution contribution : listContribs)
                 {

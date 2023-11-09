@@ -180,7 +180,7 @@ public abstract class OpInvocable extends Op
             }
         else
             {
-            chain = idMethod.getName().equals("get")
+            chain = "get".equals(idMethod.getName())
                     ? clazz.getPropertyGetterChain(idProp)
                     : clazz.getPropertySetterChain(idProp);
             }
@@ -260,13 +260,13 @@ public abstract class OpInvocable extends Op
             SignatureConstant sig    = idMethod.getSignature();
             String            sName  = sig.getName();
 
-            if (sName.equals("get") && sig.getParamCount() == 0 && sig.getReturnCount() == 1 &&
+            if ("get".equals(sName) && sig.getParamCount() == 0 && sig.getReturnCount() == 1 &&
                     sig.getRawReturns()[0].isA(idProp.getType()))
                 {
                 return idProp;
                 }
 
-            if (sName.equals("set") && sig.getParamCount() == 1 && sig.getReturnCount() == 0 &&
+            if ("set".equals(sName) && sig.getParamCount() == 1 && sig.getReturnCount() == 0 &&
                     sig.getRawParams()[0].isA(idProp.getType()))
                 {
                 return idProp;

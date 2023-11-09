@@ -39,7 +39,7 @@ public class ForEachStmtAST
         this.body        = body;
     }
 
-    static private boolean nodeTypeOk(NodeType nodeType) {
+    private static boolean nodeTypeOk(NodeType nodeType) {
         return switch (nodeType) {
             default -> false;
             case ForIteratorStmt,

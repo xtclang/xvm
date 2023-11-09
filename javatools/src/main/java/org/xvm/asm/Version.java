@@ -218,7 +218,7 @@ public class Version
                 }
             }
 
-        if (sBuild != null && sBuild.length() > 0)
+        if (sBuild != null && !sBuild.isEmpty())
             {
             sb.append('+')
               .append(sBuild);

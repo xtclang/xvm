@@ -106,9 +106,9 @@ public class BitCube
 
     // ----- fields --------------------------------------------------------------------------------
 
-    final private int    f_cDims;
-    final private int    f_cTotal;
-    final private int[]  f_acSize;
-    final private BitSet f_bs;
+    private final int    f_cDims;
+    private final int    f_cTotal;
+    private final int[]  f_acSize;
+    private final BitSet f_bs;
     }
 

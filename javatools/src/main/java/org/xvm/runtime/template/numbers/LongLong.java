@@ -687,7 +687,7 @@ public class LongLong
     protected final long m_lLow;
     protected final long m_lHigh;
 
-    private static class Overflow
+    private static final class Overflow
             extends LongLong
         {
         private Overflow()

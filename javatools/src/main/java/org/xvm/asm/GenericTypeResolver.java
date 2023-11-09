@@ -10,6 +10,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * Resolver of a generic type name into an actual type.
  */
+@FunctionalInterface
 public interface GenericTypeResolver
     {
     /**

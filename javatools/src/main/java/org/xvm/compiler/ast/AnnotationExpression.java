@@ -603,7 +603,7 @@ public class AnnotationExpression
         @Override
         public boolean isVarReadable(String sName)
             {
-            return sName.equals("this") && hasThis();
+            return "this".equals(sName) && hasThis();
             }
 
         @Override
@@ -621,7 +621,7 @@ public class AnnotationExpression
         @Override
         protected Argument resolveReservedName(String sName, Token name, ErrorListener errs)
             {
-            return sName.equals("this:module")
+            return "this:module".equals(sName)
                     ? AnnotationExpression.this.getComponent().getIdentityConstant().getModuleConstant()
                     : null;
             }

@@ -4,6 +4,7 @@ package org.xvm.runtime;
 /**
  * Represents a function that creates an injectable resource.
  */
+@FunctionalInterface
 public interface InjectionSupplier
     {
     /**

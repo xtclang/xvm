@@ -1019,7 +1019,7 @@ public abstract class AstNode
             String sMethodName, List<Expression> listExprArgs, MethodKind kind, boolean fCall,
             boolean fAllowNested, TypeConstant[] atypeReturn, ErrorListener errs)
         {
-        assert sMethodName != null && sMethodName.length() > 0;
+        assert sMethodName != null && !sMethodName.isEmpty();
 
         int cExpr = listExprArgs == null ? 0 : listExprArgs.size();
 
@@ -1879,14 +1879,14 @@ public abstract class AstNode
 
         // print out a line of info about this node (if more than one line is necessary, then indent
         // the whole thing under the top line)
-        if (sIndentFirst.length() > 0)
+        if (!sIndentFirst.isEmpty())
             {
             out.print(sIndentFirst + "- ");
             }
         out.print(getClass().getSimpleName());
 
         String sThis = getDumpDesc();
-        if (sThis == null || sThis.length() == 0)
+        if (sThis == null || sThis.isEmpty())
             {
             out.println();
             }

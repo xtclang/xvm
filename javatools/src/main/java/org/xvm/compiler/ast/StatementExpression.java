@@ -301,7 +301,7 @@ public class StatementExpression
     /**
      * A custom context implementation for statement expression.
      */
-    static protected class StatementExpressionContext
+    protected static class StatementExpressionContext
             extends Context
         {
         public StatementExpressionContext(Context ctxOuter)

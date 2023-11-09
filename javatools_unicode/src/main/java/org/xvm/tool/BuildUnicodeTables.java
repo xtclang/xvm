@@ -193,7 +193,7 @@ public class BuildUnicodeTables
             String s = array[i];
             if (s != null)
                 {
-                assert !s.equals("");
+                assert !"".equals(s);
                 map.compute(s, (k, v) -> (v==null?0:v) + 1);
                 }
             }
@@ -381,14 +381,14 @@ public class BuildUnicodeTables
         {
         int firstIndex()
             {
-            return codepoint == null || codepoint.length() == 0
+            return codepoint == null || codepoint.isEmpty()
                     ? Integer.parseInt(codepointStart, 16)
                     : Integer.parseInt(codepoint, 16);
             }
 
         int lastIndex()
             {
-            return codepoint == null || codepoint.length() == 0
+            return codepoint == null || codepoint.isEmpty()
                     ? Integer.parseInt(codepointEnd, 16)
                     : Integer.parseInt(codepoint, 16);
             }
@@ -464,11 +464,11 @@ public class BuildUnicodeTables
 
         int dec()
             {
-            if (nt != null && nt.equals("De"))
+            if (nt != null && "De".equals(nt))
                 {
                 assert nv != null;
-                assert nv.length() > 0;
-                assert !nv.equals("NaN");
+                assert !nv.isEmpty();
+                assert !"NaN".equals(nv);
                 return Integer.parseInt(nv);
                 }
 
@@ -477,8 +477,8 @@ public class BuildUnicodeTables
 
         String num()
             {
-            return nt == null || nt.length() == 0 || nt.equals("None") ||
-                   nv == null || nv.length() == 0 || nv.equals("NaN")
+            return nt == null || nt.isEmpty() || "None".equals(nt) ||
+                   nv == null || nv.isEmpty() || "NaN".equals(nv)
                     ? null
                     : nv;
             }
@@ -491,7 +491,7 @@ public class BuildUnicodeTables
 
         int combo()
             {
-            return ccc == null || ccc.length() == 0
+            return ccc == null || ccc.isEmpty()
                     ? 255
                     : Integer.parseInt(ccc);
             }
@@ -501,7 +501,7 @@ public class BuildUnicodeTables
 
         int lower()
             {
-            return slc == null || slc.length() == 0 || slc.equals("#")
+            return slc == null || slc.isEmpty() || "#".equals(slc)
                     ? 0
                     : Integer.parseInt(slc, 16);
             }
@@ -511,7 +511,7 @@ public class BuildUnicodeTables
 
         int upper()
             {
-            return suc == null || suc.length() == 0 || suc.equals("#")
+            return suc == null || suc.isEmpty() || "#".equals(suc)
                     ? 0
                     : Integer.parseInt(suc, 16);
             }
@@ -521,7 +521,7 @@ public class BuildUnicodeTables
 
         int title()
             {
-            return stc == null || stc.length() == 0 || stc.equals("#")
+            return stc == null || stc.isEmpty() || "#".equals(stc)
                     ? 0
                     : Integer.parseInt(stc, 16);
             }
@@ -531,7 +531,7 @@ public class BuildUnicodeTables
 
         String block()
             {
-            return blk == null || blk.length() == 0
+            return blk == null || blk.isEmpty()
                     ? null
                     : blk;
             }
@@ -561,21 +561,21 @@ public class BuildUnicodeTables
         public String toString()
             {
             return getClass().getSimpleName().toLowerCase()
-                    + " codepoint=" + (codepoint == null || codepoint.length() == 0
+                    + " codepoint=" + (codepoint == null || codepoint.isEmpty()
                             ? codepointStart + ".." + codepointEnd
                             : codepoint)
-                    + (name != null && name.length() > 0 ? ", name=\"" + name + "\"" : "")
+                    + (name != null && !name.isEmpty() ? ", name=\"" + name + "\"" : "")
                     + ", gen-cat=" + gc
-                    + (blk != null && blk.length() > 0 ? ", block=\"" + blk + "\"" : "")
-                    + (nt != null && nt.length() > 0 && !nt.equals("None") ? ", num-type=\"" + nt + "\"" : "")
+                    + (blk != null && !blk.isEmpty() ? ", block=\"" + blk + "\"" : "")
+                    + (nt != null && !nt.isEmpty() && !"None".equals(nt) ? ", num-type=\"" + nt + "\"" : "")
                     + (
-                    nv != null && nv.length() > 0 && !nv.equals("NaN") ? ", num-val=\"" + nv + "\"" : "")
-                    + (suc == null || suc.length() == 0
-                            || suc.equals("#") ? "" : ", suc=" + suc)
-                    + (slc == null || slc.length() == 0
-                            || slc.equals("#") ? "" : ", slc=" + slc)
-                    + (stc == null || stc.length() == 0
-                            || stc.equals("#") ? "" : ", stc=" + stc)
+                    nv != null && !nv.isEmpty() && !"NaN".equals(nv) ? ", num-val=\"" + nv + "\"" : "")
+                    + (suc == null || suc.isEmpty()
+                            || "#".equals(suc) ? "" : ", suc=" + suc)
+                    + (slc == null || slc.isEmpty()
+                            || "#".equals(slc) ? "" : ", slc=" + slc)
+                    + (stc == null || stc.isEmpty()
+                            || "#".equals(stc) ? "" : ", stc=" + stc)
 //                    + (bidiClass != null && bidiClass.length() > 0 ? ", bidiClass=\"" + bidiClass + "\"" : "")
 //                    + (bidiMirrored != null && bidiMirrored.equals("Y") ? ", bidiMirrored=\"" + bidiMirrored + "\"" : "")
 //                    + (bidiMirrorImage != null && bidiMirrorImage.length() > 0 ? ", bidiMirrorImage=\"" + bidiMirrorImage + "\"" : "")

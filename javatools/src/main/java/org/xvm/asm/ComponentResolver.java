@@ -7,6 +7,7 @@ import org.xvm.compiler.ast.AstNode;
 /**
  * ComponentResolver represents the name resolution functionality of the Component.
  */
+@FunctionalInterface
 public interface ComponentResolver
     {
     /**

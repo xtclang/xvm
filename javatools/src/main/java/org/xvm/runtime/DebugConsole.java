@@ -65,7 +65,7 @@ import static org.xvm.util.Handy.NO_ARGS;
  * TODO implementation Watch Eval
  * TODO show which variables changed when stepping
  */
-public class DebugConsole
+public final class DebugConsole
         implements Debugger
     {
     /**
@@ -302,7 +302,7 @@ public class DebugConsole
                     }
 
                 sCommand = sCommand.trim();
-                if (sCommand.length() == 0)
+                if (sCommand.isEmpty())
                     {
                     sCommand = "VD";
                     }
@@ -514,7 +514,7 @@ public class DebugConsole
             var = m_aVars[--iVar];
             }
         return (var.watch != null && getGlobalStash().getWatchList().contains(var.watch)
-            || var.path.equals("this")
+            || "this".equals(var.path)
                 ? getGlobalStash()
                 : getFrameStash() ).ensureExpandMap();
         }
@@ -565,7 +565,7 @@ public class DebugConsole
             bp = bpExists;
             }
 
-        if (bp.className.equals("*"))
+        if ("*".equals(bp.className))
             {
             assert bp.isException();
             m_fBreakOnAllThrows = true;
@@ -593,7 +593,7 @@ public class DebugConsole
                 }
             }
 
-        if (bp.className.equals("*"))
+        if ("*".equals(bp.className))
             {
             assert bp.isException();
             m_fBreakOnAllThrows = false;
@@ -616,7 +616,7 @@ public class DebugConsole
                 bp.enable();
                 }
 
-            if (bp.className.equals("*"))
+            if ("*".equals(bp.className))
                 {
                 assert bp.isException();
                 m_fBreakOnAllThrows = bp.isEnabled();
@@ -656,7 +656,7 @@ public class DebugConsole
         m_setLineBreaks     = stringToBreakpoints(prefs.get("break-points", ""));
         m_setThrowBreaks    = stringToBreakpoints(prefs.get("break-throws", ""));
         m_fBreakOnAllThrows = m_setThrowBreaks != null && m_setThrowBreaks.stream().
-                                anyMatch(bp -> bp.isEnabled() && bp.className.equals("*"));
+                                anyMatch(bp -> bp.isEnabled() && "*".equals(bp.className));
         }
 
     private void saveBreakpoints()
@@ -745,7 +745,7 @@ public class DebugConsole
 
                     case 1:
                         // "B- *"  (nuke all breakpoints)
-                        if (asParts[1].equals("*"))
+                        if ("*".equals(asParts[1]))
                             {
                             m_fBreakOnAllThrows = false;
                             m_setLineBreaks     = null;
@@ -860,7 +860,7 @@ public class DebugConsole
                          break; // invalid command
 
                     case 1:
-                        if (asParts[1].equals("*"))
+                        if ("*".equals(asParts[1]))
                             {
                             BreakPoint[] aBP = allBreakpoints();
                             if (Arrays.stream(aBP).allMatch(BreakPoint::isEnabled))
@@ -872,7 +872,7 @@ public class DebugConsole
                                 {
                                 Arrays.stream(aBP).forEach(BreakPoint::enable);
                                 m_fBreakOnAllThrows =
-                                    Arrays.stream(aBP).anyMatch(bp -> bp.className.equals("*"));
+                                    Arrays.stream(aBP).anyMatch(bp -> "*".equals(bp.className));
                                 }
                             saveBreakpoints();
                             return Op.R_REPEAT;
@@ -1068,7 +1068,7 @@ public class DebugConsole
                                 Map<String, Integer> mapExpand = ensureExpandMap(iVar);
                                 if (var.isArray)
                                     {
-                                    if (var.name.equals("..."))
+                                    if ("...".equals(var.name))
                                         {
                                         // find the parent array
                                         int arrayLevel = var.indent - 1;
@@ -1446,7 +1446,7 @@ public class DebugConsole
         List<String> list = new ArrayList<>();
 
         String sHistory = prefs.get("history", "");
-        if (sHistory.length() > 0)
+        if (!sHistory.isEmpty())
             {
             byte[] abHistory = Base64.getDecoder().decode(sHistory);
             sHistory = new String(abHistory, StandardCharsets.UTF_8);
@@ -1468,7 +1468,7 @@ public class DebugConsole
             }
 
         s = s.trim();
-        if (s.length() == 0)
+        if (s.isEmpty())
             {
             return null;
             }
@@ -1480,7 +1480,7 @@ public class DebugConsole
                 {
                 String[] settings = parseDelimitedString(sbp, ':');
                 String   sName   = settings[0];
-                int      nLine   = settings.length >= 2 && settings[1].length() > 0
+                int      nLine   = settings.length >= 2 && !settings[1].isEmpty()
                         ? Integer.parseInt(settings[1])
                         : -1;
                 BreakPoint bp = nLine >= 0
@@ -1489,13 +1489,13 @@ public class DebugConsole
                 if (settings.length >= 3)
                     {
                     String sCondB64 = settings[2];
-                    if (sCondB64.length() > 0)
+                    if (!sCondB64.isEmpty())
                         {
                         byte[] abCond = Base64.getDecoder().decode(sCondB64);
                         bp.condition = new String(abCond, StandardCharsets.UTF_8);
                         }
 
-                    if (settings.length >= 4 && settings[3].equals("off"))
+                    if (settings.length >= 4 && "off".equals(settings[3]))
                         {
                         bp.disable();
                         }
@@ -1918,7 +1918,7 @@ public class DebugConsole
                 }
             }
 
-        boolean fExpanded = fCanExpand && !sVar.equals("...")
+        boolean fExpanded = fCanExpand && !"...".equals(sVar)
                 && mapExpand.getOrDefault(sPath, 0) > 0;
 
         VarDisplay result = new VarDisplay(cIndent, sPath, sVar, hVar, fCanExpand, fExpanded);
@@ -2135,7 +2135,7 @@ public class DebugConsole
         for (Container container : m_frame.f_context.getRuntime().containers())
             {
             // for now, let's show all the containers, rather than the current one
-            if (sb.length() > 0)
+            if (!sb.isEmpty())
                 {
                 sb.append("\n\n");
                 }
@@ -2329,7 +2329,7 @@ public class DebugConsole
                 return false;
                 }
 
-            if (className.equals("*"))
+            if ("*".equals(className))
                 {
                 return true;
                 }
@@ -2370,11 +2370,11 @@ public class DebugConsole
                 return this.isException() ? -1 : 1;
                 }
 
-            if (this.className.equals("*"))
+            if ("*".equals(this.className))
                 {
                 return -1;
                 }
-            if (that.className.equals("*"))
+            if ("*".equals(that.className))
                 {
                 return 1;
                 }
@@ -2463,7 +2463,7 @@ public class DebugConsole
             {
             StringBuilder sb = new StringBuilder();
             sb.append(lineNumber < 0
-                    ? className.equals("*")
+                    ? "*".equals(className)
                             ? "On ALL exceptions"
                             : "On exception: " + className
                     : "At " + className + ':' + lineNumber);
@@ -2600,7 +2600,7 @@ public class DebugConsole
               .append(canExpand ? (expanded ? '-' : '+') : ' ')
               .append(name);
 
-            if (!name.equals("..."))
+            if (!"...".equals(name))
                 {
                 if (isArray)
                     {

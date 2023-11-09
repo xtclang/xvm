@@ -10,7 +10,7 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.InitAst;
 /**
  * A synthetic AST that represents a "default initialization" for the currently constructed class.
  */
-public class InitAST
+public final class InitAST
         extends BinaryAST {
 
     private InitAST() {
@@ -37,5 +37,5 @@ public class InitAST
         return "<defaultInit>";
     }
 
-    static public final InitAST INSTANCE = new InitAST();
+    public static final InitAST INSTANCE = new InitAST();
 }

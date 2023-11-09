@@ -1285,18 +1285,18 @@ public class ListSet<E>
     /**
      * The singleton used to represent a "null" value that is stored in the set.
      */
-    private final static Object NULL = new Null();
+    private static final Object NULL = new Null();
 
     /**
      * Do not index small sets.
      */
-    private final static int   INDEX_MIN  = 12;
+    private static final int   INDEX_MIN  = 12;
 
     /**
      * The amount of storage for an index, based on the size of the underlying storage for the
      * ListSet, which is always of a power-of-two size.
      */
-    private final static int[] INDEX_SIZE = new int[]
+    private static final int[] INDEX_SIZE = new int[]
         {
                0,        0,         0,         0,        23,    // 1, 2, 4, 8, 16,
               47,       97,       191,       373,       757,    // 32, ...

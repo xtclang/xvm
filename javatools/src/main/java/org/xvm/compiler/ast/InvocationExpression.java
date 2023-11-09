@@ -237,7 +237,7 @@ public class InvocationExpression
     public boolean validateCondition(ErrorListener errs)
         {
         return expr instanceof NameExpression exprName
-                && exprName.getName().equals("versionMatches")
+                && "versionMatches".equals(exprName.getName())
                 && args.size() == 1
                 && args.get(0) instanceof LiteralExpression argLit
                 && argLit.getLiteral().getId() == Id.LIT_VERSION
@@ -2165,7 +2165,7 @@ public class InvocationExpression
         NameExpression exprName   = (NameExpression) expr;
         Token          tokName    = exprName.getNameToken();
         String         sName      = exprName.getName();
-        boolean        fConstruct = sName.equals("construct");
+        boolean        fConstruct = "construct".equals(sName);
         boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
         if (exprLeft == null)
@@ -2197,12 +2197,12 @@ public class InvocationExpression
                     }
 
                 // report the error
-                if (sName.equals("construct"))
+                if ("construct".equals(sName))
                     {
                     log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR,
                             ctx.getThisType().getValueString());
                     }
-                else if (sName.equals("super"))
+                else if ("super".equals(sName))
                     {
                     log(errs, Severity.ERROR, Compiler.NO_SUPER);
                     }
@@ -2457,7 +2457,7 @@ public class InvocationExpression
         // possible identity), then check the identity first
         if (exprLeft instanceof NameExpression nameLeft)
             {
-            if (nameLeft.getName().equals("super"))
+            if ("super".equals(nameLeft.getName()))
                 {
                 log(errs, Severity.ERROR, Compiler.INVALID_SUPER_REFERENCE);
                 return null;

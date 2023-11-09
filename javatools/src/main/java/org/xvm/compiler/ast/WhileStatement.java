@@ -148,7 +148,7 @@ public class WhileStatement
     @Override
     public boolean hasLabelVar(String sName)
         {
-        return sName.equals("first") || sName.equals("count");
+        return "first".equals(sName) || "count".equals(sName);
         }
 
     @Override
@@ -156,7 +156,7 @@ public class WhileStatement
         {
         assert hasLabelVar(sName);
 
-        boolean fFirst = sName.equals("first");
+        boolean fFirst = "first".equals(sName);
 
         Register reg = fFirst ? m_regFirst : m_regCount;
         if (reg == null)

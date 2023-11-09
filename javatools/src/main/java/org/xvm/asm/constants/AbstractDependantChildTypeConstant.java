@@ -54,7 +54,7 @@ public abstract class AbstractDependantChildTypeConstant
     /**
      * @return the child ClassStructure associated with this type
      */
-    abstract protected ClassStructure getChildStructure();
+    protected abstract ClassStructure getChildStructure();
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------

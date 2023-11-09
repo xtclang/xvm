@@ -143,7 +143,7 @@ public class MethodConstant
         // a lambda identity always occurs for a lambda
         boolean fLambda = m_iLambda > 0;
         assert fLambda || m_constSig != null;
-        assert fLambda == getName().equals("->");
+        assert fLambda == "->".equals(getName());
         return fLambda;
         }
 

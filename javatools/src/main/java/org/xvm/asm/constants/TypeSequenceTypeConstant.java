@@ -230,7 +230,7 @@ public class TypeSequenceTypeConstant
         {
         // since the formal type sequence is a sequence of types (see above).
         // we need to report the "Element" formal type
-        return sName.equals("Element")
+        return "Element".equals(sName)
                 ? getConstantPool().typeType()
                 : null;
         }

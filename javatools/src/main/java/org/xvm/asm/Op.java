@@ -460,7 +460,7 @@ public abstract class Op
     /**
      * An Op that can act as a Prefix to another op must implement the Prefix interface.
      */
-    public static abstract class Prefix
+    public abstract static class Prefix
             extends Op
         {
         // ----- Prefix methods ---------------------------------------------------------------
@@ -2301,19 +2301,19 @@ public abstract class Op
      *
      * Note: This id is used by the Op code based runtime, but is not used by the binary AST.
      */
-    public final static int A_MULTI         = -14;
+    public static final int A_MULTI         = -14;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      *
      * Note: This id is used by the Op code based runtime, but is not used by the binary AST.
      */
-    public final static int A_TUPLE         = -15;
+    public static final int A_TUPLE         = -15;
     /**
      * Pre-defined and compile-time only argument: A label.
      *
      * Note: This id is used by the compiler, but is not used by the Op codes or binary AST.
      */
-    public final static int A_LABEL         = -16;
+    public static final int A_LABEL         = -16;
 
     /**
      * The first constant, constant #0, is at this index (which is a negative). For a constant whose

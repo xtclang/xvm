@@ -6,6 +6,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.HashSet;
+import java.util.Set;
 
 import org.xvm.asm.Constant;
 
@@ -264,7 +265,7 @@ public abstract class BinaryAST {
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static final HashSet<String> ALREADY_DISPLAYED = new HashSet();
+    private static final Set<String> ALREADY_DISPLAYED = new HashSet();
 
     static void reportUnimplemented(String msg) {
         if (ALREADY_DISPLAYED.add(msg)) {

@@ -454,7 +454,7 @@ public class xIntLiteral
             }
         catch (NumberFormatException e)
             {
-            if (sText.length() == 0)
+            if (sText.isEmpty())
                 {
                 throw e;
                 }

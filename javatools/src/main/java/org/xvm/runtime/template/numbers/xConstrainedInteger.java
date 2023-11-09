@@ -91,7 +91,7 @@ public abstract class xConstrainedInteger
     /**
      * @return a complimentary template (signed for unsigned and vice versa)
      */
-    abstract protected xConstrainedInteger getComplimentaryTemplate();
+    protected abstract xConstrainedInteger getComplimentaryTemplate();
 
     @Override
     public boolean isGenericHandle()
@@ -725,7 +725,7 @@ public abstract class xConstrainedInteger
      *
      * @return the byte array
      */
-    static public byte[] toByteArray(long l, int cBytes)
+    public static byte[] toByteArray(long l, int cBytes)
         {
         return switch (cBytes)
             {
@@ -771,7 +771,7 @@ public abstract class xConstrainedInteger
      * @param ab  the byte array to copy into
      * @param of  the offset to start copying at
      */
-    static public void copyAsBytes(long l, byte[] ab, int of)
+    public static void copyAsBytes(long l, byte[] ab, int of)
         {
         for (int i = 0, cShift = 56; i < 8; i++, cShift-=8)
             {
@@ -788,7 +788,7 @@ public abstract class xConstrainedInteger
      *
      * @return the long value
      */
-    static public long fromByteArray(byte[] aBytes, int cBytes, boolean fSigned)
+    public static long fromByteArray(byte[] aBytes, int cBytes, boolean fSigned)
         {
         return fromByteArray(aBytes, 0, cBytes, fSigned);
         }
@@ -803,7 +803,7 @@ public abstract class xConstrainedInteger
      *
      * @return the long value
      */
-    static public long fromByteArray(byte[] aBytes, int of, int cBytes, boolean fSigned)
+    public static long fromByteArray(byte[] aBytes, int of, int cBytes, boolean fSigned)
         {
         long l = fSigned & aBytes[cBytes-1] < 0 ? -1 : 0;
         for (int i = of; i < cBytes; i++)

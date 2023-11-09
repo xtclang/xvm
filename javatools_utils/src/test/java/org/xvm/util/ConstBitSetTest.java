@@ -8,9 +8,12 @@ import java.util.Random;
 /**
  * A test for ConstBitSet.
  */
-public class ConstBitSetTest
+public final class ConstBitSetTest
     {
-    public static void main(String[] args)
+        private ConstBitSetTest() {
+        }
+
+        public static void main(String[] args)
         {
         BitSet bs = new BitSet();
 

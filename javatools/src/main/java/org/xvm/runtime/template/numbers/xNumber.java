@@ -100,17 +100,17 @@ public abstract class xNumber
     /**
      * Construct a number from the specified string and place it into the specified register.
      */
-    abstract protected int constructFromString(Frame frame, String sText, int iReturn);
+    protected abstract int constructFromString(Frame frame, String sText, int iReturn);
 
     /**
      * Construct a number from the specified byte array and place it into the specified register.
      */
-    abstract protected int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn);
+    protected abstract int constructFromBytes(Frame frame, byte[] ab, int cBytes, int iReturn);
 
     /**
      * Construct a number from the specified bit array and place it into the specified register.
      */
-    abstract protected int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn);
+    protected abstract int constructFromBits(Frame frame, byte[] ab, int cBits, int iReturn);
 
     @Override
     public int callEquals(Frame frame, TypeComposition clazz,

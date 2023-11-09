@@ -666,7 +666,7 @@ public abstract class BaseInt128
      *
      * @return one of the {@link Op#R_NEXT} or {@link Op#R_EXCEPTION} values
      */
-    abstract protected int convertToConstrainedType(Frame frame, xConstrainedInteger template,
+    protected abstract int convertToConstrainedType(Frame frame, xConstrainedInteger template,
                                                     LongLong llValue, boolean fCheckBounds, int iReturn);
 
     /**

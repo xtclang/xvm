@@ -198,7 +198,7 @@ public abstract class LongDelegate
         return reverseLongs(alValue, cSize);
         }
 
-    static public long[] reverseLongs(long[] alValue, int cSize)
+    public static long[] reverseLongs(long[] alValue, int cSize)
         {
         long[] alValueR = new long[cSize];
         for (int i = 0; i < cSize; i++)

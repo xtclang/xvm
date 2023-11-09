@@ -27,7 +27,7 @@ import org.xvm.runtime.template.text.xString;
 /**
  * Base class for native BinaryFPNumber (Float16, 32, 64) support.
  */
-abstract public class BaseBinaryFP
+public abstract class BaseBinaryFP
         extends BaseFP
     {
     public BaseBinaryFP(Container container, ClassStructure structure, int cBits)
@@ -394,12 +394,12 @@ abstract public class BaseBinaryFP
     /**
      * @return a bit array for the specified double value
      */
-    abstract protected byte[] getBits(double d);
+    protected abstract byte[] getBits(double d);
 
     /**
      * @return a double value for the specified long value
      */
-    abstract protected double fromLong(long l);
+    protected abstract double fromLong(long l);
 
     /**
      * Note: while we could simply say "Sting.valueOf(d)", it may produce a higher precision
@@ -407,7 +407,7 @@ abstract public class BaseBinaryFP
      *
      * @return a String value of the specified double
      */
-    abstract protected String toString(double d);
+    protected abstract String toString(double d);
 
 
     // ----- handle --------------------------------------------------------------------------------

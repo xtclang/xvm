@@ -441,7 +441,7 @@ public class JumpVal
      */
     private transient List<Object[]> m_listRanges;
 
-    private final static int EXCLUDE_MASK = 0xC000_0000;
-    private final static int LO_EX        = 0x8000_0000;
-    private final static int HI_EX        = 0x4000_0000;
+    private static final int EXCLUDE_MASK = 0xC000_0000;
+    private static final int LO_EX        = 0x8000_0000;
+    private static final int HI_EX        = 0x4000_0000;
     }

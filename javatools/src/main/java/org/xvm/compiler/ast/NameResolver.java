@@ -844,6 +844,7 @@ public class NameResolver
     /**
      * Classes that can provide a NameResolver should implement this interface.
      */
+    @FunctionalInterface
     public interface NameResolving
         {
         NameResolver getNameResolver();

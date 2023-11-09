@@ -29,9 +29,11 @@ import java.util.Date;
 /**
  * Handy static methods.
  */
-public class Handy
+public final class Handy
     {
-    // ----- String formatting ---------------------------------------------------------------------
+        private Handy() {
+        }
+        // ----- String formatting ---------------------------------------------------------------------
 
     /**
      * Take the passed nibble (the low order 4 bits of the int) and return the corresponding hexit
@@ -284,7 +286,7 @@ public class Handy
      *
      * @return the byte array
      */
-    static public byte[] toByteArray(long l)
+    public static byte[] toByteArray(long l)
         {
         return new byte[]
             {
@@ -308,7 +310,7 @@ public class Handy
      *
      * @return the byte array
      */
-    static public void toByteArray(long l, byte[] ab, int of)
+    public static void toByteArray(long l, byte[] ab, int of)
         {
         ab[of++] = (byte) (l >> 56);
         ab[of++] = (byte) (l >> 48);
@@ -611,7 +613,7 @@ public class Handy
             return null;
             }
 
-        if (s.length() == 0)
+        if (s.isEmpty())
             {
             return NO_ARGS;
             }
@@ -1963,20 +1965,20 @@ public class Handy
     /**
      * A constant empty array of <tt>byte</tt>.
      */
-    public final static byte[] EMPTY_BYTE_ARRAY = new byte[0];
+    public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     /**
      * A constant empty array of <tt>char</tt>.
      */
-    public final static char[] EMPTY_CHAR_ARRAY = new char[0];
+    public static final char[] EMPTY_CHAR_ARRAY = new char[0];
 
     /**
      * A constant empty array of <tt>String</tt>.
      */
-    public final static String[] NO_ARGS = new String[0];
+    public static final String[] NO_ARGS = new String[0];
 
     /**
      * A constant empty array of <tt>File</tt>.
      */
-    public final static File[] NO_FILES = new File[0];
+    public static final File[] NO_FILES = new File[0];
     }

@@ -314,7 +314,7 @@ public class xArray
     public int createPropertyRef(Frame frame, ObjectHandle hTarget,
                                  PropertyConstant idProp, boolean fRO, int iReturn)
         {
-        if (idProp.getName().equals("delegate"))
+        if ("delegate".equals(idProp.getName()))
             {
             ArrayHandle    hArray    = (ArrayHandle) hTarget;
             DelegateHandle hDelegate = hArray.m_hDelegate;

@@ -897,8 +897,8 @@ public class ArrayAccessExpression
             TypeConstant  typeReturn,
             ErrorListener errs)
         {
-        assert sMethodName != null && sMethodName.length() > 0;
-        assert sOp         != null && sOp        .length() > 0;
+        assert sMethodName != null && !sMethodName.isEmpty();
+        assert sOp         != null && !sOp.isEmpty();
 
         TypeInfo infoTarget = typeTarget.ensureTypeInfo(errs);
         int      cParams    = aexprArgs == null ? -1 : aexprArgs.length;

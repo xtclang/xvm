@@ -237,7 +237,7 @@ public class ByteConstant
      *
      * @return true if the format is signed
      */
-    static private boolean isSigned(Format format)
+    private static boolean isSigned(Format format)
         {
         return format == Format.Int8;
         }
@@ -249,7 +249,7 @@ public class ByteConstant
      *
      * @return true if the format is checked
      */
-    static private boolean isChecked(Format format)
+    private static boolean isChecked(Format format)
         {
         return format != Format.Int8 && format != Format.UInt8;
         }

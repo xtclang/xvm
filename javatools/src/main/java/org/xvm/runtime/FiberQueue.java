@@ -150,7 +150,7 @@ public class FiberQueue
             if (iPriority == -1)
                 {
                 Frame frame = m_aFrame[ix];
-                if (sb.length() == 0)
+                if (sb.isEmpty())
                     {
                     sb.append(frame.f_context);
                     }

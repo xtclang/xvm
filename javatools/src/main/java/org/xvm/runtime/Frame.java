@@ -1403,7 +1403,7 @@ public class Frame
                         {
                         String sInjectName = inject.getName();
                         if (inject.getType().isA(type) &&
-                                sInjectName.equals("_") || sInjectName.equals(sName))
+                                "_".equals(sInjectName) || sInjectName.equals(sName))
                             {
                             fUse = true;
                             break;
@@ -2368,7 +2368,7 @@ public class Frame
             f_nScope        = nScope;
             }
 
-        abstract public int handleException(Frame frame, ExceptionHandle hException, int iGuard);
+        public abstract int handleException(Frame frame, ExceptionHandle hException, int iGuard);
 
         /**
          * Drop to the scope of the exception/finally handler;
@@ -2463,7 +2463,7 @@ public class Frame
     /**
      * A deferred action to be performed by the "FinallyEnd" op.
      */
-    public static abstract class DeferredGuardAction
+    public abstract static class DeferredGuardAction
         {
         protected DeferredGuardAction(int ixGuard)
             {
@@ -2478,7 +2478,7 @@ public class Frame
             m_ixGuardBase = ixGuardBase;
             }
 
-        abstract public int complete(Frame frame);
+        public abstract int complete(Frame frame);
 
         /**
          * @return the Guard index for this pseudo handle
@@ -2669,6 +2669,7 @@ public class Frame
             }
         }
 
+    @FunctionalInterface
     public interface Continuation
         {
         /**
@@ -2684,6 +2685,7 @@ public class Frame
     /**
      * An internal VarInfo type resolver.
      */
+    @FunctionalInterface
     interface VarTypeResolver
         {
         TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId);

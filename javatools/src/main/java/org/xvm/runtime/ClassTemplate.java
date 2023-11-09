@@ -192,7 +192,7 @@ public abstract class ClassTemplate
             {
             if (f_structSuper == null)
                 {
-                if (f_sName.equals("Object"))
+                if ("Object".equals(f_sName))
                     {
                     return null;
                     }
@@ -606,7 +606,7 @@ public abstract class ClassTemplate
                 break;
 
             case 3:
-                if (method.getName().equals("equals"))
+                if ("equals".equals(method.getName()))
                     {
                     return frame.assignValue(iReturn,
                             xBoolean.makeHandle(ahArg[1] == ahArg[2]));
@@ -2323,7 +2323,7 @@ public abstract class ClassTemplate
             }
         else
             {
-            if (sName.equals("this"))
+            if ("this".equals(sName))
                 {
                 IdentityConstant constId = template == null ?
                     pool.clzObject() : template.getClassConstant();

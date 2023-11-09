@@ -263,5 +263,5 @@ public class AssertV
 
     private Argument[] m_aArgValue;
 
-    private volatile transient String[] m_asParts;
+    private transient volatile String[] m_asParts;
     }

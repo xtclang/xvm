@@ -11,7 +11,7 @@ import org.xvm.asm.constants.TypeConstant;
 /**
  * Place-holder that cannot be serialized.
  */
-public class PoisonAST
+public final class PoisonAST
         extends ExprAST {
 
     static final PoisonAST INSTANCE = new PoisonAST();

@@ -1492,7 +1492,7 @@ public class TypeInfo
         // check well-known native methods
         if (getType().isA(pool().typeFunction()))
             {
-            if (sig.getName().equals("invoke"))
+            if ("invoke".equals(sig.getName()))
                 {
                 Set<MethodConstant> set = findMethods("invoke", 1, MethodKind.Method);
                 assert set.size() == 1;

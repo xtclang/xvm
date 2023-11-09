@@ -3816,7 +3816,7 @@ public class Parser
                         switch (peek().getId())
                             {
                             case L_PAREN:
-                                if (left != null || !name.getValueText().equals("Tuple"))
+                                if (left != null || !"Tuple".equals(name.getValueText()))
                                     {
                                     break;
                                     }
@@ -4456,7 +4456,7 @@ public class Parser
                     exprs.add(expr);
                     if (match(Id.COMMA) == null)
                         {
-                        if (sType.equals("") && exprs.size() == 1)
+                        if ("".equals(sType) && exprs.size() == 1)
                             {
                             // special handling for a map
                             if (peek().getId() == Id.ASN)
@@ -4555,7 +4555,7 @@ public class Parser
                 {
                 Token   tokFile  = parsePath();
                 String  sFile    = (String) tokFile.getValue();
-                boolean fReqFile = sType.equals("File");
+                boolean fReqFile = "File".equals(sType);
                 boolean fReqDir  = sFile.endsWith("/") || !fReqFile;
                 long    lStart   = type.getStartPosition();
                 long    lEnd     = tokFile.getEndPosition();

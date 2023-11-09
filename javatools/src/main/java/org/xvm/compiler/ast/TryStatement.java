@@ -102,7 +102,7 @@ public class TryStatement
     @Override
     public boolean hasLabelVar(String sName)
         {
-        return sName.equals("exception") &&
+        return "exception".equals(sName) &&
                 (m_ctxValidatingFinally != null || m_regFinallyException != null);
         }
 
@@ -577,7 +577,7 @@ public class TryStatement
     /**
      * A custom "try" block context.
      */
-    static protected class TryContext
+    protected static class TryContext
             extends Context
         {
         protected TryContext(Context ctxOuter)

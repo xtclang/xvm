@@ -154,7 +154,7 @@ public class Source
      */
     public Object resolvePath(String sFile)
         {
-        return sFile != null && sFile.length() > 0 && m_node != null
+        return sFile != null && !sFile.isEmpty() && m_node != null
                 ? m_node.resolveResource(sFile)
                 : null;
         }

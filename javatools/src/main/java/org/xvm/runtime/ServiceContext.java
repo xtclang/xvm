@@ -953,7 +953,7 @@ public class ServiceContext
                     }
                 }
 
-            assert setFibers.size() == 0 ||
+            assert setFibers.isEmpty() ||
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
             f_container.terminate(this);
@@ -1747,7 +1747,7 @@ public class ServiceContext
         /**
          * The CompletableFuture associates with this request.
          */
-        final public CompletableFuture f_future;
+        public final CompletableFuture f_future;
         /**
          * The Fiber this request runs on.
          */
@@ -2151,7 +2151,7 @@ public class ServiceContext
     /**
      * The queue size threshold at which the caller should be pushed back.
      */
-    public final static int QUEUE_THRESHOLD = 256;
+    public static final int QUEUE_THRESHOLD = 256;
 
     /**
      * The container's ConstantPool.
@@ -2271,12 +2271,12 @@ public class ServiceContext
     /**
      * The context served by the current thread.
      */
-    final static ThreadLocal<ServiceContext[]> s_tloContext = ThreadLocal.withInitial(() -> new ServiceContext[1]);
+    static final ThreadLocal<ServiceContext[]> s_tloContext = ThreadLocal.withInitial(() -> new ServiceContext[1]);
 
     /**
      * VarHandle for {@link #m_lLockScheduling}.
      */
-    final static VarHandle SCHEDULING_LOCK_HANDLE;
+    static final VarHandle SCHEDULING_LOCK_HANDLE;
     static
         {
         try

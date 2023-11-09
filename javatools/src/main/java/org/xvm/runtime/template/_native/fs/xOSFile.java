@@ -534,10 +534,10 @@ public class xOSFile
     private enum ReadOption  {NoRead, Read, Exclusive}
     private enum WriteOption {Write, Ensure, Create, Sparse, Temp, Truncate, Append, Exclusive, SyncData, SyncAll}
 
-    private final static OpenOption[]  NO_ACCESS  = new OpenOption[0];
-    private final static OpenOption[]  READ_ONLY  = new OpenOption[] {StandardOpenOption.READ};
-    private final static OpenOption[]  WRITE_ONLY = new OpenOption[] {StandardOpenOption.WRITE};
-    private final static OpenOption[]  READ_WRITE = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
+    private static final OpenOption[]  NO_ACCESS  = new OpenOption[0];
+    private static final OpenOption[]  READ_ONLY  = new OpenOption[] {StandardOpenOption.READ};
+    private static final OpenOption[]  WRITE_ONLY = new OpenOption[] {StandardOpenOption.WRITE};
+    private static final OpenOption[]  READ_WRITE = new OpenOption[] {StandardOpenOption.READ, StandardOpenOption.WRITE};
 
     private static MethodStructure s_constructor;
     }

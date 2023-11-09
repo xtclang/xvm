@@ -248,7 +248,7 @@ public abstract class Container
      *
      * @return the injectable handle (can be a DeferredCallHandle) or null, if the name not resolvable
      */
-    abstract public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts);
+    public abstract ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts);
 
     /**
      * A delegation method into the ConstHeap API.

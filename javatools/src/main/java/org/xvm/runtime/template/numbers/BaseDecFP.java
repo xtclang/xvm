@@ -34,7 +34,7 @@ import org.xvm.type.Decimal;
 /**
  * Base class for native DecimalFPNumber (Dec*) support.
  */
-abstract public class BaseDecFP
+public abstract class BaseDecFP
         extends BaseFP
     {
     public BaseDecFP(Container container, ClassStructure structure, int cBits)
@@ -418,7 +418,7 @@ abstract public class BaseDecFP
     /**
      * @return a decimal value for the specified double
      */
-    abstract protected Decimal fromDouble(double d);
+    protected abstract Decimal fromDouble(double d);
 
 
     // ----- handle --------------------------------------------------------------------------------

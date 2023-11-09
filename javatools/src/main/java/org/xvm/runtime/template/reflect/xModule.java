@@ -309,7 +309,7 @@ public class xModule
                 : structTS.getModule();
             }
 
-        if (fClass && sClassOrType.length() == 0)
+        if (fClass && sClassOrType.isEmpty())
             {
             // module.classForName("") is the module itself
             return module.getIdentityConstant().getType();

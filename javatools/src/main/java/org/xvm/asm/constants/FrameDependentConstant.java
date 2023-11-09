@@ -34,5 +34,5 @@ public abstract class FrameDependentConstant
      *
      * @return the ObjectHandle (can be a DeferredCallHandle)
      */
-    abstract public ObjectHandle getHandle(Frame frame);
+    public abstract ObjectHandle getHandle(Frame frame);
     }

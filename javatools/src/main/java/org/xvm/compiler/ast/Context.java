@@ -1063,7 +1063,7 @@ public class Context
 
                     tokName.log(errs, getSource(), Severity.ERROR,
                             sName.startsWith("this") ? Compiler.NO_THIS     :
-                            sName.equals("super")    ? Compiler.NO_SUPER    :
+                            "super".equals(sName)    ? Compiler.NO_SUPER    :
                                                        Compiler.NAME_MISSING,
                             sName, idCtx.getValueString());
 
@@ -1099,7 +1099,7 @@ public class Context
      */
     public boolean isVarWritable(String sName)
         {
-        if (sName.equals("$"))
+        if ("$".equals(sName))
             {
             return false;
             }
@@ -1209,7 +1209,7 @@ public class Context
      */
     public boolean isVarHideable(String sName)
         {
-        if (sName.equals("$"))
+        if ("$".equals(sName))
             {
             return true;
             }

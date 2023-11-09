@@ -9,9 +9,12 @@ import java.util.Random;
 /**
  * A test for ConstOrdinalList.
  */
-public class ConstOrdinalListTest
+public final class ConstOrdinalListTest
     {
-    public static void main(String[] args)
+        private ConstOrdinalListTest() {
+        }
+
+        public static void main(String[] args)
         {
 //        validate(new ConstOrdinalList(ConstOrdinalList.decompress(
 //              Handy.hexStringToByteArray("0x0B0C0AD9245739010101FD0C01CC3336"))), 0, true);
@@ -22,7 +25,7 @@ public class ConstOrdinalListTest
             // e.g. "[4, 27, 27, 27, 27, 13, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 4, 4, 4]"
             boolean fDump = false;
             String s = args[0];
-            if (args.length > 1 && s.length() > 0 && s.substring(0, 1).equalsIgnoreCase("d"))
+            if (args.length > 1 && !s.isEmpty() && "d".equalsIgnoreCase(s.substring(0, 1)))
                 {
                 fDump = true;
                 s = args[1];
@@ -41,7 +44,7 @@ public class ConstOrdinalListTest
             for (String num : as)
                 {
                 num = num.trim();
-                if (num.length() > 0)
+                if (!num.isEmpty())
                     {
                     list.add(Integer.parseInt(num));
                     }
@@ -124,7 +127,7 @@ public class ConstOrdinalListTest
         int    cb = ab.length;
 
         System.out.println("Test #" + iTest
-            + (sTest == null || sTest.length() == 0 ? "" : " (" + sTest + ")")
+            + (sTest == null || sTest.isEmpty() ? "" : " (" + sTest + ")")
             + ", size=" + col.size()
             + ", bytes=" + cb
             + ", compression=" + calcPct(list.size() * 4 + 4, cb));
@@ -158,5 +161,5 @@ public class ConstOrdinalListTest
         return nPct < 0 ? nPct + "%" : "+" + nPct + "%";
         }
 
-    private final static Random s_rnd = new Random();
+    private static final Random s_rnd = new Random();
     }

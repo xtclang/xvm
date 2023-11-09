@@ -323,7 +323,7 @@ public abstract class OpCondJump
     private Op       m_opDest;
 
     // number of exits to simulate on the jump
-    transient protected int m_cExits;
+    protected transient int m_cExits;
 
     // the type to use for the comparison
     // TODO: it should be injected by the verifier and removed from the serialization logic

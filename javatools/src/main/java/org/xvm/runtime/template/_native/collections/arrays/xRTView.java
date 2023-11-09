@@ -21,7 +21,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 /**
  * The abstract base of RTView* implementations.
  */
-abstract public class xRTView
+public abstract class xRTView
         extends xRTDelegate
     {
     protected xRTView(Container container, ClassStructure structure)
@@ -95,7 +95,7 @@ abstract public class xRTView
             super(clazz, mutability);
             }
 
-        abstract public DelegateHandle getSource();
+        public abstract DelegateHandle getSource();
 
         /**
          * @return the underlying (fully unwrapped) delegate handle

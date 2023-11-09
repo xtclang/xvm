@@ -347,7 +347,7 @@ public class MultiMethodStructure
      */
     public MethodStructure createLambda(TypeConstant[] atypeParams, String[] asParams)
         {
-        assert getName().equals("->");
+        assert "->".equals(getName());
 
         int nMax = 0;
         for (MethodConstant id : ensureMethodByConstantMap().keySet())

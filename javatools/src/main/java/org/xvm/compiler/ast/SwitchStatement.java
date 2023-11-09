@@ -778,7 +778,7 @@ public class SwitchStatement
     /**
      * This collects the assignment information that comes from each "break" statement.
      */
-    private transient final List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
+    private final transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
     }

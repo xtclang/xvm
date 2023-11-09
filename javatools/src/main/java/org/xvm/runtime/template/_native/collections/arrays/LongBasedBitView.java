@@ -189,5 +189,5 @@ public abstract class LongBasedBitView
 
     // ----- constants -----------------------------------------------------------------------------
 
-    final protected int f_nBitsPerValue;
+    protected final int f_nBitsPerValue;
     }

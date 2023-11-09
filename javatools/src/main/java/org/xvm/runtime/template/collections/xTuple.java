@@ -676,11 +676,11 @@ public class xTuple
     protected static class Equals
             implements Frame.Continuation
         {
-        final private TupleHandle    hTuple1;
-        final private TupleHandle    hTuple2;
-        final private int            cElements;
-        final private TypeConstant[] atype;
-        final private int            iReturn;
+        private final TupleHandle    hTuple1;
+        private final TupleHandle    hTuple2;
+        private final int            cElements;
+        private final TypeConstant[] atype;
+        private final int            iReturn;
 
         private int index = -1;
 

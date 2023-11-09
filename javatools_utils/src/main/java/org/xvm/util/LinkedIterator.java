@@ -4,6 +4,7 @@ package org.xvm.util;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 
 /**
@@ -22,7 +23,7 @@ public class LinkedIterator<E>
      */
     public LinkedIterator(Iterator<E>... aIter)
         {
-        f_aIter = aIter == null ? new Iterator[0] : aIter;
+        f_aIter = Objects.requireNonNullElse(aIter, new Iterator[0])
         }
 
 

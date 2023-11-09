@@ -3751,7 +3751,7 @@ public class ConstantPool
     private TypeInfo computeNakedRefInfo(TypeConstant typeReferent)
         {
         GenericTypeResolver resolver =
-                sFormalName -> sFormalName.equals("Referent") ? typeReferent : null;
+                sFormalName -> "Referent".equals(sFormalName) ? typeReferent : null;
 
         if (m_typeNakedRef == null)
             {

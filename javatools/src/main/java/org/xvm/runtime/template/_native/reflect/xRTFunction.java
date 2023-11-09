@@ -833,7 +833,7 @@ public class xRTFunction
             return "NativeFunctionHandle";
             }
 
-        final protected xService.NativeOperation f_op;
+        protected final xService.NativeOperation f_op;
         }
 
     // one parameter bound function
@@ -1277,7 +1277,7 @@ public class xRTFunction
             extends DelegatingHandle
         {
         // the origin context of the mutable FunctionHandle
-        final private ServiceContext f_ctx;
+        private final ServiceContext f_ctx;
 
         protected FunctionProxyHandle(FunctionHandle fn, ServiceContext ctx)
             {
@@ -1687,10 +1687,10 @@ public class xRTFunction
             return Math.max(cVars, f_aParams.length);
             }
 
-        final private TypeComposition f_clzTarget;
-        final private MethodStructure f_constructor;
-        final protected Parameter[]   f_aParams;
-        final private boolean         f_fParent;
+        private final TypeComposition f_clzTarget;
+        private final MethodStructure f_constructor;
+        protected final Parameter[]   f_aParams;
+        private final boolean         f_fParent;
         }
 
 

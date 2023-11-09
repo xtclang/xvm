@@ -161,7 +161,7 @@ public class MethodStructure
     public boolean isConstructor()
         {
         String sName = getName();
-        return sName.equals("construct") || sName.equals("=");
+        return "construct".equals(sName) || "=".equals(sName);
         }
 
     /**
@@ -169,7 +169,7 @@ public class MethodStructure
      */
     public boolean isVirtualConstructor()
         {
-        return getName().equals("construct") && getParent().getParent().getFormat() == Format.INTERFACE;
+        return "construct".equals(getName()) && getParent().getParent().getFormat() == Format.INTERFACE;
         }
 
     /**
@@ -196,7 +196,7 @@ public class MethodStructure
      */
     public boolean isConstructorFinalizer()
         {
-        boolean fFinalizer = getName().equals("finally");
+        boolean fFinalizer = "finally".equals(getName());
         assert !fFinalizer || !isFunction();
         return fFinalizer;
         }
@@ -206,7 +206,7 @@ public class MethodStructure
      */
     public boolean isPropertyInitializer()
         {
-        return getName().equals("=") && getParent().getParent() instanceof PropertyStructure;
+        return "=".equals(getName()) && getParent().getParent() instanceof PropertyStructure;
         }
 
     /**
@@ -222,7 +222,7 @@ public class MethodStructure
      */
     public boolean isValidator()
         {
-        return getName().equals("assert");
+        return "assert".equals(getName());
         }
 
     /**
@@ -1298,7 +1298,7 @@ public class MethodStructure
      */
     public boolean isPotentialInitializer()
         {
-        return getName().equals("=")
+        return "=".equals(getName())
                 && getReturnCount() == 1 && getParamCount() == 0
                 && isConstructor() && !isConditionalReturn();
         }
@@ -1338,7 +1338,7 @@ public class MethodStructure
      */
     public boolean isPotentialGetter()
         {
-        return getName().equals("get")
+        return "get".equals(getName())
                 && getAccess() == Access.PUBLIC
                 && getReturnCount() == 1 && getParamCount() == 0
                 && !isFunction() && !isConditionalReturn();
@@ -1371,7 +1371,7 @@ public class MethodStructure
      */
     public boolean isPotentialSetter()
         {
-        return getName().equals("set")
+        return "set".equals(getName())
                 && getAccess() == Access.PUBLIC
                 && getReturnCount() == 0 && getParamCount() == 1
                 && !isFunction() && !isConditionalReturn();

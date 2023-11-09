@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author mf
  */
-public class ShallowSizeOf
+public final class ShallowSizeOf
     {
     /**
      * {@code true} if this JVM uses compressed references and object headers
@@ -28,7 +28,10 @@ public class ShallowSizeOf
      */
     private static final Map<Class<?>, Integer> SIZE_BY_CLASS = new ConcurrentHashMap<>();
 
-    /**
+        private ShallowSizeOf() {
+        }
+
+        /**
      * Return the shallow size of the given object.
      *
      * @param o the object to size

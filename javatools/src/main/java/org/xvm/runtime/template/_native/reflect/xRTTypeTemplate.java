@@ -240,7 +240,7 @@ public class xRTTypeTemplate
             return super.toString() + " " + f_type;
             }
 
-        final private TypeConstant f_type;
+        private final TypeConstant f_type;
         }
 
 

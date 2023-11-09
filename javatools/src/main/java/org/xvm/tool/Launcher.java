@@ -710,7 +710,7 @@ public abstract class Launcher
                 {
                 String sArg = asArgs[i];
                 assert sArg != null;
-                if (sArg.length() == 0)
+                if (sArg.isEmpty())
                     {
                     continue;
                     }
@@ -734,19 +734,19 @@ public abstract class Launcher
                         String  sName = sArg.substring(1, fEq ? ofEq : cch);
                         String  sVal  = fEq ? sArg.substring(ofEq+1) : null;
 
-                        if (sName.length() == 0)
+                        if (sName.isEmpty())
                             {
                             log(Severity.FATAL, "Missing argument name. (Name is \"\".)");
                             }
 
-                        if (sName.equals("help"))
+                        if ("help".equals(sName))
                             {
                             fHelp = true;
                             continue;
                             }
 
                         boolean fFirst = true;
-                        while (sName.length() > 0)
+                        while (!sName.isEmpty())
                             {
                             Option opt     = mapNames.get(sName);
                             String sRemain = "";
@@ -784,7 +784,7 @@ public abstract class Launcher
                                 }
                             else
                                 {
-                                if (sRemain.length() > 0)
+                                if (!sRemain.isEmpty())
                                     {
                                     if (sVal == null)
                                         {
@@ -866,11 +866,11 @@ public abstract class Launcher
                                         break;
                                     }
                                 }
-                            else if (sArg.equalsIgnoreCase("true") || sArg.equalsIgnoreCase("yes"))
+                            else if ("true".equalsIgnoreCase(sArg) || "yes".equalsIgnoreCase(sArg))
                                 {
                                 oVal = true;
                                 }
-                            else if (sArg.equalsIgnoreCase("false") || sArg.equalsIgnoreCase("no"))
+                            else if ("false".equalsIgnoreCase(sArg) || "no".equalsIgnoreCase(sArg))
                                 {
                                 oVal = true;
                                 }
@@ -885,7 +885,7 @@ public abstract class Launcher
                             break;
 
                         case String:
-                            if (sArg.length() == 0)
+                            if (sArg.isEmpty())
                                 {
                                 oVal = "";
                                 }
@@ -903,7 +903,7 @@ public abstract class Launcher
                             break;
 
                         case File:
-                            if (sArg.length() > 0)
+                            if (!sArg.isEmpty())
                                 {
                                 List<File> listFiles;
                                 try
@@ -943,7 +943,7 @@ public abstract class Launcher
                             break;
 
                         case Repo:
-                            if (sArg.length() > 0)
+                            if (!sArg.isEmpty())
                                 {
                                 List<File> repo = new ArrayList<>();
                                 for (String sPath : parseDelimitedString(sArg, File.pathSeparatorChar))
@@ -1677,7 +1677,7 @@ public abstract class Launcher
         {
         public Option(String sName, Form form, boolean fMulti, String sDesc)
             {
-            assert sName != null && sName.length() > 0;
+            assert sName != null && !sName.isEmpty();
             assert form != null;
 
             m_sName  = sName;

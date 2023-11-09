@@ -206,7 +206,7 @@ public class xRTType
             {
             TypeConstant typeTarget = hThis.getDataType();
             TypeConstant typeValue  =
-                idProp.getName().equals("OuterType") && typeTarget.isVirtualChild()
+                "OuterType".equals(idProp.getName()) && typeTarget.isVirtualChild()
                     ? typeTarget.getParentType()
                     : typeTarget.resolveFormalType(idProp);
 
@@ -216,7 +216,7 @@ public class xRTType
                 : frame.assignValue(iReturn, typeValue.ensureTypeHandle(frame.f_context.f_container));
             }
 
-        if (idProp.getName().equals("DataType"))
+        if ("DataType".equals(idProp.getName()))
             {
             TypeConstant typeResult = hThis.getUnsafeDataType();
             return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));

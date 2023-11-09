@@ -50,7 +50,7 @@ public class SetTest
         String sTest = null;
         if (sFile != null)
             {
-            if (sFile.equals("speed"))
+            if ("speed".equals(sFile))
                 {
                 speedTest();
                 return;
@@ -198,7 +198,7 @@ public class SetTest
         for (int i = 0; i < cLines; ++i)
             {
             String sLine = asLine[i];
-            if (sLine.length() > 0 && sLine.charAt(0) == '[')
+            if (!sLine.isEmpty() && sLine.charAt(0) == '[')
                 {
                 int of = sLine.indexOf(']');
                 assert of > 0;
@@ -348,6 +348,7 @@ public class SetTest
                         };
         }
 
+    @FunctionalInterface
     public interface Data
         {
         Object rnd();
@@ -405,7 +406,7 @@ public class SetTest
         public void parse(String[] asParams)
             {
             oAdd = asParams[0];
-            assert asParams[1].equals("->");
+            assert "->".equals(asParams[1]);
             fExpect = Boolean.valueOf(asParams[2]);
             }
 
@@ -445,7 +446,7 @@ public class SetTest
         public void parse(String[] asParams)
             {
             oRemove = asParams[0];
-            assert asParams[1].equals("->");
+            assert "->".equals(asParams[1]);
             fExpect = Boolean.valueOf(asParams[2]);
             }
 
@@ -479,7 +480,7 @@ public class SetTest
         @Override
         public void parse(String[] asParams)
             {
-            assert asParams[0].equals("->");
+            assert "->".equals(asParams[0]);
             nExpect = Integer.valueOf(asParams[1]);
             }
 
@@ -512,7 +513,7 @@ public class SetTest
         @Override
         public void parse(String[] asParams)
             {
-            assert asParams[0].equals("->");
+            assert "->".equals(asParams[0]);
             }
 
         @Override
@@ -542,7 +543,7 @@ public class SetTest
         @Override
         public void parse(String[] asParams)
             {
-            assert asParams[0].equals("->");
+            assert "->".equals(asParams[0]);
             nExpect = Integer.valueOf(asParams[1]);
             }
 
@@ -592,7 +593,7 @@ public class SetTest
         public void parse(String[] asParams)
             {
             cIter = Integer.valueOf(asParams[0]);
-            assert asParams[1].equals("->");
+            assert "->".equals(asParams[1]);
             }
 
         @Override

@@ -196,7 +196,7 @@ public class UnresolvedTypeConstant
         String sName = m_constId.isNameResolved()
                         ? m_constId.getResolvedConstant().getValueString()
                         : m_constId.getValueString();
-        return sName.equals("Tuple");
+        return "Tuple".equals(sName);
         }
 
     @Override
