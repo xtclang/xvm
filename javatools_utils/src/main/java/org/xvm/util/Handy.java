@@ -711,7 +711,6 @@ public final class Handy
             }
         else
             {
-            assert !Character.isValidCodePoint(ch);
             return !Character.isValidCodePoint(ch) ||
                     Character.getType(ch) == Character.CONTROL ||
                     ch == '\u2028' || ch == '\u2029';
@@ -1580,6 +1579,7 @@ public final class Handy
      * @throws IOException  indicates a failure to read the character contents
      *         of the specified file
      */
+    @SuppressWarnings("fallthrough")
     public static char[] readFileChars(File file, String sEncoding)
             throws IOException
         {

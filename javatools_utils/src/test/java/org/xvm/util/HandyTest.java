@@ -410,8 +410,6 @@ public class HandyTest
         assertEquals(0x0F, hexitValue('f'));
         }
 
-
-    @Disabled
     @Test
     public void testIsCharEscaped()
         {
