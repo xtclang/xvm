@@ -31,9 +31,9 @@ import java.util.Date;
  */
 public final class Handy
     {
-        private Handy() {
-        }
-        // ----- String formatting ---------------------------------------------------------------------
+    private Handy() {}
+
+    // ----- String formatting ---------------------------------------------------------------------
 
     /**
      * Take the passed nibble (the low order 4 bits of the int) and return the corresponding hexit
@@ -1869,7 +1869,7 @@ public final class Handy
             }
 
         final Class clz1 = o1.getClass();
-        final Class clz2 = o1.getClass();
+        final Class clz2 = o2.getClass();
         if (clz1 != clz2)
             {
             return false;

@@ -23,7 +23,7 @@ public class LinkedIterator<E>
      */
     public LinkedIterator(Iterator<E>... aIter)
         {
-        f_aIter = Objects.requireNonNullElse(aIter, new Iterator[0]);
+        f_aIter = Objects.requireNonNullElse(aIter, NO_ITERATORS);
         }
 
 
@@ -161,4 +161,9 @@ public class LinkedIterator<E>
      * {@link #HAS_NEXT}, or {@link #CAN_REMOVE}.
      */
     private int m_nState = NOT_READY;
+
+    /**
+     * Empty array of Iterators (to avoid unnecessary allocation).
+     */
+    private static final Iterator[] NO_ITERATORS = new Iterator[0];
     }
