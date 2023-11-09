@@ -109,3 +109,12 @@ val installLocalDist by tasks.registering {
         logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
     }
 }
+
+val importUnicodeFiles by tasks.registering {
+    group = BUILD_GROUP
+    description = "Download and regenerate the unicode file as resources."
+    dependsOn(gradle.includedBuild("xdk").task(":lib-ecstasy:importUnicodeFiles"))
+    doLast {
+        logger.lifecycle("$prefix Finished $name (generated and imported new unicode files)")
+    }
+}
