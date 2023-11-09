@@ -3,6 +3,7 @@ package org.xvm.plugin;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 
+@SuppressWarnings("serial")
 public class XtcBuildException extends GradleException {
     public XtcBuildException(final String msg) {
         this(msg, null);

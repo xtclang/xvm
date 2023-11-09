@@ -136,6 +136,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return sb.toString();
     }
 
+    /**
+     * Create the XTC run task. If there are no explicit modules in the xtcRun config, we don't create it,
+     * or we log an error or something. The run task will depend on the compile task, and make sure an xtc
+     * module in the source set is compiled.
+     *
+     * @param sourceSet
+     * @return
+     */
     private TaskProvider<XtcRunTask> createRunTask(final SourceSet sourceSet) {
         final var runTaskName = getRunTaskName(sourceSet, false);
         final var runTask = tasks.register(runTaskName, XtcRunTask.class, this, sourceSet);
@@ -404,30 +412,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
          * The Java sourceSets and the application of the Java plugin modifies the life cycle.
          * We may have to extend the compileClasspath and runtimeClasspath for the Java plugin with XTC
          * stuff to get the compilation properly hooked up, but this seems to work right now:
-         *
-         *   Tasks:
-         *      processResources
-         *      processTestResources
-         *      clean
-         *      clean<TaskName>
-         *      compileXtc <- tasks that contribute to compilation classpath, including jars on classpath via project eps>
-         *      classes <- compileJava, processResources
-         *      compileTestXtc <- classes, tasks that contribute to testClassPath, by default in the sourceSet.test.xtc { .. } dirs: i.e. src/test/x and build/xdk/test/xtc (for the binaries) or the sourceSet.test.getOutput()
-         *      testClasses <- compileTestJava, processTestResources
-         *      test <- testClasses, and all tasks that produce the runtime classpath
-         *
-         *   SourceSet Tasks:
-         *      compile<SourceSet>Java <- all tasks that contribute to compilation classpath
-         *      process<SourceSet>Resources
-         *      <sourceSet>classes <- compileSourceSetJava, processSourceSetResources
-         *
-         *   Lifecycle Tasks:
-         *      assemble <- jar
-         *      check <- test (aggregate platform verification tasks)
-         *      build <- check, assemble
-         *      buildNeeded <- build and buildNeeded in projects that are testRuntimeClasspath dependencies
-         *      buildDependents <- build and buildDependent tasks in all project that have this project ad a dependency in their testRuntimeClasspath
-         *      build<ConfigName> - task rule, depends on all tasks that generate artifacts attached to the named <ConfigName> configuration
          */
         final var container = extensions.findByType(JavaPluginExtension.class);
         if (container == null) {

@@ -13,10 +13,11 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.42"
-xtcplugin = "0.4.42"
+xdk = "0.4.45"
+xtcplugin = "0.4.45"
 xdkgroup = "org.xvm"
 
+# Third party depenency and plugin versions.
 kohttp = "0.12.0"
 
 [plugins]
@@ -25,8 +26,9 @@ tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }
 download = { id = "de.undercouch.download", version = "5.5.0" }
 versions = { id = "com.github.ben-manes.versions", version = "0.49.0" }
 spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
-#shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 #nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
+maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
 
 [libraries]
 javatools = { module = "org.xvm:javatools", version.ref = "xdk" }

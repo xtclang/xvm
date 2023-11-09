@@ -198,7 +198,7 @@ public abstract class XtcCompileTask extends SourceTask {
         final var resourceDirs = sourceSet.getResources().getSrcDirs();
         resourceDirs.forEach(dir -> {
             if (!dir.exists()) {
-                project.warn("{} Resource directory does not exist: {} (ignoring passing as input to compiler)", prefix, dir);
+                project.info("{} Resource directory does not exist: {} (ignoring passing as input to compiler)", prefix, dir);
             } else {
                 project.info("{} Adding resource directory: {}", prefix, dir);
                 args.add("-r", dir.getAbsolutePath());

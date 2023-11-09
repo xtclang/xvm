@@ -369,5 +369,5 @@ fun Project.executeCommand(vararg args: String): String? {
 fun Task.alwaysRerunTask() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
-    logger.warn("${project.prefix} WARNING: Task '$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle..")
+    logger.warn("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
 }
