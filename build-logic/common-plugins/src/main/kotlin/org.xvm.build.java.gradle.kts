@@ -57,8 +57,7 @@ tasks.withType<JavaCompile>().configureEach {
 
     val args = buildList {
         if (lint) {
-            add("-Xlint:unchecked")
-            add("-Xlint:deprecation")
+            add("-Xlint:all") // was: unchecked, deprecation, preview
         }
         if (enablePreview) {
             add("--enable-preview")
