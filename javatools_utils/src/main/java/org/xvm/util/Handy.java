@@ -711,7 +711,6 @@ public final class Handy
             }
         else
             {
-            assert !Character.isValidCodePoint(ch);
             return !Character.isValidCodePoint(ch) ||
                     Character.getType(ch) == Character.CONTROL ||
                     ch == '\u2028' || ch == '\u2029';
