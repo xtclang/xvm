@@ -1,8 +1,8 @@
 package org.xvm.xrun;
 
-import org.xvm.ModPart;
+import org.xvm.xtc.ModPart;
 import org.xvm.XEC;
-import org.xvm.xclz.XRunClz;
+import org.xvm.xec.XRunClz;
 
 /**
    A Container: a self-contained set of types
