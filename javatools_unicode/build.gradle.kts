@@ -40,7 +40,7 @@ val jar by tasks.existing(Jar::class)
 val run by tasks.registering {
     group = APPLICATION_GROUP
     description = "Run the BuildUnicodeTables tool, after downloading the latest available data. This rebuilds our Unicode tables."
-    dependsOn(tasks.assemble, download)
+    dependsOn(tasks.assemble, downloadUcdFlatZip)
     outputs.dir(project.layout.buildDirectory.dir("resources/main/unicode"))
     doLast {
         val unicodeJar = jar.get().archiveFile

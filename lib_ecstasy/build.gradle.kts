@@ -1,3 +1,5 @@
+import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+
 /*
  * Build file for the Ecstasy core library of the XDK.
  *
@@ -44,7 +46,7 @@ sourceSets.main {
  * Gradle/Maven build infrastructure.  TODO: make this a build task.
  */
 val importUnicodeFiles by tasks.registering {
-    group = LifecycleBasePlugin.BUILD_GROUP
+    group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
     dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
     val unicodeResources = "${gradle.includedBuild("javatools_unicode").projectDir}/build/resources/unicode"
