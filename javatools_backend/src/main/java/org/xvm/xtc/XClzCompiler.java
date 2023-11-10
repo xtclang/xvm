@@ -1,6 +1,7 @@
-package org.xvm.xclz;
+package org.xvm.xtc;
 
 import org.xvm.XEC;
+import org.xvm.xec.XRunClz;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.ClassNotFoundException;
@@ -22,10 +23,7 @@ public abstract class XClzCompiler {
     ArrayList<JavaSrc> srcs = new ArrayList<>();
     srcs.add(new JavaSrc(clzname, source));
 
-    ArrayList<String> options = new ArrayList<String>(){{
-        add("-source");
-        add("17");
-        add("--enable-preview");
+    ArrayList<String> options = new ArrayList<>(){{
       }};
     
     JavaCompiler.CompilationTask task = compiler.getTask(null, xfile, errs, options, null, srcs);

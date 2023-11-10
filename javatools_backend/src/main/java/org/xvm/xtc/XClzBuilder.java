@@ -1,11 +1,17 @@
-package org.xvm.xclz;
+package org.xvm.xtc;
 
-import org.xvm.*;
-import org.xvm.cons.*;
-import org.xvm.util.*;
+import org.xvm.XEC;
+import org.xvm.util.NonBlockingHashMapLong;
+import org.xvm.util.SB;
+import org.xvm.xtc.*;
+import org.xvm.xtc.ast.AST;
+import org.xvm.xtc.ast.BlockAST;
+import org.xvm.xtc.ast.ReturnAST;
+import org.xvm.xtc.cons.*;
+import org.xvm.xec.XRunClz;
 import org.xvm.xrun.*;
 
-import static org.xvm.xclz.XType.*;
+import static org.xvm.xtc.XType.*;
 
 import java.lang.Character;
 import java.util.HashMap;
@@ -37,9 +43,9 @@ public class XClzBuilder {
   public MethodPart _meth;      // Method whose code is being parsed
   private CPool _pool;          // Parser for code buffer
   final HashMap<String,String> _names; // Java namification
-  final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
-  final NonBlockingHashMapLong<XType>  _ltypes; // Virtual register numbers to java types
-  int _nlocals;                 // Number of locals defined; popped when lexical scopes pop
+  public final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
+  public final NonBlockingHashMapLong<XType>  _ltypes; // Virtual register numbers to java types
+  public int _nlocals; // Number of locals defined; popped when lexical scopes pop
 
   // A collection of extra class source strings
   static final HashMap<String,String> XCLASSES = new HashMap<>();
@@ -137,7 +143,8 @@ public class XClzBuilder {
     // TODO: Classes in a Module?
     MethodPart run=null;
     for( Part part : clz._name2kid.values() ) {
-      if( part instanceof MMethodPart mmp ) {
+      switch( part ) {
+      case MMethodPart mmp: 
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
@@ -147,16 +154,23 @@ public class XClzBuilder {
           if( mmp._name.equals("run") ) run = meth; // Save the top-level run method
           jmethod(meth,meth._name);
         }
-      } else if( part instanceof PackagePart ) {
-        // Self module is OK
-      } else if( part instanceof PropPart pp ) {
+        break;
+      case PackagePart pack:
+        //if( pack._name.equals("lib") ) {
+        //  System.err.println("lib in "+clz._name);
+        //} else {
+        //  throw XEC.TODO();
+        //}
+        break;
+      case PropPart pp:
         XProp.make_class( MODULE,_sb,pp); // <clinit> for a static global property
-      } else if( part instanceof ClassPart clz_nest ) {
+        break;
+      case ClassPart clz_nest:
         // Nested class.  Becomes a java static inner class
         XClzBuilder X = new XClzBuilder(_sb);
         X.jclass_body(clz_nest);
-        
-      } else {
+        break;
+      default:
         throw XEC.TODO();
       }
     }
@@ -235,18 +249,21 @@ public class XClzBuilder {
 
     if( m._name2kid != null )
       for( Part part : m._name2kid.values() ) {
-        if( part instanceof PropPart pp )
+        switch( part ) {
+        case PropPart pp:
           XProp.make_class( MODULE,_sb,pp);
-        else if( part instanceof MMethodPart mmp ) {
-          // Lambda expressions have been inlined
-          if( mmp._name.equals("->") ) ;
-          else {
-            // Recursively dump name
+          break;
+        case MMethodPart mmp:
+          // Method-local nested methods.
+          // Lambda expressions have already been inlined
+          if( !mmp._name.equals("->") ) {
+            // Recursively dump nested method
             MethodPart meth = (MethodPart)mmp.child(mmp._name);
             jmethod(meth,mname+"$"+mmp._name);
           }
-        } 
-        else throw XEC.TODO();
+          break;
+        default: throw XEC.TODO();
+        }
       }
   }
 
@@ -277,22 +294,22 @@ public class XClzBuilder {
   }
 
   
-  int u8 () { return _pool.u8(); }  // Packed read
-  int u31() { return _pool.u31(); } // Packed read
-  long pack64() { return _pool.pack64(); }
+  public int u8 () { return _pool.u8(); }  // Packed read
+  public int u31() { return _pool.u31(); } // Packed read
+  public long pack64() { return _pool.pack64(); }
   // Read an array of method constants
-  Const[] consts() { return _pool.consts(); }
-  Const[] sparse_consts(int len) { return _pool.sparse_consts(len); }
+  public Const[] consts() { return _pool.consts(); }
+  public Const[] sparse_consts(int len) { return _pool.sparse_consts(len); }
   // Read a single method constant, advancing parse pointer
-  Const con() { return con(u31()); }
+  public Const con() { return con(u31()); }
   // Read a single method constant
-  Const con(int i) { return _meth._cons[i]; }
+  public Const con(int i) { return _meth._cons[i]; }
 
   // Read an array of AST kid terminals
-  AST[] kids() { return _kids(u31(),0); }
-  AST[] kids( int n ) { return _kids(n,0); }
+  public AST[] kids() { return _kids(u31(),0); }
+  public AST[] kids( int n ) { return _kids(n,0); }
   // Read an array of AST kid terminals, with a given bias (skipped elements are null).
-  AST[] kids_bias( int b ) { return _kids(u31(),b); }
+  public AST[] kids_bias( int b ) { return _kids(u31(),b); }
   
   private AST[] _kids( int n, int bias ) {
     if( n+bias==0 ) return null;
@@ -305,13 +322,13 @@ public class XClzBuilder {
 
   // --------------------------------------------------------------------------
 
-  void define( String name, XType type ) {
+  public void define( String name, XType type ) {
     // Track active locals
     _locals.put(_nlocals  ,name);
     _ltypes.put(_nlocals++,type);
   }
     // Pop locals at end of scope
-  void pop_locals(int n) {
+  public void pop_locals(int n) {
     while( n < _nlocals ) {
       _ltypes.remove(  _nlocals);
       _locals.remove(--_nlocals);
