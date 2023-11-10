@@ -1,7 +1,7 @@
 package org.xvm.xrun;
 
-import org.xvm.cons.RangeCon;
-import org.xvm.xclz.XClz;
+import org.xvm.xtc.cons.RangeCon;
+import org.xvm.xec.XClz;
 
 import java.lang.Iterable;
 import java.util.Iterator;

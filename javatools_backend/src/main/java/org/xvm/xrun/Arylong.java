@@ -1,7 +1,7 @@
 package org.xvm.xrun;
 
 import org.xvm.XEC;
-import org.xvm.xclz.XClz;
+import org.xvm.xec.XClz;
 import org.xvm.util.SB;
 import java.lang.Iterable;
 import java.util.Arrays;

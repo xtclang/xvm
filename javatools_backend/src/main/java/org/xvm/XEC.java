@@ -1,6 +1,10 @@
 package org.xvm;
 
 import org.xvm.xrun.*;
+import org.xvm.xtc.FilePart;
+import org.xvm.xtc.ModPart;
+import org.xvm.xtc.Part;
+
 import java.io.FileFilter;
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +18,7 @@ import java.util.HashMap;
  */
 public class XEC {
   public static final String ROOT = "org.xvm";
-  public static final String XCLZ = ROOT+".xclz";
+  public static final String XCLZ = ROOT+".xec";
   
   // Main Launcher.
   // Usage: (-L path)* [-M main] file.xtc args  
@@ -98,6 +102,10 @@ public class XEC {
     // Load a single file or directory of files.  Return a single module or null.
     ModPart load( String s ) throws IOException { return load(new File(s)); }
     ModPart load( File f ) throws IOException {
+      // Check for file already parsed
+      ModPart mod = get(f.toString());
+      if( mod != null ) return mod;
+      // Recursively load directories
       if( f.isDirectory() ) {
         for( File file : f.listFiles(ModulesOnly) )
           load(file);
@@ -105,8 +113,9 @@ public class XEC {
       } else {
         byte[] buf = Files.readAllBytes(f.toPath()); // The only IO, might throw here
         FilePart file = new FilePart(buf,f.toString()); // Parse the entire file, drops buffer after parsing
-        ModPart mod = file._mod;           // Extract main module
-        put(mod._name,mod);
+        mod = file._mod;        // Extract main module
+        put(mod._name,mod);     // Installed under module name
+        put(f.toString(),mod);  // Installed under file   name
         return mod;             // Return single module for single file
       }
     }

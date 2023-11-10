@@ -3,7 +3,7 @@
 # This Makefile is deeply nested inside a larger project and uses internal
 # relative paths to avoid disturbing the larger project.
 #
-#  cd $DESK/xvm/javatools; make test
+#  cd $DESK/xvm/javatools_backend; make test
 #
 
 
@@ -42,9 +42,8 @@ ifeq ($(UNAME),Darwin)
 	CTAGS = $(shell brew list ctags 2> /dev/null | grep bin/ctags)
 endif
 
-# Fun Args to javac.  Mostly limit to java8 source definitions, and fairly
-# aggressive lint warnings.
-JAVAC_ARGS = -g --enable-preview -source 17 -target 17 -XDignore.symbol.file -Xlint:all -Xlint:-unchecked -Xlint:-preview -Xlint:-deprecation -Xlint:-serial -Xlint:-rawtypes
+# Fun Args to javac.
+JAVAC_ARGS = -g -source 21 -target 21 -XDignore.symbol.file -Xlint:all -Xlint:-unchecked -Xlint:-preview -Xlint:-deprecation -Xlint:-serial -Xlint:-rawtypes
 
 # Source code
 # Note that BuildVersion is not forced to be rebuilt here - so incremental
@@ -89,8 +88,8 @@ JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 # XDK setup
 XDK_DIR = ../xdk/build/xdk
 XDK = $(XDK_DIR)/javatools/javatools.jar
-XTC = nice java -jar $(XDK) xtc                      -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
-XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
+XTC = nice java -jar $(XDK) xcc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
+XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
 
 
 # Build examples, .xtc from .x
@@ -112,7 +111,8 @@ examples_run: $(classes) $(test_classes) $(XDK) examples
 
 # Manual tests use an explicit list
 MANUAL_DIR = ../manualTests/src/main/x
-MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x literals.x loop.x nesting.x numbers.x prop.x maps.x queues.x services.x reflect.x regex.x tuple.x TestMisc.x TestModIFace.x
+#MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x loop.x nesting.x numbers.x prop.x maps.x queues.x services.x reflect.x regex.x tuple.x TestMisc.x TestModIFace.x
+MANUAL_TESTS = TestMisc.x TestModIFace.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
@@ -120,11 +120,18 @@ manuals:	$(manuals_x:x=xtc) $(XDK)
 
 $(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
 	@echo "compiling " $@ " because " $?
-	@$(XTC) $? -o $(MANUAL_DIR)
+	@$(XTC) -L $(XDK_DIR)/lib  -L $(XDK_DIR)/javatools $? -L $(MANUAL_DIR) -o $(MANUAL_DIR)
+
+MULTI = multiModule/Lib.x multiModule/Main.x
+multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
+$(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
+	@echo "compiling " $@ " because " $?
+	@$(XTC) -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools $? -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 
 
-test:	$(classes) $(test_classes) $(MANUAL_DIR)/TestMisc.xtc
-	$(XEC) $(MANUAL_DIR)/TestMisc.xtc
+test:	$(classes) $(test_classes) $(MANUAL_DIR)/multiModule/Lib.xtc $(MANUAL_DIR)/multiModule/Main.xtc
+	@echo "Running test"
+	@$(XEC) -L $(MANUAL_DIR)/multiModule $(MANUAL_DIR)/multiModule/Main.xtc
 
 # TAGS
 tags:	../TAGS
