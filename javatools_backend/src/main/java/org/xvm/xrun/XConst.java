@@ -1,11 +1,10 @@
 package org.xvm.xrun;
 
-import org.xvm.*;
+import org.xvm.XEC;
+import org.xvm.xec.XClz;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
-import org.xvm.xclz.XClz;
-import org.xvm.xclz.XType;
-import org.xvm.xclz.XClzBuilder;
+import org.xvm.xtc.*;
 
 public abstract class XConst extends XClz
   implements Comparable<XConst>,  // Java Comparable; XTC Comparable has equals, which is included in Java Object

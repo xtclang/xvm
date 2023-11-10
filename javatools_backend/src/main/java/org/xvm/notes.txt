@@ -1,4 +1,47 @@
 
+Ignore packages for now?
+
+
+* org/xvm/XEC.java - entry point
+
+* org/xvm/xtc - Read an XTC file support classes; ClassPart, *Part, CPool,Version,VerTree
+* org/xvm/xtc/cons - "cons" things from XTC files
+* org/xvm/xtc/AST  - "AST"  things from XTC files
+
+org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
+
+
+  org/xvm/xec - generated class strings act "as if" loaded from here
+* org/xvm/xec - runtime support classes (no ties with gen classes)
+* org/xvm/xec/XClz - base class for gen'd classes.
+  org/xvm/xec/??   - Common methods like TRACE, common enums... 
+* org/xvm/xec/XRunClz - Runnable XClz
+  org/xvm/xec/ecstasy/Iterable64 - extends XClz, implements Iterator<Long>
+  org/xvm/xec/ecstasy/collections/Array<E> - extends XClz, implements array list
+  org/xvm/xec/ecstasy/collections/Array64  - extends XClz, implements array list<long>
+
+
+XTC Modules- 
+- gen as org/xvm/xec/module.java, includes static init
+- includes main & run
+- which pass off to module/class run
+
+XTC top Class-
+- gen as org/xvm/xec/module/module.java
+
+XTC lower class
+- gen as org/xvm/xec/module/CLASSNAME.java
+
+
+So multiMethod example:
+
+org/xvm/xec/Main.java       - extends xec.XClz; import default; run() { new Main.Main().run(); }
+org/xvm/xec/Main/Main.java  - extends Main;     import MLib.JLib; run() { console.log; call Lib.greeting(); }
+org/xvm/xec/Lib.java        - extends xec.Xclz; import default;  empty_static;
+org/xvm/xec/Lib/Lib.java    - extends Lib;      String greeting() {return "hello world"}
+
+
+---------------------------
 XTC Null is Java null.
 XTC objects have a constructor, an assert & a finally.
 XTC Obj construct sequence.

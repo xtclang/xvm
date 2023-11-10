@@ -1,12 +1,12 @@
 package org.xvm.xrun;
 
 import org.xvm.XEC;
-import org.xvm.cons.TCon;
+import org.xvm.xtc.cons.TCon;
 import org.xvm.util.SB;
-import org.xvm.xclz.XClz;
-import org.xvm.xclz.XType;
+import org.xvm.xec.XClz;
+import org.xvm.xtc.XType;
 
-import static org.xvm.xclz.XClz.Mutability.*;
+import static org.xvm.xec.XClz.Mutability.*;
 
 import java.util.Objects;
 import java.util.HashMap;

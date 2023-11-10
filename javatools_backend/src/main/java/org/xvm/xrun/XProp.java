@@ -1,8 +1,8 @@
 package org.xvm.xrun;
 
-import org.xvm.*;
+import org.xvm.xtc.*;
 import org.xvm.util.SB;
-import org.xvm.xclz.*;
+import org.xvm.xec.XClz;
 
 public abstract class XProp extends XClz {
   
