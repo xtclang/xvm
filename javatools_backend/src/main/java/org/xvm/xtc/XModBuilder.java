@@ -1,7 +1,10 @@
-package org.xvm.xclz;
+package org.xvm.xtc;
 
-import org.xvm.*;
-import org.xvm.cons.*;
+import org.xvm.XEC;
+import org.xvm.xtc.ModPart;
+import org.xvm.xtc.MethodPart;
+import org.xvm.xtc.MMethodPart;
+import org.xvm.xtc.cons.*;
 import org.xvm.util.*;
 import org.xvm.xrun.*;
 
