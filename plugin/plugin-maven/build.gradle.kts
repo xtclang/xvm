@@ -3,4 +3,4 @@ plugins {
     alias(libs.plugins.maven.plugin.development)
 }
 
-logger.warn("$prefix Place holder for Maven version of XTC plugin. Composite root: $compositeRootProjectDirectory")
+logger.warn("$prefix Placeholder for Maven version of XTC plugin. Composite root: $compositeRootProjectDirectory")

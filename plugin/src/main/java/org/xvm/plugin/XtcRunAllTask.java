@@ -1,7 +1,6 @@
 package org.xvm.plugin;
 
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.TaskAction;
 import org.xvm.plugin.XtcRuntimeExtension.XtcRunModule;
 
 import javax.inject.Inject;
@@ -13,11 +12,6 @@ public class XtcRunAllTask extends XtcRunTask {
     @Inject
     public XtcRunAllTask(final XtcProjectDelegate project, final SourceSet moduleSourceSet) {
         super(project, moduleSourceSet);
-    }
-
-    @TaskAction
-    public void run() {
-        super.run();
     }
 
     @Override

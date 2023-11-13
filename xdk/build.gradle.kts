@@ -1,9 +1,7 @@
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -50,7 +48,7 @@ val xtcJavaToolsJarConsumer by configurations.registering {
     isCanBeConsumed = false
     outgoing.artifact(tasks.jar)
     attributes {
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
         attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
     }
 }
@@ -74,7 +72,7 @@ dependencies {
 }
 
 internal val xvmDist = xdkBuildLogic.xdkDistribution()
-logger.lifecycle("$prefix *** Building XDK; semantic version: ${property("semanticVersion")} ***")
+logger.lifecycle("$prefix *** Building XDK; semantic version: '${property("semanticVersion")}' ***")
 
 publishing {
     publications {

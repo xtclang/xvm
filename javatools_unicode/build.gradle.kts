@@ -39,16 +39,16 @@ val downloadUcdFlatZip by tasks.registering(Download::class) {
  */
 val jar by tasks.existing(Jar::class)
 
-val assemble by tasks.existing
-
 val run by tasks.registering {
     group = APPLICATION_GROUP
     description = "Run the BuildUnicodeTables tool, after downloading the latest available data. This rebuilds our Unicode tables."
-    dependsOn(assemble) //, downloadUcdFlatZip)
+
+    dependsOn(tasks.assemble)
     dependsOn(downloadUcdFlatZip)
-    outputs.dir(project.layout.buildDirectory.dir("resources/unicode/"))
-    outputs.dir(project.layout.buildDirectory.dir("resources/unicode/tables"))
-    alwaysRerunTask()
+    val buildDir = project.layout.buildDirectory
+    outputs.dir(buildDir.dir("resources/unicode/"))
+    outputs.dir(buildDir.dir("resources/unicode/tables"))
+
     doLast {
         val unicodeJar = jar.get().archiveFile
         val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
