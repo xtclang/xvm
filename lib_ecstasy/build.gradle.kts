@@ -1,3 +1,6 @@
+import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
+import org.gradle.api.attributes.Category.LIBRARY
+import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 
 /*
@@ -15,8 +18,8 @@ val xtcTurtle by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("mackDir"))
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("mackDir"))
     }
 }
 
@@ -27,8 +30,7 @@ dependencies {
     implementation(libs.javatools.unicode)
 }
 
-// Reference to the unicode table builder. TODO: Should be references through configuration, but that's not a P1 yet.
-
+// TODO: Hack; it's better to not directly refer to an included build instead of a configuration (resolvable), as with xtcTurtle.
 val unicode = gradle.includedBuild("javatools_unicode")
 val unicodeProjectDir = unicode.projectDir
 var unicodeResources = File(unicodeProjectDir, "build/resources/unicode")
@@ -39,18 +41,12 @@ xtcCompile {
 
 sourceSets.main {
     xtc {
-        srcDir(xtcTurtle)
+        srcDir(xtcTurtle) // mack.x is in a different project, and does not build on its own, hence we add it to the lib_ecstasy source set instead.
     }
     resources {
-        // This is a bit backwards, but it basically says "if the resource directory of javatools_unicode is there,
-        // use that as resource dir too", and not just the default in the source set (which is src/main/resources)
-        // for the main source set, which we are in.
-        if (unicodeResources.exists()) {
-            logger.lifecycle("$prefix javatools_unicode has a resource directory under build, which will be included in the lib_ecstasy binary. ($unicodeResources)")
-        } else {
-            logger.lifecycle("$prefix No unicode resources are found.")
-        }
-        srcDir(unicodeResources)
+        // NOTE: We want to avoid rebuilding the unicode files every run, but if they were part of the build, we could
+        // just add them as resources here and skip the entire lazy importUnicodeFiles approach.
+        // srcDir(unicodeResources)
     }
 }
 
@@ -66,14 +62,23 @@ val importUnicodeFiles by tasks.registering {
     group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
     dependsOn(unicode.task(":run"))
+    val outputDir = project.layout.projectDirectory.dir("src/main/resources/ecstasy/text")
     doLast {
         // Hardcode the resource directory where the unicode ends up.
-        val unicodeResources = "${unicode.projectDir}/build/resources/unicode"
         copy {
-
-            from(file(unicodeResources))
-            include("Char*.txt", "Char*.dat")
-            into(project.layout.projectDirectory.dir("src/main/resources/ecstasy/text"))
+            from(fileTree(unicodeResources))
+            into(outputDir)
+            include("**/Char*.txt")
+            include("**/Char*.dat")
+            includeEmptyDirs = false
+            eachFile {
+                relativePath = RelativePath(true, name)
+                logger.lifecycle("$prefix Copying unicode file: ${file.absolutePath} to ${outputDir.asFile.absolutePath}.")
+            }
+        }
+        logger.lifecycle("$prefix Unicode files copied to ${outputDir.asFile}. Please verify your git diff, test and commit.")
+        fileTree(outputDir).forEach {
+            logger.lifecycle("$prefix     $it")
         }
     }
 }
