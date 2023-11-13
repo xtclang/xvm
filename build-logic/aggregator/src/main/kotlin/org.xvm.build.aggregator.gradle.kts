@@ -10,13 +10,12 @@ plugins {
 }
 
 internal val Project.prefix get() = "[$name]"
+
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
 
-startBuildAggregator()
-
-fun startBuildAggregator() {
+internal val startBuildAggregator = Runnable {
     logger.lifecycle("$prefix Aggregating included build tasks:")
     gradle.includedBuilds.forEachIndexed { i, includedBuild ->
         logger.lifecycle("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
@@ -26,27 +25,29 @@ fun startBuildAggregator() {
     val startParameterTasks: List<String> = startParameter.taskNames
     if (startParameterTasks.isNotEmpty()) {
         logger.info("$prefix Start parameter tasks: $startParameterTasks")
-        if (startParameterTasks.size > 1 && startParameterTasks.find { it.contains("taskTree") }.isNullOrEmpty()) { // exemption granted for taskTree, which needs another tasks to instrument, and that is not part of the build.
+        if (startParameterTasks.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
             val msg = "$prefix Multiple start parameter tasks are not guaranteed to work. Please run each task individually."
             logger.error(msg)
             throw GradleException(msg)
         }
     }
 
-    logger.info("$prefix Start Parameter: $startParameter")
-}
+    logger.info("$prefix Start Parameter(s): $startParameter")
 
-listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME).forEach { taskName ->
-    logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
-    tasks.named(taskName) {
-        group = BUILD_GROUP
-        description = "Aggregates and executes the '$taskName' task for all included builds."
-        gradle.includedBuilds.forEach { includedBuild ->
-            dependsOn(includedBuild.task(":$taskName"))
-            logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+    listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME).forEach { taskName ->
+        logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
+        tasks.named(taskName) {
+            group = BUILD_GROUP
+            description = "Aggregates and executes the '$taskName' task for all included builds."
+            gradle.includedBuilds.forEach { includedBuild ->
+                dependsOn(includedBuild.task(":$taskName"))
+                logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
+            }
         }
     }
 }
+
+startBuildAggregator.run()
 
 /*
  * Register aggregated publication tasks to the top level project, to ensure we can publish both
@@ -79,6 +80,9 @@ val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
+    doLast {
+        logger.lifecycle("$prefix Finished $name.")
+    }
 }
 
 listOfNotNull("list", "delete").forEach { taskPrefix ->
@@ -95,7 +99,7 @@ listOfNotNull("list", "delete").forEach { taskPrefix ->
 val install by tasks.registering {
     group = "distribution"
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
-    dependsOn(xdk.task(":install"))
+    dependsOn(xdk.task(":installDist"))
     doLast {
         logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
     }
@@ -104,7 +108,7 @@ val install by tasks.registering {
 val installLocalDist by tasks.registering {
     group = "distribution"
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
-    dependsOn(gradle.includedBuild("xdk").task(":installLocalDist"))
+    dependsOn(xdk.task(":$name"))
     doLast {
         logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
     }
@@ -113,7 +117,7 @@ val installLocalDist by tasks.registering {
 val importUnicodeFiles by tasks.registering {
     group = BUILD_GROUP
     description = "Download and regenerate the unicode file as resources."
-    dependsOn(gradle.includedBuild("xdk").task(":lib-ecstasy:importUnicodeFiles"))
+    dependsOn(xdk.task(":$name"))
     doLast {
         logger.lifecycle("$prefix Finished $name (generated and imported new unicode files)")
     }

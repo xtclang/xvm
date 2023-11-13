@@ -93,7 +93,7 @@ val sanityCheckJar by tasks.registering {
     doLast {
         logger.info("$prefix Sanity checking integrity of generated jar file.")
 
-        verifyJarFileContents(
+        DebugBuild.verifyJarFileContents(
             project,
             listOfNotNull(
                 "implicit.x", // verify the implicits are in the jar

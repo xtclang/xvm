@@ -1,0 +1,15 @@
+Semantic versioning from gradle properties? Probably not a good idea? Enough in the plugin and the xdk?
+Unicode
+
+Maybe after merge:
+UseLogging, prefix?
+git maven plugin to help ease the correct git flow?
+
+
+# org.xtclang artifact id so we own the domain.
+#
+# FINISH TH EXAMPLE APPS.
+
+# Need to support releases, release tagging a windows exe installer in some way
+
+# Use the gitlab actions runner framework on the command line.

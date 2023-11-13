@@ -1,11 +1,12 @@
-package org.xvm.plugin;
+package org.xvm.plugin.internal;
 
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
+import org.xvm.plugin.ProjectDelegate;
+import org.xvm.plugin.XtcTaskExtension;
 
 import java.util.ArrayList;
 import java.util.Arrays;

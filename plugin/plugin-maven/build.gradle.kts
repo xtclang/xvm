@@ -1,6 +1,10 @@
 plugins {
-    id("org.xvm.build.version")
-    alias(libs.plugins.maven.plugin.development)
+    id("org.xvm.build.java")
+    // TODO: alias(libs.plugins.maven.plugin.development)
 }
 
-logger.warn("$prefix Place holder for Maven version of XTC plugin. Composite root: $compositeRootProjectDirectory")
+val build by tasks.existing {
+    doFirst {
+        logger.warn("$prefix Placeholder for Maven version of XTC plugin. Composite root: $compositeRootProjectDirectory")
+    }
+}

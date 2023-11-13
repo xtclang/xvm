@@ -19,13 +19,12 @@ dependencies {
     implementation(libs.javatools.utils)
 }
 
-internal val ucdZip = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
-
 /**
  * Download the ucd zip file from the unicode site, if it does not exist.
  */
 val downloadUcdFlatZip by tasks.registering(Download::class) {
-    src(ucdZip)
+    val url = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
+    src(url)
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
@@ -39,16 +38,19 @@ val downloadUcdFlatZip by tasks.registering(Download::class) {
  */
 val jar by tasks.existing(Jar::class)
 
-val assemble by tasks.existing
-
 val run by tasks.registering {
     group = APPLICATION_GROUP
     description = "Run the BuildUnicodeTables tool, after downloading the latest available data. This rebuilds our Unicode tables."
-    dependsOn(assemble) //, downloadUcdFlatZip)
+
+    dependsOn(jar)
     dependsOn(downloadUcdFlatZip)
-    outputs.dir(project.layout.buildDirectory.dir("resources/unicode/"))
-    outputs.dir(project.layout.buildDirectory.dir("resources/unicode/tables"))
+
+    val buildDir = project.layout.buildDirectory
+    outputs.dir(buildDir.dir("resources/unicode/"))
+    outputs.dir(buildDir.dir("resources/unicode/tables"))
+
     alwaysRerunTask()
+
     doLast {
         val unicodeJar = jar.get().archiveFile
         val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile

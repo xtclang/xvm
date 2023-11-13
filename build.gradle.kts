@@ -7,4 +7,3 @@ plugins {
     id("org.xvm.build.aggregator")
     alias(libs.plugins.tasktree)
 }
-

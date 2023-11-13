@@ -5,52 +5,46 @@ import org.gradle.internal.os.OperatingSystem
 class XdkDistribution(buildLogic: XdkBuildLogic) {
     companion object {
         const val DISTRIBUTION_GROUP = "distribution"
-        const val BUILD_NUMBER = "BUILD_NUMBER"
-        const val CI = "CI"
+
+        private const val BUILD_NUMBER = "BUILD_NUMBER"
+        private const val CI = "CI"
 
         private val CURRENT_OS = OperatingSystem.current()
+        private val CI_ENABLED = System.getenv(CI) == "true"
     }
 
     private val project = buildLogic.project
     private val logger = project.logger
     private val prefix = project.prefix
 
-    private val distributionVersion: String = buildString {
-        fun isCiBuild(): Boolean {
-            return System.getenv(CI) != null
-        }
+    // Default: "xdk"
+    val distributionName: String get() = project.name
 
-        fun getBuildNumber(): String? {
-            return System.getenv(BUILD_NUMBER)
-        }
-
-        fun getLatestGitCommit(): String? {
-            return project.executeCommand("git", "rev-parse", "HEAD")
-        }
-
-        fun getCiTag(): String {
-            if (!isCiBuild()) {
-                return ""
-            }
-            val buildNumber = getBuildNumber()
-            val gitCommit = getLatestGitCommit()
-            if (buildNumber == null || gitCommit == null) {
-                logger.error("$prefix Cannot resolve CI build tag (buildNumber=$buildNumber, commit=$gitCommit)")
-                return ""
-            }
-            return "-ci-$buildNumber+$gitCommit".also {
-                logger.lifecycle("$prefix Configuration XVM distribution for CI build: '$it'")
-            }
-        }
-
+    val distributionVersion: String get() = buildString {
         append(project.version)
-        append(getCiTag())
+        if (CI_ENABLED) {
+            val buildNumber = System.getenv(BUILD_NUMBER) ?: ""
+            val gitCommitHash = project.executeCommand("git", "rev-parse", "HEAD") ?: ""
+            if (buildNumber.isNotEmpty() || gitCommitHash.isNotEmpty()) {
+                logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$gitCommitHash')")
+                return@buildString
+            }
+            append("-ci-$buildNumber+$gitCommitHash")
+        }
+    }.also {
+        logger.lifecycle("$prefix Configuration XVM distributionVersion for build: '$it'")
     }
 
-    val distributionName: String = project.name
-
     init {
-        logger.lifecycle("$prefix Configured XVM distribution: $this (distribution version: '$distributionVersion', target os: '$CURRENT_OS')")
+        logger.lifecycle("""
+            $prefix Configuring XVM distribution: '$this'
+            $prefix   distributionName:    '$distributionName'
+            $prefix   distributionVersion: '$distributionVersion'
+            $prefix   current OS:          '$CURRENT_OS'
+            $prefix   env:
+            $prefix       CI:                  '$CI_ENABLED' (CI property can be overwritten)
+            $prefix       GITHUB_ACTIONS:      '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
+        """.trimIndent())
     }
 
     fun getLocalDistBackupDir(localDistVersion: String): Provider<Directory> {

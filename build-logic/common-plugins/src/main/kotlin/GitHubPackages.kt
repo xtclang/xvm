@@ -5,11 +5,14 @@ import io.github.rybalkinsd.kohttp.dsl.context.Method.GET
 import io.github.rybalkinsd.kohttp.dsl.http
 import io.github.rybalkinsd.kohttp.jackson.ext.toJson
 import okhttp3.Response
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Helper class to access GitHub packages for the "xtclang" org, and other build logic
  * for publishing XDK build artifacts.
  */
+@OptIn(ExperimentalEncodingApi::class)
 class GitHubPackages(buildLogic: XdkBuildLogic) {
     @Suppress("MemberVisibilityCanBePrivate")
     companion object Rest {
@@ -28,11 +31,30 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
          *      DELETE: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions/VERSION_ID
          * Get versions of a package for an organization:
          *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions
+         *
+         * The GitHub Maven package repository should, if possible, be publically available for "package:read"
+         * access. It should be enough to connect the package repo to the public XVM repo. Alternatives are
+         * a shared "not so secret" secret token, as described here:
+         *      https://docs.github.com/en/packages/learn-github-packages/about-github-packages#authenticating-to-github-packages
+         *      https://github.com/orgs/community/discussions/26634
+         *      git clone https://github.com/jcansdale-test/maven-consume
+         *         (can also be: docker run jcansdale/gpr encode TOKEN)
          */
         const val GITHUB_PUBLICATION_NAME = "GitHub"
         const val GITHUB_HOST = "api.github.com"
         const val SCHEME = "https"
         const val JSON_PACKAGE_NAME = "name"
+
+        const val GITHUB = "org.xvm.github"
+        const val GITHUB_ORG = "$GITHUB.organization"
+        const val GITHUB_USER = "$GITHUB.user"
+        const val GITHUB_TOKEN = "$GITHUB.token"
+        const val GITHUB_TOKEN_RO = "$GITHUB.token.readonly"
+        const val GITHUB_REPO_URL = "$GITHUB.repository.url"
+        const val GITHUB_FORCE_READ_ONLY = "$GITHUB.readonly"
+
+        const val GITHUB_ORG_DEFAULT_VALUE = "xtclang"
+        const val GITHUB_USER_RO_DEFAULT_VALUE = "xtclang-bot"
 
         fun restHeaders(token: String): List<Pair<String, String>> = listOfNotNull(
             "Accept" to "application/vnd.github+json",
@@ -44,11 +66,47 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
     private val logger = project.logger
     private val prefix = project.prefix
 
-    val gitHubUser: String = buildLogic.getProperty("org.xvm.github.user", "")
-    val gitHubOrganization: String = buildLogic.getProperty("org.xvm.github.organization", "xtclang")
-    val gitHubToken: String = buildLogic.getProperty("org.xvm.github.token", System.getenv("GITHUB_TOKEN") ?: "")
-    val gitHubUrl: String = buildLogic.getProperty("org.xvm.github.repository.url", "")
-    val gitHubCredentials: Pair<String, String> = gitHubUser to gitHubToken
+    val gitHubOrganization: String
+    val gitHubUrl: String
+    val gitHubReadOnly: Boolean
+    val gitHubUser: String
+    val gitHubToken: String
+    val gitHubCredentials: Pair<String, String>
+
+    init {
+        with(buildLogic) {
+            fun decodeToken(str: String): String {
+                return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
+            }
+
+            gitHubOrganization = getProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)
+            gitHubUrl = getProperty(GITHUB_REPO_URL, "")
+
+            val forceRo = getPropertyBoolean(GITHUB_FORCE_READ_ONLY, false)
+            if (forceRo) {
+                logger.warn("$prefix *** $GITHUB_FORCE_READ_ONLY=true; forcing read-only common GitHub credentials. No publishing can take place.")
+            }
+            val rwToken = getProperty(GITHUB_TOKEN, System.getenv("GITHUB_TOKEN") ?: "")
+            val roToken = getProperty(GITHUB_TOKEN_RO, "")
+            val token: String
+            val user: String
+            if (forceRo || rwToken.isEmpty()) {
+                // Attempt read only mode
+                user = GITHUB_USER_RO_DEFAULT_VALUE
+                token = decodeToken(roToken)
+                gitHubReadOnly = true
+                logger.lifecycle("$prefix GitHub read only mode credentials fallback. ($user, $roToken)")
+            } else {
+                user = getProperty(GITHUB_USER, "")
+                token = rwToken
+                gitHubReadOnly = false
+            }
+
+            gitHubUser = user
+            gitHubToken = token
+            gitHubCredentials = gitHubUser to gitHubToken
+        }
+    }
 
     fun queryXtcLangPackageNames(): List<String> {
         return buildList {
@@ -106,9 +164,10 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
 
         logger.info("$prefix Checking GitHub repo URL: '$gitHubUrl'")
         if (gitHubUrl != gitHubUrl.lowercase()) {
-            throw project.buildException("$prefix The repository URL '$gitHubUrl' needs to contain all-lowercase owner and repository names.")
+            throw project.buildException("The repository URL '$gitHubUrl' needs to contain all-lowercase owner and repository names.")
         }
 
+        logger.lifecycle("$prefix GitHub credentials appear to be well-formed. $gitHubUser")
         return true
     }
 
@@ -119,7 +178,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             path = httpPath
             header {
                 if (gitHubToken.isEmpty()) {
-                    throw project.buildException("$prefix Could not resolve an access token for GitHub from the properties and/or environment.")
+                    throw project.buildException("Could not resolve an access token for GitHub from the properties and/or environment.")
                 }
                 restHeaders(gitHubToken).forEach { (k, v) -> k to v }
             }
@@ -129,7 +188,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
         }.use {
             logger.info("$prefix REST $mtd response status code: ${it.code()}")
             if (!it.isSuccessful) {
-                throw project.buildException("$prefix REST $mtd response not successful: $it (code: ${it.code()})")
+                throw project.buildException("REST $mtd response not successful: $it (code: ${it.code()})")
             }
             it to runCatching { it.toJson() }.getOrNull()
         }

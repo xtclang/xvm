@@ -1697,6 +1697,20 @@ public abstract class Launcher
             }
         }
 
+    /**
+     * A console that does not terminate the process, and throws an exception instead.
+     * Because we do not want to access the javatools.jar at compile time for the XTC plugin and IDE
+     * support, and because we sometimes (for debugging purposes), want to invoke a Compiler
+     * and Runner with "fork = false", instead of JavaExec, until further architectural
+     * progress has been made, we won't inherit the Console interface externally at the moment.
+     */
+    public static class PluginConsole implements Console {
+        @Override
+        public void abort(final boolean fError) {
+            err("Aborting with error: " + fError);
+            throw new IllegalStateException(String.valueOf(fError));
+        }
+    }
 
     // ----- constants -----------------------------------------------------------------------------
 

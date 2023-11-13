@@ -13,4 +13,4 @@ repositories {
     gradlePluginPortal()
 }
 
-logger.lifecycle("Kotlin details: (embedded Kotlin version: $embeddedKotlinVersion)")
+logger.lifecycle("[${project.name}] Gradle version: v${gradle.gradleVersion} (embedded Kotlin: v$embeddedKotlinVersion).")

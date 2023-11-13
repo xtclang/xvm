@@ -1,10 +1,11 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
-import org.gradle.api.logging.LogLevel;
+import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.ProjectDelegate;
+import org.xvm.plugin.XtcProjectDelegate;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,49 +19,41 @@ import static org.xvm.plugin.Constants.JAR_MANIFEST_PATH;
 import static org.xvm.plugin.Constants.JAVATOOLS_ARTIFACT_ID;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 
+/**
+ * Launcher logic that runs the XTC launchers from classes on the classpath.
+ */
 public class JavaExecLauncher extends XtcLauncher {
 
-    private final XtcProjectDelegate delegate;
-
-    JavaExecLauncher(final XtcProjectDelegate delegate) {
-        super(delegate.getProject());
-        this.delegate = delegate;
+    JavaExecLauncher(final Project project, final String mainClass) {
+        super(project, mainClass);
     }
 
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
             throw buildException("Failed to resolve javatools.jar in any classpath.");
         }
         info("{} '{}' {}; Using javatools.jar in classpath from: {}", prefix, args.getIdentifier(), args.getClass(), javaToolsJar.getAbsolutePath());
-        info("{} JavaExec command: {}", prefix, args.toString(javaToolsJar));
+        lifecycle("{} JavaExec command: {}", prefix, args.toString(javaToolsJar));
 
-        final var out = new ByteArrayOutputStream();
-        final var err = new ByteArrayOutputStream();
-        final var result = project.getProject().javaexec(spec -> {
-            spec.setStandardOutput(out);
-            spec.setErrorOutput(err);
+        final var builder = XtcExecResult.builder(getClass(), args);
+        return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {
+            spec.setStandardOutput(builder.getOut());
+            spec.setErrorOutput(builder.getErr());
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(args.getMainClassName());
             spec.args(args.toList());
             spec.jvmArgs(args.getJvmArgs());
             spec.setIgnoreExitValue(true);
-        });
-
-        final var exitValue = result.getExitValue();
-        final boolean success = exitValue == 0;
-        log(success ? LogLevel.INFO : LogLevel.ERROR, "{} '{}' JavaExec return value: {}", prefix, args.getMainClassName(), exitValue);
-
-        showOutput(args, out.toString(), err.toString());
-        return result;
+        })));
     }
 
     String readXdkVersionFromJar(final File jar) {
         return readXdkVersionFromJar(logger, prefix, jar);
     }
 
-    static String readXdkVersionFromJar(final Logger logger, final String prefix, final File jar) {
+    public static String readXdkVersionFromJar(final Logger logger, final String prefix, final File jar) {
         if (jar == null) {
             return null;
         }
@@ -79,10 +72,12 @@ public class JavaExecLauncher extends XtcLauncher {
     }
 
     private boolean isJavaToolsJar(final File file) {
-        final boolean ok = "jar".equalsIgnoreCase(getFileExtension(file)) &&
+        final boolean ok = "jar".equalsIgnoreCase(ProjectDelegate.getFileExtension(file)) &&
                 file.getName().startsWith(JAVATOOLS_ARTIFACT_ID) &&
                 readXdkVersionFromJar(file) != null;
-        info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
+        if (ok) {
+            info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
+        }
         return ok;
     }
 
@@ -110,12 +105,11 @@ public class JavaExecLauncher extends XtcLauncher {
     }
 
     private File resolveJavaTools() {
-        // TODO: Way too complicated.
-        final var javaToolsFromConfig =
-                delegate.filesFrom(true, XTC_CONFIG_NAME_JAVATOOLS_INCOMING).filter(this::isJavaToolsJar);
+        // TODO: Way too complicated, just making absolutely sure that we don't mix classpaths for e.g. XDK development, and something
+        //   that is a distribution installed locally, thinking one is the other. This can be solved through artifact signing instead.
+        final var javaToolsFromConfig = filesFrom(true, XTC_CONFIG_NAME_JAVATOOLS_INCOMING).filter(this::isJavaToolsJar);
         final var javaToolsFromXdk =
-                project.getProject().fileTree(delegate.getXdkContentsDir()).filter(this::isJavaToolsJar);
-
+                project.getProject().fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(this::isJavaToolsJar);
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
         if (resolvedFromConfig == null && resolvedFromXdk == null) {

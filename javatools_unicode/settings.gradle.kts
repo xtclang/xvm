@@ -7,6 +7,4 @@ plugins {
     id("org.xvm.build.common")
 }
 
-rootProject.name = "javatools-unicode"
-
-includeBuild("../javatools_utils")
+rootProject.name = "xtc-dev"

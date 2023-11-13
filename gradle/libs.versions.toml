@@ -13,22 +13,27 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.45"
-xtcplugin = "0.4.45"
+xdk = "0.4.42"
+xtcplugin = "0.4.42"
 xdkgroup = "org.xvm"
 
 # Third party depenency and plugin versions.
 kohttp = "0.12.0"
 
 [plugins]
+# The XTC plugin, referred from an includedBuild or a third party repository user; the same config will work.
 xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtcplugin" }
-tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }
-download = { id = "de.undercouch.download", version = "5.5.0" }
-versions = { id = "com.github.ben-manes.versions", version = "0.49.0" }
-spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
-shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+download = { id = "de.undercouch.download", version = "5.5.0" }          # Plugin used e.g for downloading unicode data.
+versions = { id = "com.github.ben-manes.versions", version = "0.50.0" }  # Plugin for ./gradlew dependencyUpdates task.
+tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }         # Plugin for ./gradlew taskTree tasks.
+gradle-plugin-portal-publish = { id = "com.gradle.plugin-publish", version = "1.2.1" }
+
+# TODO: Plugins used in ongoing work, and unfinished branches from master.
+#spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
+#shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 #nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
-maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
+#maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
+#version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version = "0.8.1" }
 
 [libraries]
 javatools = { module = "org.xvm:javatools", version.ref = "xdk" }
