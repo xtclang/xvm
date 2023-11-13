@@ -48,11 +48,18 @@ sourceSets.main {
 val importUnicodeFiles by tasks.registering {
     group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
-    dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
-    val unicodeResources = "${gradle.includedBuild("javatools_unicode").projectDir}/build/resources/unicode"
-    copy {
-        from(file(unicodeResources))
-        include("Char*.txt", "Char*.dat")
-        into(project.layout.projectDirectory.dir("src/main/resources/ecstasy/text"))
+    // TODO: Do NOT depend directly on included build. Use configurations instead. Do not learn or use anything from this. It's not good.
+    // Retrieve javatools unicode.
+    val unicode = gradle.includedBuild("javatools_unicode")
+    // Run the unicode task to create the resources.
+    dependsOn(unicode.task(":run"))
+    doLast {
+        // Hardcode the resource directory where the unicode ends up.
+        val unicodeResources = "${unicode.projectDir}/build/resources/unicode"
+        copy {
+            from(file(unicodeResources))
+            include("Char*.txt", "Char*.dat")
+            into(project.layout.projectDirectory.dir("src/main/resources/ecstasy/text"))
+        }
     }
 }
