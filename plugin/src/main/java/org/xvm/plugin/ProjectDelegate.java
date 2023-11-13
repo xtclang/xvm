@@ -160,7 +160,7 @@ public abstract class ProjectDelegate<T, R> {
         return prefix(project) + " '" + id + '\'';
     }
 
-    void log(final LogLevel level, final String str, Object... args) {
+    void log(final LogLevel level, final String str, final Object... args) {
         final String msg = String.format(str.replace("{}", "%s"), args);
         if (LOG_ALL_LEVELS_TO_STDERR) {
             System.err.println(msg);
@@ -169,19 +169,19 @@ public abstract class ProjectDelegate<T, R> {
         logger.log(level, msg);
     }
 
-    void error(final String str, Object... args) {
+    void error(final String str, final Object... args) {
         log(LogLevel.ERROR, str, args);
     }
 
-    void warn(final String str, Object... args) {
+    void warn(final String str, final Object... args) {
         log(LogLevel.WARN, str, args);
     }
 
-    void lifecycle(final String str, Object... args) {
+    void lifecycle(final String str, final Object... args) {
         log(LogLevel.LIFECYCLE, str, args);
     }
 
-    void info(final String str, Object... args) {
+    void info(final String str, final Object... args) {
         log(LogLevel.INFO, str, args);
     }
 

@@ -141,8 +141,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
      * or we log an error or something. The run task will depend on the compile task, and make sure an xtc
      * module in the source set is compiled.
      *
-     * @param sourceSet
-     * @return
+     * @param sourceSet the source set (typically main or test), but can be customized through the standard
+     *                  mechanisms, of course.
+     * @return the task provider of the rn task.
      */
     private TaskProvider<XtcRunTask> createRunTask(final SourceSet sourceSet) {
         final var runTaskName = getRunTaskName(sourceSet, false);
@@ -193,7 +194,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 final var semanticVersion = getSemanticVersion();
                 lifecycle("{} Writing version information: {}", prefix, semanticVersion);
                 try {
-                    Files.writeString(version.get().getAsFile().toPath(), semanticVersion);
+                    Files.writeString(version.get().getAsFile().toPath(), semanticVersion + System.lineSeparator());
                 } catch (final IOException e) {
                     throw buildException("I/O error when writing version file: '" + e.getMessage() + '\'', e);
                 }
@@ -426,7 +427,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void checkProjectIsVersioned() {
         if (UNSPECIFIED.equalsIgnoreCase(project.getVersion().toString())) {
-            lifecycle("WARNING: project {} has unspecified version.", prefix);
+            lifecycle("WARNING: Project {} has unspecified version.", prefix);
         }
     }
 
