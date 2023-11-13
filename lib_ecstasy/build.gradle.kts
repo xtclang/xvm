@@ -27,6 +27,12 @@ dependencies {
     implementation(libs.javatools.unicode)
 }
 
+// Reference to the unicode table builder. TODO: Should be references through configuration, but that's not a P1 yet.
+
+val unicode = gradle.includedBuild("javatools_unicode")
+val unicodeProjectDir = unicode.projectDir
+var unicodeResources = File(unicodeProjectDir, "build/resources/unicode")
+
 xtcCompile {
     renameOutput.put("mack.xtc", "javatools_turtle.xtc")
 }
@@ -34,6 +40,17 @@ xtcCompile {
 sourceSets.main {
     xtc {
         srcDir(xtcTurtle)
+    }
+    resources {
+        // This is a bit backwards, but it basically says "if the resource directory of javatools_unicode is there,
+        // use that as resource dir too", and not just the default in the source set (which is src/main/resources)
+        // for the main source set, which we are in.
+        if (unicodeResources.exists()) {
+            logger.lifecycle("$prefix javatools_unicode has a resource directory under build, which will be included in the lib_ecstasy binary. ($unicodeResources)")
+        } else {
+            logger.lifecycle("$prefix No unicode resources are found.")
+        }
+        srcDir(unicodeResources)
     }
 }
 
@@ -48,15 +65,12 @@ sourceSets.main {
 val importUnicodeFiles by tasks.registering {
     group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
-    // TODO: Do NOT depend directly on included build. Use configurations instead. Do not learn or use anything from this. It's not good.
-    // Retrieve javatools unicode.
-    val unicode = gradle.includedBuild("javatools_unicode")
-    // Run the unicode task to create the resources.
     dependsOn(unicode.task(":run"))
     doLast {
         // Hardcode the resource directory where the unicode ends up.
         val unicodeResources = "${unicode.projectDir}/build/resources/unicode"
         copy {
+
             from(file(unicodeResources))
             include("Char*.txt", "Char*.dat")
             into(project.layout.projectDirectory.dir("src/main/resources/ecstasy/text"))

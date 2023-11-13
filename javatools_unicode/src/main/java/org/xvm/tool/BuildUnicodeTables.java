@@ -239,10 +239,7 @@ public class BuildUnicodeTables {
     void writeResult(final String name, final byte[] data) throws IOException {
         final String filename = "Char" + name + ".dat";
         final File dir = new File(OUTPUT_DIR, "tables");
-        System.err.println("dir absolute path " + dir.getAbsolutePath());
-        // WTF?
         final var exists = dir.exists() && dir.isDirectory() && dir.canWrite();
-        System.err.println("Exists " + exists + " " + dir + " write result " + name);
         final File file = exists ? new File(dir, filename) : new File(filename);
         try (final FileOutputStream out = new FileOutputStream(file)) {
             out.write(data);
@@ -253,7 +250,6 @@ public class BuildUnicodeTables {
         final var filename = "Char" + name + ".txt";
         final var dir = OUTPUT_DIR;
         final var exists = dir.exists() && dir.isDirectory() && dir.canWrite();
-        System.err.println("Exists " + exists + " " + dir + " write details " + name + " " + details);
         final var file = exists ? new File(dir, filename) : new File(filename);
         try (final var writer = new FileWriter(file)) {
             writer.write(details);

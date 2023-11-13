@@ -205,18 +205,18 @@ public class Runner
         log(Severity.INFO, "Executing " + info.getQualifiedModuleName() + " from " + info.getBinaryFile());
         try
             {
-            Connector connector = new Connector(repo);
+            final Connector connector = new Connector(repo);
             connector.loadModule(module.getName());
 
             connector.start();
 
-            String   sMethod = options().getMethodName();
-            String[] asArg   = options().getMethodArgs();
+            final var sMethod = options().getMethodName();
+            final var asArg   = options().getMethodArgs();
 
             ObjectHandle[] ahArg = Utils.OBJECTS_NONE;
             if (asArg != null)
                 {
-                try (var ignore = ConstantPool.withPool(connector.getConstantPool()))
+                try (final var ignore = ConstantPool.withPool(connector.getConstantPool()))
                     {
                     ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
                     }
@@ -225,10 +225,10 @@ public class Runner
 
             connector.join();
             }
-        catch (InterruptedException ignore)
+        catch (final InterruptedException ignore)
             {
             }
-        catch (Throwable e)
+        catch (final Throwable e)
             {
             log(Severity.FATAL, e.getMessage());
             }

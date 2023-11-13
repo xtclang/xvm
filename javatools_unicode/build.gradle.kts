@@ -47,6 +47,7 @@ val run by tasks.registering {
     dependsOn(assemble) //, downloadUcdFlatZip)
     dependsOn(downloadUcdFlatZip)
     outputs.dir(project.layout.buildDirectory.dir("resources/unicode/"))
+    outputs.dir(project.layout.buildDirectory.dir("resources/unicode/tables"))
     alwaysRerunTask()
     doLast {
         val unicodeJar = jar.get().archiveFile
