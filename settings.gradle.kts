@@ -34,5 +34,6 @@ includeBuild("plugin/plugin-maven")
 includeBuild("xdk")
 includeBuild("manualTests")
 includeBuild("manualTests/webapp")
+includeBuild("dev")
 
 rootProject.name = "xvm"

@@ -58,24 +58,28 @@ sourceSets.main {
  * common build, but there is no reason to not make it that, now that we have caching parallel
  * Gradle/Maven build infrastructure.  TODO: make this a build task.
  */
-val importUnicodeFiles by tasks.registering {
+val importUnicodeFiles by tasks.registering(Copy::class) {
     group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
+
     dependsOn(unicode.task(":run"))
+    // TODO: ATM we hardcode the resource directory where the unicode ends up. This doesn't really fit with declarative Gradle/Maven semantics.
+    //   So please don't copy this and start reusing it everywhere in your own code. I will get around to it.
     val outputDir = project.layout.projectDirectory.dir("src/main/resources/ecstasy/text")
+    outputs.file(outputDir)
+
+    // Copy specification:
+    from(fileTree(unicodeResources))
+    into(outputDir)
+    include("**/Char*.txt")
+    include("**/Char*.dat")
+    includeEmptyDirs = false
+    eachFile {
+        relativePath = RelativePath(true, name)
+        logger.lifecycle("$prefix Copying unicode file: ${file.absolutePath} to ${outputDir.asFile.absolutePath}.")
+    }
+
     doLast {
-        // Hardcode the resource directory where the unicode ends up.
-        copy {
-            from(fileTree(unicodeResources))
-            into(outputDir)
-            include("**/Char*.txt")
-            include("**/Char*.dat")
-            includeEmptyDirs = false
-            eachFile {
-                relativePath = RelativePath(true, name)
-                logger.lifecycle("$prefix Copying unicode file: ${file.absolutePath} to ${outputDir.asFile.absolutePath}.")
-            }
-        }
         logger.lifecycle("$prefix Unicode files copied to ${outputDir.asFile}. Please verify your git diff, test and commit.")
         fileTree(outputDir).forEach {
             logger.lifecycle("$prefix     $it")

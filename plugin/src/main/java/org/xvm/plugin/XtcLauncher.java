@@ -4,6 +4,8 @@ import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 import org.gradle.process.internal.ExecException;
 
+import java.util.function.Consumer;
+
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
 
     static class XtcExecResult implements ExecResult {
@@ -68,15 +70,16 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
         super(project);
     }
 
+    protected void showOutput(final CommandLine args, final String output, final Consumer<String> printer) {
+        if (!output.isEmpty()) {
+            lifecycle("{} '{}' XTC stdout ({} lines):", prefix, args.getMainClassName(), output.lines().count());
+            printer.accept(output);
+        }
+    }
+
     protected void showOutput(final CommandLine args, final String out, final String err) {
         // TODO: Don't always redirect and reprint outputs. Make it configurable.
-        if (!out.isEmpty()) {
-            lifecycle("{} '{}' JavaExec stdout:", prefix, args.getMainClassName());
-            System.out.println(out);
-        }
-        if (!err.isEmpty()) {
-            lifecycle("{} '{}' JavaExec stderr:", prefix, args.getMainClassName());
-            System.err.println(err);
-        }
+        showOutput(args, out, System.out::println);
+        showOutput(args, err, System.err::println);
     }
 }

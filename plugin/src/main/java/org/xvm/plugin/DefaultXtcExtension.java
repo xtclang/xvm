@@ -17,8 +17,8 @@ public class DefaultXtcExtension implements XtcExtension {
 
     @Override
     public void printVersion() {
-        var pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
-        var ver = JavaExecLauncher.readXdkVersionFromJar(project.getLogger(), prefix, new File(pluginUrl.getPath()));
+        final var pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
+        final var ver = JavaExecLauncher.readXdkVersionFromJar(project.getLogger(), prefix, new File(pluginUrl.getPath()));
         project.getLogger().lifecycle("{} XTC language version supported by plugin: {}", prefix, ver == null ? "[unresolved]" : ver);
     }
 

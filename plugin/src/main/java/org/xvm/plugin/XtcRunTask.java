@@ -85,6 +85,7 @@ public class XtcRunTask extends DefaultTask {
     // TODO: For compile and runtime tasks, allow diverting stdout, with the JavaCompile pattern.
     private void createStartScriptTask() {
         // TODO we should add create and start script tasks just like in the JavaApplication plugin.
+        project.info("{} All XTC module compiled for sourceSet {}:", prefix, sourceSet.getName());
     }
 
     @InputFiles
@@ -182,7 +183,7 @@ public class XtcRunTask extends DefaultTask {
 
     protected Collection<File> allCompiledModules() {
         final var allFiles = getInputModulesCompiledByProject().get().getAsFileTree().getFiles();
-        project.info("{} All XTC module compiled for sourceSet {}:", prefix, sourceSet.getName());
+        project.info("{} All XTC modules compiled for sourceSet {}:", prefix, sourceSet.getName());
         allFiles.forEach(f -> project.info("{}    {}", prefix, f.getAbsolutePath()));
         return allFiles;
     }

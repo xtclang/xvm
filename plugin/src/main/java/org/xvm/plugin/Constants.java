@@ -25,7 +25,7 @@ final class Constants {
     static final String XTC_COMPONENT_VARIANT_COMPILE = "compile";
     static final String XTC_COMPONENT_VARIANT_RUNTIME = "runtime";
     static final String XTC_VERSION_GROUP_NAME = "version";
-    static final String XTC_VERSIONFILE_TASK_NAME = "versionFile";
+    static final String XTC_VERSION_FILE_TASK_NAME = "versionFile";
     static final String XTC_VERSION_TASK_NAME = XTC_VERSION_GROUP_NAME;
     static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     static final String XTC_EXTENSION_NAME_COMPILER = "xtcCompile";

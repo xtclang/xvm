@@ -56,9 +56,11 @@ tasks.withType<JavaCompile>().configureEach {
     }
 
     val args = buildList {
-        if (lint) {
-            add("-Xlint:all") // was: unchecked, deprecation, preview
-        }
+//        if (lint) {
+//            add("-Xlint:all") // was: unchecked, deprecation, preview
+ //       }
+        add("-Xlint:${if (lint) "all" else "none"}")
+
         if (enablePreview) {
             add("--enable-preview")
             if (lint) {
@@ -82,7 +84,7 @@ tasks.withType<JavaCompile>().configureEach {
     options.isDeprecation = lint
     options.encoding = UTF_8.toString()
     doLast {
-        logger.lifecycle("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
+        logger.info("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
     }
 }
 
