@@ -50,7 +50,7 @@ class XdkDistribution(buildLogic: XdkBuildLogic) {
     val distributionName: String = project.name
 
     init {
-        logger.lifecycle("$prefix Configured XVM distribution: $this (distribution version: '$distributionVersion', target os: '$CURRENT_OS')")
+        logger.lifecycle("$prefix Configured XVM distribution: $this (distribution version: '$distributionVersion', target OS: '$CURRENT_OS')")
     }
 
     fun getLocalDistBackupDir(localDistVersion: String): Provider<Directory> {

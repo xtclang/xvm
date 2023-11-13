@@ -44,7 +44,7 @@ private val pluginGroup = "$group.plugin"
 private val pluginVersion = version.toString()
 private val pluginId = getXdkProperty("org.xvm.plugin.id")
 
-internal val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false)
+private val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false)
 
 publishing {
     publications {
@@ -60,9 +60,10 @@ publishing {
 
 // TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
 gradlePlugin {
-    // The built in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
-    // However, this results in the Gradle version of the plugin not being published. To read it
-    // from at least a local repo, we need that artifact too, hence we get three artifacts.
+    // The built-in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
+    // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
+    // being published. To read it from at least a local repo, we need that artifact too, hence we
+    // get three artifacts.
     isAutomatedPublishing = getXdkPropertyBoolean("org.xvm.plugin.isAutomatedPublishing", true)
 
     logger.info("$prefix Configuring gradlePlugin; isAutomatedPublishing=$isAutomatedPublishing")

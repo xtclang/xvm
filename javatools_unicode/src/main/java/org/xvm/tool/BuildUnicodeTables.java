@@ -11,7 +11,6 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import java.util.zip.ZipEntry;
@@ -52,8 +51,7 @@ public class BuildUnicodeTables {
      * @param asArgs command line arguments
      */
     public static void main(final String[] asArgs) throws IOException, JAXBException {
-        final BuildUnicodeTables tool = new BuildUnicodeTables(asArgs);
-        tool.run();
+        new BuildUnicodeTables(asArgs).run();
     }
 
     /**
@@ -168,7 +166,7 @@ public class BuildUnicodeTables {
         return sXML;
     }
 
-    private File argFile() {
+    private File resolveArgumentAsFile() {
         if (asArgs.length > 0) {
             return new File(asArgs[0]);
         }
@@ -176,7 +174,7 @@ public class BuildUnicodeTables {
     }
 
     private ZipFile getZipFile() throws IOException {
-        final var file = requireNonNullElseGet(argFile(), () -> new File(UCD_ALL_FLAT_XML));
+        final var file = requireNonNullElseGet(resolveArgumentAsFile(), () -> new File(UCD_ALL_FLAT_XML));
         if (!(file.exists() && file.isFile() && file.canRead())) {
             final ClassLoader loader = requireNonNullElseGet(BuildUnicodeTables.class.getClassLoader(), ClassLoader::getSystemClassLoader);
             final var resource = loader.getResource(UCD_ALL_FLAT_XML);
@@ -191,7 +189,7 @@ public class BuildUnicodeTables {
 
     void writeResult(final String name, final String[] array) throws IOException {
         // collect and sort the values
-        final TreeMap<String, Integer> map = new TreeMap<>();
+        final var map = new TreeMap<String, Integer>();
         final int c = array.length;
         for (final var s : array) {
             if (s != null) {
@@ -200,10 +198,10 @@ public class BuildUnicodeTables {
             }
         }
 
-        final StringBuilder sb = new StringBuilder();
+        final var sb = new StringBuilder();
         sb.append(name).append(": [index] \"str\" (freq) \n--------------------");
         int index = 0;
-        for (final Map.Entry<String, Integer> entry : map.entrySet()) {
+        for (final var entry : map.entrySet()) {
             sb.append("\n[").append(index).append("] \"").append(entry.getKey()).append("\" (").append(entry.getValue()).append("x)");
             entry.setValue(index++);
         }
@@ -237,11 +235,11 @@ public class BuildUnicodeTables {
     }
 
     void writeResult(final String name, final byte[] data) throws IOException {
-        final String filename = "Char" + name + ".dat";
-        final File dir = new File(OUTPUT_DIR, "tables");
+        final var filename = "Char" + name + ".dat";
+        final var dir = new File(OUTPUT_DIR, "tables");
         final var exists = dir.exists() && dir.isDirectory() && dir.canWrite();
-        final File file = exists ? new File(dir, filename) : new File(filename);
-        try (final FileOutputStream out = new FileOutputStream(file)) {
+        final var file = exists ? new File(dir, filename) : new File(filename);
+        try (final var out = new FileOutputStream(file)) {
             out.write(data);
         }
     }
@@ -251,8 +249,8 @@ public class BuildUnicodeTables {
         final var dir = OUTPUT_DIR;
         final var exists = dir.exists() && dir.isDirectory() && dir.canWrite();
         final var file = exists ? new File(dir, filename) : new File(filename);
-        try (final var writer = new FileWriter(file)) {
-            writer.write(details);
+        try (final var out = new FileWriter(file)) {
+            out.write(details);
         }
     }
 
@@ -315,11 +313,11 @@ public class BuildUnicodeTables {
 
         @Override
         public String toString() {
-            final StringBuilder sb = new StringBuilder();
+            final var sb = new StringBuilder();
             sb.append("UCD description=").append(description).append(", repertoire=\n");
 
             int c = 0;
-            for (final CharData item : repertoire) {
+            for (final var item : repertoire) {
                 if (c > 200) {
                     sb.append(",\n...");
                     break;
