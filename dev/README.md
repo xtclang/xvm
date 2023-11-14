@@ -1,5 +1,5 @@
 A sample application script that can be reset to various source file anywhere on your hard drive, and then 
-debug and compiled. 
+compiled and debugged.
 
 ## Local process mode:
 
@@ -16,14 +16,14 @@ code proper. I recommend XtcCompileTask::compile and XtcRunTask::run, which are 
 has been processed, locked down, resolved and we are in the execution phase. 
 
 2) To debug the compiler, expand the Gradle view and navigate to the build tasks. ("xvm -> xvm (root) -> dev -> Tasks -> build -> build")
-Right click the build task and watch your breakpoints, both in and out of the build get hit when the compile job runs.
+Right click the build task, hit debug, and watch your breakpoints, both in and out of the build get hit when the compile job runs.
 
 3) To debug the runner, expand the Gradle view and navigate to the build tasks. ("xvm -> xvm (root) -> dev -> Tasks -> application -> runXtc") 
- Do as you did in 2.
+Do as you did in 2.
 
 ## Fork mode:
 
-(The default. Make sure that "fork = false" for both the xtcCompile and xtcRun configuration.).
+(The default. Make sure that "fork = false" for both the xtcCompile and xtcRun configuration, or not defined).
 
 0) Add an assert:break somewhere 
 

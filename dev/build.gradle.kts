@@ -60,13 +60,6 @@ sourceSets {
 }
 */
 
-// Verify the xtc extension works. We will use it later to add sugar like "orgXvmGitHubRepo()", but there
-// will always be SOME kind of settings bootstrap because we need the plugin before everything else.
-xtc {
-    printVersion()
-}
-
-
 // Compile DSL. See the XtcCompilerExtension class for what's in it.
 xtcCompile {
     // fork = false
@@ -74,22 +67,22 @@ xtcCompile {
 }
 
 // Run DSL. See the XtcRuntimeExtension class for what's in it.
+xtcRun {
+    moduleName("AppUnderTest")
+    // fork = false
+}
+
+// DEBUG SNIPPETS BELOW:
 
 // Just debug the source sets inputs and outputs.
 val compileXtc by tasks.existing(XtcCompileTask::class) {
     doLast {
         sourceSets.main.get().allSource.forEach {
-            println(" **** SOURCE SET INPUT: $it")
+            logger.lifecycle(" **** SOURCE SET INPUT: $it")
         }
         sourceSets.main.get().output.forEach {
-            println(" **** SOURCE SET OUTPUT: $it ")
+            logger.lifecycle(" **** SOURCE SET OUTPUT: $it ")
         }
-        println("Finished compile")
+        logger.lifecycle("Finished ${project.name}:$name")
     }
-}
-
-xtcRun {
-    moduleName("AppUnderTestElsewhere")
-    // fork = false
-    // interactive = true // Do not reroute stdin/stdout/stderr. May work only with fork = false. TODO: NOT IMPLEMENTED YET
 }
