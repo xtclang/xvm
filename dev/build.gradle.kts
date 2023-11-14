@@ -59,7 +59,7 @@ xtc {
 }
 
 xtcCompile {
-    fork = false
+    fork = true
     forceRebuild = true
 }
 
@@ -67,7 +67,11 @@ xtcCompile {
 xtcRun {
     verbose = true
     fork = true
-    moduleName("TestFizzBuzz")
+    module {
+        moduleName = "AppUnderTest"
+        method = "run"
+        args("some", "arg")
+    }
 }
 
 // TODO Add native launchers, just to show that they are there.

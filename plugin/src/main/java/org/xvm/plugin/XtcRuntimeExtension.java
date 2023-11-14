@@ -17,6 +17,10 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
 
         ListProperty<String> getArgs();
 
+        void args(List<String> args);
+
+        void args(Object... args);
+
         default boolean validate() {
             return true;
         }
@@ -34,7 +38,7 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
 
     XtcRunModule module(Action<XtcRunModule> action);
 
-    XtcRunModule moduleName(String name);
+    void moduleName(String name);
 
     XtcRuntimeExtension moduleNames(String... modules);
 

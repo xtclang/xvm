@@ -6,6 +6,9 @@ import org.gradle.process.internal.ExecException;
 
 import java.util.function.Consumer;
 
+import static org.xvm.plugin.XtcCompileTask.*;
+import static org.xvm.plugin.XtcRunTask.*;
+
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
 
     static class XtcExecResult implements ExecResult {
@@ -48,8 +51,8 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
 
     static String nativeLauncherFor(final XtcProjectDelegate delegate, final String mainClassName) {
         return switch (mainClassName) {
-            case XtcCompileTask.XTC_COMPILER_CLASS_NAME -> "xtc";
-            case XtcRunTask.XTC_RUNNER_CLASS_NAME -> "xec";
+            case XTC_COMPILER_CLASS_NAME -> "xtc";
+            case XTC_RUNNER_CLASS_NAME -> "xec";
             default -> throw delegate.buildException("Unknown launcher for corresponding class: " + mainClassName);
         };
     }

@@ -7,7 +7,6 @@ TODO: Maven plugin from flatfile/distro repo. Add our own plugindefinitionspdec 
 TODO: Create a github template for the "simplest" xtc project possible
 TODO: Add runXtcNative and compileXtcNative, actually model a local distribution in a build logic.kt class.
 TODO: Get rid of the project delegate stuff, just extend project?
-./lib_ecstasy/build.gradle.kts:    xtcTurtle(libs.javatools.turtle) // TODO: Don't matter if we are a project or an artifact, which is great.
 ./lib_ecstasy/build.gradle.kts: * Gradle/Maven build infrastructure.  TODO: make this a build task.
 ./plugin/build.gradle.kts:// TODO: Build another plugin artifact with the javatools included?
 ./plugin/build.gradle.kts:    // TODO distribute and package Javadocs in the future, when we have them.

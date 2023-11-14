@@ -10,13 +10,11 @@ dependencies {
 }
 
 xtcCompile {
-    verbose = true
     forceRebuild = true
 }
 
 val runXtc by tasks.existing {
     xtcRun {
-        verbose = true
         moduleName("welcomeTest")
     }
     doFirst {
