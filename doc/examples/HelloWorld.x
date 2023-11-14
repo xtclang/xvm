@@ -1,6 +1,6 @@
 module HelloWorld {
+    @Inject Console console;
     void run() {
-        @Inject Console console;
         console.print("Hello World!");
     }
 }

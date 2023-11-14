@@ -2,116 +2,118 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.util.NonBlockingHashMapLong;
+import org.xvm.util.S;
 import org.xvm.util.SB;
-import org.xvm.xtc.*;
+import org.xvm.xec.XClz;
+import org.xvm.xrun.XConst;
+import org.xvm.xrun.XProp;
 import org.xvm.xtc.ast.AST;
 import org.xvm.xtc.ast.BlockAST;
 import org.xvm.xtc.ast.ReturnAST;
 import org.xvm.xtc.cons.*;
-import org.xvm.xec.XRunClz;
-import org.xvm.xrun.*;
 
-import static org.xvm.xtc.XType.*;
+import static org.xvm.xtc.XType.jtype;
 
-import java.lang.Character;
 import java.util.HashMap;
 import javax.lang.model.SourceVersion;
-import java.lang.reflect.Constructor;
-
-
-// XTC Module is roughly a java package, but I don't want to deal with directories
-// So a module becomes "JModXNAME extends XClz" class.
-// Then a XTC class file (can be inside a single-class module file)
-// extends this: "JClzTest extends JModTest".
-
-
 
 
 // Some kind of base class for a Java class that implements an XTC Module
 public class XClzBuilder {
 
-  // XTC Module, which is also the top-level Java class
-  public static ModPart MODULE;
-  public static String JAVA_MOD_NAME;
-  public static Base MOD_TYPE;
-  // Top level, vs e.g. nested inner class
+  // XTC Module, which is the base Java class
+  public final ModPart _mod;
+  public final XType.Clz _tmod; // Module XType
+  public static ClassPart CCLZ; // Compile unit class
+  
+  // XTC class, which is also the top-level Java class
+  public final ClassPart _clz;
+  public final XType.Clz _tclz; // Class XType
+  
+  // Top level, vs e.g. nested inner class.
+  // Controls adding "import blah"
   public final boolean _top;
   
-  // Java code
+  // Java code emission for the whole top-level class
   public final SB _sb;
+  
   // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
   private CPool _pool;          // Parser for code buffer
+  
   final HashMap<String,String> _names; // Java namification
   public final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
   public final NonBlockingHashMapLong<XType>  _ltypes; // Virtual register numbers to java types
   public int _nlocals; // Number of locals defined; popped when lexical scopes pop
 
-  // A collection of extra class source strings
-  static final HashMap<String,String> XCLASSES = new HashMap<>();
+  // A collection of extra class source strings, generated all along and dumped
+  // after the normal methods are dumped.
+  final HashMap<String,String> _xclasses;
+  public static HashMap<String,String> XCLASSES = null;
 
-  public  XClzBuilder( SB sb ) { this(sb,false); }
-  private XClzBuilder( SB sb, boolean top ) {
+  // Make a nested java class builder
+  public XClzBuilder( XClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sb,false); }
+  
+  // Make a (possible nested) java class builder
+  public XClzBuilder( ModPart mod, ClassPart clz, SB sb, boolean top ) {
+    _mod = mod;
+    _tmod = mod==null ? null : XType.Clz.make(mod);
+    _clz = clz;
+    _tclz = clz==null ? null : XType.Clz.make(clz);
     _top = top;
     _sb = sb;
+    _xclasses = top ? new HashMap<>() : null;
+    if( _top ) {
+      if( XCLASSES!=null ) throw XEC.TODO(); // Nested top-level compilation units
+      XCLASSES = _xclasses;
+      CCLZ = mod;               // Compile unit
+    }
     _names = new HashMap<>();
+    // TODO: Move to XMethBuilder
     _locals = new NonBlockingHashMapLong<>();
     _ltypes = new NonBlockingHashMapLong<>();
   }
-  public static XClzBuilder module(ModPart mod) {
-    MODULE = mod;
-    JAVA_MOD_NAME = java_class_name( MODULE._name);
-    MOD_TYPE = Base.make( JAVA_MOD_NAME );
-    return new XClzBuilder(new SB(),true);
-  }
   
-  // Let's start by assuming if we're here, we're inside the top-level
-  // ecstasy package - otherwise we're nested instead the mirror for the
-  // containing package.
-  public XRunClz xclz() {
-    assert MODULE.child("ecstasy") instanceof PackagePart;
-    assert XCLASSES.isEmpty();
+  
+  public static String java_class_name( String xname ) { return xname; }
 
-    // The Java class will extend XClz.
-    // The Java class name will be the mangled module class-name.
-    jclass( MODULE );
-    // Output extra helper classes, if any
-    for( String source : XCLASSES.values() )
-      _sb.nl().p(source);    
-    XCLASSES.clear();
-    
+  // Produce a Java Class for this XTC class.
+  Class<XClz> jclz() {
+    // Build the source code in _sb for the entire java class
+    jclass();
+    // Debug print
     System.out.println(_sb);
-    
-    try {
-      Class<XRunClz> clz = XClzCompiler.compile(XEC.XCLZ+"."+ JAVA_MOD_NAME, _sb.toString());
-      Constructor<XRunClz> xcon = clz.getConstructor(Container.class);
-      return xcon.newInstance(new NativeContainer());
-    } catch( Exception ie ) {
-      throw XEC.TODO();
-    }
+    // Compile and load a Java class
+    return XClzCompiler.compile(XEC.XCLZ+"."+ java_class_name(_clz._name), _sb.toString());
   }
-
   
   // Fill in the body of the matching java class
-  private void jclass( ClassPart clz ) {
-    _sb.p("// Auto Generated by XEC from ").p( MODULE._dir._str).p(clz._path._str).nl().nl();
+  private void jclass( ) {
+    assert _top;
+    _sb.p("// Auto Generated by XEC from ").p( _mod._dir._str).p(_clz._path._str).nl().nl();
     _sb.p("package ").p(XEC.XCLZ).p(";").nl().nl();
     _sb.p("import ").p(XEC.ROOT).p(".xrun.*;").nl();
     _sb.p("import static ").p(XEC.ROOT).p(".xrun.XRuntime.$t;").nl();
     _sb.nl();
-    jclass_body( clz );
+    jclass_body( );
+    // Output extra helper classes, if any
+    for( String source : _xclasses.values() )
+      _sb.nl().p(source);
+    // TODO: Unwind nested top-level compilation units
+    XCLASSES = null;
+    CCLZ = null;
   }
 
   // Java Class body; can be nested (static inner class)
-  private void jclass_body( ClassPart clz ) {
-    String java_class_name = java_class_name(clz._name);
-    _sb.ip("// XTC ").p(_top ? "module ": "class ").p(clz._path._str).p(":").p(clz._name).p(" as Java class ").p(java_class_name).nl();
+  private void jclass_body() {
+    String java_class_name = java_class_name(_clz._name);
+    _sb.ip("// XTC ").p(_top ? "module ": "class ").p(_clz._path._str).p(":").p(_clz._name).p(" as Java class ").p(java_class_name).nl();
 
     if( _top ) {
       _sb.p("public class ").p(java_class_name).p(" extends XRunClz");
     } else {
       _sb.ip("public static class ").p(java_class_name).p(" extends ");
-      _sb.p(clz._f==Part.Format.CONST ? "XConst" : "XClz");
+      _sb.p(_clz._f==Part.Format.CONST ? "XConst" : "XClz");
     }
     _sb.p(" {").nl().ii();
 
@@ -120,7 +122,7 @@ public class XClzBuilder {
       _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>
-    MMethodPart mm = (MMethodPart)clz.child("construct");
+    MMethodPart mm = (MMethodPart)_clz.child("construct");
     MethodPart construct = (MethodPart)mm.child(mm._name);
     if( construct != null ) {
       assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
@@ -139,36 +141,35 @@ public class XClzBuilder {
       }
     }
 
-    // Output Java methods for all Module methods
-    // TODO: Classes in a Module?
+    // Output Java methods for all class methods
     MethodPart run=null;
-    for( Part part : clz._name2kid.values() ) {
+    for( Part part : _clz._name2kid.values() ) {
       switch( part ) {
       case MMethodPart mmp: 
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
-        if( meth == null && clz._f == Part.Format.CONST ) {
-          XConst.make_meth(clz,mmp._name,_sb);
+        if( meth == null && _clz._f == Part.Format.CONST ) {
+          XConst.make_meth(_clz,mmp._name,_sb);
         } else {
           if( mmp._name.equals("run") ) run = meth; // Save the top-level run method
           jmethod(meth,meth._name);
         }
         break;
       case PackagePart pack:
-        //if( pack._name.equals("lib") ) {
-        //  System.err.println("lib in "+clz._name);
-        //} else {
-        //  throw XEC.TODO();
-        //}
-        break;
+        assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
+        // Ignore default ecstasy import
+        TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
+        if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
+          break;
+        throw XEC.TODO();
       case PropPart pp:
-        XProp.make_class( MODULE,_sb,pp); // <clinit> for a static global property
+        XProp.make_class( _sb,pp); // <clinit> for a static global property
         break;
       case ClassPart clz_nest:
         // Nested class.  Becomes a java static inner class
-        XClzBuilder X = new XClzBuilder(_sb);
-        X.jclass_body(clz_nest);
+        XClzBuilder X = new XClzBuilder(this,clz_nest);
+        X.jclass_body();
         break;
       default:
         throw XEC.TODO();
@@ -177,8 +178,8 @@ public class XClzBuilder {
 
     // Const classes get a specific toString, although its not mentioned if its
     // the default
-    if( clz._f == Part.Format.CONST && clz.child("toString")==null )
-      XConst.make_meth(clz,"toString",_sb);
+    if( _clz._f == Part.Format.CONST && _clz.child("toString")==null )
+      XConst.make_meth(_clz,"toString",_sb);
     
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
@@ -192,8 +193,6 @@ public class XClzBuilder {
 
     // End the class body
     _sb.di().ip("}").nl();
-    // Install for future reference
-    XType.install(clz,java_class_name);
   }
 
   // Emit a Java string for this MethodPart.
@@ -251,7 +250,7 @@ public class XClzBuilder {
       for( Part part : m._name2kid.values() ) {
         switch( part ) {
         case PropPart pp:
-          XProp.make_class( MODULE,_sb,pp);
+          XProp.make_class( _sb,pp );
           break;
         case MMethodPart mmp:
           // Method-local nested methods.
@@ -267,7 +266,7 @@ public class XClzBuilder {
       }
   }
 
-  public void jmethod_body_inline( MethodPart meth, String mname ) {
+  public void jmethod_body_inline( MethodPart meth ) {
     if( meth._name2kid != null ) throw XEC.TODO();
     AST ast = ast(meth);
     if( ast instanceof BlockAST blk ) {
@@ -333,43 +332,6 @@ public class XClzBuilder {
       _ltypes.remove(  _nlocals);
       _locals.remove(--_nlocals);
     }
-  }
-
-  public static String java_class_name( String xname ) {
-    return "J"+xname;
-  }
-
-  // After the basic mangle, dups are suffixed 1,2,3...
-  String jname( String xname ) {
-    String s = _mangle(xname);
-    boolean unique = true;
-    int max = 0;
-    for( String old : _locals.values() ) {
-      if( s.equals(old) ) unique = false;
-      else if( old.startsWith(s) ) {
-        int last = old.length();
-        while( Character.isDigit(old.charAt(last-1)) ) last--;
-        if( last == old.length() ) continue; // No trailing digits to confuse
-        int num = Integer.parseInt(old.substring(last));
-        max = Math.max(max,num);
-      }
-    }
-
-    return unique ? s : s+(max+1);
-  }
-
-  // If the name is a valid java id, keep it.
-  // If the name starts "loop#", use "i"
-  // keep the valid prefix, and add $.
-  private static String _mangle( String name ) {
-    // Valid java name, just keep it
-    // Valid except a keyword, add "$"
-    if( SourceVersion.isIdentifier(name) )
-      return SourceVersion.isKeyword(name) ? name+"$" : name;
-    // Starts with "loop#", assume it is a generated loop variable for iterators
-    if( name.startsWith("loop#") ) return "i";
-    // Keep valid prefix and add "$"
-    throw XEC.TODO();
   }
 
 
