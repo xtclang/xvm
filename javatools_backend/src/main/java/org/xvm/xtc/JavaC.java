@@ -12,7 +12,7 @@ import javax.tools.*;
 
 import static javax.tools.JavaFileObject.Kind;
 
-public abstract class XClzCompiler {
+public abstract class JavaC {
 
   // Compile a whole class
   static Class<XClz> compile( String clzname, String source ) {

@@ -6,7 +6,7 @@ import org.xvm.xtc.*;
 
 class BreakAST extends AST {
   final int _d;                 // Depth; 0 is tightest enclosing
-  static BreakAST make(XClzBuilder X) { return new BreakAST(X.u31()); }
+  static BreakAST make( ClzBuilder X) { return new BreakAST(X.u31()); }
   private BreakAST( int d ) { super(null); _d = d; }
   @Override XType _type() { return XType.VOID; }
   @Override public SB jcode ( SB sb ) {

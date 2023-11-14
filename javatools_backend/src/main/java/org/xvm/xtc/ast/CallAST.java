@@ -7,7 +7,7 @@ import org.xvm.util.SB;
 
 class CallAST extends AST {
   final XType[] _rets;
-  static CallAST make( XClzBuilder X ) {
+  static CallAST make( ClzBuilder X ) {
     // Read optional array of return types (not currently used)
     Const[] retTypes = X.consts();
     // Read the arguments, then the function expression.

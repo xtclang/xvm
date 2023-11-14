@@ -9,7 +9,7 @@ import java.util.HashMap;
 class BinOpAST extends AST {
   final String _op0, _op1;
 
-  static BinOpAST make( XClzBuilder X, boolean has_type ) {
+  static BinOpAST make( ClzBuilder X, boolean has_type ) {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
     BinOp op = BinOp.OPS[X.u31()];
@@ -20,7 +20,7 @@ class BinOpAST extends AST {
     return new BinOpAST(op.text,"",type,kids);
   }
   
-  static BinOpAST make( XClzBuilder X, String op0, String op1 ) {
+  static BinOpAST make( ClzBuilder X, String op0, String op1 ) {
     AST[] kids = X.kids(2);
     return new BinOpAST(op0,op1,null,kids);
   }

@@ -17,14 +17,14 @@ import org.xvm.xtc.cons.Const.UniOp;
 class UniOpAST extends AST {
   final String _pre, _post;
 
-  static UniOpAST make( XClzBuilder X ) {
+  static UniOpAST make( ClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
     UniOp op = UniOp.OPS[X.u31()]; // Post op by default
     return new UniOpAST(kids,null,op.text,type);
   }
   
-  static UniOpAST make( XClzBuilder X, String pre, String post ) {
+  static UniOpAST make( ClzBuilder X, String pre, String post ) {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
     // XTC allows booleans "~" but Java does not.

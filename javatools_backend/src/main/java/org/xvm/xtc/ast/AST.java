@@ -2,7 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
 import org.xvm.xtc.XType;
-import org.xvm.xtc.XClzBuilder;
+import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.cons.Const.NodeType;
 import org.xvm.util.SB;
 
@@ -106,11 +106,11 @@ public abstract class AST {
   void jmid ( SB sb, int i ) {}
   void jpost( SB sb ) {}
   
-  public static AST parse( XClzBuilder X ) { return ast(X); }
+  public static AST parse( ClzBuilder X ) { return ast(X); }
 
   // Magic constant for indexing into the constant pool.
   static final int CONSTANT_OFFSET = -16;
-  public static AST ast_term( XClzBuilder X ) {
+  public static AST ast_term( ClzBuilder X ) {
     int iop = (int)X.pack64();
     if( iop >= 32 )
       return new RegAST(iop-32,X);  // Local variable register
@@ -121,9 +121,9 @@ public abstract class AST {
     return new ConAST( X.con(CONSTANT_OFFSET-iop) );
   }
   
-  static AST ast( XClzBuilder X ) { return _ast(X,X.u8()); }
+  static AST ast( ClzBuilder X ) { return _ast(X,X.u8()); }
   
-  private static AST _ast( XClzBuilder X, int iop ) {
+  private static AST _ast( ClzBuilder X, int iop ) {
     NodeType op = NodeType.NODES[iop];
     return switch( op ) {
     case AnnoNamedRegAlloc -> DefRegAST.make(X,true ,true );

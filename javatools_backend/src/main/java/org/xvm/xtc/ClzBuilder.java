@@ -13,11 +13,10 @@ import org.xvm.xtc.ast.ReturnAST;
 import org.xvm.xtc.cons.*;
 
 import java.util.HashMap;
-import javax.lang.model.SourceVersion;
 
 
 // Some kind of base class for a Java class that implements an XTC Module
-public class XClzBuilder {
+public class ClzBuilder {
 
   // XTC Module, which is the base Java class
   public final ModPart _mod;
@@ -54,10 +53,10 @@ public class XClzBuilder {
   public static HashMap<String,String> XCLASSES = null;
 
   // Make a nested java class builder
-  public XClzBuilder( XClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
+  public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
   
   // Make a (possible nested) java class builder
-  public XClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean top ) {
+  public ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean top ) {
     _mod = mod;
     _tmod = mod==null ? null : XType.Clz.make(mod);
     _clz = clz;
@@ -89,7 +88,7 @@ public class XClzBuilder {
     System.out.println(_sbhead);
     System.out.println(_sb);
     // Compile and load a Java class
-    return XClzCompiler.compile(qual_jname(_clz._name), _sbhead.toString() + _sb.toString());
+    return JavaC.compile(qual_jname(_clz._name), _sbhead.toString() + _sb.toString());
   }
   
   // Fill in the body of the matching java class
@@ -183,7 +182,7 @@ public class XClzBuilder {
         
       case ClassPart clz_nest:
         // Nested class.  Becomes a java static inner class
-        XClzBuilder X = new XClzBuilder(this,clz_nest);
+        ClzBuilder X = new ClzBuilder(this,clz_nest);
         X.jclass_body();
         break;
         

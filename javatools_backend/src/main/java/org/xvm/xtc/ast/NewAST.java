@@ -7,7 +7,7 @@ import org.xvm.util.SB;
 
 class NewAST extends AST {
   final MethodPart _meth; // TODO: Constructor is Java is totally determined by argument types.  
-  static NewAST make( XClzBuilder X ) {
+  static NewAST make( ClzBuilder X ) {
     return new NewAST(X.con(),X.con(),X.kids());
   }
   private NewAST( Const xtype, Const meth, AST[] kids ) {

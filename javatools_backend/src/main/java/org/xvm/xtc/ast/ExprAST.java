@@ -5,7 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const;
 
 class ExprAST extends AST {
-  static ExprAST make( XClzBuilder X ) {
+  static ExprAST make( ClzBuilder X ) {
     
     // Parse kids in order as stmts not exprs
     AST kid = ast(X);

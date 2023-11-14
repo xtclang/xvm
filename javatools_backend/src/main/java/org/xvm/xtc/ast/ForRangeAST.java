@@ -8,7 +8,7 @@ class ForRangeAST extends AST {
   // _kids[1] == RHS
   // _kids[2] == Body
   // _kids[3+] == Special Regs
-  static ForRangeAST make( XClzBuilder X ) {
+  static ForRangeAST make( ClzBuilder X ) {
     AST[] kids = X.kids_bias(3);
     kids[0] = ast_term(X);     // LHS
     kids[1] = ast_term(X);     // RHS

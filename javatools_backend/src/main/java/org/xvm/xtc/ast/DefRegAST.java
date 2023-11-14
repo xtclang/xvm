@@ -2,7 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
-import org.xvm.xtc.XClzBuilder;
+import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.XType;
 import org.xvm.xtc.XValue;
 import org.xvm.util.SB;
@@ -10,13 +10,13 @@ import org.xvm.util.SB;
 class DefRegAST extends AST {
   final String _name, _init;
 
-  static DefRegAST make( XClzBuilder X, boolean named, boolean initd ) {
+  static DefRegAST make( ClzBuilder X, boolean named, boolean initd ) {
     Const init = initd ? X.con() : null;
     Const type =         X.con()       ;
     Const name = named ? X.con() : null;
     return new DefRegAST(X,init,type,name);
   }
-  private DefRegAST( XClzBuilder X, Const init, Const type, Const name ) {
+  private DefRegAST( ClzBuilder X, Const init, Const type, Const name ) {
     super(null);
     if( init!=null ) {
       // Destination is read first and is type-aware, so read the destination type.

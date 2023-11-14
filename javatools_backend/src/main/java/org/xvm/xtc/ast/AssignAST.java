@@ -1,6 +1,5 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.AsnOp;
@@ -8,7 +7,7 @@ import org.xvm.xtc.cons.Const.AsnOp;
 class AssignAST extends AST {
   final AsnOp _op;
   String _cond_asgn, _name;
-  static AssignAST make( XClzBuilder X, boolean asgn ) {
+  static AssignAST make( ClzBuilder X, boolean asgn ) {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
     AsnOp op = asgn ? AsnOp.Asn : AsnOp.OPS[X.u31()];

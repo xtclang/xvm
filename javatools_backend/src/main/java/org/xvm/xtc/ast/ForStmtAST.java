@@ -9,7 +9,7 @@ class ForStmtAST extends AST {
   // _kids[2] == update
   // _kids[3] == Body
   // _kids[4+] == Special Regs
-  static ForStmtAST make( XClzBuilder X ) {
+  static ForStmtAST make( ClzBuilder X ) {
     // Count of locals
     int nlocals = X._nlocals;
     AST[] kids = X.kids_bias(4);

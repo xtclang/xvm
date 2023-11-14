@@ -3,11 +3,10 @@ package org.xvm.xtc.ast;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
-import org.xvm.XEC;
 
 class BindMethAST extends AST {
   final MethodPart _meth;
-  static BindMethAST make( XClzBuilder X ) {
+  static BindMethAST make( ClzBuilder X ) {
     AST target = ast_term(X);
     Const meth = X.con();
     Const type = X.con();

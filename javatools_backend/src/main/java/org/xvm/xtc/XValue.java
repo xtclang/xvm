@@ -49,7 +49,7 @@ public abstract class XValue {
       } else {
         // Put qualified name if not in local namespace
         ClassPart clz = (ClassPart)meth._par._par;
-        if( clz!=XClzBuilder.CCLZ )
+        if( clz!= ClzBuilder.CCLZ )
           name = clz._name+"."+name;
       }
       yield ASB.p(name);
@@ -88,7 +88,7 @@ public abstract class XValue {
     // Singleton class constants (that are not enums)
     case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
-        yield ASB.p(XClzBuilder.java_class_name(mod._name));
+        yield ASB.p( ClzBuilder.java_class_name(mod._name));
       if( con0.part() instanceof PropPart prop )
         yield ASB.p(XProp.jname(prop)).p("$get()");
       throw XEC.TODO();

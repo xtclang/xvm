@@ -1,13 +1,12 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const;
 
 class PropertyAST extends AST {
   public String _prop;
-  static PropertyAST make( XClzBuilder X ) {
+  static PropertyAST make( ClzBuilder X ) {
     AST lhs = ast_term(X);
     Const tc = X.con();
     String prop = XValue.val(tc);

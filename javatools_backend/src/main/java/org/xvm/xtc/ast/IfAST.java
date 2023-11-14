@@ -2,10 +2,9 @@ package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
-import org.xvm.XEC;
 
 class IfAST extends AST {
-  static IfAST make( XClzBuilder X, int n ) {
+  static IfAST make( ClzBuilder X, int n ) {
     AST[] kids = new AST[n];
     kids[0] = ast_term(X);
     kids[1] = ast(X);
