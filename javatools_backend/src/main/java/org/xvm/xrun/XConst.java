@@ -38,7 +38,7 @@ public abstract class XConst extends XClz
      }
   */
   static void make_compare( ClassPart clz, SB sb ) {
-    String clzname = XClzBuilder.java_class_name(clz._name);    
+    String clzname = ClzBuilder.java_class_name(clz._name);
     sb.ip("// Default compare").nl();
     sb.ip("public Ordered compare( XConst o ) {").nl().ii();
     sb.ip("if( this==o ) return Ordered.Equal;").nl();
@@ -68,7 +68,7 @@ public abstract class XConst extends XClz
      }
   */
   static void make_equals( ClassPart clz, SB sb ) {
-    String clzname = XClzBuilder.java_class_name(clz._name);    
+    String clzname = ClzBuilder.java_class_name(clz._name);
     sb.ip("// Default equals").nl();
     sb.ip("public boolean equals( Object o ) {").nl().ii();
     sb.ip(  "if( this==o ) return true;").nl();
