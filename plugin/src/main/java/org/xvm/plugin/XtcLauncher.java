@@ -6,11 +6,14 @@ import org.gradle.process.internal.ExecException;
 
 import java.util.function.Consumer;
 
-import static org.xvm.plugin.XtcCompileTask.*;
-import static org.xvm.plugin.XtcRunTask.*;
+import static org.xvm.plugin.tasks.XtcCompileTask.XTC_COMPILER_CLASS_NAME;
+import static org.xvm.plugin.tasks.XtcRunTask.XTC_RUNNER_CLASS_NAME;
 
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
 
+    /**
+     * Subclass to a Gradle Exec Result.
+     */
     static class XtcExecResult implements ExecResult {
         static final XtcExecResult OK = new XtcExecResult(0, null);
 
@@ -57,7 +60,7 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
         };
     }
 
-    static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean isFork, final boolean isNativeLauncher) {
+    public static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean isFork, final boolean isNativeLauncher) {
         if (isNativeLauncher) {
             assert isFork : "For option for native launcher will be ignored. A native process is always forked.";
             delegate.warn("{} The XTC plugin does not yet support using the native launcher.", delegate.prefix()); // TODO: Verify this works.

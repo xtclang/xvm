@@ -1,4 +1,4 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -15,6 +15,10 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
+import org.xvm.plugin.CommandLine;
+import org.xvm.plugin.XtcCompilerExtension;
+import org.xvm.plugin.XtcLauncher;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -25,13 +29,13 @@ import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
 import static org.xvm.plugin.Constants.XTC_SOURCE_FILE_EXTENSION;
-import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
+import static org.xvm.plugin.tasks.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 import static org.xvm.plugin.XtcProjectDelegate.hasFileExtension;
 import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask {
-    static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
+    public static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
 
     private final XtcProjectDelegate project;
     private final String prefix;

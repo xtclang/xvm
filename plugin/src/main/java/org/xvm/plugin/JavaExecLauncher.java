@@ -31,7 +31,7 @@ public class JavaExecLauncher extends XtcLauncher {
     }
 
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
             throw buildException("Failed to resolve javatools.jar in any classpath.");

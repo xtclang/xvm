@@ -1,6 +1,7 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
 import org.gradle.api.tasks.SourceSet;
+import org.xvm.plugin.XtcProjectDelegate;
 import org.xvm.plugin.XtcRuntimeExtension.XtcRunModule;
 
 import javax.inject.Inject;

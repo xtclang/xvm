@@ -18,19 +18,10 @@ public class BuildThreadLauncher extends XtcLauncher {
         lifecycle("{} Running {} in build process; this is not recommended for production use.", prefix, mainClassName);
     }
 
-     private Method resolveMethod(final String className) {
-        try {
-            return Class.forName(className).getMethod("main", String[].class);
-        } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            info("{} Failed to resolve method 'main' in class '{}', launching with JavaExec.", prefix, className);
-            return null;
-        }
-    }
-
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         Objects.requireNonNull(args);
-        warn("{} XTC Plugin will launch '{}' from the plugin process.", prefix, args.getMainClassName());
+        warn("{} WARNING: XTC Plugin will launch '{}' from its own process. No new process will be forked.", prefix, args.getMainClassName());
         final var oldOut = System.out;
         final var oldErr = System.err;
         final var out = new ByteArrayOutputStream();
@@ -47,5 +38,14 @@ public class BuildThreadLauncher extends XtcLauncher {
             showOutput(args, out.toString(), err.toString());
         }
         return XtcExecResult.OK;
+    }
+
+    private Method resolveMethod(final String className) {
+        try {
+            return Class.forName(className).getMethod("main", String[].class);
+        } catch (final ClassNotFoundException | NoSuchMethodException e) {
+            error("{} Failed to resolve method 'main' in class '{}'.", prefix, className);
+            return null;
+        }
     }
 }

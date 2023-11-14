@@ -18,7 +18,7 @@ public class NativeBinaryLauncher extends XtcLauncher {
     }
 
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         Objects.requireNonNull(args);
         warn("{} XTC Plugin will launch '{}' by executing a native process.", prefix, commandName);
         final var oldOut = System.out;

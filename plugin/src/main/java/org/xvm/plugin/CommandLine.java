@@ -12,7 +12,7 @@ public class CommandLine {
     private final List<String> jvmArgs;
     private final String mainClass;
 
-    CommandLine(final String mainClass, final List<String> jvmArgs) {
+    public CommandLine(final String mainClass, final List<String> jvmArgs) {
         this(mainClass, jvmArgs, Collections.emptyList());
     }
 

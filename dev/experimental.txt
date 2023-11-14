@@ -1,4 +1,4 @@
-import org.xvm.plugin.XtcCompileTask
+import org.xvm.plugin.tasks.XtcCompileTask
 
 /*
  * This is a subproject templated to compile, run, and debug the XTC compiler and runtimes.

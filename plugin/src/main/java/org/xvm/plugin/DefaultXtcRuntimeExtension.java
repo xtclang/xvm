@@ -90,7 +90,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         this.enableDebug = objects.property(Boolean.class).value(false);
     }
 
-    static XtcRunModule createModule(final Project project, final String name) {
+    public static XtcRunModule createModule(final Project project, final String name) {
         return new DefaultXtcRunModule(project, name);
     }
 

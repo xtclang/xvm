@@ -1,4 +1,4 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
 import groovy.lang.Closure;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -15,6 +15,7 @@ import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
 import org.gradle.internal.Factory;
 import org.jetbrains.annotations.NotNull;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 import java.io.File;

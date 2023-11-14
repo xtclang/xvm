@@ -1,6 +1,5 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
-import org.gradle.api.DefaultTask;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
@@ -17,6 +16,11 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.CommandLine;
+import org.xvm.plugin.DefaultXtcRuntimeExtension;
+import org.xvm.plugin.XtcLauncher;
+import org.xvm.plugin.XtcProjectDelegate;
+import org.xvm.plugin.XtcRuntimeExtension;
 import org.xvm.plugin.XtcRuntimeExtension.XtcRunModule;
 
 import javax.inject.Inject;
@@ -30,7 +34,7 @@ import static java.util.Collections.emptyList;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
-import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
+import static org.xvm.plugin.tasks.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 /**
@@ -39,7 +43,7 @@ import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
  * TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
  */
 public class XtcRunTask extends XtcDefaultTask {
-    static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
+    public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
 
     protected final XtcProjectDelegate project;
     protected final String prefix;

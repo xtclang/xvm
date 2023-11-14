@@ -4,7 +4,6 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.VersionCatalog;
 import org.gradle.api.artifacts.VersionCatalogsExtension;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.DirectoryProperty;
@@ -30,8 +29,6 @@ import java.util.List;
 import static org.xvm.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
 
 public abstract class ProjectDelegate<T, R> {
-    private static final String DEFAULT_VERSION_CATALOG_NAME = "libs";
-
     private static final boolean LOG_ALL_LEVELS_TO_STDERR;
     private static final boolean LOG_ALL_LEVELS_TO_BUILD_FILE;
 
@@ -130,11 +127,11 @@ public abstract class ProjectDelegate<T, R> {
         }
     }
 
-    XtcBuildException buildException(final String msg) {
+    public XtcBuildException buildException(final String msg) {
         return buildException(msg, null);
     }
 
-    XtcBuildException buildException(final String msg, final Throwable cause) {
+    public XtcBuildException buildException(final String msg, final Throwable cause) {
         if (LOG_ALL_LEVELS_TO_STDERR) {
             error(msg);
         }
@@ -142,23 +139,23 @@ public abstract class ProjectDelegate<T, R> {
         return XtcBuildException.buildException(logger, prefix + ": " + msg, cause);
     }
 
-    String prefix() {
+    public final String prefix() {
         return prefix(project);
     }
 
-    String prefix(final String id) {
+    public final String prefix(final String id) {
         return prefix(project, id);
     }
 
-    static String prefix(final Project project) {
+    public static String prefix(final Project project) {
         return '[' + project.getName() + ']';
     }
 
-    static String prefix(final Project project, final String id) {
+    public static String prefix(final Project project, final String id) {
         return prefix(project) + " '" + id + '\'';
     }
 
-    void log(final LogLevel level, final String str, final Object... args) {
+    public void log(final LogLevel level, final String str, final Object... args) {
         final String msg = String.format(str.replace("{}", "%s"), args);
         if (LOG_ALL_LEVELS_TO_STDERR) {
             System.err.println(msg);
@@ -167,34 +164,23 @@ public abstract class ProjectDelegate<T, R> {
         logger.log(level, msg);
     }
 
-    void error(final String str, final Object... args) {
+    public void error(final String str, final Object... args) {
         log(LogLevel.ERROR, str, args);
     }
 
-    void warn(final String str, final Object... args) {
+    public void warn(final String str, final Object... args) {
         log(LogLevel.WARN, str, args);
     }
 
-    void lifecycle(final String str, final Object... args) {
+    public void lifecycle(final String str, final Object... args) {
         log(LogLevel.LIFECYCLE, str, args);
     }
 
-    void info(final String str, final Object... args) {
+    public void info(final String str, final Object... args) {
         log(LogLevel.INFO, str, args);
     }
 
-    private VersionCatalog findVersionCatalog() {
-        return findVersionCatalog(DEFAULT_VERSION_CATALOG_NAME);
-    }
-
-    private VersionCatalog findVersionCatalog(final String name) {
-        if (versionCatalogExtension == null) {
-            return null;
-        }
-        return versionCatalogExtension.find(name).orElse(null);
-    }
-
-    boolean isXtcBinary(final File file) {
+    public boolean isXtcBinary(final File file) {
         return isXtcBinary(file, true);
     }
 
@@ -218,11 +204,15 @@ public abstract class ProjectDelegate<T, R> {
         }
     }
 
-    protected Project getProject() {
+    public Project getProject() {
         return project;
     }
 
-    protected ObjectFactory getObjects() {
+    public ConfigurationContainer getConfigs() {
+        return configs;
+    }
+
+    public ObjectFactory getObjects() {
         return objects;
     }
 
@@ -233,25 +223,25 @@ public abstract class ProjectDelegate<T, R> {
         return extensions.getByType(clazz);
     }
 
-    protected Logger getLogger() {
+    public Logger getLogger() {
         return project.getLogger();
     }
 
-    static boolean hasFileExtension(final File file, final String extension) {
+    public static boolean hasFileExtension(final File file, final String extension) {
         return getFileExtension(file).equalsIgnoreCase(extension);
     }
 
-    static String getFileExtension(final File file) {
+    public static String getFileExtension(final File file) {
         final String name = file.getName();
         final int dot = name.lastIndexOf('.');
         return dot == -1 ? "" : name.substring(dot + 1);
     }
 
-    static String capitalize(final String string) {
+    public static String capitalize(final String string) {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
     }
 
-    void alwaysRerunTask(final Task task) {
+    public void alwaysRerunTask(final Task task) {
         // Used to implement forceRebuild
         // To work around Gradle caches, we are also marking this task as always stale, refusing it to cache inputs -> outputs. Be aware that
         // this will totally remove most of the benefits of Gradle.
@@ -265,5 +255,5 @@ public abstract class ProjectDelegate<T, R> {
         return apply(null);
     }
 
-    protected abstract R apply(T arg);
+    public abstract R apply(T arg);
 }
