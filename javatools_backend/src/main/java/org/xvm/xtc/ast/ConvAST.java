@@ -21,7 +21,7 @@ class ConvAST extends AST {
     super(kids);
     // Expecting exactly 2 types; first is boolean for a COND.
     // Expecting exactly 1 conversion method.
-    assert types.length==2 && XType.jtype(types[0],false).equals("boolean");
+    assert types.length==2 && XType.xtype(types[0],false)==XType.BOOL;
     assert convs.length==2 && convs[0]==null;
     _type = XType.xtype(types[1],false);
     _meth = (MethodPart)((MethodCon)convs[1]).part();
