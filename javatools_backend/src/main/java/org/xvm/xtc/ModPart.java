@@ -18,8 +18,6 @@ public class ModPart extends ClassPart {
   public final VerTree _allowedVers; //
   public final ArrayList<Version> _prefers; 
 
-  private Class<XClz> _jclz;    // Matching java class
-  
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, CPool X ) {
     super(par,nFlags,con,cond,X,Part.Format.MODULE);
 
@@ -76,12 +74,6 @@ public class ModPart extends ClassPart {
     }
     return null;
   }
-
-  // Return a Java module Class for this XTC Module
-  public Class<XClz> jclz() {
-    return _jclz == null ? (_jclz = new ModBuilder(this).jmod()) : _jclz;
-  }
-  
 
   // ----- ModuleType enumeration ----------------------------------------------------------------
   /**

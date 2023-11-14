@@ -10,7 +10,6 @@ public abstract class XConst extends XClz
   implements Comparable<XConst>,  // Java Comparable; XTC Comparable has equals, which is included in Java Object
              XStringable          // has appendTo
 {
-
   abstract public Ordered compare( XConst that );
   @Override public int compareTo( XConst o ) { return compare(o).ordinal()-1; }
   public boolean CompLt( XConst that ) { return compare(that)==Ordered.Lesser; }
