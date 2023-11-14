@@ -1,6 +1,7 @@
 package org.xvm.xrun;
 
 import org.xvm.xtc.ModPart;
+import org.xvm.xtc.ClzBldSet;
 import org.xvm.XEC;
 import org.xvm.xec.XClz;
 import org.xvm.xec.XRunClz;
@@ -23,11 +24,12 @@ public abstract class Container {
   
   public Object invoke(String xrun, String[] args) {
     // Build the java module class.
-    Class<XClz> jclz = _mod.jclz();
+    if( _mod._jclz==null )
+      ClzBldSet.do_compile(_mod,_mod);
     // Make an instanceof the Java version of the XTC module
     XClz jobj;
     try {
-      Constructor<XClz> con = jclz.getConstructor(Container.class);
+      Constructor<XClz> con = _mod._jclz.getConstructor(Container.class);
       jobj = con.newInstance(new NativeContainer());
     } catch( Exception ie ) {
       throw XEC.TODO();

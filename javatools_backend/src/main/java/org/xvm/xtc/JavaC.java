@@ -1,6 +1,7 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
+import org.xvm.util.Ary;
 import org.xvm.xec.XClz;
 
 import java.io.ByteArrayOutputStream;
@@ -14,37 +15,35 @@ import static javax.tools.JavaFileObject.Kind;
 
 public abstract class JavaC {
 
-  // Compile a whole class
-  static Class<XClz> compile( String clzname, String source ) {
+  // Compile a whole set of classes together
+  static void compile( ArrayList<JavaSrc> srcs, Ary<ClassPart> clzs ) {
 
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     DiagnosticCollector<JavaFileObject> errs = new DiagnosticCollector<>();
     XFileManager xfile = new XFileManager(compiler.getStandardFileManager(null, null, null));
-    ArrayList<JavaSrc> srcs = new ArrayList<>();
-    srcs.add(new JavaSrc(clzname, source));
 
     ArrayList<String> options = new ArrayList<>(){};
     
     JavaCompiler.CompilationTask task = compiler.getTask(null, xfile, errs, options, null, srcs);
 
-    boolean result = task.call();
-
-    if( !result ) {
+    if( !task.call() ) {
       errs.getDiagnostics().forEach( System.err::println );
       throw XEC.TODO();
     }
 
     try {
-      return (Class<XClz>)xfile._loader.loadClass(clzname);
+      for( int i=0; i<clzs._len; i++ )
+        clzs.at(i)._jclz = (Class<XClz>)xfile._loader.loadClass(srcs.get(i)._name);
     } catch( ClassNotFoundException cnfe ) {
       throw new RuntimeException(cnfe);
     }
   }
 
-  private static class JavaSrc extends SimpleJavaFileObject {
-    public final String _src;
+  static class JavaSrc extends SimpleJavaFileObject {
+    public final String _name, _src;
     public JavaSrc(String name, String src) {
       super(URI.create("string:///" + name.replace('.', '/') + Kind.SOURCE.extension),  Kind.SOURCE);
+      _name = name;
       _src = src;
     }
     @Override public CharSequence getCharContent(boolean ignore) { return _src;  }
