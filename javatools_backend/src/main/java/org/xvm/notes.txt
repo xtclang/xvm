@@ -8,10 +8,10 @@ Ignore packages for now?
 * org/xvm/xtc/cons - "cons" things from XTC files
 * org/xvm/xtc/AST  - "AST"  things from XTC files
 
-org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
+  org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
 
 
-  org/xvm/xec - generated class strings act "as if" loaded from here
+* org/xvm/xec - generated class strings act "as if" loaded from here
 * org/xvm/xec - runtime support classes (no ties with gen classes)
 * org/xvm/xec/XClz - base class for gen'd classes.
   org/xvm/xec/??   - Common methods like TRACE, common enums... 
