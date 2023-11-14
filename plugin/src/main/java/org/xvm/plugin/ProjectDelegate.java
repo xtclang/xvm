@@ -3,10 +3,8 @@ package org.xvm.plugin;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.ConfigurationContainer;
-import org.gradle.api.artifacts.MinimalExternalModuleDependency;
 import org.gradle.api.artifacts.VersionCatalog;
 import org.gradle.api.artifacts.VersionCatalogsExtension;
-import org.gradle.api.artifacts.VersionConstraint;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.ProjectLayout;
@@ -16,7 +14,6 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
-import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.TaskContainer;
 
 import java.io.DataInputStream;
@@ -218,28 +215,6 @@ public abstract class ProjectDelegate<T, R> {
             error("{} Error parsing XTC_MAGIC: {}", prefix, e.getMessage());
             return false;
         }
-    }
-
-    protected MinimalExternalModuleDependency findVersionCatalogLib(final String name) {
-        final var catalog = findVersionCatalog();
-        if (catalog == null) {
-            return null;
-        }
-        return catalog.findLibrary(name).map(Provider::get).orElse(null);
-    }
-
-    protected String findVersionCatalogVersion(final String name) {
-        return findVersionCatalogVersion(name, Project.DEFAULT_VERSION);
-    }
-
-    // TODO Add the version catalog Gradle tree walker!
-    protected String findVersionCatalogVersion(final String name, final String defaultVersion) {
-        final var catalog = findVersionCatalog();
-        if (catalog == null) {
-            return defaultVersion;
-        }
-        final var version = catalog.findVersion(name);
-        return version.map(VersionConstraint::getRequiredVersion).orElse(defaultVersion);
     }
 
     protected Project getProject() {

@@ -58,7 +58,7 @@ import static org.xvm.plugin.Constants.XTC_EXTENSION_NAME_RUNTIME;
 import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
 import static org.xvm.plugin.Constants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xvm.plugin.Constants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
-import static org.xvm.plugin.Constants.XTC_VERSIONFILE_TASK_NAME;
+import static org.xvm.plugin.Constants.XTC_VERSION_FILE_TASK_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_GROUP_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_TASK_NAME;
 import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
@@ -185,7 +185,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 prefix, t.getName(), project.getVersion(), getSemanticVersion()));
         });
 
-        tasks.register(XTC_VERSIONFILE_TASK_NAME, task -> {
+        tasks.register(XTC_VERSION_FILE_TASK_NAME, task -> {
             task.setGroup(XTC_VERSION_GROUP_NAME);
             task.setDescription("Generate a file containing the XDK/XTC version under the build tree.");
             final var version = buildDir.file(XDK_VERSION_PATH);
@@ -374,7 +374,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             final var outputResources = getXtcCompilerOutputResourceDir(sourceSet);
             info("{} Configured sourceSets.{}.outputModules  : {}", prefix, sourceSetName, outputModules.get());
             info("{} Configured sourceSets.{}.outputResources  : {}", prefix, sourceSetName, outputResources.get());
-            output.dir(outputResources); // TODO is this really correct? We have the resource dir as a special property in the ourceSetOutput already?
+            output.dir(outputResources); // TODO is this really correct? We have the resource dir as a special property in the sourceSetOutput already?
             output.dir(outputModules);
             output.setResourcesDir(outputResources);
         }
@@ -514,21 +514,19 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, resolveFiles(inputXtcModules));
         // All contents of the XDK. We can reduce that to a directory, since we know the structure, and that it's one directory
 
-        map.put("xdkContents", resolveDirectories(getXdkContentsDir()));
+        map.put(XDK_CONFIG_NAME_CONTENTS, resolveDirectories(getXdkContentsDir()));
 
         // All source set output modules. Again - it's unclear which ones we are interested in, but we can add the directories
         // to the XEC / XTC module path and let the xec/xtc sort that out.
         for (final var sourceSet : getSourceSets()) {
-            // TODO: Temporarily, put just the directories in there for locally compiled modules. Several may be executable, which is ambig
-            //    map.put(XTC_LANGUAGE_NAME + capitalize(sourceSet.getName()), resolveFiles(getXtcCompilerOutputDirModules(sourceSet)));
             final var name = capitalize(sourceSet.getName());
             final var modules = getXtcCompilerOutputDirModules(sourceSet);
             // xtcMain - Normally the only one we need to use
             // xtcMainFiles - This is used to generate runAll task contents.
             map.put("xtc" + name, resolveDirectories(modules));
-            //map.put("xtc" + name + "Files", resolveFiles(modules));
         }
 
+        map.forEach((k, v) -> info("{} '{}' Resolved files: {}", prefix, k, v));
         info("{} '{}' Resolving module path:", prefix, identifier);
         return verifyModulePath(identifier, map);
     }
