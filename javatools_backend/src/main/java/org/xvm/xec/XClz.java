@@ -4,6 +4,10 @@ import org.xvm.xrun.*;
 
 // Some kind of base class for a Java class that implements an XTC Module
 public abstract class XClz {
+  public final Container _container;
+  public XClz( ) { this(null); }
+  public XClz( Container container ) { _container = container; }
+  
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
 
