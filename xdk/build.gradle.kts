@@ -37,6 +37,16 @@ val xdkProvider by configurations.registering {
     }
 }
 
+val xtcUnicodeConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    // TODO: Can likely remove these.
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
+    }
+}
+
 // TODO: Add a plugin handler that scans the local build dir? Bootstrapping? Worth it?
 val xtcPluginRepoConsumer by configurations.registering {
     isCanBeResolved = true
@@ -288,5 +298,55 @@ val installLocalDist by tasks.registering {
         }
         logger.lifecycle("$prefix $name Finished.")
         XdkBuildLogic.walkDir(project, localDistDir)
+    }
+}
+
+
+/**
+ * This task can update the Unicode data files, if a Unicode release has occurred and provided
+ * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.
+ *
+ * This task is used to force rebuild and input unicode files into our build. This is not part of the
+ * common build, but there is no reason to not make it that, now that we have caching parallel
+ * Gradle/Maven build infrastructure.
+ */
+
+// TODO: We do NOT want the unicode consumer as a project dependency. We must resolve it in-task somehow.
+
+val importUnicodeFiles by tasks.registering {
+    group = LifecycleBasePlugin.BUILD_GROUP
+    description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
+
+    alwaysRerunTask()
+    dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
+    dependsOn(xtcUnicodeConsumer)
+    inputs.files(xtcUnicodeConsumer)
+
+    val outputDir = File(project(":lib-ecstasy").projectDir, "src/main/resources/ecstasy/text2")
+    outputs.dir(outputDir)
+
+    doLast {
+        logger.lifecycle("$prefix Trying to write unicode tables to ${outputDir.absolutePath}...")
+        logger.lifecycle("$prefix Provider files: ${xtcUnicodeConsumer.get().resolve()}")
+        fileTree(xtcUnicodeConsumer).forEach {
+            println(" *** WORK : $it")
+        }
+
+        copy {
+            from(fileTree(xtcUnicodeConsumer)) {
+                into(outputDir)
+            }
+            include("**/Char*.txt")
+            include("**/Char*.dat")
+            includeEmptyDirs = false
+            eachFile {
+                relativePath = RelativePath(true, name)
+                logger.lifecycle("$prefix Copying unicode file: ${file.absolutePath} to ${outputDir.absolutePath}.")
+            }
+        }
+        logger.lifecycle("$prefix Unicode files copied to ${outputDir.absolutePath}. Please verify your git diff, test and commit.")
+        fileTree(outputDir).forEach {
+            logger.lifecycle("$prefix     Destination: $it")
+        }
     }
 }
