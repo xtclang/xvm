@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 plugins {
     id("org.xvm.build.version")
     java
+    // checkstyle -> Check style is built in TODO: Add a code standard template (e.g. sun.xml), and configure checkstyle so it works correctly per language.
 }
 
 private val enablePreview = enablePreview()
@@ -56,11 +57,7 @@ tasks.withType<JavaCompile>().configureEach {
     }
 
     val args = buildList {
-//        if (lint) {
-//            add("-Xlint:all") // was: unchecked, deprecation, preview
- //       }
         add("-Xlint:${if (lint) "all" else "none"}")
-
         if (enablePreview) {
             add("--enable-preview")
             if (lint) {

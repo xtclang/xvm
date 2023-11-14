@@ -18,6 +18,9 @@ import static org.xvm.plugin.Constants.JAR_MANIFEST_PATH;
 import static org.xvm.plugin.Constants.JAVATOOLS_ARTIFACT_ID;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 
+/**
+ * Launcher logic that runs the XTC launchers from classes on the classpath.
+ */
 public class JavaExecLauncher extends XtcLauncher {
 
     private final XtcProjectDelegate delegate;
@@ -38,22 +41,23 @@ public class JavaExecLauncher extends XtcLauncher {
 
         final var out = new ByteArrayOutputStream();
         final var err = new ByteArrayOutputStream();
-        final var result = project.getProject().javaexec(spec -> {
-            spec.setStandardOutput(out);
-            spec.setErrorOutput(err);
-            spec.classpath(javaToolsJar);
-            spec.getMainClass().set(args.getMainClassName());
-            spec.args(args.toList());
-            spec.jvmArgs(args.getJvmArgs());
-            spec.setIgnoreExitValue(true);
-        });
-
-        final var exitValue = result.getExitValue();
-        final boolean success = exitValue == 0;
-        log(success ? LogLevel.INFO : LogLevel.ERROR, "{} '{}' JavaExec return value: {}", prefix, args.getMainClassName(), exitValue);
-
-        showOutput(args, out.toString(), err.toString());
-        return result;
+        try {
+            final var result = project.getProject().javaexec(spec -> {
+                spec.setStandardOutput(out);
+                spec.setErrorOutput(err);
+                spec.classpath(javaToolsJar);
+                spec.getMainClass().set(args.getMainClassName());
+                spec.args(args.toList());
+                spec.jvmArgs(args.getJvmArgs());
+                spec.setIgnoreExitValue(true);
+            });
+            final var exitValue = result.getExitValue();
+            final boolean success = exitValue == 0;
+            log(success ? LogLevel.INFO : LogLevel.ERROR, "{} '{}' JavaExec return value: {}", prefix, args.getMainClassName(), exitValue);
+            return result;
+        } finally {
+            showOutput(args, out.toString(), err.toString());
+        }
     }
 
     String readXdkVersionFromJar(final File jar) {

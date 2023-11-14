@@ -30,11 +30,6 @@ dependencies {
     implementation(libs.javatools.unicode)
 }
 
-// TODO: Hack; it's better to not directly refer to an included build instead of a configuration (resolvable), as with xtcTurtle.
-val unicode = gradle.includedBuild("javatools_unicode")
-val unicodeProjectDir = unicode.projectDir
-var unicodeResources = File(unicodeProjectDir, "build/resources/unicode")
-
 xtcCompile {
     renameOutput.put("mack.xtc", "javatools_turtle.xtc")
 }
@@ -62,6 +57,10 @@ val importUnicodeFiles by tasks.registering(Copy::class) {
     group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
 
+// TODO: Hack; it's better to not directly refer to an included build instead of a configuration (resolvable), as with xtcTurtle.
+    val unicode = gradle.includedBuild("javatools_unicode")
+    val unicodeProjectDir = unicode.projectDir
+    var unicodeResources = File(unicodeProjectDir, "build/resources/unicode")
     dependsOn(unicode.task(":run"))
     // TODO: ATM we hardcode the resource directory where the unicode ends up. This doesn't really fit with declarative Gradle/Maven semantics.
     //   So please don't copy this and start reusing it everywhere in your own code. I will get around to it.

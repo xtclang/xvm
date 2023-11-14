@@ -56,6 +56,16 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
 
         @Override
+        public void args(final List<String> args) {
+            this.args.addAll(args);
+        }
+
+        @Override
+        public void args(final Object... args) {
+            this.args.addAll(Arrays.stream(args).map(String::valueOf).toList());
+        }
+
+        @Override
         public boolean validate() {
             return moduleName.isPresent() && method.isPresent() && args.isPresent();
         }
@@ -115,8 +125,8 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     }
 
     @Override
-    public XtcRunModule moduleName(final String name) {
-        return addModule(createModule(name));
+    public void moduleName(final String name) {
+        addModule(createModule(name));
     }
 
     @Override

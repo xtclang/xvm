@@ -15,6 +15,7 @@ public class BuildThreadLauncher extends XtcLauncher {
     BuildThreadLauncher(final XtcProjectDelegate delegate, final String mainClassName) {
         super(delegate.getProject());
         this.main = resolveMethod(mainClassName);
+        lifecycle("{} Running {} in build process; this is not recommended for production use.", prefix, mainClassName);
     }
 
      private Method resolveMethod(final String className) {
