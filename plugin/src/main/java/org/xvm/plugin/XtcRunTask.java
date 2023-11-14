@@ -38,7 +38,7 @@ import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
  * the xtc environment.
  * TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
  */
-public class XtcRunTask extends DefaultTask {
+public class XtcRunTask extends XtcDefaultTask {
     static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
 
     protected final XtcProjectDelegate project;

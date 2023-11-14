@@ -2,6 +2,7 @@ package org.xvm.plugin;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.VersionCatalog;
 import org.gradle.api.artifacts.VersionCatalogsExtension;
@@ -248,6 +249,15 @@ public abstract class ProjectDelegate<T, R> {
 
     static String capitalize(final String string) {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
+    }
+
+    void alwaysRerunTask(final Task task) {
+        // Used to implement forceRebuild
+        // To work around Gradle caches, we are also marking this task as always stale, refusing it to cache inputs -> outputs. Be aware that
+        // this will totally remove most of the benefits of Gradle.
+        task.getOutputs().cacheIf(t -> false);
+        task.getOutputs().upToDateWhen(t -> false);
+        warn("{} WARNING: Task '{}:{}' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...", prefix, projectName, task.getName());
     }
 
     @SuppressWarnings("UnusedReturnValue")

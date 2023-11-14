@@ -49,7 +49,6 @@ dependencies {
 }
 
 // This is how you add a path to the source set, to debug a custom file at any location:
-/*
 sourceSets {
     main {
         xtc {
@@ -58,7 +57,6 @@ sourceSets {
         }
     }
 }
-*/
 
 // Compile DSL. See the XtcCompilerExtension class for what's in it.
 xtcCompile {
