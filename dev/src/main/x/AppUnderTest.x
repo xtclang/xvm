@@ -3,7 +3,7 @@ module AppUnderTest {
         @Inject Console console;
 
         console.print("Should break into the debugger...");
-        assert:debug;
+        //assert:debug;
         console.print("Debugging finished.");
 
         for (Int x : 1..10) {

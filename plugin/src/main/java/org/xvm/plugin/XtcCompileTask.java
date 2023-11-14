@@ -19,7 +19,9 @@ import org.gradle.api.tasks.TaskAction;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
@@ -58,12 +60,12 @@ public abstract class XtcCompileTask extends SourceTask {
         setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
         project.info("{} Associating {} compile task {} with SourceDirectorySet: {}", prefix, sourceSet.getName(), name, getSource().getFiles());
         if (extCompiler.getForceRebuild().get()) {
-            project.info("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
+            project.lifecycle("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
             touchSourceSet(sourceSet);
         }
         doLast(t -> {
             // This happens during task execution, after the config phase.
-            project.info("{} '{}' finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
+            project.info("{} '{}' Finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
             sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{}.compileXtc sourceSet output: {}", prefix, it));
         });
         project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());
@@ -82,9 +84,14 @@ public abstract class XtcCompileTask extends SourceTask {
     }
 
     private void touchSourceSet(final SourceSet sourceSet) {
-        sourceSet.getResources().getAsFileTree().forEach(this::touch);
-        sourceSet.getAllSource().getAsFileTree().forEach(this::touch);
-        project.info("{} Updated lastModified of source set '{}' and resources to 'now', to enforce a full rebuild.", prefix, sourceSet.getName());
+        final var all = sourceSet.getResources().plus(sourceSet.getAllSource());
+        all.getAsFileTree().forEach(f -> {
+            final var before = f.lastModified();
+            touch(f);
+            final var after = f.lastModified();
+            project.info("{} *** File: {} (before: {}, after: {})", prefix, f.getAbsolutePath(), before, after);
+        });
+        project.lifecycle("{} Updated lastModified of source set '{}' and resources to 'now' in the epoch, to enforce a full rebuild.", prefix, sourceSet.getName());
     }
 
     @InputFiles
@@ -255,14 +262,21 @@ public abstract class XtcCompileTask extends SourceTask {
 
     private boolean isTopLevelSource(final File file) {
         assert file.isFile();
-        final var srcTopDir = project.getProject().getLayout().getProjectDirectory().dir(project.getXtcSourceDirectoryRootPath(sourceSet)).getAsFile();
-        final var isTopLevelSrc = file.getParentFile().equals(srcTopDir);
+        final var topLevelSourceDirs = new HashSet<>(sourceSet.getAllSource().getSrcDirs());
+        final var dir = file.getParentFile();
+        assert(dir != null && dir.isDirectory());
+        final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
         project.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || "mack.x".equalsIgnoreCase(file.getName())) {
             project.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
             return true;
         }
         return false;
+
+        // Previous check only looked inside the source sets in the project. Note that we query about top level after the config
+        // phase is finished, so everything should still be resolved and evaluated. So the above version is simpler and more generic.
+        //final var srcTopDir = project.getProject().getLayout().getProjectDirectory().dir(project.getXtcSourceDirectoryRootPath(sourceSet)).getAsFile();
+        //final var isTopLevelSrc = file.getParentFile().equals(srcTopDir);
     }
 
     private boolean isXtcSourceFile(final File file) {
