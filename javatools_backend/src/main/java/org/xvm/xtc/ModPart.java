@@ -1,7 +1,7 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.xec.XRunClz;
+import org.xvm.xec.XClz;
 import org.xvm.xtc.cons.*;
 
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ public class ModPart extends ClassPart {
   public final VerTree _allowedVers; //
   public final ArrayList<Version> _prefers; 
 
-  private XClzBuilder _xbuild; // Cached Java class hierarchy version of this module
+  private Class<XClz> _jclz;    // Matching java class
   
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, CPool X ) {
     super(par,nFlags,con,cond,X,Part.Format.MODULE);
@@ -77,8 +77,10 @@ public class ModPart extends ClassPart {
     return null;
   }
 
-  // Return a Java Class for this XTC Module
-  public XRunClz xclz() { return (_xbuild==null ? (_xbuild=XClzBuilder.module(this)) : _xbuild).xclz(); }
+  // Return a Java module Class for this XTC Module
+  public Class<XClz> jclz() {
+    return _jclz == null ? (_jclz = new XModBuilder(this).jmod()) : _jclz;
+  }
   
 
   // ----- ModuleType enumeration ----------------------------------------------------------------

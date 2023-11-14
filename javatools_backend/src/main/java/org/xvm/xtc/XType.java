@@ -2,7 +2,6 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
-import org.xvm.xtc.cons.Const.BinOp;
 import org.xvm.util.*;
 import org.xvm.xrun.XProp;
 
@@ -16,18 +15,11 @@ public abstract class XType {
   // The intern table
   private static final HashMap<XType,XType> INTERN = new HashMap<>();
 
-  // Compiled
-  private static final HashMap<String,Base> XJMAP = new HashMap<>();
-  static void install(ClassPart clz, String name) {
-    XType old = XJMAP.put(xjkey(clz),Base.make(name));
-    assert old==null;
-  }
-  
   @Override public final String toString() { return str(new SB()).toString(); }
   public SB p(SB sb) { return clz(sb); }
   public abstract SB str( SB sb );
   public final String clz() { return clz(new SB()).toString(); }
-  abstract SB clz( SB sb );     // Class string
+  abstract public SB clz( SB sb );     // Class string
   abstract public boolean is_prim_base();
 
   abstract boolean eq( XType xt );
@@ -61,7 +53,7 @@ public abstract class XType {
     }
     @Override public boolean is_prim_base() { return XBOX.containsKey(this); }
     @Override public SB str( SB sb ) { return sb.p(_jtype); }
-    @Override SB clz( SB sb ) { return sb.p(_jtype); }
+    @Override public SB clz( SB sb ) { return sb.p(_jtype); }
     @Override boolean eq(XType xt) { return _jtype.equals(((Base)xt)._jtype);  }
     @Override int hash() { return _jtype.hashCode(); }
   }
@@ -88,7 +80,7 @@ public abstract class XType {
         xt.str(sb).p(",");
       return sb.unchar().p(" )");
     }
-    @Override SB clz( SB sb ) {
+    @Override public SB clz( SB sb ) {
       sb.p("Tuple").p(_xts.length).p("$");
       for( XType xt : _xts )
         xt.str(sb).p("$");
@@ -99,7 +91,50 @@ public abstract class XType {
     @Override int hash() { return Arrays.hashCode(_xts); }
   }
   
+  // Basically a Java class as a 
+  public static class Clz extends XType {
+    private static final HashMap<ClassPart,Clz> ZINTERN = new HashMap<>();
+    public final ClassPart _mod;      // Compilation unit class
+    public final ClassPart _clz;      // Self class, can be compilation unit
+    public final String[] _flds;
+    public final XType[] _xts;
+    private Clz( ClassPart clz ) {
+      _mod = XClzBuilder.CCLZ;  // Compile unit class
+      _clz = clz;
+      int len=0;
+      for( Part part : clz._name2kid.values() )
+        if( part instanceof PropPart )
+          len++;
+      _flds = new String[len];
+      _xts  = new XType [len];
+      len=0;
+      for( Part part : clz._name2kid.values() )
+        if( part instanceof PropPart prop ) {
+          _flds[len  ] = prop._name;
+          _xts [len++] = xtype(prop._con,false);
+        }
+    }
+    public static Clz make( ClassPart clz ) {
+      return ZINTERN.computeIfAbsent(clz, k->new Clz(clz));
+    }
+    String name() { return _mod==_clz || _mod==XClzBuilder.CCLZ ? _clz._name : _mod._name+"."+_clz._name; }
+    @Override public boolean is_prim_base() { return false; }
 
+    @Override public SB str( SB sb ) {
+      sb.p("class ").p(name()).p(" {").nl();
+      for( int i=0; i<_flds.length; i++ )
+        _xts[i].str(sb.p("  ").p(_flds[i]).p(":")).p(";").nl();
+      return sb.p("}").nl();
+    }
+    @Override public SB clz( SB sb ) { return sb.p(name()); }
+    // Using shallow equals,hashCode, not deep, because the parts are already interned
+    @Override boolean eq(XType xt) {
+      return Arrays.equals(_flds,((Clz)xt)._flds) && Arrays.equals(_xts,((Clz)xt)._xts);
+    }
+    @Override int hash() { return Arrays.hashCode(_flds) ^ Arrays.hashCode(_xts); }
+  }
+
+  
   // Basically a Java class as an array
   public static class Ary extends XType {
     private static Ary FREE = new Ary(null);
@@ -120,7 +155,7 @@ public abstract class XType {
         return _e.p(sb.p("Ary")); // Primitives print as "Arylong" or "Arychar" classes
       return _e.str(sb.p("Ary<")).p(">");
     }
-    @Override SB clz( SB sb ) { return str(sb); }
+    @Override public SB clz( SB sb ) { return str(sb); }
     @Override boolean eq(XType xt) { return _e == ((Ary)xt)._e; }
     @Override int hash() { return _e.hashCode() ^ 123456789; }
   }
@@ -152,7 +187,7 @@ public abstract class XType {
         xt.str(sb).p(",");
       return sb.unchar().p(" }");
     }
-    @Override SB clz( SB sb ) {
+    @Override public SB clz( SB sb ) {
       sb.p("Fun").p(_args.length).p("$");
       for( XType xt : _args )
         xt.str(sb).p("$");
@@ -162,9 +197,9 @@ public abstract class XType {
     @Override boolean eq(XType xt) { return Arrays.equals(_args,((Fun)xt)._args) && Arrays.equals(_rets,((Fun)xt)._rets); }
     @Override int hash() { return Arrays.hashCode(_args) ^ Arrays.hashCode(_rets); }
 
-    public Fun make_class( HashMap<String,String> cache ) {
+    public Fun make_class( ) {
       String tclz = clz();
-      if( cache.containsKey(tclz) ) return this;
+      if( XClzBuilder.XCLASSES.containsKey(tclz) ) return this;
       /* Gotta build one.  Looks like:
          interface Fun2$long$String {
          long call(long l, String s);
@@ -184,7 +219,7 @@ public abstract class XType {
       sb.unchar().p(");").nl();
       // Class end
       sb.di().ip("}").nl();
-      cache.put(tclz,sb.toString());               
+      XClzBuilder.XCLASSES.put(tclz,sb.toString());               
       return this;
     }
   }
@@ -313,15 +348,8 @@ public abstract class XType {
       String xjkey = xjkey(clz);
       Base val = BASE_XJMAP.get(xjkey);
       if( val!=null )  return boxed ? val.box() : val;
-      // Check installed classes
-      val = XJMAP.get(xjkey);
-      if( val!=null )  return val;
-      // Same module compiles shortly, with the short name
-      XType clzpar = Base.make(XClzBuilder.java_class_name(clz._par._name));
-      if( clzpar==XClzBuilder.MOD_TYPE )
-        return Base.make(XClzBuilder.java_class_name(clz._name));
-      // TODO: Figure out cross-XTC-module naming
-      throw XEC.TODO();
+      // Make one
+      return Clz.make(clz);
     }
 
     if( tc instanceof ParamTCon ptc ) {
@@ -338,7 +366,7 @@ public abstract class XType {
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
         Tuple args = xtype(((ParamTCon)ptc._parms[0])._parms);
         Tuple rets = xtype(((ParamTCon)ptc._parms[1])._parms);
-        return Fun.make(args._xts, rets._xts).make_class(XClzBuilder.XCLASSES);
+        return Fun.make(args._xts, rets._xts).make_class();
       }
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true);
@@ -359,7 +387,8 @@ public abstract class XType {
     //    return "Ary<"+telem+">"; // Shortcut class
 
       if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") )
-        return org.xvm.xrun.Tuple.make_class(XClzBuilder.XCLASSES, xtype(ptc._parms));
+        //return org.xvm.xrun.Tuple.make_class(XClzBuilder.XCLASSES, xtype(ptc._parms));
+        throw XEC.TODO();
 
     //  if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/collections/Map.x") )
     //    return XMap.make_class(XClzBuilder.XCLASSES, ptc._parms);
@@ -422,7 +451,7 @@ public abstract class XType {
 
     if( tc instanceof SingleCon con0 ) {
       if( con0.part() instanceof ModPart mod )
-        return Base.make(XClzBuilder.java_class_name(mod._name));
+        return Clz.make(mod);
       if( con0.part() instanceof PropPart prop )
         return Base.make(XProp.jname(prop));
       throw XEC.TODO();
@@ -438,5 +467,5 @@ public abstract class XType {
       clzs[i]=XType.xtype(cons[i],false);
     return Tuple.make(clzs);
   }
-
+  
 }

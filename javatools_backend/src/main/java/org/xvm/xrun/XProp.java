@@ -25,12 +25,12 @@ public abstract class XProp extends XClz {
   // Fancier, e.g. marked LazyVar, or has non-default get/set or other pieces:
   //   private Prop$Type prop = new Prop$Type();
   //   // Calls are e.g. prop.$get() or prop.$set(p)
-  public static void make_class( ModPart mod, SB sb, PropPart pp ) {
+  public static void make_class( SB sb, PropPart pp ) {
     // Name is unique per-class, so if embedded in XTC method make it unique
     // per java class.
     String pname = jname(pp);
-    
-    String jtype = XType.jtype(pp._con,false);
+
+    XType xtype = XType.xtype(pp._con,false);
     String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     boolean lazy = "LazyVar".equals(ano);
     boolean stat = (pp._nFlags & Part.STATIC_BIT)!=0;
@@ -38,7 +38,7 @@ public abstract class XProp extends XClz {
     // Definition and init
     sb.ip("private ");
     if( stat ) sb.p("static ");
-    sb.p(jtype).p(" ").p(pname);
+    xtype.clz(sb).p(" ").p(pname);
     // Special init for InjectedRef.  Other props get no init()?
     if( "InjectedRef".equals(ano) )
       sb.p(" = _container.").p(pname).p("()");
@@ -49,10 +49,10 @@ public abstract class XProp extends XClz {
       sb.p(" = ");
       MMethodPart mm = (MMethodPart)init;
       MethodPart meth = (MethodPart)mm._name2kid.get("=");
-      XClzBuilder X =  new XClzBuilder(sb);
+      XClzBuilder X =  new XClzBuilder(null,null,sb,false);
       // Method has to be a no-args function, that is executed exactly once here.
       // Inline instead.
-      X.jmethod_body_inline(meth,meth._name);
+      X.jmethod_body_inline(meth );
     }
     sb.p(";").nl();
     
@@ -64,7 +64,7 @@ public abstract class XProp extends XClz {
     // Type prop$get() { if( !prop$init ) { init=true; prop=prop$calc(); } return prop; }
     sb.i();
     if( stat ) sb.p("static ");
-    sb.p(jtype).p(" ").p(pname).p("$get() { ");
+    xtype.clz(sb).p(" ").p(pname).p("$get() { ");
     if( lazy )
       sb.p("if( !").p(pname).p("$init").p(") { ").p(pname).p("$init").p("=true; ").p(pname).p(" = ").p(pname).p("$calc(); } ");
     sb.p("return ").p(pname).p("; }").nl();
@@ -72,7 +72,8 @@ public abstract class XProp extends XClz {
     // void prop$set(Type p) { prop=p; }
     sb.i();
     if( stat ) sb.p("static ");
-    sb.p("void ").p(pname).p("$set( ").p(jtype).p(" p ) { ");
+    sb.p("void ").p(pname).p("$set( ");
+    xtype.clz(sb).p(" p ) { ");
     boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
     sb.p( is_const ? "throw new ReadOnlyX();" : pname + " = p;").p(" }").nl();
 
@@ -80,7 +81,7 @@ public abstract class XProp extends XClz {
     if( lazy ) {
       MMethodPart mm = (MMethodPart)pp._name2kid.get("->");
       MethodPart meth = (MethodPart)mm._name2kid.get("->");
-      XClzBuilder X =  new XClzBuilder(sb);
+      XClzBuilder X =  new XClzBuilder(null,null,sb,false);
       X.jmethod(meth,pname+"$calc");
     }
 

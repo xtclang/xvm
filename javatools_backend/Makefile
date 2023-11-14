@@ -43,7 +43,7 @@ ifeq ($(UNAME),Darwin)
 endif
 
 # Fun Args to javac.
-JAVAC_ARGS = -g -source 21 -target 21 -XDignore.symbol.file -Xlint:all -Xlint:-unchecked -Xlint:-preview -Xlint:-deprecation -Xlint:-serial -Xlint:-rawtypes
+JAVAC_ARGS = -g -source 21 -target 21 -XDignore.symbol.file -Xlint:all -Xlint:-this-escape -Xlint:-unchecked -Xlint:-preview -Xlint:-deprecation -Xlint:-serial -Xlint:-rawtypes
 
 # Source code
 # Note that BuildVersion is not forced to be rebuilt here - so incremental
@@ -53,8 +53,8 @@ XEC := org/xvm/
 SRC := src/main/java
 TST := src/test/java
 CLZDIR:= build/classes/java
-main_javas   := $(wildcard $(SRC)/$(XEC)/*java $(SRC)/$(XEC)/*/*java)
-test_javas   := $(wildcard $(TST)/$(XEC)/*java $(TST)/$(XEC)/*/*java)
+main_javas   := $(wildcard $(SRC)/$(XEC)/*java $(SRC)/$(XEC)/*/*java $(SRC)/$(XEC)/*/*/*java)
+test_javas   := $(wildcard $(TST)/$(XEC)/*java $(TST)/$(XEC)/*/*java $(TST)/$(XEC)/*/*/*java)
 main_classes := $(patsubst $(SRC)/%java,$(CLZDIR)/main/%class,$(main_javas))
 test_classes := $(patsubst $(TST)/%java,$(CLZDIR)/test/%class,$(test_javas))
 classes = $(main_classes) $(test_classes)

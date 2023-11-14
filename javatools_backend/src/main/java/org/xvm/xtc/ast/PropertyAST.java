@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const;
@@ -12,7 +13,7 @@ class PropertyAST extends AST {
     String prop = XClzBuilder.value_tcon(tc);
     XType type = XType.xtype(tc,false);
     // Property is class-local, no need for class name
-    if( lhs._type==XClzBuilder.MOD_TYPE ) lhs = null;
+    if( lhs._type==X._tmod ) lhs = null;
     return new PropertyAST( lhs, type, prop);
   }
   

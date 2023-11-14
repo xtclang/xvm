@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.xtc.ClassPart;
 import org.xvm.xtc.XType;
 import org.xvm.xtc.XClzBuilder;
 import org.xvm.util.SB;
@@ -27,8 +28,8 @@ class RegAST extends AST {
     };
     _type = switch( reg ) {
     case -4 ->  XType.VOID;  // A_DEFAULT
-    case -5 ->  XClzBuilder.MOD_TYPE;                     // A_THIS
-    case -10 -> XType.Base.make(X._meth._par._par._name); // A_STRUCT
+    case -5 ->  X._tclz;     // A_THIS
+    case -10 -> XType.Clz.make((ClassPart)X._meth._par._par); // A_STRUCT
     default -> X._ltypes.get(reg);
     };
     
