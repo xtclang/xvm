@@ -137,8 +137,8 @@ public class XtcRunTask extends DefaultTask {
     }
 
     @Input
-    Property<Boolean> getShowVersion() {
-        return extRuntime.getShowVersion();
+    Property<Boolean> getVersion() {
+        return extRuntime.getVersion();
     }
 
     @Input
@@ -159,7 +159,7 @@ public class XtcRunTask extends DefaultTask {
     @TaskAction
     public void run() {
         final var args = new CommandLine(XTC_RUNNER_CLASS_NAME, getJvmArgs().get());
-        args.addBoolean("-version", getShowVersion().get());
+        args.addBoolean("-version", getVersion().get());
         args.addBoolean("-verbose", getIsVerbose().get());
         args.addBoolean("-debug", getDebuggerEnabled().get());
 

@@ -76,7 +76,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
     }
 
-    private final Property<Boolean> showVersion;
+    private final Property<Boolean> version;
     private final ListProperty<XtcRunModule> modules;
     private final Property<Boolean> allowParallel;
     private final Property<Boolean> enableDebug;
@@ -84,7 +84,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
         super(project);
-        this.showVersion = objects.property(Boolean.class).value(false);
+        this.version = objects.property(Boolean.class).value(false);
         this.modules = objects.listProperty(XtcRunModule.class).value(Collections.emptyList());
         this.allowParallel = objects.property(Boolean.class).value(false);
         this.enableDebug = objects.property(Boolean.class).value(false);
@@ -170,7 +170,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     }
 
     @Override
-    public Property<Boolean> getShowVersion() {
-        return showVersion;
+    public Property<Boolean> getVersion() {
+        return version;
     }
 }

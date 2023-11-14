@@ -65,13 +65,42 @@ xtcCompile {
 
 // TODO Add the possibility to run a module with hard coded path
 xtcRun {
-    verbose = true
-    fork = true
+    version = true
+    fork = false // Run the app in the build process.
     module {
         moduleName = "AppUnderTest"
         method = "run"
         args("some", "arg")
     }
-}
 
-// TODO Add native launchers, just to show that they are there.
+    // Other shorthand and DSL:
+    /*
+
+    moduleName("Someting")
+
+    moduleNames("Something", "Other", "...")
+
+    // Or a list of modules work, i.e. repeated module {} blocks. Executed in order.
+    module {
+        moduleName = "mandatoryName"
+        method = "optionalMethodToRun" // default is "run"
+        args("arguments", "to", "add") // default is empty list.
+    }
+        ... other modules ...
+
+    module {
+        ...
+    }
+
+    debugEnabled = false
+
+    // Not supported yet. You can get parallelism if you add another project. Gradle will build everything that's
+    // independent at the same time. TODO: This will be improved with the Worker API.
+    allowParallel = true
+
+    jvmArgs = ..
+
+    verbose = true // default is false
+
+    */
+}
