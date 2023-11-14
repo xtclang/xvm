@@ -66,7 +66,7 @@ xtcCompile {
 // TODO Add the possibility to run a module with hard coded path
 xtcRun {
     version = true
-    fork = false // Run the app in the build process.
+    fork = true // Run the app in the build process.
     module {
         moduleName = "AppUnderTest"
         method = "run"

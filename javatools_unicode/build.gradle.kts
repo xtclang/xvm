@@ -19,7 +19,7 @@ dependencies {
     implementation(libs.javatools.utils)
 }
 
-internal val ucdZip = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
+private val ucdZip = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
 
 /**
  * Download the ucd zip file from the unicode site, if it does not exist.
@@ -43,12 +43,13 @@ val run by tasks.registering {
     group = APPLICATION_GROUP
     description = "Run the BuildUnicodeTables tool, after downloading the latest available data. This rebuilds our Unicode tables."
 
-    dependsOn(tasks.assemble)
+    //dependsOn(tasks.assemble)
     dependsOn(downloadUcdFlatZip)
     val buildDir = project.layout.buildDirectory
+    //outputs.files(buildDir.dir("resources/unicode/"))
     outputs.dir(buildDir.dir("resources/unicode/"))
     outputs.dir(buildDir.dir("resources/unicode/tables"))
-
+    alwaysRerunTask()
     doLast {
         val unicodeJar = jar.get().archiveFile
         val localUcdZip = downloadUcdFlatZip.get().outputs.files.singleFile
@@ -59,5 +60,17 @@ val run by tasks.registering {
             args(localUcdZip.absolutePath)
             mainClass.set("org.xvm.tool.BuildUnicodeTables")
         }
+    }
+}
+
+val javatoolsUnicodeProvider by configurations.registering {
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    outgoing.artifact(run) {
+        type = ArtifactTypeDefinition.DIRECTORY_TYPE
+    }
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
     }
 }
