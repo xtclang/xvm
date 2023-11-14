@@ -25,7 +25,7 @@ public abstract class XProp extends XClz {
   // Fancier, e.g. marked LazyVar, or has non-default get/set or other pieces:
   //   private Prop$Type prop = new Prop$Type();
   //   // Calls are e.g. prop.$get() or prop.$set(p)
-  public static void make_class( SB sb, PropPart pp ) {
+  public static void make_class( XClzBuilder X, PropPart pp ) {
     // Name is unique per-class, so if embedded in XTC method make it unique
     // per java class.
     String pname = jname(pp);
@@ -36,6 +36,7 @@ public abstract class XProp extends XClz {
     boolean stat = (pp._nFlags & Part.STATIC_BIT)!=0;
     
     // Definition and init
+    SB sb = X._sb;
     sb.ip("private ");
     if( stat ) sb.p("static ");
     xtype.clz(sb).p(" ").p(pname);
@@ -49,10 +50,10 @@ public abstract class XProp extends XClz {
       sb.p(" = ");
       MMethodPart mm = (MMethodPart)init;
       MethodPart meth = (MethodPart)mm._name2kid.get("=");
-      XClzBuilder X =  new XClzBuilder(null,null,sb,false);
+      XClzBuilder X2 =  new XClzBuilder(X,null);
       // Method has to be a no-args function, that is executed exactly once here.
       // Inline instead.
-      X.jmethod_body_inline(meth );
+      X2.jmethod_body_inline(meth );
     }
     sb.p(";").nl();
     
@@ -81,8 +82,8 @@ public abstract class XProp extends XClz {
     if( lazy ) {
       MMethodPart mm = (MMethodPart)pp._name2kid.get("->");
       MethodPart meth = (MethodPart)mm._name2kid.get("->");
-      XClzBuilder X =  new XClzBuilder(null,null,sb,false);
-      X.jmethod(meth,pname+"$calc");
+      XClzBuilder X2 =  new XClzBuilder(X,null);
+      X2.jmethod(meth,pname+"$calc");
     }
 
   }
