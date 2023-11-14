@@ -1,3 +1,4 @@
+import XdkBuildLogic.Companion.DEFAULT_JAVA_BYTECODE_VERSION
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
 import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
 import org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED
@@ -10,13 +11,14 @@ import java.nio.charset.StandardCharsets.UTF_8
 plugins {
     id("org.xvm.build.version")
     java
+    // checkstyle -> Check style is built in TODO: Add a code standard template (e.g. sun.xml), and configure checkstyle so it works correctly per language.
 }
 
 private val enablePreview = enablePreview()
 
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("org.xvm.java.jdk", XdkBuildLogic.DEFAULT_JAVA_BYTECODE_VERSION).toInt())
+        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("org.xvm.java.jdk", DEFAULT_JAVA_BYTECODE_VERSION).toInt())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             throw buildException("Error in Java toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
@@ -56,11 +58,7 @@ tasks.withType<JavaCompile>().configureEach {
     }
 
     val args = buildList {
-//        if (lint) {
-//            add("-Xlint:all") // was: unchecked, deprecation, preview
- //       }
         add("-Xlint:${if (lint) "all" else "none"}")
-
         if (enablePreview) {
             add("--enable-preview")
             if (lint) {
@@ -95,7 +93,7 @@ tasks.withType<Test>().configureEach {
     }
     maxHeapSize = "4G" // TODO make this configurable in the properties files along with the other Java properties.
     testLogging {
-        showStandardStreams = getXdkProperty("java.test.stdout", "false").toBoolean()
+        showStandardStreams = getXdkPropertyBoolean("org.xvm.java.test.stdout", false)
         if (showStandardStreams) {
             events(STANDARD_OUT, STANDARD_ERROR, SKIPPED, STARTED, PASSED, FAILED)
         }
@@ -106,7 +104,7 @@ tasks.withType<Test>().configureEach {
 }
 
 fun enablePreview(): Boolean {
-    val enablePreview = getXdkProperty("java.enablePreview", "false").toBoolean()
+    val enablePreview = getXdkPropertyBoolean("org.xvm.java.enablePreview", false)
     if (enablePreview) {
         logger.warn("$prefix WARNING; project has Java preview features enabled.")
     }
