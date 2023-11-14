@@ -366,33 +366,34 @@ service ChainBundle {
      * Extract the body value from the request and append it to the values Tuple.
      */
     private Tuple extractBodyValue(RequestIn request, String name, BodyParam param, Tuple values) {
-        Body? body = request.body;
-        if (body == Null) {
-            throw new IllegalState($"Request has no body");
-        }
-
+        Body?  body = request.body;
         Object paramValue;
-        Type   paramType = param.ParamType;
-        switch (paramType.is(_)) {
-        case Type<Byte[]>:
-            paramValue = body.bytes;
-            break;
+        if (body == Null) {
+            if (!(paramValue := param.defaultValue())) {
+                throw new IllegalState($"Request has no body");
+            }
+        } else {
+            Type   paramType = param.ParamType;
+            switch (paramType.is(_)) {
+            case Type<Byte[]>:
+                paramValue = body.bytes;
+                break;
 
-        default:
-            if (Codec<paramType.DataType> codec := registry.findCodec(body.mediaType, paramType)) {
-                paramValue = codec.decode(body.bytes);
-                if (String formatName ?= param.format) {
-                    if (Format format := registry.findFormat(formatName, paramType),
-                               paramValue.is(String)) {
-                        paramValue = format.decode(paramValue);
+            default:
+                if (Codec<paramType.DataType> codec := registry.findCodec(body.mediaType, paramType)) {
+                    paramValue = codec.decode(body.bytes);
+                    if (String formatName ?= param.format) {
+                        if (Format format := registry.findFormat(formatName, paramType),
+                                   paramValue.is(String)) {
+                            paramValue = format.decode(paramValue);
+                            break;
+                        }
+                    } else {
                         break;
                     }
-                } else {
-                    break;
                 }
+                throw new IllegalState($"Unsupported BodyParam type: \"{paramType}\"");
             }
-
-            throw new IllegalState($"Unsupported BodyParam type: \"{paramType}\"");
         }
 
         return values.add(paramValue.as(param.ParamType));
