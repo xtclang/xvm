@@ -91,7 +91,7 @@ class SwitchAST extends AST {
         String[] arms = _armss[i] = new String[alen];
         Const[] cons = ((AryCon)cases[i]).cons();
         for( int j=0; j<alen; j++ )
-          arms[j] = cons[j] !=null ? XClzBuilder.value_tcon(cons[j]) : null;
+          arms[j] = cons[j] !=null ? XValue.val(cons[j]) : null;
       }
       break;
 
@@ -116,7 +116,7 @@ class SwitchAST extends AST {
       for( int i=0; i<clen; i++ )
         // This might be an exact check, or might have a default.
         if( _cases[i] != null ) {
-          String arm = XClzBuilder.value_tcon(_cases[i]);
+          String arm = XValue.val(_cases[i]);
           // Enum arms must be the unqualified enum name.
           int idx = arm.lastIndexOf(".");
           if( idx >=0 ) arm = arm.substring(idx + 1);
@@ -127,7 +127,7 @@ class SwitchAST extends AST {
     case SimpleTern:
       // A list of singleton constants
       for( int i=0; i<clen-1; i++ )
-        _armss[i] = new String[]{XClzBuilder.value_tcon(cases[i])};
+        _armss[i] = new String[]{XValue.val(cases[i])};
       break;
       
     }

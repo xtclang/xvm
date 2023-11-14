@@ -311,11 +311,6 @@ public abstract class XType {
   }
  
 
-  // Legacy interface returning a string
-  public static String jtype( Const tc, boolean boxed ) {
-    return xtype(tc,boxed).toString();
-  }
-
   // Convert an array of Const to an array of XType
   public static XType[] xtypes( Const[] cons ) {
     if( cons==null ) return null;

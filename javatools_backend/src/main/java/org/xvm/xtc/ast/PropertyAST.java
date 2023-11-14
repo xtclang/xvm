@@ -10,7 +10,7 @@ class PropertyAST extends AST {
   static PropertyAST make( XClzBuilder X ) {
     AST lhs = ast_term(X);
     Const tc = X.con();
-    String prop = XClzBuilder.value_tcon(tc);
+    String prop = XValue.val(tc);
     XType type = XType.xtype(tc,false);
     // Property is class-local, no need for class name
     if( lhs._type==X._tmod ) lhs = null;
