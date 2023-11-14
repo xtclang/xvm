@@ -793,7 +793,12 @@ public class xTuple
                 for (int i = 0, c = ahValue.length; i < c; i++)
                     {
                     ObjectHandle hValue = ahValue[i];
-                    if (!hValue.isService() && !hValue.makeImmutable())
+                    if (hValue == null)
+                        {
+                        // this can only be a scenario of a conditional Tuple
+                        assert i > 0 && ahValue[0] == xBoolean.FALSE;
+                        }
+                    else if (!hValue.isService() && !hValue.makeImmutable())
                         {
                         return false;
                         }
