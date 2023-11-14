@@ -13,8 +13,8 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.46"
-xtcplugin = "0.4.46"
+xdk = "0.4.47"
+xtcplugin = "0.4.47"
 xdkgroup = "org.xvm"
 
 # Third party depenency and plugin versions.

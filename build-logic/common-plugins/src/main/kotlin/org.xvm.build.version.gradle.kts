@@ -6,15 +6,9 @@
  * Any XTC project will have an extension with its resolved SemanticVersion
  */
 
-import SemanticVersion.Companion.XDK_VERSION_CATALOG_GROUP
-import SemanticVersion.Companion.XDK_VERSION_CATALOG_PLUGIN_VERSION
-import SemanticVersion.Companion.XDK_VERSION_CATALOG_VERSION
 import XdkBuildLogic.Companion.XDK_TASK_GROUP_VERSION
-import XdkBuildLogic.Companion.ls
 import org.gradle.api.Project
-import org.gradle.api.artifacts.VersionCatalogsExtension
-import org.gradle.kotlin.dsl.findByType
-import org.gradle.kotlin.dsl.provideDelegate
+import java.io.IOException
 
 plugins {
     id("org.xvm.build.debug")
@@ -24,9 +18,19 @@ val semanticVersion by extra {
     initXdkVersion()
 }
 
-// TODO if we can fold these functions into the XdkBuildLogic class, it would be a lot nicer.
+val Project.versionCatalogToml: File get() = File("$compositeRootProjectDirectory/gradle/libs.versions.toml")
+
+// TODO if we can fold these functions into the XdkBuildLogic class, it would be a lot nicer. (TODO: partially done)
 fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion {
-    checkIsNotVersioned()
+    fun ensureNotVersioned(project: Project): Unit = project.run {
+        // Group does not always default to empty. It may default to parent project name hierarchy too.
+        val hasGroup = group.toString().isNotEmpty()
+        val hasVersion = Project.DEFAULT_VERSION == version.toString()
+        if ((hasGroup || hasVersion) && group.toString().indexOf('.') != -1) {
+            project.logger.warn("Project '$name' is not expected to have hierarchical group and version configured at init: (version: group='$group', name='$name', version='$version')")
+        }
+    }
+    ensureNotVersioned(project)
     val (group, name, version) = semanticVersion
 
     if (project.name != name) {
@@ -50,41 +54,8 @@ fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion 
 }
 
 fun Project.initXdkVersion(): SemanticVersion {
-    return assignXdkVersion(resolveSemanticVersion())
-}
-
-fun Project.checkIsNotVersioned() {
-    val hasGroup = project.group.toString().isNotEmpty()
-    val hasVersion = Project.DEFAULT_VERSION == project.version.toString()
-    if (hasGroup || hasVersion) {
-        // Group does not always default to empty. It may default to parent project name too.
-        if (group.toString().indexOf('.') != -1) {
-            logger.warn("Project '$name' is not expected to have hierarchical group and version configured at init: (version: group='$group', name='$name', version='$version')")
-        }
-    }
-}
-
-fun Project.resolveSemanticVersion(): SemanticVersion {
-    return SemanticVersion(
-        resolveCatalogVersion(XDK_VERSION_CATALOG_GROUP),
-        project.name,
-        resolveCatalogVersion(XDK_VERSION_CATALOG_VERSION)
-    )
-}
-
-fun Project.resolveCatalogVersion(name: String, catalog: String = "libs"): String = project.run {
-    // Why not use typesafe "libs.versions... etc." here? This is why:
-    //    When building this precompiled script plugin, we are still partly on the settings evaluation
-    //    level, and cannot guarantee that we have access to the soon-to-be-precompiled type safe
-    //    VersionCatalog instance yet.
-    extensions.findByType<VersionCatalogsExtension>()?.also { catalogs ->
-        val versionCatalog = catalogs.named(catalog)
-        val value = versionCatalog.findVersion(name)
-        if (value.isPresent) {
-            return value.get().toString()
-        }
-    }
-    throw buildException("Version catalog entry '$name' has no value for '$catalog:$name'")
+    validateGradle()
+    return assignXdkVersion(SemanticVersion.resolveCatalogSemanticVersion(project))
 }
 
 fun Project.isVersioned(): Boolean {
@@ -95,20 +66,22 @@ fun Project.isNotVersioned(): Boolean {
     return version == Project.DEFAULT_VERSION
 }
 
-/*
-fun Project.isSnapshotVersion(): Boolean {
-    if (isNotVersioned()) {
-        throw buildException("Project is not versioned; XDK subprojects should inherit version from XDK.")
-    }
-    return version.toString().endsWith("-SNAPSHOT")
-}*/
+fun updateVersionCatalogFile(toSnapshot: Boolean) {
+    val current = semanticVersion
+    val next = current.bump(toSnapshot)
+    logger.lifecycle("$prefix '${project.name}' (upgrading '$current' to '$next')")
+    versionCatalogToml.updateVersionCatalog(current, next)
+    logger.lifecycle("""
+        $prefix bumpProjectVersion updated TOML file: '$versionCatalogToml'
+        $prefix IMPORTANT: depending on your environment, a full clean and rebuild may be required.
+    """.trimIndent())
+}
 
-fun changeVersion(current: SemanticVersion, next: SemanticVersion) {
-    val toml = File("${compositeRootProjectDirectory}/gradle/libs.versions.toml")
-
+fun File.updateVersionCatalog(current: SemanticVersion, next: SemanticVersion): List<Pair<String, String>> {
+    val ls = System.lineSeparator()
+    val srcLines = readLines().map { it.trim() }
     val changedLines = mutableListOf<Pair<String, String>>()
-    val srcLines = toml.readLines().map { it.trim() }
-    val destLines = buildList {
+    val newLines = buildList {
         var section = ""
         for (it in srcLines) {
             if (it.isEmpty()) {
@@ -124,15 +97,15 @@ fun changeVersion(current: SemanticVersion, next: SemanticVersion) {
                 continue
             }
 
-            if (section != "[versions]") {
+            if (section != SemanticVersion.VERSION_CATALOG_TOML_VERSIONS) {
                 add(it)
                 continue
             }
 
             when (val split = it.split("=")[0].trim()) {
-                XDK_VERSION_CATALOG_VERSION, XDK_VERSION_CATALOG_PLUGIN_VERSION -> {
+               SemanticVersion.XDK_VERSION_CATALOG_VERSION, SemanticVersion.XDK_VERSION_CATALOG_PLUGIN_VERSION -> {
                     if (!it.contains(current.artifactVersion)) {
-                        throw buildException("ERROR: Failed to find current version '$current' in version catalog entry: $it")
+                        throw IOException("ERROR: Failed to find current version '$current' in version catalog entry: $it")
                     }
                     val updated = "$split = \"${next.artifactVersion}\""
                     add(updated)
@@ -143,37 +116,30 @@ fun changeVersion(current: SemanticVersion, next: SemanticVersion) {
         }
     }
 
-    if (changedLines.isNotEmpty()) {
-        changedLines.forEach {
-            val (from, to) = it
-            logger.lifecycle("$prefix bumpProjectVersion changed TOML entry $from to $to.")
-        }
-        toml.writeText(destLines.joinToString(ls, postfix = ls))
-        logger.lifecycle("$prefix bumpProjectVersion updated TOML file: '$toml'")
-        logger.lifecycle("$prefix IMPORTANT: depending on your environment, a full clean and rebuild may be required.")
-    } else {
-        logger.error("$prefix bumpProjectVersion failed to find any changes to make.")
+    if (changedLines.isEmpty()) {
+        throw IOException("ERROR: Failed to replace any version strings for '$current' in toml: $absolutePath");
     }
+
+    changedLines.forEach {
+        logger.lifecycle("$prefix bumpProjectVersion changed TOML entry ${it.first} to ${it.second}.")
+    }
+
+    writeText(newLines.joinToString(ls, postfix = ls))
+    return changedLines
 }
 
 val bumpProjectVersion by tasks.registering {
     group = XDK_TASK_GROUP_VERSION
     description = "Increase the version of the current XDK build with one."
     doLast {
-        val current = resolveSemanticVersion()
-        val next = current.bump(project, false)
-        logger.lifecycle("$prefix bumpProjectVersion (upgrading '$current' to '$next')")
-        changeVersion(current, next)
+        updateVersionCatalogFile(false)
     }
 }
 
 val bumpProjectVersionToSnapshot by tasks.registering {
     group = XDK_TASK_GROUP_VERSION
-    description = "Increase the version of the current XDK build with one."
+    description = "Increase the version of the current XDK build with one, and suffix the new version string with '-SNAPSHOT'."
     doLast {
-        val current = resolveSemanticVersion()
-        val next = current.bump(project, true)
-        logger.lifecycle("$prefix bumpProjectVersion (upgrading '$current' to '$next')")
-        changeVersion(current, next)
+        updateVersionCatalogFile(true)
     }
 }

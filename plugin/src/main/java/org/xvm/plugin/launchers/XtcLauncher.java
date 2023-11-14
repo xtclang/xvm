@@ -1,16 +1,23 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 import org.gradle.process.internal.ExecException;
+import org.xvm.plugin.ProjectDelegate;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import java.util.function.Consumer;
 
-import static org.xvm.plugin.XtcCompileTask.*;
-import static org.xvm.plugin.XtcRunTask.*;
+import static org.xvm.plugin.Constants.XTC_COMPILER_CLASS_NAME;
+import static org.xvm.plugin.Constants.XTC_COMPILER_LAUNCHER_NAME;
+import static org.xvm.plugin.Constants.XTC_RUNNER_CLASS_NAME;
+import static org.xvm.plugin.Constants.XTC_RUNNER_LAUNCHER_NAME;
 
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
 
+    /**
+     * Subclass to a Gradle Exec Result.
+     */
     static class XtcExecResult implements ExecResult {
         static final XtcExecResult OK = new XtcExecResult(0, null);
 
@@ -49,15 +56,19 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
         }
     }
 
+    protected XtcLauncher(final Project project) {
+        super(project);
+    }
+
     static String nativeLauncherFor(final XtcProjectDelegate delegate, final String mainClassName) {
         return switch (mainClassName) {
-            case XTC_COMPILER_CLASS_NAME -> "xtc";
-            case XTC_RUNNER_CLASS_NAME -> "xec";
+            case XTC_COMPILER_CLASS_NAME -> XTC_COMPILER_LAUNCHER_NAME;
+            case XTC_RUNNER_CLASS_NAME -> XTC_RUNNER_LAUNCHER_NAME;
             default -> throw delegate.buildException("Unknown launcher for corresponding class: " + mainClassName);
         };
     }
 
-    static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean isFork, final boolean isNativeLauncher) {
+    public static XtcLauncher create(final XtcProjectDelegate delegate, final String mainClassName, final boolean isFork, final boolean isNativeLauncher) {
         if (isNativeLauncher) {
             assert isFork : "For option for native launcher will be ignored. A native process is always forked.";
             delegate.warn("{} The XTC plugin does not yet support using the native launcher.", delegate.prefix()); // TODO: Verify this works.
@@ -67,10 +78,6 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
             return new JavaExecLauncher(delegate);
         }
         return new BuildThreadLauncher(delegate, mainClassName);
-    }
-
-    protected XtcLauncher(final Project project) {
-        super(project);
     }
 
     protected void showOutput(final CommandLine args, final String output, final Consumer<String> printer) {

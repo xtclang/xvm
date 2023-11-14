@@ -1,4 +1,4 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.Directory;
@@ -11,6 +11,7 @@ import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -22,7 +23,7 @@ import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_OUTGOING;
 import static org.xvm.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
 
 @CacheableTask
-public class XtcExtractXdkTask extends DefaultTask {
+public class XtcExtractXdkTask extends XtcDefaultTask {
     public static final String EXTRACT_TASK_NAME = "extractXdk";
     private static final String ARCHIVE_EXTENSION = "zip";
     private final XtcProjectDelegate project;
@@ -36,7 +37,7 @@ public class XtcExtractXdkTask extends DefaultTask {
         setGroup(BUILD_GROUP);
         setDescription("Extract an XDK zip resource into build/xdk/common/ as a build dependency. This is an internal task, and it makes little sense to run it manually.");
 
-        project.configs.register(XTC_CONFIG_NAME_JAVATOOLS_OUTGOING, it -> {
+        project.getConfigs().register(XTC_CONFIG_NAME_JAVATOOLS_OUTGOING, it -> {
             it.setCanBeConsumed(false);
             it.setCanBeResolved(true);
             it.setDescription("The xtcJavaToolsProvider configuration is used to resolve the javatools.jar from the XDK.");

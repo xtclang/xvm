@@ -1,4 +1,4 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
 import org.gradle.api.DefaultTask;
 

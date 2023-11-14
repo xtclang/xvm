@@ -1,10 +1,13 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Objects;
+
+import static org.xvm.plugin.launchers.XtcLauncher.XtcExecResult.OK;
 
 // TODO: Finish the support for native launchers from the local System PATH, and implement the "nativeLauncher = true" flag.
 @SuppressWarnings("unused")
@@ -18,7 +21,7 @@ public class NativeBinaryLauncher extends XtcLauncher {
     }
 
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         Objects.requireNonNull(args);
         warn("{} XTC Plugin will launch '{}' by executing a native process.", prefix, commandName);
         final var oldOut = System.out;
@@ -27,7 +30,7 @@ public class NativeBinaryLauncher extends XtcLauncher {
         final var err = new ByteArrayOutputStream();
         try {
             System.setOut(new PrintStream(out));
-            System.setErr(new PrintStream(out));
+            System.setErr(new PrintStream(err));
             project.exec(spec -> {
                 spec.setExecutable(commandName);
                 spec.setArgs(args.toList());
@@ -37,6 +40,6 @@ public class NativeBinaryLauncher extends XtcLauncher {
             System.setErr(oldErr);
             showOutput(args, out.toString(), err.toString());
         }
-        return XtcExecResult.OK;
+        return OK;
     }
 }

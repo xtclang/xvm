@@ -1,21 +1,21 @@
+import org.gradle.api.Project
 import org.gradle.api.file.Directory
+import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
 import org.gradle.internal.os.OperatingSystem
 
 class XdkDistribution(buildLogic: XdkBuildLogic) {
     companion object {
         const val DISTRIBUTION_GROUP = "distribution"
-        const val BUILD_NUMBER = "BUILD_NUMBER"
-        const val CI = "CI"
+
+        private const val BUILD_NUMBER = "BUILD_NUMBER"
+        private const val CI = "CI"
 
         private val CURRENT_OS = OperatingSystem.current()
     }
 
-    private val project = buildLogic.project
-    private val logger = project.logger
-    private val prefix = project.prefix
-
-    private val distributionVersion: String = buildString {
+    val distributionName: String get() = project.name
+    val distributionVersion: String get() = buildString {
         fun isCiBuild(): Boolean {
             return System.getenv(CI) != null
         }
@@ -47,9 +47,14 @@ class XdkDistribution(buildLogic: XdkBuildLogic) {
         append(getCiTag())
     }
 
-    val distributionName: String = project.name
+    private val project: Project
+    private val logger: Logger
+    private val prefix: String
 
     init {
+        this.project = buildLogic.project
+        this.logger = project.logger
+        this.prefix = project.prefix
         logger.lifecycle("$prefix Configured XVM distribution: $this (distribution version: '$distributionVersion', target OS: '$CURRENT_OS')")
     }
 
