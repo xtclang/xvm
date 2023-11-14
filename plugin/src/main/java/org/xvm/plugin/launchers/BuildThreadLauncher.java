@@ -1,36 +1,32 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
 
 public class BuildThreadLauncher extends XtcLauncher {
-
     private final Method main;
+
+    @SuppressWarnings("FieldCanBeLocal")
+    private final Method moduleInfo;
 
     BuildThreadLauncher(final XtcProjectDelegate delegate, final String mainClassName) {
         super(delegate.getProject());
-        this.main = resolveMethod(mainClassName);
-        lifecycle("{} Running {} in build process; this is not recommended for production use.", prefix, mainClassName);
-    }
-
-     private Method resolveMethod(final String className) {
-        try {
-            return Class.forName(className).getMethod("main", String[].class);
-        } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            info("{} Failed to resolve method 'main' in class '{}', launching with JavaExec.", prefix, className);
-            return null;
-        }
+        this.main = resolveMethod(mainClassName, "main", String[].class);
+        this.moduleInfo = resolveMethod("org.xvm.tool.ModuleInfo", "extractModuleName", File.class);
+        info("{} Resolved module info: {}.{}", prefix, moduleInfo.getClass().getSimpleName(), moduleInfo.getName());
     }
 
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         Objects.requireNonNull(args);
-        warn("{} XTC Plugin will launch '{}' from the plugin process.", prefix, args.getMainClassName());
+        warn("{} WARNING: XTC Plugin will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, args.getMainClassName());
         final var oldOut = System.out;
         final var oldErr = System.err;
         final var out = new ByteArrayOutputStream();
@@ -47,5 +43,13 @@ public class BuildThreadLauncher extends XtcLauncher {
             showOutput(args, out.toString(), err.toString());
         }
         return XtcExecResult.OK;
+    }
+
+    private Method resolveMethod(final String className, final String methodName, final Class<?>... parameterTypes) {
+        try {
+            return Class.forName(className).getMethod(methodName, parameterTypes);
+        } catch (final ClassNotFoundException | NoSuchMethodException e) {
+            throw buildException("{} Failed to resolve method '{}' in class '{}' ({}).", prefix, methodName, className, e.getMessage());
+        }
     }
 }

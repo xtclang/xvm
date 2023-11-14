@@ -1,8 +1,10 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.ProjectDelegate;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -31,7 +33,7 @@ public class JavaExecLauncher extends XtcLauncher {
     }
 
     @Override
-    protected ExecResult apply(final CommandLine args) {
+    public ExecResult apply(final CommandLine args) {
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
             throw buildException("Failed to resolve javatools.jar in any classpath.");
@@ -65,7 +67,7 @@ public class JavaExecLauncher extends XtcLauncher {
         return readXdkVersionFromJar(logger, prefix, jar);
     }
 
-    static String readXdkVersionFromJar(final Logger logger, final String prefix, final File jar) {
+    public static String readXdkVersionFromJar(final Logger logger, final String prefix, final File jar) {
         if (jar == null) {
             return null;
         }
@@ -84,10 +86,12 @@ public class JavaExecLauncher extends XtcLauncher {
     }
 
     private boolean isJavaToolsJar(final File file) {
-        final boolean ok = "jar".equalsIgnoreCase(getFileExtension(file)) &&
+        final boolean ok = "jar".equalsIgnoreCase(ProjectDelegate.getFileExtension(file)) &&
                 file.getName().startsWith(JAVATOOLS_ARTIFACT_ID) &&
                 readXdkVersionFromJar(file) != null;
-        info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
+        if (ok) {
+            info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
+        }
         return ok;
     }
 

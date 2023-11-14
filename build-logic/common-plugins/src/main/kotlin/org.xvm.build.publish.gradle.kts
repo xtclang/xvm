@@ -127,6 +127,6 @@ val pruneBuildRepo by tasks.registering {
     description = "Helper task called internally to make sure the build repo is wiped out before republishing."
     delete(buildRepoDirectory)
     doLast {
-        logger.lifecycle("$prefix Finished $name (deleted build repo under ${buildRepoDirectory.get()}).")
+        logger.lifecycle("$prefix Finished '$name' (deleted build repo under ${buildRepoDirectory.get()}). Likely triggered by inserting XTC plugin into distribution.");
     }
 }

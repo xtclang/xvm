@@ -16,6 +16,8 @@ rootProject.name = "xdk"
 
 val xdkProjectPath = rootDir
 
+// TODO Can we move plugin application of taskTree here to get it out of every file?
+
 /**
  * The explicit XDK subprojects that are built for each library included in the XDK.
  *   Naming convention: https://kotlinlang.org/docs/reference/coding-conventions.html#naming-rules

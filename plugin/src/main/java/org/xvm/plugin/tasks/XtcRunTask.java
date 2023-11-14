@@ -1,6 +1,5 @@
-package org.xvm.plugin;
+package org.xvm.plugin.tasks;
 
-import org.gradle.api.DefaultTask;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
@@ -17,6 +16,11 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.launchers.CommandLine;
+import org.xvm.plugin.internal.DefaultXtcRuntimeExtension;
+import org.xvm.plugin.launchers.XtcLauncher;
+import org.xvm.plugin.XtcProjectDelegate;
+import org.xvm.plugin.XtcRuntimeExtension;
 import org.xvm.plugin.XtcRuntimeExtension.XtcRunModule;
 
 import javax.inject.Inject;
@@ -26,21 +30,27 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
-import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
+import static org.xvm.plugin.Constants.XTC_RUNNER_CLASS_NAME;
+import static org.xvm.plugin.tasks.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 /**
  * Task that runs and XTC module, given at least its name, using the module path from
- * the xtc environment.
- * TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
+ * the XTC environment.
+ * <p>
+ * If the 'runXtc' task is called without any module specifications, it will try to run every module compiled
+ * from the source set in undefined order. That would be the exact equivalent of calling 'runAllXtc'
+ * (which does not need to be configured, and is a task added by the plugin).
+ *
+ * @see XtcRunAllTask
  */
-public class XtcRunTask extends DefaultTask {
-    static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
 
+// TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
+public class XtcRunTask extends XtcDefaultTask {
     protected final XtcProjectDelegate project;
     protected final String prefix;
     protected final String name;
@@ -50,7 +60,7 @@ public class XtcRunTask extends DefaultTask {
     protected final SourceSet sourceSet;
     protected final XtcLauncher launcher;
 
-    private final Map<ExecResult, XtcRunModule> executedModules; // TODO we can cache output here to if we want.
+    private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
 
     @Inject
     public XtcRunTask(final XtcProjectDelegate project, final SourceSet moduleSourceSet) {
@@ -64,10 +74,6 @@ public class XtcRunTask extends DefaultTask {
         this.executedModules = new LinkedHashMap<>();
         this.launcher = XtcLauncher.create(project, XTC_RUNNER_CLASS_NAME, getIsFork().get(), getUseNativeLauncher().get());
         configureTask(moduleSourceSet);
-    }
-
-    protected XtcRunModule createModule(final String name) {
-        return DefaultXtcRuntimeExtension.createModule(project.getProject(), name);
     }
 
     private void configureTask(final SourceSet sourceSet) {
@@ -94,26 +100,22 @@ public class XtcRunTask extends DefaultTask {
         return project.getProject().files(project.getProject().getConfigurations().getByName(XTC_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 
-    // The extract dependency and this input take care of an XDK dependency
     @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
     public FileCollection getInputDeclaredDependencyModules() {
-        // xtcModule and xtcModuleTest dependencies declared in the project dependency { scope section
-        return project.filesFrom(incomingXtcModuleDependencies(sourceSet));
+        return project.filesFrom(incomingXtcModuleDependencies(sourceSet)); // xtcModule and xtcModuleTest dependencies declared in the project dependency { scope section
     }
 
     @InputDirectory
     @PathSensitive(PathSensitivity.ABSOLUTE)
     public Provider<Directory> getInputModulesCompiledByProject() {
-        // The output of the XTC compiler for this project and source set.
-        return project.getXtcCompilerOutputDirModules(sourceSet);
+        return project.getXtcCompilerOutputDirModules(sourceSet); // The output of the XTC compiler for this project and source set.
     }
 
     @InputDirectory
     @PathSensitive(PathSensitivity.ABSOLUTE)
     public Provider<Directory> getInputXdkModules() {
-        // Modules in the XDK directory, if one exists.
-        return project.getXdkContentsDir();
+        return project.getXdkContentsDir(); // Modules in the XDK directory, if one exists.
     }
 
     @Input
@@ -165,27 +167,26 @@ public class XtcRunTask extends DefaultTask {
 
         final var modulePath = project.resolveModulePath(name, getInputDeclaredDependencyModules());
         args.addRepeated("-L", modulePath);
-        withStream(resolveModulesToRun()).forEach(m -> runOne(m, args.copy()));
+
+        final var modulesToRun = resolveModulesToRun();
+        project.lifecycle("{} '{}' Want to executed {} modules:", prefix, name, modulesToRun.size());
+        for (final var m : modulesToRun) {
+            runOne(m, args.copy());
+            project.info("{} '{}'    Finished executing: {}", prefix, name, m.getModuleName());
+        }
 
         final int count = executedModules.size();
         project.lifecycle("{} '{}' Executed {} modules:", prefix, name, count);
         int i = 0;
         for (final var entry : executedModules.entrySet()) {
-            final var result = entry.getKey();
-            final var config = entry.getValue();
+            final var config = entry.getKey();
+            final var result = entry.getValue();
             final var index = String.format("(%2d/%2d)", ++i, count);
             final var success = result.getExitValue() == 0;
             final var level = success ? LogLevel.LIFECYCLE : LogLevel.ERROR;
             project.log(level, "{} '{}' {}   {} {}", prefix, name, index, config.getModuleName().get(), config);
             project.log(level, "{} '{}' {}       {} {}", prefix, name, index, success ? "SUCCESS" : "FAILURE", result);
         }
-    }
-
-    protected Collection<File> allCompiledModules() {
-        final var allFiles = getInputModulesCompiledByProject().get().getAsFileTree().getFiles();
-        project.info("{} All XTC modules compiled for sourceSet {}:", prefix, sourceSet.getName());
-        allFiles.forEach(f -> project.info("{}    {}", prefix, f.getAbsolutePath()));
-        return allFiles;
     }
 
     private boolean isSequentialRun() {
@@ -197,15 +198,25 @@ public class XtcRunTask extends DefaultTask {
         if (isSequentialRun()) {
             return stream;
         }
+        // TODO: Fix this, but it probably means using Gradle worker APIs, if the user insists on parallelism for different run tasks
+        //  in the same runtime environment / build.gradle.kts file right now. Not hard, just takes effort.
         project.warn("{} WARNING: The allowParallel flag has been set. This is untested functionality.", prefix);
         return stream.parallel();
     }
 
     protected Collection<XtcRunModule> resolveModulesToRun() {
+        // Given the module definition in the xtcRun closure in the DSL, create their equivalent POJOs.
         final var modules = extRuntime.getModules().get();
         if (modules.isEmpty()) {
-            project.warn("{} {} Configuration does not contain any modules to run.", prefix, name);
-            return emptyList();
+            project.warn("{} '{}' Configuration does not contain specified modules to run. Will default to 'xtcRunAll' task.", prefix, name);
+            // was emptySet()
+            final var allModules = resolveCompiledModules();
+            if (allModules.isEmpty()) {
+                project.warn("{} '{}' There is nothing in the module path to run. Aborting.", prefix, name);
+                return emptySet();
+            }
+            allModules.forEach(m -> project.lifecycle("{} '{}'    Module '{}' added to execution queue.", prefix, name, m));
+            return allModules;
         }
         if (!extRuntime.validateModules()) {
             throw project.buildException("ERROR: Invalid runtime modules exist. Module name not specified.");
@@ -213,10 +224,28 @@ public class XtcRunTask extends DefaultTask {
         return modules;
     }
 
+    private Collection<File> resolveCompiledModuleFiles() {
+        final var allFiles = getInputModulesCompiledByProject().get().getAsFileTree().getFiles();
+        project.info("{} All XTC modules compiled for SourceSet '{}':", prefix, sourceSet.getName());
+        allFiles.forEach(f -> project.info("{}    {}", prefix, f.getAbsolutePath()));
+        return allFiles;
+    }
+
+    private Collection<XtcRunModule> resolveCompiledModules() {
+        final var moduleFiles = resolveCompiledModuleFiles();
+        final var allModules = moduleFiles.stream().map(File::getAbsolutePath).map(this::createModuleNamed).toList();
+        project.lifecycle("{} '{}' Resolved {} module names or module file paths to run.", prefix, getName(), allModules.size());
+        return allModules;
+    }
+
+    private XtcRunModule createModuleNamed(final String name) {
+        return DefaultXtcRuntimeExtension.createModule(project.getProject(), name);
+    }
+
     @SuppressWarnings("UnusedReturnValue")
     private ExecResult runOne(final XtcRunModule runConfig, final CommandLine args) {
-        project.info("{} Executing resolved xtcRuntime.module closure: {}", prefix, runConfig);
-        final var moduleMethod = runConfig.getMethod().get();
+        project.info("{} Executing resolved xtcRuntime module closure: {}", prefix, runConfig);
+        final var moduleMethod = runConfig.getMethodName().get();
         if (!runConfig.hasDefaultMethodName()) {
             args.add("-M", moduleMethod);
         }
@@ -229,7 +258,7 @@ public class XtcRunTask extends DefaultTask {
 
         final var result = launcher.apply(args);
         result.rethrowFailure();
-        executedModules.put(result, runConfig);
+        executedModules.put(runConfig, result);
 
         return result;
     }

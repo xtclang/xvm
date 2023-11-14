@@ -11,6 +11,7 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.initialization.Settings
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.provider.Provider
 import java.io.ByteArrayOutputStream
 import java.nio.file.Path
@@ -19,6 +20,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.Objects.requireNonNull
 import java.util.Properties
+import kotlin.io.path.absolutePathString
 
 class XdkBuildLogic(val project: Project) {
 
@@ -33,31 +35,32 @@ class XdkBuildLogic(val project: Project) {
         const val SNAPSHOT_SUFFIX = "-SNAPSHOT"
         const val DEFAULT_JAVA_BYTECODE_VERSION = "17"
 
-        val ls: String = System.lineSeparator()
+        private const val DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
-        // companion objects are guaranteed to be singletons by Kotlin.
+        // Companion objects are guaranteed to be singletons by Kotlin, so this cache works as build global cache.
         private val cache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
 
         fun resolve(project: Project): XdkBuildLogic {
             return cache[project] ?: XdkBuildLogic(project).also { cache[project] = it }
         }
 
+        fun getDateTimeStampWithTz(ms: Long = System.currentTimeMillis()): String {
+            return SimpleDateFormat(DATE_TIME_FORMAT, Locale.getDefault()).format(Date(ms))
+        }
+
         // Helper function to print contents of a directory tree with timestamps
-        fun walkDir(project: Project, dir: File, level: LogLevel = LogLevel.LIFECYCLE) {
-            fun getFormatTimeWithTz(ms: Long): String {
-                val currentTime = Date(ms)
-                val timeZoneDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                return timeZoneDate.format(currentTime)
-            }
+        fun walkDir(project: Project, dir: File, level: LogLevel = LIFECYCLE) {
             val prefix = "[${project.name}]"
-            project.logger.log(level, "$prefix ls -R $dir:")
+            val logger = project.logger
+            logger.log(level, "$prefix ls -R $dir:")
             val truncate = dir.absolutePath
             dir.walkTopDown().forEach {
                 assert(it.absolutePath.startsWith(truncate))
                 val path = it.absolutePath.substring(truncate.length)
-                val timestamp = getFormatTimeWithTz(it.lastModified())
-                project.logger.log(level, "$prefix    [$timestamp] '${dir.name}$path'")
+                val timestamp = getDateTimeStampWithTz(it.lastModified())
+                logger.log(level, "$prefix    [$timestamp] '${dir.name}$path'")
             }
+
         }
     }
 
@@ -69,7 +72,7 @@ class XdkBuildLogic(val project: Project) {
         private var evaluated: Boolean = false
 
         override fun settingsEvaluated(settings: Settings) {
-            this.settings = settings;
+            this.settings = settings
             logger.info("$prefix Settings evaluated.")
         }
 
@@ -80,7 +83,7 @@ class XdkBuildLogic(val project: Project) {
 
         override fun projectsEvaluated(gradle: Gradle) {
             this.evaluated = true
-            logger.info("$prefix Projects evaluated.");
+            logger.info("$prefix Projects evaluated.")
         }
 
         @Deprecated("BuildListener.buildFinished is deprecated")
@@ -123,7 +126,8 @@ class XdkBuildLogic(val project: Project) {
     }
 
     fun findExecutableOnPath(executable: String): Path? {
-        return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
+        return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }
+            ?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
     }
 
     fun findLocalXdkInstallation(): File? {
@@ -132,6 +136,24 @@ class XdkBuildLogic(val project: Project) {
 
     fun resolveLocalXdkInstallation(): File {
         return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
+    }
+
+    fun validateGradle() {
+        findExecutableOnPath("gradle")?.let {
+            val currentProcess = ProcessHandle.current()
+            currentProcess.info()
+            val hasWrapper = currentProcess.info().arguments().orElse(emptyArray())
+                .find { it.contains("gradle") && it.contains("wrapper") }.isNullOrEmpty().not()
+            if (!hasWrapper) {
+                logger.error(
+                    """
+                        $prefix Found 'gradle' executable on path: ${it.absolutePathString()}. It also appears you are 
+                        $prefix not running through the Gradle wrapper in the root of this repository. This is discouraged!
+                        $prefix In order to maintain stable and reproducible builds, please use the Gradle wrapper that
+                        $prefix comes with this distribution at all times.
+                    """.trimIndent())
+            }
+        }
     }
 
     fun getPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
@@ -172,7 +194,7 @@ class XdkBuildLogic(val project: Project) {
          * in a build run, that isn't declared in a property file. Examples could be testing out
          * a new GitHub token, or adding an environment variable that the plugin needs at start
          * time (for example, because the project logger outputs aren't inherited by default in
-         * a plugin, even if it has access to the actual project.logger instance, for the
+         * a plugin, even if it has access to the actual project.logger instance), for the
          * project to which the plugin is applied.
          *
          * If the method fails to find the value of a property, both in its resolved property
@@ -230,7 +252,8 @@ class XdkBuildLogic(val project: Project) {
 
             fun merge(to: Properties, from: Properties): Properties {
                 from.forEach { key, value ->
-                    val prev = to.putIfAbsent(key, value) // Check if this property is set already, then it's declared on a deeper level, and should not be reset.
+                    // Check if this property is set already, then it's declared on a deeper level, and should not be reset.
+                    val prev = to.putIfAbsent(key, value)
                     if (prev == null) {
                         logger.info("$prefix Added project property: $key")
                     }
@@ -340,6 +363,10 @@ val Project.prefix
 //  Better to add the resource directory as a source set?
 val Project.xdkImplicitsPath: String
     get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
+
+fun Project.validateGradle() {
+    xdkBuildLogic.validateGradle()
+}
 
 fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = false): Boolean {
     return xdkBuildLogic.getPropertyBoolean(key, defaultValue)
