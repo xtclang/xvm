@@ -43,7 +43,7 @@ public class BlockAST extends AST {
     if( _tmps!=null ) {
       for( XType type : _tmps.keySet() ) {
         Ary<String> tmps = _tmps.get(type);
-        type.str(sb.i()).p(" ");
+        type.clz(sb.i()).p(" ");
         for( String tmp : tmps )
           sb.p(tmp).p(", ");
         sb.unchar(2).p(";").nl();

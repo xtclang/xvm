@@ -21,24 +21,29 @@ org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
   org/xvm/xec/ecstasy/collections/Array64  - extends XClz, implements array list<long>
 
 
-XTC Modules- 
-- gen as org/xvm/xec/module.java, includes static init
-- includes main & run
-- which pass off to module/class run
+*XTC Modules- 
+*- gen as org/xvm/xec/module.java, includes static init
+*- includes main & run
+*- which pass off to module/class run
 
-XTC top Class-
-- gen as org/xvm/xec/module/module.java
+*XTC module+class Class-
+*- gen as org/xvm/xec/module.java
 
 XTC lower class
 - gen as org/xvm/xec/module/CLASSNAME.java
 
 
-So multiMethod example:
+#So multiMethod example:
+#
+#org/xvm/xec/Main.java       - extends xec.XClz; import default; run() { new Main.Main().run(); }
+#org/xvm/xec/Main/Main.java  - extends Main;     import MLib.JLib; run() { console.log; call Lib.greeting(); }
+#org/xvm/xec/Lib.java        - extends xec.Xclz; import default;  empty_static;
+#org/xvm/xec/Lib/Lib.java    - extends Lib;      String greeting() {return "hello world"}
 
-org/xvm/xec/Main.java       - extends xec.XClz; import default; run() { new Main.Main().run(); }
-org/xvm/xec/Main/Main.java  - extends Main;     import MLib.JLib; run() { console.log; call Lib.greeting(); }
-org/xvm/xec/Lib.java        - extends xec.Xclz; import default;  empty_static;
-org/xvm/xec/Lib/Lib.java    - extends Lib;      String greeting() {return "hello world"}
+Simple 1-class modules can keep their short form:
+  org/xvm/xec/Main.java
+  org/xvm/xec/Lib.java
+
 
 
 ---------------------------

@@ -1,7 +1,7 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.xec.XRunClz;
+import org.xvm.xec.XClz;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.ClassNotFoundException;
@@ -15,7 +15,7 @@ import static javax.tools.JavaFileObject.Kind;
 public abstract class XClzCompiler {
 
   // Compile a whole class
-  static Class<XRunClz> compile( String clzname, String source ) {
+  static Class<XClz> compile( String clzname, String source ) {
 
     JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
     DiagnosticCollector<JavaFileObject> errs = new DiagnosticCollector<>();
@@ -23,8 +23,7 @@ public abstract class XClzCompiler {
     ArrayList<JavaSrc> srcs = new ArrayList<>();
     srcs.add(new JavaSrc(clzname, source));
 
-    ArrayList<String> options = new ArrayList<>(){{
-      }};
+    ArrayList<String> options = new ArrayList<>(){};
     
     JavaCompiler.CompilationTask task = compiler.getTask(null, xfile, errs, options, null, srcs);
 
@@ -36,7 +35,7 @@ public abstract class XClzCompiler {
     }
 
     try {
-      return (Class<XRunClz>)xfile._loader.loadClass(clzname);
+      return (Class<XClz>)xfile._loader.loadClass(clzname);
     } catch( ClassNotFoundException cnfe ) {
       throw new RuntimeException(cnfe);
     }
@@ -62,11 +61,11 @@ public abstract class XClzCompiler {
   private static class XClzLoader extends ClassLoader {
     public final HashMap<String,JCodes> _map;
     XClzLoader( ClassLoader par, XFileManager xfm ) { super(par); _map = xfm._map; }
-    @Override protected Class<XRunClz> findClass(String clzname) throws ClassNotFoundException {
+    @Override protected Class<XClz> findClass(String clzname) throws ClassNotFoundException {
       JCodes codes = _map.get(clzname);
       if( codes==null )  throw new ClassNotFoundException();
       byte[] bytes = codes._bos.toByteArray();
-      return (Class<XRunClz>)defineClass(clzname, bytes, 0, bytes.length);
+      return (Class<XClz>)defineClass(clzname, bytes, 0, bytes.length);
     }
   }
   
