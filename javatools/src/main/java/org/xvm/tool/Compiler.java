@@ -675,7 +675,7 @@ public class Compiler
             addOption("r",       Form.File,   true,  "Files and/or directories to read resources from");
             addOption("o",       Form.File,   false, "File or directory to write output to");
             addOption("qualify", Form.Name,   false, "Use full module name for the output file name");
-            addOption("version", Form.String, false, "Use full module name for the output file name");
+            addOption("version", Form.String, false, "Specify the version to stamp onto the compiled module(s)");
             addOption(Trailing,  Form.File,   true , "Source file name(s) and/or module location(s) to"
                                                  + " compile");
             }
