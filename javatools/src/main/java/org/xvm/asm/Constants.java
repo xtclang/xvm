@@ -579,5 +579,5 @@ public interface Constants
     /**
      * Compile-time debug flag.
      */
-    boolean DEBUG = true;
+    boolean DEBUG = Boolean.parseBoolean(System.getProperty("xtc.debug", "true"));
     }

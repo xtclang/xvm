@@ -2,6 +2,7 @@ import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
+import org.gradle.api.logging.LogLevel.INFO
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -34,6 +35,16 @@ val xdkProvider by configurations.registering {
     attributes {
         attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
         attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xdk-distribution-archive"))
+    }
+}
+
+val xtcUnicodeConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    // TODO: Can likely remove these.
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
     }
 }
 
@@ -71,7 +82,7 @@ dependencies {
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
-internal val xvmDist = xdkBuildLogic.xdkDistribution()
+internal val xdkDist = xdkBuildLogic.xdkDistribution()
 logger.lifecycle("$prefix *** Building XDK; semantic version: '${property("semanticVersion")}' ***")
 
 publishing {
@@ -94,6 +105,10 @@ val pluginPublication by tasks.registering {
     dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
     outputs.dir(buildRepoDirectory)
     doLast {
+        // TODO: Right now this is always executed, as we declare an outgoing artifact for it in plugin/build.gradle.kts
+        //   May not be necessary. The reason it's there is because the installLocalDist wants it, but it should really
+        //   only try to resolve that at runtime. However, the dependency will still be resolved, and can probably be
+        //   more lazy.
         logger.lifecycle("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
         //printTaskOutputs()
     }
@@ -106,7 +121,8 @@ val pluginPublication by tasks.registering {
  */
 distributions {
     main {
-        distributionBaseName = xvmDist.distributionName // TODO: Should really rename the distribution to "xdk" explicitly.
+        distributionBaseName = xdkDist.distributionName // TODO: Should really rename the distribution to "xdk" explicitly.
+        assert(distributionBaseName.get() == "xdk")
         contents {
             val resources = tasks["processResources"].outputs.files.asFileTree
             val published = tasks["pluginPublication"].outputs.files
@@ -152,13 +168,12 @@ val clean by tasks.existing {
     doLast {
         subprojects.forEach {
             // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
-            logger.lifecycle("$prefix $name Cleaning subproject ${it.name} build directory.")
+            val subProjectBuildDir = it.layout.buildDirectory.get().asFile
             delete(it.layout.buildDirectory)
-            logger.lifecycle("$prefix $name Done.")
+            logger.lifecycle("$prefix $name Cleaned subproject ${it.name} build directory (buildDir: '$subProjectBuildDir')")
         }
-        logger.lifecycle("$prefix $name Cleaning composite build common build directory: ${compositeRootBuildDirectory.get()}")
         delete(compositeRootBuildDirectory)
-        logger.lifecycle("$prefix $name Done.")
+        logger.lifecycle("$prefix $name Cleaned composite build common build directory: ${compositeRootBuildDirectory.get()}")
     }
 }
 
@@ -171,6 +186,11 @@ val assembleDist by tasks.existing {
     doFirst {
         logger.lifecycle("$prefix $name; Assembling distribution...")
     }
+    doLast {
+        logger.lifecycle("$prefix $name: Assembled distribution.")
+        printTaskInputs(INFO)
+        printTaskOutputs(INFO)
+    }
 }
 
 val processResources by tasks.existing(Copy::class)
@@ -178,20 +198,19 @@ val processResources by tasks.existing(Copy::class)
 val distExe by tasks.registering {
     group = XdkDistribution.DISTRIBUTION_GROUP
     description = "Use an NSIS compatible plugin to create the Windows .exe installer."
-    doLast {
-        throw GradleException("TODO: distExe needs to be implemented and verified.")
-    }
-    // TODO("$prefix distExe needs to be ported to the new build system.")
-    /*
-    val makensis = xdkBuildLogic.findExecutableOnPath("makensis")
+
+    dependsOn(installDist)
+
     val nsi = file("src/main/nsi/xdkinstall.nsi")
-    val outputDir = xvmDist.getDistributionDir()
-
-    outputs.dir(outputDir)
-
+    val makensis = xdkBuildLogic.findExecutableOnPath("makensis")
     onlyIf {
         makensis != null
     }
+
+    val inputDir = project.layout.buildDirectory.dir("install/xdk")
+    inputs.dir(inputDir)
+    val outputFile = project.layout.buildDirectory.file("distributions/xdk-$version.exe")
+    outputs.file(outputFile)
 
     // notes:
     // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
@@ -200,22 +219,19 @@ val distExe by tasks.registering {
     // - requires the x.ico file to be in the same directory as the nsi file
     doLast {
         if (makensis == null) {
-            throw buildException("Cannot find makensis on the path.")
+            throw buildException("Cannot find 'makensis' in PATH.")
         }
         if (!nsi.exists()) {
-            throw buildException("Cannot find nsi file: ${nsi.absolutePath}")
+            throw buildException("Cannot find 'nsi' file: ${nsi.absolutePath}")
         }
-        val exe = File(outputDir.get().asFile, "xdk-$version.exe")
-        //val ico = "${launcherMain}/c/x.ico"
-
         exec {
-            environment("NSIS_SRC", xvmDist.getInstallDir().get().asFile.absolutePath)
-            environment("NSIS_VER", xvmDist.getName())
-            environment("NSIS_OUT", exe.absolutePath)
-            //environment("NSIS_ICO", ico)
+            environment("NSIS_SRC", inputDir.get())
+            environment("NSIS_ICO", xtcIconFile)
+            environment("NSIS_OUT", outputFile)
+            environment("NSIS_VER", xdkDist.distributionVersion)
             commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
         }
-    }*/
+    }
 }
 
 val test by tasks.existing {
@@ -233,11 +249,9 @@ val test by tasks.existing {
  */
 val installDist by tasks.existing {
     doLast {
-        logger.lifecycle("$prefix Installed distribution to build directory.")
+        logger.lifecycle("$prefix '$name' Installed distribution to {project.layout.buildDirectory}/install/ directory.")
         logger.info("$prefix Installation files:")
-        outputs.files.asFileTree.forEach {
-            logger.info("$prefix   ${it.absolutePath}")
-        }
+        printTaskOutputs()
     }
 }
 
@@ -252,7 +266,9 @@ val findLocalDist by tasks.registering {
     }
     doLast {
         logger.lifecycle("$prefix Detected existing local XTC installation at: '$localDistDir'")
-        XdkBuildLogic.walkDir(project, localDistDir!!, LogLevel.INFO)
+        XdkBuildLogic.listDirWithTimestamps(localDistDir!!).lines().forEach {
+            logger.lifecycle("$prefix   $it")
+        }
     }
 }
 
@@ -260,7 +276,7 @@ val backupLocalDist by tasks.registering(Copy::class) {
     group = XdkDistribution.DISTRIBUTION_GROUP
     description = "Backs up a local installation to build dir before starting to overwrite."
     val localDist = xdkBuildLogic.resolveLocalXdkInstallation()
-    val dest = xvmDist.getLocalDistBackupDir(localDist.name)
+    val dest = xdkDist.getLocalDistBackupDir(localDist.name)
     from(localDist).into(dest)
     doLast {
         logger.lifecycle("$prefix Backed up local installation at $localDist to ${dest.get()}")
@@ -287,6 +303,59 @@ val installLocalDist by tasks.registering {
             into(localDistDir)
         }
         logger.lifecycle("$prefix $name Finished.")
-        XdkBuildLogic.walkDir(project, localDistDir)
+        XdkBuildLogic.listDirWithTimestamps(localDistDir).lines().forEach {
+            logger.lifecycle("$prefix   $it")
+        }
+    }
+}
+
+
+/**
+ * This task can update the Unicode data files, if a Unicode release has occurred and provided
+ * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.
+ *
+ * This task is used to force rebuild and input unicode files into our build. This is not part of the
+ * common build, but there is no reason to not make it that, now that we have caching parallel
+ * Gradle/Maven build infrastructure.
+ */
+
+// TODO: We do NOT want the unicode consumer as a project dependency. We must resolve it in-task somehow.
+
+val importUnicodeFiles by tasks.registering {
+    group = LifecycleBasePlugin.BUILD_GROUP
+    description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
+
+    logger.warn("$prefix '$name' is currently broken. There is a reported issue, and we will get to this very soon.")
+
+    alwaysRerunTask()
+    dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
+    dependsOn(xtcUnicodeConsumer)
+    inputs.files(xtcUnicodeConsumer)
+
+    val libEcstasy = project(XdkVersionHandler.semanticVersionFor(libs.xdk.ecstasy).artifactId)
+    val outputDir = File(libEcstasy.projectDir, "src/main/resources/ecstasy/text2")
+    outputs.dir(outputDir)
+
+    doLast {
+        logger.lifecycle("$prefix Trying to write unicode tables to ${outputDir.absolutePath}...")
+        logger.lifecycle("$prefix Provider files: ${xtcUnicodeConsumer.get().resolve()}")
+        fileTree(xtcUnicodeConsumer).forEach {
+            println(" *** TODO: WORK : $it")
+        }
+
+        copy {
+            from(fileTree(xtcUnicodeConsumer)) {
+                into(outputDir)
+            }
+            includeEmptyDirs = false
+            eachFile {
+                relativePath = RelativePath(true, name)
+                logger.lifecycle("$prefix Copying unicode file: ${file.absolutePath} to ${outputDir.absolutePath}.")
+            }
+        }
+        logger.lifecycle("$prefix Unicode files copied to ${outputDir.absolutePath}. Please verify your git diff, test and commit.")
+        fileTree(outputDir).forEach {
+            logger.lifecycle("$prefix     Destination: $it")
+        }
     }
 }

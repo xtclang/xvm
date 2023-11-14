@@ -3,7 +3,6 @@ package org.xvm.plugin;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 
-@SuppressWarnings("serial")
 public class XtcBuildException extends GradleException {
     @SuppressWarnings("unused")
     public XtcBuildException(final String msg) {

@@ -6,7 +6,7 @@ import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 plugins {
     id("org.xvm.build.java")
     id("org.xvm.build.publish")
-    id("java-gradle-plugin")
+    alias(libs.plugins.gradle.plugin.portal.publish)
     alias(libs.plugins.tasktree)
 }
 
@@ -52,7 +52,7 @@ publishing {
             groupId = pluginGroup
             artifactId = project.name
             version = pluginVersion
-            from(components["java"])
+            from(components["java"]) // TODO: Do not publish source or javadoc
             logger.lifecycle("$prefix Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
         }
     }
@@ -82,7 +82,7 @@ gradlePlugin {
             description = getXdkProperty("org.xvm.plugin.description")
             logger.lifecycle("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
             @Suppress("UnstableApiUsage")
-            tags = listOfNotNull("xtc", "gradle", "plugin", "xdk")
+            tags = listOfNotNull("xtc", "language", "ecstasy", "xdk")
         }
     }
 }
@@ -128,10 +128,9 @@ val jar by tasks.existing(Jar::class) {
     if (shouldBundleJavaTools) {
         from(zipTree(xtcJavaToolsJarConsumer.get().singleFile))
         doLast {
-            logger.lifecycle("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
+            logger.info("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
         }
     }
-
     manifest {
         attributes(
             "Manifest-Version" to "1.0",

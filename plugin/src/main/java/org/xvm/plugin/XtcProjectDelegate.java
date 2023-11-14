@@ -20,13 +20,20 @@ import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.tasks.TaskProvider;
 import org.jetbrains.annotations.NotNull;
+import org.xvm.plugin.internal.DefaultXtcCompilerExtension;
+import org.xvm.plugin.internal.DefaultXtcExtension;
+import org.xvm.plugin.internal.DefaultXtcRuntimeExtension;
+import org.xvm.plugin.internal.DefaultXtcSourceDirectorySet;
+import org.xvm.plugin.tasks.XtcCompileTask;
+import org.xvm.plugin.tasks.XtcExtractXdkTask;
+import org.xvm.plugin.tasks.XtcRunAllTask;
+import org.xvm.plugin.tasks.XtcRunTask;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +68,7 @@ import static org.xvm.plugin.Constants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_FILE_TASK_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_GROUP_NAME;
 import static org.xvm.plugin.Constants.XTC_VERSION_TASK_NAME;
-import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
+import static org.xvm.plugin.tasks.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 
 /**
  * Base class for the Gradle XTC Plugin in a project context.
@@ -69,6 +76,10 @@ import static org.xvm.plugin.XtcExtractXdkTask.EXTRACT_TASK_NAME;
 public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     // TODO add a logger mode where a more detailed output is written.
+
+    public XtcProjectDelegate(final Project project) {
+        this(project, null);
+    }
 
     public XtcProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         super(project, component);
@@ -108,13 +119,27 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return null;
     }
 
-    public URL getPluginUrl() {
-        return pluginUrl;
-    }
-
     @Override
     public String toString() {
         return getClass().getSimpleName() + " (plugin: " + getPluginUrl() + ')';
+    }
+
+    public URL getPluginUrl() {
+        project.getRepositories().add(project.getRepositories().mavenCentral());
+        return pluginUrl;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    public XtcExtension xtcExtension() {
+        return ensureExtension(XTC_LANGUAGE_NAME, DefaultXtcExtension.class);
+    }
+
+    public XtcCompilerExtension xtcCompileExtension() {
+        return ensureExtension(XTC_EXTENSION_NAME_COMPILER, DefaultXtcCompilerExtension.class);
+    }
+
+    public XtcRuntimeExtension xtcRuntimeExtension() {
+        return ensureExtension(XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
     }
 
     private String getCompileTaskName(final SourceSet sourceSet) {
@@ -440,7 +465,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return clazz.getProtectionDomain().getCodeSource().getLocation().toString();
     }
 
-    static String incomingXtcModuleDependencies(final SourceSet sourceSet) {
+    public static String incomingXtcModuleDependencies(final SourceSet sourceSet) {
         return sourceSet.getName().equals(MAIN_SOURCE_SET_NAME) ? XTC_CONFIG_NAME_INCOMING : XTC_CONFIG_NAME_INCOMING_TEST;
     }
 
@@ -449,36 +474,20 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return sourceSet.getName().equals(MAIN_SOURCE_SET_NAME) ? XTC_CONFIG_NAME_OUTGOING : XTC_CONFIG_NAME_OUTGOING_TEST;
     }
 
-    Provider<Directory> getXdkContentsDir() {
-        return buildDir.dir("xdk/common/lib");
+    public static Provider<Directory> getXdkContentsDir(final Project project) {
+        return project.getLayout().getBuildDirectory().dir("xdk/common/lib");
     }
 
-    Provider<Directory> getXtcCompilerOutputDirModules(final SourceSet sourceSet) {
+    public Provider<Directory> getXdkContentsDir() {
+        return getXdkContentsDir(project);
+    }
+
+    public Provider<Directory> getXtcCompilerOutputDirModules(final SourceSet sourceSet) {
         return buildDir.dir("xdk/" + sourceSet.getName() + "/lib");
     }
 
-    Provider<Directory> getXtcCompilerOutputResourceDir(final SourceSet sourceSet) {
+    public Provider<Directory> getXtcCompilerOutputResourceDir(final SourceSet sourceSet) {
         return buildDir.dir("xdk/" + sourceSet.getName() + "/resources");
-    }
-
-    FileCollection filesFrom(final String... configNames) {
-        return filesFrom(false, configNames);
-    }
-
-    FileCollection filesFrom(final boolean shouldBeResolved, final String... configNames) {
-        info("{} Resolving filesFrom config: {}", prefix, Arrays.asList(configNames));
-        FileCollection fc = objects.fileCollection();
-        for (final var name : configNames) {
-            final Configuration config = configs.getByName(name);
-            if (shouldBeResolved && config.getState() != Configuration.State.RESOLVED) {
-                throw buildException("Configuration '" + name + "' is not resolved; which is a requirement from this task execution phase.");
-            }
-            final var files = project.files(config);
-            info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
-            fc = fc.plus(files);
-        }
-        fc.getAsFileTree().forEach(it -> info("{}    RESOLVED fileTree '{}'", prefix, it.getAbsolutePath()));
-        return fc;
     }
 
     Set<File> resolveFiles(final FileCollection files) {
@@ -506,7 +515,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     // TODO use a builder pattern instead. Add xtcModule dependencies, XDK modules, and (for a runner), any output from the compile task in the local project.
-    Set<File> resolveModulePath(final String identifier, final FileCollection inputXtcModules) {
+    public Set<File> resolveModulePath(final String identifier, final FileCollection inputXtcModules) {
         info("{} Adding RESOLVED configurations from: {}", prefix, inputXtcModules.getFiles());
         final var map = new HashMap<String, Set<File>>();
 
@@ -534,11 +543,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     @NotNull
     private Set<File> verifyModulePath(final String identifier, final Map<String, Set<File>> map) {
         final var prefix = prefix(identifier);
-        info("{} ModulePathMap = {}", prefix, map);
+        info("{} ModulePathMap: [{} keys and {} values]",
+                prefix,
+                map.keySet().size(),
+                map.values().stream().mapToInt(Set::size).sum());
 
         final var modulePathList = new ArrayList<File>();
         map.forEach((provider, files) -> {
-            info("{}     module path from: '{}':", prefix, provider);
+            info("{}     Module path from: '{}':", prefix, provider);
             if (files.isEmpty()) {
                 info("{}         (empty)", prefix);
             }
@@ -547,13 +559,11 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             modulePathList.addAll(files.stream().filter(f -> {
                 if (f.isDirectory()) {
                     info("{} Adding directory to module path ({}).", prefix, f.getAbsolutePath());
-                    return true;
-                }
-                final boolean isValidXtcModule = isXtcBinary(f);
-                if (!isValidXtcModule) {
+                } else if (!isXtcBinary(f)) {
                     warn("{} Has a non .xtc module file on the module path ({}). Was this intended?", prefix, f.getAbsolutePath());
+                    return false;
                 }
-                return isValidXtcModule;
+                return true;
             }).toList());
         });
 
@@ -591,18 +601,5 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 throw buildException(msg);
             }
         }
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    XtcExtension xtcExtension() {
-        return ensureExtension(XTC_LANGUAGE_NAME, DefaultXtcExtension.class);
-    }
-
-    XtcCompilerExtension xtcCompileExtension() {
-        return ensureExtension(XTC_EXTENSION_NAME_COMPILER, DefaultXtcCompilerExtension.class);
-    }
-
-    XtcRuntimeExtension xtcRuntimeExtension() {
-        return ensureExtension(XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
     }
 }

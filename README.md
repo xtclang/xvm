@@ -1,3 +1,5 @@
+# TINY TITLE CHANGE
+
 # Welcome to Ecstasy! #
 
 This is the public repository for the Ecstasy language ([xtclang.org](http://xtclang.org/)) and the
@@ -50,13 +52,13 @@ For **macOS** and **Linux**:
 2. Add a "tap" to access the XDK CI builds, and install the latest XDK CI build:
 
 ```
-  brew tap xtclang/xvm && brew install xdk-latest
+brew tap xtclang/xvm && brew install xdk-latest
 ```
 
 3. To upgrade to the latest XDK CI build at any time:
 
 ```
-  brew update && brew upgrade xdk-latest
+brew update && brew upgrade xdk-latest
 ```
 
 For **Windows**:
@@ -81,19 +83,7 @@ Manual local build for **any computer** (for advanced users):
   ./gradlew build
 ```
 
-## Workflow and source control
-
-### Local git configuration
-
-The project comes with a local git configuration, stored in the file ".gitconfig" in the root
-of the repository. The configuration also contains various powerful and conventient shortcuts
-for common git operations.
-
-To apply the local git configuration, execute this commit from the repository root:
-
-```
-git config --local include.path ../.gitconfig
-```
+## Development
 
 ### Recommended git workflow
 
@@ -101,37 +91,74 @@ git config --local include.path ../.gitconfig
 common GUI in any common IDE, in one way or another. But in the interest of
 not having to document several instances with slightly different naming convention,
 or deliver a confusing tutorial, this section only describes the exact bare
-bones commmand line git commands that can be used to implement our workflow,
+bones command line git commands that can be used to implement our workflow,
 which is also a common developer preference. All known IDEs just wrap these
 commands in one way or another.*
+
+#### Make sure "pull.rebase" is set to "true" in your git configuration
+
+In order to maintain linear git history, and at any cost avoid merges being created
+and persisted in the code base, please make sure that your git configuration will
+run "pull" with "rebase" as its default option. Preferably globally, but at least
+for the XVM repository.
+
+```
+git config --get pull.rebase
+```
+
+Output should be "true".
+
+If it's not, execute
+
+```
+git config --global pull.rebase true
+```
+
+or from a directory inside the repository:
+
+```
+git config --local pull.rebase true
+```
+
+The latter will only change the pull semantics for the repository itself, and
+the config may or may not be rewritten by future updates.
+
+#### Always work in a branch. Do not work directly in master
+
+XTC will very soon switch to only allowing putting code onto the master branch through
+a pull request in a sub branch.
 
 In order to minimize git merges, and to keep master clean, with a minimum of complexity,
 the recommended workflow for submitting a pull request is as follows:
 
-Create a new branch for your change, and connect it to the upstream:
+##### 1) Create a new branch for your change, and connect it to the upstream:
 
 ```
 git checkout -B decriptive-branch-name
 git push --set-upstream origin descriptive-branch-name
 ```
 
-Perform your changes, and commit them. We currently do not have any syntax requirements
+##### 2) Perform your changes, and commit them. We currently do not have any syntax requirements
+
 on commit descriptions, but it's a good idea to describe the purpose of the commit.
 
 ```
 git commit -m "Descriptive commit message, including a github issue reference, if one exists"
+```
+
+##### 3) Push your changes to the upstream and create a pull request, when you are ready for review
+
+```
 git push
 ```
 
+##### Resolving conflicts, and keeping your branch up to date with master
+
 Whenever you need to, and this is encouraged, you should rebase your local branch,
-so that your changes gets transplanted on top of everything that has been pushed to
-master, during the time you have been working on the branch.
+so that your changes get ripped out and re-transplanted on top of everything that has
+been pushed to master, during the time you have been working on the branch.
 
-Furthermore, we recommend that you configure git pull to use rebase mode as
-its default, rather than merge. This is already enabled in our repository local
-git settings.
-
-Before you submit a pull request, you *need* to rebase it agaist master. We will
+Before you submit a pull request, you *need* to rebase it against master. We will
 gradually add build pipeline logic for helping out with this, and other things, but
 it's still strongly recommended that you understand the process.
 
@@ -143,9 +170,17 @@ git fetch
 git rebase origin/master
 ```
 
-If there are any conflicts, the rebase will be halted. Should this be the case, change
-your code to resolve the conflicts, and verify that it builds clean again. After it does,
-add the resolved commit and tell git to continue with the rebase:
+The fetch command ensures that the global state of the world, whose local copy is stored
+in the ".git" directory of the repository, gets updated. Remember that git allows you to
+work completely offline, should you chose to do so, after you have cloned a repository.
+This means that, in order to get the latest changes from the rest of the world, and make
+sure you are working in an up-to-date environment, you need to fetch that state from the
+upstream.
+
+If there are any conflicts, the rebase command above will halt and report conflict.
+Should this be the case, change your code to resolve the conflicts, and verify that it
+builds clean again. After it does, add the resolved commit and tell git to continue
+with the rebase:
 
 ```
 git add .
@@ -169,27 +204,29 @@ git status
 git push -f # if needed
 ```
 
+##### Do not be afraid to mess around in your local branch
+
 You should feel free to commit and push as much as you want in your local branch, if
 your workflow so requires. However, before submitting the finished branch as a pull
-request, do an interactive rebase and replace "pick" with "fixup" to merge any
-temporary commits with their predecessor.
+request, please do an interactive rebase and collapse any broken commits that don't
+build, or any small commits that just fix typos and things of a similar nature.
 
-* It is considered bad form to submit a pull request where there are unncessary
-  or intermediate commits, with vague descriptions.
+* _It is considered bad form to submit a pull request where there are unnecessary
+  or intermediate commits, with vague descriptions._
 
-* It is considered bad form to submit a pull request where there are commits, which
-  do not build and test cleanly. This is important, because it enables things like
+* _It is considered bad form to submit a pull request where there are commits, which
+  do not build and test cleanly._ This is important, because it enables things like
   automating git bisection to narrow down commits that may have introduced bugs,
   and it has various other benefits. The ideal state for master, should be that
   you can check it out at any change in its commit history, and that it will build
   and test clean on that head.
 
-Most pull requests are small in scope, should and contain only one commit, when
+Most pull requests are small in scope, and should contain only one commit, when
 they are put up for review. If there are distinct unrelated commits, that both contribute
 to solving the issue you are working on, it's naturally fine to not squash those together,
 as it's easier to read and shows clear separation of concerns.
 
-If you need to get rid of temporary, broken, or unbuildable commits in your branch,
+If you need to get rid of temporary, broken, or non-buildable commits in your branch,
 do an interactive rebase before you submit it for review. You can execute:
 
 ```
@@ -198,10 +235,10 @@ git rebase -i HEAD~n
 
 to do this, where *n* is the number of commits you are interested in modifying.
 
-*According to the git philosophy, branches should be thought of as private, plentiful
-and ephemeral. They should be created at the drop of a hat, and the branch should be
-automatically or manually deleted after its changes have been merged to master.
-A branch should never be reused.*
+* *According to the git philosophy, branches should be thought of as private, plentiful
+  and ephemeral. They should be created at the drop of a hat, and the branch should be
+  automatically or manually deleted after its changes have been merged to master.
+  A branch should never be reused.*
 
 The described approach is a good one to follow, since it moves any complicated source control
 issues completely to the author of a branch, without affecting master, and potentially
@@ -212,8 +249,8 @@ branches.
 
 ## Status
 
-Version 0.4. That's way _before_ a 1.0. In other words, Ecstasy is about as mature as Windows 3.1
-was.
+Version 0.4. That's way _before_ version 1.0. In other words, Ecstasy is about as mature as 
+Windows 3.1 was.
 
 **Warning:** The Ecstasy project is not yet certified for production use. This is a large and
 extremely ambitious project, and _it may yet be several years before this project is certified for
@@ -283,7 +320,9 @@ To download the entire project from the terminal, you will need
 [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) installed. From the terminal,
 go to the directory where you want to create a local copy of the Ecstasy project, and:
 
-    git clone https://github.com/xtclang/xvm.git
+```
+git clone https://github.com/xtclang/xvm.git
+```
 
 (There is excellent online documentation for git at
 [git-scm.com](https://git-scm.com/book/en/v2/Git-Basics-Getting-a-Git-Repository).)
@@ -291,11 +330,15 @@ go to the directory where you want to create a local copy of the Ecstasy project
 To build the entire project, you need to have [gradle](https://gradle.org/install/), or you use the
 included Gradle Wrapper from within the `xvm` directory, which is the recommended method:
 
-    ./gradlew build
+```
+./gradlew build
+```
 
 Or on Windows:
 
-    C:\> gradlew.bat build
+```
+C:\> gradlew.bat build
+```
 
 Note that Windows may require the `JAVA_TOOLS_OPTIONS` environment variable to be set to
 `-Dfile.encoding=UTF-8` in the Environment Variables window that can be accessed from Control Panel.
@@ -327,14 +370,14 @@ Should you, for any reason, need to clear the caches, and really start fresh, yo
 
 Or do the equivalent actions manually:
 
-*
-* Kill all Gradle daemons.
-* Close any open projects in your IDEs, to avoid restarting them with a large state change under the hood.
-* Delete the $GRADLE_USER_HOME/cache and $GRADLE_USER_HOME/daemons directories; note - this invalidates
-  caches for all Gradle builds on your current system, and rebuilds a new Gradle version.
-* Run 'git clean -xfd' in your build root. Note that this may also delete any IDE configuration that resides
-  in your build. You may want to preserve e.g. the ".idea" directory, and then you can do "git clean -xfd -e .idea"
-  or perform a dry run "git clean -xfdn", to see what will be deleted. Note that if you are at this level of
+1) Close any open XTC projects in your IDEs, to avoid restarting them with a large state change under the hood.
+   Optionally, also close your IDE processes.
+2) Kill all Gradle daemons.
+3) Delete the `$GRADLE_USER_HOME/cache` and `$GRADLE_USER_HOME/daemons` directories. *NOTE: this invalidates
+   caches for all Gradle builds on your current system, and rebuilds a new Gradle version.*
+4) Run `git clean -xfd` in your build root. Note that this may also delete any IDE configuration that resides
+  in your build. You may want to preserve e.g. the `.idea` directory, and then you can do `git clean -xfd -e .idea`
+  or perform a dry run `git clean -xfdn`, to see what will be deleted. Note that if you are at this level of
   purging stuff, it's likely a bad idea to hang on to your IDE state anyway.
 
 ## Debugging the build
@@ -349,38 +392,46 @@ compiler, runner or disassembler.
 XTC follow Gradle best practise, and you can run the build, or any task therein, with the standard
 verbosity flags. For example, to run the build with more verbose output, use:
 
-    ./gradlew build --info
+```
+./gradlew build --info
+```
 
 The build also supports Gradle build scans, which can be generated with:
 
-    ./gradlew build --scan
+```
+./gradlew build --scan
+```
 
 Note that build scans are published to the Gradle online build scan repository (as configured
-through the "gradle-enterprise" settings plugin.), so make sure that you aren't logging any
+through the `gradle-enterprise` settings plugin.), so make sure that you aren't logging any
 secrets, and avoid publishing build scans in "--debug" mode, as it may be a potential security
 hazard.
 
-You can also combine the above flags, and use all other standard Gradle flags, like "--stacktrace",
+You can also combine the above flags, and use all other standard Gradle flags, like `--stacktrace`,
 and so on.
 
 ### Tasks
 
 To see the list of available tasks for the XDK build, use:
 
-    ./gradlew tasks
+```
+./gradlew tasks
+```
 
 #### Versioning and Publishing XDK artifacts
 
-* Use "publishLocal" to publish an XDK build to the local Maven repository and a build specific repository directory.
-* Use "publishRemote" to publish and XDK build to the xtclang organization package repo on GitHub (a GitHub token with
+* Use `publishLocal`to publish an XDK build to the local Maven repository and a build specific repository directory.
+* Use `publishRemote`to publish and XDK build to the xtclang organization package repo on GitHub (a GitHub token with
   permissions is required).
-* Use "publish" to run both of the above tasks.
+* Use `publish` to run both of the above tasks.
 
-*Note*: At the moment Publications have some raciness due to Gradle issues, so they will warn or abort, if you do not
-also run then with the "--no-parallel" flag.
+*Note*: At the moment some publish tasks may have some raciness in execution, due to Gradle issues. Should you 
+get some kind of error during the publishing task, it may be a good idea to clean, and then rerun that task 
+with the Gradle flag `--no-parallel`.
 
 The version of the current XDK build is currently defined in the version catalog file located at
-"gradle/libs.versions.toml".
+`gradle/libs.versions.toml`. Note: We will likely migrate to a version handling system that is wrapped
+in well-defined tasks, and follows the principle of least surprise, very soon. 
 
 The version of the XTC plugin needs to be same as the version of the XDK being built. This is a constraint
 that will be relaxed in the future, but right now, we use them to verify that rapidly release plugin versions
@@ -388,26 +439,29 @@ work together with their XDK release. If you just use the XDK repository, the pl
 will be resolved as included builds, so it doesn't matter if there is version skew (except for sanity checks),
 when things are being tested.
 
-* Use "bumpProjectVersion" to change the version catalog to update to the next patch version.
-* Use "bumpProjectVersionToSnapshot" to change the version catalog to update to the next path version, setting
+* Use `bumpProjectVersion` to change the version catalog to update to the next patch version.
+* Use `bumpProjectVersionToSnapshot` to change the version catalog to update to the next path version, setting
   the version suffix to "-SNAPSHOT", which is the preferred version for any unreleased code. Typically the release
   process uploads and tags an XDK shipment and an XTC Plugin shipment. After publishing a release and its
   artifacts, the master branch should be updated to use a snapshot version. I.e. if we release XDK v1.0.2, the
   next change in the master branch should change the version of the XDK and the XTC Plugin to XDK v1.0.3-SNAPSHOT.
 
-*TODO*: In the future we will also support tagging and publishing releases on GitHub, using JReleaser.
+*TODO*: In the future we will also support tagging and publishing releases on GitHub, using JReleaser or a
+similar framework.
 
 ## Bleeding Edge for Developers
 
 If you would like to contribute to the Ecstasy Project, it might be an idea to use the
-very latest version by invoking
+very latest version by invoking:
 
-    ./gradlew installLocalDist
+```
+./gradlew installLocalDist
+```
 
 This copies the build from the xvm directory into the brew cellar, or other local installation,
-that is deduced from the location of the "xec" launcher on the system PATH.
+that is deduced from the location of the `xec` launcher on the system PATH.
 
-*Note*: this would be done after installing the XDK via brew, or through any other installation
+*Note*: this would be done after installing the XDK via `brew`, or through any other installation
 utility, depending on your platform. This will overwrite several libraries and files in any
 local installation.
 
@@ -417,4 +471,4 @@ For more information about the XTC DSL, please see the README.md file in the "pl
 
 To submit a contributor agreement, sign up for very hard work, fork over a giant
 pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please
-understand if we cannot respond to every email. Thank you.
+understand if we cannot respond to every e.mail. Thank you.

@@ -4,10 +4,10 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 plugins {
     id("org.xvm.build.version")
     id("maven-publish")
-    id("signing")
+    //id("signing")
 }
 
-internal val xtcGitHubClient = xdkBuildLogic.gitHubClient()
+internal val xtcGitHubClient = xdkBuildLogic.xdkGitHubClient()
 
 /**
  * Configure repositories for XDK artifact publication. Currently we publish the XDK zip "xdkArchive", and
@@ -25,18 +25,18 @@ publishing {
             url = uri(buildRepoDirectory)
         }
 
-        logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
-        if (xtcGitHubClient.verifyGitHubConfig()) {
-            logger.info("$prefix XTC GitHub username: ${xtcGitHubClient.gitHubUser}, organization: ${xtcGitHubClient.gitHubOrganization}")
-            val (user, token) = xtcGitHubClient.gitHubCredentials
-
-            maven {
-                name = GITHUB_PUBLICATION_NAME
-                description = "Publish all publications to the xtclang.org GitHub repository."
-                url = uri(xtcGitHubClient.gitHubUrl)
-                credentials {
-                    username = user
-                    password = token
+        logger.lifecycle("$prefix Configuring publications for xtclang.org GitHub repository.")
+        with (xtcGitHubClient) {
+            if (verifyGitHubConfig()) {
+                logger.lifecycle("$prefix Found GitHub package credentials for XTC: username: $gitHubUser, organization: $gitHubOrganization, read-only: $gitHubReadOnly")
+                maven {
+                    name = GITHUB_PUBLICATION_NAME
+                    description = "Publish all publications to the xtclang.org GitHub repository."
+                    url = uri(gitHubUrl)
+                    credentials {
+                        username = gitHubCredentials.first
+                        password = gitHubCredentials.second
+                    }
                 }
             }
         }
@@ -65,6 +65,7 @@ publishing {
     }
 }
 
+/*
 tasks.withType<Sign>().configureEach {
     onlyIf {
         xdkBuildLogic.isSnapshot().not() && getXdkPropertyBoolean("org.xvm.publications.sign", false) && System.getenv("CI").isNullOrEmpty() // TODO postpone signing in CI.
@@ -76,13 +77,13 @@ tasks.withType<Sign>().configureEach {
     project.extra["signing.keyId"] = keyId
     project.extra["signing.password"] = password
     project.extra["signing.secretKeyRingFile"] = secretKeyRingFile
-}
+}*/
 
 val listGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
-        logger.lifecycle("$prefix Listing publications for project '${project.group}:${project.name}':")
+        logger.lifecycle("$prefix '$name' Listing publications for project '${project.group}:${project.name}':")
         val packageNames = xtcGitHubClient.queryXtcLangPackageNames()
         if (packageNames.isEmpty()) {
             logger.lifecycle("$prefix   No Maven packages found.")
@@ -102,31 +103,43 @@ val listGitHubPublications by tasks.registering {
 
 val deleteGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description =
-        "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
+    description =  "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
-        logger.lifecycle("Deleting publications for project: '${project.group}:${project.name}'...")
         xtcGitHubClient.deleteXtcLangPackages()
+        logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
     }
 }
-
-val publishAllPublicationsToBuildRepository by tasks.existing {
-    dependsOn(pruneBuildRepo)
-}
-
-val publishAllPublicationsToMavenLocalRepository by tasks.existing
 
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to local repositories (e.g. build and mavenLocal)."
     dependsOn(publishAllPublicationsToBuildRepository, publishAllPublicationsToMavenLocalRepository)
+    doLast {
+        logger.lifecycle("$prefix Finished '$name' (local artifact publication to build and mavenLocal respositories).");
+    }
 }
 
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Helper task called internally to make sure the build repo is wiped out before republishing."
+    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
+    //enabled = false
+    //logger.warn("$prefix FYI: pruneBuildRepo is temporarily disabled; may affect repo in local installations. This is while mapping out the last dependencies for the build cache.")
     delete(buildRepoDirectory)
     doLast {
-        logger.lifecycle("$prefix Finished $name (deleted build repo under ${buildRepoDirectory.get()}).")
+        logger.lifecycle("$prefix Finished '$name' (deleted build repo under ${buildRepoDirectory.get()}). Likely triggered by inserting XTC plugin into distribution.");
+    }
+}
+
+val publishAllPublicationsToBuildRepository by tasks.existing {
+    dependsOn(pruneBuildRepo)
+    mustRunAfter(pruneBuildRepo)
+    doLast {
+        logger.lifecycle("$prefix Finished '$name' (local artifact publication to build repository).");
+    }
+}
+
+val publishAllPublicationsToMavenLocalRepository by tasks.existing {
+    doLast {
+        logger.lifecycle("$prefix Finished '$name' (local artifact publication to Maven repository).");
     }
 }

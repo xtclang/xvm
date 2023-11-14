@@ -55,6 +55,11 @@ public class Runner
         new Runner(asArg).run();
         }
 
+    public static void call(String[] asArg)
+        {
+        new Runner(asArg, new PluginConsole()).run();
+        }
+
     /**
      * Runner constructor.
      *

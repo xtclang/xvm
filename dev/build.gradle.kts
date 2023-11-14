@@ -1,73 +1,135 @@
-/*
- * This is a subproject templated to compile, run, and debug the XTC compiler and runtimes.
- * By default, the source set of this project contains a simple HelloWorld.x program. Do
- * debug an XTC program/module of your choice, just change the sourceSet to include whatever
- * source directory you have for your module.
- *
- * The project is part of the XDK, and uses its included builds, so that it looks like a normal Gradle XTC
- * project, that just uses the XDK as a dependency. It doesn't "know" it's part of the XTC. Please see the
- * GitHub repo "xtc-app-template" on GitHub in the XtcLang organization for a standalone example.
- *
- * Behind the scenes, the project will, thanks to the included build set, refresh and recompile any
- * changes made to the XDK in the same repository, whenever the project is build and "xtc" or "xec"
- * is executed through the compile and run configurations.
- *
- * The configs in this project use the "fork = false" option, for launching the XTC tools. This means
- * that the plugin dependencies are expected to be on the classpath of the same classloader as the
- * one building this project. This makes it possible for us to step directly into the XDK code,
- * or to hit breakpoints in the same process as the one running the XTC launchers. For a "sharp"
- * development project, that is XTC only, it is recommended to not override "fork", and let Gradle
- * launch the XTC components through standard "javaexec" specfications, so that the XTC Java code
- * runs in a different process. A similar approach in fork mode can be achieved the standard way,
- * by launching with -Xdebug, just like you would for any other Java application, like so:
- *
- *   1) export GRADLE_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"
- *   2) Put some breakpoints and launch the remote debug configuration inside your IDE on the port 5005
- *   (somewhat dated StackOverflow answer: https://stackoverflow.com/a/2066309/1267320)
- *
- *   If the abovementioned approach does not let you put breakpoints in the build scripts, you
- *   can still put one in e.g. org.gradle.api.internal.project.AbstractProject#dependencies() and
- *   you will at least have the opportunity to debug the build through the Gradle classes, hooking
- *   into project confiugration, dependency resolution, etc.
- *
- *   For some scenarios, it's also probably a good idea to run Gradle with --no-daemon mode.
- *
- * The master reference to debugging a Gradle build, and applications launched from it, can be
- * found here: https://docs.gradle.org/current/userguide/troubleshooting.html
- */
+import org.xvm.plugin.tasks.XtcCompileTask
+import org.xvm.plugin.tasks.XtcRunTask
+
+// TODO: The build repo publication is pretty annoying, as it rebuilds every time, even though nothing has changed.
+// Hence, it would be nice to just be able to refer to a standard repository in some normal way.
+// e.g. by extending a pluginSpec for xtcLocalDistRepo() that does this better, or by getting rid of the GitHub
+// credentials stuff.
 
 plugins {
+    /**
+     * This line just ties the dev project into the versioned XDK build as one of its components.
+     * This means we have the same wiring for using the xtc plugin and xdk libs from the XDK repo,
+     * and using any changed versions as the "official" ones, enabling incremental rebuild and testing
+     * with semantics just as if we were using "real" published artifacts. For an XTC third party app,
+     * this line would not be needed.
+     *
+     * TODO: A standalone "third party app" template repo is almost finished.
+     */
     id("org.xvm.build.version")
-    alias(libs.plugins.xtc)
+
+   /**
+    * This is the XTC plugin. An external user would have a version catalog of their own, default location
+    * would be in repo root/gradle/libs.versions.toml. Note that any dependency resolution works, so you
+    * could just put:
+    *
+    *    id("org.xvm:xtc-plugin:$version") (or a hard coded version string after the last colon, of course)
+    *
+    * (But this is just what the version catalog extension provides shorthand for. Third party users
+    *  will probably put the xtc plugin and xdk with versions and identifiers in their own version catalogs,
+    *  together with the versions and id:s of any other external projects they depend on, at least when
+    *  their projects start to grow. So the "alias(libs.plugins.xtc)" or something almost identical will
+    *  most likely pop up in that format in all kinds of projects, so it's not unrealistic to use this
+    *  shorthand for both the XDK and for a third party XDK dependency project, but that is up to its
+    *  implementor.)
+    *
+    * The XDK build builds the XDK libs and the XTC plugin and assigns them the same version, taken
+    * from the version catalog, e.g. "0.4.4".
+    * version catalogs, see https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalogs
+    */
+   alias(libs.plugins.xtc)
 }
 
-// TODO: Add an assert:debug in our test program.
-
+/**
+ * The XTC plugin teaches the project about the "xdk" dependency, which basically means "I want all
+ * modules in the XDK to go into any module path we use for compilation and execution of the modules
+ * build by this project. The notation in the parenthesis, is shorthand to refer to an artifact that
+ * is in our TOML version catalog description, but the user can use any dependency notation that Gradle
+ * supports, of course. For example 'xdk("org.xvm:xdk:0.4.4")'.
+ */
 dependencies {
     xdk(libs.xdk)
 }
 
-sourceSets {
-    main {
-        xtc {
-        }
+/**
+ * The source set section below is currently commented out. It illustrates how you can add source
+ * with any kind of URI, anywhere (not just in the source tree of this project) to the build.
+ */
+//val genesLocalXtcSourceFile = File(System.getProperty("user.home") + "/ggleyzer-xtc-code/GenesHelloWorld.x")
+
+/**
+ * Add a source directory with the file to be compiled to this project. Exclude everything else from this dir or
+ * any other default dir. To not exclude anything except the external source file, but also build the default
+ * source sets (if they exist), just remove the "include" line or comment it out. "srcDir" means ADD a source
+ * set directory to any existing ones.
+ *
+ * Again: this is commented out, and would complement the "execute only this compilation/run" above.
+ * The default action is to compile and run modules defined under the main source set directory of this
+ * project (or under the test source set, if we are executing compileXtcTest or runXtcTest).
+ */
+//sourceSets.main {
+//    xtc {
+//        srcDir(genesLocalXtcSourceFile.parentFile) // Adds a source directory to the XTC source set.
+//        include(genesLocalXtcSourceFile.name) // Include Gene's XTC source file and absolutely nothing else.
+//    }
+//}
+
+/**
+ * XTC Compile configuration block. See @XtcCompilerExtension for what's in it.
+ * As we have not stated otherwise, we leave it to the plugin's discretion to put the built xtc
+ * artifact anywhere it wants (default is build/xdk/main/lib). Gradle and the plugin handles
+ * the module paths for us, so there is really no nead to change this, but we can.
+ */
+xtcCompile {
+    fork = false
+
+    /** forceRebuild flag:
+     *     forceRebuild = false is the default, and should really always be enough, if you don't have a very
+     *     good reason to be recompiling already compiled and cached source code over and over again.
+     *     forceRebuild = true is ABSOLUTELY not recommended for production builds, but can be useful for
+     *     development and testing e.g. parts of the build lifecycle.
+     *
+     *     You can do the same thing in the XDK build in a more generic way for any task, by using the
+     *     extension function Task.alwaysRerunTask() from the build logic.
+     */
+    //forceRebuild = true
+}
+
+/**
+ * XTC Runtime DSL. See @XtcRuntimeExtension class for what's in it.
+ */
+xtcRun {
+    fork = true // fork = false, may be desirable to execute the runner inside the build process so breakpoint works without connectors and stuff
+    module {
+        moduleName = "DevExample"
+        methodName = "run"
+        args("one", "two", "three")
+    }
+    //moduleName("DevExample")  // alternative shorthand with only module name, default run method and no args (can also be an of module names)
+}
+
+/**
+ * Helper logs. Print the inputs, outputs etc, of any task in the project that is executed:
+ */
+
+tasks.withType<XtcCompileTask>().configureEach {
+    doLast {
+       printTaskInputs()
+       printTaskOutputs()
     }
 }
 
-xtc {
-    printVersion()
+tasks.withType<XtcRunTask>().configureEach {
+    /**
+     * An XtcRun task declares no explicit outputs, which means that Gradle should always automatically treat
+     * it as non-cachable, and rerun it. If not, we can force it with the XDK build logic function
+     * Task.alwaysRerunTask() (see above), or its Gradle equivalent configuration. This should not be necessary,
+     * though, so if the run does not seem to execute again in an unmodified build, when rerun, please debug
+     * that.
+     */
+    //alwaysRerunTask()
+    doLast {
+       printTaskInputs()
+       printTaskOutputs()
+    }
 }
-
-xtcCompile {
-    fork = false
-    forceRebuild = true
-}
-
-// TODO Add the possibility to run a module with hard coded path
-xtcRun {
-    verbose = true
-    fork = true
-    moduleName("TestFizzBuzz")
-}
-
-// TODO Add native launchers, just to show that they are there.

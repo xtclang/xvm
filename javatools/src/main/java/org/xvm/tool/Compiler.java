@@ -110,6 +110,11 @@ public class Compiler
         new Compiler(asArg).run();
         }
 
+    public static void call(String[] asArg)
+        {
+        new Compiler(asArg, new PluginConsole()).run();
+        }
+
     /**
      * Compiler constructor.
      *

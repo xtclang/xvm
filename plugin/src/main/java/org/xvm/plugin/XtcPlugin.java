@@ -32,6 +32,7 @@ public class XtcPlugin implements Plugin<Project> {
             this.xtcComponent = softwareComponentFactory.adhoc(Constants.XTC_COMPONENT_NAME);
         }
 
+        @Override
         public void apply(final @NotNull Project project) {
             new XtcProjectDelegate(project, xtcComponent).apply();
         }

@@ -58,5 +58,6 @@ xtc {
 
 xtcRun {
     verbose = true
+    fork = false // Change this to the default (default is true), to run the module in a separate process (recommended)
     moduleName("TestFizzBuzz")
 }

@@ -1,8 +1,9 @@
-package org.xvm.plugin;
+package org.xvm.plugin.internal;
 
 import org.gradle.api.Project;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
+import org.xvm.plugin.XtcCompilerExtension;
 
 import javax.inject.Inject;
 import java.util.HashMap;
