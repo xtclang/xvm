@@ -13,6 +13,6 @@ public class XModBuilder {
 
   // Use the normal Clz builder, with the ModPart as the XTC class
   Class<XClz> jmod( ) {
-    return new XClzBuilder(_mod,_mod,new SB(),true).jclz();
+    return new XClzBuilder(_mod,_mod,new SB(),new SB(),true).jclz();
   }  
 }

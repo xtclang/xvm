@@ -176,19 +176,26 @@ public abstract class XType {
       FREE = new Fun(null,null);
       return jtt;
     }
+    public static Fun make( MethodPart meth ) {
+      return make(xtypes(meth._args),xtypes(meth._rets));
+    }
     public int nargs() { return _args.length; }
     @Override public boolean is_prim_base() { return false; }
     @Override public SB str( SB sb ) {
       sb.p("{ ");
-      for( XType xt : _args )
-        xt.str(sb).p(",");
+      if( _args != null )
+        for( XType xt : _args )
+          xt.str(sb).p(",");
       sb.unchar().p(" -> ");
-      for( XType xt : _rets )
-        xt.str(sb).p(",");
+      if( _rets != null )
+        for( XType xt : _rets )
+          xt.str(sb).p(",");
       return sb.unchar().p(" }");
     }
     @Override public SB clz( SB sb ) {
-      sb.p("Fun").p(_args.length).p("$");
+      sb.p("Fun");
+      if( _args == null ) return sb;
+      sb.p(_args.length).p("$");
       for( XType xt : _args )
         xt.str(sb).p("$");
       return sb.unchar();
@@ -197,6 +204,7 @@ public abstract class XType {
     @Override boolean eq(XType xt) { return Arrays.equals(_args,((Fun)xt)._args) && Arrays.equals(_rets,((Fun)xt)._rets); }
     @Override int hash() { return Arrays.hashCode(_args) ^ Arrays.hashCode(_rets); }
 
+    // Make a callable interface with a particular signature
     public Fun make_class( ) {
       String tclz = clz();
       if( XClzBuilder.XCLASSES.containsKey(tclz) ) return this;
@@ -214,8 +222,9 @@ public abstract class XType {
       else throw XEC.TODO();
       sb.p(" call( ");
       int i=0;
-      for( XType arg : _args )
-        arg.p(sb).p(" x").p(i++).p(",");
+      if( _args!=null )
+        for( XType arg : _args )
+          arg.p(sb).p(" x").p(i++).p(",");
       sb.unchar().p(");").nl();
       // Class end
       sb.di().ip("}").nl();
@@ -331,37 +340,38 @@ public abstract class XType {
   
   // Produce a java type from a TermTCon
   public static XType xtype( Const tc, boolean boxed ) {
-    if( tc instanceof TermTCon ttc ) {
+    return switch( tc ) {
+    case TermTCon ttc -> {
       ClassPart clz = (ClassPart)ttc.part();
       if( clz._path==null ) {
-        if( clz._name.equals("Null" ) ) return Base.NULL;
-        if( clz._name.equals("True" ) ) return Base.TRUE;
-        if( clz._name.equals("False") ) return Base.FALSE;
+        if( clz._name.equals("Null" ) ) yield Base.NULL;
+        if( clz._name.equals("True" ) ) yield Base.TRUE;
+        if( clz._name.equals("False") ) yield Base.FALSE;
         throw XEC.TODO();
       }
       // Check the common base classes
       String xjkey = xjkey(clz);
       Base val = BASE_XJMAP.get(xjkey);
-      if( val!=null )  return boxed ? val.box() : val;
+      if( val!=null )  yield boxed ? val.box() : val;
       // Make one
-      return Clz.make(clz);
+      yield Clz.make(clz);
     }
 
-    if( tc instanceof ParamTCon ptc ) {
+    case ParamTCon ptc -> {
       ClassPart clz = ((ClzCon)ptc._con).clz();
 
       // These XTC classes are all intercepted and directly implemented in Java
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
         XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],false);
-        if( telem== Base.LONG ) return ARYLONG; // Java ArrayList specialized to int64
-        if( telem== Base.CHAR ) return ARYCHAR; // Java ArrayList specialized to char
-        return Ary.make(telem);   // Shortcut class
+        if( telem== Base.LONG ) yield ARYLONG; // Java ArrayList specialized to int64
+        if( telem== Base.CHAR ) yield ARYCHAR; // Java ArrayList specialized to char
+        yield Ary.make(telem);   // Shortcut class
       }
 
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
-        Tuple args = xtype(((ParamTCon)ptc._parms[0])._parms);
-        Tuple rets = xtype(((ParamTCon)ptc._parms[1])._parms);
-        return Fun.make(args._xts, rets._xts).make_class();
+        XType[] args = xtypes(((ParamTCon)ptc._parms[0])._parms);
+        XType[] rets = xtypes(((ParamTCon)ptc._parms[1])._parms);
+        yield Fun.make(args, rets).make_class();
       }
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true);
@@ -369,28 +379,28 @@ public abstract class XType {
       // All the long-based ranges, intervals and iterators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
-        if( telem== Base.LONG || telem== Base.JLONG ) return Base.RANGE; // Shortcut class
+        if( telem== Base.LONG || telem== Base.JLONG ) yield Base.RANGE; // Shortcut class
         else throw XEC.TODO();
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
-        if( telem== Base.LONG || telem== Base.JLONG ) return Base.ITER64; // Shortcut class
+        if( telem== Base.LONG || telem== Base.JLONG ) yield Base.ITER64; // Shortcut class
         else throw XEC.TODO();
       }
 
     //  if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
-    //    return "Ary<"+telem+">"; // Shortcut class
+    //    yield "Ary<"+telem+">"; // Shortcut class
 
       if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") )
-        //return org.xvm.xrun.Tuple.make_class(XClzBuilder.XCLASSES, xtype(ptc._parms));
+        //yield org.xvm.xrun.Tuple.make_class(XClzBuilder.XCLASSES, xtype(ptc._parms));
         throw XEC.TODO();
 
     //  if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/collections/Map.x") )
-    //    return XMap.make_class(XClzBuilder.XCLASSES, ptc._parms);
+    //    yield XMap.make_class(XClzBuilder.XCLASSES, ptc._parms);
     //  
     //  // Attempt to use the Java class name
     //  if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
-    //    return telem + ".class";
+    //    yield telem + ".class";
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") )
         throw XEC.TODO();
@@ -398,61 +408,55 @@ public abstract class XType {
       throw XEC.TODO();
     }
 
-    if( tc instanceof ImmutTCon itc )
-      return xtype(itc.icon(),boxed); // Ignore immutable for now
+    case ImmutTCon itc ->
+      xtype(itc.icon(),boxed); // Ignore immutable for now
 
     // Generalized union types gonna wait awhile.
     // Right now, allow null unions only
-    if( tc instanceof UnionTCon utc ) {
+    case UnionTCon utc -> {
       if( ((ClzCon)utc._con1).clz()._name.equals("Nullable") )
-        return xtype(utc._con2,true);
+        yield xtype(utc._con2,true);
       throw XEC.TODO();
     }
 
-    if( tc instanceof IntCon itc ) {
+    case IntCon itc -> {
       if( itc._f == Const.Format.Int64 )
-        return boxed ? Base.JLONG : Base.LONG;
+        yield boxed ? Base.JLONG : Base.LONG;
       throw XEC.TODO();
     }
 
-    if( tc instanceof StringCon )
-      return Base.STRING;
+    case StringCon sc ->
+      Base.STRING;
 
-    if( tc instanceof EnumCon econ ) {
-      ClassPart clz = (ClassPart)econ.part();
-      return Base.make(clz._super._name).unbox();
-    }
+    case EnumCon econ ->
+      Base.make(((ClassPart)econ.part())._super._name).unbox();
 
-    if( tc instanceof LitCon lit ) {
+    case LitCon lit -> {
       if( lit._f==Const.Format.IntLiteral )
-        return boxed ? Base.JLONG : Base.LONG;
+        yield boxed ? Base.JLONG : Base.LONG;
       throw XEC.TODO();
     }
 
-    if( tc instanceof AryCon ac )
-      return xtype(ac.type(),false);
+    case AryCon ac ->
+      xtype(ac.type(),false);
 
-    if( tc instanceof MethodCon mcon )  {
-      MethodPart meth = (MethodPart)mcon.part();
-      String name = meth._name;
-      if( !name.equals("->") && meth._par._par instanceof MethodPart pmeth )
-        name = pmeth._name+"$"+meth._name;
-      return Base.make(name);
-    }
+    case MethodCon mcon ->
+      Fun.make((MethodPart)mcon.part());
 
     // Property constant
-    if( tc instanceof PropCon prop )
-      return xtype(((PropPart)prop.part())._con,false);
+    case PropCon prop ->
+      xtype(((PropPart)prop.part())._con,false);
 
-    if( tc instanceof SingleCon con0 ) {
+    case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
-        return Clz.make(mod);
+        yield Clz.make(mod);
       if( con0.part() instanceof PropPart prop )
-        return Base.make(XProp.jname(prop));
+        yield Base.make(XProp.jname(prop));
       throw XEC.TODO();
     }
-    
-    throw XEC.TODO();
+
+    default -> throw XEC.TODO();
+    };
   }
 
   private static Tuple xtype( TCon[] cons ) {
