@@ -4,7 +4,7 @@ import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
 class TernaryAST extends AST {
-  static TernaryAST make(XClzBuilder X) { return new TernaryAST(X.kids(3)); }
+  static TernaryAST make( ClzBuilder X) { return new TernaryAST(X.kids(3)); }
   TernaryAST( AST... kids ) { super(kids); }
 
   @Override XType _type() {

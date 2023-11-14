@@ -8,7 +8,7 @@ class CmpChainAST extends AST {
   final BinOp[] _ops;
   final String[] _tmps;
 
-  static CmpChainAST make( XClzBuilder X ) {
+  static CmpChainAST make( ClzBuilder X ) {
     AST[] kids = X.kids();
     BinOp[] ops = new BinOp[kids.length-1];
     for( int i=0; i<ops.length; i++ )

@@ -2,7 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.xtc.ClassPart;
 import org.xvm.xtc.XType;
-import org.xvm.xtc.XClzBuilder;
+import org.xvm.xtc.ClzBuilder;
 import org.xvm.util.SB;
 
 // Always replaced before writing out.
@@ -17,7 +17,7 @@ class RegAST extends AST {
     _name = name;
     _type = type;
   }
-  RegAST( int reg, XClzBuilder X ) {
+  RegAST( int reg, ClzBuilder X ) {
     super(null);
     _reg  = reg ;
     _name = switch( reg ) {

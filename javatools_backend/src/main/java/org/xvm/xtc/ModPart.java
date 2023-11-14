@@ -79,7 +79,7 @@ public class ModPart extends ClassPart {
 
   // Return a Java module Class for this XTC Module
   public Class<XClz> jclz() {
-    return _jclz == null ? (_jclz = new XModBuilder(this).jmod()) : _jclz;
+    return _jclz == null ? (_jclz = new ModBuilder(this).jmod()) : _jclz;
   }
   
 

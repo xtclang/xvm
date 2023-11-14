@@ -9,7 +9,7 @@ public class BlockAST extends AST {
   HashMap<XType,Ary<String>> _tmps;
   private int _uid;
   
-  static BlockAST make( XClzBuilder X ) {
+  static BlockAST make( ClzBuilder X ) {
     // Count of locals
     int nlocals = X._nlocals;
     

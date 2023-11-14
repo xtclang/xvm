@@ -7,7 +7,7 @@ import org.xvm.util.SB;
 class OuterAST extends AST {
   final int _depth;
 
-  static OuterAST make( XClzBuilder X ) {
+  static OuterAST make( ClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
     int depth = X.u31();

@@ -1,7 +1,6 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
-import org.xvm.XEC;
 import org.xvm.xtc.*;
 
 class WhileAST extends AST {
@@ -10,7 +9,7 @@ class WhileAST extends AST {
   // _kids[2+] == Specials
   // _kids[2+] == Declared Regs
   final int _skids;             // Number of specials
-  static WhileAST make( XClzBuilder X ) {
+  static WhileAST make( ClzBuilder X ) {
     // Special Expr Ary
     AST[] skids = X.kids();
     int nskids = skids == null ? 0 : skids.length;

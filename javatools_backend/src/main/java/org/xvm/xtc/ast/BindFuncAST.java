@@ -1,6 +1,5 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.*;
@@ -12,7 +11,7 @@ class BindFuncAST extends AST {
   final int[] _idxs;            // Which args are being bound
   final String[] _args;         // Remaining args
 
-  static BindFuncAST make( XClzBuilder X ) {
+  static BindFuncAST make( ClzBuilder X ) {
     AST target = ast_term(X);
     int nargs = X.u31();
     AST[] kids = new AST[nargs+1];
@@ -26,7 +25,7 @@ class BindFuncAST extends AST {
     return new BindFuncAST( X, kids, idxs, type );
   }
     
-  private BindFuncAST( XClzBuilder X, AST[] kids, int[] idxs, Const type ) {
+  private BindFuncAST( ClzBuilder X, AST[] kids, int[] idxs, Const type ) {
     super(kids);
     _idxs = idxs;
     int nargs = kids.length-1;
@@ -34,7 +33,7 @@ class BindFuncAST extends AST {
       // Embedded Lambda
       MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
       // A builder for the lambda method
-      XClzBuilder X2 = new XClzBuilder(X,null);
+      ClzBuilder X2 = new ClzBuilder(X,null);
       // All the args from the current scope visible in the lambda body, as
       // hidden extra arguments
       for( int i=0; i<nargs; i++ ) {

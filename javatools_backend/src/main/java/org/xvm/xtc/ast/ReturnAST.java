@@ -2,12 +2,12 @@ package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
 import org.xvm.XEC;
-import org.xvm.xtc.XClzBuilder;
+import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.XType;
 
 public class ReturnAST extends AST {
   private final String _ztype;
-  static ReturnAST make( XClzBuilder X, int n ) {
+  static ReturnAST make( ClzBuilder X, int n ) {
 
     String ztype=null;
     if( X._meth.is_cond_ret() ) {
