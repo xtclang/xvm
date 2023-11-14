@@ -1,13 +1,12 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
-import org.xvm.xtc.cons.Const.UniOp;
 import org.xvm.xtc.cons.AccessTCon;
 import org.xvm.xtc.cons.Const;
 
 class NarrowAST extends AST {
 
-  static NarrowAST make( XClzBuilder X ) {
+  static NarrowAST make( ClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
     return new NarrowAST(kids,type);

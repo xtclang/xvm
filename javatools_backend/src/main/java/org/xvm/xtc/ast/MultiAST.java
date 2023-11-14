@@ -5,7 +5,7 @@ import org.xvm.xtc.*;
 
 class MultiAST extends AST {
   final boolean _expr;
-  static MultiAST make(XClzBuilder X, boolean expr) {
+  static MultiAST make( ClzBuilder X, boolean expr) {
     int len = X.u31();
     AST[] kids = new AST[len];
     for( int i=0; i<len; i++ )

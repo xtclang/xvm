@@ -8,7 +8,7 @@ import org.xvm.xtc.*;
 class ListAST extends AST {
   final boolean _tuple;
   
-  static ListAST make( XClzBuilder X, boolean tuple ) {
+  static ListAST make( ClzBuilder X, boolean tuple ) {
     Const type = X.con();
     return new ListAST(X.kids(),type,tuple);
   }

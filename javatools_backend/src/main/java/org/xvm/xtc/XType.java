@@ -99,7 +99,7 @@ public abstract class XType {
     public final String[] _flds;
     public final XType[] _xts;
     private Clz( ClassPart clz ) {
-      _mod = XClzBuilder.CCLZ;  // Compile unit class
+      _mod = ClzBuilder.CCLZ;  // Compile unit class
       _clz = clz;
       int len=0;
       for( Part part : clz._name2kid.values() )
@@ -117,7 +117,7 @@ public abstract class XType {
     public static Clz make( ClassPart clz ) {
       return ZINTERN.computeIfAbsent(clz, k->new Clz(clz));
     }
-    String name() { return _mod==_clz || _mod==XClzBuilder.CCLZ ? _clz._name : _mod._name+"."+_clz._name; }
+    String name() { return _mod==_clz || _mod== ClzBuilder.CCLZ ? _clz._name : _mod._name+"."+_clz._name; }
     @Override public boolean is_prim_base() { return false; }
 
     @Override public SB str( SB sb ) {
@@ -207,7 +207,7 @@ public abstract class XType {
     // Make a callable interface with a particular signature
     public Fun make_class( ) {
       String tclz = clz();
-      if( XClzBuilder.XCLASSES.containsKey(tclz) ) return this;
+      if( ClzBuilder.XCLASSES.containsKey(tclz) ) return this;
       /* Gotta build one.  Looks like:
          interface Fun2$long$String {
          long call(long l, String s);
@@ -228,7 +228,7 @@ public abstract class XType {
       sb.unchar().p(");").nl();
       // Class end
       sb.di().ip("}").nl();
-      XClzBuilder.XCLASSES.put(tclz,sb.toString());               
+      ClzBuilder.XCLASSES.put(tclz,sb.toString());
       return this;
     }
   }

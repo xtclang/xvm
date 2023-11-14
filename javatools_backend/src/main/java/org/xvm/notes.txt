@@ -8,8 +8,7 @@ Ignore packages for now?
 * org/xvm/xtc/cons - "cons" things from XTC files
 * org/xvm/xtc/AST  - "AST"  things from XTC files
 
-  org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
-
+* org/xvm/xtc/ClzBuilder, ModBuilder, Javac, XType, XValue,
 
 * org/xvm/xec - generated class strings act "as if" loaded from here
 * org/xvm/xec - runtime support classes (no ties with gen classes)
@@ -30,7 +29,7 @@ Ignore packages for now?
 *- gen as org/xvm/xec/module.java
 
 XTC lower class
-- gen as org/xvm/xec/module/CLASSNAME.java
+ - gen as org/xvm/xec/module/CLASSNAME.java
 
 
 #So multiMethod example:
@@ -40,9 +39,9 @@ XTC lower class
 #org/xvm/xec/Lib.java        - extends xec.Xclz; import default;  empty_static;
 #org/xvm/xec/Lib/Lib.java    - extends Lib;      String greeting() {return "hello world"}
 
-Simple 1-class modules can keep their short form:
-  org/xvm/xec/Main.java
-  org/xvm/xec/Lib.java
+* Simple 1-class modules can keep their short form:
+*   org/xvm/xec/Main.java
+*   org/xvm/xec/Lib.java
 
 
 

@@ -1,11 +1,10 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
-import org.xvm.XEC;
 import org.xvm.xtc.*;
 
 class AssertAST extends AST {
-  static AssertAST make( XClzBuilder X ) {
+  static AssertAST make( ClzBuilder X ) {
     int flags = X.u31();
     AST cond = (flags&1)!=0 ? ast_term(X) : null;
     AST intv = (flags&2)!=0 ? ast_term(X) : null;

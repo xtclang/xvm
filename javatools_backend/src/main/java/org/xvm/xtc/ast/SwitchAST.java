@@ -27,7 +27,7 @@ class SwitchAST extends AST {
   enum Flavor { ComplexTern, SimpleTern, IntRange, Pattern };
   final Flavor _flavor;
   
-  static SwitchAST make( XClzBuilder X, boolean expr ) {
+  static SwitchAST make( ClzBuilder X, boolean expr ) {
     Flavor flavor;
     AST cond = ast_term(X);
     long isa = X.pack64();

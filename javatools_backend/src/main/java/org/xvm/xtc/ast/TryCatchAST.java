@@ -11,7 +11,7 @@ class TryCatchAST extends AST {
   // kids[xbody+1...len] // catch clauses, each a StmtBody with DefReg first
   final int _xbody;
   
-  static TryCatchAST make( XClzBuilder X ) {
+  static TryCatchAST make( ClzBuilder X ) {
     AST[] resources = X.kids(); // Resources to close
     int xbody = resources==null ? 0 : resources.length;
     AST body = ast(X);          // Main body

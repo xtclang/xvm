@@ -10,7 +10,7 @@ class InvokeAST extends AST {
   final String _meth;
   final XType[] _rets;
 
-  static InvokeAST make( XClzBuilder X ) {
+  static InvokeAST make( ClzBuilder X ) {
     Const[] retTypes = X.consts(); // Return types
     AST[] kids = X.kids_bias(1);   // Call arguments
     Const methcon = X.con();       // Method constant, name
