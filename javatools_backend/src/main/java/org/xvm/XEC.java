@@ -17,7 +17,9 @@ import java.util.HashMap;
 
  */
 public class XEC {
+  // Local project root
   public static final String ROOT = "org.xvm";
+  // All the generated code is generated here:
   public static final String XCLZ = ROOT+".xec";
   
   // Main Launcher.

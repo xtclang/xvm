@@ -41,11 +41,17 @@ public abstract class XValue {
     // Method constants
     case MethodCon mcon -> {
       MethodPart meth = (MethodPart)mcon.part();
-      // TODO: Assumes the method is in the local Java namespace
       // Lambda names "->" are inlined as Java lambdas
       String name = meth._name;
-      if( !name.equals("->") && meth._par._par instanceof MethodPart pmeth )
-        name = pmeth._name+"$"+meth._name;
+      if( meth._par._par instanceof MethodPart pmeth ) {
+        if( !name.equals("->") )
+          name = pmeth._name+"$"+meth._name;
+      } else {
+        // Put qualified name if not in local namespace
+        ClassPart clz = (ClassPart)meth._par._par;
+        if( clz!=XClzBuilder.CCLZ )
+          name = clz._name+"."+name;
+      }
       yield ASB.p(name);
     }
 
