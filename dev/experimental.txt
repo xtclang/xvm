@@ -14,7 +14,7 @@ import org.xvm.plugin.XtcCompileTask
  * changes made to the XDK in the same repository, whenever the project is build and "xtc" or "xec"
  * is executed through the compile and run configurations.
  *
- * The configs in this project may use the "fork = false" option, for launching the XTC tools. This means
+ * The configs in this project use the "fork = false" option, for launching the XTC tools. This means
  * that the plugin dependencies are expected to be on the classpath of the same classloader as the
  * one building this project. This makes it possible for us to step directly into the XDK code,
  * or to hit breakpoints in the same process as the one running the XTC launchers. For a "sharp"
@@ -41,45 +41,40 @@ import org.xvm.plugin.XtcCompileTask
 plugins {
     id("org.xvm.build.version")
     alias(libs.plugins.xtc)
-    alias(libs.plugins.tasktree)
 }
+
+// TODO: Add an assert:debug in our test program.
 
 dependencies {
     xdk(libs.xdk)
 }
 
-// This is how you add a path to the source set, to debug a custom file at any location:
-/*
 sourceSets {
     main {
         xtc {
-            srcDir(System.getProperty("user.dir") + "/my-ecstasy")
+            val externalFile = System.getProperty("user.home") + "/xtc-external"
+            println("externalFIle: " + externalFile)
+            srcDir(externalFile)
             include("AppUnderTestElsewhere.x")
+ //           include("**/*AppUnderTestElsewhere.x")
+
         }
     }
 }
-*/
 
-// Verify the xtc extension works. We will use it later to add sugar like "orgXvmGitHubRepo()", but there
-// will always be SOME kind of settings bootstrap because we need the plugin before everything else.
 xtc {
     printVersion()
 }
 
-
-// Compile DSL. See the XtcCompilerExtension class for what's in it.
 xtcCompile {
-    // fork = false
+    fork = true
     forceRebuild = true
 }
 
-// Run DSL. See the XtcRuntimeExtension class for what's in it.
-
-// Just debug the source sets inputs and outputs.
 val compileXtc by tasks.existing(XtcCompileTask::class) {
     doLast {
         sourceSets.main.get().allSource.forEach {
-            println(" **** SOURCE SET INPUT: $it")
+            println(" **** SOURCE SET: $it")
         }
         sourceSets.main.get().output.forEach {
             println(" **** SOURCE SET OUTPUT: $it ")
@@ -88,8 +83,55 @@ val compileXtc by tasks.existing(XtcCompileTask::class) {
     }
 }
 
+// TODO Add the possibility to run a module with hard coded path
+//fork = true // Run the app in the build process.
 xtcRun {
+    //interactive = true // Do not reroute stdin/stdout/stderr. May work only with fork = false.
+
+    // fork = false; Invoke the app directly from the build script.  (TODO maybe a separate thread)??
+    //   this means that you will hit breakpoints both in the plugin and the XTC java internals like Runner.process.
+
+    // fork = true; This is the default, run the XTC launcher in another process. This means you can't
+    // put breakpoints in the launchers, but it DOES mean you can interact with the debugger.
+    fork = true
+    //
     moduleName("AppUnderTestElsewhere")
-    // fork = false
-    // interactive = true // Do not reroute stdin/stdout/stderr. May work only with fork = false. TODO: NOT IMPLEMENTED YET
+
+    // TODO explicitly setting run seems to not work.
+    /*
+    module {
+        moduleName = "AppUnderTest"
+        //method = "run"
+        //args("some", "arg")
+    }*/
+    // Other shorthand and DSL:
+    /*
+
+    moduleName("Something")
+
+    moduleNames("Something", "Other", "...")
+
+    // Or a list of modules work, i.e. repeated module {} blocks. Executed in order.
+    module {
+        moduleName = "mandatoryName"
+        method = "optionalMethodToRun" // default is "run"
+        args("arguments", "to", "add") // default is empty list.
+    }
+        ... other modules ...
+
+    module {
+        ...
+    }
+
+    debugEnabled = false
+
+    // Not supported yet. You can get parallelism if you add another project. Gradle will build everything that's
+    // independent at the same time. TODO: This will be improved with the Worker API.
+    allowParallel = true
+
+    jvmArgs = ..
+
+    verbose = true // default is false
+
+    */
 }

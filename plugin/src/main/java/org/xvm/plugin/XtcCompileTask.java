@@ -58,12 +58,12 @@ public abstract class XtcCompileTask extends SourceTask {
         setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
         project.info("{} Associating {} compile task {} with SourceDirectorySet: {}", prefix, sourceSet.getName(), name, getSource().getFiles());
         if (extCompiler.getForceRebuild().get()) {
-            project.info("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
+            project.lifecycle("{} Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
             touchSourceSet(sourceSet);
         }
         doLast(t -> {
             // This happens during task execution, after the config phase.
-            project.info("{} '{}' finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
+            project.info("{} '{}' Finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
             sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{}.compileXtc sourceSet output: {}", prefix, it));
         });
         project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());
@@ -82,9 +82,14 @@ public abstract class XtcCompileTask extends SourceTask {
     }
 
     private void touchSourceSet(final SourceSet sourceSet) {
-        sourceSet.getResources().getAsFileTree().forEach(this::touch);
-        sourceSet.getAllSource().getAsFileTree().forEach(this::touch);
-        project.info("{} Updated lastModified of source set '{}' and resources to 'now', to enforce a full rebuild.", prefix, sourceSet.getName());
+        var all = sourceSet.getResources().plus(sourceSet.getAllSource());
+        all.getAsFileTree().forEach(f -> {
+            final var before = f.lastModified();
+            touch(f);
+            final var after = f.lastModified();
+            project.info("{} *** File: {} (before: {}, after: {})", prefix, f.getAbsolutePath(), before, after);
+        });
+        project.lifecycle("{} Updated lastModified of source set '{}' and resources to 'now' in the epoch, to enforce a full rebuild.", prefix, sourceSet.getName());
     }
 
     @InputFiles
@@ -254,7 +259,17 @@ public abstract class XtcCompileTask extends SourceTask {
     }
 
     private boolean isTopLevelSource(final File file) {
+        // TODO:
+        //   Current check looks for "top level files" since we aren't lexing anything, since that requires having access to the Javatools lexer
+        //   (we actually ship with an XDK compatible javatools in the plugin now, to enable the "fork = false" trick, so nothing is really stopping
+        //   us from calling its module parser, atm, but I don't want to look myself into that design too hard just yet, and we should not strive
+        //   to forever continue having the xtc plugin and the xdk coupled by version, and hence not also start relying on them always being
+        //   together at plugin application time.
         assert file.isFile();
+
+        sourceSet.getResources().getSrcDirTrees().forEach(it -> project.info("{} Resource directory tree: {}", prefix, it));
+        sourceSet.getAllSource().getSrcDirTrees().forEach(it -> project.info("{} Source directory tree: {}", prefix, it));
+
         final var srcTopDir = project.getProject().getLayout().getProjectDirectory().dir(project.getXtcSourceDirectoryRootPath(sourceSet)).getAsFile();
         final var isTopLevelSrc = file.getParentFile().equals(srcTopDir);
         project.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);

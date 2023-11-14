@@ -30,7 +30,7 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
         }
     }
 
-    Property<Boolean> getVersion();
+    Property<Boolean> getShowVersion();
 
     Property<Boolean> getAllowParallel();
 

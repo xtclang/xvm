@@ -64,6 +64,7 @@ val run by tasks.registering {
     }
 }
 
+/*
 val xtcUnicodeProvider by configurations.registering {
     isCanBeResolved = false
     isCanBeConsumed = true
@@ -76,3 +77,4 @@ val xtcUnicodeProvider by configurations.registering {
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
     }
 }
+*/
