@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
 import org.xvm.xtc.XClzBuilder;
 import org.xvm.xtc.XType;
+import org.xvm.xtc.XValue;
 import org.xvm.util.SB;
 
 class DefRegAST extends AST {
@@ -23,7 +24,7 @@ class DefRegAST extends AST {
       // TODO: Handle other kinds of typed args
       TermTCon ttc = anno.con().is_generic();
       if( ttc==null ) throw XEC.TODO();
-      _init = XClzBuilder.value_tcon(ttc);
+      _init = XValue.val(ttc);
     } else {
       _init = null;
     }

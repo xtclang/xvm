@@ -28,7 +28,7 @@ class UniOpAST extends AST {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
     // XTC allows booleans "~" but Java does not.
-    if( "~".equals(pre) && "boolean".equals(XType.jtype(type,false)) )
+    if( "~".equals(pre) && XType.xtype(type,false)==XType.BOOL )
       pre = "!";                // Use Java bang instead
     return new UniOpAST(kids,pre,post,type);
   }

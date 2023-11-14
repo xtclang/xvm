@@ -2,13 +2,13 @@ package org.xvm.xtc.ast;
 
 import org.xvm.xtc.cons.*;
 import org.xvm.xtc.XType;
-import org.xvm.xtc.XClzBuilder;
+import org.xvm.xtc.XValue;
 import org.xvm.util.SB;
 
 class ConAST extends AST {
   final TCon _tcon;
   final String _con;
-  ConAST( Const con ) { this((TCon)con, XClzBuilder.value_tcon(con), XType.xtype(con,false)); }
+  ConAST( Const con ) { this((TCon)con, XValue.val(con), XType.xtype(con,false)); }
   ConAST( String con ) { this(null,con, XType.Base.make(con)); }
   ConAST( TCon tcon, String con, XType type ) {
     super(null);

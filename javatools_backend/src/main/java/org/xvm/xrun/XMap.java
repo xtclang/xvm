@@ -32,16 +32,20 @@ public abstract class XMap<K,V> extends XClz implements Cloneable {
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
   public static String make_class( HashMap<String,String> cache, TCon[] parms ) {
-    String zkey = XType.jtype(parms[0],true);
-    String zval = XType.jtype(parms[1],true);
-    SB sb = new SB().p("XMap$").p(zkey).p("$").p(zval);
+    XType xkey = XType.xtype(parms[0],true);
+    XType xval = XType.xtype(parms[1],true);
+    SB sb = new SB().p("XMap$");
+    xkey.str(sb).p("$");
+    xval.str(sb);
     String tclz = sb.toString();
     sb.clear();
 
     // Lookup cached version
     if( !cache.containsKey(tclz) ) {
       // XMap N class
-      sb.p("class ").p(tclz).p(" extends XMap<").p(zkey).p(",").p(zval).p("> {").nl().ii();
+      sb.p("class ").p(tclz).p(" extends XMap<");
+      xkey.str(sb).p(",");
+      xval.str(sb).p("> {").nl().ii();
       sb.di().ip("}").nl();
       cache.put(tclz,sb.toString());
     }
