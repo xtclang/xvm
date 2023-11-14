@@ -40,6 +40,11 @@ val xdkProvider by configurations.registering {
 val xtcUnicodeConsumer by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
+    // TODO: Can likely remove these.
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
+    }
 }
 
 // TODO: Add a plugin handler that scans the local build dir? Bootstrapping? Worth it?
@@ -310,14 +315,16 @@ val importUnicodeFiles by tasks.registering {
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
 
     alwaysRerunTask()
-
-    dependsOn(xtcUnicodeConsumer)
+    dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
     inputs.files(xtcUnicodeConsumer)
 
-    val outputDir = File(project(":lib-ecstasy").projectDir, "src/main/resources/ecstasy/text")
+    val outputDir = File(project(":lib-ecstasy").projectDir, "src/main/resources/ecstasy/text2")
+    outputs.dir(outputDir)
+
     doLast {
         logger.lifecycle("$prefix Trying to write unicode tables to ${outputDir.absolutePath}...")
-        sync {
+        logger.lifecycle("$prefix Provider files: ${xtcUnicodeConsumer.get().resolve()}")
+        copy {
             from(xtcUnicodeConsumer) {
                 into(outputDir)
             }
