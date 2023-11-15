@@ -4,12 +4,12 @@ module TestModIFace {
     void run() {
         Point point1 = new Point(0, 2);
         console.print($"point1={point1} hypo={point1.hypo}");
-    
+
         NamedPoint point2 = new NamedPoint("top-left", 1, 0);
         console.print($"point2={point2} hypo={point2.hypo}");
-    
+
         Point point3 = point2;
-    
+
         assert point1 == point3;
         assert Point.equals(point1, point3);
         assert point1 <=> point3 == Equal;

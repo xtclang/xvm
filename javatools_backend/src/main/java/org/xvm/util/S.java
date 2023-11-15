@@ -8,4 +8,12 @@ public abstract class S {
     assert s1==s1.intern();
     return false;
   }
+
+  // Fast linear scan for a hit, returns index or -1.
+  // Uses '==' not '.equals'
+  public static <E> int find( E[] es, E e ) {
+    for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
+    return -1;
+  }
+  
 }

@@ -28,6 +28,7 @@ class SwitchAST extends AST {
   final Flavor _flavor;
   
   static SwitchAST make( ClzBuilder X, boolean expr ) {
+    int nlocals = X.nlocals();  // Count of locals
     Flavor flavor;
     AST cond = ast_term(X);
     long isa = X.pack64();
@@ -40,8 +41,11 @@ class SwitchAST extends AST {
     if( clen < 64 ) {   // Use bitvector
       long body_mask = X.pack64();
       for( int i = 0; i < clen;  i++ )
-        if( (body_mask & (1L << i)) != 0 ) // Skip some cases
+        if( (body_mask & (1L << i)) != 0 ) { // Skip some cases
+          int body_locals = X.nlocals();  // Count of locals
           kids[i+1] = expr ? ast_term(X) : ast(X);
+          X.pop_locals(body_locals); // Pop scope-locals at end of scope
+        }
     } else {                    // Use another encoding
       throw XEC.TODO();
     }
@@ -66,6 +70,7 @@ class SwitchAST extends AST {
     
     // Parse result types
     Const[] rezs = expr ? X.consts() : null;
+    X.pop_locals(nlocals);      // Pop scope-locals at end of scope
     return new SwitchAST(flavor,kids,expr,isa,cases,rezs);
   }
   private static boolean valid_range( Const c ) {
