@@ -5,9 +5,9 @@ import org.xvm.xtc.XType;
 import org.xvm.xtc.XValue;
 import org.xvm.util.SB;
 
-class ConAST extends AST {
-  final TCon _tcon;
-  final String _con;
+public class ConAST extends AST {
+  public final TCon _tcon;
+  public String _con;
   ConAST( Const con ) { this((TCon)con, XValue.val(con), XType.xtype(con,false)); }
   ConAST( String con ) { this(null,con, XType.Base.make(con)); }
   ConAST( TCon tcon, String con, XType type ) {

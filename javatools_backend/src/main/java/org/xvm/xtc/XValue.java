@@ -62,7 +62,7 @@ public abstract class XValue {
 
     // A class Type as a value
     case ParamTCon ptc ->
-      ASB.p(XType.xtype(ptc,false).toString());
+      XType.xtype(ptc,false).clz(ASB);
     
     // Enums
     case EnumCon econ -> {

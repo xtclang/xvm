@@ -11,7 +11,7 @@ class ForStmtAST extends AST {
   // _kids[4+] == Special Regs
   static ForStmtAST make( ClzBuilder X ) {
     // Count of locals
-    int nlocals = X._nlocals;
+    int nlocals = X.nlocals();
     AST[] kids = X.kids_bias(4);
     kids[0] = ast(X);           // init
     kids[1] = ast_term(X);      // cond

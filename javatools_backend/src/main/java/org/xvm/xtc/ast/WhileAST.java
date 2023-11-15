@@ -19,7 +19,10 @@ class WhileAST extends AST {
     if( skids != null ) System.arraycopy(skids,0,kids,2,nskids);
     // Fixed 
     kids[0] = ast_term(X);      // Condition
-    kids[1] = ast(X);           // BOdy
+    
+    int nlocals = X.nlocals();  // Count of locals
+    kids[1] = ast(X);           // Body
+    X.pop_locals(nlocals);      // Pop scope-locals at end of scope
     return new WhileAST(kids,nskids);
   }
   private WhileAST( AST[] kids, int skids ) { super(kids); _skids = skids; }

@@ -5,11 +5,15 @@ import org.xvm.xtc.*;
 
 class IfAST extends AST {
   static IfAST make( ClzBuilder X, int n ) {
+    int nlocals0 = X.nlocals();  // Count of locals
     AST[] kids = new AST[n];
     kids[0] = ast_term(X);
+    int nlocals1 = X.nlocals();  // Count of locals
     kids[1] = ast(X);
+    X.pop_locals(nlocals1);      // Pop scope-locals at end of scope
     if( n==3 )
       kids[2] = ast(X);
+    X.pop_locals(nlocals0);     // Pop scope-locals at end of scope
     return new IfAST(kids);
   }  
   private IfAST( AST[] kids ) { super(kids); }

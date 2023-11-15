@@ -9,10 +9,12 @@ class ForRangeAST extends AST {
   // _kids[2] == Body
   // _kids[3+] == Special Regs
   static ForRangeAST make( ClzBuilder X ) {
+    int nlocals = X.nlocals(); // Count of locals
     AST[] kids = X.kids_bias(3);
     kids[0] = ast_term(X);     // LHS
     kids[1] = ast_term(X);     // RHS
     kids[2] = ast(X);          // Body
+    X.pop_locals(nlocals);     // Pop scope-locals at end of scope
     return new ForRangeAST(kids);
   }
   private ForRangeAST( AST[] kids ) { super(kids); }

@@ -1,15 +1,13 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.util.NonBlockingHashMapLong;
+import org.xvm.util.Ary;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xec.XClz;
 import org.xvm.xrun.XConst;
 import org.xvm.xrun.XProp;
-import org.xvm.xtc.ast.AST;
-import org.xvm.xtc.ast.BlockAST;
-import org.xvm.xtc.ast.ReturnAST;
+import org.xvm.xtc.ast.*;
 import org.xvm.xtc.cons.*;
 
 import java.util.HashMap;
@@ -43,9 +41,9 @@ public class ClzBuilder {
   private CPool _pool;          // Parser for code buffer
   
   final HashMap<String,String> _names; // Java namification
-  public final NonBlockingHashMapLong<String> _locals; // Virtual register numbers to java names
-  public final NonBlockingHashMapLong<XType>  _ltypes; // Virtual register numbers to java types
-  public int _nlocals; // Number of locals defined; popped when lexical scopes pop
+  public final Ary<String> _locals; // Virtual register numbers to java names
+  public final Ary<XType>  _ltypes; // Virtual register numbers to java types
+  public final int nlocals() { return _locals._len; }
 
   // A collection of extra class source strings, generated all along and dumped
   // after the normal methods are dumped.
@@ -57,6 +55,12 @@ public class ClzBuilder {
   
   // Make a (possible nested) java class builder
   public ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean top ) {
+    _xclasses = top ? new HashMap<>() : null;
+    if( top ) {
+      assert XCLASSES==null; // Nested top-level compilation units
+      XCLASSES = _xclasses;
+      CCLZ = mod;               // Compile unit
+    }
     _mod = mod;
     _tmod = mod==null ? null : XType.Clz.make(mod);
     _clz = clz;
@@ -64,16 +68,10 @@ public class ClzBuilder {
     _top = top;
     _sbhead = sbhead;
     _sb = sb;
-    _xclasses = top ? new HashMap<>() : null;
-    if( _top ) {
-      if( XCLASSES!=null ) throw XEC.TODO(); // Nested top-level compilation units
-      XCLASSES = _xclasses;
-      CCLZ = mod;               // Compile unit
-    }
     _names = new HashMap<>();
     // TODO: Move to XMethBuilder
-    _locals = new NonBlockingHashMapLong<>();
-    _ltypes = new NonBlockingHashMapLong<>();
+    _locals = new Ary<String>(String.class);
+    _ltypes = new Ary<XType >(XType .class);
   }
   
   // Fill in the body of the matching java class
@@ -107,7 +105,8 @@ public class ClzBuilder {
       _sb.p("public class ").p(java_class_name).p(" extends ").p(is_runclz() ? "XRunClz" : "XClz");
     } else {
       _sb.ip("public static class ").p(java_class_name).p(" extends ");
-      _sb.p(_clz._f==Part.Format.CONST ? "XConst" : "XClz");
+      if( _clz._super != null ) _sb.p(_clz._super._name);
+      else _sb.p(_clz._f==Part.Format.CONST ? "XConst" : "XClz");
     }
     _sb.p(" {").nl().ii();
 
@@ -119,7 +118,7 @@ public class ClzBuilder {
     MMethodPart mm = (MMethodPart)_clz.child("construct");
     MethodPart construct = (MethodPart)mm.child(mm._name);
     if( construct != null ) {
-      assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
+      assert _locals.isEmpty(); // No locals mapped yet
       assert construct._sibling==null;
       // Skip common empty constructor
       if( !construct.is_empty_function() ) {
@@ -130,7 +129,7 @@ public class ClzBuilder {
           _sb.ip("}").nl().nl();
         } else {
           _sb.i();
-          jmethod_body(construct,java_class_name);
+          jmethod_body(construct,java_class_name,true);
         }
       }
     }
@@ -144,7 +143,7 @@ public class ClzBuilder {
         if( mmp._name.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
-        if( meth == null && _clz._f == Part.Format.CONST ) {
+        if( (meth==null || meth._ast == null) && _clz._f == Part.Format.CONST ) {
           // Const classes have default methods, with no code given.  Generate.
           XConst.make_meth(_clz,mmp._name,_sb);
         } else {
@@ -212,7 +211,7 @@ public class ClzBuilder {
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
   public void jmethod( MethodPart m, String mname ) {
-    assert _locals.isEmpty() && _nlocals==0; // No locals mapped yet
+    assert _locals.isEmpty();   // No locals mapped yet
     _sb.i();
     int access = m._nFlags & Part.ACCESS_MASK;
     if( access==Part.ACCESS_PRIVATE   ) _sb.p("private "  );
@@ -230,7 +229,7 @@ public class ClzBuilder {
     } else {
       throw XEC.TODO(); // Multi-returns will need much help
     }
-    jmethod_body(m,mname);
+    jmethod_body(m,mname,false);
   }
 
   // Name, argument list, body:
@@ -238,7 +237,7 @@ public class ClzBuilder {
   // ...method_name( int arg0, String arg1, ...) {
   //   ...indented_body
   //   }
-  public void jmethod_body( MethodPart m, String mname ) {
+  public void jmethod_body( MethodPart m, String mname, boolean constructor ) {
     // Argument list
     _sb.p(mname).p("( ");
     XType[] xargs = XType.xtypes(m._args);
@@ -251,15 +250,18 @@ public class ClzBuilder {
       _sb.unchar(2);
     }
     _sb.p(" ) ");
-    // Body
+    // Parse the Body
     AST ast = ast(m);
+    // If a constructor, move the super-call up front
+    if( constructor && _clz._super!=null ) do_super((MultiAST)ast);
+    // Wrap in required "{}"
     if( !(ast instanceof BlockAST) )
       ast = new BlockAST(ast);
     ast.jcode(_sb);
     _sb.nl();
 
     // Popped back to the original args
-    assert (m._args==null ? 0 : m._args.length) == _nlocals;
+    assert (m._args==null ? 0 : m._args.length) == nlocals();
     pop_locals(0);
 
     if( m._name2kid != null )
@@ -282,13 +284,36 @@ public class ClzBuilder {
       }
   }
 
+  private void do_super( MultiAST ast ) {
+    for( int i=0; i<ast._kids.length; i++ ) {
+      AST kid = ast._kids[i];
+      if( kid instanceof CallAST call &&
+          call._kids[0] instanceof ConAST con &&
+          ((MethodCon)con._tcon).name().equals("construct") ) {
+        // Move ith kid to the front; rename as "super"
+        System.arraycopy(ast._kids,0,ast._kids,1,i);
+        ast._kids[0] = kid;
+        con._con = "super";
+        return;
+      }
+    }
+    // Must find super call
+    throw XEC.TODO();
+  }
+  
+  // An inlinable method; turn into java Lambda syntax:
+  // From: "{ return expr }"
+  // To:   "         expr   "
   public void jmethod_body_inline( MethodPart meth ) {
     if( meth._name2kid != null ) throw XEC.TODO();
+    // Parse the method body
     AST ast = ast(meth);
+    // Strip any single-block wrapper
     if( ast instanceof BlockAST blk ) {
       if( blk._kids.length>1 ) throw XEC.TODO();
       ast = blk._kids[0];
     }
+    // Strip any return wrapper, just the expression
     if( ast instanceof ReturnAST ret )
       ast = ret._kids[0];
     ast.jcode(_sb);
@@ -339,14 +364,14 @@ public class ClzBuilder {
 
   public void define( String name, XType type ) {
     // Track active locals
-    _locals.put(_nlocals  ,name);
-    _ltypes.put(_nlocals++,type);
+    _locals.add(name);
+    _ltypes.add(type);
   }
     // Pop locals at end of scope
   public void pop_locals(int n) {
-    while( n < _nlocals ) {
-      _ltypes.remove(  _nlocals);
-      _locals.remove(--_nlocals);
+    while( n < nlocals() ) {
+      _ltypes.pop();
+      _locals.pop();
     }
   }
 }

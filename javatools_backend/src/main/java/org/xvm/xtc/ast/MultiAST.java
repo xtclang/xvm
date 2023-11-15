@@ -3,7 +3,7 @@ package org.xvm.xtc.ast;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
-class MultiAST extends AST {
+public class MultiAST extends AST {
   final boolean _expr;
   static MultiAST make( ClzBuilder X, boolean expr) {
     int len = X.u31();
@@ -47,16 +47,20 @@ class MultiAST extends AST {
   }
   
   @Override public void jpre(SB sb) {
-    if( _expr ) 
-      if( _kids.length > 1 )
+    if( _kids.length > 1 )
+      if( _expr ) 
         sb.p("(");
   }
   @Override public void jmid(SB sb, int i) {
     if( _kids.length > 1 )
-      sb.p(_expr ? ") && (" : "; ");
+      if( _expr ) sb.p(") && (");
+      else {
+        sb.p(";").nl();
+        if( i<_kids.length-1 ) sb.i();
+      }
   }
   @Override public void jpost(SB sb) {
     if( _kids.length > 1 )
-      sb.unchar( _expr ? 5 : 2); // Undo ") && (" or "; " from jmid
+      if( _expr ) sb.unchar(5); // Undo ") && ("    
   }
 }
