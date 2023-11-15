@@ -1,8 +1,3 @@
-import org.gradle.internal.logging.console.UserInputConsoleRenderer
-import org.xvm.plugin.tasks.XtcCompileTask
-import java.nio.file.Paths
-import kotlin.io.path.isDirectory
-
 /*
  * This is a subproject templated to compile, run, and debug the XTC compiler and runtimes.
  * By default, the source set of this project contains a simple HelloWorld-ish program. Do
@@ -53,7 +48,7 @@ dependencies {
 
 /*
  * Add a reference to an external file to compile, run and/or debug. If the file does not exist
- * (check gradle.properteis for its path), the project will compile and run the default source set.
+ * (check gradle.properties for its path), the project will compile and run the default source set.
  * However, for that to happen, you need to remove the "include only the externalFile.name" statement
  * in the sourceSets configuration.
  *
@@ -79,6 +74,18 @@ if (externalFile != null) {
     }
 }
 
+//
+// If external file is null, the default source sets are being used. You can also verify that if you just do:
+// sourceSets.main {
+//    xtc {
+//       srcDir(externalFile.parentFile)
+//    }
+// }
+//
+// That it will add the folder with your external file to the existing source set, and the build will do both.
+//
+
+
 // XTC Compile DSL. See the XtcCompilerExtension class for what's in it.
 xtcCompile {
     //fork = false
@@ -86,9 +93,14 @@ xtcCompile {
 }
 
 // XTC Run DSL. See the XtcRuntimeExtension class for what's in it.
+// If externalFile is null, the spec will be treated as having no modules declared.
+// This means that it will default to its behavior of running what it can find in
+// the source set. If the source set is empty, it will warn and exit.
 xtcRun {
     fork = false
-    moduleName(externalModuleName)
+    if (externalFile != null) {
+        moduleName(externalModuleName)
+    }
 
     // You can also use the module DSL object for more granularity:
     /*

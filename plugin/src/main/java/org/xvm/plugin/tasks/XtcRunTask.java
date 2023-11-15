@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptySet;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
@@ -202,11 +203,15 @@ public class XtcRunTask extends XtcDefaultTask {
         // Given the module definition in the xtcRun closure in the DSL, create their equivalent POJOs.
         final var modules = extRuntime.getModules().get();
         if (modules.isEmpty()) {
-            project.warn("{} {} Configuration does not contain specified modules to run. Will default to 'xtcRunAll' task.", prefix, name);
+            project.warn("{} '{}' Configuration does not contain specified modules to run. Will default to 'xtcRunAll' task.", prefix, name);
             // was emptySet()
-            final var runModules = resolveCompiledModules();
-            runModules.forEach(m -> project.lifecycle("{} '{}'    Module '{}' added to execution queue.", prefix, name, m));
-            return runModules;
+            final var allModules = resolveCompiledModules();
+            if (allModules.isEmpty()) {
+                project.warn("{} '{}' There is nothing in the module path to run. Aborting.", prefix, name);
+                return emptySet();
+            }
+            allModules.forEach(m -> project.lifecycle("{} '{}'    Module '{}' added to execution queue.", prefix, name, m));
+            return allModules;
         }
         if (!extRuntime.validateModules()) {
             throw project.buildException("ERROR: Invalid runtime modules exist. Module name not specified.");
