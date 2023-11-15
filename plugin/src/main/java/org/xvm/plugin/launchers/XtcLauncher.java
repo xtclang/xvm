@@ -1,8 +1,10 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 import org.gradle.process.internal.ExecException;
+import org.xvm.plugin.ProjectDelegate;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import java.util.function.Consumer;
 
@@ -52,6 +54,10 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
         }
     }
 
+    protected XtcLauncher(final Project project) {
+        super(project);
+    }
+
     static String nativeLauncherFor(final XtcProjectDelegate delegate, final String mainClassName) {
         return switch (mainClassName) {
             case XTC_COMPILER_CLASS_NAME -> "xtc";
@@ -70,10 +76,6 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
             return new JavaExecLauncher(delegate);
         }
         return new BuildThreadLauncher(delegate, mainClassName);
-    }
-
-    protected XtcLauncher(final Project project) {
-        super(project);
     }
 
     protected void showOutput(final CommandLine args, final String output, final Consumer<String> printer) {

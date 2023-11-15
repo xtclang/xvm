@@ -55,11 +55,11 @@ public abstract class ProjectDelegate<T, R> {
     protected final List<File> logFiles;
 
     @SuppressWarnings("unused")
-    ProjectDelegate(final Project project) {
+    protected ProjectDelegate(final Project project) {
         this(project, null);
     }
 
-    ProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
+    protected ProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         this.project = project;
         this.projectName = project.getName();
         this.prefix = prefix();
@@ -82,50 +82,12 @@ public abstract class ProjectDelegate<T, R> {
         project.setProperty("logPrefix", prefix); // TODO Allowed?
     }
 
-    private static boolean queryProperty(final String envKey, final boolean defaultValue) {
-        final var envValue = System.getenv(envKey);
-        final var propKey = envKey.replace("_", ".").toLowerCase();
-        final var propValue = System.getProperty(propKey);
-        if (envValue == null && propValue == null) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(envKey) || Boolean.parseBoolean(propKey);
+    @SuppressWarnings("UnusedReturnValue")
+    protected final R apply() {
+        return apply(null);
     }
 
-    private Gradle rootGradle() {
-        Gradle gradle = project.getGradle();
-        while (gradle.getParent() != null) {
-            gradle = gradle.getParent();
-        }
-        // TODO: Add Gradle.useLogger, with a project prefixed logger.
-        return gradle;
-    }
-
-    private File logFileFull() {
-        return new File(rootGradle().getRootProject().getLayout().getBuildDirectory().get().getAsFile(), "build-xdk.log");
-    }
-
-    private File logFile() {
-        return new File(layout.getBuildDirectory().get().getAsFile(), "build-" + projectName + ".log");
-    }
-
-    private void logToFiles(final LogLevel level, final String msg) {
-        if (LOG_ALL_LEVELS_TO_BUILD_FILE) {
-            if (logFiles.isEmpty()) {
-                logFiles.add(logFileFull());
-                logFiles.add(logFile());
-            }
-            logFiles.forEach(log -> {
-                try (final var out = new PrintWriter(new FileWriter(log, true), true)) {
-                    final String hash = "0x" + Integer.toHexString(gradle.hashCode());
-                    final long pid = ProcessHandle.current().pid();
-                    out.println(hash + ' ' + pid + ' ' + level.name() + ": " + msg);
-                } catch (final IOException e) {
-                    throw new GradleException(prefix + " Failed to write log files to. " + logFile().getAbsolutePath() + " and/or " + logFileFull().getAbsolutePath(), e);
-                }
-            });
-        }
-    }
+    public abstract R apply(T arg);
 
     public XtcBuildException buildException(final String msg) {
         return buildException(msg, null);
@@ -185,7 +147,7 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     @SuppressWarnings("SameParameterValue")
-    boolean isXtcBinary(final File file, final boolean checkMagic) {
+    public boolean isXtcBinary(final File file, final boolean checkMagic) {
         if (!file.exists() || !file.isFile() || !hasFileExtension(file, XTC_MODULE_FILE_EXTENSION)) {
             return false;
         }
@@ -216,13 +178,6 @@ public abstract class ProjectDelegate<T, R> {
         return objects;
     }
 
-    protected <E> E ensureExtension(final String name, final Class<E> clazz) {
-        if (extensions.findByType(clazz) == null) {
-            return extensions.create(name, clazz, project);
-        }
-        return extensions.getByType(clazz);
-    }
-
     public Logger getLogger() {
         return project.getLogger();
     }
@@ -250,10 +205,55 @@ public abstract class ProjectDelegate<T, R> {
         warn("{} WARNING: Task '{}:{}' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...", prefix, projectName, task.getName());
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    protected final R apply() {
-        return apply(null);
+    protected <E> E ensureExtension(final String name, final Class<E> clazz) {
+        if (extensions.findByType(clazz) == null) {
+            return extensions.create(name, clazz, project);
+        }
+        return extensions.getByType(clazz);
     }
 
-    public abstract R apply(T arg);
+    private static boolean queryProperty(final String envKey, final boolean defaultValue) {
+        final var envValue = System.getenv(envKey);
+        final var propKey = envKey.replace("_", ".").toLowerCase();
+        final var propValue = System.getProperty(propKey);
+        if (envValue == null && propValue == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(envKey) || Boolean.parseBoolean(propKey);
+    }
+
+    private Gradle rootGradle() {
+        Gradle gradle = project.getGradle();
+        while (gradle.getParent() != null) {
+            gradle = gradle.getParent();
+        }
+        // TODO: Add Gradle.useLogger, with a project prefixed logger.
+        return gradle;
+    }
+
+    private File logFileFull() {
+        return new File(rootGradle().getRootProject().getLayout().getBuildDirectory().get().getAsFile(), "build-xdk.log");
+    }
+
+    private File logFile() {
+        return new File(layout.getBuildDirectory().get().getAsFile(), "build-" + projectName + ".log");
+    }
+
+    private void logToFiles(final LogLevel level, final String msg) {
+        if (LOG_ALL_LEVELS_TO_BUILD_FILE) {
+            if (logFiles.isEmpty()) {
+                logFiles.add(logFileFull());
+                logFiles.add(logFile());
+            }
+            logFiles.forEach(log -> {
+                try (final var out = new PrintWriter(new FileWriter(log, true), true)) {
+                    final String hash = "0x" + Integer.toHexString(gradle.hashCode());
+                    final long pid = ProcessHandle.current().pid();
+                    out.println(hash + ' ' + pid + ' ' + level.name() + ": " + msg);
+                } catch (final IOException e) {
+                    throw new GradleException(prefix + " Failed to write log files to. " + logFile().getAbsolutePath() + " and/or " + logFileFull().getAbsolutePath(), e);
+                }
+            });
+        }
+    }
 }

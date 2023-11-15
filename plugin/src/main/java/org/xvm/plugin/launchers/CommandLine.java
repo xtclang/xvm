@@ -1,4 +1,4 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import java.io.File;
 import java.util.ArrayList;

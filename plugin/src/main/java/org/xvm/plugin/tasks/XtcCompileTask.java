@@ -15,9 +15,9 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
-import org.xvm.plugin.CommandLine;
+import org.xvm.plugin.launchers.CommandLine;
 import org.xvm.plugin.XtcCompilerExtension;
-import org.xvm.plugin.XtcLauncher;
+import org.xvm.plugin.launchers.XtcLauncher;
 import org.xvm.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;

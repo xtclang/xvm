@@ -2,7 +2,7 @@ import org.xvm.plugin.tasks.XtcCompileTask
 
 /*
  * This is a subproject templated to compile, run, and debug the XTC compiler and runtimes.
- * By default, the source set of this project contains a simple HelloWorld.x program. Do
+ * By default, the source set of this project contains a simple HelloWorld-ish program. Do
  * debug an XTC program/module of your choice, just change the sourceSet to include whatever
  * source directory you have for your module.
  *
@@ -60,13 +60,13 @@ sourceSets {
 
 // Compile DSL. See the XtcCompilerExtension class for what's in it.
 xtcCompile {
-    // fork = false
     forceRebuild = true
+    // fork = false
 }
 
 // Run DSL. See the XtcRuntimeExtension class for what's in it.
 xtcRun {
-    moduleName("AppUnderTest")
+    moduleName("AppUnderTestElsewhere")
     // fork = false
 }
 
@@ -75,6 +75,9 @@ xtcRun {
 // Just debug the source sets inputs and outputs.
 val compileXtc by tasks.existing(XtcCompileTask::class) {
     doLast {
+        val process = ProcessHandle.current()
+        val pid = process.pid()
+        logger.lifecycle("PID verification: $pid, processHandle: $process")
         sourceSets.main.get().allSource.forEach {
             logger.lifecycle(" **** SOURCE SET INPUT: $it")
         }

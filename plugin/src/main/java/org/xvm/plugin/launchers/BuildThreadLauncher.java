@@ -1,6 +1,7 @@
-package org.xvm.plugin;
+package org.xvm.plugin.launchers;
 
 import org.gradle.process.ExecResult;
+import org.xvm.plugin.XtcProjectDelegate;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
