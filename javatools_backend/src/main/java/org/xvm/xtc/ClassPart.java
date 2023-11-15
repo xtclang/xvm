@@ -33,7 +33,7 @@ public class ClassPart extends Part {
 
   // A list of "extra" features about Classes: extends, implements, delegates
   public final Contrib[] _contribs;
-  
+
   public SB _header, _body;     // Java source code
   public Class<XClz> _jclz;     // Matching java class
   

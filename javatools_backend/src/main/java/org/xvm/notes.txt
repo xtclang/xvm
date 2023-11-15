@@ -44,6 +44,14 @@ XTC lower class
 *   org/xvm/xec/Lib.java
 
 
+* XType - intercepts Appendable<XXX>, TODO
+        -                      <Char> MAPS TO interface xec/ecstasy/Appendable$Char
+  TemplateAST
+  - DefReg of ecstasy/text/StringBuffer <<-->> NEW JAVA xec/ecstasy/text/StringBufffer.java
+  Every thing is either-
+  - prim base: sb.p(prim)
+  - else     : obj.appendTo(sb)  // Must call appendTo, so can be overridden by object
+
 
 ---------------------------
 XTC Null is Java null.

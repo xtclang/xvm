@@ -5,7 +5,7 @@ import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
 import org.xvm.util.SB;
 
-class CallAST extends AST {
+public class CallAST extends AST {
   final XType[] _rets;
   static CallAST make( ClzBuilder X ) {
     // Read optional array of return types (not currently used)

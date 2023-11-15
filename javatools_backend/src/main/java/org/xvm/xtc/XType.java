@@ -96,32 +96,49 @@ public abstract class XType {
     private static final HashMap<ClassPart,Clz> ZINTERN = new HashMap<>();
     public final ClassPart _mod;      // Compilation unit class
     public final ClassPart _clz;      // Self class, can be compilation unit
+    public final Clz _super;          // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
     private Clz( ClassPart clz ) {
+      assert ClzBuilder.CCLZ!=null; // Init error
+      _super = clz._super==null ? null : make(clz._super);
       _mod = ClzBuilder.CCLZ;  // Compile unit class
       _clz = clz;
       int len=0;
       for( Part part : clz._name2kid.values() )
-        if( part instanceof PropPart )
+        if( part instanceof PropPart prop && find(_super,prop._name)==null )
           len++;
       _flds = new String[len];
       _xts  = new XType [len];
       len=0;
       for( Part part : clz._name2kid.values() )
-        if( part instanceof PropPart prop ) {
+        if( part instanceof PropPart prop && find(_super,prop._name)==null ) {
           _flds[len  ] = prop._name;
           _xts [len++] = xtype(prop._con,false);
         }
     }
     public static Clz make( ClassPart clz ) {
+      // Check for a pre-cooked class
+      String xjkey = xjkey(clz);
+      Base val = BASE_XJMAP.get(xjkey);
+      if( val != null ) throw XEC.TODO();
       return ZINTERN.computeIfAbsent(clz, k->new Clz(clz));
     }
     String name() { return _mod==_clz || _mod== ClzBuilder.CCLZ ? _clz._name : _mod._name+"."+_clz._name; }
     @Override public boolean is_prim_base() { return false; }
+    static XType find(Clz clz, String fld) {
+      for( ; clz!=null; clz = clz._super ) {
+        int idx = S.find(clz._flds,fld);
+        if( idx!= -1 )
+          return clz._xts[idx];
+      }
+      return null;
+    }
 
     @Override public SB str( SB sb ) {
-      sb.p("class ").p(name()).p(" {").nl();
+      sb.p("class ").p(name());
+      if( _super!=null ) sb.p(":").p(_super.name());
+      sb.p(" {").nl();
       for( int i=0; i<_flds.length; i++ )
         _xts[i].str(sb.p("  ").p(_flds[i]).p(":")).p(";").nl();
       return sb.p("}").nl();
@@ -282,6 +299,7 @@ public abstract class XType {
       put("Int64+ecstasy/numbers/Int64.x",LONG);
       put("UInt8+ecstasy/numbers/UInt8.x",JUBYTE);
       put("IntLiteral+ecstasy/numbers/IntLiteral.x",LONG);
+      put("Ordered+ecstasy.x",ORDERED);
       put("Object+ecstasy/Object.x",OBJECT);
       put("String+ecstasy/text/String.x",STRING);
       put("StringBuffer+ecstasy/text/StringBuffer.x",STRINGBUFFER);
@@ -404,8 +422,8 @@ public abstract class XType {
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") )
         throw XEC.TODO();
-      
-      throw XEC.TODO();
+
+      yield telem;
     }
 
     case ImmutTCon itc ->

@@ -24,17 +24,17 @@ class RegAST extends AST {
     case -4 ->  "default";  // A_DEFAULT
     case -5 ->  "this";     // A_THIS
     case -10 -> "this";     // A_STRUCT: this as a struct
-    default -> X._locals.get(reg);
+    default -> X._locals.at(reg);
     };
     _type = switch( reg ) {
     case -4 ->  XType.VOID;  // A_DEFAULT
     case -5 ->  X._tclz;     // A_THIS
     case -10 -> XType.Clz.make((ClassPart)X._meth._par._par); // A_STRUCT
-    default -> X._ltypes.get(reg);
-    };
-    
+    default -> X._ltypes.at(reg);
+    };    
+    assert _type!=null;
   }
-  @Override String name() { return _name; }
+  @Override String name() { return _name; } // Can be null for 'this'?
   @Override XType _type() { return _type; }
   @Override void jpre ( SB sb ) { sb.p(_name); }
 }

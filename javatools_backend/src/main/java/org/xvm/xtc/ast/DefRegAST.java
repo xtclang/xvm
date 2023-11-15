@@ -30,7 +30,7 @@ class DefRegAST extends AST {
     }
     _type = XType.xtype(type,false);
     _name = name==null ? null : ((StringCon)name)._str;
-    if( name!=null && !_name.equals("$") )
+    if( name!=null )
       X.define(_name,_type);
   }
   DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }

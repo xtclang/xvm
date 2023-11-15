@@ -99,11 +99,11 @@ examples_x = $(wildcard $(EXM)/*.x)
 
 examples:	$(examples_x:x=xtc) $(XDK)
 
-$(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x
+$(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x $(XDK)
 	@echo "compiling " $@ " because " $?
 	@$(XTC) $? -o $(EXM)
 
-examples_run: $(classes) $(test_classes) $(XDK) examples
+examples_run: $(classes) examples
 	$(XEC) $(EXM)/HelloWorld.xtc
 	$(XEC) $(EXM)/FizzBuzz.xtc
 	$(XEC) $(EXM)/Permutations.xtc
@@ -116,11 +116,20 @@ MANUAL_TESTS = TestMisc.x TestModIFace.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
-manuals:	$(manuals_x:x=xtc) $(XDK)
+manuals:	$(manuals_x:x=xtc)
 
-$(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
+$(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
 	@echo "compiling " $@ " because " $?
-	@$(XTC) -L $(XDK_DIR)/lib  -L $(XDK_DIR)/javatools $? -L $(MANUAL_DIR) -o $(MANUAL_DIR)
+	@$(XTC) -L $(MANUAL_DIR) -o $(MANUAL_DIR) $<
+
+$(manuals_x:x=log): $(MANUAL_DIR)/%.log: $(MANUAL_DIR)/%.xtc $(classes)
+	@echo "Running " $@ " because " $?
+	@$(XEC) $?
+
+manuals_run: $(classes) $(XDK) manuals
+	$(XEC) $(MANUAL_DIR)/TestMisc.xtc
+	$(XEC) $(MANUAL_DIR)/TestModIFace.xtc
+
 
 MULTI = multiModule/Lib.x multiModule/Main.x
 multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
