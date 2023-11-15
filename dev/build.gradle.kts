@@ -1,4 +1,7 @@
+import org.gradle.internal.logging.console.UserInputConsoleRenderer
 import org.xvm.plugin.tasks.XtcCompileTask
+import java.nio.file.Paths
+import kotlin.io.path.isDirectory
 
 /*
  * This is a subproject templated to compile, run, and debug the XTC compiler and runtimes.
@@ -48,42 +51,56 @@ dependencies {
     xdk(libs.xdk)
 }
 
-// This is how you add a path to the source set, to debug a custom file at any location:
-sourceSets {
-    main {
-        xtc {
-            srcDir(System.getProperty("user.dir") + "/my-ecstasy")
-            include("AppUnderTestElsewhere.x")
+/*
+ * Add a reference to an external file to compile, run and/or debug. If the file does not exist
+ * (check gradle.properteis for its path), the project will compile and run the default source set.
+ * However, for that to happen, you need to remove the "include only the externalFile.name" statement
+ * in the sourceSets configuration.
+ *
+ * The external file in my world is in $HOME/xtc/xtcapp.x. and defines a module called AnyAppAnywhere.
+ */
+
+val externalFile = runCatching { File(property("org.xvm.path.singleSourceFile") as String) }.getOrNull()
+val externalModuleName = "AnyAppAnywhere"
+
+if (externalFile != null) {
+    logger.lifecycle("$prefix External source file given: ${externalFile.absolutePath} (exists: ${externalFile.exists()})")
+
+    sourceSets {
+        main {
+            xtc {
+                // Add directory where the external file lives as a source set.
+                srcDir(externalFile.parentFile)
+                // Ignore any other file in the source set, like those in this project. Remove the include line to
+                // compile both the main source set of this project and the external file to XTC modules.
+                include(externalFile.name)
+            }
         }
     }
 }
 
-// Compile DSL. See the XtcCompilerExtension class for what's in it.
+// XTC Compile DSL. See the XtcCompilerExtension class for what's in it.
 xtcCompile {
+    //fork = false
     forceRebuild = true
-    // fork = false
 }
 
-// Run DSL. See the XtcRuntimeExtension class for what's in it.
+// XTC Run DSL. See the XtcRuntimeExtension class for what's in it.
 xtcRun {
-    moduleName("AppUnderTestElsewhere")
-    // fork = false
-}
+    fork = false
+    moduleName(externalModuleName)
 
-// DEBUG SNIPPETS BELOW:
-
-// Just debug the source sets inputs and outputs.
-val compileXtc by tasks.existing(XtcCompileTask::class) {
-    doLast {
-        val process = ProcessHandle.current()
-        val pid = process.pid()
-        logger.lifecycle("PID verification: $pid, processHandle: $process")
-        sourceSets.main.get().allSource.forEach {
-            logger.lifecycle(" **** SOURCE SET INPUT: $it")
-        }
-        sourceSets.main.get().output.forEach {
-            logger.lifecycle(" **** SOURCE SET OUTPUT: $it ")
-        }
-        logger.lifecycle("Finished ${project.name}:$name")
+    // You can also use the module DSL object for more granularity:
+    /*
+    module {
+        moduleName = "AnyAppAnywhere" // mandatory
+        methodName = "run"            // not mandatory
+        args("Hello", "World")        // not mandatory (add two args)
     }
+    */
+
+    // You can execute > 1 modules in order of declaration with repeated
+    // "moduleName(...)" statements, or module {} DSL sections.
+    // To ignore this spec, use the xtcRun<SourceSet>All task, to just
+    // execute all modules on the resolved module path.
 }

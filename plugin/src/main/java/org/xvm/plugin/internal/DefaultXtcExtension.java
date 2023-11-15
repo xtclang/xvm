@@ -25,6 +25,7 @@ public class DefaultXtcExtension implements XtcExtension {
         project.getLogger().lifecycle("{} XTC language version supported by plugin: {}", prefix, ver == null ? "[unresolved]" : ver);
     }
 
+    @Override
     public ArtifactRepository xtcLangOrg() {
         project.getLogger().warn("{} xtgLangOrg() is not yet implemented!", prefix);
         return project.getRepositories().mavenLocal();

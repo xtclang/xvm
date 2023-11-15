@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.xvm.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
@@ -77,9 +78,8 @@ public abstract class ProjectDelegate<T, R> {
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
         this.logFiles = new ArrayList<>();
 
-        // add a property to the existing environment.
+        // add a property to the existing environment, project.setProperty assumes the property exists already
         extra.set("logPrefix", prefix);
-        project.setProperty("logPrefix", prefix); // TODO Allowed?
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -90,7 +90,7 @@ public abstract class ProjectDelegate<T, R> {
     public abstract R apply(T arg);
 
     public XtcBuildException buildException(final String msg) {
-        return buildException(msg, null);
+        return buildException(msg, (Throwable)null);
     }
 
     public XtcBuildException buildException(final String msg, final Throwable cause) {
@@ -99,6 +99,24 @@ public abstract class ProjectDelegate<T, R> {
         }
         logToFiles(LogLevel.ERROR, msg);
         return XtcBuildException.buildException(logger, prefix + ": " + msg, cause);
+    }
+
+    public XtcBuildException buildException(final String msg, final Object... args) {
+        final var template = msg.replace("{}", "#");
+        final var list = Arrays.asList(args);
+        final var sb = new StringBuilder();
+        for (int i = 0, pos = 0; i < template.length(); i++) {
+            final var c = msg.charAt(i);
+            if (c == '#') {
+                if (pos >= list.size()) {
+                    throw new IllegalStateException("More ellipses than tokens in expansion.");
+                }
+                sb.append(list.get(pos++));
+            } else {
+                sb.append(c);
+            }
+        }
+        return buildException(sb.toString());
     }
 
     public final String prefix() {

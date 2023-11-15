@@ -13,7 +13,7 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
     interface XtcRunModule {
         Property<String> getModuleName();
 
-        Property<String> getMethod();
+        Property<String> getMethodName();
 
         ListProperty<String> getArgs();
 
@@ -26,7 +26,7 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
         }
 
         default boolean hasDefaultMethodName() {
-            return DEFAULT_METHOD_NAME.equals(getMethod().get());
+            return DEFAULT_METHOD_NAME.equals(getMethodName().get());
         }
     }
 

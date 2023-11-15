@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
+import static org.xvm.plugin.Constants.XTC_COMPILER_CLASS_NAME;
 import static org.xvm.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xvm.plugin.Constants.XTC_LANGUAGE_NAME;
 import static org.xvm.plugin.Constants.XTC_SOURCE_FILE_EXTENSION;
@@ -35,8 +36,6 @@ import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask {
-    public static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
-
     private final XtcProjectDelegate project;
     private final String prefix;
     private final SourceSet sourceSet;
@@ -73,7 +72,7 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         doLast(t -> {
             // This happens during task execution, after the config phase.
             project.info("{} '{}' Finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
-            sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{}.compileXtc sourceSet output: {}", prefix, it));
+            sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{} compileXtc sourceSet output: {}", prefix, it));
         });
 
         project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());

@@ -8,8 +8,10 @@ import org.xvm.plugin.XtcProjectDelegate;
 
 import java.util.function.Consumer;
 
-import static org.xvm.plugin.tasks.XtcCompileTask.XTC_COMPILER_CLASS_NAME;
-import static org.xvm.plugin.tasks.XtcRunTask.XTC_RUNNER_CLASS_NAME;
+import static org.xvm.plugin.Constants.XTC_COMPILER_CLASS_NAME;
+import static org.xvm.plugin.Constants.XTC_COMPILER_LAUNCHER_NAME;
+import static org.xvm.plugin.Constants.XTC_RUNNER_CLASS_NAME;
+import static org.xvm.plugin.Constants.XTC_RUNNER_LAUNCHER_NAME;
 
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
 
@@ -60,8 +62,8 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
 
     static String nativeLauncherFor(final XtcProjectDelegate delegate, final String mainClassName) {
         return switch (mainClassName) {
-            case XTC_COMPILER_CLASS_NAME -> "xtc";
-            case XTC_RUNNER_CLASS_NAME -> "xec";
+            case XTC_COMPILER_CLASS_NAME -> XTC_COMPILER_LAUNCHER_NAME;
+            case XTC_RUNNER_CLASS_NAME -> XTC_RUNNER_LAUNCHER_NAME;
             default -> throw delegate.buildException("Unknown launcher for corresponding class: " + mainClassName);
         };
     }

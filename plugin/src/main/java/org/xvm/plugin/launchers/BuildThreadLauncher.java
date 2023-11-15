@@ -4,6 +4,7 @@ import org.gradle.process.ExecResult;
 import org.xvm.plugin.XtcProjectDelegate;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -13,16 +14,21 @@ public class BuildThreadLauncher extends XtcLauncher {
 
     private final Method main;
 
+    @SuppressWarnings("FieldCanBeLocal")
+    private final Method moduleInfo;
+
     BuildThreadLauncher(final XtcProjectDelegate delegate, final String mainClassName) {
         super(delegate.getProject());
-        this.main = resolveMethod(mainClassName);
+        this.main = resolveMethod(mainClassName, "main", String[].class);
+        this.moduleInfo = resolveMethod("org.xvm.tool.ModuleInfo", "extractModuleName", File.class);
+        lifecycle("{} Resolved module info: {}", prefix, moduleInfo);
         lifecycle("{} Running {} in build process; this is not recommended for production use.", prefix, mainClassName);
     }
 
     @Override
     public ExecResult apply(final CommandLine args) {
         Objects.requireNonNull(args);
-        warn("{} WARNING: XTC Plugin will launch '{}' from its own process. No new process will be forked.", prefix, args.getMainClassName());
+        warn("{} WARNING: XTC Plugin will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, args.getMainClassName());
         final var oldOut = System.out;
         final var oldErr = System.err;
         final var out = new ByteArrayOutputStream();
@@ -41,12 +47,11 @@ public class BuildThreadLauncher extends XtcLauncher {
         return XtcExecResult.OK;
     }
 
-    private Method resolveMethod(final String className) {
+    private Method resolveMethod(final String className, final String methodName, final Class<?>... parameterTypes) {
         try {
-            return Class.forName(className).getMethod("main", String[].class);
+            return Class.forName(className).getMethod(methodName, parameterTypes);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            error("{} Failed to resolve method 'main' in class '{}'.", prefix, className);
-            return null;
+            throw buildException("{} Failed to resolve method '{}' in class '{}' ({}).", prefix, methodName, className, e.getMessage());
         }
     }
 }

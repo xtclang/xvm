@@ -16,9 +16,13 @@ import static org.xvm.plugin.Constants.XTC_DEFAULT_RUN_METHOD_NAME_PREFIX;
 
 public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implements XtcRuntimeExtension {
 
+    // TODO: Make it possible to add to the module path, both here and in the XTC compiler with explicit paths.
+    //  well in the compiler, it just corresponds to the SourceSet and you can edit that already (except for
+    //  maybe the XDK handling behind the scenes). Anyway I'll make it a common property for both environments.
+    //  You never know.
     public static class DefaultXtcRunModule implements XtcRunModule {
         private final Property<String> moduleName; // mandatory
-        private final Property<String> method;
+        private final Property<String> methodName; // TODO check that name works
         private final ListProperty<String> args;
 
         @Inject
@@ -34,7 +38,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         public DefaultXtcRunModule(final Project project, final String moduleName, final String method, final List<String> args) {
             final var objects = requireNonNull(project.getObjects());
             this.moduleName = objects.property(String.class);
-            this.method = objects.property(String.class).value(requireNonNull(method));
+            this.methodName = objects.property(String.class).value(requireNonNull(method));
             this.args = objects.listProperty(String.class).value(requireNonNull(args));
             if (moduleName != null) {
                 this.moduleName.set(moduleName);
@@ -47,8 +51,8 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
 
         @Override
-        public Property<String> getMethod() {
-            return method;
+        public Property<String> getMethodName() {
+            return methodName;
         }
 
         @Override
@@ -68,19 +72,19 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
 
         @Override
         public boolean validate() {
-            return moduleName.isPresent() && method.isPresent() && args.isPresent();
+            return moduleName.isPresent() && methodName.isPresent() && args.isPresent();
         }
 
         @Override
         public String toString() {
-            return "[xtcRunModule: moduleName=" + (moduleName.isPresent() ? moduleName.get() : "NO MODULE") + ", method=" + method.get() + ", args=" + args.get() + ']';
+            return "[xtcRunModule: moduleName='" + (moduleName.isPresent() ? moduleName.get() : "none") + "', methodName='" + methodName.get() + "', args=" + args.get() + ']';
         }
     }
 
     private final Property<Boolean> showVersion;
-    private final ListProperty<XtcRunModule> modules;
     private final Property<Boolean> allowParallel;
-    private final Property<Boolean> enableDebug;
+    private final Property<Boolean> enableDebug; // TODO: We can use this to enable debug logging in the XTC runtime, or to run the stdin debugger in interactive mode, perhaps?
+    private final ListProperty<XtcRunModule> modules;
 
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {

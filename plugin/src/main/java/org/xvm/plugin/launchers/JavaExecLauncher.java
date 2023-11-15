@@ -89,7 +89,9 @@ public class JavaExecLauncher extends XtcLauncher {
         final boolean ok = "jar".equalsIgnoreCase(ProjectDelegate.getFileExtension(file)) &&
                 file.getName().startsWith(JAVATOOLS_ARTIFACT_ID) &&
                 readXdkVersionFromJar(file) != null;
-        info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
+        if (ok) {
+            info("{} isJavaToolsJar({}) = {}", prefix, file.getAbsolutePath(), ok);
+        }
         return ok;
     }
 

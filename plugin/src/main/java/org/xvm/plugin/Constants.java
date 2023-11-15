@@ -43,6 +43,11 @@ public final class Constants {
 
     public static final String JAR_MANIFEST_PATH = "META-INF/MANIFEST.MF";
 
+    public static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
+    public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
+    public static final String XTC_COMPILER_LAUNCHER_NAME = "org.xvm.tool.Compiler";
+    public static final String XTC_RUNNER_LAUNCHER_NAME = "org.xvm.tool.Runner";
+
     private Constants() {
     }
 }
