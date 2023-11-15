@@ -82,7 +82,7 @@ public abstract class XProp extends XClz {
     if( lazy ) {
       MMethodPart mm = (MMethodPart)pp._name2kid.get("->");
       MethodPart meth = (MethodPart)mm._name2kid.get("->");
-      ClzBuilder X2 =  new ClzBuilder(X,null);
+      ClzBuilder X2 =  new ClzBuilder(X,X._clz);
       X2.jmethod(meth,pname+"$calc");
     }
 
