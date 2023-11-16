@@ -2,7 +2,7 @@ import java.io.File
 
 plugins {
     /**
-     * This line just ties the dev project into the versioned XDK build as one of its component.
+     * This line just ties the dev project into the versioned XDK build as one of its components.
      * This means we have the same wiring for using the xtc plugin and xdk libs from the XDK repo,
      * and using any changed versions as the "official" ones, enabling incremental rebuild and testing
      * with semantics just as if we were using "real" published artifacts. For an XTC third party app,
@@ -25,11 +25,12 @@ plugins {
     *  their projects start to grow. So the "alias(libs.plugins.xtc)" or something almost identical will
     *  most likely pop up in that format in all kinds of projects, so it's not unrealistic to use this
     *  shorthand for both the XDK and for a third party XDK dependency project, but that is up to its
-    *  implementor.
+    *  implementor.)
     *
     * The XDK build builds the XDK libs and the XTC plugin and assigns them the same version, taken
     * from the version catalog, e.g. "0.4.4".
     * version catalogs, see https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalogs
+    */
    alias(libs.plugins.xtc)
 }
 
