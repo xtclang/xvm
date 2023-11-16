@@ -48,8 +48,8 @@ dependencies {
 
 // enabled = true, externalSourceOnly = true;  Only build and run your external source.
 // enabled = true, externalSourceOnly = false; Build and run both your external source and the project source set.
-// enabled = false, externalSourceOnly = <any value>; Buland and run just the project source set; "default Maven behavior."
-private val externalSrc = getExternalSource(enabled = true, externalSourceOnly = false)
+// enabled = false, externalSourceOnly = <any value>; Build and run just the project source set; "default Maven behavior."
+private val externalSrc = getExternalSource(enabled = false, externalSourceOnly = false)
 
 /*
  * Add a reference to an external file to compile, run and/or debug. If the file does not exist
@@ -83,12 +83,6 @@ sourceSets.main {
                 throw GradleException("WHY!")
             }
         }
-    }
-}
-
-tasks.assemble {
-    doFirst {
-        sourceSets.main.get().allSource.forEach { logger.error("Source set: $it") }
     }
 }
 
