@@ -156,7 +156,36 @@ public class Runner
 
         if (fCompile)
             {
-            new Compiler(m_asArgs).run();
+            String[] asRunnerArgs   = m_asArgs;
+            int      cRunnerArgs    = asRunnerArgs.length;
+            String[] asCompilerArgs = asRunnerArgs;
+            int      cCompilerArgs  = cRunnerArgs;
+            boolean  fTargetFound   = false;
+            do
+                {
+                try
+                    {
+                    if (fileSpec.equals(new File(asCompilerArgs[cCompilerArgs-1])))
+                        {
+                        fTargetFound = true;
+                        }
+                    else
+                        {
+                        --cCompilerArgs;
+                        }
+                    }
+                catch (Exception ignore) {}
+                }
+            while (!fTargetFound && cCompilerArgs > 0);
+            assert fTargetFound && cCompilerArgs > 0;
+
+            if (cCompilerArgs < cRunnerArgs)
+                {
+                asCompilerArgs = new String[cCompilerArgs];
+                System.arraycopy(asRunnerArgs, 0, asCompilerArgs, 0, cCompilerArgs);
+                }
+
+            new Compiler(asCompilerArgs).run();
             info      = new ModuleInfo(fileSpec);
             fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
