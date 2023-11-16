@@ -9,7 +9,7 @@ class AssertAST extends AST {
     AST cond = (flags&1)!=0 ? ast_term(X) : null;
     AST intv = (flags&2)!=0 ? ast_term(X) : null;
     AST mesg = (flags&4)!=0 ? ast_term(X) : null;
-    return new AssertAST(new ConAST("XClz"), cond,intv,mesg);
+    return new AssertAST(new ConAST("XTC"), cond,intv,mesg);
   }
   private AssertAST( AST... kids ) { super(kids); }
   @Override XType _type() { return XType.VOID; }

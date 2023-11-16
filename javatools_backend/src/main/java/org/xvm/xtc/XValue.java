@@ -3,7 +3,6 @@ package org.xvm.xtc;
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
-import org.xvm.xrun.XProp;
 
 // Concrete java values from XTC values.
 public abstract class XValue {
@@ -90,7 +89,7 @@ public abstract class XValue {
       if( con0.part() instanceof ModPart mod )
         yield ASB.p( ClzBuilder.java_class_name(mod._name));
       if( con0.part() instanceof PropPart prop )
-        yield ASB.p(XProp.jname(prop)).p("$get()");
+        yield ASB.p(PropBuilder.jname(prop)).p("$get()");
       throw XEC.TODO();
     }
 
@@ -98,6 +97,7 @@ public abstract class XValue {
       String ext = rcon._xlo
         ? (rcon._xhi ? "EE" : "EI")
         : (rcon._xhi ? "IE" : "II");
+      ClzBuilder.IMPORTS.add("ecstasy.Range"+ext);
       ASB.p("new Range").p(ext).p("(");
       _val(rcon._lo).p(",");
       _val(rcon._hi).p(")");

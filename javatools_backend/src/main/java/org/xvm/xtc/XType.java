@@ -3,7 +3,6 @@ package org.xvm.xtc;
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.*;
-import org.xvm.xrun.XProp;
 
 import java.util.HashMap;
 import java.util.Arrays;
@@ -255,7 +254,7 @@ public abstract class XType {
   public static Base EXCEPTION = Base.make("Exception");
   public static Base ILLARGX= Base.make("IllegalArgumentException");
   public static Base ILLSTATEX = Base.make("IllegalStateX");
-  public static Base ITER64 = Base.make("XIter64");
+  public static Base ITER64 = Base.make("Iterablelong");
   public static Base JBOOL  = Base.make("Boolean");
   public static Base JCHAR  = Base.make("Character");
   public static Base JINT   = Base.make("Integer");
@@ -292,7 +291,6 @@ public abstract class XType {
   static final HashMap<String, Base> BASE_XJMAP = new HashMap<>() {{
       put("Boolean+ecstasy/Boolean.x",BOOL);
       put("Char+ecstasy/text/Char.x",CHAR);
-      put("Console+ecstasy/io/Console.x",CONSOLE);
       put("Exception+ecstasy/Exception.x",EXCEPTION);
       put("IllegalArgument+ecstasy.x",ILLARGX);
       put("IllegalState+ecstasy.x",ILLSTATEX);
@@ -303,6 +301,11 @@ public abstract class XType {
       put("Object+ecstasy/Object.x",OBJECT);
       put("String+ecstasy/text/String.x",STRING);
       put("StringBuffer+ecstasy/text/StringBuffer.x",STRINGBUFFER);
+    }};
+  // A set of common XTC classes, and their Java replacements...
+  // AND these take the default import.
+  static final HashMap<String, Base> IMPORT_XJMAP = new HashMap<>() {{
+      put("Console+ecstasy/io/Console.x",CONSOLE);
     }};
   private static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
 
@@ -370,7 +373,16 @@ public abstract class XType {
       // Check the common base classes
       String xjkey = xjkey(clz);
       Base val = BASE_XJMAP.get(xjkey);
-      if( val!=null )  yield boxed ? val.box() : val;
+      if( val!=null ) yield boxed ? val.box() : val;
+      // Again, common classes with imports
+      val = IMPORT_XJMAP.get(xjkey);
+      if( val!=null ) {
+        String imp = clz._path._str;
+        // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
+        String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
+        ClzBuilder.IMPORTS.add(imp2);
+        yield val;
+      }
       // Make one
       yield Clz.make(clz);
     }
@@ -381,9 +393,12 @@ public abstract class XType {
       // These XTC classes are all intercepted and directly implemented in Java
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
         XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],false);
-        if( telem== Base.LONG ) yield ARYLONG; // Java ArrayList specialized to int64
-        if( telem== Base.CHAR ) yield ARYCHAR; // Java ArrayList specialized to char
-        yield Ary.make(telem);   // Shortcut class
+        String imp="Ary"; XType xt=null;
+        if( telem == Base.LONG ) { imp="Arylong"; xt = ARYLONG; } // Java ArrayList specialized to int64
+        if( telem == Base.CHAR ) { imp="Arychar"; xt = ARYCHAR; } // Java ArrayList specialized to char
+        if( xt==null ) xt = Ary.make(telem);
+        ClzBuilder.IMPORTS.add("ecstasy.collections."+imp);
+        yield xt;
       }
 
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
@@ -397,24 +412,27 @@ public abstract class XType {
       // All the long-based ranges, intervals and iterators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
+        ClzBuilder.IMPORTS.add("ecstasy.Range");        
         if( telem== Base.LONG || telem== Base.JLONG ) yield Base.RANGE; // Shortcut class
         else throw XEC.TODO();
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
-        if( telem== Base.LONG || telem== Base.JLONG ) yield Base.ITER64; // Shortcut class
-        else throw XEC.TODO();
+        if( telem== Base.LONG || telem== Base.JLONG ) {
+          ClzBuilder.IMPORTS.add("ecstasy.Iterablelong");
+          yield Base.ITER64; // Shortcut class
+        } else throw XEC.TODO();
       }
 
     //  if( clz._name.equals("List") && clz._path._str.equals("ecstasy/collections/List.x") )
     //    yield "Ary<"+telem+">"; // Shortcut class
 
       if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") )
-        //yield org.xvm.xrun.Tuple.make_class(XClzBuilder.XCLASSES, xtype(ptc._parms));
+        //yield org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES, xtype(ptc._parms));
         throw XEC.TODO();
 
     //  if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/collections/Map.x") )
-    //    yield XMap.make_class(XClzBuilder.XCLASSES, ptc._parms);
+    //    yield XMap.make_class(ClzBuilder.XCLASSES, ptc._parms);
     //  
     //  // Attempt to use the Java class name
     //  if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
@@ -469,7 +487,7 @@ public abstract class XType {
       if( con0.part() instanceof ModPart mod )
         yield Clz.make(mod);
       if( con0.part() instanceof PropPart prop )
-        yield Base.make(XProp.jname(prop));
+        yield Base.make(PropBuilder.jname(prop));
       throw XEC.TODO();
     }
 

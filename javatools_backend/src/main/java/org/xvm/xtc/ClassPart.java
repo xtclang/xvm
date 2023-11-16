@@ -1,13 +1,12 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.*;
 
 import static org.xvm.xtc.Part.Composition.*;
 
-import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -35,7 +34,7 @@ public class ClassPart extends Part {
   public final Contrib[] _contribs;
 
   public SB _header, _body;     // Java source code
-  public Class<XClz> _jclz;     // Matching java class
+  public Class<XTC> _jclz;     // Matching java class
   
   ClassPart( Part par, int nFlags, Const id, CondCon cond, CPool X, Part.Format f ) {
     super(par,nFlags,id,null,cond,X);
