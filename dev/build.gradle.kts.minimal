@@ -12,25 +12,25 @@ plugins {
      */
     id("org.xvm.build.version")
 
-   /**
-    * This is the XTC plugin. An external user would have a version catalog of their own, default location
-    * would be in repo root/gradle/libs.versions.toml. Note that any dependency resolution works, so you
-    * could just put:
-    *
-    *    id("org.xvm:xtc-plugin:$version") (or a hard coded version string after the last colon, of course)
-    *
-    * (But this is just what the version catalog extension provides shorthand for. Third party users
-    *  will probably put the xtc plugin and xdk with versions and identifiers in their own version catalogs,
-    *  together with the versions and id:s of any other external projects they depend on, at least when
-    *  their projects start to grow. So the "alias(libs.plugins.xtc)" or something almost identical will
-    *  most likely pop up in that format in all kinds of projects, so it's not unrealistic to use this
-    *  shorthand for both the XDK and for a third party XDK dependency project, but that is up to its
-    *  implementor.)
-    *
-    * The XDK build builds the XDK libs and the XTC plugin and assigns them the same version, taken
-    * from the version catalog, e.g. "0.4.4".
-    * version catalogs, see https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalogs
-    */
+    /**
+     * This is the XTC plugin. An external user would have a version catalog of their own, default location
+     * would be in repo root/gradle/libs.versions.toml. Note that any dependency resolution works, so you
+     * could just put:
+     *
+     *    id("org.xvm:xtc-plugin:$version") (or a hard coded version string after the last colon, of course)
+     *
+     * (But this is just what the version catalog extension provides shorthand for. Third party users
+     *  will probably put the xtc plugin and xdk with versions and identifiers in their own version catalogs,
+     *  together with the versions and id:s of any other external projects they depend on, at least when
+     *  their projects start to grow. So the "alias(libs.plugins.xtc)" or something almost identical will
+     *  most likely pop up in that format in all kinds of projects, so it's not unrealistic to use this
+     *  shorthand for both the XDK and for a third party XDK dependency project, but that is up to its
+     *  implementor.)
+     *
+     * The XDK build builds the XDK libs and the XTC plugin and assigns them the same version, taken
+     * from the version catalog, e.g. "0.4.4".
+     * version catalogs, see https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalogs
+     */
    alias(libs.plugins.xtc)
 }
 
@@ -41,7 +41,6 @@ plugins {
  * is in our TOML version catalog description, but the user can use any dependency notation that Gradle
  * supports, of course. For example 'xdk("org.xvm:xdk:0.4.4")'.
  */
- *
 dependencies {
     xdk(libs.xdk)
 }
