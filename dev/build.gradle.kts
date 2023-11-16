@@ -80,7 +80,6 @@ sourceSets.main {
             if (externalSrc.exclusive) { // should we ignore everything in the project except for the external source file?
                 logger.lifecycle("$prefix External source is exclusive; we will ignore the default source set in this project.")
                 include(externalSrcFile.name)
-                throw GradleException("WHY!")
             }
         }
     }
