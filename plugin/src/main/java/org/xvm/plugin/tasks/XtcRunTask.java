@@ -60,7 +60,7 @@ public class XtcRunTask extends XtcDefaultTask {
     protected final SourceSet sourceSet;
     protected final XtcLauncher launcher;
 
-    private final Map<ExecResult, XtcRunModule> executedModules; // TODO we can cache output here to if we want.
+    private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
 
     @Inject
     public XtcRunTask(final XtcProjectDelegate project, final SourceSet moduleSourceSet) {
@@ -167,18 +167,23 @@ public class XtcRunTask extends XtcDefaultTask {
 
         final var modulePath = project.resolveModulePath(name, getInputDeclaredDependencyModules());
         args.addRepeated("-L", modulePath);
-        withStream(resolveModulesToRun()).forEach(m -> runOne(m, args.copy()));
+
+        final var modulesToRun = resolveModulesToRun();
+        project.lifecycle("{} '{}' Want to executed {} modules:", prefix, name, modulesToRun.size());
+        for (final var m : modulesToRun) {
+            runOne(m, args.copy());
+            project.info("{} '{}'    Finished executing: {}", prefix, name, m.getModuleName());
+        }
 
         final int count = executedModules.size();
         project.lifecycle("{} '{}' Executed {} modules:", prefix, name, count);
         int i = 0;
         for (final var entry : executedModules.entrySet()) {
-            final var result = entry.getKey();
-            final var config = entry.getValue();
+            final var config = entry.getKey();
+            final var result = entry.getValue();
             final var index = String.format("(%2d/%2d)", ++i, count);
             final var success = result.getExitValue() == 0;
             final var level = success ? LogLevel.LIFECYCLE : LogLevel.ERROR;
-            // TODO: Before useLogging, just fold in the prefixes as we do in buildException.
             project.log(level, "{} '{}' {}   {} {}", prefix, name, index, config.getModuleName().get(), config);
             project.log(level, "{} '{}' {}       {} {}", prefix, name, index, success ? "SUCCESS" : "FAILURE", result);
         }
@@ -253,7 +258,7 @@ public class XtcRunTask extends XtcDefaultTask {
 
         final var result = launcher.apply(args);
         result.rethrowFailure();
-        executedModules.put(result, runConfig);
+        executedModules.put(runConfig, result);
 
         return result;
     }

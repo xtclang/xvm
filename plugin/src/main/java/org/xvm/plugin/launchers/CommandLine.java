@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class CommandLine {
+public final class CommandLine {
     private final List<String> args;
     private final List<String> jvmArgs;
     private final String mainClass;

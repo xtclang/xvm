@@ -11,7 +11,6 @@ import java.lang.reflect.Method;
 import java.util.Objects;
 
 public class BuildThreadLauncher extends XtcLauncher {
-
     private final Method main;
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -21,7 +20,7 @@ public class BuildThreadLauncher extends XtcLauncher {
         super(delegate.getProject());
         this.main = resolveMethod(mainClassName, "main", String[].class);
         this.moduleInfo = resolveMethod("org.xvm.tool.ModuleInfo", "extractModuleName", File.class);
-        lifecycle("{} Resolved module info: {}", prefix, moduleInfo);
+        lifecycle("{} Resolved module info: {}.{}", prefix, moduleInfo.getClass().getSimpleName(), moduleInfo.getName());
         lifecycle("{} Running {} in build process; this is not recommended for production use.", prefix, mainClassName);
     }
 

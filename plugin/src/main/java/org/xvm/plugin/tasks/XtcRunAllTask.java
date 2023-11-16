@@ -13,6 +13,7 @@ public class XtcRunAllTask extends XtcRunTask {
         super(project, moduleSourceSet);
     }
 
+    @Override
     @TaskAction
     public void run() {
         super.run();

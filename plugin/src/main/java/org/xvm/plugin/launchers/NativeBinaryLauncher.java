@@ -4,10 +4,7 @@ import org.gradle.process.ExecResult;
 import org.xvm.plugin.XtcProjectDelegate;
 
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.PrintStream;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Objects;
 
 import static org.xvm.plugin.launchers.XtcLauncher.XtcExecResult.OK;
