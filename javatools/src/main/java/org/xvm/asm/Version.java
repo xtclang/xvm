@@ -514,6 +514,33 @@ public class Version
         return new Version(partsNew, build);
         }
 
+    /**
+     * @return the number of parts of the version
+     */
+    public int getPartCount()
+        {
+        return ints.length;
+        }
+
+    /**
+     * @param i  specifies which part of the version to obtain
+     *
+     * @return the i-th part of the version
+     */
+    public int getPart(int i)
+        {
+        assert i >= 0 && i < getPartCount();
+        return ints[i];
+        }
+
+    /**
+     * @return the optional build string (may be null)
+     */
+    public String getBuildString()
+        {
+        return build;
+        }
+
 
     // ----- Comparable methods --------------------------------------------------------------------
 
@@ -576,7 +603,7 @@ public class Version
 
     private static final String[] PREFIX = {"CI", "Dev", "QC", "alpha", "beta", "rc"};
 
-    protected String  literal;
-    protected int[]   ints;
-    protected String  build;
+    protected String literal;
+    protected int[]  ints;
+    protected String build;
     }

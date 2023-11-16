@@ -1362,6 +1362,21 @@ public final class Handy
         return aFile;
         }
 
+    /**
+     * Obtain an array of files (not including directories) from the specified directory that match
+     * the specified case-insensitive extension.
+     *
+     * @param dir        the directory to search
+     * @param extension  the extension to match; null will match files with no '.' in their name
+     *
+     * @return an array of zero or more files that match the specified extension
+     */
+    public static File[] listFiles(File dir, String extension)
+        {
+        return extension == null
+                ? dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()) == null)
+                : dir.listFiles(f -> !f.isDirectory() && extension.equalsIgnoreCase(getExtension(f.getName())));
+        }
 
     /**
      * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
