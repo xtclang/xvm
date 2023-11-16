@@ -1,16 +1,17 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
 import org.xvm.util.SB;
+import org.xvm.xec.ecstasy.Iterablelong;
+
 import java.lang.Iterable;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Arylong extends XClz implements Iterable<Long> {
+public class Arylong extends XTC implements Iterable<Long> {
   public long[] _es;
   public int _len;
   public Arylong() { _es = new long[1]; }
@@ -74,6 +75,6 @@ public class Arylong extends XClz implements Iterable<Long> {
 
      
   /** @return an iterator */
-  @Override public XIter64 iterator() { return new XIter64(0,_len); }
+  @Override public Iterablelong iterator() { return new Iterablelong(0,_len); }
 
 }

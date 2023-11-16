@@ -1,5 +1,5 @@
-package org.xvm.xrun;
-import org.xvm.XEC;
+package org.xvm.xec.ecstasy.collections;
+
 public abstract class Tuple3 extends Tuple2 {
   public Tuple3() { this(3); }
   public Tuple3(int n) { super(n); }

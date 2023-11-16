@@ -4,13 +4,12 @@ import org.xvm.XEC;
 import org.xvm.util.Ary;
 import org.xvm.util.S;
 import org.xvm.util.SB;
-import org.xvm.xec.XClz;
-import org.xvm.xrun.XConst;
-import org.xvm.xrun.XProp;
+import org.xvm.xec.ecstasy.Const;
 import org.xvm.xtc.ast.*;
 import org.xvm.xtc.cons.*;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 
 // Some kind of base class for a Java class that implements an XTC Module
@@ -47,19 +46,20 @@ public class ClzBuilder {
 
   // A collection of extra class source strings, generated all along and dumped
   // after the normal methods are dumped.
-  final HashMap<String,String> _xclasses;
-  public static HashMap<String,String> XCLASSES = null;
+  public static HashMap<String,String> XCLASSES;
 
+  // A collection of extra imports, generated all along
+  public static HashSet<String> IMPORTS;
+  
   // Make a nested java class builder
   public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
   
   // Make a (possible nested) java class builder
   public ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean top ) {
-    _xclasses = top ? new HashMap<>() : null;
     if( top ) {
-      assert XCLASSES==null; // Nested top-level compilation units
-      XCLASSES = _xclasses;
-      CCLZ = mod;               // Compile unit
+      IMPORTS = new HashSet<>();  // Top-level extra imports
+      XCLASSES = new HashMap<>(); // Top-level extra classes
+      CCLZ = mod;                 // Top-level compile unit
     }
     _mod = mod;
     _tmod = mod==null ? null : XType.Clz.make(mod);
@@ -81,14 +81,16 @@ public class ClzBuilder {
     _sbhead.p("package ").p(XEC.XCLZ).p(";").nl().nl();
     _sbhead.p("import ").p(XEC.ROOT).p(".xrun.*;").nl();
     _sbhead.p("import static ").p(XEC.ROOT).p(".xrun.XRuntime.$t;").nl();
-    _sbhead.nl();
     jclass_body( );
     // Output extra helper classes, if any
-    for( String source : _xclasses.values() )
+    for( String source : XCLASSES.values() )
       _sb.nl().p(source);
+    for( String imp : IMPORTS )
+      _sbhead.p("import ").p(XEC.XCLZ).p(".").p(imp).p(";").nl();
+    _sbhead.nl();
     _clz._header = _sbhead;
     _clz._body = _sb;
-    // TODO: Unwind nested top-level compilation units
+    IMPORTS = null;
     XCLASSES = null;
     CCLZ = null;
   }
@@ -102,11 +104,11 @@ public class ClzBuilder {
     _sb.ip("// XTC ").p(_top ? "module ": "class ").p(_clz._path._str).p(":").p(_clz._name).p(" as Java class ").p(java_class_name).nl();
 
     if( _top ) {
-      _sb.p("public class ").p(java_class_name).p(" extends ").p(is_runclz() ? "XRunClz" : "XClz");
+      _sb.p("public class ").p(java_class_name).p(" extends ").p(is_runclz() ? "XRunClz" : "XTC");
     } else {
       _sb.ip("public static class ").p(java_class_name).p(" extends ");
       if( _clz._super != null ) _sb.p(_clz._super._name);
-      else _sb.p(_clz._f==Part.Format.CONST ? "XConst" : "XClz");
+      else _sb.p(_clz._f==Part.Format.CONST ? "XConst" : "XTC");
     }
     _sb.p(" {").nl().ii();
 
@@ -145,7 +147,7 @@ public class ClzBuilder {
         MethodPart meth = (MethodPart)mmp.child(mmp._name);
         if( (meth==null || meth._ast == null) && _clz._f == Part.Format.CONST ) {
           // Const classes have default methods, with no code given.  Generate.
-          XConst.make_meth(_clz,mmp._name,_sb);
+          Const.make_meth(_clz,mmp._name,_sb);
         } else {
           if( mmp._name.equals("run") ) run = meth; // Save the top-level run method
           // Generate the method from the AST
@@ -168,7 +170,7 @@ public class ClzBuilder {
         
       case PropPart pp:
         // <clinit> for a static global property
-        XProp.make_class(this,pp); 
+        PropBuilder.make_class(this,pp); 
         break;
         
       case ClassPart clz_nest:
@@ -185,7 +187,7 @@ public class ClzBuilder {
     // Const classes get a specific toString, although its not mentioned if its
     // the default
     if( _clz._f == Part.Format.CONST && _clz.child("toString")==null )
-      XConst.make_meth(_clz,"toString",_sb);
+      Const.make_meth(_clz,"toString",_sb);
     
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
@@ -268,7 +270,7 @@ public class ClzBuilder {
       for( Part part : m._name2kid.values() ) {
         switch( part ) {
         case PropPart pp:
-          XProp.make_class(this,pp );
+          PropBuilder.make_class(this,pp );
           break;
         case MMethodPart mmp:
           // Method-local nested methods.
@@ -338,12 +340,12 @@ public class ClzBuilder {
   public int u31() { return _pool.u31(); } // Packed read
   public long pack64() { return _pool.pack64(); }
   // Read an array of method constants
-  public Const[] consts() { return _pool.consts(); }
-  public Const[] sparse_consts(int len) { return _pool.sparse_consts(len); }
+  public org.xvm.xtc.cons.Const[] consts() { return _pool.consts(); }
+  public org.xvm.xtc.cons.Const[] sparse_consts( int len) { return _pool.sparse_consts(len); }
   // Read a single method constant, advancing parse pointer
-  public Const con() { return con(u31()); }
+  public org.xvm.xtc.cons.Const con() { return con(u31()); }
   // Read a single method constant
-  public Const con(int i) { return _meth._cons[i]; }
+  public org.xvm.xtc.cons.Const con( int i) { return _meth._cons[i]; }
 
   // Read an array of AST kid terminals
   public AST[] kids() { return _kids(u31(),0); }

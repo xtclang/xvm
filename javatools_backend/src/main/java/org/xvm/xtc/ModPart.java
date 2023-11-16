@@ -1,7 +1,6 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.xec.XClz;
 import org.xvm.xtc.cons.*;
 
 import java.util.ArrayList;

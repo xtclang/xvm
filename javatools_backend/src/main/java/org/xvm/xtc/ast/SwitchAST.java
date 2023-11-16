@@ -1,7 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
-import org.xvm.xrun.Range;
+import org.xvm.xec.ecstasy.Range;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;

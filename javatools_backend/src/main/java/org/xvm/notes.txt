@@ -12,12 +12,12 @@ Ignore packages for now?
 
 * org/xvm/xec - generated class strings act "as if" loaded from here
 * org/xvm/xec - runtime support classes (no ties with gen classes)
-* org/xvm/xec/XClz - base class for gen'd classes.
+* org/xvm/xec/XTC - base class for gen'd classes.
   org/xvm/xec/??   - Common methods like TRACE, common enums... 
-* org/xvm/xec/XRunClz - Runnable XClz
-  org/xvm/xec/ecstasy/Iterable64 - extends XClz, implements Iterator<Long>
-  org/xvm/xec/ecstasy/collections/Array<E> - extends XClz, implements array list
-  org/xvm/xec/ecstasy/collections/Array64  - extends XClz, implements array list<long>
+* org/xvm/xec/XRunClz - Runnable XTC
+  org/xvm/xec/ecstasy/Iterable64 - extends XTC, implements Iterator<Long>
+  org/xvm/xec/ecstasy/collections/Array<E> - extends XTC, implements array list
+  org/xvm/xec/ecstasy/collections/Array64  - extends XTC, implements array list<long>
 
 
 *XTC Modules- 
@@ -34,7 +34,7 @@ XTC lower class
 
 #So multiMethod example:
 #
-#org/xvm/xec/Main.java       - extends xec.XClz; import default; run() { new Main.Main().run(); }
+#org/xvm/xec/Main.java       - extends xec.XTC; import default; run() { new Main.Main().run(); }
 #org/xvm/xec/Main/Main.java  - extends Main;     import MLib.JLib; run() { console.log; call Lib.greeting(); }
 #org/xvm/xec/Lib.java        - extends xec.Xclz; import default;  empty_static;
 #org/xvm/xec/Lib/Lib.java    - extends Lib;      String greeting() {return "hello world"}

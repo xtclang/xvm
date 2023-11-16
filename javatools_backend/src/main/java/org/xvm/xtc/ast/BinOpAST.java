@@ -42,15 +42,15 @@ class BinOpAST extends AST {
 
   @Override AST rewrite() {
     // Range is not a valid Java operator, so need to change everything here
-    if( _op0.equals(".." ) ) return new NewAST(_kids,XType.RANGEII,null);
-    if( _op0.equals("..<") ) return new NewAST(_kids,XType.RANGEIE,null);
+    if( _op0.equals(".." ) ) return do_range(XType.RANGEII);
+    if( _op0.equals("..<") ) return do_range(XType.RANGEIE);
     // Generally Java needs to use equals for refs and == is only for prims
     if( _op0.equals("==") && !(_kids[0] instanceof ConAST con && "null".equals(con._con)) ) {
       if( !_kids[0]._type.primeq() || !_kids[1]._type.primeq() )
         return new InvokeAST("equals",XType.BOOL,_kids[0],_kids[1]).do_type();
     }
     if( _op0.equals("<=>") )
-      return new InvokeAST("spaceship",XType.ORDERED,new ConAST("XClz"),_kids[0],_kids[1]).do_type();
+      return new InvokeAST("spaceship",XType.ORDERED,new ConAST("XTC"),_kids[0],_kids[1]).do_type();
 
     // This is a ternary null-check or elvis operator.  _kids[0] has, deep
     // within it, the matching predicate test.  I need to restructure this tree:
@@ -90,6 +90,11 @@ class BinOpAST extends AST {
     AST nchk = new BinOpAST("!=","",XType.BOOL,asgn, zero );
     // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
     return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
+  }
+
+  private AST do_range( XType.Base rng ) {
+    ClzBuilder.IMPORTS.add("ecstasy."+rng._jtype);
+    return new NewAST(_kids,rng,null);
   }
   
   @Override public SB jcode( SB sb ) {

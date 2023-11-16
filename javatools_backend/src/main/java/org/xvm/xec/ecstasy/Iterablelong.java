@@ -1,20 +1,19 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy;
 
-import org.xvm.xtc.cons.RangeCon;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
+import org.xvm.xrun.XRuntime;
 
-import java.lang.Iterable;
 import java.util.Iterator;
 
 /**
      Support XTC range iterator
 */
-public class XIter64 extends XClz implements Iterator<Long> {
+public class Iterablelong extends XTC implements Iterator<Long> {
   long _i;
   final long _end;
   final boolean _dn;
   
-  XIter64( long i, long end ) {
+  public Iterablelong( long i, long end ) {
     _i = i;
     _end = end;
     _dn = i > end;

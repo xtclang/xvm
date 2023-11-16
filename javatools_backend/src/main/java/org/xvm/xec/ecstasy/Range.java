@@ -1,16 +1,16 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy;
 
 import org.xvm.xtc.cons.RangeCon;
-import org.xvm.xec.XClz;
+import org.xvm.xec.ecstasy.Iterablelong;
+import org.xvm.xec.XTC;
 
 import java.lang.Iterable;
-import java.util.Iterator;
 
 /**
      Support XTC range iterator
 */
-abstract public class Range extends XClz implements Iterable<Long> {
-  final long _lo, _hi;          // Inclusive lo, exclusive hi
+abstract public class Range extends XTC implements Iterable<Long> {
+  public final long _lo, _hi;          // Inclusive lo, exclusive hi
   final boolean _lx, _hx;       // True if exclusive
   final boolean _invert;        // Inverted range
   Range( long lo, long hi, boolean lx, boolean hx ) {
@@ -43,5 +43,5 @@ abstract public class Range extends XClz implements Iterable<Long> {
   public boolean in( long x ) { return _lo <= x && x < _hi; }
   
   /** @return an iterator */
-  @Override public XIter64 iterator() { return _invert ? new XIter64(_hi,_lo) : new XIter64(_lo,_hi); }
+  @Override public Iterablelong iterator() { return _invert ? new Iterablelong(_hi,_lo) : new Iterablelong(_lo,_hi); }
 }

@@ -2,7 +2,7 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.util.Ary;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.ClassNotFoundException;
@@ -33,7 +33,7 @@ public abstract class JavaC {
 
     try {
       for( int i=0; i<clzs._len; i++ )
-        clzs.at(i)._jclz = (Class<XClz>)xfile._loader.loadClass(srcs.get(i)._name);
+        clzs.at(i)._jclz = (Class<XTC>)xfile._loader.loadClass(srcs.get(i)._name);
     } catch( ClassNotFoundException cnfe ) {
       throw new RuntimeException(cnfe);
     }
@@ -60,11 +60,11 @@ public abstract class JavaC {
   private static class XClzLoader extends ClassLoader {
     public final HashMap<String,JCodes> _map;
     XClzLoader( ClassLoader par, XFileManager xfm ) { super(par); _map = xfm._map; }
-    @Override protected Class<XClz> findClass(String clzname) throws ClassNotFoundException {
+    @Override protected Class<XTC> findClass( String clzname) throws ClassNotFoundException {
       JCodes codes = _map.get(clzname);
       if( codes==null )  throw new ClassNotFoundException();
       byte[] bytes = codes._bos.toByteArray();
-      return (Class<XClz>)defineClass(clzname, bytes, 0, bytes.length);
+      return (Class<XTC>)defineClass(clzname, bytes, 0, bytes.length);
     }
   }
   

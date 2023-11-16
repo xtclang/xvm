@@ -1,22 +1,22 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy.io;
 
 /**
 */
-public class Console {
+public interface Console {
 
-  public void print( String s, boolean no_newline ) {
+  default public void print( String s, boolean no_newline ) {
     System.out.print(s);
     if( !no_newline )
       System.out.println();
   }
 
-  public void print( int i, boolean no_newline ) {
+  default public void print( int i, boolean no_newline ) {
     System.out.print(i);
     if( !no_newline )
       System.out.println();
   }
 
-  public void print( long i, boolean no_newline ) {
+  default public void print( long i, boolean no_newline ) {
     System.out.print(i);
     if( !no_newline )
       System.out.println();

@@ -12,7 +12,7 @@ import org.xvm.xtc.cons.Const.UniOp;
 // AST: ( ~ e0 ) -- Java: !e0 // rewritten in make if e0 is boolean
 // AST: ( ! e0 ) -- Java: !e0 // e0 NOT CONDITIONAL
 // AST: ( ! e0 ) -- Java: !($t(e0) && GET$COND()) // E0 YES CONDITIONAL
-// AST: ( .TRACE() e0 ) - Java: XClz.TRACE(e0) // rewrite
+// AST: ( .TRACE() e0 ) - Java: XTC.TRACE(e0) // rewrite
 
 class UniOpAST extends AST {
   final String _pre, _post;
@@ -66,7 +66,7 @@ class UniOpAST extends AST {
 
   @Override AST rewrite() {
     if( is_trace() )
-      return new InvokeAST("TRACE",(XType)null,new ConAST("XClz"),_kids[0]).do_type();
+      return new InvokeAST("TRACE",(XType)null,new ConAST("XTC"),_kids[0]).do_type();
     return this;
   }
   

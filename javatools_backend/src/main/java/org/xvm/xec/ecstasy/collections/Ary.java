@@ -1,8 +1,10 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.util.SB;
 
-import java.util.*;
+import java.lang.Iterable;
+import java.util.Arrays;
+import java.util.Iterator;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.

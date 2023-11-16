@@ -230,8 +230,8 @@ public class MethodPart extends MMethodPart {
   // Java  if( (stmp = cond_ret()) && GET$COND() && (ntmp = cond_ret() && GET$COND() ) { String s=stmp; long n=ntmp; ...s... }
   //
   // XTC   assert Int n := S1(), ...n...
-  // BAST  (Assert (XClz) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
-  // BAST  (Assert (XClz) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
+  // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
+  // BAST  (Assert (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
   // Java  long n0, n1;  assert $t(n0=S1()) && GET$COND() && ...n0...
   
   

@@ -1,13 +1,14 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
-import org.xvm.xec.XClz;
 import org.xvm.util.SB;
+import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.text.Stringable;
 import java.util.Arrays;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Arychar extends XClz implements XStringable {
+public class Arychar extends XTC implements Stringable {
   public char[] _cs;
   public int _len;
   public Arychar() { _cs = new char[1]; }

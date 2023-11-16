@@ -1,17 +1,17 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
-import org.xvm.xtc.cons.TCon;
 import org.xvm.util.SB;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
 import org.xvm.xtc.XType;
+import org.xvm.xec.ecstasy.Range;
 
-import static org.xvm.xec.XClz.Mutability.*;
+import static org.xvm.xec.XTC.Mutability.*;
 
 import java.util.Objects;
 import java.util.HashMap;
 
-public abstract class Tuple extends XClz implements Cloneable {
+public abstract class Tuple extends XTC implements Cloneable {
   private byte _mut = -1;
   final short _len; // 0-32767 length limit
   // Array-like interface
