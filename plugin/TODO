@@ -10,6 +10,7 @@ val value: String, val debugString: String = "",
         }
     )
 }
+TODO: Move javatool_unicode generation tables to some other part of the build logic. If we reach lib_ecstasy and we have e.g. build logic cache hits for unicode generation, we should interpret it to mean that we want to overwrite the resources for lib_ecstasy because there are new tables.
 TODO runXtc/All should not fail for e.g. test when there is no test source set.
 TODO: Fix the unicode depenency problems.
 TODO: Add native launcher tasks.
