@@ -2149,7 +2149,15 @@ public class ModuleInfo
             return subdir;
             }
 
-        return prjDir;
+        if (sourceFiles(prjDir).length > 0 || compiledFiles(prjDir).length > 0)
+            {
+            return prjDir;
+            }
+
+        // we assume that the absence of either source or compiled files in the project directory
+        // implies that the build (or target) directory has not been created yet, which is a common
+        // condition after a "clean" build command
+        return new File(prjDir, "build");
         }
 
 
