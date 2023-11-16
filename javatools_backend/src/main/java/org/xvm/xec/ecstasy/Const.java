@@ -1,18 +1,19 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy;
 
 import org.xvm.XEC;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
-public abstract class XConst extends XClz
-  implements Comparable<XConst>,  // Java Comparable; XTC Comparable has equals, which is included in Java Object
-             XStringable          // has appendTo
+public abstract class Const extends XTC
+  implements Comparable<Const>,  // Java Comparable; XTC Comparable has equals, which is included in Java Object
+             Stringable           // has appendTo
 {
-  abstract public Ordered compare( XConst that );
-  @Override public int compareTo( XConst o ) { return compare(o).ordinal()-1; }
-  public boolean CompLt( XConst that ) { return compare(that)==Ordered.Lesser; }
+  abstract public Ordered compare( Const that );
+  @Override public int compareTo( Const o ) { return compare(o).ordinal()-1; }
+  public boolean CompLt( Const that ) { return compare(that)==Ordered.Lesser; }
 
   
   // Make several fixed constant class methods
@@ -51,7 +52,7 @@ public abstract class XConst extends XClz
     for( PropPart prop : pps ) {
       String fld = prop._name;
       sb.ip(  "if( ($x=");
-      if( xeq(prop) ) sb.p("XClz.spaceship(").p(fld).p(",that.").p(fld).p(")");
+      if( xeq(prop) ) sb.p("XTC.spaceship(").p(fld).p(",that.").p(fld).p(")");
       else            sb.p(fld).p(".compare(that.").p(fld).p(")");
       sb.p(") != Ordered.Equal ) return $x;").nl();
     }

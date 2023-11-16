@@ -3,8 +3,9 @@ package org.xvm.xrun;
 import org.xvm.xtc.ModPart;
 import org.xvm.xtc.ClzBldSet;
 import org.xvm.XEC;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
 import org.xvm.xec.XRunClz;
+
 import java.lang.reflect.Constructor;
 
 
@@ -14,7 +15,7 @@ import java.lang.reflect.Constructor;
 public abstract class Container {
   final Container _par;         // Parent container
   final ModPart _mod;           // Main module
-  public Console console() { return _par.console(); }
+  public NativeConsole console() { return _par.console(); }
   
   Container( Container par, ModPart mod ) {
     _par = par;
@@ -27,9 +28,9 @@ public abstract class Container {
     if( _mod._jclz==null )
       ClzBldSet.do_compile(_mod,_mod);
     // Make an instanceof the Java version of the XTC module
-    XClz jobj;
+    XTC jobj;
     try {
-      Constructor<XClz> con = _mod._jclz.getConstructor(Container.class);
+      Constructor<XTC> con = _mod._jclz.getConstructor(Container.class);
       jobj = con.newInstance(new NativeContainer());
     } catch( Exception ie ) {
       throw XEC.TODO();

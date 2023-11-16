@@ -1,10 +1,8 @@
-package org.xvm.xrun;
+package org.xvm.xtc;
 
-import org.xvm.xtc.*;
 import org.xvm.util.SB;
-import org.xvm.xec.XClz;
 
-public abstract class XProp extends XClz {
+public abstract class PropBuilder {
   
   // Normal prop impl:
   //   private Type prop;
@@ -20,7 +18,7 @@ public abstract class XProp extends XClz {
   //   Type prop$calc() { ... }
   //
   // Const:
-  //   void prop$set(Type p) { throw new ReadOnlyX(); }
+  //   void prop$set(Type p) { throw new ReadOnlyException(); }
   //
   // Fancier, e.g. marked LazyVar, or has non-default get/set or other pieces:
   //   private Prop$Type prop = new Prop$Type();
@@ -76,7 +74,7 @@ public abstract class XProp extends XClz {
     sb.p("void ").p(pname).p("$set( ");
     xtype.clz(sb).p(" p ) { ");
     boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
-    sb.p( is_const ? "throw new ReadOnlyX();" : pname + " = p;").p(" }").nl();
+    sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }").nl();
 
     // Lazy calc
     if( lazy ) {

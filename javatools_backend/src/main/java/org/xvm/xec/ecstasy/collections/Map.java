@@ -1,20 +1,16 @@
-package org.xvm.xrun;
+package org.xvm.xec.ecstasy.collections;
 
-import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.TCon;
-import org.xvm.xec.XClz;
+import org.xvm.xec.XTC;
 
-import static org.xvm.xec.XClz.Mutability.*;
-
-import java.util.Objects;
 import java.util.HashMap;
 
-public abstract class XMap<K,V> extends XClz implements Cloneable {
+public abstract class Map<K,V> extends XTC implements Cloneable {
   private final HashMap<K,V> _map;
 
-  public XMap() { _map = new HashMap<>(); }
+  public Map() { _map = new HashMap<>(); }
 
   public void put( K key, V val ) { _map.put(key,val); }
 
@@ -25,7 +21,7 @@ public abstract class XMap<K,V> extends XClz implements Cloneable {
   // TODO: This needs to use XTC equals
   @Override public boolean equals( Object o ) {
     if( o==this ) return true;
-    if( !(o instanceof XMap that) ) return false;
+    if( !(o instanceof Map that) ) return false;
     return _map.equals(that._map);
   }
   
