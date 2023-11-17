@@ -1,7 +1,7 @@
 module DevExample {
     void run(String[] args = []) {
         @Inject Console console;
-        console.print("Hello, World!");
+        console.print("Hello, World! Conflicting Example");
     	//assert:debug;
     	Int len = args.size - 1;
     	if (len < 0) {
