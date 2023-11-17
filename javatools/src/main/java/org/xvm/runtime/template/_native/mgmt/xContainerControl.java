@@ -51,12 +51,6 @@ public class xContainerControl
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return false;
-        }
-
-    @Override
     public void initNative()
         {
         ConstantPool pool     = pool();

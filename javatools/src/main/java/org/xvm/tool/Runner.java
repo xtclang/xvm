@@ -14,8 +14,12 @@ import org.xvm.api.Connector;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
@@ -239,20 +243,89 @@ public class Runner
 
             connector.start();
 
-            String   sMethod = options().getMethodName();
-            String[] asArg   = options().getMethodArgs();
-
-            ObjectHandle[] ahArg = Utils.OBJECTS_NONE;
-            if (asArg != null)
+            ConstantPool pool = connector.getConstantPool();
+            try (var ignore = ConstantPool.withPool(pool))
                 {
-                try (var ignore = ConstantPool.withPool(connector.getConstantPool()))
+                String sMethod = options().getMethodName();
+                Set<MethodConstant> setMethods = connector.getContainer().findMethods(sMethod);
+                if (setMethods.size() != 1)
                     {
-                    ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
+                    if (setMethods.isEmpty())
+                        {
+                        log(Severity.ERROR, "Missing method \"" + sMethod + "\" in module " +
+                                info.getQualifiedModuleName());
+                        }
+                    else
+                        {
+                        log(Severity.ERROR, "Ambiguous method \"" + sMethod + "\" in module " +
+                                info.getQualifiedModuleName());
+                        }
+                    abort(true);
                     }
-                }
-            connector.invoke0(sMethod, ahArg);
 
-            connector.join();
+                String[]        asArg       = options().getMethodArgs();
+                ObjectHandle[]  ahArg       = Utils.OBJECTS_NONE;
+                MethodStructure method      = (MethodStructure) setMethods.iterator().next().getComponent();
+                TypeConstant    typeStrings = pool.ensureArrayType(pool.typeString());
+
+                switch (method.getRequiredParamCount())
+                    {
+                    case 0:
+                        if (asArg != null)
+                            {
+                            // the method doesn't require anything, but there are args
+                            if (method.getParamCount() > 0)
+                                {
+                                TypeConstant typeArg = method.getParam(0).getType();
+                                if (typeStrings.isA(typeArg))
+                                    {
+                                    ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
+                                    }
+                                else
+                                    {
+                                    log(Severity.ERROR, "Unsupported argument type \"" +
+                                        typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
+                                    abort(true);
+                                    }
+                                }
+                            else
+                                {
+                                log(Severity.WARNING, "Method \"" + sMethod +
+                                    "\" does not take any parameters; ignoring the specified arguments");
+                                }
+                            }
+                        break;
+
+                    case 1:
+                        {
+                        TypeConstant typeArg = method.getParam(0).getType();
+                        if (typeStrings.isA(typeArg))
+                            {
+                            // the method requires an array that we can supply
+                            ahArg = new ObjectHandle[]{
+                                asArg == null
+                                    ? xString.ensureEmptyArray()
+                                    : xString.makeArrayHandle(asArg)};
+                            }
+                        else
+                            {
+                            log(Severity.ERROR, "Unsupported argument type \"" +
+                                typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
+                            abort(true);
+                            }
+                        break;
+                        }
+
+                    default:
+                        log(Severity.ERROR, "Unsupported method arguments \"" +
+                            method.getIdentityConstant().getSignature().getValueString());
+                        abort(true);
+                    }
+
+                connector.invoke0(sMethod, ahArg);
+
+                connector.join();
+                }
             }
         catch (InterruptedException ignore)
             {

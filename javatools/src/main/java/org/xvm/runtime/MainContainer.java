@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.util.Set;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
@@ -8,6 +10,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
@@ -37,6 +40,9 @@ public class MainContainer
 
     // ----- MainContainer specific functionality --------------------------------------------------
 
+    /**
+     * Start the main container.
+     */
     public void start()
         {
         if (m_contextMain != null)
@@ -47,6 +53,21 @@ public class MainContainer
         ensureServiceContext();
         }
 
+    /**
+     * Helper method to find any possible entry points for a given name.
+     */
+    public Set<MethodConstant> findMethods(String sMethodName)
+        {
+        try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool()))
+            {
+            TypeInfo infoModule = getModule().getType().ensureTypeInfo();
+            return infoModule.findMethods(sMethodName, -1, TypeInfo.MethodKind.Any);
+            }
+        }
+
+    /**
+     * Invoke the specified entry point.
+     */
     public void invoke0(String sMethodName, ObjectHandle... ahArg)
         {
         try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool()))
