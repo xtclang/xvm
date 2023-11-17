@@ -2,15 +2,16 @@ module DevExample {
     void run(String[] args = []) {
         @Inject Console console;
         console.print("Hello, World!");
-    	//assert:debug;
-    	Int len = args.size - 1;
-    	if (len < 0) {
-	        console.print("There are no arguments: Exiting.");
-	        return;
-	    }
-	    console.print("There are args: " + len);
-        for (Int i : 0..len) {
-            console.print("Hello, World! (args[" + i + "] = " + args[i] + ")");
+
+//    	  assert:debug;
+        if (args.empty) {
+	          console.print("There are no arguments: Exiting.");
+	          return;
+	      }
+
+	      console.print($"There are {args.size} args");
+        loop: for (String arg : args) {
+            console.print($"Hello, World! (args[{loop.count}] = {arg})");
         }
     }
 }
