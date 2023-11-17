@@ -102,8 +102,8 @@ mixin Interval<Element extends immutable Sequential>
     @Override
     Int size.get() {
         try {
-            return (lowerBound.stepsTo(upperBound) - (lowerExclusive ? 1 : 0)
-                                                   - (upperExclusive ? 1 : 0)).notLessThan(0);
+            return (lowerBound.stepsTo(upperBound) + 1 - (lowerExclusive ? 1 : 0)
+                                                       - (upperExclusive ? 1 : 0)).notLessThan(0);
         } catch (OutOfBounds e) {
             // way too many steps
             return MaxValue;

@@ -1,9 +1,7 @@
-module TestLiterals
-    {
+module TestLiterals {
     @Inject Console console;
 
-    void run()
-        {
+    void run() {
         console.print("*** literal tests ***\n");
 
         testFactors();
@@ -19,18 +17,17 @@ module TestLiterals
         testTimes();
         testDurations();
 //        testLexer();
-        }
+        testInterval();
+    }
 
-    void testFactors()
-        {
+    void testFactors() {
         console.print("\n** testFactors()");
 
         @Volatile String s = "";
         @Volatile Int    n = 0;
-        val show = () ->
-            {
+        val show = () -> {
             console.print($"{s} == {n}");
-            };
+        };
 
         s = "1KB";  n = 1KB;  show();
         s = "1KI";  n = 1KI;  show();
@@ -53,10 +50,9 @@ module TestLiterals
 //      s = "1Zi";  n = 1Zi;  show();
 //      s = "1Y";   n = 1Y;   show();
 //      s = "1Yi";  n = 1Yi;  show();
-        }
+    }
 
-    void testVersions()
-        {
+    void testVersions() {
         console.print("\n** testVersions()");
 
         Version version = new Version(Null, 1);
@@ -72,20 +68,18 @@ module TestLiterals
         version = new Version(version, 2);
         console.print($"new Version(version, 2)={version}");
 
-        for (Int i : 0..3)
-            {
+        for (Int i : 0..3) {
             console.print("version[" + i + "]=" + version[i]);
-            }
+        }
 
         console.print("version[1..2]=" + version[1..2]);
         console.print("version[0..1]=" + version[0..1]);
         console.print("--version=" + --version);
         console.print("++version=" + ++version);
 
-        for (String s : ["1", "alpha", "1.0", "beta2", "5.6.7.8-alpha", "1.2-beta5", "1.2beta5"])
-            {
+        for (String s : ["1", "alpha", "1.0", "beta2", "5.6.7.8-alpha", "1.2-beta5", "1.2beta5"]) {
             console.print("version for String " + s + "=" + new Version(s));
-            }
+        }
 
         // "1.2-beta3" to "1.2-beta5"
         console.print("steps from 1.2-beta to 1.2-beta5="
@@ -118,10 +112,9 @@ module TestLiterals
 
         version = v:1.2beta5+123-456.abc;
         console.print($"literal v:1.2beta5+123-456.abc={version}");
-        }
+    }
 
-    void testPaths()
-        {
+    void testPaths() {
         console.print("\n** testPaths()");
 
         Path path1 = Path:./;
@@ -164,10 +157,9 @@ module TestLiterals
 
         dir = Directory:./more/;
         console.print($"Dir ./more/={dir}");
-        }
+    }
 
-    void testIncludes()
-        {
+    void testIncludes() {
         console.print("\n** testIncludes()");
 
         String s = $./more/msgs_EN.txt;
@@ -175,10 +167,9 @@ module TestLiterals
 
         assert $./allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt == "hello world!";
         assert $/allow.as.assert.avoid.public.private.if.for.while.var.val.void.txt == "hello world!";
-        }
+    }
 
-    void testMultiline()
-        {
+    void testMultiline() {
         console.print("\n** testMultiline()");
 
         String s = \|<%@ taglib uri="/WEB-INF/jspwiki.tld" prefix="wiki" %>
@@ -210,10 +201,9 @@ module TestLiterals
              ;
 
         console.print($"s one-line={s}");
-        }
+    }
 
-    void testMultilineTemplate()
-        {
+    void testMultilineTemplate() {
         console.print("\n** testMultiline()");
 
         const Person(String firstname, String lastname);
@@ -246,10 +236,9 @@ module TestLiterals
              ;
 
         console.print($"\nJSON one-line={s}");
-        }
+    }
 
-    void testHex()
-        {
+    void testHex() {
         console.print("\n** testHex()");
 
         Byte[] bytes = #123_4567_89aB_cDeF;
@@ -262,10 +251,9 @@ module TestLiterals
 
         bytes = #/literals.x;
         console.print($"bytes={bytes[0..10]}...{bytes[bytes.size-10 ..< bytes.size]}");
-        }
+    }
 
-    void testDirs()
-        {
+    void testDirs() {
         console.print("\n** testDirs()");
 
         FileStore fs = FileStore:/archive/moduleTest;
@@ -279,10 +267,9 @@ module TestLiterals
 
         Directory dir = Directory:./archive/moduleTest;
         console.print($"Directory:./archive/moduleTest=(recursive)\n{{dir.emitListing($, recursive=True);}}");
-        }
+    }
 
-    void testDates()
-        {
+    void testDates() {
         console.print("\n** testDates()");
 
         Date date = new Date("1999-12-25");
@@ -293,10 +280,9 @@ module TestLiterals
 
         date = new Date("99999-01-23");
         console.print($"date={date} or {Date:9999-01-23} (one less 9)");
-        }
+    }
 
-    void testTimeOfDays()
-        {
+    void testTimeOfDays() {
         console.print("\n** testTimeOfDays()");
 
         TimeOfDay timeOfDay = new TimeOfDay("12:01:23");
@@ -310,10 +296,9 @@ module TestLiterals
 
         timeOfDay = new TimeOfDay("120123.456");
         console.print($"timeOfDay={timeOfDay} or {TimeOfDay:120123.456}");
-        }
+    }
 
-    void testTimes()
-        {
+    void testTimes() {
         console.print("\n** testTimes()");
 
         Time dt = new Time("1999-12-25T12:01:23");
@@ -333,10 +318,9 @@ module TestLiterals
 
         dt = new Time("2019-05-22T120123.456-5:00");
         console.print($"dt={dt} or {Time:2019-05-22T120123.456-05:00}");
-        }
+    }
 
-    void testDurations()
-        {
+    void testDurations() {
         console.print("\n** testDurations()");
 
         Duration duration = new Duration("P3DT4H5M6S");
@@ -362,10 +346,9 @@ module TestLiterals
 
         duration = new Duration("10.5S");
         console.print($"10.5S duration={duration} or {Duration:10.5S}");
-        }
+    }
 
-    void testLexer()
-        {
+    void testLexer() {
         console.print("\n** testLexer()");
 
         import ecstasy.lang.ErrorList;
@@ -390,9 +373,22 @@ module TestLiterals
         ErrorList  errs   = new ErrorList(100);
         Lexer      lexer  = new Lexer(source, errs);
         console.print($"lexer={lexer}");
-        Loop: for (Token token : lexer)
-            {
+        Loop: for (Token token : lexer) {
             console.print($"[{Loop.count}] {token}");
-            }
         }
     }
+
+    void testInterval() {
+        console.print("\n** testInterval()");
+        assert (1>..1).empty;
+        assert (1>..1).size == 0;
+        assert (1..<1).empty;
+        assert (1..<1).size == 0;
+        assert (1>..<1).empty;
+        assert (1>..<1).size == 0;
+        assert !(1..1).empty;
+        assert (1..1).size == 1;
+        assert !(1..2).empty;
+        assert (1..2).size == 2;
+    }
+}
