@@ -6,11 +6,6 @@ plugins {
 // TODO: xdkZip does not resolve on its own in this environment. It's not clear why.
 dependencies {
     xdk(libs.xdk)
-    // TODO: webappConsumer(project(":webapp"))
-}
-
-xtcCompile {
-    forceRebuild = true
 }
 
 val runXtc by tasks.existing {

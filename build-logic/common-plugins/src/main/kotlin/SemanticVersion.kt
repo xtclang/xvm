@@ -5,11 +5,9 @@ import kotlin.IllegalArgumentException
 
 data class SemanticVersion(val artifactGroup: String, val artifactId: String, val artifactVersion: String) {
     companion object {
-        const val XDK_VERSION_CATALOG_GROUP = "xdkgroup"
-        const val XDK_VERSION_CATALOG_VERSION = "xdk"
-        const val XDK_VERSION_CATALOG_PLUGIN_VERSION = "xtcplugin"
-        const val VERSION_CATALOG_LIBS_NAME = "libs"
-        const val VERSION_CATALOG_TOML_VERSIONS = "[versions]"
+        private const val XDK_VERSION_CATALOG_GROUP = "xdkgroup"
+        private const val XDK_VERSION_CATALOG_VERSION = "xdk"
+        private const val VERSION_CATALOG_LIBS_NAME = "libs"
 
         fun resolveCatalogSemanticVersion(project: Project): SemanticVersion {
             return SemanticVersion(

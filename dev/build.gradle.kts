@@ -95,25 +95,15 @@ xtcCompile {
     forceRebuild = true
 }
 
+/**
+ * Ensure that none of the xtcRun tasks is seen as "cached" and "up to date", as a running program can have
+ * any type of side effect we don't know about. It's better to do it the other way around in the xtcRun
+ * configuration, i.e. declaring which runs depend on others. Or just go by implicit dependencies in the
+ * build logic, if that is enough.
+ */
 tasks.withType<XtcRunTask>().configureEach {
-    println("** I am the withType $name")
-    //alwaysRerunTask()
-    //outputs.cacheIf { alse }
-    //outputs.upToDateWhen { false }
-    //doLast {
-    //    println("I am the doLast $name")
-    //}
+    alwaysRerunTask()
 }
-
-tasks.named("runXtc") {
-    outputs.upToDateWhen { false }
-    doFirst {
-        printTaskInputs()
-        printTaskOutputs()
-    }
-}
-
-
 
 /**
  * XTC Runtime DSL. See @XtcRuntimeExtension class for what's in it.

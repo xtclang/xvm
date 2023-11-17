@@ -6,6 +6,7 @@ import org.xvm.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 
+// TODO not cachable?
 public class XtcRunAllTask extends XtcRunTask {
 
     @Inject
@@ -16,7 +17,7 @@ public class XtcRunAllTask extends XtcRunTask {
     @Override
     @TaskAction
     public void run() {
+        project.warn("{} '{}' Running all XTC modules, even if they aren't configured to be run by default.", project.prefix(), getName());
         super.run();
-
     }
 }

@@ -1,16 +1,20 @@
 package org.xvm.plugin.internal;
 
 import org.gradle.api.Action;
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.xvm.plugin.XtcRuntimeExtension;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static org.xvm.plugin.Constants.XTC_DEFAULT_RUN_METHOD_NAME_PREFIX;
 
@@ -32,7 +36,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
 
         public DefaultXtcRunModule(final Project project, final String moduleName) {
-            this(project, moduleName, XTC_DEFAULT_RUN_METHOD_NAME_PREFIX, Collections.emptyList());
+            this(project, moduleName, XTC_DEFAULT_RUN_METHOD_NAME_PREFIX, emptyList());
         }
 
         public DefaultXtcRunModule(final Project project, final String moduleName, final String method, final List<String> args) {
@@ -43,6 +47,10 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
             if (moduleName != null) {
                 this.moduleName.set(moduleName);
             }
+        }
+
+        static List<Object> getModuleInputs(final XtcRunModule module) {
+            return List.of(module.getModuleName(), module.getMethodName(), module.getArgs());
         }
 
         @Override
@@ -62,7 +70,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
 
         @Override
         public void args(final List<String> args) {
-            this.args.addAll(args);
+            args(args.toArray());
         }
 
         @Override
@@ -86,11 +94,13 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     private final Property<Boolean> enableDebug; // TODO: We can use this to enable debug logging in the XTC runtime, or to run the stdin debugger in interactive mode, perhaps?
     private final ListProperty<XtcRunModule> modules;
 
+    // Just used for inputs, and should not be set.
+
     @Inject
     public DefaultXtcRuntimeExtension(final Project project) {
         super(project);
         this.showVersion = objects.property(Boolean.class).value(false);
-        this.modules = objects.listProperty(XtcRunModule.class).value(Collections.emptyList());
+        this.modules = objects.listProperty(XtcRunModule.class).value(emptyList());
         this.allowParallel = objects.property(Boolean.class).value(false);
         this.enableDebug = objects.property(Boolean.class).value(false);
     }
@@ -99,21 +109,23 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         return new DefaultXtcRunModule(project, name);
     }
 
-    XtcRunModule createModule(final String name) {
+    private XtcRunModule createModule(final String name) {
         return createModule(project, name);
     }
 
     /**
      * Check if there are module { ... } declarations without names. TODO: Can use mandatory flag
+     * NOTE: This function expects that the configuration phase is finished and everything resolves.
      */
-    public boolean validateModules() {
-        for (final var m : getModules().get()) {
+    @Override
+    public List<XtcRunModule> validatedModules() {
+        return modules.get().stream().filter(m -> {
             if (!m.validate()) {
-                logger.error("{} ERROR: XTC run module without module name was declared.", prefix);
-                return false;
+                logger.error("{} ERROR: XTC run module without module name was declared: {}", prefix, m);
+                throw new GradleException(prefix + " Invalid module configuration: " + m);
             }
-        }
-        return true;
+            return true;
+        }).toList();
     }
 
     private XtcRunModule addModule(final XtcRunModule runModule) {
@@ -141,6 +153,28 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     }
 
     @Override
+    public ListProperty<XtcRunModule> getModules() {
+        return modules;
+    }
+
+    @Override
+    public List<String> getModuleNames() {
+        return modules.get().stream().map(m -> m.getModuleName().get()).toList();
+    }
+
+    @Override
+    public List<String> getModuleMethods() {
+        return modules.get().stream().map(m -> m.getMethodName().get()).toList();
+    }
+
+    @Override
+    public List<String> getModuleArgs() {
+        final var list = modules.get().stream().map(m -> m.getArgs().get()).toList().stream().flatMap(Collection::stream).toList();
+        logger.lifecycle("{} flatmap args: ${}", prefix, list);
+        return list;
+    }
+
+    @Override
     public XtcRuntimeExtension setModuleNames(final List<String> moduleNames) {
         modules.get().clear();
         moduleNames.forEach(this::moduleName);
@@ -154,9 +188,14 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
 
     @Override
     public XtcRuntimeExtension setModules(final List<XtcRunModule> modules) {
-        this.modules.value(modules);
-        assert this.modules.get().size() == modules.size();
+        this.modules.get().clear();
+        modules.forEach(this::addModule);
         return this;
+    }
+
+    @Override
+    public XtcRuntimeExtension setModules(final XtcRunModule... modules) {
+        return setModules(Arrays.asList(modules));
     }
 
     @Override
@@ -170,12 +209,17 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     }
 
     @Override
-    public ListProperty<XtcRunModule> getModules() {
-        return modules;
+    public ListProperty<Object> getModuleInputs() {
+        return objects.listProperty(Object.class).value(modules.get().stream().map(DefaultXtcRunModule::getModuleInputs).toList());
     }
 
     @Override
     public Property<Boolean> getShowVersion() {
         return showVersion;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return modules.get().isEmpty();
     }
 }

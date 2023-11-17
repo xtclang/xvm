@@ -10,6 +10,7 @@ val value: String, val debugString: String = "",
         }
     )
 }
+TODO: Add byte ingestion counters for the compiler, perhaps, so we can tell if a rerun actually took place just by looking at the screen.
 TODO: Add a configuraton/text file/dsl, anything that can be read from disk that is interpreted as arguments for the launcher. This would be
 useful and could be drawn out directly from xtc kotlin gradle dsls in the plugin with very low complexity. I have at a few occaasins
 wished I had something like that
@@ -56,3 +57,4 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./javatools/build.gradle.kts:// TODO: Move these to buildSrc, the XDK composite build does use them in some different places.
 ./javatools/build.gradle.kts:    // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
 ./javatools/build.gradle.kts:    from(file(xdkImplicitsPath)) // TODO Hack: this should be changed to use a consumable configuration, and/or moving javautils as a subproject, as it is never used standalone, just as part of a fat javatools jar.
+TODO: SAVE THE BUILD SCAN FROM THE LATEST BUILD SOMEWHERE LOCAL WHERE WE CAN LOOK LATER. CONTAINER OUR OWN GRADLE ENTERPRISE SERVER.

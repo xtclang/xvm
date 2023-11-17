@@ -21,13 +21,11 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
 
         void args(Object... args);
 
-        default boolean validate() {
-            return true;
-        }
-
         default boolean hasDefaultMethodName() {
             return DEFAULT_METHOD_NAME.equals(getMethodName().get());
         }
+
+        boolean validate();
     }
 
     Property<Boolean> getShowVersion();
@@ -38,19 +36,29 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
 
     XtcRunModule module(Action<XtcRunModule> action);
 
+    ListProperty<XtcRunModule> getModules();
+
     void moduleName(String name);
 
     XtcRuntimeExtension moduleNames(String... modules);
 
-    ListProperty<XtcRunModule> getModules();
-
     XtcRuntimeExtension setModules(List<XtcRunModule> modules);
+
+    XtcRuntimeExtension setModules(XtcRunModule... modules);
 
     XtcRuntimeExtension setModuleNames(List<String> moduleNames);
 
     XtcRuntimeExtension setModuleNames(String... moduleNames);
 
-    default boolean validateModules() {
-        return true;
-    }
+    ListProperty<Object> getModuleInputs();
+
+    List<XtcRunModule> validatedModules();
+
+    boolean isEmpty();
+
+    List<String> getModuleNames();
+
+    List<String> getModuleMethods();
+
+    List<String> getModuleArgs();
 }

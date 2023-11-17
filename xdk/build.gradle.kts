@@ -261,7 +261,9 @@ val findLocalDist by tasks.registering {
     }
     doLast {
         logger.lifecycle("$prefix Detected existing local XTC installation at: '$localDistDir'")
-        XdkBuildLogic.walkDir(project, localDistDir!!, LogLevel.INFO)
+        XdkBuildLogic.listDirWithTimestamps(localDistDir!!).lines().forEach {
+            logger.lifecycle("$prefix   $it")
+        }
     }
 }
 
@@ -296,7 +298,9 @@ val installLocalDist by tasks.registering {
             into(localDistDir)
         }
         logger.lifecycle("$prefix $name Finished.")
-        XdkBuildLogic.walkDir(project, localDistDir)
+        XdkBuildLogic.listDirWithTimestamps(localDistDir).lines().forEach {
+            logger.lifecycle("$prefix   $it")
+        }
     }
 }
 

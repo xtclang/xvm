@@ -46,8 +46,8 @@ public class JavaExecLauncher extends XtcLauncher {
         try {
             final var result = project.getProject().javaexec(spec -> {
                 spec.setStandardInput(System.in); // Not coupled by default for JavaExec
-                //spec.setStandardOutput(out);
-                //spec.setErrorOutput(err);
+                spec.setStandardOutput(out);
+                spec.setErrorOutput(err);
                 spec.classpath(javaToolsJar);
                 spec.getMainClass().set(args.getMainClassName());
                 spec.args(args.toList());

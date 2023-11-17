@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import java.io.File;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -50,6 +51,7 @@ import static org.xvm.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
  */
 
 // TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
+//@DisableCachingByDefault
 public class XtcRunTask extends XtcDefaultTask {
     protected final XtcProjectDelegate project;
     protected final String prefix;
@@ -154,9 +156,24 @@ public class XtcRunTask extends XtcDefaultTask {
     }
 
     @Input
-    ListProperty<XtcRunModule> getModules() {
-        return extRuntime.getModules();
+    List<String> getModuleNames() {
+        return extRuntime.getModuleNames();
     }
+
+    @Input
+    List<String> getModuleMethods() {
+        return extRuntime.getModuleMethods();
+    }
+
+    @Input
+    List<String> getModuleArgs() {
+        return extRuntime.getModuleNames();
+    }
+
+    /*
+    private List<XtcRunModule> getModules() {
+        return extRuntime.getModules().get();
+    }*/
 
     @TaskAction
     public void run() {
@@ -169,14 +186,14 @@ public class XtcRunTask extends XtcDefaultTask {
         args.addRepeated("-L", modulePath);
 
         final var modulesToRun = resolveModulesToRun();
-        project.lifecycle("{} '{}' Want to executed {} modules:", prefix, name, modulesToRun.size());
+        project.lifecycle("{} '{}' Queued up {} modules to execute:", prefix, name, modulesToRun.size());
         for (final var m : modulesToRun) {
             runOne(m, args.copy());
-            project.info("{} '{}'    Finished executing: {}", prefix, name, m.getModuleName());
+            project.info("{} '{}'    Finished executing: {}", prefix, name, m.getModuleName().get());
         }
 
         final int count = executedModules.size();
-        project.lifecycle("{} '{}' Executed {} modules:", prefix, name, count);
+        project.lifecycle("{} '{}'    Executed {} modules:", prefix, name, count);
         int i = 0;
         for (final var entry : executedModules.entrySet()) {
             final var config = entry.getKey();
@@ -206,22 +223,24 @@ public class XtcRunTask extends XtcDefaultTask {
 
     protected Collection<XtcRunModule> resolveModulesToRun() {
         // Given the module definition in the xtcRun closure in the DSL, create their equivalent POJOs.
-        final var modules = extRuntime.getModules().get();
-        if (modules.isEmpty()) {
+        if (extRuntime.isEmpty()) {
+            // 1) No modules were declared
             project.warn("{} '{}' Configuration does not contain specified modules to run. Will default to 'xtcRunAll' task.", prefix, name);
-            // was emptySet()
+
+            // 2) Examine all compiled modules for this project.
             final var allModules = resolveCompiledModules();
             if (allModules.isEmpty()) {
+                // 3) We have no compiled modules for the project, return an empty execution queue.
                 project.warn("{} '{}' There is nothing in the module path to run. Aborting.", prefix, name);
                 return emptySet();
             }
+
+            // 4) We do have modules compiled for this project. Add them all to the execution queue.
             allModules.forEach(m -> project.lifecycle("{} '{}'    Module '{}' added to execution queue.", prefix, name, m));
             return allModules;
         }
-        if (!extRuntime.validateModules()) {
-            throw project.buildException("ERROR: Invalid runtime modules exist. Module name not specified.");
-        }
-        return modules;
+
+        return extRuntime.validatedModules();
     }
 
     private Collection<File> resolveCompiledModuleFiles() {

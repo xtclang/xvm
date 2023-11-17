@@ -1,25 +1,23 @@
 import org.gradle.BuildListener
 import org.gradle.BuildResult
-import org.gradle.api.Project
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStreamReader
 import org.gradle.api.GradleException
+import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.initialization.Settings
 import org.gradle.api.invocation.Gradle
-import org.gradle.api.logging.LogLevel
-import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.provider.Provider
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStreamReader
 import java.nio.file.Path
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.Objects.requireNonNull
 import java.util.Properties
+import java.util.Objects.requireNonNull
 import kotlin.io.path.absolutePathString
 
 class XdkBuildLogic(val project: Project) {
@@ -27,8 +25,6 @@ class XdkBuildLogic(val project: Project) {
     companion object {
         const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_TASK_GROUP_VERSION = "version"
-        const val XDK_VERSION_CATALOG_GROUP = "xdkgroup"
-        const val XDK_VERSION_CATALOG_VERSION = "xdk"
         const val REDACTED = "[REDACTED]"
         const val ENV_PATH = "PATH"
         const val XTC_LAUNCHER = "xec"
@@ -44,23 +40,27 @@ class XdkBuildLogic(val project: Project) {
             return cache[project] ?: XdkBuildLogic(project).also { cache[project] = it }
         }
 
+        /*
+         * Various utility functions are defined below.
+         * TODO: May want them in a separate build logic class.
+         */
+
         fun getDateTimeStampWithTz(ms: Long = System.currentTimeMillis()): String {
             return SimpleDateFormat(DATE_TIME_FORMAT, Locale.getDefault()).format(Date(ms))
         }
 
         // Helper function to print contents of a directory tree with timestamps
-        fun walkDir(project: Project, dir: File, level: LogLevel = LIFECYCLE) {
-            val prefix = "[${project.name}]"
-            val logger = project.logger
-            logger.log(level, "$prefix ls -R $dir:")
+        fun listDirWithTimestamps(dir: File): String {
             val truncate = dir.absolutePath
-            dir.walkTopDown().forEach {
-                assert(it.absolutePath.startsWith(truncate))
-                val path = it.absolutePath.substring(truncate.length)
-                val timestamp = getDateTimeStampWithTz(it.lastModified())
-                logger.log(level, "$prefix    [$timestamp] '${dir.name}$path'")
+            return buildString {
+                append("Recursively listing '$dir' with modificaton timestamps:")
+                dir.walkTopDown().forEach {
+                    assert(it.absolutePath.startsWith(truncate))
+                    val path = it.absolutePath.substring(truncate.length)
+                    val timestamp = getDateTimeStampWithTz(it.lastModified())
+                    append("    [$timestamp] '${dir.name}$path'")
+                }
             }
-
         }
     }
 
@@ -113,12 +113,16 @@ class XdkBuildLogic(val project: Project) {
         project.gradle.addBuildListener(listener)
     }
 
-    fun gitHubClient(): GitHubPackages {
+    fun xdkGitHubClient(): GitHubPackages {
         return GitHubPackages(this)
     }
 
     fun xdkDistribution(): XdkDistribution {
         return XdkDistribution(this)
+    }
+
+    fun xdkVersionHandler(): XdkVersionHandler {
+        return XdkVersionHandler(this)
     }
 
     fun isSnapshot(): Boolean {

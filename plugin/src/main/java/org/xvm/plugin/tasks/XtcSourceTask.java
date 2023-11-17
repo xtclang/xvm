@@ -111,6 +111,7 @@ public abstract class XtcSourceTask extends XtcDefaultTask implements PatternFil
         return this;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public @NotNull XtcSourceTask include(final @NotNull Closure includeSpec) {
         patternSet.include(includeSpec);
@@ -135,6 +136,7 @@ public abstract class XtcSourceTask extends XtcDefaultTask implements PatternFil
         return this;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public @NotNull XtcSourceTask exclude(final @NotNull Closure excludeSpec) {
         patternSet.exclude(excludeSpec);
