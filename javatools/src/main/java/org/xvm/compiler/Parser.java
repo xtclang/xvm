@@ -714,13 +714,22 @@ public class Parser
                     if (fFileLevel)
                         {
                         // module cannot have any statements before it in the source
-                        if (stmt instanceof TypeCompositionStatement)
+                        if (stmt instanceof TypeCompositionStatement stmtType)
                             {
-                            if (((TypeCompositionStatement) stmt).getCategory().getId() == Id.MODULE
-                                    && !stmts.isEmpty())
+                            if (stmtType.getCategory().getId() == Id.MODULE && !stmts.isEmpty())
                                 {
-                                log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
-                                        start.getEndPosition());
+                                if (stmts.stream().allMatch(ImportStatement.class::isInstance))
+                                    {
+                                    // transfer the imports from outside the module body to inside
+                                    // the module body
+                                    stmtType.ensureBody().getStatements().addAll(0, stmts);
+                                    stmts.clear();
+                                    }
+                                else
+                                    {
+                                    log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
+                                            start.getEndPosition());
+                                    }
                                 }
                             }
                         else
