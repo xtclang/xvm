@@ -864,7 +864,7 @@ public class ModuleInfo
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        public Node(DirNode parent, File file)
+        protected Node(DirNode parent, File file)
             {
             // at least one of the parameters is required
             assert parent != null || file != null;
@@ -1054,7 +1054,7 @@ public class ModuleInfo
         /**
          * The error list that buffers errors for the file node, if any.
          */
-        protected ErrorList m_errs;
+        private ErrorList m_errs;
         }
 
     /**
@@ -1070,7 +1070,7 @@ public class ModuleInfo
          * @param dir      the directory that this node will represent
          * @param fileSrc  the file for the package.x file (or null if it does not exist)
          */
-        protected DirNode(DirNode parent, File dir, File fileSrc)
+        DirNode(DirNode parent, File dir, File fileSrc)
             {
             super(parent, dir);
             assert dir.isDirectory();
@@ -1380,27 +1380,27 @@ public class ModuleInfo
         /**
          * The module.x or package.x file, or null.
          */
-        protected File                    m_fileSrc;
+        private File m_fileSrc;
 
         /**
          * The node for the module, package, or class source.
          */
-        protected FileNode                m_nodeSrc;
+        private FileNode m_nodeSrc;
 
         /**
          * The classes nested directly in the module or package.
          */
-        protected ListMap<File, FileNode> m_mapClzNodes  = new ListMap<>();
+        private ListMap<File, FileNode> m_mapClzNodes = new ListMap<>();
 
         /**
          * The packages nested directly in the module or package.
          */
-        protected List<DirNode>           m_listPkgNodes = new ArrayList<>();
+        private List<DirNode> m_listPkgNodes = new ArrayList<>();
 
         /**
          * The child nodes (both packages and classes) nested directly in the module or package.
          */
-        protected Map<String, Node>       m_mapChildren  = new HashMap<>();
+        private Map<String, Node> m_mapChildren = new HashMap<>();
         }
 
     /**
@@ -1415,7 +1415,7 @@ public class ModuleInfo
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        public FileNode(DirNode parent, File file)
+        FileNode(DirNode parent, File file)
             {
             super(parent, file);
             }
@@ -1699,22 +1699,22 @@ public class ModuleInfo
         /**
          * The source code text for the file node.
          */
-        protected String                   m_text;
+        private String                   m_text;
 
         /**
          * The Source object code for the file node; lazily created.
          */
-        protected Source                   m_source;
+        private Source                   m_source;
 
         /**
          * The AST for the source code, once it has been parsed.
          */
-        protected Statement                m_stmtAST;
+        private Statement                m_stmtAST;
 
         /**
          * The primary class (or other type) that the source file declares.
          */
-        protected TypeCompositionStatement m_stmtType;
+        private TypeCompositionStatement m_stmtType;
         }
 
 
@@ -1766,6 +1766,34 @@ public class ModuleInfo
         }
 
     /**
+     * @param moduleFile  a File that contains a compiled Ecstasy module
+     *
+     * @return the version of the XVM that compiled the specified module
+     */
+    public static Version getXvmVersion(File moduleFile)
+        {
+        if (moduleFile == null)
+            {
+            throw new IllegalArgumentException("Compiled module file required");
+            }
+
+        if (!moduleFile.exists())
+            {
+            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
+            }
+
+        try
+            {
+            FileStructure struct = new FileStructure(moduleFile);
+            return new Version(new int[] {struct.getFileMajorVersion(), struct.getFileMinorVersion()}, null);
+            }
+        catch (IOException e)
+            {
+            throw new RuntimeException("Failed to read module file: " + moduleFile);
+            }
+        }
+
+    /**
      * @return the version of the XDK that is answering this question, or null if this running code
      *         is not part of a well-formed XDK image
      */
@@ -1774,6 +1802,31 @@ public class ModuleInfo
         try
             {
             return getModuleVersion(new File(getJarFile().getParentFile().getParentFile(), "lib/ecstasy.xtc"));
+            }
+        catch (Exception ignore)
+            {
+            return null;
+            }
+        }
+
+    /**
+     * @return the Version that was stamped onto the specified compiled module file
+     */
+    public static Version getModuleVersion(File moduleFile)
+        {
+        if (moduleFile == null)
+            {
+            throw new IllegalArgumentException("Compiled module file required");
+            }
+
+        if (!moduleFile.exists())
+            {
+            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
+            }
+
+        try
+            {
+            return new FileStructure(moduleFile).getModule().getVersion().getVersion();
             }
         catch (Exception ignore)
             {
@@ -1845,60 +1898,6 @@ public class ModuleInfo
                 }
             }
         return jarFile;
-        }
-
-    /**
-     * @return the Version that was stamped onto the specified compiled module file
-     */
-    public static Version getModuleVersion(File moduleFile)
-        {
-        if (moduleFile == null)
-            {
-            throw new IllegalArgumentException("Compiled module file required");
-            }
-
-        if (!moduleFile.exists())
-            {
-            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
-            }
-
-        try
-            {
-            return new FileStructure(moduleFile).getModule().getVersion().getVersion();
-            }
-        catch (Exception ignore)
-            {
-            return null;
-            }
-        }
-
-    /**
-     * @param moduleFile  a File that contains a compiled Ecstasy module
-     *
-     * @return the version of the XVM code that is located in the specified compiled Ecstasy module
-     */
-    public static Version getModuleXvmVersion(File moduleFile)
-        {
-        if (moduleFile == null)
-            {
-            throw new IllegalArgumentException("Compiled module file required");
-            }
-
-        if (!moduleFile.exists())
-            {
-            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
-            }
-
-        try
-            {
-            FileStructure struct = new FileStructure(moduleFile);
-            return new Version(new int[] {struct.getFileMajorVersion(), struct.getFileMinorVersion()},
-                               fileTimestampToBuildString(moduleFile));
-            }
-        catch (IOException e)
-            {
-            throw new RuntimeException("Failed to read module file: " + moduleFile);
-            }
         }
 
     /**
