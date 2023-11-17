@@ -52,10 +52,3 @@ The runner tasks depend on their compile tasks and other resource processing.
 
 If you want to run every module in the source set, use the xtcRunAll tasks.
 
-# TODO: Resolving module definition .x files outside the project: 
-
-Right now a source set doesn't resolve files that don't reside in project source set directories, since that 
-is the fix Gene and I came up with to only identify module definitions. Working in making this better, because there is
-really nothing stopping us from debugging any file anywhere on your hard drive, except for this. For now, put the stuff 
-you want to build and play with in src/main/x and it will auto detect and auto build your xtc modules. 
-

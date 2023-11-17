@@ -1,6 +1,8 @@
 module DevExample {
     void run(String[] args = []) {
         @Inject Console console;
+        console.print("Hello, World!");
+    	//assert:debug;
     	Int len = args.size - 1;
     	if (len < 0) {
 	        console.print("There are no arguments: Exiting.");

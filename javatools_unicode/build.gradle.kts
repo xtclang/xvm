@@ -63,18 +63,3 @@ val run by tasks.registering {
         }
     }
 }
-
-/*
-val xtcUnicodeProvider by configurations.registering {
-    isCanBeResolved = false
-    isCanBeConsumed = true
-    outgoing.artifact(run) {
-        type = ArtifactTypeDefinition.DIRECTORY_TYPE
-    }
-    // TODO: Can likely remove these.
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
-    }
-}
-*/
