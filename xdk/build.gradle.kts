@@ -162,13 +162,12 @@ val clean by tasks.existing {
     doLast {
         subprojects.forEach {
             // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
-            logger.lifecycle("$prefix $name Cleaning subproject ${it.name} build directory.")
+            val subProjectBuildDir = it.layout.buildDirectory.get().asFile
             delete(it.layout.buildDirectory)
-            logger.lifecycle("$prefix $name Done.")
+            logger.lifecycle("$prefix $name Cleaned subproject ${it.name} build directory (buildDir: '$subProjectBuildDir')")
         }
-        logger.lifecycle("$prefix $name Cleaning composite build common build directory: ${compositeRootBuildDirectory.get()}")
         delete(compositeRootBuildDirectory)
-        logger.lifecycle("$prefix $name Done.")
+        logger.lifecycle("$prefix $name Cleaned composite build common build directory: ${compositeRootBuildDirectory.get()}")
     }
 }
 
