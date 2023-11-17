@@ -13,7 +13,7 @@ val value: String, val debugString: String = "",
 TODO: Add a configuraton/text file/dsl, anything that can be read from disk that is interpreted as arguments for the launcher. This would be
 useful and could be drawn out directly from xtc kotlin gradle dsls in the plugin with very low complexity. I have at a few occaasins
 wished I had something like that
-
+TODO: xtcRunTestAll should not break if we don't have test source sets, it should warn and exit.
 TODO: Move javatool_unicode generation tables to some other part of the build logic. If we reach lib_ecstasy and we have e.g. build logic cache hits for unicode generation, we should interpret it to mean that we want to overwrite the resources for lib_ecstasy because there are new tables.
 TODO runXtc/All should not fail for e.g. test when there is no test source set.
 TODO: Fix the unicode depenency problems.
@@ -31,7 +31,6 @@ TODO: Get rid of the project delegate stuff, just extend project?
 TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurations. It should work for the former
   already, since it inherits a standard Gradle source task.
 ./lib_ecstasy/build.gradle.kts: * Gradle/Maven build infrastructure.  TODO: make this a build task.
-./plugin/build.gradle.kts:// TODO: Build another plugin artifact with the javatools included?
 ./plugin/build.gradle.kts:    // TODO distribute and package Javadocs in the future, when we have them.
 ./xdk/build.gradle.kts:    // TODO these are added twice to the archive configuration. We probably don't want that.
 ./xdk/build.gradle.kts:        TODO("$prefix distExe needs to be ported to the new build system.")
