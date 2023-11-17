@@ -14,10 +14,13 @@ public class CallAST extends AST {
     AST[] kids = X.kids_bias(1);
     // Move the function to the 0th kid slot.
     kids[0] = ast_term(X);     // Call expression first
-    return new CallAST(kids,retTypes);
+    return new CallAST(kids,retTypes,X._meth);
   }
-  private CallAST( AST[] kids, Const[] retTypes ) {
+  private CallAST( AST[] kids, Const[] retTypes, MethodPart meth ) {
     super(kids);
+    // Check for a call to super: "super.call()" becomes "super.METHOD"
+    if( _kids[0] instanceof RegAST reg && reg._reg== -13 )
+      _kids[0] = new ConAST(null,"super."+meth._name,reg._type);
     _rets = XType.xtypes(retTypes);
   }
   

@@ -40,7 +40,7 @@ public abstract class Const extends XTC
   static void make_compare( ClassPart clz, SB sb ) {
     String clzname = ClzBuilder.java_class_name(clz._name);
     sb.ip("// Default compare").nl();
-    sb.ip("public Ordered compare( XConst o ) {").nl().ii();
+    sb.ip("public Ordered compare( Const o ) {").nl().ii();
     sb.ip("if( this==o ) return Ordered.Equal;").nl();
     sb.ip(clzname).p(" that = (").p(clzname).p(")o;").nl();
     sb.ip("Ordered $x;").nl();
@@ -87,7 +87,7 @@ public abstract class Const extends XTC
   }
 
   private static boolean xeq(PropPart p) {
-    return XType.xtype(p._con,false).primeq();
+    return XType.xtype(p._con,false).is_jdk();
   }
 
   /* Generate:
@@ -102,8 +102,14 @@ public abstract class Const extends XTC
     sb.ip(  "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) )
-        sb.p(prop._name).p(xeq(prop) ? "" : ".hash()").p(" ^ ");
+      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
+        sb.p(prop._name);
+        XType xt = XType.xtype(prop._con,false);
+        if( xt.primeq() ) ; // Numbers as themselves for hash
+        else if( xt.is_jdk() ) sb.p(".hashCode()");
+        else sb.p(".hash()");
+        sb.p(" ^ ");
+      }
     if( any ) sb.unchar(3);
     else sb.p("0xDEADBEEF");
     sb.p(";").nl().di();
@@ -137,4 +143,9 @@ public abstract class Const extends XTC
     sb.ip("return sb.toString();").nl().di();
     sb.ip("}").nl();
   };
+
+  // Default appendTo
+  @Override public Appenderchar appendTo(Appenderchar buf) {
+    return buf.appendTo(toString());
+  }
 }

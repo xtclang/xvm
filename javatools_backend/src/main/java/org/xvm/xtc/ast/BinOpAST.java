@@ -92,8 +92,8 @@ class BinOpAST extends AST {
     return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
   }
 
-  private AST do_range( XType.Base rng ) {
-    ClzBuilder.IMPORTS.add("ecstasy."+rng._jtype);
+  private AST do_range( XType.Clz rng ) {
+    ClzBuilder.IMPORTS.add("ecstasy."+rng._name);
     return new NewAST(_kids,rng,null);
   }
   

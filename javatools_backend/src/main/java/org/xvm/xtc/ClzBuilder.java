@@ -108,7 +108,11 @@ public class ClzBuilder {
     } else {
       _sb.ip("public static class ").p(java_class_name).p(" extends ");
       if( _clz._super != null ) _sb.p(_clz._super._name);
-      else _sb.p(_clz._f==Part.Format.CONST ? "XConst" : "XTC");
+      else if( _clz._f!=Part.Format.CONST ) _sb.p("XTC");
+      else {
+        _sb.p("Const");
+        IMPORTS.add("ecstasy.Const");
+      } 
     }
     _sb.p(" {").nl().ii();
 
@@ -169,8 +173,14 @@ public class ClzBuilder {
         break;
         
       case PropPart pp:
-        // <clinit> for a static global property
-        PropBuilder.make_class(this,pp); 
+        // <clinit> for a static global property, or a normal Java field.        
+        // If the property is in my superclass chain, and is ALSO defined here,
+        // I need to override the super on just the present properties.
+        if( _clz._super!=null && _clz._super.child(pp._name)!=null ) {
+          if( pp._name2kid!=null ) throw XEC.TODO();
+          break;                // Redundantly mentioned here
+        }
+        PropBuilder.make_class(this,pp);
         break;
         
       case ClassPart clz_nest:
@@ -184,10 +194,11 @@ public class ClzBuilder {
       }
     }
 
-    // Const classes get a specific toString, although its not mentioned if its
-    // the default
-    if( _clz._f == Part.Format.CONST && _clz.child("toString")==null )
-      Const.make_meth(_clz,"toString",_sb);
+    // Const classes get a specific {toString, appendTo}, although they are not
+    // mentioned if default
+    if( _clz._f == Part.Format.CONST ) {
+      if( _clz.child("toString")==null ) Const.make_meth(_clz,"toString",_sb);
+    }
     
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.

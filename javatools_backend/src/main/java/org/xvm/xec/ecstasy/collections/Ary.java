@@ -1,6 +1,10 @@
 package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.util.SB;
+import org.xvm.XEC;
+
+import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xec.ecstasy.Appenderchar;
 
 import java.lang.Iterable;
 import java.util.Arrays;
@@ -8,7 +12,7 @@ import java.util.Iterator;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Ary<E> implements Iterable<E> {
+public class Ary<E> implements Iterable<E>, Stringable {
   public E[] _es;
   public int _len;
   public Ary( E... es ) {
@@ -65,5 +69,11 @@ public class Ary<E> implements Iterable<E> {
     for( int i=0; i<_len; i++ )
       sum += _es[i]==null ? 0 : _es[i].hashCode();
     return sum;
+  }
+  
+  // --- text/Stringable
+  @Override public long estimateStringLength() { return _len*10; }
+  @Override public Appenderchar appendTo(Appenderchar buf) {
+    return buf.appendTo(toString());
   }
 }

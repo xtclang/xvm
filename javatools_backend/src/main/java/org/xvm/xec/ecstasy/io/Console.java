@@ -1,7 +1,7 @@
 package org.xvm.xec.ecstasy.io;
 
-/**
-*/
+import org.xvm.xec.ecstasy.Appenderchar;
+
 public interface Console {
 
   default public void print( String s, boolean no_newline ) {
@@ -21,4 +21,5 @@ public interface Console {
     if( !no_newline )
       System.out.println();
   }
+
 }

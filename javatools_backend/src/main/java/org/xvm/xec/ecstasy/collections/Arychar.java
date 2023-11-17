@@ -4,21 +4,24 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xec.ecstasy.Appenderchar;
 import java.util.Arrays;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Arychar extends XTC implements Stringable {
+public class Arychar<A extends Arychar> extends XTC
+  implements Stringable
+{
   public char[] _cs;
   public int _len;
   public Arychar() { _cs = new char[1]; }
   public Arychar(String s) { _cs = s.toCharArray(); _len = _cs.length; }  
 
   // Add an element, doubling base array as needed
-  public Arychar add( char c ) {
+  public A add( char c ) {
     if( _len >= _cs.length ) _cs = Arrays.copyOf(_cs,Math.max(1,_cs.length<<1));
     _cs[_len++] = c;
-    return this;
+    return (A)this;
   }
 
   // Fetch element
@@ -58,14 +61,11 @@ public class Arychar extends XTC implements Stringable {
     return (int)sum;
   }
 
-  public Arychar appendTo(String str) {
-    throw XEC.TODO();
-  }
+  Arychar clear() { _len=0; return this; }
 
-  
-  // --- XStringable
-  @Override public int estimateStringLength() { return _len; }
-  @Override public Arychar appendTo(Arychar ary) {
+  // --- text/Stringable
+  @Override public long estimateStringLength() { return _len; }
+  @Override public Appenderchar appendTo(Appenderchar ary) {
     throw XEC.TODO();
   }
 }
