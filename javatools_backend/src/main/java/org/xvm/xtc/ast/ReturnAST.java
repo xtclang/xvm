@@ -6,7 +6,7 @@ import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.XType;
 
 public class ReturnAST extends AST {
-  private final String _ztype;
+  private final String _ztype;  // Set if this is a conditional return
   static ReturnAST make( ClzBuilder X, int n ) {
 
     String ztype=null;

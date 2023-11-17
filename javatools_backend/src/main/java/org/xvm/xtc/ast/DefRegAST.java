@@ -8,7 +8,8 @@ import org.xvm.xtc.XValue;
 import org.xvm.util.SB;
 
 class DefRegAST extends AST {
-  final String _name, _init;
+  final String _name;
+  String _init;
 
   static DefRegAST make( ClzBuilder X, boolean named, boolean initd ) {
     Const init = initd ? X.con() : null;

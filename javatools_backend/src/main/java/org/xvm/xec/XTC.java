@@ -1,6 +1,7 @@
 package org.xvm.xec;
 
 import org.xvm.xrun.*;
+import org.xvm.XEC;
 
 import java.io.IOException;
 
@@ -24,12 +25,36 @@ public abstract class XTC {
   // --------------------------------------------------------------------------
   // A bunch of classes and functions that are always available (e.g. TRACE
   // from asserts), or defined in ecstasy.x, or needed for the Java port.
-  
+
+  // Ecstasy's normal "equals" call calls the "equals" from "clz" and not a
+  // subclass implementation.  This requires a runtime lookup of equals, if
+  // there are several.
+
+
+  // Theory on a "free" fast version.
+  // Classes always define a "equals$CLZ" along with a custom "equals" (note: Const defines a custom equals)
+  //     class Base extends XTC {
+  //       boolean x0.equals$Base(Base x1);
+  //     }
+  // If the calling type is a constant, use it directly:
+  //     x0.equals$CONSTANT_CLZ(x1);
+  public static boolean equals( Class clz, XTC x0, XTC x1 ) {
+    throw XEC.TODO();
+  }
+
+  // Ecstasy's normal "compare" call calls the "compare" from "clz" and not a
+  // subclass implementation.  This requires a runtime lookup of compare, if
+  // there are several.
+  public static Ordered compare( Class clz, XTC x0, XTC x1 ) {
+    throw XEC.TODO();
+  }
+
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
 
   // Trace
-  public static <X extends XTC> X TRACE( X x) { return x; }
+  public static <X extends XTC> X TRACE( X x ) { return x; }
+  public static Ordered TRACE( Ordered x ) { return x; }
   public static String TRACE(String x) { return x; }
   public static long TRACE(long x) { return x; }
   public static int  TRACE(int  x) { return x; }
@@ -58,6 +83,18 @@ public abstract class XTC {
     if( x < y ) return Ordered.Lesser;
     if( x== y ) return Ordered.Equal;
     return Ordered.Greater;
+  }
+
+  public static Ordered spaceship(String x, String y) {
+    int o = x.compareTo(y);
+    return o < 0 ? Ordered.Lesser
+      : o > 0 ? Ordered.Greater
+      : Ordered.Equal;
+  }
+  
+  public static Ordered spaceship(XTC x, XTC y) {
+    // Needs an XTC class to call compare()
+    throw XEC.TODO();
   }
 
   /** --------------------------------------------------------------------------
