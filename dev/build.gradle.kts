@@ -1,3 +1,5 @@
+import org.xvm.plugin.tasks.XtcRunTask
+
 /*
  * This is a subproject templated to compile, run, and debug the XTC compiler and runtimes.
  * By default, the source set of this project contains a simple HelloWorld-ish program. Do
@@ -93,6 +95,26 @@ xtcCompile {
     forceRebuild = true
 }
 
+tasks.withType<XtcRunTask>().configureEach {
+    println("** I am the withType $name")
+    //alwaysRerunTask()
+    //outputs.cacheIf { alse }
+    //outputs.upToDateWhen { false }
+    //doLast {
+    //    println("I am the doLast $name")
+    //}
+}
+
+tasks.named("runXtc") {
+    outputs.upToDateWhen { false }
+    doFirst {
+        printTaskInputs()
+        printTaskOutputs()
+    }
+}
+
+
+
 /**
  * XTC Runtime DSL. See @XtcRuntimeExtension class for what's in it.
  * If externalFile is null, the spec will be treated as having no modules declared.
@@ -107,7 +129,7 @@ xtcCompile {
  * implementation code (currently mostly in "javatools") as well.
  */
 xtcRun {
-    fork = false
+    //fork = false
     if (externalSrc.enabled) {
         moduleName(externalSrc.moduleName)
     }
