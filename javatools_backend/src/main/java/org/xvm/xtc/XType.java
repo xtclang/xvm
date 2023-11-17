@@ -50,7 +50,7 @@ public abstract class XType {
       FREE=null;
       return jt;
     }
-    @Override public boolean is_prim_base() { return XBOX.containsKey(this); }
+    @Override public boolean is_prim_base() { return primeq(); }
     @Override public SB str( SB sb ) { return sb.p(_jtype); }
     @Override public SB clz( SB sb ) { return sb.p(_jtype); }
     @Override boolean eq(XType xt) { return _jtype.equals(((Base)xt)._jtype);  }
@@ -93,8 +93,9 @@ public abstract class XType {
   // Basically a Java class as a 
   public static class Clz extends XType {
     private static final HashMap<ClassPart,Clz> ZINTERN = new HashMap<>();
-    public final ClassPart _mod;      // Compilation unit class
-    public final ClassPart _clz;      // Self class, can be compilation unit
+    public final String _name;
+    public       ClassPart _mod;      // Compilation unit class
+    public       ClassPart _clz;      // Self class, can be compilation unit
     public final Clz _super;          // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
@@ -103,6 +104,7 @@ public abstract class XType {
       _super = clz._super==null ? null : make(clz._super);
       _mod = ClzBuilder.CCLZ;  // Compile unit class
       _clz = clz;
+      _name = _mod==clz ? clz._name : _mod._name+"."+clz._name;
       int len=0;
       for( Part part : clz._name2kid.values() )
         if( part instanceof PropPart prop && find(_super,prop._name)==null )
@@ -116,14 +118,28 @@ public abstract class XType {
           _xts [len++] = xtype(prop._con,false);
         }
     }
+    // Made from XTC class
     public static Clz make( ClassPart clz ) {
       // Check for a pre-cooked class
-      String xjkey = xjkey(clz);
-      Base val = BASE_XJMAP.get(xjkey);
-      if( val != null ) throw XEC.TODO();
+      assert !BASE_XJMAP.containsKey(xjkey(clz));
       return ZINTERN.computeIfAbsent(clz, k->new Clz(clz));
     }
-    String name() { return _mod==_clz || _mod== ClzBuilder.CCLZ ? _clz._name : _mod._name+"."+_clz._name; }
+    // Made from a Java class directly; the XTC class shows up later.  No
+    // fields are mentioned, and are not needed since the class is pre
+    // hand-built.
+    Clz( String name ) {
+      _name = name;
+      // clz,mod set later
+      _super=null;              // No super in the XTC sense
+      _flds=null;
+      _xts=null;
+    }
+    void set(ClassPart clz) {
+      if( _clz==clz ) return;
+      assert _clz==null;
+      // TODO: Set MOD to ECSTASY
+      _clz=clz;
+    }
     @Override public boolean is_prim_base() { return false; }
     static XType find(Clz clz, String fld) {
       for( ; clz!=null; clz = clz._super ) {
@@ -135,14 +151,15 @@ public abstract class XType {
     }
 
     @Override public SB str( SB sb ) {
-      sb.p("class ").p(name());
-      if( _super!=null ) sb.p(":").p(_super.name());
+      sb.p("class ").p(_name);
+      if( _super!=null ) sb.p(":").p(_super._name);
       sb.p(" {").nl();
-      for( int i=0; i<_flds.length; i++ )
-        _xts[i].str(sb.p("  ").p(_flds[i]).p(":")).p(";").nl();
+      if( _flds != null ) 
+        for( int i=0; i<_flds.length; i++ )
+          _xts[i].str(sb.p("  ").p(_flds[i]).p(":")).p(";").nl();
       return sb.p("}").nl();
     }
-    @Override public SB clz( SB sb ) { return sb.p(name()); }
+    @Override public SB clz( SB sb ) { return sb.p(_name); }
     // Using shallow equals,hashCode, not deep, because the parts are already interned
     @Override boolean eq(XType xt) {
       return Arrays.equals(_flds,((Clz)xt)._flds) && Arrays.equals(_xts,((Clz)xt)._xts);
@@ -250,11 +267,7 @@ public abstract class XType {
   }
 
   // Java non-primitive classes
-  public static Base CONSOLE= Base.make("Console");
   public static Base EXCEPTION = Base.make("Exception");
-  public static Base ILLARGX= Base.make("IllegalArgumentException");
-  public static Base ILLSTATEX = Base.make("IllegalStateX");
-  public static Base ITER64 = Base.make("Iterablelong");
   public static Base JBOOL  = Base.make("Boolean");
   public static Base JCHAR  = Base.make("Character");
   public static Base JINT   = Base.make("Integer");
@@ -262,12 +275,7 @@ public abstract class XType {
   public static Base JNULL  = Base.make("Nullable");
   public static Base JUBYTE = Base.make("XUByte");
   public static Base OBJECT = Base.make("Object");
-  public static Base ORDERED= Base.make("Ordered");
-  public static Base RANGE  = Base.make("Range");
-  public static Base RANGEIE= Base.make("RangeIE");
-  public static Base RANGEII= Base.make("RangeII");
   public static Base STRING = Base.make("String");
-  public static Base STRINGBUFFER = Base.make("StringBuffer");
 
   // Java primitives or primitive classes
   public static Base BOOL = Base.make("boolean");
@@ -292,20 +300,33 @@ public abstract class XType {
       put("Boolean+ecstasy/Boolean.x",BOOL);
       put("Char+ecstasy/text/Char.x",CHAR);
       put("Exception+ecstasy/Exception.x",EXCEPTION);
-      put("IllegalArgument+ecstasy.x",ILLARGX);
-      put("IllegalState+ecstasy.x",ILLSTATEX);
       put("Int64+ecstasy/numbers/Int64.x",LONG);
       put("UInt8+ecstasy/numbers/UInt8.x",JUBYTE);
       put("IntLiteral+ecstasy/numbers/IntLiteral.x",LONG);
-      put("Ordered+ecstasy.x",ORDERED);
       put("Object+ecstasy/Object.x",OBJECT);
       put("String+ecstasy/text/String.x",STRING);
-      put("StringBuffer+ecstasy/text/StringBuffer.x",STRINGBUFFER);
     }};
+  
   // A set of common XTC classes, and their Java replacements...
   // AND these take the default import.
-  static final HashMap<String, Base> IMPORT_XJMAP = new HashMap<>() {{
+  public static Clz APPENDERCHAR= new Clz("Appenderchar");
+  public static Clz CONSOLE     = new Clz("Console");
+  public static Clz ILLARGX     = new Clz("IllegalArgumentException");
+  public static Clz ILLSTATEX   = new Clz("IllegalStateX");
+  public static Clz ITER64      = new Clz("Iterablelong");
+  public static Clz ORDERED     = new Clz("Ordered");
+  public static Clz RANGE       = new Clz("Range");
+  public static Clz RANGEIE     = new Clz("RangeIE");
+  public static Clz RANGEII     = new Clz("RangeII");
+  public static Clz STRINGBUFFER= new Clz("StringBuffer");
+  static final HashMap<String, Clz> IMPORT_XJMAP = new HashMap<>() {{
       put("Console+ecstasy/io/Console.x",CONSOLE);
+      put("IllegalArgument+ecstasy.x",ILLARGX);
+      put("IllegalState+ecstasy.x",ILLSTATEX);
+      put("Iterable+ecstasy/Iterable.x",ITER64);
+      put("Ordered+ecstasy.x",ORDERED);
+      put("Range+ecstasy/Range.x",RANGE);
+      put("StringBuffer+ecstasy/text/StringBuffer.x",STRINGBUFFER);
     }};
   private static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
 
@@ -315,6 +336,7 @@ public abstract class XType {
       put(CHAR,JCHAR);
       put(INT ,JINT);
       put(LONG,JLONG);
+      put(NULL,JNULL);
     }};
   public XType box() {
     Base jt = XBOX.get(this);
@@ -334,6 +356,7 @@ public abstract class XType {
   } 
   public boolean primeq() { return XBOX.containsKey(this); }
   public String ztype() { return primeq() ? "0" : "null"; }
+  public boolean is_jdk() { return primeq() || this==STRING; }
   
   // Either "==name" or ".equals(name)"
   public SB do_eq(SB sb, String name) {
@@ -365,9 +388,9 @@ public abstract class XType {
     case TermTCon ttc -> {
       ClassPart clz = (ClassPart)ttc.part();
       if( clz._path==null ) {
-        if( clz._name.equals("Null" ) ) yield Base.NULL;
-        if( clz._name.equals("True" ) ) yield Base.TRUE;
-        if( clz._name.equals("False") ) yield Base.FALSE;
+        if( clz._name.equals("Null" ) ) yield NULL;
+        if( clz._name.equals("True" ) ) yield TRUE;
+        if( clz._name.equals("False") ) yield FALSE;
         throw XEC.TODO();
       }
       // Check the common base classes
@@ -375,13 +398,16 @@ public abstract class XType {
       Base val = BASE_XJMAP.get(xjkey);
       if( val!=null ) yield boxed ? val.box() : val;
       // Again, common classes with imports
-      val = IMPORT_XJMAP.get(xjkey);
-      if( val!=null ) {
+      Clz xclz = IMPORT_XJMAP.get(xjkey);
+      if( xclz!=null ) {
+        xclz.set(clz);
         String imp = clz._path._str;
-        // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
-        String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
-        ClzBuilder.IMPORTS.add(imp2);
-        yield val;
+        if( !imp.equals("ecstasy.x") ) {
+          // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
+          String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
+          ClzBuilder.IMPORTS.add(imp2);
+        }
+        yield xclz;
       }
       // Make one
       yield Clz.make(clz);
@@ -394,8 +420,8 @@ public abstract class XType {
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") ) {
         XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],false);
         String imp="Ary"; XType xt=null;
-        if( telem == Base.LONG ) { imp="Arylong"; xt = ARYLONG; } // Java ArrayList specialized to int64
-        if( telem == Base.CHAR ) { imp="Arychar"; xt = ARYCHAR; } // Java ArrayList specialized to char
+        if( telem == LONG ) { imp="Arylong"; xt = ARYLONG; } // Java ArrayList specialized to int64
+        if( telem == CHAR ) { imp="Arychar"; xt = ARYCHAR; } // Java ArrayList specialized to char
         if( xt==null ) xt = Ary.make(telem);
         ClzBuilder.IMPORTS.add("ecstasy.collections."+imp);
         yield xt;
@@ -413,14 +439,14 @@ public abstract class XType {
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
         ClzBuilder.IMPORTS.add("ecstasy.Range");        
-        if( telem== Base.LONG || telem== Base.JLONG ) yield Base.RANGE; // Shortcut class
+        if( telem== LONG || telem== JLONG ) yield RANGE; // Shortcut class
         else throw XEC.TODO();
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
-        if( telem== Base.LONG || telem== Base.JLONG ) {
+        if( telem== LONG || telem== JLONG ) {
           ClzBuilder.IMPORTS.add("ecstasy.Iterablelong");
-          yield Base.ITER64; // Shortcut class
+          yield ITER64; // Shortcut class
         } else throw XEC.TODO();
       }
 
@@ -438,8 +464,13 @@ public abstract class XType {
     //  if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
     //    yield telem + ".class";
 
-      if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") )
+      if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
+        if( telem == CHAR || telem== JCHAR ) {
+          ClzBuilder.IMPORTS.add("ecstasy.Appenderchar");
+          yield APPENDERCHAR; // Shortcut class
+        }
         throw XEC.TODO();
+      }
 
       yield telem;
     }
@@ -457,19 +488,23 @@ public abstract class XType {
 
     case IntCon itc -> {
       if( itc._f == Const.Format.Int64 )
-        yield boxed ? Base.JLONG : Base.LONG;
+        yield boxed ? JLONG : LONG;
       throw XEC.TODO();
     }
 
+    case CharCon cc -> {
+      yield boxed ? JCHAR : CHAR;
+    }
+    
     case StringCon sc ->
-      Base.STRING;
+      STRING;
 
     case EnumCon econ ->
       Base.make(((ClassPart)econ.part())._super._name).unbox();
 
     case LitCon lit -> {
       if( lit._f==Const.Format.IntLiteral )
-        yield boxed ? Base.JLONG : Base.LONG;
+        yield boxed ? JLONG : LONG;
       throw XEC.TODO();
     }
 

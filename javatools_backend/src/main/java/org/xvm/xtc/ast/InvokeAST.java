@@ -67,6 +67,11 @@ class InvokeAST extends AST {
         return new InvokeAST(_meth,XType.STRING,new ConAST("Long"),_kids[0]).do_type();
       if( _meth.equals("toInt64") ) // Cast long to a Long
         return _kids[0];            // Autoboxing in Java
+      // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
+      if( _meth.equals("appendTo") ) {
+        AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
+        return this;
+      }
       // Actually needs a cast
       throw XEC.TODO();
     }
@@ -92,6 +97,11 @@ class InvokeAST extends AST {
         return new NewAST(_kids,XType.ARYCHAR,null);
       if( _meth.equals("equals") )
         return this;
+      // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
+      if( _meth.equals("appendTo") ) {
+        AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
+        return this;
+      }
       throw XEC.TODO();
 
     default:

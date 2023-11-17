@@ -24,12 +24,14 @@ class RegAST extends AST {
     case -4 ->  "default";  // A_DEFAULT
     case -5 ->  "this";     // A_THIS
     case -10 -> "this";     // A_STRUCT: this as a struct
+    case -13 -> "super";    // A_SUPER
     default -> X._locals.at(reg);
     };
     _type = switch( reg ) {
     case -4 ->  XType.VOID;  // A_DEFAULT
     case -5 ->  X._tclz;     // A_THIS
-    case -10 -> XType.Clz.make((ClassPart)X._meth._par._par); // A_STRUCT
+    case -10 -> X._tclz;     // A_STRUCT: this as a struct
+    case -13 -> XType.xtype(X._meth._rets[0]._con,false);
     default -> X._ltypes.at(reg);
     };    
     assert _type!=null;

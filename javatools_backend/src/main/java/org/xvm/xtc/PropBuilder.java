@@ -35,7 +35,7 @@ public abstract class PropBuilder {
     
     // Definition and init
     SB sb = X._sb;
-    sb.ip("private ");
+    sb.i();                     // Not private, so child can reference
     if( stat ) sb.p("static ");
     xtype.clz(sb).p(" ").p(pname);
     // Special init for InjectedRef.  Other props get no init()?
