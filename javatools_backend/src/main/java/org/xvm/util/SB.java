@@ -82,5 +82,17 @@ public final class SB {
     }
     return this;
   }
+
+  // Replace all %0 with a
+  public SB fmt( String fmt, String a ) {
+    assert fmt.indexOf("%0")>=0: "Looks like the extra string is never used in the format";
+    return p(fmt.replace("%0",a));
+  }
+  public SB ifmt( String fmt, String a ) { return i().fmt(fmt,a); }
+  public SB ifmt( String fmt, long l   ) { return i().fmt(fmt,l); }
+  public SB  fmt( String fmt, long l   ) { return     fmt(fmt,Long.toString(l)); }
+  public SB  fmt( String fmt, String a, String b ) { return p(fmt.replace("%0",a).replace("%1",b)); }
+  public SB  fmt( String fmt, String a, long l ) { return     fmt(fmt,a,Long.toString(l)); }
+  public SB ifmt( String fmt, String a, long l ) { return i().fmt(fmt,a,Long.toString(l)); }
   
 }
