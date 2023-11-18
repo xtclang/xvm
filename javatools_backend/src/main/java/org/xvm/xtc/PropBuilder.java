@@ -40,7 +40,7 @@ public abstract class PropBuilder {
     xtype.clz(sb).p(" ").p(pname);
     // Special init for InjectedRef.  Other props get no init()?
     if( "InjectedRef".equals(ano) )
-      sb.p(" = _container.").p(pname).p("()");
+      sb.fmt(" = _container.%0()",pname);
 
     // Explicit init
     Part init;
@@ -53,28 +53,28 @@ public abstract class PropBuilder {
       // Inline instead.
       X2.jmethod_body_inline(meth );
     }
-    sb.p(";").nl();
+    sb.p(";\n");
     
     // private boolean prop$init;
     if( lazy )
-      sb.ip("private boolean ").p(pname).p("$init;").nl();
+      sb.ip("private boolean ").p(pname).p("$init;\n");
     
     // Type prop$get() { return prop; }  OR
     // Type prop$get() { if( !prop$init ) { init=true; prop=prop$calc(); } return prop; }
     sb.i();
     if( stat ) sb.p("static ");
-    xtype.clz(sb).p(" ").p(pname).p("$get() { ");
+    xtype.clz(sb).fmt(" %0$get() { ",pname);
     if( lazy )
-      sb.p("if( !").p(pname).p("$init").p(") { ").p(pname).p("$init").p("=true; ").p(pname).p(" = ").p(pname).p("$calc(); } ");
-    sb.p("return ").p(pname).p("; }").nl();
+      sb.fmt("if( !%0$init ) { %0$init=true; %0 = %0$calc(); } ",pname);
+    sb.fmt("return %0; }",pname).nl();
 
     // void prop$set(Type p) { prop=p; }
     sb.i();
     if( stat ) sb.p("static ");
-    sb.p("void ").p(pname).p("$set( ");
+    sb.fmt("void %0$set( ",pname);
     xtype.clz(sb).p(" p ) { ");
     boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
-    sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }").nl();
+    sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }\n");
 
     // Lazy calc
     if( lazy ) {

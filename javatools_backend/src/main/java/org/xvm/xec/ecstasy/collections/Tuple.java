@@ -132,27 +132,27 @@ public abstract class Tuple extends XTC implements Cloneable {
     */
     // Tuple N class
     SB sb = new SB();
-    sb.p("class ").p(tclz).p(" extends Tuple"+N+" {").nl().ii();
+    sb.fmt("class %0 extends Tuple%1 {\n",tclz,N).ii();
     // N field declares
     for( int i=0; i<N; i++ )
-      sb.ip("public ").p(xts[i].toString()).p(" _f").p(i).p(";").nl();
+      sb.ifmt("public %0 _f%1;\n",xts[i].toString(),i);
     // Constructor, taking N arguments
     sb.ip(tclz).p("( ");
     for( int i=0; i<N; i++ )
-      sb.p(xts[i].toString()).p(" f").p(i).p(", ");
-    sb.unchar(2).p(") {").nl().ii().i();
+      sb.fmt("%0 f%1, ",xts[i].toString(),i);
+    sb.unchar(2).p(") {\n").ii().i();
     // N arg to  field assigns
     for( int i=0; i<N; i++ )
-      sb.p("_f").p(i).p("=").p("f").p(i).p("; ");
-    sb.nl().di().ip("}").nl();
+      sb.fmt("_f%0=f%0; ",i);
+    sb.nl().di().ip("}\n");
     // Abstract accessors
     for( int i=0; i<N; i++ )
-      sb.ip("public Object f").p(i).p("() { return _f").p(i).p("; }").nl();
+      sb.ifmt("public Object f%0() { return _f%0; }\n",i);
     // Abstract setters
     for( int i=0; i<N; i++ )
-      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xts[i].box().toString()).p(")e; }").nl();
+      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xts[i].box().toString()).p(")e; }\n");
     // Class end
-    sb.di().ip("}").nl();
+    sb.di().ip("}\n");
     cache.put(tclz,sb.toString());
 
     return xtt;
