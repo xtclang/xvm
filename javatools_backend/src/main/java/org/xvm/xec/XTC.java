@@ -92,11 +92,15 @@ public abstract class XTC {
       : Ordered.Equal;
   }
   
-  public static Ordered spaceship(XTC x, XTC y) {
-    // Needs an XTC class to call compare()
-    throw XEC.TODO();
+  public static Ordered spaceship( XTC x, XTC y ) {
+    return x.getClass().isInstance(y) ? x.compare(y) : y.compare(x);
   }
 
+  public Ordered compare(XTC that) {
+    if( this==that ) return Ordered.Equal;
+    throw new IllegalArgumentException("comparing non-orderables");
+  }
+    
   /** --------------------------------------------------------------------------
       <ul>
       <li>XTC {@code IllegalStateException} is thrown by {@code assert} and by {@code close}.</li>

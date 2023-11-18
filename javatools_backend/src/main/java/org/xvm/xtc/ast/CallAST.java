@@ -29,6 +29,21 @@ public class CallAST extends AST {
     if( _rets.length == 1 ) return _rets[0];
     throw XEC.TODO();
   }
+
+  private static final String[] CMPS = new String[]{"equals","compare"};
+  @Override AST rewrite( ) {
+    // Try to rewrite constant calls to the XTC special equals.
+    if( _kids[0] instanceof ConAST con ) {
+      for( String s : CMPS ) {
+        if( con._con.endsWith("."+s) ) {
+          AST eq = new InvokeAST(s+"$"+con._con.substring(0,con._con.length()-s.length()-1), XType.BOOL,_kids[2],_kids[3]);
+          eq._type = XType.BOOL;
+          return eq;
+        }
+      }
+    }
+    return this;
+  }
   
   @Override void jmid ( SB sb, int i ) {
     sb.p( i==0 ? (_kids[0] instanceof RegAST ? ".call(": "(") : ", " );
