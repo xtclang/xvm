@@ -85,7 +85,17 @@ public class Runner
             return;
             }
 
-        ModuleInfo      info      = new ModuleInfo(fileSpec);
+        ModuleInfo info = null;
+        try
+            {
+            info = new ModuleInfo(fileSpec);
+            }
+        catch (RuntimeException e)
+            {
+            log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
+            }
+        checkErrors();;
+
         File            fileBin   = info.getBinaryFile();
         boolean         binExists = fileBin != null && fileBin.exists();
         ModuleStructure module    = null;
@@ -125,11 +135,11 @@ public class Runner
                         }
                     if (possibles == null)
                         {
-                        log(Severity.ERROR, "Unable to find module: " + fileSpec);
+                        log(Severity.ERROR, "Failed to locate the module for: " + fileSpec);
                         }
                     else if (possibles.size() == 1)
                         {
-                        log(Severity.ERROR, "Unable to find module for " + fileSpec
+                        log(Severity.ERROR, "Unable to locate the module for " + fileSpec
                                 + "; did you mean " + quotedString(possibles.iterator().next()) + '?');
                         }
                     else
@@ -140,7 +150,7 @@ public class Runner
                             buf.append(", ")
                                .append(quotedString(name));
                             }
-                        log(Severity.ERROR, "Unable to find module for " + fileSpec
+                        log(Severity.ERROR, "Unable to locate the module for " + fileSpec
                                 + "; did you mean one of: " + buf.substring(2) + '?');
                         }
                     }

@@ -1398,22 +1398,27 @@ public abstract class Launcher
         // this is expected to be the name of a file to compile
         if (!file.exists() || file.isDirectory())
             {
-            ModuleInfo info = ensureModuleInfo(file, null, null);
-            File srcFile = info == null ? null : info.getSourceFile();
-            if (srcFile != null)
+            try
                 {
-                return srcFile;
+                ModuleInfo info = ensureModuleInfo(file, null, null);
+                File srcFile = info == null ? null : info.getSourceFile();
+                if (srcFile == null || !srcFile.exists())
+                    {
+                    log(Severity.ERROR, "Failed to locate the module source code for: " + file);
+                    }
                 }
-            log(Severity.ERROR, "No such source file: \"" + file + "\"");
+            catch (RuntimeException e)
+                {
+                log(Severity.ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
+                }
             }
         else if (!file.canRead())
             {
-            log(Severity.ERROR, (file.isDirectory() ? "Directory" : "File")
-                    + " not readable: \"" + file + "\"");
+            log(Severity.ERROR, "File not readable: " + file);
             }
-        else if (file.isFile() && !file.getName().endsWith(".x"))
+        else if (!file.getName().endsWith(".x"))
             {
-            log(Severity.WARNING, "Source file does not use \".x\" extension: \"" + file + "\"");
+            log(Severity.WARNING, "Source file does not have a \".x\" extension: " + file);
             }
         return file;
         }
@@ -1704,6 +1709,11 @@ public abstract class Launcher
         public String desc()
             {
             return m_sDesc;
+            }
+
+        @Override public String toString()
+            {
+            return m_sName + ":" + m_form + (m_fMulti ? "*" : "");
             }
 
         private final String  m_sName;

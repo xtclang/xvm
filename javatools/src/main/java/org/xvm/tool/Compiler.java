@@ -177,6 +177,11 @@ public class Compiler
                         + " specify a target directory instead");
                 }
 
+            if (srcFile == null || !srcFile.exists())
+                {
+                log(Severity.ERROR, "Could not locate the source for the module " + info.getFileSpec());
+                }
+
             if (sModule == null)
                 {
                 log(Severity.ERROR, "Could not determine the module name for " + info.getFileSpec());
