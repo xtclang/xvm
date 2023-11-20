@@ -48,9 +48,8 @@ import static org.xvm.util.Handy.toPathString;
 /**
  * The "launcher" commands:
  *
- * <ul><li> <code>xtc</code> <i>("ecstasy")</i> routes to {@link Compiler}
+ * <ul><li> <code>xcc</code> <i>("ecstasy")</i> routes to {@link Compiler}
  * </li><li> <code>xec</code> <i>("exec")</i> routes to {@link Runner}
- * </li><li> <code>xam</code> <i>("exam")</i> routes to {@link Disassembler}
  * </li></ul>
  */
 public abstract class Launcher
@@ -1727,7 +1726,7 @@ public abstract class Launcher
     /**
      * This is the name used for an option that does not have a name. It is called "trailing"
      * because it comes at the end of a sequence of options, such as the sequence of file names
-     * at the end of the command: "{@code xtc -o ../build -verbose MyApp.x MyTest.x}".
+     * at the end of the command: "{@code xcc -o ../build -verbose MyApp.x MyTest.x}".
      * <p/>
      * If a Launcher supports trailing files, for example, then the {@link Options#options()} method
      * should return a map containing an entry whose key is {@code Trailing} and whose value is

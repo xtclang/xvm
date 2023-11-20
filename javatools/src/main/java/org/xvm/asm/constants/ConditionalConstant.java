@@ -21,9 +21,9 @@ import org.xvm.util.LongList;
  * encode boolean expressions into VM structures themselves, allowing structures and portions of
  * structures to be conditionally present at runtime. This has the net effect of supporting the same
  * "conditional compilation" as a pre-processor would provide for a language such as C/C++, but
- * instead of compiling only one "path" through the specified conditionals, XTC compiles all of the
+ * instead of compiling only one "path" through the specified conditionals, Ecstasy compiles all of the
  * paths, verifying that every single path meets the requirements of the language and the
- * dependencies implied by (and deferred to) link-time. Among other purposes, this allows XTC code
+ * dependencies implied by (and deferred to) link-time. Among other purposes, this allows Ecstasy code
  * to be tailored to the presence (or absence) of a specific library, such as only implementing a
  * library-specific interface and only consuming library functionality if that particular library is
  * present. Additionally, multiple versions of VM structures can be combined into a single VM
@@ -33,7 +33,7 @@ import org.xvm.util.LongList;
  * Structural inclusion/exclusion occurs when a conditional constant is referenced by another VM
  * structure, indicating that the presence at runtime of the VM structure depends on the result of
  * the evaluation of the conditional constant. Similarly, logical inclusion/exclusion occurs when a
- * conditional constant is referenced by an XTC op-code, indicating that the presence at runtime of
+ * conditional constant is referenced by an Ecstasy op-code, indicating that the presence at runtime of
  * that particular block of code depends on the result of the evaluation of the conditional
  * constant.
  * <p/>

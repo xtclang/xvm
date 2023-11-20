@@ -29,7 +29,7 @@ import static org.xvm.util.Handy.quotedChar;
 
 
 /**
- * An XTC source code parser supporting both demand-based and stream-based
+ * An Ecstasy source code parser supporting both demand-based and stream-based
  * parsing.
  */
 public class Lexer
@@ -38,7 +38,7 @@ public class Lexer
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an XTC lexical analyzer.
+     * Construct an Ecstasy lexical analyzer.
      *
      * @param source  the source to parse
      */
@@ -2932,7 +2932,7 @@ public class Lexer
      *
      * @param ch  the character to evaluate
      *
-     * @return true iff the character is defined as an XTC <i>SpacingElement</i>
+     * @return true iff the character is defined as an Ecstasy <i>SpacingElement</i>
      */
     public static boolean isWhitespace(char ch)
         {
@@ -3007,7 +3007,7 @@ public class Lexer
      *
      * @param ch  the character to evaluate
      *
-     * @return true iff the character is defined as an XTC <i>LineTerminator</i>
+     * @return true iff the character is defined as an Ecstasy <i>LineTerminator</i>
      */
     public static boolean isLineTerminator(char ch)
         {

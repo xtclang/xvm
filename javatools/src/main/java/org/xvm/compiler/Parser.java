@@ -39,7 +39,7 @@ public class Parser
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an XTC lexical analyzer.
+     * Construct an Ecstasy lexical analyzer.
      *
      * @param source   the source to parse
      * @param listener the error listener

@@ -5,7 +5,7 @@
  * To compile this example, execute the following command line from within the directory containing
  * this file:
  *
- *     xtc HelloWorld
+ *     xcc HelloWorld
  *
  * Then, to run this example:
  *

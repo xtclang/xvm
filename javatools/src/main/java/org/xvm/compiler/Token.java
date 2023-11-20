@@ -21,7 +21,7 @@ public class Token
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an XTC token.
+     * Construct an Ecstasy token.
      *
      * @param lStartPos  starting position in the Source (inclusive)
      * @param lEndPos    ending position in the Source (exclusive)
@@ -33,7 +33,7 @@ public class Token
         }
 
     /**
-     * Construct an XTC token.
+     * Construct an Ecstasy token.
      *
      * @param lStartPos  starting position in the Source (inclusive)
      * @param lEndPos    ending position in the Source (exclusive)

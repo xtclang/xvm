@@ -35,25 +35,25 @@ the `xdk/bin` directory to your operating system's permanent path.
 
 ## Compiling
 
-The `xtc` command (pronounced "ecstasy") is used to compile `.x` source
+The `xcc` command (pronounced "ecstasy") is used to compile `.x` source
 code files (for an entire module, or even multiple modules) into an
 `.xtc` file.
 
 After configuring, change the directory to `xdk/examples` and compile the
-"Hello World!" example:
+"Hello World!" example, located in the HelloWorld.x source file:
 
     cd ~/xdk/examples
-    xtc HelloWorld.x
+    xcc HelloWorld
 
 Or on Windows:
 
     c:
     cd "\program files\xdk\examples"
-    xtc HelloWorld.x
+    xcc HelloWorld
 
-Successful compilation will produce a corresponding `.xtc` file.
+Successful compilation will produce a corresponding `.xtc` binary file.
 
-For more information, run: `xtc -help`
+For more information, run: `xcc -help`
 
 ## Executing
 
@@ -62,22 +62,9 @@ The `xec` command (pronounced "exec") is used to execute a compiled
 
 After compiling, execute the "Hello World!" example:
 
-    xec HelloWorld.xtc
+    xec HelloWorld
 
 For more information, run: `xec -help`
-
-## Disassembling
-
-The `xam` command (pronounced "exam") is used to peek at the compiled
-information in an `.xtc` file.
-
-To examine an `.xtc` module file:
-
-    xam HelloWorld.xtc
-
-The disassembly information is printed to the screen.
-
-For more information, run: `xam -help`
 
 ## Miscellaneous command line information
 

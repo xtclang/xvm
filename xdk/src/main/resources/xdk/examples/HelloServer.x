@@ -4,7 +4,7 @@
  * To compile this example, execute the following command line from within the directory containing
  * this file:
  *
- *     xtc HelloServer
+ *     xcc HelloServer
  *
  * Then, to run this example:
  *

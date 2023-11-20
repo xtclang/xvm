@@ -8,7 +8,7 @@ import reflect.ModuleTemplate;
 const InstantRepository
         implements ModuleRepository {
     /**
-     * Construct a repository from an XTC structure and an optional underlying repository.
+     * Construct a repository from an Ecstasy structure and an optional underlying repository.
      */
     construct(ModuleTemplate template, ModuleRepository? repository = Null) {
         this.template   = template;

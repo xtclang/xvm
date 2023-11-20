@@ -6,7 +6,7 @@
  * To compile this example, execute the following command line from within the directory containing
  * this file:
  *
- *     xtc FizzBuzz
+ *     xcc FizzBuzz
  *
  * Then, to run this example:
  *

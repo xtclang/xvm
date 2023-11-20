@@ -28,7 +28,7 @@ import org.xvm.util.Severity;
  * expanded beyond what one would consider "small". Hereunder is an attempt to capture a few of the
  * rationales for the design:
  * <ul>
- * <li>The design of the binary structure that is emitted by the XTC compiler (and consumed by the
+ * <li>The design of the binary structure that is emitted by the Ecstasy compiler (and consumed by the
  * XVM) is hierarchical, and thus there is a natural correlation to the hierarchical tree of XVM
  * structures.</li>
  *

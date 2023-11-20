@@ -1,9 +1,8 @@
 This directory contains the command line tools:
 
-* `xtc` (`xtc.exe` on Windows) - the **Ecstasy compiler** is used to
+* `xcc` (`xcc.exe` on Windows) - the **Ecstasy compiler** is used to
   compile Ecstasy source (`.x`) into a module (`.xtc`)
 * `xec` (`xec.exe` on Windows) - execute an Ecstasy module (`.xtc`)
-* `xam` (`xam.exe` on Windows) - disassemble an Ecstasy module (`.xtc`)
 
 If the commands are not already present in this directory, then
 execute the shell/command file appropriate to the OS:
@@ -15,18 +14,18 @@ execute the shell/command file appropriate to the OS:
 This command will create the command line tool executable files
 for the specified operating system.
 
-To override the configuration of a launcher file, for example `xtc`,
-create a correspondingly named `xtc.cfg` file in this directory, and
+To override the configuration of a launcher file, for example `xcc`,
+create a correspondingly named `xcc.cfg` file in this directory, and
 specify any of the following key/value pairs, changing the values to
 meet your requirements:
 
     exec = java
-    opts = -Xms256m -Xmx1024m -ea
+    opts = -ea
     jar  = ../javatools/javatools.jar
 
 So, for example, if the `java` executable is not in the path, but rather
 is located at `~/jdk/jre/bin`, then create a configuration file in the
-`xdk/bin` directory for each command (`xtc.cfg`, `xec.cfg`, `xam.cfg`)
+`xdk/bin` directory for each command (`xcc.cfg`, `xec.cfg`)
 that contains this one line:
 
     exec=~/jdk/jre/bin/java

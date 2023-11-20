@@ -13,15 +13,15 @@ half-decent operating system. This allows us to hide the Java-specific command l
 complications of invoking the JVM.
 
 The solution is a single native executable (one per hardware/OS combination, e.g. `macos_launcher`)
-that can then be copied to as many different command names as necessary (e.g. `xtc` for the
+that can then be copied to as many different command names as necessary (e.g. `xcc` for the
 compiler, and `xec` for the runtime). When executed, each command executable (which is an identical
 copy of the original, or on Linux or UNIX, a symbolic link to the executable is supported as well)
-uses the OS to determine its own name (e.g. "xtc" or "xec"), and passes that name to a Java
-utility inside of the `javatools.jar` file, along with all of the command line parameters.
+uses the OS to determine its own name (e.g. "xcc" or "xec"), and passes that name to a Java
+utility inside the `javatools.jar` file, along with all of the command line parameters.
 
 For example:
 
-    xtc HelloWorld.x
+    xcc HelloWorld.x
    
 Will generate an execution of the program "java" with the arguments:
 
@@ -31,7 +31,7 @@ Will generate an execution of the program "java" with the arguments:
     [ 3] = "-ea"
     [ 4] = "-jar"
     [ 5] = "../javatools/javatools.jar"
-    [ 6] = "xtc"
+    [ 6] = "xcc"
     [ 7] = "-L"
     [ 8] = "../lib/"
     [ 9] = "-L"
@@ -40,7 +40,7 @@ Will generate an execution of the program "java" with the arguments:
 
 Which in turn results in an execution of that "main class" in the specified JAR with the arguments:
 
-    [0] = "xtc"
+    [0] = "xcc"
     [1] = "-L"
     [2] = "../lib/"
     [3] = "-L"
@@ -101,12 +101,12 @@ Details:
 `javatools.jar` with a "main class" that echos the command line arguments. Read the README.md in
 that directory for a detailed explanation.)
 
-Lastly, one can override the default behavior of a launcher named `xtc`, for example, by creating a
-corresponding `.cfg` file (e.g. `xtc.cfg`) in the same directory (e.g. `xdk/bin`), which contains
+Lastly, one can override the default behavior of a launcher named `xcc`, for example, by creating a
+corresponding `.cfg` file (e.g. `xcc.cfg`) in the same directory (e.g. `xdk/bin`), which contains
 (up to) the following key/value pairs, defaulting to the following values:
 
     exec = java
-    opts = -Xms256m -Xmx1024m -ea
+    opts = -ea
     jar  = ../javatools/javatools.jar
 
 ### IntelliJ IDEA: Debugging

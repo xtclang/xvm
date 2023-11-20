@@ -22,7 +22,7 @@ import static org.xvm.util.Handy.readFileChars;
 
 
 /**
- * A representation of an XTC source code file, handling the first two phases of lexical analysis
+ * A representation of an Ecstasy source code file, handling the first two phases of lexical analysis
  * (line termination, location and unicode escapes).
  */
 public class Source
@@ -31,9 +31,9 @@ public class Source
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a Source directly from a String of XTC source code.
+     * Construct a Source directly from a String of Ecstasy source code.
      *
-     * @param sScript  the XTC source code, as a String
+     * @param sScript  the Ecstasy source code, as a String
      */
     public Source(String sScript)
         {
@@ -41,9 +41,9 @@ public class Source
         }
 
     /**
-     * Construct a Source by reading the XTC source code from a file.
+     * Construct a Source by reading the Ecstasy source code from a file.
      *
-     * @param file the File containing the XTC source code to load
+     * @param file the File containing the Ecstasy source code to load
      *
      * @throws IOException
      */
@@ -105,11 +105,11 @@ public class Source
         }
 
     /**
-     * Construct a Source directly from a character array containing the XTC
+     * Construct a Source directly from a character array containing the Ecstasy
      * source code. Note that the passed array is retained -- not copied! -- by
      * this constructor.
      *
-     * @param ach  the XTC source code, as a character array
+     * @param ach  the Ecstasy source code, as a character array
      */
     Source(char[] ach)
         {

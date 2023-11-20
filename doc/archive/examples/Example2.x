@@ -474,7 +474,7 @@ interface Map<K,V>
 * Example bad code that I plan to disallow:
 */
 class HashMap<K,V>
-    implements Map<V,K>   // this is illegal in xtc!
+    implements Map<V,K>   // this is illegal in Ecstasy!
   {
   // ...
 

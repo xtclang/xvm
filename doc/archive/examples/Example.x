@@ -596,7 +596,7 @@ doStringExtracting((Extractor<String>) listOnlyObject); // compile: OK. runtime:
 // java helper
 List<T> <T extends Comparable> sort(List<T> list) {...}
 
-// xtc equivalent
+// Ecstasy equivalent
 List<list.T> sort(List<Comparable> list) {...}
 
 --
