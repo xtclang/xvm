@@ -115,7 +115,18 @@ public class Compiler
      */
     public Compiler(String[] asArg)
         {
-        super(asArg);
+        this(asArg, null);
+        }
+
+    /**
+     * Compiler constructor.
+     *
+     * @param asArg    command line arguments
+     * @param console  representation of the terminal within which this command is run
+     */
+    public Compiler(String[] asArg, Console console)
+        {
+        super(asArg, console);
         }
 
     @Override

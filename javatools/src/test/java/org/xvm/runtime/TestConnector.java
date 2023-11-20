@@ -79,16 +79,6 @@ public final class TestConnector
             // +++ that is the actual use +++
             connector.loadModule(name);
 
-            if (System.getProperties().containsKey("DEBUG"))
-                {
-                ModuleStructure module = (ModuleStructure)
-                        connector.getContainer().getModule().getComponent();
-                if (module != null)
-                    {
-                    module.visitChildren(Disassembler::dump, false, true);
-                    }
-                }
-
             // configuration of the container happens here
 
             connector.start();

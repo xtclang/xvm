@@ -62,7 +62,18 @@ public class Runner
      */
     public Runner(String[] asArg)
         {
-        super(asArg);
+        this(asArg, null);
+        }
+
+    /**
+     * Runner constructor.
+     *
+     * @param asArg    command line arguments
+     * @param console  representation of the terminal within which this command is run
+     */
+    public Runner(String[] asArg, Console console)
+        {
+        super(asArg, console);
         }
 
     @Override
@@ -199,7 +210,7 @@ public class Runner
                 System.arraycopy(asRunnerArgs, 0, asCompilerArgs, 0, cCompilerArgs);
                 }
 
-            new Compiler(asCompilerArgs).run();
+            new Compiler(asCompilerArgs, m_console).run();
             info      = new ModuleInfo(fileSpec);
             fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();

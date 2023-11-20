@@ -109,9 +109,10 @@ public abstract class Launcher
     /**
      * @param asArgs  the Launcher's command-line arguments
      */
-    public Launcher(String[] asArgs)
+    public Launcher(String[] asArgs, Console console)
         {
-        m_asArgs = asArgs;
+        m_asArgs  = asArgs;
+        m_console = console == null ? DefaultConsole : console;
         }
 
     /**
@@ -177,7 +178,7 @@ public abstract class Launcher
         Options opts = options();
         if (opts.isBadEnoughToPrint(sev))
             {
-            out(sev.desc() + ": " + sMsg);
+            m_console.log(sev, sMsg);
             }
 
         if (sev == Severity.FATAL)
@@ -202,33 +203,33 @@ public abstract class Launcher
     /**
      * Print a blank line to the terminal.
      */
-    public static void out()
+    public void out()
         {
-        out("");
+        m_console.out();
         }
 
     /**
      * Print the String value of some object to the terminal.
      */
-    public static void out(Object o)
+    public void out(Object o)
         {
-        System.out.println(o);
+        m_console.out(o);
         }
 
     /**
      * Print a blank line to the terminal.
      */
-    public static void err()
+    public void err()
         {
-        err("");
+        m_console.err();
         }
 
     /**
      * Print the String value of some object to the terminal.
      */
-    public static void err(Object o)
+    public void err(Object o)
         {
-        System.err.println(o);
+        m_console.err(o);
         }
 
     /**
@@ -298,7 +299,7 @@ public abstract class Launcher
      */
     protected void abort(boolean fError)
         {
-        System.exit(fError ? -1 : 0);
+        m_console.abort(fError);
         }
 
     /**
@@ -1606,7 +1607,74 @@ public abstract class Launcher
         }
 
 
+    // ----- Console -------------------------------------------------------------------------------
+
+    /**
+     * An interface representing this tool's interaction with the terminal.
+     */
+    public interface Console
+        {
+        /**
+         * Print a blank line to the terminal.
+         */
+        default void out()
+            {
+            out("");
+            }
+
+        /**
+         * Print the String value of some object to the terminal.
+         */
+        default void out(Object o)
+            {
+            System.out.println(o);
+            }
+
+        /**
+         * Print a blank line to the terminal.
+         */
+        default void err()
+            {
+            err("");
+            }
+
+        /**
+         * Print the String value of some object to the terminal.
+         */
+        default void err(Object o)
+            {
+            System.err.println(o);
+            }
+
+        /**
+         * Log a message of a specified severity.
+         *
+         * @param sev   the severity (may indicate an error)
+         * @param sMsg  the message or error to display
+         */
+        default void log(Severity sev, String sMsg)
+            {
+            out(sev.desc() + ": " + sMsg);
+            }
+
+        /**
+         * Abort the command line with or without an error status.
+         *
+         * @param fError  true to abort with an error status
+         */
+        default void abort(boolean fError)
+            {
+            System.exit(fError ? -1 : 0);
+            }
+        }
+
+
     // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The default Console implementation.
+     */
+    public static final Console DefaultConsole = new Console() {};
 
     /**
      * The various forms of command-line options can take:
@@ -1743,6 +1811,11 @@ public abstract class Launcher
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * A representation of the Console (e.g. terminal) that this tool is running in.
+     */
+    protected final Console m_console;
 
     /**
      * The command-line arguments.

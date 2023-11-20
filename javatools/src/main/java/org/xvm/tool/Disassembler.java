@@ -44,7 +44,18 @@ public class Disassembler
      */
     public Disassembler(String[] asArg)
         {
-        super(asArg);
+        this(asArg, null);
+        }
+
+    /**
+     * Disassembler constructor.
+     *
+     * @param asArg    command line arguments
+     * @param console  representation of the terminal within which this command is run
+     */
+    public Disassembler (String[] asArg, Console console)
+        {
+        super(asArg, console);
         }
 
     @Override
@@ -86,10 +97,10 @@ public class Disassembler
             }
         checkErrors();
 
-        component.visitChildren(Disassembler::dump, false, true);
+        component.visitChildren(this::dump, false, true);
         }
 
-    public static void dump(Component component)
+    public void dump(Component component)
         {
         if (component instanceof MethodStructure method)
             {
@@ -119,6 +130,8 @@ public class Disassembler
             Ecstasy disassembler:
 
             Examines a compiled Ecstasy module.
+            
+            Note: The xam command will be removed, and replaced with an option on the xtc command.
 
             Usage:
 
