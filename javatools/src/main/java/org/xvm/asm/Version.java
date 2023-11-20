@@ -43,20 +43,20 @@ public class Version
                 break;
                 }
 
-            if (sLiteral.charAt(ix) == '.')
+            switch (sLiteral.charAt(ix))
                 {
-                ix++;
-                continue;
-                }
+                case '.':
+                case '-':
+                    ix++;
+                    continue;
 
-            if (sLiteral.charAt(ix) == '-')
-                {
-                ix++;
-                break;
-                }
+                case '+':
+                    break;
 
-            fErr = true;
-            break;
+                default:
+                    fErr = true;
+                    break;
+                }
             }
 
         if (!fErr && ix < cLen)
@@ -105,6 +105,17 @@ public class Version
                     ix += 2;
                     break;
 
+                case '+':
+                    // parse the build string, which must be the remainder of the version
+                    sBuild = sLiteral.substring(ix + 1);
+                    ix = cLen;
+
+                    // semver states that only A..Z, a..z, 0..9, and '-' may occur in the build
+                    // metadata, but the examples given also include '.', so Ecstasy considers the
+                    // '.' to be legal
+                    fErr = !sBuild.matches("[A-Za-z0-9\\-\\.]*");
+                    break;
+
                 default:
                     fErr = true;
                     break;
@@ -120,18 +131,6 @@ public class Version
                 while (ix < cLen && isDigit(sLiteral.charAt(ix)));
 
                 listParts.add(n);
-                }
-            }
-
-        if (!fErr && ix < cLen)
-            {
-            if (sLiteral.charAt(ix) == '+')
-                {
-                sBuild = sLiteral.substring(ix + 1);
-                }
-            else
-                {
-                fErr = true;
                 }
             }
 
