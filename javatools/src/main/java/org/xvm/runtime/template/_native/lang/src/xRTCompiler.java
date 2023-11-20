@@ -328,12 +328,12 @@ public class xRTCompiler
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    static class CompilerHandle
+    protected static class CompilerHandle
             extends ServiceHandle
         {
         protected final CompilerAdapter fAdapter;
 
-        public CompilerHandle(TypeComposition clazz, ServiceContext context, CompilerAdapter adapter)
+        protected CompilerHandle(TypeComposition clazz, ServiceContext context, CompilerAdapter adapter)
             {
             super(clazz, context);
 
@@ -347,7 +347,7 @@ public class xRTCompiler
     protected static class CompilerAdapter
             extends Compiler
         {
-        public CompilerAdapter()
+        protected CompilerAdapter()
             {
             super(null);
             }
