@@ -94,7 +94,7 @@ class EntryKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
      *
      * @return True
      *
-     * @throws ReadOnly if the Map is not mutable
+     * @throws ReadOnly iff the Map does not support in-place modification
      */
     protected Boolean verifyInPlace() {
         if (!contents.inPlace) {
