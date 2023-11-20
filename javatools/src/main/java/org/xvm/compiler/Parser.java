@@ -305,31 +305,6 @@ public class Parser
         }
 
     /**
-     * Temporary: Allows a type to be parsed from a string in the debugger. (TODO REMOVE)
-     *
-     * @param ctx  the component that links this in to a real module
-     *
-     * @return the TypeConstant represented by the parsed String
-     */
-    public TypeConstant parseType(Component ctx)
-        {
-        TypeExpression type = parseTypeExpression();
-
-        Token var = new Token(type.getEndPosition(), type.getEndPosition(), Id.IDENTIFIER, "test");
-        Statement stmt = new VariableDeclarationStatement(type, var, true);
-        StatementBlock body = new StatementBlock(List.of(stmt));
-        TypeCompositionStatement module = new TypeCompositionStatement(m_source,
-                type.getStartPosition(), type.getEndPosition(), null, null, null,
-                new Token(0, 0, Id.MODULE), null, null, null, null, null, body, null);
-        module.buildDumpModule(ctx);
-        boolean fOK = new StageMgr(module, Stage.Registered, m_errorListener).processComplete()
-                   && new StageMgr(module, Stage.Resolved  , m_errorListener).processComplete()
-                   && new StageMgr(module, Stage.Validated , m_errorListener).processComplete();
-        assert fOK;
-        return type.ensureTypeConstant();
-        }
-
-    /**
      * Parse a type declaration
      *
      * <p/><code><pre>

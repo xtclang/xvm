@@ -35,14 +35,11 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
 
 import org.xvm.compiler.Constants;
-import org.xvm.compiler.Parser;
-import org.xvm.compiler.Source;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
@@ -1574,9 +1571,13 @@ public abstract class Component
      * @param idVirtChild  the ide of the virtual child whose super (class or interface) we are
      *                     searching for
      * @param cDepth       the current depth
-     * @param setVisited   TODO
+     * @param setVisited   the caller must pass a mutable set, which this method contributes each
+     *                     component identity to when that component is visited, to prevent both
+     *                     infinite recursion and also the re-examination of components
      *
-     * @return TODO
+     * @return the super for the specified virtual child, or Boolean FALSE if resolution has not yet
+     *         proceeded to the point that this question can be answered; otherwise null if there is
+     *         no super
      */
     protected Object findVirtualChildSuper(
             IdentityConstant        idVirtChild,
@@ -2508,20 +2509,6 @@ public abstract class Component
         }
 
     /**
-     * Split this component into multiple components based on the specified condition. The result
-     * is a CompositeComponent.
-     *
-     * @param condition  the condition which is used to split this component
-     *
-     * @return a CompositeComponent that contains both the specified condition and its negation
-     */
-    public CompositeComponent bifurcateConditional(ConditionalConstant condition)
-        {
-        // TODO
-        throw new UnsupportedOperationException();
-        }
-
-    /**
      * {@inheritDoc}
      * <p/>
      * For all but the FileStructure Component, this method applies only to the body of the
@@ -2580,37 +2567,6 @@ public abstract class Component
 
         // dump the shared children
         child.dumpChildren(out, nextIndent(sIndent));
-        }
-
-    /**
-     * Temporary: Helper for use in debugger to dump specific information. (REMOVE LATER!)
-     *
-     * @param sType  the type to evaluate
-     *
-     * @return a String that has the TypeInfo dump in it
-     */
-    public String dumpType(String sType)
-        {
-        ErrorList    errs   = new ErrorList(10);
-        Parser       parser = new Parser(new Source(sType + ";"), errs);
-        TypeConstant type   = parser.parseType(this);
-        if (errs.getSeriousErrorCount() > 0)
-            {
-            return errs.toString();
-            }
-
-        if (type == null)
-            {
-            return "type could not be resolved: " + sType;
-            }
-
-        TypeInfo info = type.ensureTypeInfo(errs);
-        if (errs.getSeriousErrorCount() > 0)
-            {
-            return errs.toString();
-            }
-
-        return info + "\n\n" + errs;
         }
 
 
@@ -3205,13 +3161,8 @@ public abstract class Component
                 }
 
             List<Injection> listInject = m_listInject;
-            if (listInject != null && listInject.stream().anyMatch(
-                    inj -> inj.getType().containsUnresolved()))
-                {
-                return true;
-                }
-
-            return false;
+            return listInject != null && listInject.stream().anyMatch(
+                    injection -> injection.getType().containsUnresolved());
             }
 
         /**
