@@ -608,6 +608,7 @@ TypeDefStatement
 #   Operator        Description             Level   Associativity
 #   --------------  ----------------------  -----   -------------
 #   &               reference-of              1
+#   ->              lambda
 #
 #   ++              post-increment            2     left to right
 #   --              post-decrement
