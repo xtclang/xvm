@@ -719,27 +719,25 @@ public class ModuleInfo
     @Override
     public String toString()
         {
-        return new StringBuilder()
-            .append("Module(name=")        .append(moduleName == null ? "<unknown>" : moduleName)
-            .append(", fileSpec=")         .append(fileSpec)
-            .append(", fileName=")         .append(fileName)
-            .append(", moduleName=")       .append(moduleName == null ? "<unknown>" : moduleName)
-            .append(", projectDir=")       .append(projectDir)
-            .append(", sourceStatus=")     .append(sourceStatus)
-            .append(", sourceDir=")        .append(sourceDir)
-            .append(", sourceIsTree=")     .append(sourceIsTree)
-            .append(", sourceFile=")       .append(sourceFile)
-            .append(", sourceContent=")    .append(sourceContent)
-            .append(", sourceTimestamp=")  .append(sourceTimestamp == 0 ? "<unknown>" : dateString(sourceTimestamp))
-            .append(", resourceDir=")      .append(resourceDir == null ? "<unknown>" : resourceDir)
-            .append(", resourceTimestamp=").append(resourceTimestamp == 0 ? "<unknown>" : dateString(resourceTimestamp))
-            .append(", binaryStatus=")     .append(binaryStatus)
-            .append(", binaryDir=")        .append(binaryDir == null ? "<unknown>" : binaryDir)
-            .append(", binaryFile=")       .append(binaryFile == null ? "<unknown>" : binaryFile)
-            .append(", binaryVersion=")    .append(binaryVersion == null ? "<unknown>" : binaryVersion)
-            .append(", binaryContent=")    .append(binaryContent)
-            .append(", binaryTimestamp=")  .append(binaryTimestamp == 0 ? "<unknown>" : dateString(binaryTimestamp))
-            .toString();
+        return "Module(name="         + (moduleName == null ? "<unknown>" : moduleName)
+             + ", fileSpec="          + fileSpec
+             + ", fileName="          + fileName
+             + ", moduleName="        + (moduleName == null ? "<unknown>" : moduleName)
+             + ", projectDir="        + projectDir
+             + ", sourceStatus="      + sourceStatus
+             + ", sourceDir="         + sourceDir
+             + ", sourceIsTree="      + sourceIsTree
+             + ", sourceFile="        + sourceFile
+             + ", sourceContent="     + sourceContent
+             + ", sourceTimestamp="   + (sourceTimestamp == 0 ? "<unknown>" : dateString(sourceTimestamp))
+             + ", resourceDir="       + resourceDir == null ? "<unknown>" : resourceDir
+             + ", resourceTimestamp=" + (resourceTimestamp == 0 ? "<unknown>" : dateString(resourceTimestamp))
+             + ", binaryStatus="      + binaryStatus
+             + ", binaryDir="         + binaryDir == null ? "<unknown>" : binaryDir
+             + ", binaryFile="        + binaryFile == null ? "<unknown>" : binaryFile
+             + ", binaryVersion="     + binaryVersion == null ? "<unknown>" : binaryVersion
+             + ", binaryContent="     + binaryContent
+             + ", binaryTimestamp="   + (binaryTimestamp == 0 ? "<unknown>" : dateString(binaryTimestamp));
         }
 
 
@@ -1390,17 +1388,17 @@ public class ModuleInfo
         /**
          * The classes nested directly in the module or package.
          */
-        private ListMap<File, FileNode> m_mapClzNodes = new ListMap<>();
+        private final ListMap<File, FileNode> m_mapClzNodes = new ListMap<>();
 
         /**
          * The packages nested directly in the module or package.
          */
-        private List<DirNode> m_listPkgNodes = new ArrayList<>();
+        private final List<DirNode> m_listPkgNodes = new ArrayList<>();
 
         /**
          * The child nodes (both packages and classes) nested directly in the module or package.
          */
-        private Map<String, Node> m_mapChildren = new HashMap<>();
+        private final Map<String, Node> m_mapChildren = new HashMap<>();
         }
 
     /**
@@ -1861,7 +1859,7 @@ public class ModuleInfo
                         {
                         jarUrl = new URL(clzPath.substring(0, clzPath.length() - clzTail.length()));
                         }
-                    catch (MalformedURLException e) {}
+                    catch (MalformedURLException ignore) {}
                     }
                 }
             }
@@ -2169,26 +2167,26 @@ public class ModuleInfo
 
     transient long accumulator;
 
-    private File        fileSpec;       // original file spec that was used to create this info
-    private String      fileName;       // selected file name, without the file extension
-    private String      moduleName;     // the module name (potentially qualified)
-    private File        projectDir;     // the directory containing the "project"
+    private final File   fileSpec;       // original file spec that was used to create this info
+    private String       fileName;       // selected file name, without the file extension
+    private String       moduleName;     // the module name (potentially qualified)
+    private File         projectDir;     // the directory containing the "project"
 
-    private Status      sourceStatus;
-    private File        sourceDir;      // directory containing source code
-    private File        sourceFile;     // the "module root" source code file
-    private boolean     sourceIsTree;   // true iff the module sources include subdirectories
-    private Content     sourceContent = Content.Unknown;  // what is known about the module source file content
-    private long        sourceTimestamp;// last known change to a source file
-    private Node        sourceNode;     // root node of the source tree
+    private final Status sourceStatus;
+    private File         sourceDir;      // directory containing source code
+    private File         sourceFile;     // the "module root" source code file
+    private boolean      sourceIsTree;   // true iff the module sources include subdirectories
+    private Content      sourceContent = Content.Unknown;  // what is known about the module source file content
+    private long         sourceTimestamp;// last known change to a source file
+    private Node         sourceNode;     // root node of the source tree
 
-    private ResourceDir resourceDir;
-    private long        resourceTimestamp;
+    private ResourceDir  resourceDir;
+    private long         resourceTimestamp;
 
-    private Status      binaryStatus = Status.Unknown;
-    private File        binaryDir;
-    private File        binaryFile;
-    private Version     binaryVersion;
-    private Content     binaryContent = Content.Unknown;  // what is known about the compiled module file content
-    private long        binaryTimestamp;
+    private Status       binaryStatus = Status.Unknown;
+    private File         binaryDir;
+    private File         binaryFile;
+    private Version      binaryVersion;
+    private Content      binaryContent = Content.Unknown;  // what is known about the compiled module file content
+    private long         binaryTimestamp;
     }
