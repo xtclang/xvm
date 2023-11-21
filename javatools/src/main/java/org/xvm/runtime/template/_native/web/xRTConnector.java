@@ -233,7 +233,7 @@ public class xRTConnector
 
         try (var ignore = s_handlerGlobal.withHandler(hConn.m_cookieHandler))
             {
-            URL               url  = new URL(hUrl.getStringValue());
+            URL               url  = new URI(hUrl.getStringValue()).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod(hMethod.getStringValue());

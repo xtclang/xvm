@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.IOException;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 
 import java.util.ArrayList;
@@ -1857,9 +1859,10 @@ public class ModuleInfo
                     {
                     try
                         {
-                        jarUrl = new URL(clzPath.substring(0, clzPath.length() - clzTail.length()));
+                        jarUrl = new URI(clzPath.substring(0, clzPath.length() - clzTail.length())).
+                                    toURL();
                         }
-                    catch (MalformedURLException ignore) {}
+                    catch (MalformedURLException | URISyntaxException ignore) {}
                     }
                 }
             }
@@ -1886,7 +1889,7 @@ public class ModuleInfo
                 {
                 jarPath = "file:/" + jarPath.substring(5);
                 }
-            jarFile = new File(new URL(jarPath).toURI());
+            jarFile = new File(new URI(jarPath));
             }
         catch (Exception ignore)
             {
