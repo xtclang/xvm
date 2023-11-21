@@ -3,17 +3,16 @@ package org.xvm.xec.ecstasy;
 import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
 public abstract class Const extends XTC
-  implements Comparable<Const>,  // Java Comparable; XTC Comparable has equals, which is included in Java Object
-             Stringable           // has appendTo
+  implements Comparable<Const>, // Java Comparable; XTC Comparable has equals, which is included in Java Object
+             Hashable<Const>,   // XTC hash and hashCode
+             Stringable         // has appendTo
 {
-  @Override public int compareTo( Const o ) { return compare(o).ordinal()-1; }
-  public boolean CompLt( Const that ) { return compare(that)==Ordered.Lesser; }
-
   
   // Make several fixed constant class methods
   public static void make_meth( ClassPart clz, String methname, SB sb ) {
@@ -61,6 +60,7 @@ public abstract class Const extends XTC
     sb.ip(  "return Ordered.Equal;\n").di();
     sb.ip("}\n");
   };
+  // Just a default Java compare, when the user overwrites the Const default compare
   public static void make_compare_0( String clzname, SB sb ) {
     sb.ip("// Default compare\n");
     sb.ip("public Ordered compare( XTC that ) {\n").ii();
@@ -94,6 +94,7 @@ public abstract class Const extends XTC
     sb.p(";\n").di();
     sb.ip("}\n");
   }
+  // Just a default Java equals, when the user overwrites the Const default equals
   public static void make_equals_0( String clzname, SB sb ) {
     sb.ip("// Default equals\n");
     sb.ip("public boolean equals( Object o ) {\n").ii();
@@ -109,7 +110,7 @@ public abstract class Const extends XTC
      public long hash() {
        return fld0.hash()^fld1^...^fldN.hash();
      }
-     public int hashCode() { long h = hash(); return (int)((h>>32)^h); }
+     public static long hashCode( Class<CLZ> clz, CLZ x ) { return x.hash(); }
   */
   static void make_hashCode( ClassPart clz, SB sb ) {
     sb.ip("// Default hashCode\n");
@@ -129,7 +130,9 @@ public abstract class Const extends XTC
     else sb.p("0xDEADBEEF");
     sb.p(";\n").di();
     sb.ip("}\n");
-    sb.ip("public int hashCode() { long h = hash(); return (int)((h>>32)^h); }\n");
+    // Static XTC inverted hashCode
+    String clzname = ClzBuilder.java_class_name(clz._name);
+    sb.ifmt("public static long hashCode( Class<%0> clz, %0 x ) { return x.hash(); }\n",clzname);
   };
 
 
@@ -159,8 +162,19 @@ public abstract class Const extends XTC
     sb.ip("}\n");
   };
 
+  // --- Default Implementations ----------------------------------------------
   // Default appendTo
   @Override public Appenderchar appendTo(Appenderchar buf) {
     return buf.appendTo(toString());
   }
+
+  // XTC long hash, implemented by above make_hash
+  abstract long hash();
+  
+  // Java 32-bit hashCode() wrapping XTC 64-bit hash()
+  public int hashCode() { long h = hash(); return (int)((h>>32)^h); }
+  
+  @Override public int compareTo( Const o ) { return compare(o).ordinal()-1; }
+  public boolean CompLt( Const that ) { return compare(that)==Ordered.Lesser; }
+
 }
