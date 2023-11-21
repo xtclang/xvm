@@ -1004,7 +1004,8 @@ interface List<Element>
          * exception), but _setting_ the value is legal, and will append the specified value to the
          * end of the list.
          *
-         * @throws ReadOnly     if an attempt is made to modify the value an the List is not mutable
+         * @throws ReadOnly     if an attempt is made to modify the value and the List is not
+         *                      mutable
          * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
          *                      beyond the end of the list
          */
