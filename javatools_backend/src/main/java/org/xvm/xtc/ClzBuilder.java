@@ -146,16 +146,27 @@ public class ClzBuilder {
       switch( part ) {
       case MMethodPart mmp: 
         // Output java methods
-        if( mmp._name.equals("construct") ) continue; // Already handled module constructor
+        String mname = mmp._name;
+        if( mname.equals("construct") ) continue; // Already handled module constructor
         _sb.nl();
-        MethodPart meth = (MethodPart)mmp.child(mmp._name);
+        MethodPart meth = (MethodPart)mmp.child(mname);
         if( (meth==null || meth._ast == null) && _clz._f == Part.Format.CONST ) {
           // Const classes have default methods, with no code given.  Generate.
-          Const.make_meth(_clz,mmp._name,_sb);
+          Const.make_meth(_clz,mname,_sb);
         } else {
-          if( mmp._name.equals("run") ) run = meth; // Save the top-level run method
+          if( mname.equals("run") ) run = meth; // Save the top-level run method
+          // Change the name of the equals & compare, as they have special dispatch rules.
+          // Insert a default java version which special dispatches to the user version.
+          if( mname.equals("equals") ) {
+            mname = mname+"$"+java_class_name;
+            Const.make_equals_0(java_class_name,_sb);
+          }
+          if( mname.equals("compare") ) {
+            mname = mname+"$"+java_class_name;
+            Const.make_compare_0(java_class_name,_sb);
+          }
           // Generate the method from the AST
-          jmethod(meth,meth._name);
+          jmethod(meth,mname);
         }
         break;
 

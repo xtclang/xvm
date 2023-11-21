@@ -99,6 +99,7 @@ public abstract class XType {
     public final Clz _super;          // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
+    public final ClzClz _clzclz;
     private Clz( ClassPart clz ) {
       assert ClzBuilder.CCLZ!=null; // Init error
       _super = clz._super==null ? null : make(clz._super);
@@ -117,6 +118,7 @@ public abstract class XType {
           _flds[len  ] = prop._name;
           _xts [len++] = xtype(prop._con,false);
         }
+      _clzclz = new ClzClz(this);
     }
     // Made from XTC class
     public static Clz make( ClassPart clz ) {
@@ -133,6 +135,7 @@ public abstract class XType {
       _super=null;              // No super in the XTC sense
       _flds=null;
       _xts=null;
+      _clzclz = null;
     }
     void set(ClassPart clz) {
       if( _clz==clz ) return;
@@ -141,6 +144,7 @@ public abstract class XType {
       _clz=clz;
     }
     @Override public boolean is_prim_base() { return false; }
+    // Find a field in the superclass chain
     static XType find(Clz clz, String fld) {
       for( ; clz!=null; clz = clz._super ) {
         int idx = S.find(clz._flds,fld);
@@ -166,7 +170,22 @@ public abstract class XType {
     }
     @Override int hash() { return Arrays.hashCode(_flds) ^ Arrays.hashCode(_xts); }
   }
+  
 
+  // The *class* of a instance, defined as a class.
+  // Example:
+  //   Value:  (2,3)
+  //   XType:  Point
+  //   ClzClz: Point.class
+  public static class ClzClz extends XType {
+    public final Clz _clz;
+    ClzClz(Clz clz) { _clz = clz; }
+    @Override public boolean is_prim_base() { return false; }
+    @Override public SB str( SB sb ) { return _clz.clz(sb.p("Class<")).p(">"); }
+    @Override public SB clz( SB sb ) { return str(sb); }
+    @Override boolean eq(XType xt) { return _clz.equals(((ClzClz)xt)._clz);  }
+    @Override int hash() { return _clz.hashCode()^123456789; }
+  }
   
   // Basically a Java class as an array
   public static class Ary extends XType {
@@ -386,31 +405,38 @@ public abstract class XType {
   public static XType xtype( Const tc, boolean boxed ) {
     return switch( tc ) {
     case TermTCon ttc -> {
-      ClassPart clz = (ClassPart)ttc.part();
-      if( clz._path==null ) {
-        if( clz._name.equals("Null" ) ) yield NULL;
-        if( clz._name.equals("True" ) ) yield TRUE;
-        if( clz._name.equals("False") ) yield FALSE;
-        throw XEC.TODO();
-      }
-      // Check the common base classes
-      String xjkey = xjkey(clz);
-      Base val = BASE_XJMAP.get(xjkey);
-      if( val!=null ) yield boxed ? val.box() : val;
-      // Again, common classes with imports
-      Clz xclz = IMPORT_XJMAP.get(xjkey);
-      if( xclz!=null ) {
-        xclz.set(clz);
-        String imp = clz._path._str;
-        if( !imp.equals("ecstasy.x") ) {
-          // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
-          String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
-          ClzBuilder.IMPORTS.add(imp2);
+      if( ttc.part() instanceof ClassPart clz ) {
+        if( clz._path==null ) {
+          if( clz._name.equals("Null" ) ) yield NULL;
+          if( clz._name.equals("True" ) ) yield TRUE;
+          if( clz._name.equals("False") ) yield FALSE;
+          throw XEC.TODO();
         }
-        yield xclz;
+        // Check the common base classes
+        String xjkey = xjkey(clz);
+        Base val = BASE_XJMAP.get(xjkey);
+        if( val!=null ) yield boxed ? val.box() : val;
+        // Again, common classes with imports
+        Clz xclz = IMPORT_XJMAP.get(xjkey);
+        if( xclz!=null ) {
+          xclz.set(clz);
+          String imp = clz._path._str;
+          if( !imp.equals("ecstasy.x") ) {
+            // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
+            String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
+            ClzBuilder.IMPORTS.add(imp2);
+          }
+          yield xclz;
+        }
+        // Make one
+        yield Clz.make(clz);
       }
-      // Make one
-      yield Clz.make(clz);
+      if( ttc.part() instanceof ParmPart parm ) {
+        TParmCon tpc = (TParmCon)ttc.id();
+        ClzClz clz = (ClzClz)xtype(tpc.parm()._con,boxed);
+        yield clz._clz;
+      }
+      throw XEC.TODO();
     }
 
     case ParamTCon ptc -> {
@@ -460,9 +486,9 @@ public abstract class XType {
     //  if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/collections/Map.x") )
     //    yield XMap.make_class(ClzBuilder.XCLASSES, ptc._parms);
     //  
-    //  // Attempt to use the Java class name
-    //  if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
-    //    yield telem + ".class";
+      // Attempt to use the Java class name
+      if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
+        yield ((Clz)telem)._clzclz;
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
         if( telem == CHAR || telem== JCHAR ) {
