@@ -1004,7 +1004,7 @@ interface List<Element>
          * exception), but _setting_ the value is legal, and will append the specified value to the
          * end of the list.
          *
-         * @throws ReadOnly     if the List is not _mutable_ or _fixed-size_
+         * @throws ReadOnly     if an attempt is made to modify the value an the List is not mutable
          * @throws OutOfBounds  if an attempt is made to access the value when the cursor is
          *                      beyond the end of the list
          */
@@ -1054,7 +1054,7 @@ interface List<Element>
          * After this method completes successfully, the cursor will be positioned on the newly
          * inserted element.
          *
-         * @throws ReadOnly  if the List is not _mutable_
+         * @throws ReadOnly  if the List is not mutable
          */
         void insert(Element value);
 
@@ -1067,7 +1067,7 @@ interface List<Element>
          * element "beyond the end of the list" if the element deleted was the last element in the
          * list.
          *
-         * @throws ReadOnly     if the List is not _mutable_
+         * @throws ReadOnly     if the List is not mutable
          * @throws OutOfBounds  if an attempt is made to delete the value when the cursor is
          *                      beyond the end of the list
          */

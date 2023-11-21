@@ -161,8 +161,8 @@ class ListMap<Key, Value>
     }
 
     /**
-     * Some operations require that the containing Map be mutable; this method throws an exception
-     * if the Map is not mutable.
+     * Some operations require that mutations to the containing Map be made without copying the map;
+     * this method throws an exception if the Map can not be mutated in-place.
      *
      * @return True
      *

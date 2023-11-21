@@ -29,7 +29,9 @@ interface Iterator<Element> {
     conditional Element next();
 
     /**
-     * Take the next element.
+     * Take the next element. A caller should only use this method if the iterator is known to have
+     * additional elements remaining; if the iterator is not known to have elements remaining, use
+     * the [next()] method instead.
      *
      * @return the Element value
      *

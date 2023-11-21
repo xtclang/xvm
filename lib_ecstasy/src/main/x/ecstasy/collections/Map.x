@@ -176,7 +176,7 @@ interface Map<Key, Value>
      *
      *   if (map.keys.contains(name)) {...}
      *
-     * The returned set is expected to support mutation operations iff the map is `inPlace`; the
+     * The returned set is expected to support mutation operations iff the map is [inPlace]; the
      * returned set is _not_ expected to support the `add` or `addAll` operations.
      */
     @RO Set<Key> keys;
@@ -184,7 +184,7 @@ interface Map<Key, Value>
     /**
      * Obtain the collection of all values (one for each key) in the map.
      *
-     * The returned collection is expected to support mutation operations iff the map is `inPlace`;
+     * The returned collection is expected to support mutation operations iff the map is [inPlace];
      * the returned collection is _not_ expected to support the `add` or `addAll` operations.
      */
     @RO Collection<Value> values;
@@ -192,7 +192,7 @@ interface Map<Key, Value>
     /**
      * Obtain the collection of all entries (key/value pairs) in the map.
      *
-     * The returned set is expected to support mutation operations iff the map is `inPlace`.
+     * The returned set is expected to support mutation operations iff the map is [inPlace].
      */
     @RO Collection<Entry> entries;
 
@@ -274,7 +274,7 @@ interface Map<Key, Value>
      * Store a mapping of the specified key to the specified value, regardless of whether that key
      * is already present in the map.
      *
-     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * An [inPlace] map will perform the operation in place; otherwise the map will return a new map
      * reflecting the requested change.
      *
      * @param key    the key to store in the map
@@ -313,7 +313,7 @@ interface Map<Key, Value>
      * Store in this map each of the mappings of key and values specified in another map, regardless
      * of whether those keys and/or values are already present in this map.
      *
-     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * An [inPlace] map will perform the operation in place; otherwise the map will return a new map
      * reflecting the requested change.
      *
      * @param that  another map containing keys and associated values to put into this map
@@ -335,7 +335,7 @@ interface Map<Key, Value>
      * Map the specified key to the specified value, iff that key is *not* currently present in the
      * map.
      *
-     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * An [inPlace] map will perform the operation in place; otherwise the map will return a new map
      * reflecting the requested change.
      *
      * @param key    the key to store in the map
@@ -415,7 +415,7 @@ interface Map<Key, Value>
     /**
      * Remove all key/value mappings from the map.
      *
-     * An `inPlace` map will perform the operation in place; otherwise the map will return a new map
+     * An [inPlace] map will perform the operation in place; otherwise the map will return a new map
      * reflecting the requested change.
      *
      * @return the resultant map, which is the same as `this` for an in-place map
@@ -575,25 +575,25 @@ interface Map<Key, Value>
          * The value associated with the entry's key.
          *
          * The value property is not settable and the entry is not removable if the containing map
-         * is not `inPlace`.
+         * is not [inPlace].
          *
          * If the entry does not [exist](exists), then the value is not readable; an attempt to get
          * the value of an will raise an `OutOfBounds`
          *
-         * @throws OutOfBounds  if an attempt is made to read the value of the entry when {@link
-         *                      exists} is False
+         * @throws OutOfBounds  if an attempt is made to read the value of the entry when [exists]
+         *                      is False
          * @throws ReadOnly     if an attempt is made to write the value of the entry and the map
-         *                      is not `inPlace`, or does not support mutation
+         *                      is not [inPlace], or does not support mutation
          */
         Value value;
 
         /**
          * Remove the entry from its map.
          *
-         * The entry is not removable if the containing map is not `inPlace`.
+         * The entry is not removable if the containing map is not [inPlace].
          *
          * @throws ReadOnly  if an attempt is made to write the value of the entry and the map
-         *                   is not `inPlace`, or does not support mutation
+         *                   is not [inPlace], or does not support mutation
          */
         void delete() {
             throw new ReadOnly();
