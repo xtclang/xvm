@@ -28,26 +28,23 @@ public abstract class Const extends XTC
   
   /* Generate:
      public Ordered compare( XTC that ) {
-       return getClass().isInstance(that) ? compare$CLAZZ((CLAZZ)that) : that.compare(this);
+       return getClass().isInstance(that) ? compare$CLZ(CLZ.class,this,(CLZ)that) : that.compare(this);
      }
-     public Ordered compare$CLAZZ( CLZ that ) {
-       if( this==that ) return Equal;
+     public static Ordered compare$CLAZZ( Class<CLZ> clz, CLZ x0, CLZ x1 ) {
+       if( x0==x1 ) return Equal;
        Ordered x;
-       if( (x=fld0.compare(that.fld0)) != Equal ) return x;
-       if( (x=fld1.compare(that.fld1)) != Equal ) return x;
+       if( (x=x0.fld0.compare(x1.fld0)) != Equal ) return x;
+       if( (x=x0.fld1.compare(x1.fld1)) != Equal ) return x;
        ...
        return Equal;
      }
   */
   static void make_compare( ClassPart clz, SB sb ) {
     String clzname = ClzBuilder.java_class_name(clz._name);
-    sb.ip("// Default compare\n");
-    sb.ip("public Ordered compare( XTC that ) {\n").ii();
-    sb.ifmt("return getClass().isInstance(that) ? compare$%0((%0)that) : that.compare(this);",clzname).nl().di();
-    sb.ip("}\n");
+    make_compare_0(clzname,sb);
     
-    sb.ifmt("public Ordered compare$%0( %0 that ) {\n",clzname).ii();
-    sb.ip("if( this==that ) return Ordered.Equal;\n");
+    sb.ifmt("public static Ordered compare$%0( Class<%0> clz, %0 x0,%0 x1 ) {\n",clzname).ii();
+    sb.ip("if( x0==x1 ) return Ordered.Equal;\n");
     sb.ip("Ordered $x;\n");
 
     Ary<PropPart> pps = new Ary<>(PropPart.class);
@@ -57,44 +54,53 @@ public abstract class Const extends XTC
     for( PropPart prop : pps ) {
       String fld = prop._name;
       sb.ip(  "if( ($x=");
-      if( xeq(prop) ) sb.p("XTC.spaceship(").p(fld).p(",that.").p(fld).p(")");
-      else            sb.p(fld).p(".compare(that.").p(fld).p(")");
+      if( xeq(prop) ) sb.p("XTC.spaceship( x0.").p(fld).p(",x1.").p(fld).p(")");
+      else            sb.p("x0.").p(fld).p(".compare(x1.").p(fld).p(")");
       sb.p(") != Ordered.Equal ) return $x;\n");
     }
     sb.ip(  "return Ordered.Equal;\n").di();
     sb.ip("}\n");
   };
+  public static void make_compare_0( String clzname, SB sb ) {
+    sb.ip("// Default compare\n");
+    sb.ip("public Ordered compare( XTC that ) {\n").ii();
+    sb.ifmt("return getClass().isInstance(that) ? compare$%0(%0.class,this,(%0)that) : that.compare(this);",clzname).nl().di();
+    sb.ip("}\n");
+  }
 
   /* Generate:
      public boolean equals( Object o ) {
-       return o instanceof CLAZZ that && equals$CLAZZ(that);
+       return o instanceof CLAZZ that && equals$CLAZZ(CLAZZ.class,this,that);
      }
-     public final boolean equals$CLAZZ( CLAZZ that ) { 
-       if( this==that ) return true;
-       return fld0.equals(that.fld0) && fld1==that.fld1 && ... fldN.equals(that.fldN);
+     public final boolean equals$CLAZZ( Class<CLAZZ> clz, CLAZZ x0, CLAZZ x1 ) { 
+       if( x0==x1 ) return true;
+       return fld0.equals(x1.fld0) && fld1==x1.fld1 && ... fldN.equals(x1.fldN);
      }
   */
   static void make_equals( ClassPart clz, SB sb ) {
     String clzname = ClzBuilder.java_class_name(clz._name);
-    sb.ip("// Default equals\n");
-    sb.ip("public boolean equals( Object o ) {\n").ii();
-    sb.ifmt("return o instanceof %0 that && equals$%0(that);\n",clzname).di();
-    sb.ip("}\n");    
-    sb.ifmt("public final boolean equals$%0( %0 that ) {\n",clzname).ii();
-    sb.ip(  "if( this==that ) return true;\n");
+    make_equals_0(clzname,sb);
+    sb.ifmt("public static boolean equals$%0( Class<%0> clz, %0 x0, %0 x1 ) {\n",clzname).ii();
+    sb.ip(  "if( x0==x1 ) return true;\n");
     sb.ip(  "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
       if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
         XType xt = XType.xtype(prop._con,false);
-        xt.do_eq(sb.p(prop._name),"that."+prop._name).p(" && ");
+        xt.do_eq(sb.p("x0.").p(prop._name),"x1."+prop._name).p(" && ");
       }
     if( any ) sb.unchar(4);
     else sb.p("true");
     sb.p(";\n").di();
     sb.ip("}\n");
   }
-
+  public static void make_equals_0( String clzname, SB sb ) {
+    sb.ip("// Default equals\n");
+    sb.ip("public boolean equals( Object o ) {\n").ii();
+    sb.ifmt("return o instanceof %0 that && equals$%0(%0.class,this,that);\n",clzname).di();
+    sb.ip("}\n");    
+  }
+  
   private static boolean xeq(PropPart p) {
     return XType.xtype(p._con,false).is_jdk();
   }

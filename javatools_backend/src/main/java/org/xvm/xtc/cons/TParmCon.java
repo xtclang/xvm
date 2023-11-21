@@ -13,6 +13,7 @@ public class TParmCon extends FormalCon {
     super(X);
     _reg = X.u31();
   }
+  public Parameter parm() { return _parm; }
   // This guy does not have a matching Part/Component/Structure
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;

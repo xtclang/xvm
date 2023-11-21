@@ -36,9 +36,11 @@ public class CallAST extends AST {
     if( _kids[0] instanceof ConAST con ) {
       for( String s : CMPS ) {
         if( con._con.endsWith("."+s) ) {
-          AST eq = new InvokeAST(s+"$"+con._con.substring(0,con._con.length()-s.length()-1), XType.BOOL,_kids[2],_kids[3]);
-          eq._type = XType.BOOL;
-          return eq;
+          // Convert CLZ.equals    (class,x0,x1)
+          // to      CLZ.equals$CLZ(class,x0,x1)
+          String clz = con._con.substring(0,con._con.length()-s.length()-1);
+          con._con += "$"+clz;
+          return this;
         }
       }
     }
