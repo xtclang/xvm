@@ -493,6 +493,7 @@ module TestMisc {
         Point point3 = point2;
     
         assert point1 == point3;
+        assert point1.equals(point3);
         assert Point.equals(point1, point3);
         assert point1 <=> point3 == Equal;
         assert Point.compare(point1, point3) == Equal;
