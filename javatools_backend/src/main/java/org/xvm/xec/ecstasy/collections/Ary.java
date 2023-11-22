@@ -2,7 +2,7 @@ package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.util.SB;
 import org.xvm.XEC;
-
+import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xec.ecstasy.Appenderchar;
 
@@ -12,7 +12,11 @@ import java.util.Iterator;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Ary<E> implements Iterable<E>, Stringable {
+public class Ary<E> extends XTC implements Iterable<E>, Stringable {
+  static final int KID = GET_KID(new Ary());
+  public int kid() { return KID; }
+  public Ary( ) { }         // No arg constructor
+  
   public E[] _es;
   public int _len;
   public Ary( E... es ) {

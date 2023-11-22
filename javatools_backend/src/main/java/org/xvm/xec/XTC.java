@@ -1,6 +1,8 @@
 package org.xvm.xec;
 
+import org.xvm.util.Ary;
 import org.xvm.xrun.*;
+import org.xvm.xec.ecstasy.Orderable.Ordered;
 import org.xvm.XEC;
 
 import java.io.IOException;
@@ -14,41 +16,48 @@ import java.io.IOException;
 // with the package/directory of the same name.
 
 public abstract class XTC {
-  // Everybody gets a container injected.
-  // TODO: This is probably too expensive, and needs to be just for X code
-  // which @Injects.
-  public final Container _container;
-  public XTC( ) { this(null); }
-  public XTC( Container container ) { _container = container; }
+  // User to allow an effective no-args constructor which does not collide with
+  // any user-provided no-arg constructor
+  //public XTC( NativeContainer n ) {  }
+  public XTC( ) {  }
 
+  // --------------------------------------------------------------------------
+  // Every XTC class has a unique integer Klass ID - a KID.  This is used for
+  // dynamic lookups for {equals,compare,hashCode } at least.
+  // Convert KID to a "Golden" blank instance of an XTC class.
+  // The Golden instance can make virtual calls, but its fields are all 0/null.
+  public static final Ary<XTC> GOLDS = new Ary<>(XTC.class);
+  public static int KID_CNT = 1; // Unique KID counter
+  abstract public int kid();     // Virtual call to get the KID from an instance
+  /** Generated in all classes
+     static final int KID = GET_KID();
+     public int kid() { return KID; }
+   */
+  public static int GET_KID( XTC gold ) {
+    int kid = KID_CNT++;
+    GOLDS.setX(kid,gold);
+    return kid;
+  }
 
+  
   // --------------------------------------------------------------------------
   // A bunch of classes and functions that are always available (e.g. TRACE
   // from asserts), or defined in ecstasy.x, or needed for the Java port.
 
   // Ecstasy's normal "equals" call calls the "equals" from "clz" and not a
-  // subclass implementation.  This requires a runtime lookup of equals, if
-  // there are several.
-
-
-  // Theory on a "free" fast version.
-  // Classes always define a "equals$CLZ" along with a custom "equals" (note: Const defines a custom equals)
-  //     class Base extends XTC {
-  //       boolean x0.equals$Base(Base x1);
-  //     }
-  // If the calling type is a constant, use it directly:
-  //     x0.equals$CONSTANT_CLZ(x1);
-  public static boolean equals( Class clz, XTC x0, XTC x1 ) {
-    throw XEC.TODO();
-  }
+  // subclass implementation.  This requires a runtime lookup, unless clz is a
+  // constant.  This call is done in the Comparable interface, but it uses this
+  // signature so can use a java virtual call instead of a java interface call.
+  // This will only be called with two Comparables.
+  public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
 
   // Ecstasy's normal "compare" call calls the "compare" from "clz" and not a
-  // subclass implementation.  This requires a runtime lookup of compare, if
-  // there are several.
-  public static Ordered compare( Class clz, XTC x0, XTC x1 ) {
-    throw XEC.TODO();
-  }
-
+  // subclass implementation.  This requires a runtime lookup, unless clz is a
+  // constant.  This call is done in the Orderable interface, but it uses this
+  // signature so can use a java virtual call instead of a java interface call.
+  // This will only be called with two Orderables.
+  public Ordered compare( XTC x0, XTC x1 ) { throw XEC.TODO(); }
+  
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
 
@@ -72,35 +81,6 @@ public abstract class XTC {
     public static final Mutability[] VALUES = values();
   }
 
-  public enum Ordered {
-    Lesser,
-    Equal, 
-    Greater;
-    public static final Ordered[] VALUES = values();
-  }
-
-  public static Ordered spaceship(long x, long y) {
-    if( x < y ) return Ordered.Lesser;
-    if( x== y ) return Ordered.Equal;
-    return Ordered.Greater;
-  }
-
-  public static Ordered spaceship(String x, String y) {
-    int o = x.compareTo(y);
-    return o < 0 ? Ordered.Lesser
-      : o > 0 ? Ordered.Greater
-      : Ordered.Equal;
-  }
-  
-  public static Ordered spaceship( XTC x, XTC y ) {
-    return x.getClass().isInstance(y) ? x.compare(y) : y.compare(x);
-  }
-
-  public Ordered compare(XTC that) {
-    if( this==that ) return Ordered.Equal;
-    throw new IllegalArgumentException("comparing non-orderables");
-  }
-    
   /** --------------------------------------------------------------------------
       <ul>
       <li>XTC {@code IllegalStateException} is thrown by {@code assert} and by {@code close}.</li>

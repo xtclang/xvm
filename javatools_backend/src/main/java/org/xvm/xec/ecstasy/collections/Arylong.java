@@ -17,6 +17,9 @@ import java.util.function.LongUnaryOperator;
 public class Arylong extends XTC
   implements Iterable<Long>, Stringable
 {
+  static final int KID = GET_KID(new Arylong());
+  public int kid() { return KID; }
+  
   public long[] _es;
   public int _len;
   public Arylong() { _es = new long[1]; }

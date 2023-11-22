@@ -49,8 +49,10 @@ class BinOpAST extends AST {
       if( !_kids[0]._type.primeq() || !_kids[1]._type.primeq() )
         return new InvokeAST("equals",XType.BOOL,_kids[0],_kids[1]).do_type();
     }
-    if( _op0.equals("<=>") )
-      return new InvokeAST("spaceship",XType.ORDERED,new ConAST("XTC"),_kids[0],_kids[1]).do_type();
+    if( _op0.equals("<=>") ) {
+      ClzBuilder.IMPORTS.add("ecstasy.Orderable");
+      return new InvokeAST("spaceship",XType.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).do_type();
+    }
 
     // This is a ternary null-check or elvis operator.  _kids[0] has, deep
     // within it, the matching predicate test.  I need to restructure this tree:
