@@ -53,8 +53,8 @@ public class SwitchAST
      * @param bodies   an array of bodies, corresponding to the cases
      */
     public SwitchAST(ExprAST     cond,
-                     long           isaTest,
-                     Constant[]            cases,
+                     long        isaTest,
+                     Constant[]  cases,
                      BinaryAST[] bodies) {
         this(cond, isaTest, cases, bodies, null);
     }
@@ -83,9 +83,9 @@ public class SwitchAST
         int rowCount = cases.length;
 
         // check bodies that are associated with some or all of the cases
-        assert bodies != null && bodies.length <= cases.length;
-        if (bodies.length < cases.length) {
-            BinaryAST[] newBodies = new BinaryAST[cases.length];
+        assert bodies != null && bodies.length <= rowCount;
+        if (bodies.length < rowCount) {
+            BinaryAST[] newBodies = new BinaryAST[rowCount];
             System.arraycopy(bodies, 0, newBodies, 0, bodies.length);
             bodies = newBodies;
         }
@@ -154,7 +154,7 @@ public class SwitchAST
      *         source code, where a {@Code Constant} indicates a "case" value, and a {@Code BinaryAST}
      *         indicates a body
      */
-    Iterator contents() {
+    public Iterator contents() {
         return new Iterator() {
             int     cur       = 0;
             boolean checkBody = false;

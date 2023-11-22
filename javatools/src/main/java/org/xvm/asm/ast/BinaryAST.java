@@ -82,35 +82,37 @@ public abstract class BinaryAST {
         None,               // 00:
         PropertyExpr,       // 01: property access
         InvokeExpr,         // 02: foo() (method)   (foo is a const)
-        CondOpExpr,         // 03: "<", ">=", etc.
-        Assign,             // 04: x=y;
-        NamedRegAlloc,      // 05: int x; (classified as an expression to simplify "l-value" design)
-        RelOpExpr,          // 06: "&&", "||", "^", etc.
-        NarrowedExpr,       // 07:
-        UnaryOpExpr,        // 08: "+", "-", etc.
-        NewExpr,            // 09:
-        ThrowExpr,          // 0A:
-        CallExpr,           // 0B: foo() (function) (foo is a register/property)
-        ArrayAccessExpr,    // 0C: x[i]
-        BinOpAssign,        // 0D: x*=y; etc.
-        TernaryExpr,        // 0E: x ? y : z
-        OuterExpr,          // 0F:
-        NotExpr,            // 10: !x
-        MultiExpr,          // 11: (expr1, expr2, ...)
-        BindFunctionExpr,   // 12: bind function's arguments
-        DivRemExpr,         // 13: x /% y
-        BindMethodExpr,     // 14: bind method's target
-        NotNullExpr,        // 15: x?
-        ConvertExpr,        // 16:
-        TemplateExpr,       // 17:
-        NewChildExpr,       // 18:
-        TupleExpr,          // 19:
-        CmpChainExpr,       // 1A: x < y <= z, etc.
-        UnpackExpr,         // 1B:
-        SwitchExpr,         // 1C: s = switch () {...}
-        NewVirtualExpr,     // 1D:
-        ListExpr,           // 1E:
+        CondOpExpr,         // 03: "||", "&&", "^^"
+        Less,               // 04: "<"
+        Greater,            // 05: ">"
+        Assign,             // 06: x=y;
+        NamedRegAlloc,      // 07: int x; (classified as an expression to simplify "l-value" design)
+        RelOpExpr,          // 08: "&&", "||", "^", etc.
+        NarrowedExpr,       // 09:
+        UnaryOpExpr,        // 0A: "+", "-", etc.
+        NewExpr,            // 0B:
+        ThrowExpr,          // 0C:
+        CallExpr,           // 0D: foo() (function) (foo is a register/property)
+        ArrayAccessExpr,    // 0E: x[i]
+        BinOpAssign,        // 0F: x*=y; etc.
+        TernaryExpr,        // 10: x ? y : z
+        OuterExpr,          // 11:
+        NotExpr,            // 12: !x
+        MultiExpr,          // 13: (expr1, expr2, ...)
+        BindFunctionExpr,   // 14: bind function's arguments
+        DivRemExpr,         // 15: x /% y
+        BindMethodExpr,     // 16: bind method's target
+        NotNullExpr,        // 17: x?
+        ConvertExpr,        // 18:
+        TemplateExpr,       // 19:
+        NewChildExpr,       // 1A:
+        TupleExpr,          // 1B:
+        CmpChainExpr,       // 1C: x < y <= z, etc.
+        UnpackExpr,         // 1D:
+        SwitchExpr,         // 1E: s = switch () {...}
         Escape,             // 1F: reserved #31: followed by NodeType ordinal as unsigned byte
+        NewVirtualExpr,     //
+        ListExpr,           //
         AnnoRegAlloc,       // same as RegAlloc, but annotated
         AnnoNamedRegAlloc,  // same as NamedRegAlloc, but annotated
         RegAlloc,           // int _; (classified as an expression to simplify "l-value" design)
@@ -126,8 +128,6 @@ public abstract class BinaryAST {
         PostDecExpr,        // x++
         RefOfExpr,          // &x
         VarOfExpr,          // &x
-        Less,
-        Greater,
         ConstantExpr,       //
         MapExpr,            //
         StmtExpr,           //
