@@ -10,13 +10,21 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
 
-import org.xvm.asm.ast.BiExprAST.Operator;
+import org.xvm.asm.ast.BiExprAST;
+import org.xvm.asm.ast.CallExprAST;
 import org.xvm.asm.ast.CondOpExprAST;
+import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.OrderedExprAST;
+import org.xvm.asm.ast.OrderedExprAST.Operator;
+import org.xvm.asm.ast.UnaryOpExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.Cmp;
 import org.xvm.asm.op.IsEq;
 import org.xvm.asm.op.IsGt;
@@ -575,18 +583,89 @@ public class CmpExpression
     @Override
     public ExprAST getExprAST()
         {
-        Operator op = switch (operator.getId())
+        if (false)
             {
-            case COMP_EQ   -> Operator.CompEq;
-            case COMP_NEQ  -> Operator.CompNeq;
-            case COMP_LT   -> Operator.CompLt;
-            case COMP_GT   -> Operator.CompGt;
-            case COMP_LTEQ -> Operator.CompLtEq;
-            case COMP_GTEQ -> Operator.CompGtEq;
-            case COMP_ORD  -> Operator.CompOrd;
-            default -> throw new UnsupportedOperationException(operator.getValueText());
+            // retaining the code for the "old" approach just in case
+            BiExprAST.Operator op = switch (operator.getId())
+                {
+                case COMP_EQ   -> BiExprAST.Operator.CompEq;
+                case COMP_NEQ  -> BiExprAST.Operator.CompNeq;
+                case COMP_LT   -> BiExprAST.Operator.CompLt;
+                case COMP_GT   -> BiExprAST.Operator.CompGt;
+                case COMP_LTEQ -> BiExprAST.Operator.CompLtEq;
+                case COMP_GTEQ -> BiExprAST.Operator.CompGtEq;
+                case COMP_ORD  -> BiExprAST.Operator.CompOrd;
+                default -> throw new UnsupportedOperationException(operator.getValueText());
+                };
+            return new CondOpExprAST(expr1.getExprAST(), op, expr2.getExprAST());
+            }
+
+        ConstantPool pool       = pool();
+        TypeConstant typeCommon = m_typeCommon;
+        assert typeCommon != null;
+
+        ExprAST[] aAstArgs   = new ExprAST[] {expr1.getExprAST(), expr2.getExprAST()};
+        TypeInfo  infoCommon = typeCommon.ensureTypeInfo();
+        boolean   fNot       = false;
+        Operator  opComp     = null;
+        ExprAST   exprOp;
+
+        switch (operator.getId())
+            {
+            case COMP_ORD :
+                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
+                return exprOp == null // TODO: must not be null
+                    ? null
+                    : new CallExprAST(exprOp, pool.typeOrdered(), aAstArgs);
+
+            case COMP_EQ  :
+                exprOp = computeFunctionExpr(infoCommon, pool.sigEquals());
+                break;
+            case COMP_NEQ :
+                exprOp = computeFunctionExpr(infoCommon, pool.sigEquals());
+                fNot   = true;
+                break;
+            case COMP_LT  :
+                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
+                opComp = Operator.Less;
+                break;
+            case COMP_GT  :
+                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
+                opComp = Operator.Greater;
+                break;
+            case COMP_LTEQ:
+                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
+                opComp = Operator.Greater;
+                fNot   = true;
+                break;
+            case COMP_GTEQ:
+                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
+                opComp = Operator.Less;
+                fNot   = true;
+                break;
+            default:
+                throw new UnsupportedOperationException(operator.getValueText());
             };
-        return new CondOpExprAST(expr1.getExprAST(), op, expr2.getExprAST());
+
+        ExprAST exprAst = new CallExprAST(exprOp, pool.typeBoolean(), aAstArgs);
+        if (opComp != null)
+            {
+            exprAst = new OrderedExprAST(exprAst, opComp);
+            }
+        if (fNot)
+            {
+            exprAst = new UnaryOpExprAST(exprAst, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
+            }
+        return exprAst;
+        }
+
+    private ExprAST computeFunctionExpr(TypeInfo info, SignatureConstant sig)
+        {
+        // TODO: must not be null
+        MethodInfo infoMethod = info.getMethodBySignature(sig);
+        return infoMethod == null
+                ? null
+                : new ConstantExprAST(infoMethod.getIdentity());
         }
 
 

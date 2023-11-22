@@ -126,6 +126,8 @@ public abstract class BinaryAST {
         PostDecExpr,        // x++
         RefOfExpr,          // &x
         VarOfExpr,          // &x
+        Less,
+        Greater,
         ConstantExpr,       //
         MapExpr,            //
         StmtExpr,           //
@@ -198,6 +200,7 @@ public abstract class BinaryAST {
                 case IsExpr             -> new IsExprAST();
                 case CondOpExpr         -> new CondOpExprAST();
                 case CmpChainExpr       -> new CmpChainExprAST();
+                case Less, Greater      -> new OrderedExprAST(this);
                 case NotExpr,
                      NegExpr,
                      BitNotExpr,

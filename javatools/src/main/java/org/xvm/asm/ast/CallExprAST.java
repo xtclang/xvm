@@ -39,6 +39,13 @@ public class CallExprAST
         this.function = function;
     }
 
+    /**
+     * Construct a synchronous InvokeExprAST with a single return type.
+     */
+    public CallExprAST(ExprAST function, TypeConstant retType, ExprAST[] args) {
+        this(function, new TypeConstant[] {retType}, args, false);
+    }
+
     public ExprAST getFunction() {
         return function;
     }
