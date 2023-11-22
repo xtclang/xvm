@@ -1,5 +1,48 @@
 /**
  * Path represents a path to a resource, such as a file.
+ *
+ * Note that at compile time, as the result of type inference, a literal path can also indicate a
+ * `File` that is specified by the literal path (if such a file exists), the `Byte[]` binary
+ * contents of that file, or the `String` contents of that file, as if the `Path` defined several
+ * additional methods:
+ *
+ *     @Auto Directory toDirectory()
+ *     @Auto File toFile()
+ *     @Auto Byte[] toFileContentAsBytes()
+ *     @Auto String toFileContentAsString()
+ *
+ * The benefit of being able to use a literal path for these purposes is that the information
+ * referred to is included in the compiled Ecstasy code. For example:
+ *
+ *     Path   path = /welcome.html;     // this includes just path information; no content
+ *     File   file = /welcome.html;     // this embeds the entire file, including file metadata
+ *     String html = /welcome.html;     // this includes the file contents, as a constant string
+ *     Byte[] raw  = /welcome.html;     // this includes the file contents, as constant bytes
+ *
+ * Additionally, when type ambiguity may occur, the path literal can be preceded by the desired
+ * type name, or by the sigils `$` or `#`:
+ *
+ *     val path = Path:/welcome.html;   // type is Path
+ *     val file = File:/welcome.html;   // type is File
+ *     val html = $/welcome.html;       // type is String
+ *     val raw  = #/welcome.html;       // type is Byte[]
+ *
+ * Path literals can also refer to directories, which can be included as a Path, a Directory, or
+ * a FileStore:
+ *
+ *     Path      path = /website/;      // this includes just path information; no content
+ *     Directory dir  = /website/;      // this embeds the entire directory and its contents
+ *     FileStore fs   = /website/;      // this embeds the entire directory and its contents
+ *
+ * Note that the trailing `/` is not required; however, it does have the benefit _to the reader_ of
+ * clearly indicating that the path string explicitly indicates a directory and not a file.
+ *
+ * As with files, when type ambiguity may occur with a directory, the path literal can be preceded
+ * by the desired type name:
+ *
+ *     val path = Path:/website/;       // type is Path
+ *     val dir  = Directory:/website/;  // type is Directory
+ *     val fs   = FileStore:/website/;  // type is FileStore
  */
 const Path
         implements UniformIndexed<Int, Path>

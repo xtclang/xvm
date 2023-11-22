@@ -132,11 +132,14 @@ public class FileExpression
             {
             return switch (sType)
                 {
-                case "FileStore" -> pool.typeFileStore();
-                case "Directory" -> pool.typeDirectory();
-                case "File"      -> pool.typeFile();
-                case "Path"      -> pool.typePath();
-                default          -> throw new IllegalStateException("type=" + sType);
+                case "FileStore"   -> pool.typeFileStore();
+                case "Directory"   -> pool.typeDirectory();
+                case "File"        -> pool.typeFile();
+                case "Path"        -> pool.typePath();
+                case "String"      -> pool.typeString();
+                case "Array<Byte>" -> pool.typeByteArray();
+                case "Byte[]"      -> pool.typeByteArray();
+                default            -> throw new IllegalStateException("type=" + sType);
                 };
             }
         }
@@ -171,6 +174,16 @@ public class FileExpression
                 {
                 nConsumes |= PATH;
                 }
+
+            if (pool.typeString().isA(typeRequired))
+                {
+                nConsumes |= STRING;
+                }
+
+            if (pool.typeByteArray().isA(typeRequired))
+                {
+                nConsumes |= BINARY;
+                }
             }
 
         return nConsumes;
@@ -190,7 +203,7 @@ public class FileExpression
                 {
                 return m_file.isDirectory()
                         ? FS | DIR | PATH
-                        : FILE | PATH;
+                        : FILE | PATH | STRING | BINARY;
                 }
 
             return PATH;
@@ -199,11 +212,14 @@ public class FileExpression
             {
             return switch (sType)
                 {
-                case "FileStore" -> FS;
-                case "Directory" -> DIR;
-                case "File"      -> FILE;
-                case "Path"      -> PATH;
-                default          -> throw new IllegalStateException("type=" + sType);
+                case "FileStore"   -> FS;
+                case "Directory"   -> DIR;
+                case "File"        -> FILE;
+                case "Path"        -> PATH;
+                case "String"      -> STRING;
+                case "Array<Byte>" -> BINARY;
+                case "Byte[]"      -> BINARY;
+                default            -> throw new IllegalStateException("type=" + sType);
                 };
             }
         }
@@ -256,6 +272,18 @@ public class FileExpression
                                 ? pool.typePath()
                                 : pool.ensureUnionTypeConstant(typeActual, pool.typePath());
                         }
+                    if ((nProduces & STRING) != 0)
+                        {
+                        typeActual = typeActual == null
+                                ? pool.typeString()
+                                : pool.ensureUnionTypeConstant(typeActual, pool.typeString());
+                        }
+                    if ((nProduces & BINARY) != 0)
+                        {
+                        typeActual = typeActual == null
+                                ? pool.typeByteArray()
+                                : pool.ensureUnionTypeConstant(typeActual, pool.typeByteArray());
+                        }
                     break;
 
                 case FS:
@@ -278,6 +306,16 @@ public class FileExpression
                 case PATH:
                     typeActual = pool.typePath();
                     constVal   = pool.ensureLiteralConstant(Constant.Format.Path, (String) path.getValue());
+                    break;
+
+                case STRING:
+                    typeActual = pool.typeString();
+                    constVal   = pool.ensureStringConstant(new String(Handy.readFileChars(m_file)));
+                    break;
+
+                case BINARY:
+                    typeActual = pool.typeByteArray();
+                    constVal   = pool.ensureByteStringConstant(Handy.readFileBytes(m_file));
                     break;
 
                 default:
@@ -479,12 +517,14 @@ public class FileExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final int FS   = 0x1;
-    private static final int DIR  = 0x2;
-    private static final int FILE = 0x4;
-    private static final int PATH = 0x8;
-    private static final int ALL  = FS | DIR | FILE | PATH;
-    private static final int NONE = 0x0;
+    private static final int FS     = 0x01;
+    private static final int DIR    = 0x02;
+    private static final int FILE   = 0x04;
+    private static final int PATH   = 0x08;
+    private static final int STRING = 0x10;
+    private static final int BINARY = 0x20;
+    private static final int ALL    = FS | DIR | FILE | PATH  | STRING | BINARY;
+    private static final int NONE   = 0x0;
 
     /**
      * The (optional) type for the expression.
