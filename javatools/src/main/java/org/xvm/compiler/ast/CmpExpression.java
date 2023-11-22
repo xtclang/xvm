@@ -20,11 +20,11 @@ import org.xvm.asm.ast.OrderedExprAST.Operator;
 import org.xvm.asm.ast.UnaryOpExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.Cmp;
 import org.xvm.asm.op.IsEq;
 import org.xvm.asm.op.IsGt;
@@ -264,7 +264,18 @@ public class CmpExpression
                     }
                 else
                     {
-                    m_typeCommon = typeCommon;
+                    SignatureConstant sigCmp  = fEqual ? pool.sigEquals() : pool.sigCompare();
+                    MethodInfo        infoCmp = typeCommon.ensureTypeInfo(errs).getMethodBySignature(sigCmp);
+                    if (infoCmp == null)
+                        {
+                        log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
+                                sigCmp.getName(), typeCommon.getValueString());
+                        }
+                    else
+                        {
+                        m_typeCommon = typeCommon;
+                        m_idCmp      = infoCmp.getIdentity();
+                        }
                     }
                 }
             }
@@ -600,57 +611,45 @@ public class CmpExpression
             return new CondOpExprAST(expr1.getExprAST(), op, expr2.getExprAST());
             }
 
-        ConstantPool pool       = pool();
-        TypeConstant typeCommon = m_typeCommon;
-        assert typeCommon != null;
-
-        ExprAST[] aAstArgs   = new ExprAST[] {expr1.getExprAST(), expr2.getExprAST()};
-        TypeInfo  infoCommon = typeCommon.ensureTypeInfo();
-        boolean   fNot       = false;
-        Operator  opComp     = null;
-        ExprAST   exprOp;
+        ConstantPool pool     = pool();
+        ExprAST      exprCmp  = new ConstantExprAST(m_idCmp);
+        ExprAST[]    aAstArgs = new ExprAST[] {expr1.getExprAST(), expr2.getExprAST()};
+        boolean      fNot     = false;
+        Operator     opCmp    = null;
 
         switch (operator.getId())
             {
-            case COMP_ORD :
-                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
-                return exprOp == null // TODO: must not be null
-                    ? null
-                    : new CallExprAST(exprOp, pool.typeOrdered(), aAstArgs);
+            case COMP_ORD:
+                return new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs);
 
-            case COMP_EQ  :
-                exprOp = computeFunctionExpr(infoCommon, pool.sigEquals());
+            case COMP_EQ:
                 break;
-            case COMP_NEQ :
-                exprOp = computeFunctionExpr(infoCommon, pool.sigEquals());
-                fNot   = true;
+            case COMP_NEQ:
+                fNot = true;
                 break;
-            case COMP_LT  :
-                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
-                opComp = Operator.Less;
+
+            case COMP_LT:
+                opCmp = Operator.Less;
                 break;
-            case COMP_GT  :
-                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
-                opComp = Operator.Greater;
+            case COMP_GT:
+                opCmp = Operator.Greater;
                 break;
             case COMP_LTEQ:
-                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
-                opComp = Operator.Greater;
-                fNot   = true;
+                opCmp = Operator.Greater;
+                fNot  = true;
                 break;
             case COMP_GTEQ:
-                exprOp = computeFunctionExpr(infoCommon, pool.sigCompare());
-                opComp = Operator.Less;
-                fNot   = true;
+                opCmp = Operator.Less;
+                fNot  = true;
                 break;
             default:
                 throw new UnsupportedOperationException(operator.getValueText());
-            };
+            }
 
-        ExprAST exprAst = new CallExprAST(exprOp, pool.typeBoolean(), aAstArgs);
-        if (opComp != null)
+        ExprAST exprAst = new CallExprAST(exprCmp, pool.typeBoolean(), aAstArgs);
+        if (opCmp != null)
             {
-            exprAst = new OrderedExprAST(exprAst, opComp);
+            exprAst = new OrderedExprAST(exprAst, opCmp);
             }
         if (fNot)
             {
@@ -659,22 +658,17 @@ public class CmpExpression
         return exprAst;
         }
 
-    private ExprAST computeFunctionExpr(TypeInfo info, SignatureConstant sig)
-        {
-        // TODO: must not be null
-        MethodInfo infoMethod = info.getMethodBySignature(sig);
-        return infoMethod == null
-                ? null
-                : new ConstantExprAST(infoMethod.getIdentity());
-        }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
      * The common type used for the comparison.
      */
-    protected TypeConstant m_typeCommon;
+    protected transient TypeConstant m_typeCommon;
+    /**
+     * The method used for the comparison.
+     */
+    protected transient MethodConstant m_idCmp;
 
     private transient boolean m_fArg1Null; // is the first arg equal to "Null"
     private transient boolean m_fArg2Null; // is the second arg equal to "Null"
