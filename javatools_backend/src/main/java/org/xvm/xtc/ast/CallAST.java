@@ -30,16 +30,16 @@ public class CallAST extends AST {
     throw XEC.TODO();
   }
 
-  private static final String[] CMPS = new String[]{"equals","compare"};
+  private static final String[] CMPS = new String[]{"equals","compare","hashCode"};
   @Override AST rewrite( ) {
     // Try to rewrite constant calls to the XTC special equals.
     if( _kids[0] instanceof ConAST con ) {
       for( String s : CMPS ) {
         if( con._con.endsWith("."+s) ) {
-          // Convert CLZ.equals    (class,x0,x1)
-          // to      CLZ.equals$CLZ(class,x0,x1)
+          // Convert CLZ.equals(class  ,x0,x1)
+          // to      equals$CLZ(CLZ.KID,x0,x1)
           String clz = con._con.substring(0,con._con.length()-s.length()-1);
-          con._con += "$"+clz;
+          con._con = con._con+"$"+clz;
           return this;
         }
       }

@@ -12,6 +12,9 @@ import java.util.Arrays;
 public class Arychar<A extends Arychar> extends XTC
   implements Stringable
 {
+  static final int KID = GET_KID(new Arychar());
+  public int kid() { return KID; }
+  
   public char[] _cs;
   public int _len;
   public Arychar() { _cs = new char[1]; }
