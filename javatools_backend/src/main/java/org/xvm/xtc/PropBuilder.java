@@ -40,7 +40,7 @@ public abstract class PropBuilder {
     xtype.clz(sb).p(" ").p(pname);
     // Special init for InjectedRef.  Other props get no init()?
     if( "InjectedRef".equals(ano) )
-      sb.fmt(" = _container.%0()",pname);
+      sb.fmt(" = _container==null ? null : _container.%0()",pname);
 
     // Explicit init
     Part init;

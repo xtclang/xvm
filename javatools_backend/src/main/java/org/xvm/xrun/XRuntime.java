@@ -104,5 +104,5 @@ public abstract class XRuntime {
     long x = c-'0';
     return SET$COND(0 <= x && x <= 9,x);
   }
-  
+
 }

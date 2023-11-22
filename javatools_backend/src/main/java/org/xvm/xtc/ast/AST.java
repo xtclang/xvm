@@ -144,9 +144,11 @@ public abstract class AST {
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
+    case Greater      ->    UniOpAST.make(X,">",null);
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
     case InvokeExpr   ->   InvokeAST.make(X);
+    case Less         ->    UniOpAST.make(X,"<",null);
     case MultiExpr    ->    MultiAST.make(X,true);
     case MultiStmt    ->    MultiAST.make(X,false);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);

@@ -99,7 +99,7 @@ public abstract class XType {
     public final Clz _super;          // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
-    public final ClzClz _clzclz;
+    public       ClzClz _clzclz;
     private Clz( ClassPart clz ) {
       assert ClzBuilder.CCLZ!=null; // Init error
       _super = clz._super==null ? null : make(clz._super);
@@ -142,6 +142,7 @@ public abstract class XType {
       assert _clz==null;
       // TODO: Set MOD to ECSTASY
       _clz=clz;
+      _clzclz = new ClzClz(this);
     }
     @Override public boolean is_prim_base() { return false; }
     // Find a field in the superclass chain
@@ -291,7 +292,6 @@ public abstract class XType {
   public static Base JBOOL  = Base.make("Boolean");
   public static Base JCHAR  = Base.make("Character");
   public static Base JINT   = Base.make("Integer");
-  public static Base JLONG  = Base.make("Long");
   public static Base JNULL  = Base.make("Nullable");
   public static Base JUBYTE = Base.make("XUByte");
   public static Base OBJECT = Base.make("Object");
@@ -321,10 +321,10 @@ public abstract class XType {
       put("Char+ecstasy/text/Char.x",CHAR);
       put("Exception+ecstasy/Exception.x",EXCEPTION);
       put("Int64+ecstasy/numbers/Int64.x",LONG);
-      put("UInt8+ecstasy/numbers/UInt8.x",JUBYTE);
       put("IntLiteral+ecstasy/numbers/IntLiteral.x",LONG);
       put("Object+ecstasy/Object.x",OBJECT);
       put("String+ecstasy/text/String.x",STRING);
+      put("UInt8+ecstasy/numbers/UInt8.x",JUBYTE);
     }};
   
   // A set of common XTC classes, and their Java replacements...
@@ -339,10 +339,12 @@ public abstract class XType {
   public static Clz RANGEIE     = new Clz("RangeIE");
   public static Clz RANGEII     = new Clz("RangeII");
   public static Clz STRINGBUFFER= new Clz("StringBuffer");
+  public static Clz JLONG       = new Clz("Long");
   static final HashMap<String, Clz> IMPORT_XJMAP = new HashMap<>() {{
       put("Console+ecstasy/io/Console.x",CONSOLE);
       put("IllegalArgument+ecstasy.x",ILLARGX);
       put("IllegalState+ecstasy.x",ILLSTATEX);
+      put("IntNumber+ecstasy/numbers/IntNumber.x",JLONG);
       put("Iterable+ecstasy/Iterable.x",ITER64);
       put("Ordered+ecstasy.x",ORDERED);
       put("Range+ecstasy/Range.x",RANGE);
@@ -351,7 +353,7 @@ public abstract class XType {
   private static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
 
   // Convert a Java primitive to the Java object version.
-  private static final HashMap<Base, Base> XBOX = new HashMap<>() {{
+  private static final HashMap<Base, XType> XBOX = new HashMap<>() {{
       put(BOOL,JBOOL);
       put(CHAR,JCHAR);
       put(INT ,JINT);
@@ -359,11 +361,11 @@ public abstract class XType {
       put(NULL,JNULL);
     }};
   public XType box() {
-    Base jt = XBOX.get(this);
+    XType jt = XBOX.get(this);
     return jt==null ? this : jt;
   }
   // Convert a Java wrapped primitive to the unwrapped primitive
-  static final HashMap<Base, Base> UNBOX = new HashMap<>() {{
+  static final HashMap<XType, Base> UNBOX = new HashMap<>() {{
       put(JBOOL,BOOL);
       put(JCHAR,CHAR);
       put(JINT ,INT );
@@ -374,7 +376,7 @@ public abstract class XType {
     Base jt = UNBOX.get(this);
     return jt==null ? this : jt;
   } 
-  public boolean primeq() { return XBOX.containsKey(this); }
+  public boolean primeq() { return XBOX.containsKey(this) || this==JLONG; }
   public String ztype() { return primeq() ? "0" : "null"; }
   public boolean is_jdk() { return primeq() || this==STRING; }
   

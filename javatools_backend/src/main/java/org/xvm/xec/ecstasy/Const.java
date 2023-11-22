@@ -3,10 +3,10 @@ package org.xvm.xec.ecstasy;
 import org.xvm.XEC;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
+import org.xvm.xrun.Never;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xec.ecstasy.text.Stringable;
-import org.xvm.xrun.NativeContainer;
 import org.xvm.xtc.*;
 
 public abstract class Const extends XTC
@@ -14,7 +14,7 @@ public abstract class Const extends XTC
              Hashable,                       // XTC hashCode
              Stringable                      // has appendTo
 {
-  public Const(NativeContainer n) {}
+  public Const(Never n) {}
   public Const() {}
   
   /* Generate:

@@ -30,6 +30,11 @@ class UniOpAST extends AST {
     // XTC allows booleans "~" but Java does not.
     if( "~".equals(pre) && XType.xtype(type,false)==XType.BOOL )
       pre = "!";                // Use Java bang instead
+    // UniOp < or > converts an Ordered to a Boolean
+    if( ">".equals(pre) )
+      throw XEC.TODO();
+    if( "<".equals(pre) )
+      throw XEC.TODO();
     return new UniOpAST(kids,pre,post,type);
   }
   

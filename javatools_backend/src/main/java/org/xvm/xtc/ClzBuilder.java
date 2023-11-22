@@ -73,8 +73,8 @@ public class ClzBuilder {
     _sb = sb;
     _names = new HashMap<>();
     // TODO: Move to XMethBuilder
-    _locals = new Ary<String>(String.class);
-    _ltypes = new Ary<XType >(XType .class);
+    _locals = new Ary<>(String.class);
+    _ltypes = new Ary<>(XType .class);
   }
   
   // Fill in the body of the matching java class
@@ -127,9 +127,9 @@ public class ClzBuilder {
       _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
     
     // Get a unique KID for faster special dispath rules
-    _sb.ifmt("static final int KID = GET_KID(new %0((NativeContainer)null));\n",java_class_name);
+    _sb.ifmt("static final int KID = GET_KID(new %0((Never)null));\n",java_class_name);
     _sb.ip("public int kid() { return KID; }\n");
-    _sb.ifmt("private %0(NativeContainer n){super(n);}\n",java_class_name);
+    _sb.ifmt("private %0(Never n){super(n);}\n",java_class_name);
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
@@ -157,7 +157,7 @@ public class ClzBuilder {
       switch( part ) {
       case MMethodPart mmp: 
         // Output java methods.
-        // A bunch of methods have special dispatch rules.
+        // A bunch of methods that have special dispatch rules.
         String mname = mmp._name;
         MethodPart meth = (MethodPart)mmp.child(mname);
         boolean no_ast = meth==null || meth._ast == null;
