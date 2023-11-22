@@ -163,8 +163,8 @@ public abstract class Container
             catch (Throwable e)
                 {
                 // must not happen
-                e.printStackTrace();
-                System.exit(-1);
+                System.err.println("Unexpected service scheduling failure: " + service.f_sName);
+                e.printStackTrace(System.err);
                 }
             finally
                 {

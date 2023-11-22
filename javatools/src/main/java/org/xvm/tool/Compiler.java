@@ -496,7 +496,7 @@ public class Compiler
                 catch (RuntimeException e)
                     {
                     System.err.println("Failed to generate code for " + compiler);
-                    e.printStackTrace();
+                    e.printStackTrace(System.err);
 
                     log(Severity.ERROR, "Failed to generate code for " + compiler
                             + " due to exception: " + e);

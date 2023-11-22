@@ -385,8 +385,9 @@ public class ServiceContext
                     }
                 catch (Throwable e)
                     {
+                    // must not happen
+                    System.err.println("Unexpected service execution failure: " + f_sName);
                     e.printStackTrace(System.err);
-                    System.exit(-1);
                     }
                 }
             }
