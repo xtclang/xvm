@@ -93,6 +93,7 @@ public final class SB {
   public SB  fmt( String fmt, long l   ) { return     fmt(fmt,Long.toString(l)); }
   public SB  fmt( String fmt, String a, String b ) { return p(fmt.replace("%0",a).replace("%1",b)); }
   public SB  fmt( String fmt, String a, long l ) { return     fmt(fmt,a,Long.toString(l)); }
+  public SB ifmt( String fmt, String a, String b ) { return p(fmt.replace("%0",a).replace("%1",b)); }
   public SB ifmt( String fmt, String a, long l ) { return i().fmt(fmt,a,Long.toString(l)); }
   
 }

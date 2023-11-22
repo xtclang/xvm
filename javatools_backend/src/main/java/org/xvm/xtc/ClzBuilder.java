@@ -4,7 +4,10 @@ import org.xvm.XEC;
 import org.xvm.util.Ary;
 import org.xvm.util.S;
 import org.xvm.util.SB;
+import org.xvm.xec.ecstasy.Comparable;
 import org.xvm.xec.ecstasy.Const;
+import org.xvm.xec.ecstasy.collections.Hashable;
+import org.xvm.xec.ecstasy.Orderable;
 import org.xvm.xtc.ast.*;
 import org.xvm.xtc.cons.*;
 
@@ -101,6 +104,7 @@ public class ClzBuilder {
   // Java Class body; can be nested (static inner class)
   private void jclass_body() {
     String java_class_name = java_class_name(_clz._name);
+    _sb.nl();                   // Blank line
     _sb.ip("// XTC ").p(_top ? "module ": "class ").p(_clz._path._str).p(":").p(_clz._name).p(" as Java class ").p(java_class_name).nl();
 
     if( _top ) {
@@ -112,13 +116,20 @@ public class ClzBuilder {
       else {
         _sb.p("Const");
         IMPORTS.add("ecstasy.Const");
+        IMPORTS.add("ecstasy.Orderable.Ordered");
       } 
     }
     _sb.p(" {").nl().ii();
 
+    
     // Required constructor to inject the container
     if( _top )
       _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
+    
+    // Get a unique KID for faster special dispath rules
+    _sb.ifmt("static final int KID = GET_KID(new %0((NativeContainer)null));\n",java_class_name);
+    _sb.ip("public int kid() { return KID; }\n");
+    _sb.ifmt("private %0(NativeContainer n){super(n);}\n",java_class_name);
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
@@ -145,28 +156,39 @@ public class ClzBuilder {
     for( Part part : _clz._name2kid.values() ) {
       switch( part ) {
       case MMethodPart mmp: 
-        // Output java methods
+        // Output java methods.
+        // A bunch of methods have special dispatch rules.
         String mname = mmp._name;
-        if( mname.equals("construct") ) continue; // Already handled module constructor
-        _sb.nl();
         MethodPart meth = (MethodPart)mmp.child(mname);
-        if( (meth==null || meth._ast == null) && _clz._f == Part.Format.CONST ) {
-          // Const classes have default methods, with no code given.  Generate.
-          Const.make_meth(_clz,mname,_sb);
-        } else {
-          if( mname.equals("run") ) run = meth; // Save the top-level run method
-          // Change the name of the equals & compare, as they have special dispatch rules.
-          // Insert a default java version which special dispatches to the user version.
-          if( mname.equals("equals") ) {
-            mname = mname+"$"+java_class_name;
-            Const.make_equals_0(java_class_name,_sb);
-          }
-          if( mname.equals("compare") ) {
-            mname = mname+"$"+java_class_name;
-            Const.make_compare_0(java_class_name,_sb);
-          }
+        boolean no_ast = meth==null || meth._ast == null;
+        _sb.nl();               // Blank line between methods
+        switch( mname ) {
+        case "construct":
+          continue;             // Constructors emitted first for easy reading
+        case "equals":
+          Comparable.make_equals(java_class_name,_sb);
+          // Add a full default method
+          if( no_ast ) Comparable.make_equals_default(_clz,java_class_name,_sb);
+          else jmethod(meth,mname+"$"+java_class_name);
+          break;
+        case "compare":
+          Orderable.make_compare(java_class_name,_sb);
+          // Add a full default method
+          if( no_ast ) Orderable.make_compare_default(_clz,java_class_name,_sb);
+          else jmethod(meth,mname+"$"+java_class_name);
+          break;
+        case "hashCode":
+          Hashable.make_hashCode(java_class_name,_sb);
+          // Add a full default method
+          if( no_ast ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
+          else jmethod(meth,mname+"$"+java_class_name);
+          break;
+        default:
+          // Save the top-level run method
+          if( mname.equals("run") ) run = meth; 
           // Generate the method from the AST
           jmethod(meth,mname);
+          break;
         }
         break;
 
@@ -208,7 +230,7 @@ public class ClzBuilder {
     // Const classes get a specific {toString, appendTo}, although they are not
     // mentioned if default
     if( _clz._f == Part.Format.CONST ) {
-      if( _clz.child("toString")==null ) Const.make_meth(_clz,"toString",_sb);
+      if( _clz.child("toString")==null ) Const.make_toString(_clz,_sb);
     }
     
     // If the run method has a string array arguments -

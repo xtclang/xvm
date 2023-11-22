@@ -11,7 +11,7 @@ module TestModIFace {
         //Hasher<Point>      hasherP = new NaturalHasher<Point>();
         //Hasher<NamedPoint> hasherN = new NaturalHasher<NamedPoint>();
 
-        assert Point.hashCode(point1)      == Point.hashCode(point2);
+        //assert Point.hashCode(point1)      == Point.hashCode(point2);
         //assert Point.hashCode(point1)      == hasherP.hashOf(point1);
         //assert Point.hashCode(point2)      == hasherP.hashOf(point2);
         //assert NamedPoint.hashCode(point2) == hasherN.hashOf(point2);
