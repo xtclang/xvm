@@ -6,6 +6,6 @@ import org.xvm.xrun.*;
 public abstract class XRunClz extends XTC implements Runnable {
   public final Container _container;
   public XRunClz( Container container ) { _container = container; }
-  public XRunClz( NativeContainer n ) { _container = n; }
+  public XRunClz( Never n ) { _container = null; }
   public void main( String[] args ) { run(); }
 }

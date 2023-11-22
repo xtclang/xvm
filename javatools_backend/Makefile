@@ -101,7 +101,7 @@ examples:	$(examples_x:x=xtc) $(XDK)
 
 $(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x $(XDK)
 	@echo "compiling " $@ " because " $?
-	@$(XTC) $? -o $(EXM)
+	@$(XTC) $< -o $(EXM)
 
 examples_run: $(classes) examples
 	$(XEC) $(EXM)/HelloWorld.xtc
@@ -133,7 +133,7 @@ manuals_run: $(classes) $(XDK) manuals
 
 MULTI = multiModule/Lib.x multiModule/Main.x
 multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
-$(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x
+$(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
 	@echo "compiling " $@ " because " $?
 	@$(XTC) -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools $? -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 

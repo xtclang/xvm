@@ -16,10 +16,6 @@ import java.io.IOException;
 // with the package/directory of the same name.
 
 public abstract class XTC {
-  // User to allow an effective no-args constructor which does not collide with
-  // any user-provided no-arg constructor
-  //public XTC( NativeContainer n ) {  }
-  public XTC( ) {  }
 
   // --------------------------------------------------------------------------
   // Every XTC class has a unique integer Klass ID - a KID.  This is used for
