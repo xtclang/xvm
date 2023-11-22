@@ -75,7 +75,7 @@
 
     @Override
     static <CompileType extends UIntNumber> Ordered compare(CompileType value1, CompileType value2) {
-        return value1.bits <=> value1.bits;
+        return value1.bits <=> value2.bits;
     }
 
     @Override
