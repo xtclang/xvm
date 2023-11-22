@@ -268,6 +268,7 @@ public class CmpExpression
                     MethodInfo        infoCmp = typeCommon.ensureTypeInfo(errs).getMethodBySignature(sigCmp);
                     if (infoCmp == null)
                         {
+                        fValid = false;
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
                                 sigCmp.getName(), typeCommon.getValueString());
                         }

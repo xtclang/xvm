@@ -20,6 +20,8 @@ import org.xvm.asm.ast.CmpChainExprAST;
 import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsEq;
@@ -129,8 +131,8 @@ public class CmpChainExpression
         List<Expression> listExprs = expressions;
         int              cExprs    = listExprs.size();
 
-        TypeConstant typeRequest = chooseCommonType(ctx, false);
-        boolean      fForceFirst = typeRequest == null;
+        TypeConstant typeCommon = chooseCommonType(ctx, false);
+        boolean      fForceFirst = typeCommon == null;
         if (fForceFirst)
             {
             Expression exprOld = listExprs.get(0);
@@ -143,24 +145,24 @@ public class CmpChainExpression
                 {
                 listExprs.set(0, exprNew);
                 }
-            typeRequest = chooseCommonType(ctx, false);
+            typeCommon = chooseCommonType(ctx, false);
             }
 
         // allow the expressions to resolve names based on the requested type
-        boolean fInfer = typeRequest != null;
+        boolean fInfer = typeCommon != null;
         if (fInfer)
             {
-            ctx = ctx.enterInferring(typeRequest);
+            ctx = ctx.enterInferring(typeCommon);
             }
         else
             {
-            typeRequest = fOrdered ? pool.typeOrderable() : null;
+            typeCommon = fOrdered ? pool.typeOrderable() : null;
             }
 
         for (int i = fForceFirst ? 1 : 0; i < cExprs; ++i)
             {
             Expression exprOld = listExprs.get(i);
-            Expression exprNew = listExprs.get(i).validate(ctx, typeRequest, errs);
+            Expression exprNew = listExprs.get(i).validate(ctx, typeCommon, errs);
             if (exprNew == null)
                 {
                 fValid = false;
@@ -177,20 +179,20 @@ public class CmpChainExpression
             }
         else
             {
-            typeRequest = chooseCommonType(ctx, true);
-            CheckConversions: if (typeRequest != null)
+            typeCommon = chooseCommonType(ctx, true);
+            CheckConversions: if (typeCommon != null)
                 {
                 // test if we can convert all of the expressions to the decided-upon type
                 MethodConstant[] aConvMethod = new MethodConstant[cExprs];
                 for (int i = 0; i < cExprs; ++i)
                     {
                     TypeConstant typePre = listExprs.get(i).getType();
-                    if (!typePre.isA(typeRequest))
+                    if (!typePre.isA(typeCommon))
                         {
-                        MethodConstant method = typePre.getConverterTo(typeRequest);
+                        MethodConstant method = typePre.getConverterTo(typeCommon);
                         if (method == null)
                             {
-                            typeRequest = null;
+                            typeCommon = null;
                             break CheckConversions;
                             }
                         else
@@ -211,7 +213,7 @@ public class CmpChainExpression
                     }
                 }
 
-            if (typeRequest == null)
+            if (typeCommon == null)
                 {
                 if (fOrdered)
                     {
@@ -223,49 +225,30 @@ public class CmpChainExpression
                 else
                     {
                     // for equality, just use Object
-                    typeRequest = pool.typeObject();
+                    typeCommon = pool.typeObject();
                     }
                 }
             }
 
         // store the resulting common type to compare
-        m_typeCommon = typeRequest;
+        if (fValid)
+            {
+            assert typeCommon != null;
 
-//                // make sure that we can compare the left value to the right value
-//                TypeConstant typeCommon = chooseCommonType(type1, type2, true);
-//                if (typeCommon == null)
-//                    {
-//                    // try to resolve the types using the current context
-//                    GenericTypeResolver resolver = ctx.getFormalTypeResolver();
-//                    TypeConstant        type1R   = type1.resolveGenerics(pool, resolver);
-//                    TypeConstant        type2R   = type2.resolveGenerics(pool, resolver);
-//
-//                    typeCommon = chooseCommonType(type1R, type2R, true);
-//                    }
-//
-//                if (typeCommon == null)
-//                    {
-//                    fValid = false;
-//                    if (type1.equals(pool.typeNull()))
-//                        {
-//                        log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
-//                                type2.getValueString());
-//                        }
-//                    else if (type2.equals(pool.typeNull()))
-//                        {
-//                        log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
-//                                type1.getValueString());
-//                        }
-//                    else
-//                        {
-//                        log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
-//                                type1.getValueString(), type2.getValueString());
-//                        }
-//                    }
-//                else
-//                    {
-//                    m_typeCommon = typeCommon;
-//                    }
+            SignatureConstant sigCmp  = fOrdered ? pool.sigCompare() : pool.sigEquals();
+            MethodInfo        infoCmp = typeCommon.ensureTypeInfo(errs).getMethodBySignature(sigCmp);
+            if (infoCmp == null)
+                {
+                fValid = false;
+                log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
+                        sigCmp.getName(), typeCommon.getValueString());
+                }
+            else
+                {
+                m_typeCommon = typeCommon;
+                m_idCmp      = infoCmp.getIdentity();
+                }
+            }
 
         // for this to be a constant expression, either all sub-expressions are constant and the
         // result is calculated from that, or left-to-right, enough expressions are constant that
@@ -549,7 +532,7 @@ public class CmpChainExpression
                     };
                 }
             }
-        return new CmpChainExprAST(aAst, aOp);
+        return new CmpChainExprAST(aAst, aOp, m_idCmp);
         }
 
 
@@ -719,6 +702,10 @@ public class CmpChainExpression
      * The common type used for the comparison.
      */
     private TypeConstant m_typeCommon;
+    /**
+     * The method used for the comparison.
+     */
+    protected transient MethodConstant m_idCmp;
 
     /**
      * The constant value that all other expressions are compared to for equality; often

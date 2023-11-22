@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
@@ -22,17 +23,19 @@ import static org.xvm.util.Handy.writePackedLong;
 public class CmpChainExprAST
         extends ExprAST {
 
-    private ExprAST[]  exprs;
-    private Operator[] ops;
+    private ExprAST[]      exprs;
+    private Operator[]     ops;
+    private MethodConstant method; // the comparison method (same for all pairs)
 
     private transient TypeConstant booleanType;
 
     CmpChainExprAST() {}
 
-    public CmpChainExprAST(ExprAST[] exprs, Operator[] ops) {
+    public CmpChainExprAST(ExprAST[] exprs, Operator[] ops, MethodConstant method) {
         assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
         assert ops   != null && Arrays.stream(ops).allMatch(Objects::nonNull);
         assert ops.length == exprs.length - 1;
+        assert method != null;
 
         for (Operator op : ops) {
             assert switch (op) {
@@ -41,8 +44,9 @@ public class CmpChainExprAST
                 default -> false;
             };
         }
-        this.exprs = exprs;
-        this.ops   = ops;
+        this.exprs  = exprs;
+        this.ops    = ops;
+        this.method = method;
     }
 
     public Operator[] getOps() {
@@ -51,6 +55,10 @@ public class CmpChainExprAST
 
     public ExprAST[] getExprs() {
         return exprs;  // note: caller must not modify returned array in any way
+    }
+
+    public MethodConstant getMethod() {
+        return method;
     }
 
     @Override
@@ -77,14 +85,18 @@ public class CmpChainExprAST
         for (int i = 0; i < count-1; ++i) {
             ops[i] = Operator.values()[readMagnitude(in)];
         }
+        MethodConstant method = (MethodConstant) res.getConstant(readMagnitude(in));
+
         this.exprs  = exprs;
         this.ops    = ops;
+        this.method = method;
         booleanType = res.typeForName("Boolean");
     }
 
     @Override
     public void prepareWrite(ConstantResolver res) {
         prepareASTArray(exprs, res);
+        res.register(method);
     }
 
     @Override
@@ -98,6 +110,7 @@ public class CmpChainExprAST
         for (Operator op : ops) {
             writePackedLong(out, op.ordinal());
         }
+        writePackedLong(out, res.indexOf(method));
     }
 
     @Override
