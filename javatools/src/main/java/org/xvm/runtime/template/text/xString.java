@@ -79,10 +79,10 @@ public class xString
         markNativeMethod("construct", STRING, VOID);
         markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
-        markNativeMethod("substring", INT, STRING);
-        markNativeMethod("hashCode", null, null);
-        markNativeMethod("equals", null, null);
-        markNativeMethod("compare", null, null);
+        markNativeMethod("substring", INT,  STRING);
+        markNativeMethod("hashCode",  null, INT);
+        markNativeMethod("equals",    null, BOOLEAN);
+        markNativeMethod("compare",   null, null);
 
         invalidateTypeInfo();
         }
@@ -364,64 +364,6 @@ public class xString
         else
             {
             // TODO: see String.java indexOfSupplementary()
-            }
-        return -1;
-        }
-
-    private static int indexOf(char[] achSource, char[] achTarget, int ofStart)
-        {
-        int cchSource = achSource.length;
-        int cchTarget = achTarget.length;
-
-        if (ofStart >= cchSource - cchTarget)
-            {
-            return -1;
-            }
-
-        if (ofStart < 0)
-            {
-            ofStart = 0;
-            }
-
-        if (cchTarget <= 1)
-            {
-            if (cchTarget == 0)
-                {
-                return ofStart;
-                }
-            return indexOf(achSource, achTarget[0], ofStart);
-            }
-
-        char chFirst = achTarget[0];
-        int  ofMax   = cchSource - cchTarget;
-
-        for (int of = ofStart; of <= ofMax; of++)
-            {
-            // indexOf(chFirst, ofStart)
-            if (achSource[of] != chFirst)
-                {
-                while (++of <= ofMax && achSource[of] != chFirst)
-                    {
-                    }
-                }
-
-            // first character matches; compare the rest
-            if (of <= ofMax)
-                {
-                int ofFirst = of + 1;
-                int ofLast  = ofFirst + cchTarget - 1;
-
-                for (int ofTarget = 1;
-                     ofFirst < ofLast && achSource[ofFirst] == achTarget[ofTarget];
-                     ofFirst++, ofTarget++)
-                    {
-                    }
-
-                if (ofFirst == ofLast)
-                    {
-                    return of;
-                    }
-                }
             }
         return -1;
         }

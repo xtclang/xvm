@@ -42,7 +42,7 @@ public class Identity
     public void initNative()
         {
         markNativeMethod("equals",   null, BOOLEAN);
-        markNativeMethod("hashCode", null, new String[] {"numbers.Int64"});
+        markNativeMethod("hashCode", null, INT);
 
         invalidateTypeInfo();
         }
@@ -100,7 +100,7 @@ public class Identity
     /**
      * An identity handle for non-hashable or mutable values.
      */
-    protected static class IdentityHandle
+    public static class IdentityHandle
             extends ObjectHandle
         {
         protected IdentityHandle(ClassComposition clzIdentity, ObjectHandle hValue)

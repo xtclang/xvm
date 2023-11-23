@@ -356,13 +356,16 @@ public class xConst
             {
             case "compare":
                 {
-                Container container = frame.f_context.f_container;
-                xConst    template  = this;
-                if (template == INSTANCE)
+                Container     container = frame.f_context.f_container;
+                TypeHandle    hType     = (TypeHandle) ahArg[0];
+                ClassTemplate template  = this;
+
+                // allow for narrower native implementations
+                if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst)
                     {
-                    TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) container.getTemplate(hType.getDataType());
+                    template = templateConst;
                     }
+
                 return template.callCompare(frame,
                         getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
                 }
@@ -372,13 +375,16 @@ public class xConst
 
             case "equals":
                 {
-                Container container = frame.f_context.f_container;
-                xConst    template  = this;
-                if (template == INSTANCE)
+                Container     container = frame.f_context.f_container;
+                TypeHandle    hType     = (TypeHandle) ahArg[0];
+                ClassTemplate template  = this;
+
+                // allow for narrower native implementations
+                if (container.getTemplate(hType.getDataType()) instanceof xConst templateConst)
                     {
-                    TypeHandle hType = (TypeHandle) ahArg[0];
-                    template = (xConst) container.getTemplate(hType.getDataType());
+                    template = templateConst;
                     }
+
                 return template.callEquals(frame,
                         getCanonicalClass(container), ahArg[1], ahArg[2], iReturn);
                 }

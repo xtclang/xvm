@@ -57,6 +57,11 @@ public abstract class xNumber
             }
 
         markNativeProperty("bits");
+
+        ClassStructure structure = getStructure();
+        structure.findMethodDeep("equals",   m -> m.getParamCount() == 3).markNative();
+        structure.findMethodDeep("compare",  m -> m.getParamCount() == 3).markNative();
+        structure.findMethodDeep("hashCode", m -> m.getParamCount() == 2).markNative();
         }
 
     @Override
