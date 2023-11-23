@@ -20,6 +20,8 @@ import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Token;
+
 import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.ListMap;
@@ -353,6 +355,12 @@ public class Compiler
         for (Node node : allNodes)
             {
             // create a module/package/class structure for each dir/file node in the "module tree"
+            if (node.type().getCategory().getId() != Token.Id.MODULE)
+                {
+                log(Severity.ERROR, "File \"" + node + "\" doesn't contain a module statement");
+                continue;
+                }
+
             var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
             FileStructure struct   = compiler.generateInitialFileStructure();
             assert struct != null;
