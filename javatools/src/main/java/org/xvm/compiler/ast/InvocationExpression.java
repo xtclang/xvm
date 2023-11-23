@@ -830,6 +830,7 @@ public class InvocationExpression
             else if (m_fBjarne)
                 {
                 listArgs.add(0, exprLeft);
+                typeLeft = null;
                 }
 
             // handle conversion to function
