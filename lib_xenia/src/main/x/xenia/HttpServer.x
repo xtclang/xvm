@@ -22,11 +22,6 @@ interface HttpServer
     }
 
     /**
-     * The host name that was used to start the HttpServer.
-     */
-    @RO String hostName;
-
-    /**
      * The address the server is bound to (can be the same as hostName).
      */
     @RO String bindAddr;
@@ -44,15 +39,15 @@ interface HttpServer
     /**
      * Configure the server.
      *
-     * @param hostName   the host name (e.g. "www.xqiz.it")
+     * @param bindAddr   the address (name) to bind the server to
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
      * @param keystore   the KeyStore to use for tls certificates and encryption
-     * @param tlsKey     the name of the public/private key pair in the keystore to use for tls
-     * @param cookieKey  the name of the secret key in the keystore to use for cookie encryption
+     * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls
+     * @param cookieKey  (optional) the name of the secret key in the keystore to use for cookie
+     *                   encryption
      */
-    void configure(String hostName, String bindAddress,
-                   UInt16 httpPort, UInt16 httpsPort,
+    void configure(String bindAddr, UInt16 httpPort, UInt16 httpsPort,
                    KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null);
 
     /**
@@ -340,7 +335,7 @@ interface HttpServer
             Scheme scheme    = getProtocol().scheme;
             Scheme tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
             UInt16 tlsPort   = server.tlsPort;
-            String hostName  = server.getClientHostName(context) ?: server.hostName;
+            String hostName  = server.getClientHostName(context)? : assert as $"cannot upgrade {scheme}";
 
             return $|{tlsScheme.name}://{hostName}\
                     |{{if (tlsPort!=443) {$.add(':').append(tlsPort);}}}\

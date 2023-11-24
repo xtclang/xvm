@@ -172,12 +172,12 @@ public class xRTKeyStore
                     break;
                     }
                 }
+
             if (trustManager == null)
                 {
                 return new DeferredCallHandle(
                         xException.makeHandle(frame, "No X509TrustManager available"));
                 }
-
 
             ServiceContext  context  = f_container.createServiceContext("KeyStore");
             TypeComposition clzStore = getCanonicalClass(f_container);
@@ -188,7 +188,7 @@ public class xRTKeyStore
             MethodStructure ctor = f_struct.findConstructor(); // default constructor
             assert ctor != null;
 
-            // this is a bit of a hack; since the injected service ic constructed natively, we're
+            // this is a bit of a hack; since the injected service is constructed natively, we're
             // calling the default constructor as a regular method, skipping initializers/finalizers
             CallChain chain = clzStore.getMethodCallChain(ctor.getIdentityConstant().getSignature());
             switch (invoke1(frame, chain, hService, Utils.OBJECTS_NONE, Op.A_IGNORE))

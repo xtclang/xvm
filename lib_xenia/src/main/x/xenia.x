@@ -82,21 +82,20 @@ module xenia.xtclang.org {
      * Create and start an HTTP/HTTPS server for the specified web application.
      *
      * @param webApp     the WebApp to dispatch the HTTP requests to
-     * @param hostName   the server host name (e.g. "localhost")
      * @param bindAddr   the address (name) to bind the server to (could be the same as hostName)
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
      * @param keystore   the keystore to use for tls certificates and encryption
+     * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls
+     * @param cookieKey  (optional) the name of the secret key in the keystore to use for cookie encryption
      *
      * @return a function that allows to shutdown the server
      */
-    function void () createServer(WebApp webApp,
-                                  String hostName, String bindAddr,
-                                  UInt16 httpPort, UInt16 httpsPort,
-                                  KeyStore keystore) {
+    function void () createServer(WebApp webApp, String bindAddr, UInt16 httpPort, UInt16 httpsPort,
+                                  KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null) {
         @Inject HttpServer server;
         try {
-            server.configure(hostName, bindAddr, httpPort, httpsPort, keystore);
+            server.configure(bindAddr, httpPort, httpsPort, keystore, tlsKey);
 
             HttpHandler handler = new HttpHandler(server, webApp);
 

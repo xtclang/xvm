@@ -6,11 +6,10 @@ module %appName%_web%qualifier%
 
     package hosted_ import %appName%%qualifier%;
 
-    function void () createServer_(String hostName, String bindAddr,
-                                   UInt16 httpPort, UInt16 httpsPort,
-                                   crypto_.KeyStore keystore)
+    function void () createServer_(String bindAddr, UInt16 httpPort, UInt16 httpsPort,
+                                   crypto_.KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null)
         {
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);
-        return xenia_.createServer(webApp, hostName, bindAddr, httpPort, httpsPort, keystore);
+        return xenia_.createServer(webApp, bindAddr, httpPort, httpsPort, keystore, tlsKey, cookieKey);
         }
     }

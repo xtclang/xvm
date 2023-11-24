@@ -49,7 +49,7 @@ module Hello
         String hostName  = "localhost";
         UInt16 httpPort  = 8080;
         UInt16 httpsPort = 8090;
-        xenia.createServer(this, hostName, hostName, httpPort, httpsPort, keystore);
+        xenia.createServer(this, hostName, httpPort, httpsPort, keystore);
 
         console.print($|Use the curl command to test, for example:
                        |
@@ -77,7 +77,7 @@ module Hello
 
             @Get
             ResponseOut home() {
-                return new HtmlResponse(/resources/hello/index.html);
+                return new HtmlResponse(File:/resources/hello/index.html);
             }
 
             @Get("hello")
