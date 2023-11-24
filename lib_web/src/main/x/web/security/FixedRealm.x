@@ -124,7 +124,7 @@ const FixedRealm
     @Override
     conditional Set<String> validUser(String user) {
         return pwdsByUser.contains(user)
-                ? rolesByUser.get(user)
+                ? (True, rolesByUser.get(user) ?: [])
                 : False;
     }
 
