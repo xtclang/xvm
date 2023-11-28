@@ -8,7 +8,8 @@ import ecstasy.text.Log;
 /**
  * The ModuleGenerator for a hosted web module.
  */
-class ModuleGenerator(ModuleTemplate webModule) {
+class ModuleGenerator(ModuleTemplate webModule,
+                      String         moduleSourceTemplate = $./templates/_module.txt) {
     /**
      * The underlying WebModule template.
      */
@@ -17,7 +18,7 @@ class ModuleGenerator(ModuleTemplate webModule) {
     /**
      * Generic templates.
      */
-    protected String moduleSourceTemplate = $./templates/_module.txt;
+    protected String moduleSourceTemplate;
 
     /**
      * Generate (if necessary) all the necessary classes to use a web module.
