@@ -37,6 +37,8 @@ public class MMethodPart extends Part {
   }
   
   private static final HashSet<String> NATIVES = new HashSet<>() { {
+      add("add");
+      add("addAll");
       add("appendTo");
       add("compare");
       add("equals");

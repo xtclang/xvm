@@ -96,18 +96,22 @@ XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
 	@echo "compiling " $@ " because " $?
 	$(XTC) $< -o $@
 
+# General recipe for executing an XTC, by making an "EXE" file from an XTC -
+# since no "EXE" is ever made, this just always runs the module.
+%.exe:	%.xtc $(classes) $(XDK)
+	@echo "running " $@
+	$(XEC) $<
+
+
 
 # Build examples, .xtc from .x
 # Assuming a minor version change in XTC, rebuild XTC examples
 EXM = $(XVM_ROOT)/doc/examples
 examples_x = $(wildcard $(EXM)/*.x)
 
-examples:	$(examples_x:x=xtc) $(XDK)
+examples_xtc:	$(examples_x:x=xtc) $(XDK)
 
-examples_run: $(classes) examples
-	$(XEC) $(EXM)/HelloWorld.xtc
-	$(XEC) $(EXM)/FizzBuzz.xtc
-	$(XEC) $(EXM)/Permutations.xtc
+examples_exe:	$(examples_x:x=exe) $(classes) 
 
 
 # Manual tests use an explicit list
@@ -117,15 +121,10 @@ MANUAL_TESTS = TestMisc.x TestModIFace.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
-manuals:	$(manuals_x:x=xtc)
+manuals_xtc:	$(manuals_x:x=xtc) $(XDK)
 
-$(manuals_x:x=exe): $(MANUAL_DIR)/%.exe: $(MANUAL_DIR)/%.xtc $(classes)
-	@echo "Running " $@ " because " $?
-	@$(XEC) $?
+manuals_exe:	$(manuals_x:x=exe) $(classes)
 
-manuals_run: $(classes) $(XDK) manuals
-	$(XEC) $(MANUAL_DIR)/TestMisc.xtc
-	$(XEC) $(MANUAL_DIR)/TestModIFace.xtc
 
 
 MULTI = multiModule/Lib.x multiModule/Main.x
