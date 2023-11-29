@@ -30,11 +30,6 @@ class UniOpAST extends AST {
     // XTC allows booleans "~" but Java does not.
     if( "~".equals(pre) && XType.xtype(type,false)==XType.BOOL )
       pre = "!";                // Use Java bang instead
-    // UniOp < or > converts an Ordered to a Boolean
-    if( ">".equals(pre) )
-      throw XEC.TODO();
-    if( "<".equals(pre) )
-      throw XEC.TODO();
     return new UniOpAST(kids,pre,post,type);
   }
   
@@ -50,6 +45,18 @@ class UniOpAST extends AST {
   }
   boolean is_elvis() { return "ELVIS".equals(_pre); }
   static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern.is_elvis(); }
+  static AST find_elvis(AST ast) {
+    if( is_elvis(ast) ) return ast;
+    if( ast._kids==null ) return null;
+    for( AST kid : ast._kids ) {
+      if( kid != null ) {
+        kid._par = ast;
+        AST elvis = find_elvis(kid);
+        if( elvis!=null ) return elvis;
+      }
+    }
+    return null;
+  }
   boolean is_trace() { return ".TRACE()".equals(_post); }
 
   @Override XType _type() {
@@ -72,6 +79,15 @@ class UniOpAST extends AST {
   @Override AST rewrite() {
     if( is_trace() )
       return new InvokeAST("TRACE",(XType)null,new ConAST("XTC"),_kids[0]).do_type();
+    if( "!".equals(_pre) && _kids[0] instanceof OrderAST ord ) {
+      // Invert the bang directly
+      ord._op = switch( ord._op ) {
+      case ">" -> "<=";
+      case "<" -> ">=";
+      default -> throw XEC.TODO();
+      };
+      return ord;
+    }
     return this;
   }
   
@@ -88,7 +104,9 @@ class UniOpAST extends AST {
     }
     
     if( _pre !=null ) sb.p(" ").p(_pre );
+    if( _kids[0] instanceof BinOpAST ) sb.p('(');
     _kids[0].jcode(sb);
+    if( _kids[0] instanceof BinOpAST ) sb.p(')');
     if( _post!=null ) sb.p(_post).p(" ");
     return sb;
   }

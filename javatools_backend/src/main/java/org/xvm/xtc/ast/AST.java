@@ -61,21 +61,21 @@ public abstract class AST {
   // Walk, and allow AST to rewrite themselves in-place.
   // Set the _par parent.
   public final void do_rewrite() {
-    if( _kids!=null )
-      for( int i=0; i<_kids.length; i++ ) {
-        AST kid = _kids[i];
-        if( kid != null ) {
-          while( true ) {
-            kid._par = this;
-            AST rwk = kid.rewrite();
-            if( kid==rwk )  break; // No change
-            assert rwk._type!=null;
-            kid = rwk;
-          }
-          _kids[i] = kid;
-          _kids[i].do_rewrite();
-        }
+    if( _kids==null ) return;
+    for( int i=0; i<_kids.length; i++ ) {
+      AST kid = _kids[i];
+      if( kid == null ) continue;
+      while( true ) {
+        kid._par = this;
+        AST rwk = kid.rewrite();
+        if( kid==rwk )  break; // No change
+        assert rwk._type!=null;
+        kid = rwk;
       }
+      _kids[i] = kid;
+      _kids[i].do_rewrite();
+    }
+    return;
   }
   
   // Rewrite some AST bits before Java
@@ -144,11 +144,11 @@ public abstract class AST {
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
-    case Greater      ->    UniOpAST.make(X,">",null);
+    case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
     case InvokeExpr   ->   InvokeAST.make(X);
-    case Less         ->    UniOpAST.make(X,"<",null);
+    case Less         ->    OrderAST.make(X,"<");
     case MultiExpr    ->    MultiAST.make(X,true);
     case MultiStmt    ->    MultiAST.make(X,false);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);

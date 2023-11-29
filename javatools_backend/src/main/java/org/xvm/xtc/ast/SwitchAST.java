@@ -220,13 +220,13 @@ class SwitchAST extends AST {
   // def
   private SB do_simple_tern( SB sb ) {
     XType xt = _kids[0]._type;
-    sb.p(" $t(").p(_tmps[0]).p("= ");
+    sb.p(" $t(").p(_tmps==null ? null : _tmps[0]).p("= ");
     _kids[0].jcode(sb);
     sb.p(") &");
     sb.nl().ii();
     // For each arm
     for( int i=0; i<_armss.length-1; i++ ) {
-      xt.do_eq(sb.ip(_tmps[0]),_armss[i][0]).p(" ? ");
+      xt.do_eq(sb.ip(_tmps==null ? null : _tmps[0]),_armss[i][0]).p(" ? ");
       _kids[i+1].jcode(sb);
       sb.p(" :").nl();
     }

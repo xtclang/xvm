@@ -120,7 +120,7 @@ manuals:	$(manuals_x:x=xtc)
 
 $(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
 	@echo "compiling " $@ " because " $?
-	@$(XTC) -L $(MANUAL_DIR) -o $(MANUAL_DIR) $<
+	@$(XTC) $< -o $(MANUAL_DIR)
 
 $(manuals_x:x=log): $(MANUAL_DIR)/%.log: $(MANUAL_DIR)/%.xtc $(classes)
 	@echo "Running " $@ " because " $?

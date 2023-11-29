@@ -16,6 +16,8 @@ import java.io.IOException;
 // with the package/directory of the same name.
 
 public abstract class XTC {
+  public XTC( Never n ) {}      // No arg constructor
+  public XTC() {}               // No arg constructor
 
   // --------------------------------------------------------------------------
   // Every XTC class has a unique integer Klass ID - a KID.  This is used for
@@ -53,6 +55,11 @@ public abstract class XTC {
   // signature so can use a java virtual call instead of a java interface call.
   // This will only be called with two Orderables.
   public Ordered compare( XTC x0, XTC x1 ) { throw XEC.TODO(); }
+
+  // TODO: this should move into e.g. Const, but Java doesn't understand
+  //                GOLDS[Enum.idx].equals(...);
+  // TODO: Instead: Enum.GOLD      .equals(...)  should work
+  public boolean equals(Ordered x0, Ordered x1) { return x0==x1; }
   
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }

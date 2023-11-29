@@ -3,6 +3,7 @@ package org.xvm.xtc.ast;
 import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
+import org.xvm.xtc.cons.MethodCon;
 import org.xvm.util.SB;
 
 public class CallAST extends AST {
@@ -14,14 +15,15 @@ public class CallAST extends AST {
     AST[] kids = X.kids_bias(1);
     // Move the function to the 0th kid slot.
     kids[0] = ast_term(X);     // Call expression first
-    return new CallAST(kids,retTypes,X._meth);
+    XType[] rets = XType.xtypes(retTypes);
+    return new CallAST(rets,X._meth._name,kids);
   }
-  private CallAST( AST[] kids, Const[] retTypes, MethodPart meth ) {
+  CallAST( XType[] rets, String mname, AST... kids ) {
     super(kids);
     // Check for a call to super: "super.call()" becomes "super.METHOD"
     if( _kids[0] instanceof RegAST reg && reg._reg== -13 )
-      _kids[0] = new ConAST(null,"super."+meth._name,reg._type);
-    _rets = XType.xtypes(retTypes);
+      _kids[0] = new ConAST(null,"super."+mname,reg._type);
+    _rets = rets;
   }
   
   @Override XType _type() {
@@ -34,13 +36,44 @@ public class CallAST extends AST {
   @Override AST rewrite( ) {
     // Try to rewrite constant calls to the XTC special equals.
     if( _kids[0] instanceof ConAST con ) {
-      for( String s : CMPS ) {
-        if( con._con.endsWith("."+s) ) {
-          // Convert CLZ.equals(class  ,x0,x1)
-          // to      equals$CLZ(CLZ.KID,x0,x1)
-          String clz = con._con.substring(0,con._con.length()-s.length()-1);
-          con._con = con._con+"$"+clz;
-          return this;
+      if( con._type instanceof XType.Fun fun && fun._args!=null && fun._args[0] instanceof XType.ClzClz clz ) {
+        // Hard force Int64/IntNumber "funky dispatch" to Java primitive
+        if( clz._clz==XType.JLONG ) {
+          if( con._con.equals("Int64.equals") ) return new BinOpAST("==","",XType.BOOL,_kids[1],_kids[2]);
+          if( con._con.equals("IntNumber.compare") ) return new BinOpAST("<=>","",XType.BOOL,_kids[1],_kids[2]);
+          throw XEC.TODO();
+        }
+        // Hard force  "funky dispatch" to Java primitive
+        if( clz._clz==XType.STRING ) {
+          if( con._con.equals("String.equals") ) return new BinOpAST("==","",XType.BOOL,_kids[1],_kids[2]);
+        }
+      }
+
+      // Convert "funky dispatch" calls:
+      int lidx = con._con.lastIndexOf('.');
+      if( lidx != -1 ) {
+        String clz = con._con.substring(0,lidx);
+        String base = con._con.substring(lidx+1);
+        int nargs = switch( base ) {
+          case "hashCode" -> 1;
+          case "equals", "compare" -> 2;
+          default -> 0;
+        };
+        if( nargs != 0 ) {
+          if( _kids.length==nargs+2 ) { // extra-KID static variant
+            // Convert CLZ.equal/cmp(KID,arg1,arg2) to their static variant: CLZ.equal/cmp$CLZ(int KID,arg1,arg2);
+            // Convert CLZ.hashCode (KID,arg1     ) to their static variant: CLZ.hashCode$CLZ (int KID,arg1,arg2);
+            con._con += "$"+clz;
+            return this;
+          } else {              // Dynamic variant
+            // Convert CLZ.equal/cmp(arg1,arg2) to Java dynamic: GOLD.equal/cmp(arg1,arg2);
+            // Convert CLZ.hashCode (arg1     ) to Java dynamic: GOLD.hashCode (arg1     );
+            assert _kids.length==nargs+1;
+            MethodPart meth = (MethodPart)((MethodCon)con._tcon).part();
+            ClassPart clazz = meth.clz();
+            ClzBuilder.add_import(clazz);
+            return new InvokeAST(base,_rets,new ConAST("GOLDS.at("+clz+".KID)"),_kids[1],_kids[2]);
+          }
         }
       }
     }

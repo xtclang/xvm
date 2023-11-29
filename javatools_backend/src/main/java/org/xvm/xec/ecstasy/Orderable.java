@@ -27,6 +27,12 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
   // class, so we can do a v-call instead of an i-call.
   public abstract Ordered compare( XTC x0, XTC x1 );
 
+  // If the XTC compiler knows 'this' and 'x1' are the same class it emits a
+  // short-form compare call, to directly check <,<=,>,>=
+  default boolean CompLt(Orderable ord) {
+    return compare((XTC)this,(XTC)ord) == Ordered.Lesser;
+  }
+
   /** Each implementation will define the above abstract equals as:
    *  {@code public Ordered compare(XTC x0, XTC x1) { return compare$CLZ((CLZ)x0,(CLZ)x1) } }
    * Each implemention will also define (commonly with a default gen'd code):
@@ -92,4 +98,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
       : Ordered.Equal;
   }
 
+  
+  public static boolean lesser ( Ordered x ) { return x==Ordered.Lesser ; }
+  public static boolean greater( Ordered x ) { return x==Ordered.Greater; }
 }

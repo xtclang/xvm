@@ -7,7 +7,7 @@ import org.xvm.xtc.*;
 // Not-The-Java Comparable.  XTC Comparable adds 'equals' not 'compareTo'.
 public interface Comparable {
 
-  // The fully dynamic comparable lookup
+  // The fully dynamic equals lookup, based on the given compile-time class
   public static boolean equals( int czidx, XTC x0, XTC x1 ) {
     return XTC.GOLDS.at(czidx).equals(x0,x1); // Dynamic against gold
   }
@@ -17,6 +17,10 @@ public interface Comparable {
   // class, so we can do a v-call instead of an i-call.
   public abstract boolean equals( XTC x0, XTC x1 );
 
+  // If the XTC compiler knows 'this' and 'x1' are the same class it emits a
+  // short-form equals call in which dispatch to either side is ok.  
+  default public boolean equals( XTC x1 ) { return equals((XTC)this,x1); }
+  
   /** Each implementation will define the above abstract equals as:
    *  {@code public boolean equals(XTC x0, XTC x1) { return equals$CLZ((CLZ)x0,(CLZ)x1) } }
    * Each implemention will also define (commonly with a default gen'd code):

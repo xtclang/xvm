@@ -90,7 +90,7 @@ public abstract class XType {
     @Override int hash() { return Arrays.hashCode(_xts); }
   }
   
-  // Basically a Java class as a 
+  // Basically a Java class as a XType 
   public static class Clz extends XType {
     private static final HashMap<ClassPart,Clz> ZINTERN = new HashMap<>();
     public final String _name;
@@ -99,32 +99,40 @@ public abstract class XType {
     public final Clz _super;          // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
-    public       ClzClz _clzclz;
+    public final ClzClz _clzclz;
     private Clz( ClassPart clz ) {
       assert ClzBuilder.CCLZ!=null; // Init error
       _super = clz._super==null ? null : make(clz._super);
       _mod = ClzBuilder.CCLZ;  // Compile unit class
       _clz = clz;
       _name = _mod==clz ? clz._name : _mod._name+"."+clz._name;
+      _clzclz = new ClzClz(this);
       int len=0;
       for( Part part : clz._name2kid.values() )
         if( part instanceof PropPart prop && find(_super,prop._name)==null )
           len++;
       _flds = new String[len];
       _xts  = new XType [len];
-      len=0;
-      for( Part part : clz._name2kid.values() )
+      // Split init from new to avoid infinite recursion on init
+    }
+    // Split init from new to avoid infinite recursion on init
+    private Clz init() {
+      int len=0;
+      for( Part part : _clz._name2kid.values() )
         if( part instanceof PropPart prop && find(_super,prop._name)==null ) {
           _flds[len  ] = prop._name;
           _xts [len++] = xtype(prop._con,false);
         }
-      _clzclz = new ClzClz(this);
+      return this;
     }
     // Made from XTC class
     public static Clz make( ClassPart clz ) {
       // Check for a pre-cooked class
       assert !BASE_XJMAP.containsKey(xjkey(clz));
-      return ZINTERN.computeIfAbsent(clz, k->new Clz(clz));
+      Clz xclz = ZINTERN.get(clz);
+      if( xclz!=null ) return xclz;
+      ZINTERN.put(clz,xclz = new Clz(clz));
+      return xclz.init();
     }
     // Made from a Java class directly; the XTC class shows up later.  No
     // fields are mentioned, and are not needed since the class is pre
@@ -135,14 +143,13 @@ public abstract class XType {
       _super=null;              // No super in the XTC sense
       _flds=null;
       _xts=null;
-      _clzclz = null;
+      _clzclz = new ClzClz(this);
     }
     void set(ClassPart clz) {
       if( _clz==clz ) return;
       assert _clz==null;
       // TODO: Set MOD to ECSTASY
       _clz=clz;
-      _clzclz = new ClzClz(this);
     }
     @Override public boolean is_prim_base() { return false; }
     // Find a field in the superclass chain
@@ -167,9 +174,12 @@ public abstract class XType {
     @Override public SB clz( SB sb ) { return sb.p(_name); }
     // Using shallow equals,hashCode, not deep, because the parts are already interned
     @Override boolean eq(XType xt) {
-      return Arrays.equals(_flds,((Clz)xt)._flds) && Arrays.equals(_xts,((Clz)xt)._xts);
+      Clz clz = (Clz)xt;
+      return _name.equals(clz._name) && _super==clz._super;
     }
-    @Override int hash() { return Arrays.hashCode(_flds) ^ Arrays.hashCode(_xts); }
+    @Override int hash() {
+      return _name.hashCode() ^ (_super==null ? -1 : _super.hashCode() );
+    }
   }
   
 
@@ -251,7 +261,7 @@ public abstract class XType {
       if( _args == null ) return sb;
       sb.p(_args.length).p("$");
       for( XType xt : _args )
-        xt.str(sb).p("$");
+        xt.clz(sb).p("$");
       return sb.unchar();
     }
     // Using shallow equals,hashCode, not deep, because the parts are already interned
@@ -295,7 +305,7 @@ public abstract class XType {
   public static Base JNULL  = Base.make("Nullable");
   public static Base JUBYTE = Base.make("XUByte");
   public static Base OBJECT = Base.make("Object");
-  public static Base STRING = Base.make("String");
+  public static Clz  STRING = new Clz("String");
 
   // Java primitives or primitive classes
   public static Base BOOL = Base.make("boolean");
@@ -316,15 +326,15 @@ public abstract class XType {
   
   // A set of common XTC classes, and their Java replacements.
   // These are NOT parameterized.
-  static final HashMap<String, Base> BASE_XJMAP = new HashMap<>() {{
+  static final HashMap<String, XType> BASE_XJMAP = new HashMap<>() {{
       put("Boolean+ecstasy/Boolean.x",BOOL);
       put("Char+ecstasy/text/Char.x",CHAR);
       put("Exception+ecstasy/Exception.x",EXCEPTION);
       put("Int64+ecstasy/numbers/Int64.x",LONG);
       put("IntLiteral+ecstasy/numbers/IntLiteral.x",LONG);
       put("Object+ecstasy/Object.x",OBJECT);
-      put("String+ecstasy/text/String.x",STRING);
       put("UInt8+ecstasy/numbers/UInt8.x",JUBYTE);
+      put("String+ecstasy/text/String.x",STRING);
     }};
   
   // A set of common XTC classes, and their Java replacements...
@@ -376,7 +386,7 @@ public abstract class XType {
     Base jt = UNBOX.get(this);
     return jt==null ? this : jt;
   } 
-  public boolean primeq() { return XBOX.containsKey(this) || this==JLONG; }
+  public boolean primeq() { return XBOX.containsKey(this); }
   public String ztype() { return primeq() ? "0" : "null"; }
   public boolean is_jdk() { return primeq() || this==STRING; }
   
@@ -417,18 +427,13 @@ public abstract class XType {
         }
         // Check the common base classes
         String xjkey = xjkey(clz);
-        Base val = BASE_XJMAP.get(xjkey);
+        XType val = BASE_XJMAP.get(xjkey);
         if( val!=null ) yield boxed ? val.box() : val;
         // Again, common classes with imports
         Clz xclz = IMPORT_XJMAP.get(xjkey);
         if( xclz!=null ) {
           xclz.set(clz);
-          String imp = clz._path._str;
-          if( !imp.equals("ecstasy.x") ) {
-            // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
-            String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
-            ClzBuilder.IMPORTS.add(imp2);
-          }
+          ClzBuilder.add_import(clz);
           yield xclz;
         }
         // Make one
@@ -490,8 +495,9 @@ public abstract class XType {
     //    yield XMap.make_class(ClzBuilder.XCLASSES, ptc._parms);
     //  
       // Attempt to use the Java class name
-      if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
+      if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") ) {
         yield ((Clz)telem)._clzclz;
+      }
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
         if( telem == CHAR || telem== JCHAR ) {
