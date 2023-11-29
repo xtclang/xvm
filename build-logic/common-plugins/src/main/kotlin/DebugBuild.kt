@@ -44,7 +44,7 @@ fun Task.printTaskDependencies(level: LogLevel = LIFECYCLE) {
 
 @Suppress("unused")
 fun Project.printRepos(level: LogLevel = LIFECYCLE) {
-    repositories.forEach {
+    repositories.map { it.name }.forEach {
         logger.log(level, "$prefix Repository: '$it'")
     }
 }
