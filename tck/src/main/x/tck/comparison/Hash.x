@@ -19,7 +19,7 @@ class Hash {
         String         s = "abc";
         Hasher<String> h = new NaturalHasher();
 
-        assert String.hashCode(s) == hasher.hashOf(s);
+        assert String.hashCode(s) == h.hashOf(s);
     }
 
     @Test
@@ -35,8 +35,8 @@ class Hash {
         assert NamedPoint.hashCode(point2) == hasherN.hashOf(point2);
     }
 
-    const Point(Int x, Int y);
+    static const Point(Int x, Int y);
 
-    const NamedPoint(String name, Int x, Int y)
+    static const NamedPoint(String name, Int x, Int y)
         extends Point(x, y);
 }

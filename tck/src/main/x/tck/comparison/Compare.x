@@ -61,7 +61,7 @@ class Compare {
         assert np1 != np2;
         assert np1 <=> np2 == Lesser;
         assert p1 == p2;
-        assert p1 <=> p2 == Equals;
+        assert p1 <=> p2 == Equal;
     }
 
     @Test
@@ -123,13 +123,12 @@ class Compare {
         return t1 < t2;
     }
 
-    const Point(Int x, Int y);
+    static const Point(Int x, Int y);
 
-    const NamedPoint(String name, Int x, Int y)
+    static const NamedPoint(String name, Int x, Int y)
         extends Point(x, y);
 
-
-    const AnyValue(Int key, String value) {
+    static const AnyValue(Int key, String value) {
         @Override
         static <CompileType extends AnyValue> Boolean equals(CompileType value1, CompileType value2) {
             return value1.key == value2.key;
