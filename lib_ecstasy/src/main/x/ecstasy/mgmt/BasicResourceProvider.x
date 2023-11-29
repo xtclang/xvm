@@ -36,14 +36,14 @@ service BasicResourceProvider
             return (InjectedRef.Options opts) -> {
                 @Inject(opts=opts) Timer timer;
                 return timer;
-        };
+            };
 
         case (Random, "random"):
         case (Random, "rnd"):
             return (InjectedRef.Options opts) -> {
                 @Inject(opts=opts) Random random;
                 return random;
-        };
+            };
 
         default:
             // if the type is Nullable, no need to complain; just return Null, otherwise
