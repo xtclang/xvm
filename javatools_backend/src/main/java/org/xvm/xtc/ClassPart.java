@@ -119,10 +119,11 @@ public class ClassPart extends Part {
   }
 
   // Module for this class
-  ModPart mod() {
+  public ModPart mod() {
     Part clz = this;
     while( !(clz instanceof ModPart mod) )
       clz = clz._par;
     return mod;
   }
+
 }

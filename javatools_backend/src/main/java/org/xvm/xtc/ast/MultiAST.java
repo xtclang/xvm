@@ -1,6 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 
 public class MultiAST extends AST {
@@ -29,23 +30,22 @@ public class MultiAST extends AST {
     // When finding a Multi, I search the _kids[0] slot for an elvis
     //   ( ...e0 ?. e1 ... , more)  ==>>
     //   ((e0==null || (...e0.e1...)) && more)
-    // TODO: search all kids
-    AST elvis = _kids[0];
-    while( elvis!=null && elvis._kids!=null && !UniOpAST.is_elvis(elvis._kids[0]) )
-      elvis = elvis._kids[0];
-    if( elvis!=null && elvis._kids!=null ) {
+    AST elvis = UniOpAST.find_elvis(this);
+    if( elvis != null ) {
+      AST par_elvis = elvis._par;
+      assert par_elvis._kids[0] == elvis;
       // Make 'e0==null'
-      AST vsnull = elvis._kids[0]._kids[0];
+      AST vsnull = elvis._kids[0];
       BinOpAST eq0 = new BinOpAST("==","",XType.BOOL,new ConAST("null"),vsnull);
       BinOpAST or  = new BinOpAST("||","",XType.BOOL,eq0,_kids[0]);
       _kids[0] = or;
       // Drop the elvis buried inside the expression
-      elvis._kids[0] = vsnull;
+      par_elvis._kids[0] = vsnull;
     }
     
     return this;
   }
-  
+
   @Override public void jpre(SB sb) {
     if( _kids.length > 1 )
       if( _expr ) 

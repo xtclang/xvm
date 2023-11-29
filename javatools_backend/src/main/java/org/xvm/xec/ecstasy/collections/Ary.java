@@ -1,12 +1,14 @@
 package org.xvm.xec.ecstasy.collections;
 
-import org.xvm.util.SB;
 import org.xvm.XEC;
+import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xec.ecstasy.Appenderchar;
+import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xrun.Never;
 
 import java.lang.Iterable;
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -15,13 +17,17 @@ import java.util.Iterator;
 public class Ary<E> extends XTC implements Iterable<E>, Stringable {
   static final int KID = GET_KID(new Ary());
   public int kid() { return KID; }
-  public Ary( ) { }         // No arg constructor
-  
+  public Ary(Never n) { }       // No arg constructor
+
   public E[] _es;
   public int _len;
-  public Ary( E... es ) {
+  
+  @SuppressWarnings("unchecked")
+  public Ary(Class<E> clazz) { this((E[]) Array.newInstance(clazz, 1),0); }
+  public Ary( E... es ) { this(es,es.length); }
+  public Ary( E[] es, int len ) {
     _es = es;
-    _len = es.length;
+    _len = len;
   }
 
   /** Length, as encoded as a size property read */

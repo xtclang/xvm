@@ -10,9 +10,9 @@ import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xtc.*;
 
 public abstract class Const extends XTC
-  implements org.xvm.xec.ecstasy.Comparable, // XTC comparable adds equals
-             Hashable,                       // XTC hashCode
-             Stringable                      // has appendTo
+  implements org.xvm.xec.ecstasy.Orderable, // XTC comparable adds compare,equals
+             Hashable,                      // XTC hashCode
+             Stringable                     // has appendTo
 {
   public Const(Never n) {}
   public Const() {}

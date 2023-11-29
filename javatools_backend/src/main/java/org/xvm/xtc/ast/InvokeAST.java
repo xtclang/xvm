@@ -43,6 +43,7 @@ class InvokeAST extends AST {
     super(kids);
     _meth = meth;
     _rets = rets;
+    _type = _type();
   }
 
   @Override XType _type() {
@@ -58,6 +59,29 @@ class InvokeAST extends AST {
   }
   
   @Override AST rewrite() {
+    if( _kids[0]._type == XType.JLONG ) {
+      if( _meth.equals("toString") )
+        return _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XType.STRING,new ConAST("Long"),_kids[1]).do_type();
+      if( _meth.equals("toInt64") ) // Cast long to a Long
+        return _kids[0];            // Autoboxing in Java
+      if( _meth.equals("valueOf") )
+        return this;
+      // Actually needs a cast
+      throw XEC.TODO();
+    }
+    if( _kids[0]._type == XType.STRING ) {
+      if( _meth.equals("toCharArray") )
+        return new NewAST(_kids,XType.ARYCHAR,null);
+      if( _meth.equals("equals") )
+        return this;
+      // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
+      if( _meth.equals("appendTo") ) {
+        AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
+        return this;
+      }
+      throw XEC.TODO();
+    }
+    
     if( !(_kids[0]._type instanceof XType.Base jt) ) return this;
     // Cannot invoke directly on java primitives
     switch( jt._jtype ) {
@@ -75,16 +99,6 @@ class InvokeAST extends AST {
       // Actually needs a cast
       throw XEC.TODO();
     }
-    case "Long": {
-      if( _meth.equals("toString") )
-        return _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XType.STRING,new ConAST("Long"),_kids[1]).do_type();
-      if( _meth.equals("toInt64") ) // Cast long to a Long
-        return _kids[0];            // Autoboxing in Java
-      if( _meth.equals("valueOf") )
-        return this;
-      // Actually needs a cast
-      throw XEC.TODO();
-    }
 
     case "char":
     case "Character":
@@ -92,18 +106,6 @@ class InvokeAST extends AST {
         return new InvokeAST(_meth,XType.COND_CHAR,new ConAST("XRuntime"),_kids[0]).do_type();
       throw XEC.TODO();      
       
-    case "String":
-      if( _meth.equals("toCharArray") )
-        return new NewAST(_kids,XType.ARYCHAR,null);
-      if( _meth.equals("equals") )
-        return this;
-      // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
-      if( _meth.equals("appendTo") ) {
-        AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
-        return this;
-      }
-      throw XEC.TODO();
-
     default:
       return this;
     }
