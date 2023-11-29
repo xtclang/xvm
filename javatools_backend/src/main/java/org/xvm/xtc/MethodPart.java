@@ -151,7 +151,11 @@ public class MethodPart extends MMethodPart {
       rez = Math.min(rez,_args[i]._con.eq(sig._args[i]));
       if( rez == -1 ) return -1;
     }
-    // Do not match on returns
+    if( _rets != null )
+      for( int i=0; i<_rets.length; i++ ) {
+        rez = Math.min(rez,_rets[i]._con.eq(sig._rets[i]));
+        if( rez == -1 ) return -1;
+      }
     return rez;
   }
   

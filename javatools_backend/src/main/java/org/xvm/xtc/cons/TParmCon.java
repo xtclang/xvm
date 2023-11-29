@@ -17,7 +17,9 @@ public class TParmCon extends FormalCon {
   // This guy does not have a matching Part/Component/Structure
   @Override public Part link( XEC.ModRepo repo ) {
     if( _part!=null ) return _part;
-    MethodPart meth = (MethodPart)_par.link(repo).link(repo);
+    MethodPart meth = (MethodPart)_par.link(repo);
+    if( meth==null ) return null; // Recursive, not ready yet
+    meth.link(repo);
     _parm = meth._args[_reg];
     return (_part=new ParmPart(meth,this));
   }

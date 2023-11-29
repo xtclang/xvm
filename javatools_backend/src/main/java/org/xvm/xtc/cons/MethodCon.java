@@ -10,6 +10,7 @@ import org.xvm.util.SB;
 public class MethodCon extends PartCon {
   public SigCon _sig;
   public final int _lamidx;
+  private boolean _link_start;
   public MethodCon( CPool X ) {
     X.u31();                    // Parent
     X.u31();                    // Signature
@@ -45,7 +46,10 @@ public class MethodCon extends PartCon {
     if( rez1 >= 1 ) { assert rez1==1;  return (_part = meth1); }
     if( rez0 == 1 )                    return (_part = meth0);
 
-    // Might have to go deep
+    
+    // Might have to go deep, and this can get recursive.
+    if( _link_start ) return null; // Recursive link, no answer (yet)
+    _link_start = true;
     if( rez0 > 1 ) {
       // Now try the sig field by field
       _sig.link(repo);          // This can recurse

@@ -1,24 +1,31 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
+import org.xvm.xtc.MethodPart;
+import org.xvm.xtc.cons.Const;
+import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.cons.Const.BinOp;
 import org.xvm.util.SB;
 
 class CmpChainAST extends AST {
   final BinOp[] _ops;
   final String[] _tmps;
+  final MethodPart _cmp;
 
   static CmpChainAST make( ClzBuilder X ) {
     AST[] kids = X.kids();
     BinOp[] ops = new BinOp[kids.length-1];
     for( int i=0; i<ops.length; i++ )
       ops[i] = BinOp.OPS[X.u31()];
-    return new CmpChainAST(kids,ops);
+    Const con = X.con();
+    MethodPart cmp = (MethodPart)((MethodCon)con).part();
+    return new CmpChainAST(kids,ops,cmp);
   }
   
-  CmpChainAST( AST[] kids, BinOp[] ops ) {
+  CmpChainAST( AST[] kids, BinOp[] ops, MethodPart cmp ) {
     super(kids);
     _ops = ops;
+    _cmp = cmp;
     _tmps = new String[ops.length];
   }
 
