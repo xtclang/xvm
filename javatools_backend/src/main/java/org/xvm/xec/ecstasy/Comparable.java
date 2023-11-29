@@ -8,8 +8,8 @@ import org.xvm.xtc.*;
 public interface Comparable {
 
   // The fully dynamic equals lookup, based on the given compile-time class
-  public static boolean equals( int czidx, XTC x0, XTC x1 ) {
-    return XTC.GOLDS.at(czidx).equals(x0,x1); // Dynamic against gold
+  public static boolean equals( XTC gold_type, XTC x0, XTC x1 ) {
+    return gold_type.equals(x0,x1); // Dynamic against gold
   }
 
   // Require implementations define this, which can typically be done with a
@@ -37,7 +37,7 @@ public interface Comparable {
      }
   */
   static void make_equals_default( ClassPart clz, String clzname, SB sb ) {
-    sb.ifmt("public static boolean equals$%0( int clzid, %0 x0, %0 x1 ) {\n",clzname).ii();
+    sb.ifmt("public static boolean equals$%0( XTC gold, %0 x0, %0 x1 ) {\n",clzname).ii();
     sb.ip(  "if( x0==x1 ) return true;\n");
     sb.ip(  "return ");
     boolean any=false;
@@ -55,7 +55,7 @@ public interface Comparable {
   public static void make_equals( String clzname, SB sb ) {
     sb.ip("// Default equals\n");
     sb.ip("public boolean equals( XTC x0, XTC x1 ) {\n").ii();
-    sb.ifmt("return equals$%0(KID,(%0)x0,(%0)x1);\n",clzname).di();
+    sb.ifmt("return equals$%0(GOLD,(%0)x0,(%0)x1);\n",clzname).di();
     sb.ip("}\n");    
   }  
 }

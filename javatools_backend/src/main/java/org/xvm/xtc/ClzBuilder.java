@@ -130,9 +130,8 @@ public class ClzBuilder {
     if( _is_module && is_runclz() )
       _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
     
-    // Get a unique KID for faster special dispath rules
-    _sb.ifmt("static final int KID = GET_KID(new %0((Never)null));\n",java_class_name);
-    _sb.ip("public int kid() { return KID; }\n");
+    // Get a GOLDen instance for faster special dispath rules
+    _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
     _sb.ifmt("private %0(Never n){super(n);}\n",java_class_name);
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>

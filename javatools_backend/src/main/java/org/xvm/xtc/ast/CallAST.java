@@ -24,6 +24,7 @@ public class CallAST extends AST {
     if( _kids[0] instanceof RegAST reg && reg._reg== -13 )
       _kids[0] = new ConAST(null,"super."+mname,reg._type);
     _rets = rets;
+    _type = _type();
   }
   
   @Override XType _type() {
@@ -61,8 +62,8 @@ public class CallAST extends AST {
         };
         if( nargs != 0 ) {
           if( _kids.length==nargs+2 ) { // extra-KID static variant
-            // Convert CLZ.equal/cmp(KID,arg1,arg2) to their static variant: CLZ.equal/cmp$CLZ(int KID,arg1,arg2);
-            // Convert CLZ.hashCode (KID,arg1     ) to their static variant: CLZ.hashCode$CLZ (int KID,arg1,arg2);
+            // Convert CLZ.equal/cmp(GOLD,arg1,arg2) to their static variant: CLZ.equal/cmp$CLZ(GOLD,arg1,arg2);
+            // Convert CLZ.hashCode (GOLD,arg1     ) to their static variant: CLZ.hashCode$CLZ (GOLD,arg1,arg2);
             con._con += "$"+clz;
             return this;
           } else {              // Dynamic variant
@@ -72,7 +73,7 @@ public class CallAST extends AST {
             MethodPart meth = (MethodPart)((MethodCon)con._tcon).part();
             ClassPart clazz = meth.clz();
             ClzBuilder.add_import(clazz);
-            return new InvokeAST(base,_rets,new ConAST("GOLDS.at("+clz+".KID)"),_kids[1],_kids[2]);
+            return new InvokeAST(base,_rets,new ConAST(clz+".GOLD"),_kids[1],_kids[2]);
           }
         }
       }

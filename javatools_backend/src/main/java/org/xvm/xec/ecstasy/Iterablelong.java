@@ -10,8 +10,7 @@ import java.util.Iterator;
      Support XTC range iterator
 */
 public class Iterablelong extends XTC implements Iterator<Long> {
-  static final int KID = GET_KID(new Iterablelong(null));
-  public int kid() { return KID; }
+  public static final Iterablelong GOLD = new Iterablelong(null);
   public Iterablelong(Never n ) { _end=0; _dn=false; } // No-arg constructor
   
   long _i;
