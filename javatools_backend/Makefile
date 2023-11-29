@@ -91,6 +91,11 @@ XDK = $(XDK_DIR)/javatools/javatools.jar
 XTC = nice java -jar $(XDK) xcc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
 XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
 
+# General recipe for making an XTC from a X file
+%.xtc:	%.x $(XDK)
+	@echo "compiling " $@ " because " $?
+	$(XTC) $< -o $@
+
 
 # Build examples, .xtc from .x
 # Assuming a minor version change in XTC, rebuild XTC examples
@@ -98,10 +103,6 @@ EXM = $(XVM_ROOT)/doc/examples
 examples_x = $(wildcard $(EXM)/*.x)
 
 examples:	$(examples_x:x=xtc) $(XDK)
-
-$(examples_x:x=xtc): $(EXM)/%.xtc: $(EXM)/%.x $(XDK)
-	@echo "compiling " $@ " because " $?
-	@$(XTC) $< -o $(EXM)
 
 examples_run: $(classes) examples
 	$(XEC) $(EXM)/HelloWorld.xtc
@@ -118,11 +119,7 @@ manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
 manuals:	$(manuals_x:x=xtc)
 
-$(manuals_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
-	@echo "compiling " $@ " because " $?
-	@$(XTC) $< -o $(MANUAL_DIR)
-
-$(manuals_x:x=log): $(MANUAL_DIR)/%.log: $(MANUAL_DIR)/%.xtc $(classes)
+$(manuals_x:x=exe): $(MANUAL_DIR)/%.exe: $(MANUAL_DIR)/%.xtc $(classes)
 	@echo "Running " $@ " because " $?
 	@$(XEC) $?
 
@@ -138,7 +135,7 @@ $(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
 	@$(XTC) -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools $? -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 
 
-test:	$(classes) $(test_classes) $(MANUAL_DIR)/multiModule/Lib.xtc $(MANUAL_DIR)/multiModule/Main.xtc
+test:	$(classes) $(test_classes) ../tck
 	@echo "Running test"
 	@$(XEC) -L $(MANUAL_DIR)/multiModule $(MANUAL_DIR)/multiModule/Main.xtc
 
