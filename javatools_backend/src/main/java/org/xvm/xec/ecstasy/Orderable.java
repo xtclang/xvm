@@ -18,8 +18,8 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
   }
 
   // The fully dynamic compare lookup
-  public static Ordered compare( int czidx, XTC x0, XTC x1 ) {
-    return XTC.GOLDS.at(czidx).compare(x0,x1); // Dynamic against gold
+  public static Ordered compare( XTC gold_type, XTC x0, XTC x1 ) {
+    return gold_type.compare(x0,x1); // Dynamic against gold
   }
 
   // Require implementations define this, which can typically be done with a
@@ -41,9 +41,9 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
   
   /* Generate:
      public Ordered compare( XTC x0, XTC x1 ) { // Called by the fully dynamic lookup
-       return compare$CLZ(clzid,(CLZ)x0,(CLZ)x1);
+       return compare$CLZ(GOLD,(CLZ)x0,(CLZ)x1);
      }
-     public static Ordered compare$CLZ( int clzid, CLZ x0, CLZ x1 ) { 
+     public static Ordered compare$CLZ( XTC gold, CLZ x0, CLZ x1 ) { 
        if( x0==x1 ) return Equal;
        Ordered x;
        if( (x=x0.fld0.compare(x1.fld0)) != Equal ) return x;
@@ -54,7 +54,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
      }
   */
   static void make_compare_default( ClassPart clz, String clzname, SB sb ) {
-    sb.ifmt("public static Ordered compare$%0( int clzid, %0 x0,%0 x1 ) {\n",clzname).ii();
+    sb.ifmt("public static Ordered compare$%0( XTC gold, %0 x0,%0 x1 ) {\n",clzname).ii();
     sb.ip("if( x0==x1 ) return Ordered.Equal;\n");
     sb.ip("Ordered $x;\n");
 
@@ -76,7 +76,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
   static void make_compare( String clzname, SB sb ) {
     sb.ip("// Default compare\n");
     sb.ip("public Ordered compare( XTC x0, XTC x1 ) {\n").ii();
-    sb.ifmt("return compare$%0(KID,(%0)x0,(%0)x1);\n",clzname).di();
+    sb.ifmt("return compare$%0(GOLD,(%0)x0,(%0)x1);\n",clzname).di();
     sb.ip("}\n");    
   }
   private static boolean xeq(PropPart p) {

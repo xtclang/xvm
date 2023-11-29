@@ -188,12 +188,12 @@ public abstract class XType {
   //   Value:  (2,3)
   //   XType:  Point
   //   ClzClz: Point.class
-  // Passed about as ints got from Point.KID or pt.kid()
+  // Passed about as an XTC instance got from Point.GOLD
   public static class ClzClz extends XType {
     public final Clz _clz;
     ClzClz(Clz clz) { _clz = clz; }
     @Override public boolean is_prim_base() { return false; }
-    @Override public SB str( SB sb ) { return sb.p("int"); }
+    @Override public SB str( SB sb ) { return sb.p("XTC"); }
     @Override public SB clz( SB sb ) { return str(sb); }
     @Override boolean eq(XType xt) { return _clz.equals(((ClzClz)xt)._clz);  }
     @Override int hash() { return _clz.hashCode()^123456789; }

@@ -12,8 +12,7 @@ import org.xvm.xec.ecstasy.Orderable.Ordered;
      Support XTC Int64
 */
 public class Int64 extends IntNumber {
-  static final int KID = GET_KID(new Int64(null));
-  public int kid() { return KID; }
+  public static final Int64 GOLD = new Int64(null);
   public Int64(Never n ) { this(0); } // No-arg constructor
   
   final long _i;

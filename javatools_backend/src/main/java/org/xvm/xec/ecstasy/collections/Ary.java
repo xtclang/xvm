@@ -15,8 +15,7 @@ import java.util.Iterator;
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
 public class Ary<E> extends XTC implements Iterable<E>, Stringable {
-  static final int KID = GET_KID(new Ary());
-  public int kid() { return KID; }
+  public static final Ary GOLD = new Ary();
   public Ary(Never n) { }       // No arg constructor
 
   public E[] _es;

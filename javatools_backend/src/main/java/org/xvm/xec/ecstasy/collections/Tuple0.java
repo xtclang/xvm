@@ -2,8 +2,7 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 
 public class Tuple0 extends Tuple {
-  static final int KID = GET_KID(new Tuple0());
-  public int kid() { return KID; }
+  public static final Tuple0 GOLD = new Tuple0();
   
   public Tuple0() { this(0); }
   public Tuple0(int n) { super(n); }

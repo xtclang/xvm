@@ -1,8 +1,7 @@
 package org.xvm.xec.ecstasy.collections;
 
 public class TupleN extends Tuple {
-  static final int KID = GET_KID(new TupleN());
-  public int kid() { return KID; }
+  public static final TupleN GOLD = new TupleN();
   TupleN() { super(0); _es=null; } // No arg constructor
   
   private final Object[] _es;

@@ -18,25 +18,6 @@ import java.io.IOException;
 public abstract class XTC {
   public XTC( Never n ) {}      // No arg constructor
   public XTC() {}               // No arg constructor
-
-  // --------------------------------------------------------------------------
-  // Every XTC class has a unique integer Klass ID - a KID.  This is used for
-  // dynamic lookups for {equals,compare,hashCode } at least.
-  // Convert KID to a "Golden" blank instance of an XTC class.
-  // The Golden instance can make virtual calls, but its fields are all 0/null.
-  public static final Ary<XTC> GOLDS = new Ary<>(XTC.class);
-  public static int KID_CNT = 1; // Unique KID counter
-  abstract public int kid();     // Virtual call to get the KID from an instance
-  /** Generated in all classes
-     static final int KID = GET_KID();
-     public int kid() { return KID; }
-   */
-  public static int GET_KID( XTC gold ) {
-    int kid = KID_CNT++;
-    GOLDS.setX(kid,gold);
-    return kid;
-  }
-
   
   // --------------------------------------------------------------------------
   // A bunch of classes and functions that are always available (e.g. TRACE
