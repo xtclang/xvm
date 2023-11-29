@@ -217,7 +217,7 @@ public abstract class XType {
     @Override public SB str( SB sb ) {
       if( _e.is_prim_base() && _e instanceof Base )
         return _e.p(sb.p("Ary")); // Primitives print as "Arylong" or "Arychar" classes
-      return _e.str(sb.p("Ary<")).p(">");
+      return _e.clz(sb.p("Ary<")).p(">");
     }
     @Override public SB clz( SB sb ) { return str(sb); }
     @Override boolean eq(XType xt) { return _e == ((Ary)xt)._e; }
