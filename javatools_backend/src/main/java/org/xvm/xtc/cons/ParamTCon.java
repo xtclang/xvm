@@ -43,7 +43,19 @@ public class ParamTCon extends TCon implements ClzCon {
   @Override int _eq( TCon tc ) {
     ParamTCon ptc = (ParamTCon)tc; // Invariant when called
     assert _part!=null && ptc._part!=null;
-    return _part == ptc._part ? 1 : -1;
+    if( _part != ptc._part ) return -1;
+    if( _parms == ptc._parms ) return 1;
+    if( _parms == null || ptc._parms==null ) return -1;
+    if( _parms.length != ptc._parms.length ) return -1;
+    // TODO: This code ignores matching of the parameter, which fails in the TCK for Decimal!
+    // This needs a proper XTC ISA test
+    //return _part == ptc._part ? 1 : -1;
+    //int rez = 1;
+    //for( int i=0; i<_parms.length; i++ ) {
+    //  rez = Math.min(rez,_parms[i]._eq(ptc._parms[i]));
+    //  if( rez == -1 ) return -1;
+    //}
+    //return rez;
   }
 
   // Is a generic TermTCon?
