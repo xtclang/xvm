@@ -9,6 +9,7 @@ plugins {
     base
 }
 
+// TODO get around to using a custom logger for annotated log entries. We postpone until the XTC plugin is merged though.
 private val Project.prefix get() = "[$name]"
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
@@ -116,11 +117,20 @@ val installLocalDist by tasks.registering {
     }
 }
 
+val installInitScripts by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Build and overwrite any local distribution with the new distribution produced by the build."
+    dependsOn(xdk.task(":$name"))
+    doLast {
+        logger.lifecycle("$prefix Finished '$name' (task state: $state.)")
+    }
+}
+
 val importUnicodeFiles by tasks.registering {
     group = BUILD_GROUP
     description = "Download and regenerate the unicode file as resources."
     dependsOn(xdk.task(":$name"))
     doLast {
-        logger.lifecycle("$prefix Finished $name (generated and imported new unicode files)")
+        logger.lifecycle("$prefix Finished '$name' (generated and imported new unicode files)")
     }
 }

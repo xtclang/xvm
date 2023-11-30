@@ -3,6 +3,8 @@ import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 import org.gradle.api.logging.LogLevel.INFO
+import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -99,8 +101,42 @@ publishing {
     }
 }
 
+/**
+ * Run once, to create templates in GRADLE_USER_HOME/init.d/ for an XTC Org user with
+ * just read:package access (in a safe token). This is a workaround for GitHub requiring
+ * authentication for package access, even for public packages in public repos. People
+ * have asked about this feature for almost five years now.
+ *
+ * However, as soon as we have changed artifact groups for our publications to "org.xtclang"
+ * instead of "org.xvm", we can prove domain ownership of the former with gradlePluginPortal()
+ * and mavenCentral(), and provide packages that are *really* public. In the meantime, in order
+ * to get everyone up and running as quickly as possible, this task is the bootstrap mechanism
+ * to work with the GitHub Package Repo, but not having to add various tokens and credentials.
+ *
+ * Security review completed satisfactorily.
+ */
+val installInitScripts by tasks.registering(Copy::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Writes the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
+    from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
+        eachFile {
+            // TODO: decide if "must be online" trumps "install once", as to which script template
+            //   should be default. We copy all the files to GRADLE_USER_HOME/init.d, though, but we do
+            //   not rename the non-default version.
+            if (!name.contains("minimal")) {
+                name = name.removeSuffix(".template")
+            }
+        }
+    }
+    into(userInitScriptDirectory)
+    doLast {
+        printAllTaskInputs()
+        printAllTaskOutputs()
+    }
+}
+
 val pluginPublication by tasks.registering {
-    group = LifecycleBasePlugin.BUILD_GROUP
+    group = BUILD_GROUP
     // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
     dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
     outputs.dir(buildRepoDirectory)
@@ -146,11 +182,13 @@ distributions {
             }
             from(configurations.xtcModule) {
                 into("libexec/lib")
-                exclude("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
+                // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
+                exclude("**/javatools*")
             }
             from(configurations.xtcModule) {
                 into("libexec/javatools")
-                include("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
+                // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
+                include("**/javatools*")
             }
             from(configurations.xtcJavaTools) {
                 rename {
@@ -225,10 +263,12 @@ val distExe by tasks.registering {
             throw buildException("Cannot find 'nsi' file: ${nsi.absolutePath}")
         }
         exec {
-            environment("NSIS_SRC", inputDir.get())
-            environment("NSIS_ICO", xtcIconFile)
-            environment("NSIS_OUT", outputFile)
-            environment("NSIS_VER", xdkDist.distributionVersion)
+            environment(
+                "NSIS_SRC" to inputDir.get(),
+                "NSIS_ICO" to xtcIconFile,
+                "NSIS_OUT" to outputFile,
+                "NSIS_VER" to xdkDist.distributionVersion
+            )
             commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
         }
     }
@@ -322,7 +362,7 @@ val installLocalDist by tasks.registering {
 // TODO: We do NOT want the unicode consumer as a project dependency. We must resolve it in-task somehow.
 
 val importUnicodeFiles by tasks.registering {
-    group = LifecycleBasePlugin.BUILD_GROUP
+    group = BUILD_GROUP
     description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
 
     logger.warn("$prefix '$name' is currently broken. There is a reported issue, and we will get to this very soon.")
