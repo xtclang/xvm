@@ -25,7 +25,7 @@ publishing {
             url = uri(buildRepoDirectory)
         }
 
-        logger.lifecycle("$prefix Configuring publications for xtclang.org GitHub repository.")
+        logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
         with (xtcGitHubClient) {
             if (verifyGitHubConfig()) {
                 logger.lifecycle("$prefix Found GitHub package credentials for XTC: username: $gitHubUser, organization: $gitHubOrganization, read-only: $gitHubReadOnly")
@@ -122,8 +122,6 @@ val publishLocal by tasks.registering {
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
-    //enabled = false
-    //logger.warn("$prefix FYI: pruneBuildRepo is temporarily disabled; may affect repo in local installations. This is while mapping out the last dependencies for the build cache.")
     delete(buildRepoDirectory)
     doLast {
         logger.lifecycle("$prefix Finished '$name' (deleted build repo under ${buildRepoDirectory.get()}). Likely triggered by inserting XTC plugin into distribution.");

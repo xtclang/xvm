@@ -167,7 +167,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             throw project.buildException("The repository URL '$gitHubUrl' needs to contain all-lowercase owner and repository names.")
         }
 
-        logger.lifecycle("$prefix GitHub credentials appear to be well-formed. $gitHubUser")
+        logger.info("$prefix GitHub credentials appear to be well-formed. (user: '$gitHubUser')")
         return true
     }
 

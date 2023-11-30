@@ -24,15 +24,9 @@ dependencyResolutionManagement {
         mavenCentral()
     }
     versionCatalogs {
-        // TODO separate these out, use properties for xtclibs.
-        //println(" *** Loading version catalog from: $catalogFile: " + property("xtcVersion"))
-        //val xtclibs by versionCatalogs.registering {
-        //    version("xdk", "0.411")
-        //    version("xtplugin", "0.411")
-        //}
+        // TODO separate XDK version and group out, use properties for xtclibs.
         val libs by versionCatalogs.creating {
             from(files(catalogFile))
         }
     }
-    //versionCatalogs.forEach { println("Version catalog: ${it.name}") }
 }

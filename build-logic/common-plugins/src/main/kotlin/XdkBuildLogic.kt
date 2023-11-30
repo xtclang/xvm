@@ -29,7 +29,7 @@ class XdkBuildLogic(val project: Project) {
         const val ENV_PATH = "PATH"
         const val XTC_LAUNCHER = "xec"
         const val SNAPSHOT_SUFFIX = "-SNAPSHOT"
-        const val DEFAULT_JAVA_BYTECODE_VERSION = "17"
+        const val DEFAULT_JAVA_BYTECODE_VERSION = "21"
         const val REMOVE_SECRETS = false // Should the build attempt to remove any secrets from the project properties?
 
         private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS" // default "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
@@ -137,18 +137,22 @@ class XdkBuildLogic(val project: Project) {
             ?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
     }
 
+    // TODO: IntelliJ claims this can be private. It's wrong. Revisit later, or investigate
+    //  if it can lead to more serious issues, like dependencies to it actually ARE being
+    //  broken (but it doesn't look that way)
+    @Suppress("MemberVisibilityCanBePrivate")
     fun findLocalXdkInstallation(): File? {
         return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile?.parentFile // xec -> bin -> libexec -> "x.y.z.ppp"
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun resolveLocalXdkInstallation(): File {
         return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
     }
 
     fun validateGradle() {
-        findExecutableOnPath("gradle")?.let {
+        findExecutableOnPath("gradle")?.let { it ->
             val currentProcess = ProcessHandle.current()
-            currentProcess.info()
             val hasWrapper = currentProcess.info().arguments().orElse(emptyArray())
                 .find { it.contains("gradle") && it.contains("wrapper") }.isNullOrEmpty().not()
             if (!hasWrapper) {
@@ -205,7 +209,7 @@ class XdkBuildLogic(val project: Project) {
          * project to which the plugin is applied.
          *
          * If the method fails to find the value of a property, both in its resolved property
-         * map, as well as in the system environment, it will return the supplied defaultValue
+         * map, and in the system environment, it will return the supplied defaultValue
          * parameter. If no default value was supplied, an exception will be thrown, and the
          * build breaks.
          */
@@ -257,6 +261,9 @@ class XdkBuildLogic(val project: Project) {
         /*
          * The method looks for all properties files from the project directory and upwards to the
          * gradle.rootDirectory
+         *
+         * TODO: Pretty messy - create a common companion object function to load properties
+         *   files directly into maps.
          */
         private fun resolveXtcProjectProperties(): Map<String, String> {
             val all = Properties()
@@ -361,6 +368,9 @@ val Project.compositeRootProjectDirectory
 val Project.compositeRootBuildDirectory
     get() = gradle.rootLayout.buildDirectory
 
+val Project.userInitScriptDirectory
+    get() = File(gradle.gradleUserHomeDir, "init.d")
+
 val Project.buildRepoDirectory: Provider<Directory>
     get() = compositeRootBuildDirectory.dir("repo")
 
@@ -407,9 +417,12 @@ fun Project.executeCommand(vararg args: String): String? {
     return output.toString().trim().ifEmpty { null }
 }
 
-// always rerun this task (consider it out of date)
+/**
+ * Extension method that can be called during the configuration phase, marking its
+ * task instance as forever out of date.
+ */
 fun Task.alwaysRerunTask() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
-    logger.warn("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
+    logger.info("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
 }

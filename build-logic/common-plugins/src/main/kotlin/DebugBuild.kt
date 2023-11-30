@@ -1,13 +1,15 @@
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.kotlin.dsl.findByType
+import org.gradle.kotlin.dsl.*
 import java.io.File
-import java.util.Enumeration
+import java.net.URI
+import java.util.*
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 
@@ -17,6 +19,7 @@ import java.util.jar.JarFile
  *
  * They are wrapped in helper tasks.
  */
+data class RepositoryData(val name: String, val url: URI)
 
 fun Project.printAllTaskInputs(level: LogLevel = LIFECYCLE) {
     tasks.forEach { printTaskInputs(level, it.name) }
@@ -47,6 +50,17 @@ fun Project.printRepos(level: LogLevel = LIFECYCLE) {
     repositories.map { it.name }.forEach {
         logger.log(level, "$prefix Repository: '$it'")
     }
+}
+
+fun Project.printMavenRepos(level: LogLevel = LIFECYCLE): Int {
+    val mavenRepos = repositories.withType<MavenArtifactRepository>().map { RepositoryData(it.name, it.url) }
+    mavenRepos.forEach {
+        logger.log(level, "$prefix Maven Repository: ${it.name} ('${it.url}')")
+    }
+    if (mavenRepos.isEmpty()) {
+        logger.log(level, "$prefix No Maven repositories found.")
+    }
+    return mavenRepos.size
 }
 
 fun Project.printResolvedConfigFiles(level: LogLevel = LIFECYCLE, configNames: Collection<String>) {
@@ -161,7 +175,7 @@ class DebugBuild {
             return config
         }
 
-        fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1): Boolean {
+        fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1) {
             val jar = project.tasks.getByName("jar").outputs.files.singleFile
             val contents = jarContents(jar)
 
@@ -179,7 +193,6 @@ class DebugBuild {
                     throw project.buildException("ERROR: Corrupted jar file; needs to contain entry matching '$it'")
                 }
             }
-            return true
         }
 
         private fun jarContents(jarFile: File): Set<String> {
