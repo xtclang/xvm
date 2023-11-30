@@ -104,6 +104,7 @@ class XdkBuildLogic(val project: Project) {
         }
     }
 
+    private val gradle = project.gradle
     private val prefix = "[${project.name}]"
     private val logger = project.logger
     private val props = XdkPropertyManager()
@@ -257,6 +258,9 @@ class XdkBuildLogic(val project: Project) {
         /*
          * The method looks for all properties files from the project directory and upwards to the
          * gradle.rootDirectory
+         *
+         * TODO: Pretty messy - creata a common companion object function to load properties
+         *   files directly into maps.
          */
         private fun resolveXtcProjectProperties(): Map<String, String> {
             val all = Properties()
@@ -361,6 +365,9 @@ val Project.compositeRootProjectDirectory
 val Project.compositeRootBuildDirectory
     get() = gradle.rootLayout.buildDirectory
 
+val Project.userInitScriptDirectory
+    get() = File(gradle.gradleUserHomeDir, "init.d")
+
 val Project.buildRepoDirectory: Provider<Directory>
     get() = compositeRootBuildDirectory.dir("repo")
 
@@ -411,5 +418,5 @@ fun Project.executeCommand(vararg args: String): String? {
 fun Task.alwaysRerunTask() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
-    logger.warn("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
+    logger.info("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
 }

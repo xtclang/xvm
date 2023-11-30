@@ -9,8 +9,7 @@ plugins {
     base
 }
 
-internal val Project.prefix get() = "[$name]"
-
+private val Project.prefix get() = "[$name]"
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
@@ -22,10 +21,13 @@ internal val startBuildAggregator = Runnable {
     }
 
     val startParameter = gradle.startParameter
-    val startParameterTasks: List<String> = startParameter.taskNames
-    if (startParameterTasks.isNotEmpty()) {
-        logger.info("$prefix Start parameter tasks: $startParameterTasks")
-        if (startParameterTasks.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
+    with (startParameter) {
+        logger.lifecycle("""
+            $prefix Start parameter tasks: $taskNames
+            $prefix Start parameter init scripts: $allInitScripts
+        """.trimIndent())
+
+        if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
             val msg = "$prefix Multiple start parameter tasks are not guaranteed to work. Please run each task individually."
             logger.error(msg)
             throw GradleException(msg)

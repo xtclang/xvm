@@ -47,3 +47,11 @@ val printTaskOutputs by tasks.registering {
         printAllTaskOutputs()
     }
 }
+
+val printMavenRepos by tasks.registering {
+    group = XDK_TASK_GROUP_DEBUG
+    description = "Prints all Maven repositories in configuration."
+    doLast {
+        printMavenRepos()
+    }
+}

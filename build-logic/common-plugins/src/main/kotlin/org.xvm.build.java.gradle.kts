@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 plugins {
     id("org.xvm.build.version")
     java
-    // checkstyle -> Check style is built in TODO: Add a code standard template (e.g. sun.xml), and configure checkstyle so it works correctly per language.
+    // TODO: Checkstyle/Spotless
 }
 
 private val enablePreview = enablePreview()
@@ -87,7 +87,6 @@ tasks.withType<JavaCompile>().configureEach {
     }
 }
 
-// TODO add more linting, integrate lint fix/checkstyle/spotless.
 tasks.withType<Test>().configureEach {
     if (enablePreview) {
         jvmArgs("--enable-preview")

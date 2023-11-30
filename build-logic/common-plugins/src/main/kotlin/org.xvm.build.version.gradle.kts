@@ -8,6 +8,7 @@
 
 import XdkBuildLogic.Companion.XDK_TASK_GROUP_VERSION
 import org.gradle.api.Project
+import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     id("org.xvm.build.debug")
@@ -68,5 +69,20 @@ val bumpProjectVersionToSnapshot by tasks.registering {
     description = "Increase the version of the current XDK build with one, and suffix the new version string with '-SNAPSHOT'."
     doLast {
         versionHandler.updateVersionCatalogFile(true)
+    }
+}
+
+val writeInitScript by tasks.registering(Copy::class) {
+    group = PUBLISH_TASK_GROUP
+    description = "Writes the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
+    from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
+        eachFile {
+            name = name.removeSuffix(".template")
+        }
+    }
+    into(userInitScriptDirectory)
+    doLast {
+        printAllTaskInputs()
+        printAllTaskOutputs()
     }
 }
