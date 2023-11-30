@@ -118,6 +118,10 @@ public class ClassPart extends Part {
     return null;
   }
 
+  public boolean subclass( ClassPart sup ) {
+    return this==sup || (_super!=null && _super.subclass(sup));
+  }
+  
   // Module for this class
   public ModPart mod() {
     Part clz = this;

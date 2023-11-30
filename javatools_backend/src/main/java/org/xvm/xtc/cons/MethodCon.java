@@ -60,10 +60,13 @@ public class MethodCon extends PartCon {
         if( rez==0 ) { rez0++;  meth0=methx; }
         else         { rez1++;  meth1=methx; }
       }
+      // TODO: Failing here probably means I need a proper XTC ISA test.
+      // Turn it on in ParamTCon to get generic parameters, BUT this then
+      // triggers many other issues.
       if( rez1 >= 1 ) { assert rez1==1;  return (_part = meth1); }
       if( rez0 >= 1 ) { assert rez0==1;  return (_part = meth0); }
     }
-    
+
     // Native methods?
     return mm.addNative();
   }
