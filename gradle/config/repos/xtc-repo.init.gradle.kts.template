@@ -1,0 +1,54 @@
+//noinspection
+
+/**
+ * This is an init script plugin, that can generate an xtc-repo.init.gradle.kts file under the
+ * GRADLE_USER_HOME/init.d directory, or similar locations.
+ */
+
+import java.net.URI
+import java.util.Properties
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
+
+gradle.beforeSettings {
+    settings.pluginManagement.repositories {
+        val orgXtcLang: () -> MavenArtifactRepository by extra {
+            { XtcRepoProvider(this).createMavenArtifactRepository() }
+        }
+    }
+}
+
+private class XtcRepoProvider(private val repos: RepositoryHandler) {
+    fun createMavenArtifactRepository(): MavenArtifactRepository {
+        return repos.maven {
+            @OptIn(ExperimentalEncodingApi::class)
+            fun decodeToken(str: String): String {
+                return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
+            }
+            with(readXtcRepoConfig()) {
+                name = getProperty(XTC_REPO_PROPERTY_NAME)
+                url = uri(getProperty(XTC_REPO_PROPERTY_URL))
+                credentials {
+                    username = getProperty(XTC_REPO_PROPERTY_USER)
+                    password = decodeToken(getProperty(XTC_REPO_PROPERTY_TOKEN))
+                }
+            }
+        }.also {
+            logger.lifecycle("*** Added xtcGitHub repository: ${it.name} (url ${it.url})")
+        }
+    }
+
+    companion object {
+        private const val XTC_REPO_CONFIG_URL = "https://raw.githubusercontent.com/xtclang/xvm/master/gradle/config/repos/xtc-repo.properties.template"
+
+        private const val XTC_REPO_PROPERTY_PREFIX = "org.xtclang.repo.github"
+        private const val XTC_REPO_PROPERTY_NAME = "$XTC_REPO_PROPERTY_PREFIX.name"
+        private const val XTC_REPO_PROPERTY_USER = "$XTC_REPO_PROPERTY_PREFIX.username"
+        private const val XTC_REPO_PROPERTY_TOKEN = "$XTC_REPO_PROPERTY_PREFIX.token.readonly"
+        private const val XTC_REPO_PROPERTY_URL = "$XTC_REPO_PROPERTY_PREFIX.url"
+
+        private fun readXtcRepoConfig(): Properties {
+            return URI(XTC_REPO_CONFIG_URL).toURL().openStream().use { os -> Properties().also { it.load(os) } }
+        }
+    }
+}
