@@ -1,7 +1,11 @@
+import org.gradle.BuildListener
+import org.gradle.BuildResult
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.initialization.Settings
+import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.publish.PublishingExtension
@@ -209,4 +213,41 @@ class DebugBuild {
     }
 }
 
+class XdkBuildListener(private val project: Project) : BuildListener {
+    private val prefix = project.prefix + " BUILD CALLBACK: "
+    private val logger = project.logger
+    private var settings: Settings? = null
+    private var loaded: Boolean = false
+    private var evaluated: Boolean = false
+
+    override fun settingsEvaluated(settings: Settings) {
+        this.settings = settings
+        logger.info("$prefix Settings evaluated.")
+    }
+
+    override fun projectsLoaded(gradle: Gradle) {
+        this.loaded = true
+        logger.info("$prefix Projects loaded.")
+    }
+
+    override fun projectsEvaluated(gradle: Gradle) {
+        this.evaluated = true
+        logger.info("$prefix Projects evaluated.")
+    }
+
+    @Deprecated("BuildListener.buildFinished is deprecated")
+    @SuppressWarnings("deprecated")
+    override fun buildFinished(result: BuildResult) {
+        // no-op, remove this when the Gradle API changes.
+    }
+
+    override fun toString(): String {
+        return buildString {
+            appendLine("${project.prefix} BuildListener:")
+            appendLine("  Settings evaluated: ${settings != null}")
+            appendLine("  Projects loaded: $loaded")
+            appendLine("  Projects evaluated: $evaluated")
+        }
+    }
+}
 
