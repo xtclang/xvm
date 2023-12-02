@@ -5,41 +5,13 @@ import io.github.rybalkinsd.kohttp.dsl.context.Method.GET
 import io.github.rybalkinsd.kohttp.dsl.http
 import io.github.rybalkinsd.kohttp.jackson.ext.toJson
 import okhttp3.Response
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Helper class to access GitHub packages for the "xtclang" org, and other build logic
  * for publishing XDK build artifacts.
  */
-@OptIn(ExperimentalEncodingApi::class)
 class GitHubPackages(buildLogic: XdkBuildLogic) {
-    @Suppress("MemberVisibilityCanBePrivate")
     companion object Rest {
-        /*
-         * REST API for GitHub package repository:
-         *
-         * Get a package for an org by name:
-         *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME
-         * Delete a package for an org by name:
-         *      DELETE:  https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME
-         * List package versions for a package owned by an organization:
-         *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions
-         * Get a package version for an organization:
-         *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions/VERSION_ID
-         * Delete a package version for an organization:
-         *      DELETE: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions/VERSION_ID
-         * Get versions of a package for an organization:
-         *      GET: https://api.github.com/orgs/ORG/packages/PACKAGE_TYPE/PACKAGE_NAME/versions
-         *
-         * The GitHub Maven package repository should, if possible, be publically available for "package:read"
-         * access. It should be enough to connect the package repo to the public XVM repo. Alternatives are
-         * a shared "not so secret" secret token, as described here:
-         *      https://docs.github.com/en/packages/learn-github-packages/about-github-packages#authenticating-to-github-packages
-         *      https://github.com/orgs/community/discussions/26634
-         *      git clone https://github.com/jcansdale-test/maven-consume
-         *         (can also be: docker run jcansdale/gpr encode TOKEN)
-         */
         const val GITHUB_PUBLICATION_NAME = "GitHub"
         const val GITHUB_HOST = "api.github.com"
         const val SCHEME = "https"
@@ -49,9 +21,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
         const val GITHUB_ORG = "$GITHUB.organization"
         const val GITHUB_USER = "$GITHUB.user"
         const val GITHUB_TOKEN = "$GITHUB.token"
-        const val GITHUB_TOKEN_RO = "$GITHUB.token.readonly"
         const val GITHUB_REPO_URL = "$GITHUB.repository.url"
-        const val GITHUB_FORCE_READ_ONLY = "$GITHUB.readonly"
 
         const val GITHUB_ORG_DEFAULT_VALUE = "xtclang"
         const val GITHUB_USER_RO_DEFAULT_VALUE = "xtclang-bot"
@@ -68,43 +38,14 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
 
     val gitHubOrganization: String
     val gitHubUrl: String
-    val gitHubReadOnly: Boolean
-    val gitHubUser: String
-    val gitHubToken: String
     val gitHubCredentials: Pair<String, String>
+    val isReadOnly = false // TODO:
 
     init {
         with(buildLogic) {
-            fun decodeToken(str: String): String {
-                return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
-            }
-
             gitHubOrganization = getProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)
             gitHubUrl = getProperty(GITHUB_REPO_URL, "")
-
-            val forceRo = getPropertyBoolean(GITHUB_FORCE_READ_ONLY, false)
-            if (forceRo) {
-                logger.warn("$prefix *** $GITHUB_FORCE_READ_ONLY=true; forcing read-only common GitHub credentials. No publishing can take place.")
-            }
-            val rwToken = getProperty(GITHUB_TOKEN, System.getenv("GITHUB_TOKEN") ?: "")
-            val roToken = getProperty(GITHUB_TOKEN_RO, "")
-            val token: String
-            val user: String
-            if (forceRo || rwToken.isEmpty()) {
-                // Attempt read only mode
-                user = GITHUB_USER_RO_DEFAULT_VALUE
-                token = decodeToken(roToken)
-                gitHubReadOnly = true
-                logger.lifecycle("$prefix GitHub read only mode credentials fallback. ($user, $roToken)")
-            } else {
-                user = getProperty(GITHUB_USER, "")
-                token = rwToken
-                gitHubReadOnly = false
-            }
-
-            gitHubUser = user
-            gitHubToken = token
-            gitHubCredentials = gitHubUser to gitHubToken
+            gitHubCredentials = getProperty(GITHUB_USER, GITHUB_USER_RO_DEFAULT_VALUE) to getProperty(GITHUB_TOKEN, "")
         }
     }
 
@@ -146,8 +87,9 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
     }
 
     fun verifyGitHubConfig(): Boolean {
-        val hasGitHubUser = gitHubUser.isNotEmpty()
-        val hasGitHubToken = gitHubToken.isNotEmpty()
+        val (user, token) = gitHubCredentials
+        val hasGitHubUser = user.isNotEmpty()
+        val hasGitHubToken = token.isNotEmpty()
         val hasGitHubUrl = gitHubUrl.isNotEmpty()
         val hasGitHubConfig = hasGitHubUser && hasGitHubToken && hasGitHubUrl
         if (!hasGitHubConfig) {
@@ -155,7 +97,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
                 """
                     $prefix GitHub credentials are not completely set; publication to GitHub will be disabled.
                     $prefix   'org.xvm.github.repository.url'  [configured: $hasGitHubUrl ($gitHubUrl)]
-                    $prefix   'org.xvm.github.user'            [configured: $hasGitHubUser ($gitHubUser)]                 
+                    $prefix   'org.xvm.github.user'            [configured: $hasGitHubUser ($user)]                 
                     $prefix   'org.xvm.github.token'           [configured: $hasGitHubToken ([redacted])]
                     """.trimIndent()
             )
@@ -167,7 +109,7 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             throw project.buildException("The repository URL '$gitHubUrl' needs to contain all-lowercase owner and repository names.")
         }
 
-        logger.info("$prefix GitHub credentials appear to be well-formed. (user: '$gitHubUser')")
+        logger.info("$prefix GitHub credentials appear to be well-formed. (user: '$user')")
         return true
     }
 
@@ -177,10 +119,11 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             host = GITHUB_HOST
             path = httpPath
             header {
-                if (gitHubToken.isEmpty()) {
+                val token = gitHubCredentials.second
+                if (token.isEmpty()) {
                     throw project.buildException("Could not resolve an access token for GitHub from the properties and/or environment.")
                 }
-                restHeaders(gitHubToken).forEach { (k, v) -> k to v }
+                restHeaders(token).forEach { (k, v) -> k to v }
             }
             param {
                 params.forEach { (k, v) -> k to v }

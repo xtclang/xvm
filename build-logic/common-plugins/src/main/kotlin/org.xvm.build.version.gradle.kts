@@ -14,10 +14,9 @@ plugins {
 }
 
 val semanticVersion by extra {
-    initXdkVersion()
+    xdkBuildLogic.validateGradle()
+    assignXdkVersion(XdkVersionHandler.resolveCatalogSemanticVersion(project))
 }
-
-internal val versionHandler = xdkBuildLogic.xdkVersionHandler()
 
 // TODO if we can fold these functions into the XdkBuildLogic class, it would be a lot nicer. (TODO: partially done)
 fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion {
@@ -30,7 +29,7 @@ fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion 
     project.group = group
     project.version = version
     with (project) {
-        logger.info(
+        logger.lifecycle(
             """
             $prefix XDK Project '$name' versioned as: '$semanticVersion'
             $prefix    project.group   : $group
@@ -42,24 +41,20 @@ fun Project.assignXdkVersion(semanticVersion: SemanticVersion): SemanticVersion 
     return semanticVersion
 }
 
-fun Project.initXdkVersion(): SemanticVersion {
-    validateGradle()
-    return assignXdkVersion(SemanticVersion.resolveCatalogSemanticVersion(project))
-}
-
+/*
 fun Project.isVersioned(): Boolean {
     return !isNotVersioned()
 }
 
 fun Project.isNotVersioned(): Boolean {
     return version == Project.DEFAULT_VERSION
-}
+}*/
 
 val bumpProjectVersion by tasks.registering {
     group = XDK_TASK_GROUP_VERSION
     description = "Increase the version of the current XDK build with one."
     doLast {
-        versionHandler.updateVersionCatalogFile(false)
+        xdkBuildLogic.xdkVersionHandler().updateVersionCatalogFile(false)
     }
 }
 
@@ -67,6 +62,6 @@ val bumpProjectVersionToSnapshot by tasks.registering {
     group = XDK_TASK_GROUP_VERSION
     description = "Increase the version of the current XDK build with one, and suffix the new version string with '-SNAPSHOT'."
     doLast {
-        versionHandler.updateVersionCatalogFile(true)
+        xdkBuildLogic.xdkVersionHandler().updateVersionCatalogFile(true)
     }
 }

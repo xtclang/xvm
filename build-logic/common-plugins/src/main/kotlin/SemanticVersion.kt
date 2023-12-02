@@ -1,37 +1,6 @@
-import org.gradle.api.Project
-import org.gradle.api.artifacts.VersionCatalogsExtension
-import org.gradle.kotlin.dsl.findByType
 import kotlin.IllegalArgumentException
 
 data class SemanticVersion(val artifactGroup: String, val artifactId: String, val artifactVersion: String) {
-    companion object {
-        private const val XDK_VERSION_CATALOG_GROUP = "xdkgroup"
-        private const val XDK_VERSION_CATALOG_VERSION = "xdk"
-        private const val VERSION_CATALOG_LIBS_NAME = "libs"
-
-        fun resolveCatalogSemanticVersion(project: Project): SemanticVersion {
-            return SemanticVersion(
-                resolveCatalogVersion(project, XDK_VERSION_CATALOG_GROUP),
-                project.name,
-                resolveCatalogVersion(project, XDK_VERSION_CATALOG_VERSION)
-            )
-        }
-
-        /**
-         * Returns the settings phase equivalent of doing the type safe short hand "libs.versions.<name>", when
-         * the project has been evaluated.
-         */
-        private fun resolveCatalogVersion(project: Project, name: String, catalog: String = VERSION_CATALOG_LIBS_NAME): String = project.run {
-            extensions.findByType<VersionCatalogsExtension>()?.also { catalogs ->
-                val versionCatalog = catalogs.named(catalog)
-                val value = versionCatalog.findVersion(name)
-                if (value.isPresent) {
-                    return value.get().toString()
-                }
-            }
-            throw buildException("Version catalog entry '$name' has no value for '$catalog:$name'")
-        }
-    }
 
     override fun toString(): String {
         return "$artifactGroup:$artifactId:$artifactVersion"

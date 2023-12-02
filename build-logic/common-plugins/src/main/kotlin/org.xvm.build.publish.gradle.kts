@@ -4,7 +4,6 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 plugins {
     id("org.xvm.build.version")
     id("maven-publish")
-    //id("signing")
 }
 
 internal val xtcGitHubClient = xdkBuildLogic.xdkGitHubClient()
@@ -28,7 +27,7 @@ publishing {
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
         with (xtcGitHubClient) {
             if (verifyGitHubConfig()) {
-                logger.lifecycle("$prefix Found GitHub package credentials for XTC: username: $gitHubUser, organization: $gitHubOrganization, read-only: $gitHubReadOnly")
+                logger.lifecycle("$prefix Found GitHub package credentials for XTC: username: ${gitHubCredentials.first}, organization: $gitHubOrganization, read-only: $isReadOnly")
                 maven {
                     name = GITHUB_PUBLICATION_NAME
                     description = "Publish all publications to the xtclang.org GitHub repository."
@@ -64,20 +63,6 @@ publishing {
         }
     }
 }
-
-/*
-tasks.withType<Sign>().configureEach {
-    onlyIf {
-        xdkBuildLogic.isSnapshot().not() && getXdkPropertyBoolean("org.xvm.publications.sign", false) && System.getenv("CI").isNullOrEmpty() // TODO postpone signing in CI.
-    }
-    logger.info("$prefix Configuring signature: '$name'")
-    val keyId = getXdkProperty("org.xvm.signing.keyId", "")
-    val password = getXdkProperty("org.xvm.signing.password", "")
-    val secretKeyRingFile = getXdkProperty("org.xvm.signing.secretKeyRingFile", "")
-    project.extra["signing.keyId"] = keyId
-    project.extra["signing.password"] = password
-    project.extra["signing.secretKeyRingFile"] = secretKeyRingFile
-}*/
 
 val listGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP

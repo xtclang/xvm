@@ -6,27 +6,33 @@
  * It also adds some bootstrapping logic for downloading and accessing Java toolchain components,
  * e.g. the JDK, through the Foojay Resolver plugin, which needs to come in at the settings level.
  */
-val catalogPath = "gradle/libs.versions.toml"
 
-val catalogFile = file(".").let {
-    var dir = it
-    var file = File(dir, catalogPath)
+fun fileWithPath(path: String): File {
+    var dir = file(".")
+    var file = File(dir, path)
     while (!file.exists()) {
         dir = dir.parentFile
-        file = File(dir, catalogPath)
+        file = File(dir, path)
     }
-    file
+    return file
 }
 
+val libsVersionCatalog = fileWithPath("gradle/libs.versions.toml")
+val xdkVersionProperties = fileWithPath("xdk.properties")
+
+// If we can read properties here, we can also patch the catalog files.
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
     }
+
+    //val xdkProperties = FileInputStream(xdkVersionProperties).use { fs -> Properties().also { it.load(fs) } }
+    //println("XDK PROPERTIES: " + xdkProperties)
     versionCatalogs {
-        // TODO separate XDK version and group out, use properties for xtclibs.
         val libs by versionCatalogs.creating {
-            from(files(catalogFile))
+            version("xdk2", "0.5.0")
+            from(files(libsVersionCatalog)) // load versions
         }
     }
 }

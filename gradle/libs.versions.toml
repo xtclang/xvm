@@ -13,35 +13,24 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk = "0.4.43"
-xtcplugin = "0.4.43"
-xdkgroup = "org.xvm"
+xdk-group = "org.xvm"
+xdk = "0.4.44"
+xtc-plugin = "0.4.44"
 
-# Third party depenency and plugin versions.
+download = "5.5.0"
+versions = "0.50.0"
+tasktree = "2.1.1"
+gradle-portal-publish = "1.2.1"
 kohttp = "0.12.0"
 
 [plugins]
-# The XTC plugin, referred from an includedBuild or a third party repository user; the same config will work.
-xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtcplugin" }
-download = { id = "de.undercouch.download", version = "5.5.0" }          # Plugin used e.g for downloading unicode data.
-versions = { id = "com.github.ben-manes.versions", version = "0.50.0" }  # Plugin for ./gradlew dependencyUpdates task.
-tasktree = { id = "com.dorongold.task-tree", version = "2.1.1" }         # Plugin for ./gradlew taskTree tasks.
-gradle-plugin-portal-publish = { id = "com.gradle.plugin-publish", version = "1.2.1" }
-
-# TODO: Plugins used in ongoing work, and unfinished branches from master.
-#spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
-#shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
-#nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
-#maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
-#version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version = "0.8.1" }
+xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtc-plugin" }
+download = { id = "de.undercouch.download", version.ref = "download" }
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
+tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
+gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 
 [libraries]
-javatools = { module = "org.xvm:javatools", version.ref = "xdk" }
-javatools-unicode = { module = "org.xvm:javatools-unicode", version.ref = "xdk" }
-javatools-utils = { module = "org.xvm:javatools-utils", version.ref = "xdk" }
-javatools-turtle = { module = "org.xvm:javatools-turtle", version.ref = "xdk" }
-javatools-bridge = { module = "org.xvm:javatools-bridge", version.ref = "xdk" }
-
 xdk = { module = "org.xvm:xdk", version.ref = "xdk" }
 xdk-ecstasy = { module = "org.xvm:lib-ecstasy", version.ref = "xdk" }
 xdk-aggregate = { module = "org.xvm:lib-aggregate", version.ref = "xdk" }
@@ -55,12 +44,24 @@ xdk-web = { module = "org.xvm:lib-web", version.ref = "xdk" }
 xdk-webauth = { module = "org.xvm:lib-webauth", version.ref = "xdk" }
 xdk-xenia = { module = "org.xvm:lib-xenia", version.ref = "xdk" }
 
+javatools = { module = "org.xvm:javatools", version.ref = "xdk" }
+javatools-unicode = { module = "org.xvm:javatools-unicode", version.ref = "xdk" }
+javatools-utils = { module = "org.xvm:javatools-utils", version.ref = "xdk" }
+javatools-turtle = { module = "org.xvm:javatools-turtle", version.ref = "xdk" }
+javatools-bridge = { module = "org.xvm:javatools-bridge", version.ref = "xdk" }
+
 kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
 kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }
-
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version = "2.3.2" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version = "2.3.2" }
 
 [bundles]
 unicode = ["javax-activation", "jakarta-xml-bind-api", "jaxb-runtime"]
+
+# TODO: Future libraries that may make it into the build pipeline, one way or another.
+#spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
+#shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+#nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
+#maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
+#version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version = "0.8.1" }

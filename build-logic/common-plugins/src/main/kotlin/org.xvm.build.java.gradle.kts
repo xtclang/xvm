@@ -11,7 +11,6 @@ import java.nio.charset.StandardCharsets.UTF_8
 plugins {
     id("org.xvm.build.version")
     java
-    // TODO: Checkstyle/Spotless
 }
 
 private val enablePreview = enablePreview()

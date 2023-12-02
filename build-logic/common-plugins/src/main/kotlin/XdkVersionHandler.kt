@@ -1,7 +1,9 @@
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.provider.Provider
 import org.gradle.kotlin.dsl.extra
+import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.provideDelegate
 import java.io.File
 
@@ -10,14 +12,40 @@ import java.io.File
 //   overkill to get updated, if we can read the gradle.property version and use it in the file.
 class XdkVersionHandler(buildLogic: XdkBuildLogic) {
     companion object {
-        const val CATALOG_TOML_VERSIONS_SECTION = "[versions]"
-        const val CATALOG_XDK_VERSION_KEY = "xdk"
-        const val CATALOG_XTC_PLUGIN_VERSION_KEY = "xdkplugin"
+        const val XDK_VERSION_CATALOG_VERSION_SECTION = "[versions]"
+
+        private const val XDK_VERSION_CATALOG_NAME = "libs"
+        private const val XDK_VERSION_CATALOG_VERSION = "xdk"
+        private const val XDK_VERSION_CATALOG_GROUP = "xdk-group"
+        private const val XDK_VERSION_CATALOG_PLUGIN_VERSION = "xtc-plugin"
 
         fun <T: Dependency> semanticVersionFor(dependency: Provider<T>): SemanticVersion {
             with (dependency.get()) {
                 return SemanticVersion(group!!, name, version!!)
             }
+        }
+
+        fun resolveCatalogSemanticVersion(project: Project): SemanticVersion {
+            // Try to resolve group and version to assign for an unversioned project in this repo (XDK).
+            return SemanticVersion(
+                resolveCatalogVersion(project, XDK_VERSION_CATALOG_GROUP),
+                project.name,
+                resolveCatalogVersion(project, XDK_VERSION_CATALOG_VERSION))
+        }
+
+        /**
+         * Returns the settings phase equivalent of doing the type safe shorthand "libs.versions.<name>", when
+         * the project has been evaluated.
+         */
+        private fun resolveCatalogVersion(project: Project, name: String, catalog: String = XDK_VERSION_CATALOG_NAME): String = project.run {
+            extensions.findByType<VersionCatalogsExtension>()?.also { catalogs ->
+                val versionCatalog = catalogs.named(catalog)
+                val value = versionCatalog.findVersion(name)
+                if (value.isPresent) {
+                    return value.get().toString()
+                }
+            }
+            throw buildException("Version catalog entry '$name' has no value for '$catalog:$name'")
         }
     }
 
@@ -55,9 +83,11 @@ class XdkVersionHandler(buildLogic: XdkBuildLogic) {
     }
 
     private fun ensureNotVersioned(project: Project): Unit = project.run {
-        val hasGroup = group.toString().isNotEmpty() // Not always empty by default. Can be parent project hierarchy too.
-        val hasVersion = Project.DEFAULT_VERSION == version.toString()
-        if ((hasGroup || hasVersion) && group.toString().indexOf('.') != -1) {
+        val group = group.toString()
+        val version = version.toString()
+        val hasGroup = group.isNotEmpty() // Not always empty by default. Can be parent project hierarchy too.
+        val hasVersion = Project.DEFAULT_VERSION == version
+        if ((hasGroup || hasVersion) && group.indexOf('.') != -1) {
             logger.warn("$prefix Project '$name' is not expected to have hierarchical group and version configured at init: (version: group='$group', name='$name', version='$version')")
         }
     }
@@ -99,13 +129,13 @@ class XdkVersionHandler(buildLogic: XdkBuildLogic) {
                     continue
                 }
 
-                if (section != CATALOG_TOML_VERSIONS_SECTION) {
+                if (section != XDK_VERSION_CATALOG_VERSION_SECTION) {
                     add(it)
                     continue
                 }
 
                 when (val split = it.split("=")[0].trim()) {
-                    CATALOG_XDK_VERSION_KEY, CATALOG_XTC_PLUGIN_VERSION_KEY -> {
+                    XDK_VERSION_CATALOG_VERSION, XDK_VERSION_CATALOG_PLUGIN_VERSION -> {
                         if (!it.contains(current.artifactVersion)) {
                             throw project.buildException("ERROR: Failed to find current version '$current' in version catalog entry: $it")
                         }

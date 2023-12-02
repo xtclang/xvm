@@ -1,7 +1,5 @@
 /*
  * Build file for the common Java utilities classes used by various Java projects in the XDK.
- *
- * TODO: Investigate why we seem to have gotten back the dependency that always rebuilds javatools_utils on sync!
  */
 
 plugins {

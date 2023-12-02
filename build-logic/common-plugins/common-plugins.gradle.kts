@@ -7,6 +7,7 @@ dependencies {
     implementation("io.github.rybalkinsd:kohttp:0.12.0")
     implementation("io.github.rybalkinsd:kohttp-jackson:0.12.0")
 }
+// TODO: 8.5 version catalog interface?
 
 repositories {
     mavenCentral()
