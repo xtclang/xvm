@@ -10,7 +10,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
  */
 
 plugins {
-    id("org.xvm.build.java")
+    id("org.xtclang.build.java")
     alias(libs.plugins.tasktree)
 }
 
@@ -83,11 +83,11 @@ val sanityCheckJar by tasks.registering {
 
     dependsOn(jar)
 
-    val checkJar = getXdkPropertyBoolean("org.xvm.javatools.verifyJar", false)
+    val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.verifyJar")
     onlyIf {
         checkJar
     }
-    val expectedEntryCount = getXdkProperty("org.xvm.javatools.verifyJar.expectedFileCount", "-1").toInt()
+    val expectedEntryCount = getXdkProperty("org.xtclang.javatools.verifyJar.expectedFileCount", "-1").toInt()
 
     logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
     doLast {

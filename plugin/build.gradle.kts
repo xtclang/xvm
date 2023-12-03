@@ -4,8 +4,8 @@ import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 
 plugins {
-    id("org.xvm.build.java")
-    id("org.xvm.build.publish")
+    id("org.xtclang.build.java")
+    id("org.xtclang.build.publish")
     alias(libs.plugins.gradle.portal.publish)
     alias(libs.plugins.tasktree)
 }
@@ -42,9 +42,9 @@ dependencies {
 
 private val pluginGroup = "$group.plugin"
 private val pluginVersion = version.toString()
-private val pluginId = getXdkProperty("org.xvm.plugin.id")
+private val pluginId = getXdkProperty("org.xtclang.plugin.id")
 
-private val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xvm.plugin.bundle.javatools", false)
+private val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xtclang.plugin.bundle.javatools")
 
 publishing {
     publications {
@@ -64,22 +64,22 @@ gradlePlugin {
     // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
     // being published. To read it from at least a local repo, we need that artifact too, hence we
     // get three artifacts.
-    isAutomatedPublishing = getXdkPropertyBoolean("org.xvm.plugin.isAutomatedPublishing", true)
+    isAutomatedPublishing = getXdkPropertyBoolean("org.xtclang.plugin.isAutomatedPublishing", true)
 
     logger.info("$prefix Configuring gradlePlugin; isAutomatedPublishing=$isAutomatedPublishing")
 
     @Suppress("UnstableApiUsage")
-    vcsUrl = getXdkProperty("org.xvm.plugin.vcs.url")
+    vcsUrl = getXdkProperty("org.xtclang.plugin.vcs.url")
     @Suppress("UnstableApiUsage")
-    website = getXdkProperty("org.xvm.plugin.website")
+    website = getXdkProperty("org.xtclang.plugin.website")
 
     plugins {
         create("xtcPlugin") {
             version = pluginVersion
             id = pluginId
-            implementationClass = getXdkProperty("org.xvm.plugin.implementation.class")
-            displayName = getXdkProperty("org.xvm.plugin.display.name")
-            description = getXdkProperty("org.xvm.plugin.description")
+            implementationClass = getXdkProperty("org.xtclang.plugin.implementation.class")
+            displayName = getXdkProperty("org.xtclang.plugin.display.name")
+            description = getXdkProperty("org.xtclang.plugin.description")
             logger.lifecycle("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
             @Suppress("UnstableApiUsage")
             tags = listOfNotNull("xtc", "language", "ecstasy", "xdk")
@@ -98,7 +98,7 @@ val sanityCheckPluginVersion by tasks.registering {
         val projectGroup = project.group.toString()
         val projectVersion = project.version.toString()
         val catalogPluginVersion = libs.versions.xtc.plugin.get()
-        val pluginGroupProperty = getXdkProperty("org.xvm.plugin.group", pluginGroup)
+        val pluginGroupProperty = getXdkProperty("org.xtclang.plugin.group", pluginGroup)
 
         if (pluginGroupProperty != pluginGroup) {
             throw buildException("$mismatch; the version catalog .toml file, AND the plugin properties.")
@@ -135,8 +135,8 @@ val jar by tasks.existing(Jar::class) {
         attributes(
             "Manifest-Version" to "1.0",
             "Xdk-Version" to semanticVersion.toString(),
-            "Main-Class" to "org.xvm.plugin.Usage",
-            "Name" to "/org/xvm/plugin/",
+            "Main-Class" to "org.xtclang.plugin.Usage",
+            "Name" to "/org/xtclang/plugin/",
             "Sealed" to "true",
             "Specification-Title" to "XTC Gradle and Maven Plugin",
             "Specification-Vendor" to "xtclang.org",

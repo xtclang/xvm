@@ -9,7 +9,7 @@ import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
  */
 
 plugins {
-    id("org.xvm.build.version")
+    id("org.xtclang.build.version")
     alias(libs.plugins.xtc)
 }
 

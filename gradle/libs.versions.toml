@@ -6,14 +6,14 @@
 #
 # To avoid version skew, we also access this version catalog from settings files and settings
 # plugins, using a more explicit hard-coded approach. The code for this lookup is in the
-# "org.xvm.build.gradle" convention plugin, in the function "resolveVersion".
+# "org.xtclang.build.gradle" convention plugin, in the function "resolveVersion".
 #
 # For anything post the settings stage, we can refer to entries in the version catalog
 # in a typesafe way, e.g. alias(libs.tasktree) for a dependency or plugin. Or
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk-group = "org.xvm"
+xdk-group = "org.xtclang"
 xdk = "0.4.44"
 xtc-plugin = "0.4.44"
 
@@ -24,31 +24,31 @@ gradle-portal-publish = "1.2.1"
 kohttp = "0.12.0"
 
 [plugins]
-xtc = { id = "org.xvm.xtc-plugin", version.ref = "xtc-plugin" }
+xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc-plugin" }
 download = { id = "de.undercouch.download", version.ref = "download" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 
 [libraries]
-xdk = { module = "org.xvm:xdk", version.ref = "xdk" }
-xdk-ecstasy = { module = "org.xvm:lib-ecstasy", version.ref = "xdk" }
-xdk-aggregate = { module = "org.xvm:lib-aggregate", version.ref = "xdk" }
-xdk-collections = { module = "org.xvm:lib-collections", version.ref = "xdk" }
-xdk-crypto = { module = "org.xvm:lib-crypto", version.ref = "xdk" }
-xdk-json = { module = "org.xvm:lib-json", version.ref = "xdk" }
-xdk-jsondb = { module = "org.xvm:lib-jsondb", version.ref = "xdk" }
-xdk-net = { module = "org.xvm:lib-net", version.ref = "xdk" }
-xdk-oodb = { module = "org.xvm:lib-oodb", version.ref = "xdk" }
-xdk-web = { module = "org.xvm:lib-web", version.ref = "xdk" }
-xdk-webauth = { module = "org.xvm:lib-webauth", version.ref = "xdk" }
-xdk-xenia = { module = "org.xvm:lib-xenia", version.ref = "xdk" }
+xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
+xdk-ecstasy = { group = "org.xtclang", name = "lib-ecstasy", version.ref = "xdk" }
+xdk-aggregate = { group = "org.xtclang", name = "lib-aggregate", version.ref = "xdk" }
+xdk-collections = { group = "org.xtclang", name = "lib-collections", version.ref = "xdk" }
+xdk-crypto = { group = "org.xtclang", name = "lib-crypto", version.ref = "xdk" }
+xdk-json = { group = "org.xtclang", name = "lib-json", version.ref = "xdk" }
+xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb", version.ref = "xdk" }
+xdk-net = { group = "org.xtclang", name = "lib-net", version.ref = "xdk" }
+xdk-oodb = { group = "org.xtclang", name = "lib-oodb", version.ref = "xdk" }
+xdk-web = { group = "org.xtclang", name = "lib-web", version.ref = "xdk" }
+xdk-webauth = { group = "org.xtclang", name = "lib-webauth", version.ref = "xdk" }
+xdk-xenia = { group = "org.xtclang", name = "lib-xenia", version.ref = "xdk" }
 
-javatools = { module = "org.xvm:javatools", version.ref = "xdk" }
-javatools-unicode = { module = "org.xvm:javatools-unicode", version.ref = "xdk" }
-javatools-utils = { module = "org.xvm:javatools-utils", version.ref = "xdk" }
-javatools-turtle = { module = "org.xvm:javatools-turtle", version.ref = "xdk" }
-javatools-bridge = { module = "org.xvm:javatools-bridge", version.ref = "xdk" }
+javatools = { group = "org.xtclang", name = "javatools", version.ref = "xdk" }
+javatools-unicode = { group = "org.xtclang", name = "javatools-unicode", version.ref = "xdk" }
+javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref = "xdk" }
+javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
+javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
 kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
 kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }

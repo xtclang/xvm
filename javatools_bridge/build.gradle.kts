@@ -4,7 +4,7 @@
  */
 
 plugins {
-    id("org.xvm.build.version")
+    id("org.xtclang.build.version")
     alias(libs.plugins.xtc)
 }
 

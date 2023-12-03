@@ -3,7 +3,7 @@
  */
 
 plugins {
-    id("org.xvm.build.java")
+    id("org.xtclang.build.java")
 }
 
 val semanticVersion: SemanticVersion by extra

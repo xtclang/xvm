@@ -12,7 +12,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
  */
 
 plugins {
-    id("org.xvm.build.publish")
+    id("org.xtclang.build.publish")
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)

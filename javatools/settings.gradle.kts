@@ -4,7 +4,7 @@ pluginManagement {
 }
 
 plugins {
-    id("org.xvm.build.common")
+    id("org.xtclang.build.common")
 }
 
 rootProject.name = "javatools"

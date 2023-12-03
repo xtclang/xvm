@@ -10,7 +10,7 @@ import de.undercouch.gradle.tasks.download.Download
 import org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP
 
 plugins {
-    id("org.xvm.build.java")
+    id("org.xtclang.build.java")
     alias(libs.plugins.download)
 }
 

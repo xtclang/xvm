@@ -3,7 +3,7 @@
  */
 
 plugins {
-    id("org.xvm.build.version")
-    id("org.xvm.build.aggregator")
+    id("org.xtclang.build.version")
+    id("org.xtclang.build.aggregator")
     alias(libs.plugins.tasktree)
 }

@@ -66,7 +66,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
         }
     }
 
-   companion object {
+    companion object {
         private const val XTC_REPO_INIT_PREFIX = "https://raw.githubusercontent.com/xtclang/xvm/master/gradle/config/repos/"
         private const val XTC_REPO_INIT_PROPERTIES_URL = "$XTC_REPO_INIT_PREFIX/xtc-repo.properties.template"
         private const val XTC_REPO_INIT_SCRIPT_URL   = "$XTC_REPO_INIT_PREFIX/xtc-repo.init.gradle.kts.template"
