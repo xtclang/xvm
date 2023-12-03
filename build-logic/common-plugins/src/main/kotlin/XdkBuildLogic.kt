@@ -17,7 +17,7 @@ class XdkBuildLogic(val project: Project) {
     private val prefix = "[${project.name}]"
     private val logger = project.logger
     private val props = XdkProperties(this)
-    private val listener: XdkBuildListener = XdkBuildListener(project)
+    private val listener = XdkBuildListener(project)
 
     @Suppress("unused")
     val isParallel: Boolean get() = project.gradle.startParameter.isParallelProjectExecutionEnabled
@@ -83,11 +83,10 @@ class XdkBuildLogic(val project: Project) {
     companion object {
         const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_TASK_GROUP_VERSION = "version"
-        const val REDACTED = "[REDACTED]"
         const val ENV_PATH = "PATH"
         const val XTC_LAUNCHER = "xec"
         const val SNAPSHOT_SUFFIX = "-SNAPSHOT"
-        const val DEFAULT_JAVA_BYTECODE_VERSION = "21"
+        const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
 
         private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS" // default "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 

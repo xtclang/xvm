@@ -6,7 +6,7 @@ import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 plugins {
     id("org.xvm.build.java")
     id("org.xvm.build.publish")
-    alias(libs.plugins.gradle.plugin.portal.publish)
+    alias(libs.plugins.gradle.portal.publish)
     alias(libs.plugins.tasktree)
 }
 

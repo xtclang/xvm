@@ -12,7 +12,7 @@ class XdkVersionHandler(buildLogic: XdkBuildLogic) {
     companion object {
         const val CATALOG_TOML_VERSIONS_SECTION = "[versions]"
         const val CATALOG_XDK_VERSION_KEY = "xdk"
-        const val CATALOG_XTC_PLUGIN_VERSION_KEY = "xdkplugin"
+        const val CATALOG_XTC_PLUGIN_VERSION_KEY = "xtcplugin"
 
         fun <T: Dependency> semanticVersionFor(dependency: Provider<T>): SemanticVersion {
             with (dependency.get()) {

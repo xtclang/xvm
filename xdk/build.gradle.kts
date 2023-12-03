@@ -117,7 +117,8 @@ publishing {
  */
 val installInitScripts by tasks.registering(Copy::class) {
     group = PUBLISH_TASK_GROUP
-    description = "Writes the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
+    description =
+        "Writes the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
     from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
         eachFile {
             // TODO: decide if "must be online" trumps "install once", as to which script template
@@ -157,7 +158,8 @@ val pluginPublication by tasks.registering {
  */
 distributions {
     main {
-        distributionBaseName = xdkDist.distributionName // TODO: Should really rename the distribution to "xdk" explicitly.
+        distributionBaseName =
+            xdkDist.distributionName // TODO: Should really rename the distribution to "xdk" explicitly.
         assert(distributionBaseName.get() == "xdk")
         contents {
             val resources = tasks["processResources"].outputs.files.asFileTree

@@ -13,7 +13,7 @@ import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.*
 import java.io.File
 import java.net.URI
-import java.util.*
+import java.util.Enumeration
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 

@@ -12,7 +12,7 @@ fun fetchXtcInitResource(url: String): File {
     URI(url).toURL().openStream().use { os -> os.reader().readText() }.also {
         ktsPath.writeText(it)
     }
-    println("Wrote: ${ktsPath.absolutePathString()}")
+    logger.lifecycle("Wrote: ${ktsPath.absolutePathString()}")
     return ktsPath.toFile()
 }
 

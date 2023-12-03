@@ -1,6 +1,6 @@
+import org.gradle.api.Project
 import java.io.File
 import java.io.FileInputStream
-import java.io.InputStreamReader
 import java.util.Objects.requireNonNull
 import java.util.Properties
 
@@ -23,7 +23,9 @@ import java.util.Properties
 class XdkProperties(buildLogic: XdkBuildLogic) {
     private val project = buildLogic.project
     private val secrets = mutableSetOf<String>()
-    private val props = resolveXtcProjectProperties()
+    private val props = resolve(buildLogic.project)
+
+    //init { toString().lines().forEach { project.logger.lifecycle("${project.prefix} $it") } }
 
     /**
      * Get a property value from the nested property resolution for this project, or
@@ -46,104 +48,121 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
     fun get(key: String, defaultValue: String? = null): String {
         val value = props[key] ?: System.getenv(toSystemEnvKey(key)) ?: defaultValue
         if (value == null && defaultValue == null) {
-            throw project.buildException("ERROR; property $key has no value, and no default was given.")
+            throw project.buildException("ERROR; property '$key' has no value, and no default was given.")
         }
         return value.toString()
     }
 
-    private fun isSecret(key: String): Boolean {
-        return secrets.contains(key)
-    }
-
     /**
-     * Convert e.g. org.xtclang.something.testWithCamelCase -> ORG_XVM_SOMETHING_TEST_WITH_CAMEL_CASE
+     * Accessor to check if a property key resolved by this project has a secret value.
+     * This means that we should never log it, print it, or in any way leak it from a run.
+     * Secret values <=> properties defined outside the project hiearchy, e.g. in
+     * GRADLE_USER_HOME or GRADLE_USER_HOME/init.d, or similar well-defined places.
      */
-    private fun toSystemEnvKey(key: String): String {
-        // TODO: Unit test keys and make sure no secrets are kept in memory or printed/logged.
-        return buildString {
-            for (ch in key) {
-                when {
-                    ch == '.' -> append('_')
-                    ch.isLowerCase() -> append(ch.uppercaseChar())
-                    ch.isUpperCase() -> append('_').append(ch)
-                    else -> append(ch)
-                }
-            }
-        }
-    }
-
-    /*
-     * The method looks for all properties files from the project directory and upwards to the
-     * gradle.rootDirectory. It also checks GRADLE_USER_HOME and its init.d folder, if it exists.
-     */
-    private fun resolveXtcProjectProperties(): Properties = project.run {
-        val root = project.compositeRootProjectDirectory.asFile
-        var dir = project.projectDir
-        val gradleUserHomeDir = project.gradle.gradleUserHomeDir
-        val gradleInitDir = gradleUserHomeDir.resolve("init.d")
-
-        logger.info("$prefix Ingesting *.properties files from '${dir.absolutePath}'...")
-        val all = Properties()
-        do {
-            mergeFromDir(all, dir)
-            dir = dir.parentFile
-        } while (dir != root.parentFile) // include composite root as last directory to scan for properties.
-
-        mergeFromDir(all, gradleInitDir).keys.forEach { secrets.add(it.toString()) }
-        if (gradleInitDir.exists() && gradleInitDir.isDirectory) {
-            mergeFromDir(all, gradleInitDir).keys.forEach { secrets.add(it.toString()) }
-        }
-        logger.info("$prefix Resolved all XDK Gradle properties (${secrets.size} secrets) from $name up to ancestral root (dir: $root)... ")
-        return all
+    fun isSecret(key: String): Boolean {
+        return secrets.contains(key)
     }
 
     override fun toString(): String = project.run {
         return buildString {
-            append("$prefix XVM Project Properties:")
+            append("XdkProperties('${project.name}'):")
             if (props.isEmpty) {
-                appendLine(" [empty]")
+                append(" [empty]")
             }
+            appendLine()
             props.keys.map { it.toString() }.sorted().forEach { key ->
-                val value = if (isSecret(key)) XdkBuildLogic.REDACTED else props[key]
-                appendLine("$prefix     $key = '$value'")
+                append("    $key = ")
+                val value = if (isSecret(key)) REDACTED else "'${props[key]}'"
+                appendLine(value)
             }
         }
     }
 
+    private fun resolve(project: Project, includeExternal: Boolean = true): Properties = project.run {
+        val all = Properties()
+        val ext = Properties()
+        resolveInternalDirs(project).forEach { mergeFromDir(all, it) }
+        if (includeExternal) {
+            resolveExternalDirs(project).forEach { mergeFromDir(ext, it) }
+            ext.keys.map { it.toString() }.forEach(secrets::add)
+        }
+        logger.lifecycle("$prefix Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        return merge(all, ext)
+    }
+
+    private fun resolveInternalDirs(project: Project): List<File> {
+        val compositeRoot = project.compositeRootProjectDirectory.asFile
+        var dir = project.projectDir
+        return buildList {
+            do {
+                add(dir)
+                dir = dir.parentFile
+            } while (dir != compositeRoot.parentFile)
+        }
+    }
+
+    private fun resolveExternalDirs(project: Project): List<File> {
+        return buildList {
+            val gradleUserHomeDir = project.gradle.gradleUserHomeDir
+            val gradleInitDir = gradleUserHomeDir.resolve("init.d")
+            assert(gradleUserHomeDir.isDirectory)
+            add(gradleUserHomeDir)
+            if (gradleInitDir.isDirectory) {
+                add(gradleInitDir)
+            }
+        }
+    }
+
+    /**
+     * For each property, check if this property is set already, then it's declared on a deeper
+     * level, and should not be reset.
+     */
     private fun merge(to: Properties, from: Properties): Properties = project.run {
         from.forEach { key, value ->
-            // Check if this property is set already, then it's declared on a deeper level, and should not be reset.
-            val prev = to.putIfAbsent(key, value)
-            if (prev == null) {
-                logger.info("$prefix Added project property: $key")
+            val old = to.putIfAbsent(key, value)
+            if (old == null) {
+                logger.info("$prefix Defined new property: $key")
+            } else {
+                logger.info("$prefix Property '$key' already defined, not overwriting.")
             }
         }
         return to
     }
 
-    // Merge to all properties from another file if they aren't set already
     private fun mergeFromDir(to: Properties, dir: File): Properties = project.run {
         assert(dir.isDirectory)
-
-        val files = requireNonNull(dir.listFiles())
-            .filter { it.isFile && it.extension == "properties" }
-            .toSet()
+        val files = requireNonNull(dir.listFiles()).filter { it.isFile && it.extension == PROPERTIES_EXT }.toSet()
         val local = Properties()
-
         if (files.isEmpty()) {
             return local
         }
+        for (f in files) {
+            assert(f.exists() && f.isFile)
+            FileInputStream(f).use { local.load(it) }
+            logger.info("$prefix Loaded ${local.size} properties from ${f.absolutePath}")
+        }
+        return merge(to, local)
+    }
 
-        logger.info("$prefix Ingesting properties from $files")
-        files.forEach { f ->
-            assert(f.exists())
-            assert(f.isFile)
-            logger.info("$prefix     Reading ${f.absolutePath}...")
-            InputStreamReader(FileInputStream(f), Charsets.UTF_8).use {
-                local.load(it)
+    companion object {
+        const val REDACTED = "[REDACTED]"
+        const val PROPERTIES_EXT = "properties"
+
+        /**
+         * Convert e.g. org.xtclang.something.testWithCamelCase -> ORG_XVM_SOMETHING_TEST_WITH_CAMEL_CASE
+         */
+        private fun toSystemEnvKey(key: String): String {
+            // TODO: Unit test keys and make sure no secrets are kept in memory or printed/logged.
+            return buildString {
+                for (ch in key) {
+                    when {
+                        ch == '.' -> append('_')
+                        ch.isLowerCase() -> append(ch.uppercaseChar())
+                        ch.isUpperCase() -> append('_').append(ch)
+                        else -> append(ch)
+                    }
+                }
             }
         }
-
-        return merge(to, local)
     }
 }
