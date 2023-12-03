@@ -4,10 +4,11 @@ plugins {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$embeddedKotlinVersion")
-    implementation("io.github.rybalkinsd:kohttp:0.12.0")
-    implementation("io.github.rybalkinsd:kohttp-jackson:0.12.0")
+
+    val kohttpVersion = "0.12.0"
+    implementation("io.github.rybalkinsd:kohttp:$kohttpVersion")
+    implementation("io.github.rybalkinsd:kohttp-jackson:$kohttpVersion")
 }
-// TODO: 8.5 version catalog interface?
 
 repositories {
     mavenCentral()

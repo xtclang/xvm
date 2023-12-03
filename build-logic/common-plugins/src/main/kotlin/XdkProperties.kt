@@ -86,7 +86,7 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
             resolveExternalDirs(project).forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
-        logger.lifecycle("$prefix Internals; loaded properties (${all.size} internal, ${ext.size} external).")
+        logger.info("$prefix Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 
@@ -103,10 +103,8 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
 
     private fun resolveExternalDirs(project: Project): List<File> {
         return buildList {
-            val gradleUserHomeDir = project.gradle.gradleUserHomeDir
-            val gradleInitDir = gradleUserHomeDir.resolve("init.d")
-            assert(gradleUserHomeDir.isDirectory)
-            add(gradleUserHomeDir)
+            add(project.gradle.gradleUserHomeDir)
+            val gradleInitDir = project.userInitScriptDirectory
             if (gradleInitDir.isDirectory) {
                 add(gradleInitDir)
             }
@@ -121,9 +119,12 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
         from.forEach { key, value ->
             val old = to.putIfAbsent(key, value)
             if (old == null) {
-                logger.info("$prefix Defined new property: $key")
+                logger.info("$prefix Defined new property: '$key'")
             } else {
                 logger.info("$prefix Property '$key' already defined, not overwriting.")
+                if (old != value) {
+                    logger.info("$prefix     WARNING: Property '$key' has different values at different levels.")
+                }
             }
         }
         return to

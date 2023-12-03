@@ -1,5 +1,5 @@
-import org.xvm.plugin.tasks.XtcCompileTask
-import org.xvm.plugin.tasks.XtcRunTask
+import org.xtclang.plugin.tasks.XtcCompileTask
+import org.xtclang.plugin.tasks.XtcRunTask
 
 // TODO: The build repo publication is pretty annoying, as it rebuilds every time, even though nothing has changed.
 // Hence, it would be nice to just be able to refer to a standard repository in some normal way.
@@ -16,14 +16,14 @@ plugins {
      *
      * TODO: A standalone "third party app" template repo is almost finished.
      */
-    id("org.xvm.build.version")
+    id("org.xtclang.build.version")
 
    /**
     * This is the XTC plugin. An external user would have a version catalog of their own, default location
     * would be in repo root/gradle/libs.versions.toml. Note that any dependency resolution works, so you
     * could just put:
     *
-    *    id("org.xvm:xtc-plugin:$version") (or a hard coded version string after the last colon, of course)
+    *    id("org.xtclang:xtc-plugin:$version") (or a hard coded version string after the last colon, of course)
     *
     * (But this is just what the version catalog extension provides shorthand for. Third party users
     *  will probably put the xtc plugin and xdk with versions and identifiers in their own version catalogs,
@@ -45,7 +45,7 @@ plugins {
  * modules in the XDK to go into any module path we use for compilation and execution of the modules
  * build by this project. The notation in the parenthesis, is shorthand to refer to an artifact that
  * is in our TOML version catalog description, but the user can use any dependency notation that Gradle
- * supports, of course. For example 'xdk("org.xvm:xdk:0.4.4")'.
+ * supports, of course. For example 'xdk("org.xtclang:xdk:0.4.4")'.
  */
 dependencies {
     xdk(libs.xdk)

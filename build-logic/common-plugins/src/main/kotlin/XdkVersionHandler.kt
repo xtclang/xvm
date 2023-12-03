@@ -67,7 +67,7 @@ class XdkVersionHandler(buildLogic: XdkBuildLogic) {
         project.group = group
         project.version = version
 
-        logger.info("$prefix XDK Project '$name' versioned as: '$semanticVersion'")
+        logger.lifecycle("$prefix XDK Project '$name' versioned as: '$semanticVersion'")
         with (project) {
             logger.info(
                 """

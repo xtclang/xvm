@@ -63,11 +63,11 @@ class XdkBuildLogic(val project: Project) {
         }
     }
 
-    fun getPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
+    internal fun xdkPropertyBool(key: String, defaultValue: Boolean = false): Boolean {
         return props.get(key, defaultValue.toString()).toBoolean()
     }
 
-    fun getProperty(key: String, defaultValue: String? = null): String {
+    internal fun xdkProperty(key: String, defaultValue: String? = null): String {
         return props.get(key, defaultValue)
     }
 
@@ -168,12 +168,12 @@ val Project.xdkImplicitsPath: String
 val Project.xtcIconFile: String
     get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
 
-fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = false): Boolean {
-    return xdkBuildLogic.getPropertyBoolean(key, defaultValue)
+fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean = false): Boolean {
+    return xdkBuildLogic.xdkPropertyBool(key, defaultValue)
 }
 
 fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return xdkBuildLogic.getProperty(key, defaultValue)
+    return xdkBuildLogic.xdkProperty(key, defaultValue)
 }
 
 fun Project.buildException(msg: String): Throwable {

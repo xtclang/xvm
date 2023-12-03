@@ -50,9 +50,6 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./xdk/build.gradle.kts:                include("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
 ./xdk/build.gradle.kts:// TODO: Add a sanity check, that makes sure all files in the distribution are there,
 ./xdk/build.gradle.kts:// TODO - Keep dir patterns here too, or have it return copy specs based on resources
-./build-logic/common-plugins/src/main/kotlin/org.xvm.build.version.gradle.kts:// TODO if we can fold these functions into the XdkBuildLogic class, it would be a lot nicer.
-./build-logic/common-plugins/src/main/kotlin/org.xvm.build.java.gradle.kts:// TODO add more linting, integrate lint fix/checkstyle/spotless.
-./build-logic/common-plugins/src/main/kotlin/org.xvm.build.java.gradle.kts:    maxHeapSize = "4G" // TODO make this configurable in the properties files along with the other Java properties.
 ./manualTests/webapp/build.gradle.kts:// TODO: xdkZip does not resolve on its own in this environment. It's not clear why.
 ./manualTests/webapp/build.gradle.kts:    // TODO: webappConsumer(project(":webapp"))
 ./manualTests/webapp/build.gradle.kts:// TODO: Right now processResources exists through the xtc plugin, is run, and copies src/<sourceSet>/resources to build resources for that source set

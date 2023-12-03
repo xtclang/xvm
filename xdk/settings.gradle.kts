@@ -9,22 +9,15 @@ includeBuild("../javatools_unicode")
 includeBuild("../manualTests")
 
 plugins {
-    id("org.xvm.build.common")
+    id("org.xtclang.build.common")
 }
 
 rootProject.name = "xdk"
 
 val xdkProjectPath = rootDir
 
-// TODO Can we move plugin application of taskTree here to get it out of every file?
-
 /**
  * The explicit XDK subprojects that are built for each library included in the XDK.
- *   Naming convention: https://kotlinlang.org/docs/reference/coding-conventions.html#naming-rules
- *
- *   TODO: Can we get this from settings or gradle or something, instead of having to
- *   enumerate them like this? Check with includedBuilds/map. This is probably not possible
- *   as subprojects are a very different entity than included builds.
  */
 listOfNotNull(
     "lib_ecstasy",

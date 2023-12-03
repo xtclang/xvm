@@ -1,5 +1,5 @@
 plugins {
-    id("org.xvm.build.java")
+    id("org.xtclang.build.java")
     // TODO: alias(libs.plugins.maven.plugin.development)
 }
 
