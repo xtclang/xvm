@@ -1,6 +1,3 @@
-import java.io.FileInputStream
-import java.util.*
-
 /**
  * Settings resolution level (early) configuration. The only purpose of this plugin is to make sure
  * that the ancestral root project resolves, so that we can connect any subproject or included build
@@ -34,8 +31,8 @@ dependencyResolutionManagement {
     //println("XDK PROPERTIES: " + xdkProperties)
     versionCatalogs {
         val libs by versionCatalogs.creating {
+            version("xdk2", "0.5.0")
             from(files(libsVersionCatalog)) // load versions
         }
     }
 }
-

@@ -5,14 +5,11 @@ import io.github.rybalkinsd.kohttp.dsl.context.Method.GET
 import io.github.rybalkinsd.kohttp.dsl.http
 import io.github.rybalkinsd.kohttp.jackson.ext.toJson
 import okhttp3.Response
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Helper class to access GitHub packages for the "xtclang" org, and other build logic
  * for publishing XDK build artifacts.
  */
-@OptIn(ExperimentalEncodingApi::class)
 class GitHubPackages(buildLogic: XdkBuildLogic) {
     companion object Rest {
         const val GITHUB_PUBLICATION_NAME = "GitHub"
@@ -46,9 +43,6 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
 
     init {
         with(buildLogic) {
-            fun decodeToken(str: String): String {
-                return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
-            }
             gitHubOrganization = getProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)
             gitHubUrl = getProperty(GITHUB_REPO_URL, "")
             gitHubCredentials = getProperty(GITHUB_USER, GITHUB_USER_RO_DEFAULT_VALUE) to getProperty(GITHUB_TOKEN, "")

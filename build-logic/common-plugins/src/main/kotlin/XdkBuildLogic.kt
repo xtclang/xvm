@@ -39,16 +39,7 @@ class XdkBuildLogic(val project: Project) {
     }
 
     fun isSnapshot(): Boolean {
-        return project.version.toString().endsWith(SNAPSHOT_SUFFIX)
-    }
-
-    fun findExecutableOnPath(executable: String): Path? {
-        return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }
-            ?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
-    }
-
-    fun findLocalXdkInstallation(): File? {
-        return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile?.parentFile // xec -> bin -> libexec -> "x.y.z.ppp"
+        return isSnapshot(project)
     }
 
     fun resolveLocalXdkInstallation(): File {
@@ -81,12 +72,14 @@ class XdkBuildLogic(val project: Project) {
     }
 
     companion object {
+        const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
+
         const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_TASK_GROUP_VERSION = "version"
-        const val ENV_PATH = "PATH"
-        const val XTC_LAUNCHER = "xec"
-        const val SNAPSHOT_SUFFIX = "-SNAPSHOT"
-        const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
+
+        private const val ENV_PATH = "PATH"
+        private const val XTC_LAUNCHER = "xec"
+        private const val SNAPSHOT_SUFFIX = "-SNAPSHOT"
 
         private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS" // default "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
@@ -95,6 +88,19 @@ class XdkBuildLogic(val project: Project) {
 
         fun resolve(project: Project): XdkBuildLogic {
             return cache[project] ?: XdkBuildLogic(project).also { cache[project] = it }
+        }
+
+        fun isSnapshot(project: Project): Boolean {
+            return project.version.toString().endsWith(SNAPSHOT_SUFFIX)
+        }
+
+        fun findExecutableOnPath(executable: String): Path? {
+            return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }
+                ?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
+        }
+
+        fun findLocalXdkInstallation(): File? {
+            return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile?.parentFile // xec -> bin -> libexec -> "x.y.z.ppp"
         }
 
         /**
@@ -161,10 +167,6 @@ val Project.xdkImplicitsPath: String
 // TODO: Hacky, for same reason as above.
 val Project.xtcIconFile: String
     get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
-
-fun Project.validateGradle() {
-    xdkBuildLogic.validateGradle()
-}
 
 fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = false): Boolean {
     return xdkBuildLogic.getPropertyBoolean(key, defaultValue)

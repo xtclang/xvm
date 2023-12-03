@@ -242,7 +242,7 @@ val distExe by tasks.registering {
     dependsOn(installDist)
 
     val nsi = file("src/main/nsi/xdkinstall.nsi")
-    val makensis = xdkBuildLogic.findExecutableOnPath("makensis")
+    val makensis = XdkBuildLogic.findExecutableOnPath("makensis")
     onlyIf {
         makensis != null
     }
@@ -300,7 +300,7 @@ val installDist by tasks.existing {
 val findLocalDist by tasks.registering {
     group = XdkDistribution.DISTRIBUTION_GROUP
     description = "Find and add any local XDK installation from the PATH."
-    val localDistDir = xdkBuildLogic.findLocalXdkInstallation() // done during config
+    val localDistDir = XdkBuildLogic.findLocalXdkInstallation() // done during config
     if (localDistDir == null) {
         logger.error("$prefix No local XTC installation found.")
     } else {
@@ -350,7 +350,6 @@ val installLocalDist by tasks.registering {
         }
     }
 }
-
 
 /**
  * This task can update the Unicode data files, if a Unicode release has occurred and provided

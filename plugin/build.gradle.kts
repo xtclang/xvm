@@ -97,7 +97,7 @@ val sanityCheckPluginVersion by tasks.registering {
         val mismatch = "XTC Plugin version mismatch"
         val projectGroup = project.group.toString()
         val projectVersion = project.version.toString()
-        val catalogPluginVersion = libs.versions.xtcplugin.get()
+        val catalogPluginVersion = libs.versions.xtc.plugin.get()
         val pluginGroupProperty = getXdkProperty("org.xvm.plugin.group", pluginGroup)
 
         if (pluginGroupProperty != pluginGroup) {
