@@ -354,10 +354,11 @@ public class xRTFunction
                                  ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn)
         {
         ObjectHandle haParams = xArray.createImmutableArray(xRTSignature.ensureParamArray(), ahParam);
-
         ObjectHandle haValues = xArray.makeObjectArrayHandle(ahValue, Mutability.Constant);
 
-        return Utils.constructListMap(frame, ensureListMap(), haParams, haValues, iReturn);
+        return Utils.constructListMap(frame,
+                frame.f_context.f_container.resolveClass(ensureListMapType()),
+                haParams, haValues, iReturn);
         }
 
     /**
@@ -1719,22 +1720,19 @@ public class xRTFunction
         }
 
     /**
-     * @return the TypeComposition for a ListMap<Parameter, Object>
+     * @return the TypeConstant for a ListMap<Parameter, Object>
      */
-    public static TypeComposition ensureListMap() // TODO: use the container
+    public static TypeConstant ensureListMapType()
         {
-        TypeComposition clz = LISTMAP_CLZCOMP;
-        if (clz == null)
+        TypeConstant type = LISTMAP_TYPE;
+        if (type == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeListMap   = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            TypeConstant typeParameter = pool.typeParameter();
-
-            typeListMap = pool.ensureParameterizedTypeConstant(typeListMap, typeParameter, pool.typeObject());
-            LISTMAP_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeListMap);
-            assert clz != null;
+            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
+                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.typeParameter(), pool.typeObject());
             }
-        return clz;
+        return type;
         }
 
     /**
@@ -1763,8 +1761,7 @@ public class xRTFunction
 
     private static TypeConstant  FUNCTION_ARRAY_TYPE;
     private static ArrayConstant EMPTY_FUNCTION_ARRAY;
-
-    private static TypeComposition LISTMAP_CLZCOMP;
+    private static TypeConstant  LISTMAP_TYPE;
 
     /**
      * RTFunction:

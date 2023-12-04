@@ -226,9 +226,9 @@ public class xPackage
     // ----- Helpers -------------------------------------------------------------------------------
 
     /**
-     * @return the TypeComposition for ListMap<String, Class>
+     * @return the TypeComposition for {@code ListMap<String, Class>}
      */
-    private static TypeComposition ensureListMapComposition(Container container)
+    public static TypeComposition ensureListMapComposition(Container container)
         {
         return container.ensureClassComposition(LIST_MAP_TYPE, LIST_MAP_TEMPLATE);
         }

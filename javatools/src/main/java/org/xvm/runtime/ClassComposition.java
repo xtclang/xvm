@@ -40,8 +40,8 @@ import org.xvm.util.ListMap;
 
 
 /**
- * TypeComposition represents a fully resolved class (e.g. ArrayList<String> or
- * @Interval Range<Date>).
+ * TypeComposition represents a fully resolved class (e.g. {@code ArrayList<String>} or
+ * {@code @Interval Range<Date>}).
  */
 public class ClassComposition
         implements TypeComposition
@@ -108,7 +108,8 @@ public class ClassComposition
      */
     public ProxyComposition ensureProxyComposition(TypeConstant typeProxy)
         {
-        return f_mapProxies.computeIfAbsent(typeProxy, (type) -> new ProxyComposition(this, type));
+        return f_mapProxies.computeIfAbsent(typeProxy,
+                (type) -> new ProxyComposition(this, register(type)));
         }
 
     /**
@@ -118,7 +119,7 @@ public class ClassComposition
         {
         assert typeActual.isShared(getContainer().getConstantPool());
         return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
-                (type) -> new CanonicalizedTypeComposition(this, type));
+                (type) -> new CanonicalizedTypeComposition(this, register(type)));
         }
 
     /**
@@ -175,7 +176,8 @@ public class ClassComposition
         {
         return type.equals(f_typeRevealed) ? this :
                f_typeRevealed.isA(type)
-                   ? f_mapCompositions.computeIfAbsent(type, typeR -> new ClassComposition(this, typeR))
+                   ? f_mapCompositions.computeIfAbsent(type,
+                        typeR -> new ClassComposition(this, register(typeR)))
                    : null;
         }
 
@@ -186,7 +188,7 @@ public class ClassComposition
                f_typeStructure.isA(type)   ? ensureAccess(Access.STRUCT) :
                f_typeInception.isA(type)
                    ? f_mapCompositions.computeIfAbsent(type,
-                            typeR -> new ClassComposition(f_clzInception, typeR))
+                            typeR -> new ClassComposition(f_clzInception, register(typeR)))
                    : null;
         }
 
@@ -257,7 +259,7 @@ public class ClassComposition
             }
 
         return f_mapCompositions.computeIfAbsent(
-            typeTarget, typeR -> new ClassComposition(f_clzInception, typeR));
+            typeTarget, typeR -> new ClassComposition(f_clzInception, register(typeR)));
         }
 
     @Override
@@ -536,6 +538,36 @@ public class ClassComposition
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
+     * Ensure the constant we use as a key to any of the caches belongs to this Container's
+     * ConstantPool or any of its ancestors.
+     */
+    private <T extends Constant> T register(T type)
+        {
+        Container    container = getContainer();
+        ConstantPool poolThis  = container.getConstantPool();
+        ConstantPool poolThat  = type.getConstantPool();
+
+        if (poolThat == poolThis)
+            {
+            return type;
+            }
+
+        while (true)
+            {
+            container = container.f_parent;
+            if (container == null)
+                {
+                break;
+                }
+            if (poolThat == container.getConstantPool())
+                {
+                return type;
+                }
+            }
+        return (T) poolThis.register(type);
+        }
+
+    /**
      * @return true iff this TypeComposition represents an inception class
      */
     protected boolean isInception()
@@ -803,14 +835,6 @@ public class ClassComposition
         public TypeConstant getType()
            {
            return f_type;
-           }
-
-        /**
-         * @return the TypeComposition for inflated fields
-         */
-        public TypeComposition getTypeComposition()
-           {
-           return f_clzRef;
            }
 
         /**

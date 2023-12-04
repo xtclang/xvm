@@ -365,12 +365,13 @@ public class xClass
                         : clz.getTypeParamCount();
                 }
 
-            Container    container = frame.f_context.f_container;
-            ConstantPool pool      = frame.poolContext();
+            Container       container = frame.f_context.f_container;
+            TypeComposition clzMap    = container.resolveClass(xRTType.ensureListMapType());
+            ConstantPool    pool      = frame.poolContext();
             int iResult;
             if (cParams == 0)
                 {
-                iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
+                iResult = Utils.constructListMap(frame, clzMap,
                         xString.ensureEmptyArray(),
                         xRTType.ensureEmptyTypeArray(container), Op.A_STACK);
                 }
@@ -398,7 +399,7 @@ public class xClass
                         }
                     }
 
-                iResult = Utils.constructListMap(frame, xRTType.ensureListMapComposition(),
+                iResult = Utils.constructListMap(frame, clzMap,
                         xArray.makeStringArrayHandle(ahNames),
                         xArray.createImmutableArray(
                             xRTType.ensureTypeArrayComposition(container), ahTypes),

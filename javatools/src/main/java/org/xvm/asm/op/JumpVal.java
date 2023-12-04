@@ -12,10 +12,12 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ConstHeap;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -298,15 +300,26 @@ public class JumpVal
 
         Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
 
-        Algorithm    algorithm = Algorithm.NativeSimple;
-        TypeConstant typeCond  = frame.getLocalType(m_nArgCond, null);
-        TypeConstant typeRange = frame.poolContext().typeRange();
+        Algorithm    algorithm  = Algorithm.NativeSimple;
+        TypeConstant typeCond   = frame.getLocalType(m_nArgCond, null);
+        TypeConstant typeRange  = frame.poolContext().typeRange();
+        ConstHeap    heap       = frame.f_context.f_container.f_heap;
+        ConstantPool poolTarget = frame.f_function.getConstantPool();
 
         for (int i = 0; i < cCases; i++ )
             {
             ObjectHandle hCase = ahCase[i];
 
             assert !hCase.isMutable();
+
+            // caching a constant linked to the current pool would "leak" the current container
+            if (hCase.getComposition().getConstantPool() != poolTarget)
+                {
+                hCase = heap.relocateConst(hCase, frame.getConstant(m_anConstCase[i]));
+
+                assert hCase != null;
+                ahCase[i] = hCase;
+                }
 
             TypeConstant typeCase = hCase.getType();
             boolean      fRange   = typeCase.isA(typeRange) && !typeCond.isA(typeRange);

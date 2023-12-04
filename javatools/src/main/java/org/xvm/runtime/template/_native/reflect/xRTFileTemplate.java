@@ -243,8 +243,9 @@ public class xRTFileTemplate
             }
         assert index == cModules;
 
+        TypeComposition clzArray = container.resolveClass(ensureComponentArrayType());
         return frame.assignValue(iReturn,
-            xArray.createImmutableArray(ensureComponentArrayType(), ahModule));
+                xArray.createImmutableArray(clzArray, ahModule));
 
         }
 

@@ -250,8 +250,8 @@ public class xRTComponentTemplate
 
         // the only possible child type of MultiMethodTemplate is the MethodTemplate
         TypeComposition clzArray = component instanceof MultiMethodStructure
-            ? xRTClassTemplate.ensureMethodTemplateArrayComposition(container)
-            : ensureComponentArrayType();
+                ? xRTClassTemplate.ensureMethodTemplateArrayComposition(container)
+                : container.resolveClass(ensureComponentArrayType());
 
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahChildren));
         }
@@ -260,38 +260,35 @@ public class xRTComponentTemplate
     // ----- Composition caching -------------------------------------------------------------------
 
     /**
-     * @return the TypeComposition for an Array of ComponentTemplate
+     * @return the TypeConstant for an Array of ComponentTemplate
      */
-    public static TypeComposition ensureComponentArrayType() // TODO: use the container
+    public static TypeConstant ensureComponentArrayType()
         {
-        TypeComposition clz = COMPONENT_ARRAY_COMP;
-        if (clz == null)
+        TypeConstant type = COMPONENT_ARRAY_TYPE;
+        if (type == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeTypeArray = pool.ensureArrayType(
-                                            pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
-            COMPONENT_ARRAY_COMP = clz = INSTANCE.f_container.resolveClass(typeTypeArray);
-            assert clz != null;
+            COMPONENT_ARRAY_TYPE = type = pool.ensureArrayType(
+                    pool.ensureEcstasyTypeConstant("reflect.ComponentTemplate"));
             }
-        return clz;
+        return type;
         }
 
     /**
      * @return the TypeComposition for an RTMultiMethodTemplate
      */
-    public static TypeComposition ensureMultiMethodTemplateComposition() // TODO: use the container
+    public static TypeComposition getMultiMethodTemplateComposition(Container container)
         {
-        TypeComposition clz = MULTI_METHOD_TEMPLATE_COMP;
-        if (clz == null)
+        ClassTemplate templateRT = MULTI_METHOD_TEMPLATE;
+        if (templateRT == null)
             {
-            Container    container = INSTANCE.f_container;
-            ConstantPool pool      = container.getConstantPool();
-            ClassTemplate templateRT   = INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
-            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
-            MULTI_METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(container, typeTemplate);
-            assert clz != null;
+            MULTI_METHOD_TEMPLATE = templateRT =
+                INSTANCE.f_container.getTemplate("_native.reflect.RTMultiMethodTemplate");
             }
-        return clz;
+
+        ConstantPool pool         = container.getConstantPool();
+        TypeConstant typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MultiMethodTemplate");
+        return templateRT.ensureClass(container, typeTemplate);
         }
 
 
@@ -377,7 +374,7 @@ public class xRTComponentTemplate
                 return xRTClassTemplate.makeHandle(container, (ClassStructure) component);
 
             case MULTIMETHOD:
-                return new ComponentTemplateHandle(ensureMultiMethodTemplateComposition(), component);
+                return new ComponentTemplateHandle(getMultiMethodTemplateComposition(container), component);
 
             case METHOD:
                 return xRTMethodTemplate.makeHandle((MethodStructure) component);
@@ -421,6 +418,6 @@ public class xRTComponentTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeComposition COMPONENT_ARRAY_COMP;
-    private static TypeComposition MULTI_METHOD_TEMPLATE_COMP;
+    private static TypeConstant  COMPONENT_ARRAY_TYPE;
+    private static ClassTemplate MULTI_METHOD_TEMPLATE;
     }

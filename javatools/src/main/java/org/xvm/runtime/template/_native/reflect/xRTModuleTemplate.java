@@ -89,7 +89,7 @@ public class xRTModuleTemplate
         {
         // TODO GG: how to cache the result?
         ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
-        TypeComposition clzMap = ensureListMapComposition();
+        TypeComposition clzMap = frame.f_context.f_container.resolveClass(ensureListMapType());
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -121,20 +121,19 @@ public class xRTModuleTemplate
         }
 
     /**
-     * @return the TypeComposition for ListMap<String, String>
+     * @return the TypeConstant for ListMap<String, String>
      */
-    private static TypeComposition ensureListMapComposition() // TODO: use the container
+    private static TypeConstant ensureListMapType()
         {
-        TypeComposition clz = LISTMAP_CLZ;
-        if (clz == null)
+        TypeConstant type = LISTMAP_TYPE;
+        if (type == null)
             {
-            ConstantPool pool     = INSTANCE.pool();
-            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeString());
-            LISTMAP_CLZ = clz = INSTANCE.f_container.resolveClass(typeList);
-            assert clz != null;
+            ConstantPool pool = INSTANCE.pool();
+            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
+                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.typeString(), pool.typeString());
             }
-        return clz;
+        return type;
         }
 
 
@@ -159,5 +158,5 @@ public class xRTModuleTemplate
     // ----- constants -----------------------------------------------------------------------------
 
     private static TypeConstant MODULE_TEMPLATE_TYPE;
-    private static TypeComposition LISTMAP_CLZ;
+    private static TypeConstant LISTMAP_TYPE;
     }

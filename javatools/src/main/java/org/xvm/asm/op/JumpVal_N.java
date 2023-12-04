@@ -13,6 +13,7 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
@@ -20,6 +21,7 @@ import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.MatchAnyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ConstHeap;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -146,6 +148,9 @@ public class JumpVal_N
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow,
                                    ObjectHandle[][] aahCases)
         {
+        ConstHeap    heap       = frame.f_context.f_container.f_heap;
+        ConstantPool poolTarget = frame.f_function.getConstantPool();
+
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++)
             {
             int            cColumns     = ahValue.length;
@@ -171,6 +176,17 @@ public class JumpVal_N
                 if (isDeferred(hCase))
                     {
                     fDeferred = true;
+                    }
+                else
+                    {
+                    // caching a constant linked to the current pool would "leak" the current container
+                    if (hCase.getComposition().getConstantPool() != poolTarget)
+                        {
+                        hCase = heap.relocateConst(hCase, constCase);
+
+                        assert hCase != null;
+                        ahCases[iC] = hCase;
+                        }
                     }
                 }
 

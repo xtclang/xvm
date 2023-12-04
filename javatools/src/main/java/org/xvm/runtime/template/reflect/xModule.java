@@ -180,7 +180,7 @@ public class xModule
         Container       container = frame.f_context.f_container;
         ModuleConstant  idModule  = (ModuleConstant) hTarget.getId();
         ModuleStructure module    = (ModuleStructure) idModule.getComponent();
-        TypeComposition clzMap    = ensureListMapComposition();
+        TypeComposition clzMap    = container.resolveClass(ensureListMapType());
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
@@ -375,28 +375,26 @@ public class xModule
         }
 
     /**
-     * @return the TypeComposition for ListMap<String, Module>
+     * @return the TypeConstant for {@code ListMap<String, Module>}
      */
-    private static TypeComposition ensureListMapComposition() // TODO: use the container
+    private static TypeConstant ensureListMapType()
         {
-        TypeComposition clz = LISTMAP_CLZ;
-        if (clz == null)
+        TypeConstant type = LISTMAP_TYPE;
+        if (type == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeModule());
-            LISTMAP_CLZ = clz = INSTANCE.f_container.resolveClass(typeList);
-            assert clz != null;
+            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
+                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.typeString(), pool.typeModule());
             }
-        return clz;
+        return type;
         }
 
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant  MODULE_ARRAY_TYPE;
-    private static ArrayConstant EMPTY_MODULE_ARRAY;
-
-    private static TypeComposition LISTMAP_CLZ;
+    private static TypeConstant    MODULE_ARRAY_TYPE;
+    private static ArrayConstant   EMPTY_MODULE_ARRAY;
+    private static TypeConstant    LISTMAP_TYPE;
     private static VersionConstant VERSION_DEFAULT;
     }

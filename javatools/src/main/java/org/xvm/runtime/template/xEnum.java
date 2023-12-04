@@ -50,12 +50,6 @@ public class xEnum
         }
 
     @Override
-    public boolean isGenericHandle()
-        {
-        return true;
-        }
-
-    @Override
     public void initNative()
         {
         if (this == INSTANCE)
@@ -92,6 +86,12 @@ public class xEnum
             m_listNames   = listNames;
             m_listHandles = listHandles;
             }
+        }
+
+    @Override
+    public TypeComposition ensureClass(Container container, TypeConstant typeActual)
+        {
+        return ensureClass(container, typeActual, typeActual);
         }
 
     @Override
@@ -437,7 +437,7 @@ public class xEnum
         public boolean equals(Object obj)
             {
             return obj instanceof EnumHandle that &&
-                    this.m_clazz == that.m_clazz &&
+                    this.getTemplate() == that.getTemplate() &&
                     this.m_index == that.m_index;
             }
 

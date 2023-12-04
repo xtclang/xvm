@@ -589,7 +589,7 @@ public class xRTTypeTemplate
 
         if (clzMixin.getFormat() == Component.Format.MIXIN)
             {
-            ConstantPool pool = typeThis.getConstantPool();
+            ConstantPool pool = frame.poolContext();
 
             // note, that the annotation could be into the Class itself
             if (typeThis.isA(typeInto) ||

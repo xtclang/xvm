@@ -167,6 +167,55 @@ public class ConstHeap
         return hValue0 == null ? hValue : hValue0;
         }
 
+    /**
+     * Most commonly, we try to keep cached constants at the highest applicable container, avoiding
+     * polluting the parent container with potentially unused constants. However, when the constant
+     * needs to be cached by someone non-related to this container, we need to relocate such a
+     * constant to a lower container to avoid a leak (preventing this container to be GC'd).
+     *
+     * @param hConst  the constant handle to relocate
+     * @param const   the constant for the handle
+     *
+     * @return the relocated handle or null if cannot be relocated
+     */
+    public ObjectHandle relocateConst(ObjectHandle hConst, Constant constant)
+        {
+        Container parent = f_container.f_parent;
+        if (parent != null && hConst.isShared(parent.getConstantPool(), null))
+            {
+            ObjectHandle hNew = parent.f_heap.relocateConst(hConst, constant);
+
+            // we could also re-insert it right away (after re-registering the constant)
+            f_mapConstants.remove(constant);
+            return hNew;
+            }
+
+        ObjectHandle hPrev = getConstHandle(constant);
+        if (hPrev != null)
+            {
+            // we have it; no need to do anything
+            return hPrev;
+            }
+
+        ConstantPool pool = f_container.getConstantPool();
+        if (constant.getConstantPool() != pool)
+            {
+            constant = pool.register(constant);
+            }
+
+        return f_mapConstants.computeIfAbsent(constant, c ->
+            {
+            ObjectHandle hNew = hConst.cloneAs(
+                    hConst.getTemplate().ensureClass(f_container, hConst.getType()));
+
+            if (c instanceof SingletonConstant constSingleton)
+                {
+                constSingleton.setHandle(hNew);
+                }
+            return hNew;
+            });
+        }
+
 
     // ----- data fields ---------------------------------------------------------------------------
 

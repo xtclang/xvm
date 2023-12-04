@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -29,7 +30,6 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.runtime.template.collections.xArray;
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 
@@ -413,31 +413,34 @@ public class xRTMethod
     // ----- Template, Composition, and handle caching ---------------------------------------------
 
     /**
-     * @return the TypeComposition for an Array of Method
+     * @return the ArrayConstant for an empty Array of Method
      */
-    public static TypeComposition ensureArrayComposition() // TODO: use the container
+    public static ArrayConstant ensureEmptyArrayConstant()
         {
-        TypeComposition clz = ARRAY_CLZCOMP;
-        if (clz == null)
+        ArrayConstant constant = EMPTY_ARRAY;
+        if (constant == null)
             {
             ConstantPool pool = INSTANCE.pool();
-            TypeConstant typeMethodArray = pool.ensureArrayType(pool.typeMethod());
-            ARRAY_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeMethodArray);
-            assert clz != null;
+            EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
+                                            pool.ensureArrayType(pool.typeMethod()));
             }
-        return clz;
+        return constant;
         }
 
     /**
      * @return the handle for an empty Array of Method
      */
-    public static ArrayHandle ensureEmptyArray()
+    public static ObjectHandle ensureEmptyArray(Container container)
         {
-        if (ARRAY_EMPTY == null)
+        ArrayConstant constArray = ensureEmptyArrayConstant();
+        ObjectHandle hArray = container.f_heap.getConstHandle(constArray);
+        if (hArray == null)
             {
-            ARRAY_EMPTY = xArray.createImmutableArray(ensureArrayComposition(), Utils.OBJECTS_NONE);
+            TypeComposition clzArray = container.resolveClass(constArray.getType());
+            hArray = xArray.createImmutableArray(clzArray, Utils.OBJECTS_NONE);
+            container.f_heap.saveConstHandle(constArray, hArray);
             }
-        return ARRAY_EMPTY;
+        return hArray;
         }
 
     /**
@@ -456,6 +459,5 @@ public class xRTMethod
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeComposition ARRAY_CLZCOMP;
-    private static ArrayHandle     ARRAY_EMPTY;
+    private static ArrayConstant EMPTY_ARRAY;
     }

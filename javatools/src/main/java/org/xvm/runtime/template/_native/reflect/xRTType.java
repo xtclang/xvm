@@ -510,7 +510,7 @@ public class xRTType
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return Utils.constructListMap(frame, ensureListMapComposition(),
+            return Utils.constructListMap(frame, frame.f_context.f_container.resolveClass(ensureListMapType()),
                     xString.ensureEmptyArray(), ensureEmptyTypeArray(frame.f_context.f_container), iReturn);
             }
 
@@ -538,10 +538,8 @@ public class xRTType
             TypeConstant typeChild = infoTarget.calculateChildType(poolCtx, sName);
             mapResult.put(poolCtx.ensureStringConstant(sName), typeChild.getType());
             }
-        TypeConstant typeResult  = poolCtx.ensureImmutableTypeConstant(
-                poolCtx.ensureMapType(poolCtx.typeString(), poolCtx.typeType()));
-        MapConstant  constResult = poolCtx.ensureMapConstant(typeResult, mapResult);
 
+        MapConstant constResult = poolCtx.ensureMapConstant(ensureListMapType(), mapResult);
         return frame.assignDeferredValue(iReturn, frame.getConstHandle(constResult));
         }
 
@@ -782,7 +780,7 @@ public class xRTType
         if (hType.isForeign())
             {
             // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTMethod.ensureEmptyArray());
+            return frame.assignValue(iReturn, xRTMethod.ensureEmptyArray(frame.f_context.f_container));
             }
 
         TypeConstant                    typeTarget  = hType.getDataType();
@@ -1525,19 +1523,20 @@ public class xRTType
         }
 
     /**
-     * @return the TypeComposition for ListMap<String, Type>
+     * @return the TypeConstant for {@code immutable ListMap<String, Type>}
      */
-    public static TypeComposition ensureListMapComposition() // TODO: use the container
+    public static TypeConstant ensureListMapType()
         {
-        TypeComposition clz = LISTMAP_CLZCOMP;
-        if (clz == null)
+        TypeConstant type = LISTMAP_TYPE;
+        if (type == null)
             {
-            ConstantPool pool     = INSTANCE.pool();
-            TypeConstant typeList = pool.ensureEcstasyTypeConstant("collections.ListMap");
-            typeList = pool.ensureParameterizedTypeConstant(typeList, pool.typeString(), pool.typeType());
-            LISTMAP_CLZCOMP = clz = INSTANCE.f_container.resolveClass(typeList);
+            ConstantPool pool = INSTANCE.pool();
+
+            type = pool.ensureEcstasyTypeConstant("collections.ListMap");
+            type = pool.ensureParameterizedTypeConstant(type, pool.typeString(), pool.typeType());
+            LISTMAP_TYPE = type = pool.ensureImmutableTypeConstant(type);
             }
-        return clz;
+        return type;
         }
 
     // ----- TypeHandle support --------------------------------------------------------------------
@@ -1711,8 +1710,7 @@ public class xRTType
 
     private static TypeConstant  TYPE_ARRAY_TYPE;
     private static ArrayConstant EMPTY_TYPE_ARRAY;
-
-    private static TypeComposition LISTMAP_CLZCOMP;
+    private static TypeConstant  LISTMAP_TYPE;
 
     private static TypeComposition REGISTER_CLZCOMP;
     private static MethodStructure REGISTER_CONSTRUCT;
