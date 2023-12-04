@@ -448,7 +448,7 @@ public class InvocationExpression
                     if (cReturns == 0)
                         {
                         // we allow a void method's return into an empty Tuple
-                        return atypeReturn.length == 1 && isVoid(atypeReturn)
+                        return atypeReturn != null && atypeReturn.length == 1 && isVoid(atypeReturn)
                                 ? atypeReturn
                                 : TypeConstant.NO_TYPES;
                         }
