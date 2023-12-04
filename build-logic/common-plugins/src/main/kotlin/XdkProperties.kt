@@ -20,12 +20,13 @@ import java.util.Properties
  * The property helper tries to ensure that no standard or inherited task that derives from, ore
  * uses "./gradlew properties" will inadvertently dump secrets to the console.
  */
-class XdkProperties(buildLogic: XdkBuildLogic) {
-    private val project = buildLogic.project
+class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
     private val secrets = mutableSetOf<String>()
-    private val props = resolve(buildLogic.project)
+    private val properties: Properties = resolve()
 
-    //init { toString().lines().forEach { project.logger.lifecycle("${project.prefix} $it") } }
+    init {
+        toString().lines().forEach { logger.info("$prefix $it") }
+    }
 
     /**
      * Get a property value from the nested property resolution for this project, or
@@ -46,51 +47,41 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
      * build breaks.
      */
     fun get(key: String, defaultValue: String? = null): String {
-        val value = props[key] ?: System.getenv(toSystemEnvKey(key)) ?: defaultValue
+        val value = properties[key] ?: System.getenv(toSystemEnvKey(key)) ?: defaultValue
         if (value == null && defaultValue == null) {
-            throw project.buildException("ERROR; property '$key' has no value, and no default was given.")
+            throw project.buildException("ERROR: Property '$key' has no value, and no default was given.")
         }
         return value.toString()
     }
 
-    /**
-     * Accessor to check if a property key resolved by this project has a secret value.
-     * This means that we should never log it, print it, or in any way leak it from a run.
-     * Secret values <=> properties defined outside the project hiearchy, e.g. in
-     * GRADLE_USER_HOME or GRADLE_USER_HOME/init.d, or similar well-defined places.
-     */
-    fun isSecret(key: String): Boolean {
-        return secrets.contains(key)
-    }
-
-    override fun toString(): String = project.run {
+    override fun toString(): String {
         return buildString {
             append("XdkProperties('${project.name}'):")
-            if (props.isEmpty) {
+            if (properties.isEmpty) {
                 append(" [empty]")
             }
             appendLine()
-            props.keys.map { it.toString() }.sorted().forEach { key ->
+            properties.keys.map { it.toString() }.sorted().forEach { key ->
                 append("    $key = ")
-                val value = if (isSecret(key)) REDACTED else "'${props[key]}'"
+                val value = if (isSecret(key)) REDACTED else "'${properties[key]}'"
                 appendLine(value)
             }
         }
     }
 
-    private fun resolve(project: Project, includeExternal: Boolean = true): Properties = project.run {
+    private fun resolve(includeExternal: Boolean = true): Properties {
         val all = Properties()
         val ext = Properties()
-        resolveInternalDirs(project).forEach { mergeFromDir(all, it) }
+        resolveProjectDirs().forEach { mergeFromDir(all, it) }
         if (includeExternal) {
-            resolveExternalDirs(project).forEach { mergeFromDir(ext, it) }
+            resolveExternalDirs().forEach { mergeFromDir(ext, it) }
             ext.keys.map { it.toString() }.forEach(secrets::add)
         }
         logger.info("$prefix Internals; loaded properties (${all.size} internal, ${ext.size} external).")
         return merge(all, ext)
     }
 
-    private fun resolveInternalDirs(project: Project): List<File> {
+    private fun resolveProjectDirs(): List<File> {
         val compositeRoot = project.compositeRootProjectDirectory.asFile
         var dir = project.projectDir
         return buildList {
@@ -101,7 +92,7 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
         }
     }
 
-    private fun resolveExternalDirs(project: Project): List<File> {
+    private fun resolveExternalDirs(): List<File> {
         return buildList {
             add(project.gradle.gradleUserHomeDir)
             val gradleInitDir = project.userInitScriptDirectory
@@ -112,10 +103,20 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
     }
 
     /**
+     * Accessor to check if a property key resolved by this project has a secret value.
+     * This means that we should never log it, print it, or in any way leak it from a run.
+     * Secret values <=> properties defined outside the project hiearchy, e.g. in
+     * GRADLE_USER_HOME or GRADLE_USER_HOME/init.d, or similar well-defined places.
+     */
+    private fun isSecret(key: String): Boolean {
+        return secrets.contains(key)
+    }
+
+    /**
      * For each property, check if this property is set already, then it's declared on a deeper
      * level, and should not be reset.
      */
-    private fun merge(to: Properties, from: Properties): Properties = project.run {
+    private fun merge(to: Properties, from: Properties): Properties {
         from.forEach { key, value ->
             val old = to.putIfAbsent(key, value)
             if (old == null) {
@@ -147,7 +148,8 @@ class XdkProperties(buildLogic: XdkBuildLogic) {
 
     companion object {
         const val REDACTED = "[REDACTED]"
-        const val PROPERTIES_EXT = "properties"
+
+        private const val PROPERTIES_EXT = "properties"
 
         /**
          * Convert e.g. org.xtclang.something.testWithCamelCase -> ORG_XVM_SOMETHING_TEST_WITH_CAMEL_CASE

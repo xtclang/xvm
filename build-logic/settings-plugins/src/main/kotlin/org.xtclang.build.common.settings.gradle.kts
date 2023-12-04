@@ -7,7 +7,7 @@
  * e.g. the JDK, through the Foojay Resolver plugin, which needs to come in at the settings level.
  */
 
-fun fileWithPath(path: String): File {
+fun compositeRootRelativeFile(path: String): File? {
     var dir = file(".")
     var file = File(dir, path)
     while (!file.exists()) {
@@ -17,8 +17,7 @@ fun fileWithPath(path: String): File {
     return file
 }
 
-val libsVersionCatalog = fileWithPath("gradle/libs.versions.toml")
-val xdkVersionProperties = fileWithPath("xdk.properties")
+val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")!!
 
 // If we can read properties here, we can also patch the catalog files.
 dependencyResolutionManagement {
@@ -27,12 +26,27 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 
-    //val xdkProperties = FileInputStream(xdkVersionProperties).use { fs -> Properties().also { it.load(fs) } }
-    //println("XDK PROPERTIES: " + xdkProperties)
+    // For bootstrapping reasons, we manually load the properties file, instead of falling back to the build logic automatic property handler.
+    val xdkVersionFile = compositeRootRelativeFile("VERSION")!!
+    val xtcPluginVersionFile = xdkVersionFile.parentFile.resolve("plugin/VERSION").let { if (it.isFile) it else xdkVersionFile }
+    val (xdkGroup, xdkVersion) = xdkVersionFile.readText().trim().split(':')
+    val (xtcPluginGroup, xtcPluginVersion) = xtcPluginVersionFile.readText().trim().split(':')
+    val prefix = "[${rootProject.name}]"
+    logger.lifecycle("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
+    logger.info("""
+        $prefix XDK VERSION INFO:
+        $prefix     Project : '${rootProject.name}' 
+        $prefix     Group   : '$xdkGroup' (plugin: '$xtcPluginGroup')
+        $prefix     Version : '$xdkVersion' (plugin: '$xtcPluginVersion')
+    """.trimIndent())
+
     versionCatalogs {
-        val libs by versionCatalogs.creating {
-            version("xdk2", "0.5.0")
+        val libs by creating {
             from(files(libsVersionCatalog)) // load versions
+            version("xdk", xdkVersion)
+            version("xtc-plugin", xtcPluginVersion)
+            version("group-xdk", xdkGroup)
+            version("group-xtc-plugin", xtcPluginGroup)
         }
     }
 }

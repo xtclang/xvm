@@ -30,10 +30,9 @@ includeBuild("javatools_utils")
 includeBuild("javatools")
 includeBuild("javatools_unicode")
 includeBuild("plugin")
-includeBuild("plugin/plugin-maven")
 includeBuild("xdk")
 includeBuild("manualTests")
 includeBuild("manualTests/webapp")
-includeBuild("dev")
+//includeBuild("dev")
 
 rootProject.name = "xvm"

@@ -8,6 +8,5 @@ plugins {
 }
 
 includeBuild("../javatools")
-includeBuild("plugin-maven")
 
 rootProject.name = "xtc-plugin"

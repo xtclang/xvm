@@ -168,17 +168,8 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
  * not present in the jar file, and/or if the number of entries in the jar file was
  * not equal to an optional specified size.
  */
-class DebugBuild {
+class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
-        fun resolvableConfig(project: Project, configName: String): Configuration? = project.run {
-            val config = configurations.getByName(configName)
-            if (!config.isCanBeResolved) {
-                logger.warn("Configuration '$configName' is not resolvable.")
-                return null
-            }
-            return config
-        }
-
         fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1) {
             val jar = project.tasks.getByName("jar").outputs.files.singleFile
             val contents = jarContents(jar)
@@ -210,29 +201,37 @@ class DebugBuild {
             }
             return contents.keys
         }
+
+        fun resolvableConfig(project: Project, configName: String): Configuration? {
+            val config = project.configurations.getByName(configName)
+            if (!config.isCanBeResolved) {
+                project.logger.warn("${project.prefix} Configuration '$configName' is not resolvable. Skipped.")
+                return null
+            }
+            return config
+        }
     }
 }
 
-class XdkBuildListener(private val project: Project) : BuildListener {
-    private val prefix = project.prefix + " BUILD CALLBACK: "
-    private val logger = project.logger
+class XdkBuildListener(project: Project) : XdkProjectBuildLogic(project), BuildListener {
+    private val callbackPrefix = "$prefix [BUILD CALLBACK]"
     private var settings: Settings? = null
     private var loaded: Boolean = false
     private var evaluated: Boolean = false
 
     override fun settingsEvaluated(settings: Settings) {
         this.settings = settings
-        logger.info("$prefix Settings evaluated.")
+        logger.info("$callbackPrefix Settings evaluated.")
     }
 
     override fun projectsLoaded(gradle: Gradle) {
         this.loaded = true
-        logger.info("$prefix Projects loaded.")
+        logger.info("$callbackPrefix Projects loaded.")
     }
 
     override fun projectsEvaluated(gradle: Gradle) {
         this.evaluated = true
-        logger.info("$prefix Projects evaluated.")
+        logger.info("$callbackPrefix Projects evaluated.")
     }
 
     @Deprecated("BuildListener.buildFinished is deprecated")
@@ -243,11 +242,10 @@ class XdkBuildListener(private val project: Project) : BuildListener {
 
     override fun toString(): String {
         return buildString {
-            appendLine("${project.prefix} BuildListener:")
+            appendLine("$prefix BuildListener:")
             appendLine("  Settings evaluated: ${settings != null}")
             appendLine("  Projects loaded: $loaded")
             appendLine("  Projects evaluated: $evaluated")
         }
     }
 }
-

@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.inject.Inject;
 import java.util.Set;
 
+@SuppressWarnings("unused")
 public class XtcPlugin implements Plugin<Project> {
     /** Software component for an XTC project, equivalent to components["java"], used e.g. for publishing */
     private static final Set<Class<?>> REQUIRED_PLUGINS = Set.of(

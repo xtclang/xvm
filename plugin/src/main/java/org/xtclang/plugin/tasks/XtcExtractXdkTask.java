@@ -30,9 +30,12 @@ public class XtcExtractXdkTask extends XtcDefaultTask {
     @Inject
     public XtcExtractXdkTask(final XtcProjectDelegate project) {
         super(project);
+        configure();
+    }
+
+    private void configure() {
         setGroup(BUILD_GROUP);
         setDescription("Extract an XDK zip resource into build/xdk/common/ as a build dependency. This is an internal task, and it makes little sense to run it manually.");
-
         project.getConfigs().register(XTC_CONFIG_NAME_JAVATOOLS_OUTGOING, it -> {
             it.setCanBeConsumed(false);
             it.setCanBeResolved(true);

@@ -6,6 +6,7 @@ import io.github.rybalkinsd.kohttp.dsl.context.Method.GET
 import io.github.rybalkinsd.kohttp.dsl.http
 import io.github.rybalkinsd.kohttp.jackson.ext.toJson
 import okhttp3.Response
+import org.gradle.api.Project
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -13,19 +14,18 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Helper class to access GitHub packages for the "xtclang" org, and other build logic
  * for publishing XDK build artifacts.
  */
-class GitHubPackages(buildLogic: XdkBuildLogic) {
+class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
     companion object Protocol {
-        const val GITHUB_PUBLICATION_NAME = "GitHub"
-        const val GITHUB_HOST = "api.github.com"
-        const val GITHUB_SCHEME = "https"
-        const val GITHUB_JSON_PACKAGE_NAME = "name"
+        private const val GITHUB_HOST = "api.github.com"
+        private const val GITHUB_SCHEME = "https"
+        private const val GITHUB_JSON_PACKAGE_NAME = "name"
 
-        const val GITHUB_PREFIX = "org.xtclang.repo.github"
-        const val GITHUB_ORG = "$GITHUB_PREFIX.org"
-        const val GITHUB_USER = "$GITHUB_PREFIX.user"
-        const val GITHUB_TOKEN = "$GITHUB_PREFIX.token"
-        const val GITHUB_URL = "$GITHUB_PREFIX.url"
-        const val GITHUB_READONLY = "$GITHUB_PREFIX.readonly"
+        private const val GITHUB_PREFIX = "org.xtclang.repo.github"
+        private const val GITHUB_ORG = "$GITHUB_PREFIX.org"
+        private const val GITHUB_USER = "$GITHUB_PREFIX.user"
+        private const val GITHUB_TOKEN = "$GITHUB_PREFIX.token"
+        private const val GITHUB_URL = "$GITHUB_PREFIX.url"
+        private const val GITHUB_READONLY = "$GITHUB_PREFIX.readonly"
 
         private const val GITHUB_URL_DEFAULT_VALUE = "https://maven.pkg.github.com/xtclang"
         private const val GITHUB_ORG_DEFAULT_VALUE = "xtclang"
@@ -38,21 +38,17 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             "Authorization" to "Bearer $token")
     }
 
-    private val project = buildLogic.project
-    private val logger = project.logger
-    private val prefix = project.prefix
-
     private val org: String
     private val packagesUrl: String
     private val credentials: Pair<String, String>
 
     init {
-        with(buildLogic) {
-            org = xdkProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)
-            packagesUrl = xdkProperty(GITHUB_URL, GITHUB_URL_DEFAULT_VALUE)
-            val user = xdkProperty(GITHUB_USER, GITHUB_USER_RO_DEFAULT_VALUE)
-            val ro = xdkPropertyBool(GITHUB_READONLY) || user == GITHUB_USER_RO_DEFAULT_VALUE
-            credentials = user to (if (ro) decodeToken(GITHUB_TOKEN_RO_DEFAULT_VALUE) else xdkProperty(GITHUB_TOKEN, ""))
+        with(project) {
+            val user = getXdkProperty(GITHUB_USER, GITHUB_USER_RO_DEFAULT_VALUE)
+            val ro = getXdkPropertyBoolean(GITHUB_READONLY) || user == GITHUB_USER_RO_DEFAULT_VALUE
+            credentials = user to (if (ro) decodeToken(GITHUB_TOKEN_RO_DEFAULT_VALUE) else getXdkProperty(GITHUB_TOKEN, ""))
+            packagesUrl = getXdkProperty(GITHUB_URL, GITHUB_URL_DEFAULT_VALUE)
+            org = getXdkProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)
         }
     }
 
@@ -61,17 +57,13 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
         return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
     }
 
-    val uri: String get() =
-        packagesUrl
+    val uri: String get() = packagesUrl
 
-    val user: String get() =
-        credentials.first
+    val user: String get() = credentials.first
 
-    val token: String get() =
-        credentials.second
+    val token: String get() = credentials.second
 
-    val organization: String get() =
-        this.org
+    val organization: String get() = this.org
 
     val isReadOnly: Boolean get() =
         user == GITHUB_TOKEN_RO_DEFAULT_VALUE && token == decodeToken(GITHUB_TOKEN_RO_DEFAULT_VALUE)
@@ -123,9 +115,10 @@ class GitHubPackages(buildLogic: XdkBuildLogic) {
             logger.warn(
                 """
                     $prefix GitHub credentials are not completely set; publication to GitHub will be disabled.
-                    $prefix   '$GITHUB_PREFIX.repository.url'  [configured: $hasGitHubUrl ($uri)]
-                    $prefix   '$GITHUB_PREFIX.user'            [configured: $hasGitHubUser ($user)]                 
-                    $prefix   '$GITHUB_PREFIX.token'           [configured: $hasGitHubToken ($REDACTED)]
+                    $prefix   '$GITHUB_PREFIX.url'      [configured: $hasGitHubUrl ($uri)]
+                    $prefix   '$GITHUB_PREFIX.user'     [configured: $hasGitHubUser ($user)]           
+                    $prefix   '$GITHUB_PREFIX.token'    [configured: $hasGitHubToken ($REDACTED)]
+                    $prefix   '$GITHUB_PREFIX.readonly' [configured: ${isReadOnly}]
                     """.trimIndent()
             )
             return false

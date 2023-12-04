@@ -1,3 +1,4 @@
+import org.gradle.api.logging.LogLevel.INFO
 import org.xtclang.plugin.tasks.XtcCompileTask
 import org.xtclang.plugin.tasks.XtcRunTask
 
@@ -16,7 +17,7 @@ plugins {
      *
      * TODO: A standalone "third party app" template repo is almost finished.
      */
-    id("org.xtclang.build.version")
+    alias(libs.plugins.xdk.build.version)
 
    /**
     * This is the XTC plugin. An external user would have a version catalog of their own, default location
@@ -114,8 +115,8 @@ xtcRun {
 
 tasks.withType<XtcCompileTask>().configureEach {
     doLast {
-       printTaskInputs()
-       printTaskOutputs()
+       printTaskInputs(INFO)
+       printTaskOutputs(INFO)
     }
 }
 
@@ -129,7 +130,7 @@ tasks.withType<XtcRunTask>().configureEach {
      */
     //alwaysRerunTask()
     doLast {
-       printTaskInputs()
-       printTaskOutputs()
+       printTaskInputs(INFO)
+       printTaskOutputs(INFO)
     }
 }

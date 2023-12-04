@@ -217,9 +217,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.getOutputs().file(version);
             task.doLast(t -> {
                 final var semanticVersion = getSemanticVersion();
-                lifecycle("{} Writing version information: {}", prefix, semanticVersion);
+                final var file = version.get().getAsFile();
+                lifecycle("{} Writing version information: '{}' to '{}'", prefix, semanticVersion, file.getAbsolutePath());
                 try {
-                    Files.writeString(version.get().getAsFile().toPath(), semanticVersion + System.lineSeparator());
+                    Files.writeString(file.toPath(), semanticVersion + System.lineSeparator());
                 } catch (final IOException e) {
                     throw buildException("I/O error when writing version file: '" + e.getMessage() + '\'', e);
                 }
@@ -480,6 +481,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     public Provider<Directory> getXdkContentsDir() {
         return getXdkContentsDir(project);
+    }
+
+    public FileCollection getXtcCompilerOutputModules(final SourceSet sourceSet) {
+        return buildDir.files("xdk/" + sourceSet.getName() + "/lib");
     }
 
     public Provider<Directory> getXtcCompilerOutputDirModules(final SourceSet sourceSet) {

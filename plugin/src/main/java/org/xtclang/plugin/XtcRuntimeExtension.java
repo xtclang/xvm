@@ -6,6 +6,7 @@ import org.gradle.api.provider.Property;
 
 import java.util.List;
 
+@SuppressWarnings("unused") // TODO Implement and code coverage test all configurations.
 public interface XtcRuntimeExtension extends XtcTaskExtension {
 
     String DEFAULT_METHOD_NAME = "run";

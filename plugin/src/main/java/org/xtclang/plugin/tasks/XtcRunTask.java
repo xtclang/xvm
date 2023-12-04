@@ -9,6 +9,7 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
@@ -91,13 +92,15 @@ public class XtcRunTask extends XtcDefaultTask {
         return project.getProject().files(project.getProject().getConfigurations().getByName(XTC_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 
+    @Optional
     @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
     public FileCollection getInputDeclaredDependencyModules() {
         return project.filesFrom(incomingXtcModuleDependencies(sourceSet)); // xtcModule and xtcModuleTest dependencies declared in the project dependency { scope section
     }
 
-    @InputDirectory
+    @Optional // we may have a build that only relies on modules build by other projects, or other dependencies.
+    @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
     public Provider<Directory> getInputModulesCompiledByProject() {
         return project.getXtcCompilerOutputDirModules(sourceSet); // The output of the XTC compiler for this project and source set.
@@ -187,7 +190,7 @@ public class XtcRunTask extends XtcDefaultTask {
 
     protected Stream<XtcRunModule> moduleRunQueue() {
         final var modulesToRun = resolveModulesToRun();
-        project.lifecycle("{} '{}' Queued up {} modules to execute:", prefix, name, modulesToRun.size());
+        project.lifecycle("{} '{}' Queued up {} module(s) to execute:", prefix, name, modulesToRun.size());
         return getAllowParallel().get() ? modulesToRun.parallelStream() : modulesToRun.stream();
     }
 

@@ -47,10 +47,10 @@ tasks.withType<JavaExec>().configureEach {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    val lint = getXdkProperty("org.xtclang.java.lint", "false").toBoolean()
+    val lint = getXdkPropertyBoolean("org.xtclang.java.lint", false)
     val maxErrors = getXdkProperty("org.xtclang.java.maxErrors", "0").toInt()
     val maxWarnings = getXdkProperty("org.xtclang.java.maxWarnings", "0").toInt()
-    val warningsAsErrors = getXdkProperty("org.xtclang.java.warningsAsErrors", "false").toBoolean()
+    val warningsAsErrors = getXdkPropertyBoolean("org.xtclang.java.warningsAsErrors", false)
 
     if (!warningsAsErrors) {
         logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best-practice (Enable -Werror).")
@@ -58,29 +58,36 @@ tasks.withType<JavaCompile>().configureEach {
 
     val args = buildList {
         add("-Xlint:${if (lint) "all" else "none"}")
+
         if (enablePreview) {
             add("--enable-preview")
             if (lint) {
                 add("-Xlint:preview")
             }
         }
+
         if (maxErrors > 0) {
             add("-Xmaxerrs")
             add("$maxErrors")
         }
+
         if (maxWarnings > 0) {
             add("-Xmaxwarns")
             add("$maxWarnings")
         }
+
         if (warningsAsErrors) {
             add("-Werror")
         }
     }
 
-    options.compilerArgs.addAll(args)
-    options.isDeprecation = lint
-    options.isWarnings = lint
-    options.encoding = UTF_8.toString()
+    with(options) {
+        compilerArgs.addAll(args)
+        isDeprecation = lint
+        isWarnings = lint
+        encoding = UTF_8.toString()
+    }
+
     doLast {
         logger.info("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
     }
@@ -102,10 +109,10 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-fun enablePreview(): Boolean {
+private fun enablePreview(): Boolean {
     val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview")
     if (enablePreview) {
-        logger.warn("$prefix WARNING; project has Java preview features enabled.")
+        logger.warn("$prefix WARNING: Project has Java preview features enabled.")
     }
     return enablePreview
 }

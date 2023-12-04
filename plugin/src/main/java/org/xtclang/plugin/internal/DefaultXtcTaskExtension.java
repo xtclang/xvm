@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 
 abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
+    private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
     protected final Project project;
     protected final String prefix;
@@ -24,14 +25,13 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     protected final Property<Boolean> isFork;
     protected final Property<Boolean> useNativeLauncher;
 
-    private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
-
     protected DefaultXtcTaskExtension(final Project project) {
         this.project = project;
         this.prefix = ProjectDelegate.prefix(project);
         this.objects = project.getObjects();
         this.logger = project.getLogger();
-        this.jvmArgs = project.getObjects().listProperty(String.class).value(new ArrayList<>(DEFAULT_JVM_ARGS));
+        //this.jvmArgs = project.getObjects().listProperty(String.class).value(new ArrayList<>(DEFAULT_JVM_ARGS));
+        this.jvmArgs = project.getObjects().listProperty(String.class).value(DEFAULT_JVM_ARGS);
         this.isVerbose = project.getObjects().property(Boolean.class).value(false);
         this.isFork = project.getObjects().property(Boolean.class).value(true);
         this.useNativeLauncher = project.getObjects().property(Boolean.class).value(false);

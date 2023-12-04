@@ -1,7 +1,6 @@
 plugins {
     id("org.xtclang.build.version")
     alias(libs.plugins.xtc)
-    alias(libs.plugins.tasktree)
 }
 
 val xtcTurtleProvider by configurations.registering {

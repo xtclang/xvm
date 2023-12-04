@@ -1,5 +1,3 @@
-# TINY TITLE CHANGE
-
 # Welcome to Ecstasy! #
 
 This is the public repository for the Ecstasy language ([xtclang.org](http://xtclang.org/)) and the
@@ -429,25 +427,27 @@ To see the list of available tasks for the XDK build, use:
 get some kind of error during the publishing task, it may be a good idea to clean, and then rerun that task 
 with the Gradle flag `--no-parallel`.
 
-The version of the current XDK build is currently defined in the version catalog file located at
-`gradle/libs.versions.toml`. Note: We will likely migrate to a version handling system that is wrapped
-in well-defined tasks, and follows the principle of least surprise, very soon. 
+The group and version of the current XDK build and the XTC Plugin are currently defined in 
+the properties file "version.properties". Here, we define the version of the current XDK 
+and XTC Plugin, as well as their group. The default behavior is to only define the XDK, since
+at this point, the Plugin, while decoupled, tracks and maps to the XDK version pretty much 1-1.
+This can be taken apart with different semantic versioning, should we need to. Nothing is assuming
+the plugin has the same version or group as the XDK. It's just convenient for time being.
 
-The version of the XTC plugin needs to be same as the version of the XDK being built. This is a constraint
-that will be relaxed in the future, but right now, we use them to verify that rapidly release plugin versions
-work together with their XDK release. If you just use the XDK repository, the plugin and any other artifacts
-will be resolved as included builds, so it doesn't matter if there is version skew (except for sanity checks),
-when things are being tested.
-
-* Use `bumpProjectVersion` to change the version catalog to update to the next patch version.
-* Use `bumpProjectVersionToSnapshot` to change the version catalog to update to the next path version, setting
-  the version suffix to "-SNAPSHOT", which is the preferred version for any unreleased code. Typically the release
-  process uploads and tags an XDK shipment and an XTC Plugin shipment. After publishing a release and its
-  artifacts, the master branch should be updated to use a snapshot version. I.e. if we release XDK v1.0.2, the
-  next change in the master branch should change the version of the XDK and the XTC Plugin to XDK v1.0.3-SNAPSHOT.
+The file `gradle/libs.versions.toml` contains all internal and external by-artifact version 
+dependencies to the XDK project. If you need to add a new plugin, library, or bundle, always define
+its details in this version catalog, and nowhere else. The XDK build logic, will dynamically plugin
+in values for the XDK and XTC Plugin artifacts that will be used only as references outside this file.
 
 *TODO*: In the future we will also support tagging and publishing releases on GitHub, using JReleaser or a
 similar framework.
+
+Typically, the project version of anything that is unreleased should be "x.y.z-SNAPSHOT", and the first
+action after tagging and uploading a release of the XDK, is usually changing the release version in 
+"VERSION" in the xvm repository root, and (if the plugin is versioned separately, optionally in "plugin/VERSION") 
+both by incrementing the micro version, and by adding a SNAPSHOT suffix. You  will likely find yourself 
+working in branches that use SNAPSHOT versions until they have made it into a release train. The CI/CD 
+pipeline can very likely handle this automatically.
 
 ## Bleeding Edge for Developers
 
@@ -466,6 +466,27 @@ utility, depending on your platform. This will overwrite several libraries and f
 local installation.
 
 For more information about the XTC DSL, please see the README.md file in the "plugin" project.
+
+### Releasing and Publishing
+
+This is mostly relevant to the XDK development team with release management privileges. The workflow
+for adding XTC releases:
+
+https://www.baeldung.com/maven-snapshot-release-repository
+
+### Releasing
+1) Take the current version of master and create a release branch. 
+2) Set the VERSION in the release branch project root to reflect the version of the release.
+Typically an ongoing development branch will be a "-SNAPSHOT" suffixed release, but not
+an official XTC release, which just has a group:name:version number
+3) Build, tag and add the release using the GitHub release plugin.
+
+### Publishing 
+
+1) ./gradlew publish to build the artifacts and verify they work. This will publish the artifacts
+to a local repositories and the XTC GitHub org repository. 
+2) To publish the plugin to Gradle Plugin Portal: ./gradlew :plugin:publishPlugins (publish the plugin to gradlePortal)
+3) To publish the XDK distro to Maven Central: TODO
 
 ## Questions?
 

@@ -1,6 +1,5 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
@@ -93,10 +92,10 @@ public abstract class ProjectDelegate<T, R> {
     public abstract R apply(T arg);
 
     public XtcBuildException buildException(final String msg) {
-        return buildException(msg, (Throwable)null);
+        return buildException(null, msg);
     }
 
-    public XtcBuildException buildException(final String msg, final Throwable cause) {
+    public XtcBuildException buildException(final Throwable cause, final String msg) {
         if (LOG_ALL_LEVELS_TO_STDERR) {
             error(msg);
         }
@@ -105,6 +104,10 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public XtcBuildException buildException(final String msg, final Object... args) {
+        return buildException(null, msg, args);
+    }
+
+    public XtcBuildException buildException(final Throwable cause, final String msg, final Object... args) {
         final var template = msg.replace("{}", "#");
         final var list = Arrays.asList(args);
         final var sb = new StringBuilder();
@@ -119,7 +122,7 @@ public abstract class ProjectDelegate<T, R> {
                 sb.append(c);
             }
         }
-        return buildException(sb.toString());
+        return buildException(cause, sb.toString());
     }
 
     public final String prefix() {
@@ -292,7 +295,8 @@ public abstract class ProjectDelegate<T, R> {
                     final long pid = ProcessHandle.current().pid();
                     out.println(hash + ' ' + pid + ' ' + level.name() + ": " + msg);
                 } catch (final IOException e) {
-                    throw new GradleException(prefix + " Failed to write log files to. " + logFile().getAbsolutePath() + " and/or " + logFileFull().getAbsolutePath(), e);
+                    throw buildException("Failed to write log files to '{}' and/or '{}'", logFile().getAbsolutePath(), logFileFull().getAbsolutePath(), e);
+//                    throw new GradleException(prefix + " Failed to write log files to. " + logFile().getAbsolutePath() + " and/or " + logFileFull().getAbsolutePath(), e);
                 }
             });
         }

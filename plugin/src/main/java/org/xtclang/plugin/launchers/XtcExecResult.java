@@ -89,7 +89,7 @@ public final class XtcExecResult implements ExecResult {
     /**
      * Subclass to a Gradle Exec Result.
      */
-    public static class XtcExecResultBuilder {
+    public static final class XtcExecResultBuilder {
         private final Class<? extends XtcLauncher> launcherClass;
         private final CommandLine args;
 
@@ -141,6 +141,7 @@ public final class XtcExecResult implements ExecResult {
             return this;
         }
 
+        @SuppressWarnings("UnusedReturnValue")
         XtcExecResultBuilder exitValue(final int exitValue) {
             this.exitValue = exitValue;
             this.hasExitValue = true;
