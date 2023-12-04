@@ -77,10 +77,13 @@ tasks.withType<JavaCompile>().configureEach {
         }
     }
 
-    options.compilerArgs.addAll(args)
-    options.isDeprecation = lint
-    options.isWarnings = lint
-    options.encoding = UTF_8.toString()
+    with(options) {
+        compilerArgs.addAll(args)
+        isDeprecation = lint
+        isWarnings = lint
+        encoding = UTF_8.toString()
+    }
+
     doLast {
         logger.info("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
     }
@@ -102,10 +105,10 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-fun enablePreview(): Boolean {
+private fun enablePreview(): Boolean {
     val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview")
     if (enablePreview) {
-        logger.warn("$prefix WARNING; project has Java preview features enabled.")
+        logger.warn("$prefix WARNING: Project has Java preview features enabled.")
     }
     return enablePreview
 }

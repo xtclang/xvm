@@ -40,19 +40,25 @@ dependencies {
     xtcJavaToolsJarConsumer(libs.javatools)
 }
 
-private val pluginGroup = "$group.plugin"
-private val pluginVersion = version.toString()
+// Properties for the ID (unique to a plugin)
 private val pluginId = getXdkProperty("org.xtclang.plugin.id")
 
-private val shouldBundleJavaTools: Boolean get() = getXdkPropertyBoolean("org.xtclang.plugin.bundle.javatools")
+// Properties for the artifact
+private val pluginName = project.name
+private val pluginGroup = getXdkProperty("org.xtclang.plugin.group", group.toString())
+private val pluginVersion = getXdkProperty("org.xtclang.plugin.version", version.toString())
+
+private val shouldBundleJavaTools = getXdkPropertyBoolean("org.xtclang.plugin.bundle.javatools")
+
+logger.lifecycle("$prefix Plugin (id: $pluginId) will get project and artifact versions like this: '$pluginGroup:$pluginName:$pluginVersion'")
 
 publishing {
     publications {
-        create<MavenPublication>("xtcPlugin") {
+        register<MavenPublication>("xtcPlugin") {
             groupId = pluginGroup
-            artifactId = project.name
+            artifactId = pluginName
             version = pluginVersion
-            from(components["java"]) // TODO: Do not publish source or javadoc
+            artifact(tasks.jar)  // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the publication (i.e. don't use from(components["java"]) // TODO: Do not publish source or javadoc
             logger.lifecycle("$prefix Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
         }
     }
@@ -74,7 +80,7 @@ gradlePlugin {
     website = getXdkProperty("org.xtclang.plugin.website")
 
     plugins {
-        create("xtcPlugin") {
+        val xtc by registering {
             version = pluginVersion
             id = pluginId
             implementationClass = getXdkProperty("org.xtclang.plugin.implementation.class")
@@ -88,39 +94,12 @@ gradlePlugin {
 }
 
 tasks.withType<Javadoc>().configureEach {
-    // TODO distribute and package Javadocs in the future, when we have them.
     enabled = false
 }
 
-val sanityCheckPluginVersion by tasks.registering {
-    doLast {
-        val mismatch = "XTC Plugin version mismatch"
-        val projectGroup = project.group.toString()
-        val projectVersion = project.version.toString()
-        val catalogPluginVersion = libs.versions.xtc.plugin.get()
-        val pluginGroupProperty = getXdkProperty("org.xtclang.plugin.group", pluginGroup)
-
-        if (pluginGroupProperty != pluginGroup) {
-            throw buildException("$mismatch; the version catalog .toml file, AND the plugin properties.")
-        }
-        if (pluginVersion != catalogPluginVersion) {
-            throw buildException("$mismatch between plugin version ($pluginVersion) and version catalog ($catalogPluginVersion)")
-        }
-        if (pluginVersion != projectVersion) {
-            throw buildException("$mismatch between plugin version ($pluginVersion) and plugin project ($projectVersion)")
-        }
-        if (pluginGroup.indexOf(projectGroup) != 0 || pluginGroup == projectGroup) {
-            logger.warn("$prefix WARNING: The plugin needs to be rebuilt for relatively small XDK changes; it is not a good idea to use a different version than the XDK repository root version.")
-            throw buildException("$mismatch; the plugin group is supposed to be 'project.group' + '.plugin'. ($pluginGroup != $projectGroup.plugin)")
-        }
-
-        logger.info("$prefix XTC Plugin sanity check passed; plugin artifact='$pluginGroup:$name:$pluginVersion' (plugin id: $pluginId)")
-        logger.info("$prefix XTC Plugin sanity check passed; inherited artifact='$group:$name:$version' (plugin id: $pluginId)")
-    }
-}
-
-val assemble by tasks.existing {
-    dependsOn(sanityCheckPluginVersion)
+tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
+    enabled = false
+    logger.lifecycle("$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent.")
 }
 
 val jar by tasks.existing(Jar::class) {

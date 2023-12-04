@@ -84,15 +84,17 @@ dependencies {
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
-internal val xdkDist = xdkBuildLogic.xdkDistribution()
+internal val xdkDist = xdkBuildLogic.distro()
 logger.lifecycle("$prefix *** Building XDK; semantic version: '${property("semanticVersion")}' ***")
 
 publishing {
     publications {
-        create<MavenPublication>("xdkArchive") {
-            groupId = project.group.toString()
-            artifactId = project.name
-            version = project.version.toString()
+        register<MavenPublication>("xdkArchive") {
+            with(project) {
+                groupId = group.toString()
+                artifactId = project.name
+                version = version.toString()
+            }
             logger.lifecycle("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
                 extension = "zip"
@@ -220,6 +222,15 @@ val clean by tasks.existing {
 val distTar by tasks.existing(Tar::class) {
     compression = Compression.GZIP
     archiveExtension.set("tar.gz")
+    doLast {
+        logger.lifecycle("$prefix Finished building distribution: '$name'")
+    }
+}
+
+val distZip by tasks.existing(Zip::class) {
+    doLast {
+        logger.lifecycle("$prefix Finished building distribution: '$name'")
+    }
 }
 
 val assembleDist by tasks.existing {
@@ -264,15 +275,17 @@ val distExe by tasks.registering {
         if (!nsi.exists()) {
             throw buildException("Cannot find 'nsi' file: ${nsi.absolutePath}")
         }
+        logger.lifecycle("$prefix Writing Windows installer: ${outputFile.get()}")
         exec {
             environment(
                 "NSIS_SRC" to inputDir.get(),
                 "NSIS_ICO" to xtcIconFile,
-                "NSIS_OUT" to outputFile,
+                "NSIS_OUT" to outputFile.get(),
                 "NSIS_VER" to xdkDist.distributionVersion
             )
             commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
         }
+        logger.lifecycle("$prefix Finished building distribution: '$name'")
     }
 }
 
@@ -291,7 +304,7 @@ val test by tasks.existing {
  */
 val installDist by tasks.existing {
     doLast {
-        logger.lifecycle("$prefix '$name' Installed distribution to {project.layout.buildDirectory}/install/ directory.")
+        logger.lifecycle("$prefix '$name' Installed distribution to ${project.layout.buildDirectory}/install/ directory.")
         logger.info("$prefix Installation files:")
         printTaskOutputs()
     }

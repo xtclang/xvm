@@ -13,9 +13,10 @@
 # libs.versions.xdkVersion version number.
 #
 [versions]
-xdk-group = "org.xtclang"
-xdk = "0.4.44"
-xtc-plugin = "0.4.44"
+xdk = "unspecified"
+xtc-plugin = "unspecified"
+xdk-group = "unspecified"
+xdk-plugin-group = "unspecified"
 
 download = "5.5.0"
 versions = "0.50.0"

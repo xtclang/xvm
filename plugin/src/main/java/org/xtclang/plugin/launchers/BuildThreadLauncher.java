@@ -32,7 +32,7 @@ public class BuildThreadLauncher extends XtcLauncher {
             main.invoke(null, (Object)args.toList().toArray(new String[0]));
             builder.exitValue(0);
         } catch (final IllegalAccessException e) {
-            throw buildException("{} Failed to invoke '{}.{}' through reflection: {}", prefix, main.getDeclaringClass().getName(), main.getName(), e.getMessage());
+            throw buildException("Failed to invoke '{}.{}' through reflection: {}", main.getDeclaringClass().getName(), main.getName(), e.getMessage());
         } catch (final Throwable e) {
             final var cause = e.getCause();
             if (cause instanceof IllegalStateException) {
@@ -42,7 +42,7 @@ public class BuildThreadLauncher extends XtcLauncher {
                     builder.failure(cause); // Flag an abnormal Console.abort and an ExecException, as for the JavaExec launcher or native launcher.
                 }
             } else {
-                throw buildException("{} Unexpected exception from invocation to '{}.{}' through reflection: {}", prefix, main.getDeclaringClass().getName(), main.getName(), e.getMessage());
+                throw buildException("Unexpected exception from invocation to '{}.{}' through reflection: {}", main.getDeclaringClass().getName(), main.getName(), e.getMessage());
             }
         } finally {
             System.setOut(oldOut);
@@ -64,7 +64,7 @@ public class BuildThreadLauncher extends XtcLauncher {
         try (final var classLoader = new URLClassLoader(new URL[]{jar.toURI().toURL()})) {
             return classLoader.loadClass(className);
         } catch (final ClassNotFoundException e) {
-            throw buildException("{} Failed to load class from jar '{}': {}", prefix, jar, e.getMessage());
+            throw buildException("Failed to load class from jar '{}': {}", jar, e.getMessage());
         }
     }
 
@@ -72,7 +72,7 @@ public class BuildThreadLauncher extends XtcLauncher {
         try {
             return Class.forName(className).getMethod(methodName, parameterTypes);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            throw buildException("{} Failed to resolve method '{}' in class '{}' ({}).", prefix, methodName, className, e.getMessage());
+            throw buildException("Failed to resolve method '{}' in class '{}' ({}).", methodName, className, e.getMessage());
         }
     }
 }
