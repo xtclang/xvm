@@ -716,10 +716,12 @@ public abstract class RelationalTypeConstant
     @Override
     protected int compareDetails(Constant obj)
         {
-        if (!(obj instanceof RelationalTypeConstant that))
+        if (obj == null || this.getClass() != obj.getClass())
             {
             return -1;
             }
+
+        RelationalTypeConstant that = (RelationalTypeConstant) obj;
 
         int n = this.m_constType1.compareTo(that.m_constType1);
         if (n == 0)
