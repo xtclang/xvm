@@ -796,9 +796,10 @@ service Catalog<Schema extends RootSchema>
         case Running:
             scheduler.disable();
             txManager.disable();
-            continue;
-        case Closed:
             transition(status, Closed, snapshot -> snapshot.owned, allowReadOnly = True);
+            break;
+
+        case Closed:
             break;
 
         default:
