@@ -49,7 +49,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             if (repoPath == null || !repoPath.isDirectory()) {
                 throw IllegalArgumentException("Cannot resolve any repository data in local XDK distribution.")
             }
-            name = "orgXtcLangLocalDist"
+            name = "xdkRepo"
             url = repoPath.toUri()
         }.also {
             logger.lifecycle("*** Added orgXtcLangLocalDist() repository: ${it.name} (url ${it.url})")
@@ -105,19 +105,18 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             try {
                 return loadFromFile().also { logger.lifecycle("Loaded XTC Repo properties from local path: $it") }
             } catch (t: Throwable) {
-                t.printStackTrace()
-                logger.error("Failed to resolve local properties.", e)
+                logger.lifecycle("XTC Plugin: failed to resolve local properties from: $initDir (will attempt remote URL)", t)
             }
             try {
                 return loadFromUrl(XTC_REPO_INIT_PROPERTIES_URL).also { logger.lifecycle("Loaded XTC Repo properties from remote URL: $it") }
             } catch (t: Throwable) {
-                t.printStackTrace()
-                logger.error("Failed to resolve remote properties.")
+                logger.error("XTC Plugin: failed to resolve remote properties from: $XTC_REPO_INIT_PROPERTIES_URL", t)
+                throw GradleException(t.message ?: t.javaClass.simpleName, t)
             }
-            throw IllegalStateException("Cannot resolve xtc-repo.properties from remote or local locations.")
         }
 
-        // TODO: Third alternative may be to grab the local dist from the path to use the "repo" subdirectory in an existing XDK distribution.
+        // TODO: Third alternative may be to grab the local dist from the path to use the "repo" subdirectory in an
+        //   existing XDK distribution.
         private fun findXdkLocalDist(): Path? {
             return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, LAUNCHER) }?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()?.parent?.parent?.parent
         }
