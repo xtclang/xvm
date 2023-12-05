@@ -12,6 +12,7 @@
 #
 
 org.xtclang.repo.github.url=https://maven.pkg.github.com/xtclang/xvm
-org.xtclang.repo.github.username=xtclang-bot
-org.xtclang.repo.github.token.readonly=Z2hwX0ZjNGRWeDhNYmxPcnZDYWZrRW96Q0NrQXAzaVZ5RjBUb0NheAo=
-org.xtclang.repo.github.name="orgXtcLangGitHub"
+org.xtclang.repo.github.org=xtclang
+org.xtclang.repo.github.user=xtclang-bot
+org.xtclang.repo.github.token=Z2hwX0ZjNGRWeDhNYmxPcnZDYWZrRW96Q0NrQXAzaVZ5RjBUb0NheAo=
+org.xtclang.repo.github.readonly=true
