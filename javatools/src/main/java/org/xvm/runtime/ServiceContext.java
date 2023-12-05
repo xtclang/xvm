@@ -656,6 +656,7 @@ public class ServiceContext
                 catch (Throwable e)
                     {
                     e.printStackTrace(System.err);
+                    System.err.println(frame.getStackTrace());
                     iPC = frame.raiseException("Run-time error: " + e);
                     }
 
