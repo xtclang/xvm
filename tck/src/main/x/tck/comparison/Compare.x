@@ -3,6 +3,10 @@
  */
 class Compare {
 
+    public void run() {
+        compareIntsDirect();
+    }
+    
     @Test
     void compareIntsDirect() {
         Int i = 1;

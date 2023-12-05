@@ -141,6 +141,7 @@ public abstract class AST {
     case CondOpExpr   ->    BinOpAST.make(X,false);
     case ContinueStmt -> ContinueAST.make(X);
     case ConvertExpr  ->     ConvAST.make(X);
+    case DivRemExpr   ->   DivRemAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
