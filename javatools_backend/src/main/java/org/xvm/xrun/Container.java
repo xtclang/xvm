@@ -32,6 +32,8 @@ public abstract class Container {
     try {
       Constructor<XTC> con = _mod._jclz.getConstructor(Container.class);
       jobj = con.newInstance(new NativeContainer());
+    } catch( NoSuchMethodException nsme ) {
+      throw XEC.TODO(); // No top-level run method?
     } catch( Exception ie ) {
       throw XEC.TODO();
     }

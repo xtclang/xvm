@@ -17,6 +17,8 @@ class NewAST extends AST {
     super(kids_plus_clz(kids,type));
     _type = type;
     _meth = meth;
+    if( type.needs_import() )
+      ClzBuilder.LOCAL_IMPORTS.add(type.clz());
   }
   private static AST[] kids_plus_clz(AST[] kids, XType type) {
     // If type is generic, add the generic class explicitly
@@ -25,7 +27,7 @@ class NewAST extends AST {
     AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+1];
     if( kids!=null ) System.arraycopy(kids,0,kids2,1,kids.length);
     XType gen = tary._e;
-    kids2[0] = new ConAST(null,gen+".class",gen);
+    kids2[0] = new ConAST(null,gen.clz()+".class",gen);
     return kids2;
   }
   @Override XType _type() { return _type; }

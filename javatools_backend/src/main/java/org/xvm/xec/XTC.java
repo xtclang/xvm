@@ -3,6 +3,7 @@ package org.xvm.xec;
 import org.xvm.util.Ary;
 import org.xvm.xrun.*;
 import org.xvm.xec.ecstasy.Orderable.Ordered;
+import org.xvm.xec.ecstasy.collections.Ary.Mutability;
 import org.xvm.XEC;
 
 import java.io.IOException;
@@ -57,13 +58,6 @@ public abstract class XTC {
     if( !cond ) throw new IllegalStateX();
   }
   public static void xassert( ) { xassert(false); }
-  
-  public enum Mutability {
-    Constant,                   // Deeply immutable
-    Persistent,                 // Odd name, but shallow immutable
-    Fixed;                      // Tuples and arrays are fixed length, but mutable
-    public static final Mutability[] VALUES = values();
-  }
 
   /** --------------------------------------------------------------------------
       <ul>

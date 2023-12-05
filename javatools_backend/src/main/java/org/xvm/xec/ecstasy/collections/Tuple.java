@@ -5,8 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xtc.XType;
 import org.xvm.xec.ecstasy.Range;
-
-import static org.xvm.xec.XTC.Mutability.*;
+import org.xvm.xec.ecstasy.collections.Ary.Mutability;
 
 import java.util.Objects;
 import java.util.HashMap;
@@ -84,9 +83,9 @@ public abstract class Tuple extends XTC implements Cloneable {
   public Tuple ensureMutability(Mutability mut0, boolean inPlace) {
     Mutability mut = mutability$get();
     if( mut==mut0 ) return this;
-    if( mut==Constant && mut0==Persistent ) return this;
-    if( mut==Fixed && mut0==Persistent && inPlace ) throw XEC.TODO(); // Update self to Persistent
-    if( mut0==Constant ) throw XEC.TODO();                            // Deep freeze in place
+    if( mut==Mutability.Constant && mut0==Mutability.Persistent ) return this;
+    if( mut==Mutability.Fixed && mut0==Mutability.Persistent && inPlace ) throw XEC.TODO(); // Update self to Persistent
+    if( mut0==Mutability.Constant ) throw XEC.TODO(); // Deep freeze in place
     // Copy, then set mutability
     try {
       Tuple clone = (Tuple)clone();

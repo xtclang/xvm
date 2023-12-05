@@ -73,13 +73,6 @@ public abstract class XValue {
       // XTC Booleans rewrite as Java booleans
       if( sup_clz.equals("Boolean") ) 
         yield ASB.p(clz._name.equals("False") ? "false" : "true");
-      // Intercept Tuple enums
-      if( sup_clz.equals("Mutability") ) {
-        if( clz._super._par._name.equals("Tuple") ) {
-          yield ASB.p("Tuple.Mutability.").p(clz._name);          
-        } else
-          throw XEC.TODO();
-      }
       // Use the enum name directly
       yield ASB.p(sup_clz).p(".").p(clz._name);
     }
@@ -97,7 +90,7 @@ public abstract class XValue {
       String ext = rcon._xlo
         ? (rcon._xhi ? "EE" : "EI")
         : (rcon._xhi ? "IE" : "II");
-      ClzBuilder.IMPORTS.add("ecstasy.Range"+ext);
+      ClzBuilder.XTC_IMPORTS.add("ecstasy.Range"+ext);
       ASB.p("new Range").p(ext).p("(");
       _val(rcon._lo).p(",");
       _val(rcon._hi).p(")");
@@ -139,6 +132,9 @@ public abstract class XValue {
         yield ASB.p("_container.console()");
       throw XEC.TODO();      
     }
+
+    case Dec64Con dcon -> 
+      ASB.p("new Dec64(").p(dcon._dec.toString()).p(")");
     
     default -> throw XEC.TODO();
     };

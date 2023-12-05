@@ -56,6 +56,7 @@ public class ParamTCon extends TCon implements ClzCon {
     //  if( rez == -1 ) return -1;
     //}
     //return rez;
+    return 1;
   }
 
   // Is a generic TermTCon?

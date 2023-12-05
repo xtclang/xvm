@@ -12,7 +12,7 @@ import java.math.MathContext;
   Exploring XEC Constants
  */
 public abstract class DecCon extends TCon {
-  private final BigDecimal _dec;
+  public final BigDecimal _dec;
   public DecCon( CPool X, BigDecimal dec ) { _dec = dec; }
   
 

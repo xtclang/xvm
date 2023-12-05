@@ -70,16 +70,19 @@ class InvokeAST extends AST {
       throw XEC.TODO();
     }
     if( _kids[0]._type == XType.STRING ) {
-      if( _meth.equals("toCharArray") )
+      switch( _meth ) {
+      case "toCharArray":
         return new NewAST(_kids,XType.ARYCHAR,null);
-      if( _meth.equals("equals") )
+      case "equals":
         return this;
       // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
-      if( _meth.equals("appendTo") ) {
+      case "appendTo":
         AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
         return this;
+        
+      default:
+        throw XEC.TODO();
       }
-      throw XEC.TODO();
     }
     
     if( !(_kids[0]._type instanceof XType.Base jt) ) return this;

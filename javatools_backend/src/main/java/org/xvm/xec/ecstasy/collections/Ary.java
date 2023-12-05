@@ -79,7 +79,17 @@ public class Ary<E> extends XTC implements Iterable<E>, Stringable {
       sum += _es[i]==null ? 0 : _es[i].hashCode();
     return sum;
   }
-  
+
+
+  // --- Mutability
+  public enum Mutability {
+    Constant,                   // Deeply immutable
+    Persistent,                 // Odd name, but shallow immutable
+    Fixed,                      // Tuples and arrays are fixed length, but mutable
+    Mutable;                    // Classic mutable    
+    public static final Mutability[] VALUES = values();
+  }
+
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*10; }
   @Override public Appenderchar appendTo(Appenderchar buf) {
