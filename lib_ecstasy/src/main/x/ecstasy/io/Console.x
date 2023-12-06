@@ -9,7 +9,7 @@ interface Console {
      * @param object           (optional) the object to output to the console
      * @param suppressNewline  (optional) pass True to prevent the automatic addition of a newline
      */
-    void print(Object object= "", Boolean suppressNewline = False);
+    void print(Object object = "", Boolean suppressNewline = False);
 
     /**
      * Read a line of user input from the console.

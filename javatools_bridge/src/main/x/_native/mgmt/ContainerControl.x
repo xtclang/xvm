@@ -11,7 +11,8 @@ class ContainerControl
     @Override void limitThreads(Int max)                                           {TODO("Native");}
     @Override void limitCompute(Duration max, function void() maxCpuExceeded)      {TODO("Native");}
     @Override void limitMemory(Int max, function void() maxRamExceeded)            {TODO("Native");}
-    @Override Tuple invoke(String methodName, Tuple args, Service? runWithin)      {TODO("Native");}
+    @Override Tuple invoke(String methodName, Tuple args=Tuple:(),
+                           Service? runWithin=Null)                                {TODO("Native");}
     @Override @RO TypeSystem innerTypeSystem                                .get() {TODO("Native");}
     @Override @RO Service? mainService                                      .get() {TODO("Native");}
     @Override @RO Container[] nestedContainers                              .get() {TODO("Native");}

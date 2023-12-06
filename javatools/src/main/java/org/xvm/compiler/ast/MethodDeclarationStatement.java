@@ -900,8 +900,9 @@ public class MethodDeclarationStatement
             return true;
             }
 
-        MethodInfo infoMethod = clzParent.getFormalType().ensureAccess(Access.PRIVATE).
-                                    ensureTypeInfo(ErrorListener.BLACKHOLE).
+        ErrorListener errsTemp   = errs.branch(this);
+        MethodInfo    infoMethod = clzParent.getFormalType().ensureAccess(Access.PRIVATE).
+                                    ensureTypeInfo(errsTemp).
                                     getMethodById(method.getIdentityConstant());
         if (infoMethod == null)
             {
@@ -915,6 +916,7 @@ public class MethodDeclarationStatement
             log(errs, Severity.ERROR, Compiler.SUPER_MISSING);
             return false;
             }
+        errsTemp.merge();
         return true;
         }
 

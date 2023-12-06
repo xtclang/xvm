@@ -569,6 +569,10 @@ public interface Constants
      * The type modifier is not permitted for contribution {1} on {0}.
      */
     String VE_TYPE_MODIFIER_ILLEGAL = "VERIFY-88";
+    /**
+     * The parameter {2} for the method {1} on {0} must specify a default value.
+     */
+    String VE_DEFAULT_VALUE_MISSING              = "VERIFY-89";
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

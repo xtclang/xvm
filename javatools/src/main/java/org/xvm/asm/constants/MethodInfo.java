@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
@@ -163,6 +164,24 @@ public class MethodInfo
                         idThat.getNamespace().getValueString(),
                         idThat.getValueString());
                 return that;
+                }
+
+            MethodStructure methodThat = bodyAdd.getMethodStructure();
+            MethodStructure methodThis = aBase[cBase-1].getMethodStructure();
+            if (methodThis != null && methodThat != null)
+                {
+                int cParamsAll  = methodThis.getVisibleParamCount();
+                int cParamsReq  = methodThis.getRequiredParamCount();
+                int cParamsThat = methodThat.getRequiredParamCount();
+                if (cParamsReq < cParamsThat && cParamsThat <= cParamsAll)
+                    {
+                    Parameter      param  = methodThat.getParam(cParamsReq);
+                    MethodConstant idThat = that.getIdentity();
+                    idThat.log(errs, Severity.ERROR, Constants.VE_DEFAULT_VALUE_MISSING,
+                            idThat.getClassIdentity().getValueString(),
+                            idThat.getValueString(),
+                            param.getName());
+                    }
                 }
             }
 
@@ -818,21 +837,6 @@ public class MethodInfo
         }
 
     /**
-     * @return the identity of a constructor that must be overridden by all extending classes
-     */
-    public MethodConstant getVirtualConstructorIdentity()
-        {
-        for (MethodBody body : getChain())
-            {
-            if (body.isVirtualConstructor())
-                {
-                return body.getIdentity();
-                }
-            }
-        return null;
-        }
-
-    /**
      * @return true iff this method is a virtual constructor that <b>is not implemented</b>
      *         by the class represented by the specified TypeInfo
      */
@@ -1124,11 +1128,31 @@ public class MethodInfo
                 }
             }
 
-        boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
+        MethodBody bodySuper = findSuper(infoType, chain);
+        if (bodySuper == null)
+            {
+            return null;
+            }
 
-        int        cMethods  = 0;
+        SignatureConstant sigSuper = bodySuper.getSignature();
+        if (sigSuper.containsAutoNarrowing(false))
+            {
+            sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
+            }
+        if (sigSuper.containsTypeParameters())
+            {
+            // formal type parameters need to be resolved by the "head"
+            sigSuper = sigSuper.resolveGenericTypes(pool(), getHead().getIdentity());
+            }
+
+        return sigSuper;
+        }
+
+    private MethodBody findSuper(TypeInfo infoType, MethodBody[] chain)
+        {
+        boolean    fMixin    = infoType.getFormat() == Component.Format.MIXIN;
         MethodBody bodySuper = null;
-        for (int i = 0, c = chain.length; i < c; ++i)
+        for (int i = 0, cMethods = 0, cAll = chain.length; i < cAll; ++i)
             {
             MethodBody body = chain[i];
             switch (body.getImplementation())
@@ -1179,24 +1203,7 @@ public class MethodInfo
                 bodySuper = body;
                 }
             }
-
-        if (bodySuper == null)
-            {
-            return null;
-            }
-
-        SignatureConstant sigSuper = bodySuper.getSignature();
-        if (sigSuper.containsAutoNarrowing(false))
-            {
-            sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
-            }
-        if (sigSuper.containsTypeParameters())
-            {
-            // formal type parameters need to be resolved by the "head"
-            sigSuper = sigSuper.resolveGenericTypes(pool(), getHead().getIdentity());
-            }
-
-        return sigSuper;
+        return bodySuper;
         }
 
     /**
