@@ -612,9 +612,11 @@ public class CmpExpression
             return new CondOpExprAST(expr1.getExprAST(), op, expr2.getExprAST());
             }
 
+        ExprAST[] aAstArgs = new ExprAST[]
+                {toExprAst(m_typeCommon), expr1.getExprAST(), expr2.getExprAST()};
+
         ConstantPool pool     = pool();
         ExprAST      exprCmp  = new ConstantExprAST(m_idCmp);
-        ExprAST[]    aAstArgs = new ExprAST[] {expr1.getExprAST(), expr2.getExprAST()};
         boolean      fNot     = false;
         Operator     opCmp    = null;
 
