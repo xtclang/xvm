@@ -21,22 +21,13 @@ import kotlin.io.path.isDirectory
 
 gradle.beforeSettings {
     settings.pluginManagement.repositories {
-
-        /**
-         * Lambda sugar used to boostrap the XTC plugin/XDK from the XtcLang GitHub Maven Package
-         * repository (requires messing with credentials, even for just read:package)
-         */
-        val orgXtcLang: () -> MavenArtifactRepository by extra {
-            { XtcRepoProvider(this).createGitHubMavenArtifactRepository() }
-        }
-
-        /**
-         * Lambda Sugar used to bootstrap the XTC plugin/XDK with a localDist (if it contains
-         * an XDK repository as part of the distribution)
-         */
-        val orgXtcLangLocalDist: () -> MavenArtifactRepository by extra {
-            { XtcRepoProvider(this).createLocalDistMavenArtifactRepository() }
-        }
+        val orgXtcLangRepoPlugins: () -> MavenArtifactRepository by extra { { XtcRepoProvider(this).createGitHubMavenArtifactRepository() } }
+        val xdkRepoPlugins: () -> MavenArtifactRepository by extra { { XtcRepoProvider(this).createLocalDistMavenArtifactRepository() } }
+    }
+    @Suppress("UnstableApiUsage")
+    settings.dependencyResolutionManagement.repositories {
+        val orgXtcLangRepo: () -> MavenArtifactRepository by extra { { XtcRepoProvider(this).createGitHubMavenArtifactRepository() } }
+        val xdkRepo: () -> MavenArtifactRepository by extra { { XtcRepoProvider(this).createLocalDistMavenArtifactRepository() } }
     }
 }
 
@@ -63,7 +54,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
                 return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
             }
             with(resolveConfig(logger, initDir)) {
-                name = getProperty(XTC_REPO_PROPERTY_NAME)
+                name = "GitHub"
                 url = uri(getProperty(XTC_REPO_PROPERTY_URL))
                 credentials {
                     username = getProperty(XTC_REPO_PROPERTY_USER)
@@ -103,7 +94,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             }
 
             try {
-                return loadFromFile().also { logger.lifecycle("Loaded XTC Repo properties from local path: $it") }
+                return loadFromFile().also { logger.lifecycle("Loaded XTC Repo properties from local path: ${initDir.absolutePath}") }
             } catch (t: Throwable) {
                 logger.lifecycle("XTC Plugin: failed to resolve local properties from: $initDir (will attempt remote URL)", t)
             }
