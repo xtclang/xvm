@@ -613,7 +613,7 @@ public class CmpExpression
             }
 
         ExprAST[] aAstArgs = new ExprAST[]
-                {toExprAst(m_typeCommon), expr1.getExprAST(), expr2.getExprAST()};
+                {toExprAst(m_typeCommon.getType()), expr1.getExprAST(), expr2.getExprAST()};
 
         ConstantPool pool     = pool();
         ExprAST      exprCmp  = new ConstantExprAST(m_idCmp);
