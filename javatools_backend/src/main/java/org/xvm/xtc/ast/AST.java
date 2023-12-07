@@ -118,7 +118,7 @@ public abstract class AST {
     if( iop >= 0 ) return _ast(X,iop);
     if( iop > CONSTANT_OFFSET ) return new RegAST(iop,X); // "special" negative register
     // Constants from the limited method constant pool
-    return new ConAST( X.con(CONSTANT_OFFSET-iop) );
+    return new ConAST( X, X.con(CONSTANT_OFFSET-iop) );
   }
   
   static AST ast( ClzBuilder X ) { return _ast(X,X.u8()); }

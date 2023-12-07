@@ -116,7 +116,7 @@ public class ClzBuilder {
     _sb.nl();                   // Blank line
     _sb.ip("// XTC ").p( _is_module ? "module ": "class ").p(_clz._path._str).p(":").p(_clz._name).p(" as Java class ").p(java_class_name).nl();
 
-    if( _is_module ) {
+    if( _is_top ) {
       _sb.p("public class ").p(java_class_name).p(" extends ").p(is_runclz() ? "XRunClz" : "XTC");
     } else {
       _sb.ip("public static class ").p(java_class_name).p(" extends ");

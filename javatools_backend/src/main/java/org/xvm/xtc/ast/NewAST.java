@@ -27,7 +27,7 @@ class NewAST extends AST {
     AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+1];
     if( kids!=null ) System.arraycopy(kids,0,kids2,1,kids.length);
     XType gen = tary._e;
-    kids2[0] = new ConAST(null,gen.clz()+".class",gen);
+    kids2[0] = new ConAST(null,null,gen.clz()+".class",gen);
     return kids2;
   }
   @Override XType _type() { return _type; }

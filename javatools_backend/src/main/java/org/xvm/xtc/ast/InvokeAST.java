@@ -31,7 +31,7 @@ class InvokeAST extends AST {
       if( _kids[i] instanceof RegAST reg &&
           reg._reg == -4/*Op.A_DEFAULT*/ ) {    // Default reg
         // Swap in the default from method defaults
-        _kids[i] = new ConAST(meth._args[i-1]._def);
+        _kids[i] = new ConAST(null,meth._args[i-1]._def);
       }
     }
   }
@@ -99,6 +99,8 @@ class InvokeAST extends AST {
         AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
         return this;
       }
+      if( _meth.equals("toUInt32") )
+        return new BinOpAST("&","",XType.JLONG,new AST[]{new ConAST("0xFFFFFFFF00000000L"),_kids[0]});
       // Actually needs a cast
       throw XEC.TODO();
     }
