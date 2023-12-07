@@ -321,7 +321,7 @@ public abstract class XType {
   public static Base EXCEPTION = Base.make("Exception");
   public static Base JINT   = Base.make("Integer");
   public static Base JNULL  = Base.make("Nullable");
-  public static Base JUBYTE = Base.make("XUByte");
+  public static Clz  JUBYTE = new Clz("XUByte");
   public static Clz  JBOOL  = new Clz("Boolean");
   public static Clz  JCHAR  = new Clz("Character");
   public static Clz  OBJECT = new Clz("Object");

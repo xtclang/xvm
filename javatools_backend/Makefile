@@ -88,7 +88,7 @@ JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
 # XDK setup
 XDK_DIR = ../xdk/build/xdk
 XDK = $(XDK_DIR)/javatools/javatools.jar
-XTC = nice java -jar $(XDK) xcc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools 
+XTC = java -jar $(XDK) xcc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools -rebuild
 XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
 
 ## General recipe for making an XTC from a X file
@@ -116,7 +116,7 @@ examples_exe:	$(examples_x:x=exe) $(classes)
 # Build TCK
 TCK = ../tck/src/main/x
 
-$(TCK)/tck.xtc:	$(TCK)/tck.x $(wildcard $(TCK)/tck/*/*.x)
+$(TCK)/tck.xtc:	$(TCK)/tck.x $(wildcard $(TCK)/tck/*/*.x) $(XDK)
 	@echo "compiling " $@ " because " $?
 	$(XTC) $< -o $@
 
