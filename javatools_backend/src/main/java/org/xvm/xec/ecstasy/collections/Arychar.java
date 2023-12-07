@@ -5,7 +5,9 @@ import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xec.ecstasy.Appenderchar;
+
 import java.util.Arrays;
+import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
@@ -18,7 +20,15 @@ public class Arychar<A extends Arychar> extends XTC
   public int _len;
   public Arychar() { _cs = new char[1]; }
   public Arychar(String s) { _cs = s.toCharArray(); _len = _cs.length; }  
-
+  public Arychar( long len, LongUnaryOperator fcn ) {
+    _len = (int)len;
+    if( _len != len ) throw XEC.TODO(); // Too Big
+    _cs = new char[_len];
+    for( int i=0; i<_len; i++ )
+      //_cs[i] = (char)fcn.applyAsLong(i);
+      throw XEC.TODO();
+  }
+  
   // Add an element, doubling base array as needed
   public A add( char c ) {
     if( _len >= _cs.length ) _cs = Arrays.copyOf(_cs,Math.max(1,_cs.length<<1));

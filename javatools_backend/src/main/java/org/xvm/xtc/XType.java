@@ -106,13 +106,18 @@ public abstract class XType {
       _super = clz._super==null ? null : make(clz._super);
       _mod = ClzBuilder.CCLZ;  // Compile unit class
       _clz = clz;
+      // Class name
       String name = ClzBuilder.java_class_name(clz._name);
-      Part px = clz;
-      while( px != ClzBuilder.CCLZ ) {
-        px = px._par;
-        if( px==null ) { name = xjkey(clz); break; }
-        name = ClzBuilder.java_class_name(px._name)+"."+name;
+      // Part of local module, stack up packages
+      if( clz.mod()==ClzBuilder.CCLZ ) {
+        // Stack up packages in the local module
+        Part px = clz;
+        while( px != ClzBuilder.CCLZ ) {
+          px = px._par;
+          name = ClzBuilder.java_class_name(px._name)+"."+name;
+        }
       }
+        
       _name = name;
       _clzclz = new ClzClz(this);
       int len=0;
@@ -333,6 +338,7 @@ public abstract class XType {
   public static Base TRUE = Base.make("true");
   public static Base VOID = Base.make("void");
 
+  public static Ary ARYBOOL= Ary.make(BOOL);
   public static Ary ARYCHAR= Ary.make(CHAR);
   public static Ary ARYLONG= Ary.make(LONG);
   public static Tuple COND_CHAR = Tuple.make(BOOL,CHAR);
@@ -384,7 +390,6 @@ public abstract class XType {
       put("IllegalState+ecstasy.x",ILLSTATEX);
       put("IntNumber+ecstasy/numbers/IntNumber.x",JLONG);
       put("Iterable+ecstasy/Iterable.x",ITER64);
-      put("Mutability+ecstasy/collections/Array.x",MUTABILITY);
       put("Number+ecstasy/numbers/Number.x",NUMBER);
       put("Ordered+ecstasy.x",ORDERED);
       put("Range+ecstasy/Range.x",RANGE);
@@ -468,10 +473,17 @@ public abstract class XType {
           ClzBuilder.add_import(clz);
           yield xclz;
         }
+        // Yet Another Special Case - Mutability comes from xt/c/Array.x,
+        // which I am remapping to Ary.java
+        if( "Mutability+ecstasy/collections/Array.x".equals(xjkey) ) {
+          ClzBuilder.XTC_IMPORTS.add("ecstasy.collections.Ary.Mutability");
+          yield MUTABILITY;
+        }
+        
         // Make one
         yield Clz.make(clz);
       }
-      if( ttc.part() instanceof ParmPart parm ) {
+      if( ttc.part() instanceof ParmPart ) {
         if( ttc.id() instanceof TParmCon tpc ) {
           yield ((ClzClz)xtype(tpc.parm()._con,boxed))._clz;
         } else if( ttc.id() instanceof DynFormalCon dfc ) {
@@ -492,6 +504,7 @@ public abstract class XType {
         String imp="Ary"; XType xt=null;
         if( telem == LONG ) { imp="Arylong"; xt = ARYLONG; } // Java ArrayList specialized to int64
         if( telem == CHAR ) { imp="Arychar"; xt = ARYCHAR; } // Java ArrayList specialized to char
+        if( telem == BOOL ) { imp="Aryboolean"; xt = ARYBOOL; } // Java ArrayList specialized to boolean
         if( xt==null ) xt = Ary.make(telem);
         ClzBuilder.XTC_IMPORTS.add("ecstasy.collections."+imp);
         yield xt;

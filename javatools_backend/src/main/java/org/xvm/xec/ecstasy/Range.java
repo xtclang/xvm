@@ -12,7 +12,7 @@ import java.lang.Iterable;
 abstract public class Range extends XTC implements Iterable<Long> {
   public Range( ) {_lo=_hi=0; _lx=_hx=_invert=false; } // No arg constructor
   
-  public final long _lo, _hi;          // Inclusive lo, exclusive hi
+  public final long _lo, _hi;   // Inclusive lo, exclusive hi
   final boolean _lx, _hx;       // True if exclusive
   final boolean _invert;        // Inverted range
   Range( long lo, long hi, boolean lx, boolean hx ) {

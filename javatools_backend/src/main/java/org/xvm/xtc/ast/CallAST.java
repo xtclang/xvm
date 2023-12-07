@@ -22,7 +22,7 @@ public class CallAST extends AST {
     super(kids);
     // Check for a call to super: "super.call()" becomes "super.METHOD"
     if( _kids[0] instanceof RegAST reg && reg._reg== -13 )
-      _kids[0] = new ConAST(null,"super."+mname,reg._type);
+      _kids[0] = new ConAST(null,null,"super."+mname,reg._type);
     _rets = rets;
     _type = _type();
   }
@@ -33,7 +33,6 @@ public class CallAST extends AST {
     throw XEC.TODO();
   }
 
-  private static final String[] CMPS = new String[]{"equals","compare","hashCode"};
   @Override AST rewrite( ) {
     // Try to rewrite constant calls to the XTC special equals.
     if( _kids[0] instanceof ConAST con ) {
