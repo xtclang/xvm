@@ -115,6 +115,17 @@ class Compare {
         assert !checkLess(a1, a2);
     }
 
+    @Test
+    void compareComposite() {
+        typedef String|Int as StrInt;
+
+        StrInt si1 = 1;
+        StrInt si2 = "a";
+
+        assert si1 != si2;
+        assert !checkEquals(si1, si2);
+    }
+
     <T> Boolean checkEquals(T t1, T t2) {
         return t1 == t2;
     }
