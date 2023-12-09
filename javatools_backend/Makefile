@@ -91,16 +91,16 @@ XDK = $(XDK_DIR)/javatools/javatools.jar
 XTC = java -jar $(XDK) xcc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools -rebuild
 XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
 
-## General recipe for making an XTC from a X file
-#%.xtc:	%.x $(XDK)
-#	@echo "compiling " $@ " because " $?
-#	$(XTC) $< -o $@
+# General recipe for making an XTC from a X file
+%.xtc:	%.x $(XDK)
+	@echo "compiling " $@ " because " $?
+	@$(XTC) $< -o $@
 
 # General recipe for executing an XTC, by making an "EXE" file from an XTC -
 # since no "EXE" is ever made, this just always runs the module.
 %.exe:	%.xtc $(classes) $(XDK)
 	@echo "running " $@
-	$(XEC) $<
+	@$(XEC) $<
 
 
 
@@ -118,7 +118,7 @@ TCK = ../tck/src/main/x
 
 $(TCK)/tck.xtc:	$(TCK)/tck.x $(wildcard $(TCK)/tck/*/*.x) $(XDK)
 	@echo "compiling " $@ " because " $?
-	$(XTC) $< -o $@
+	@$(XTC) $< -o $@
 
 
 # Manual tests use an explicit list

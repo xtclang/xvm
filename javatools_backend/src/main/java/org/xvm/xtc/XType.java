@@ -94,7 +94,7 @@ public abstract class XType {
   // Basically a Java class as a XType 
   public static class Clz extends XType {
     private static final HashMap<ClassPart,Clz> ZINTERN = new HashMap<>();
-    public final String _name;
+    public final String _name, _pack;
     public       ClassPart _mod;      // Compilation unit class
     public       ClassPart _clz;      // Self class, can be compilation unit
     public final Clz _super;          // Super xtype or null
@@ -102,23 +102,33 @@ public abstract class XType {
     public final XType[] _xts;
     public final ClzClz _clzclz;
     private Clz( ClassPart clz ) {
-      assert ClzBuilder.CCLZ!=null; // Init error
+      assert ClzBuilder.CMOD!=null; // Init error
       _super = clz._super==null ? null : make(clz._super);
-      _mod = ClzBuilder.CCLZ;  // Compile unit class
+      _mod = ClzBuilder.CMOD;  // Compile unit class
       _clz = clz;
-      // Class name
-      String name = ClzBuilder.java_class_name(clz._name);
+      // Class & package names.
+      // Assume fully qualified: tck_module.comparison.Compare.AnyValue
+      // Module: tck_module
+      // Package: comparison
+      // Class: Compare.AnyValue
+      String name = S.java_class_name(clz._name);
+      String pack = "";
       // Part of local module, stack up packages
-      if( clz.mod()==ClzBuilder.CCLZ ) {
+      if( clz.mod()==ClzBuilder.CMOD && clz!= ClzBuilder.CMOD ) {
         // Stack up packages in the local module
-        Part px = clz;
-        while( px != ClzBuilder.CCLZ ) {
+        Part px = clz._par;
+        while( px != ClzBuilder.CMOD ) {
+          String pxname = S.java_class_name(px._name);
+          if( px instanceof PackagePart ) 
+            pack = pack.isEmpty() ? pxname : pxname+"."+pack;
+          else 
+            ; //name = pxname+"."+name;
           px = px._par;
-          name = ClzBuilder.java_class_name(px._name)+"."+name;
         }
       }
-        
       _name = name;
+      _pack = pack;
+      
       _clzclz = new ClzClz(this);
       int len=0;
       for( Part part : clz._name2kid.values() )
@@ -141,8 +151,9 @@ public abstract class XType {
     // Made from XTC class
     public static Clz make( ClassPart clz ) {
       // Check for a pre-cooked class
-      assert !BASE_XJMAP.containsKey(xjkey(clz));
-      Clz xclz = ZINTERN.get(clz);
+      Clz xclz = (Clz)BASE_XJMAP.get(xjkey(clz));
+      if( xclz != null ) return xclz;
+      xclz = ZINTERN.get(clz);
       if( xclz!=null ) return xclz;
       ZINTERN.put(clz,xclz = new Clz(clz));
       return xclz.init();
@@ -152,6 +163,7 @@ public abstract class XType {
     // hand-built.
     Clz( String name ) {
       _name = name;
+      _pack = null;
       // clz,mod set later
       _super=null;              // No super in the XTC sense
       _flds=null;
@@ -169,7 +181,7 @@ public abstract class XType {
       // Built-ins before being 'set' have no mod
       if( _mod==null ) return false;
       // Self module, no import
-      if( _mod==ClzBuilder.CCLZ ) return false;
+      if( _mod==ClzBuilder.CMOD ) return false;
       throw XEC.TODO();
     }
     // Find a field in the superclass chain
@@ -192,6 +204,10 @@ public abstract class XType {
       return sb.p("}").nl();
     }
     @Override public SB clz( SB sb ) { return sb.p(_name); }
+    public String qualified_name() {
+      if( _mod==_clz ) return XEC.XCLZ+".X$"+_name;
+      return XEC.XCLZ+"."+_pack+"."+_name;
+    }
     // Using shallow equals,hashCode, not deep, because the parts are already interned
     @Override boolean eq(XType xt) {
       Clz clz = (Clz)xt;
@@ -318,7 +334,6 @@ public abstract class XType {
   }
 
   // Java non-primitive classes
-  public static Base EXCEPTION = Base.make("Exception");
   public static Base JINT   = Base.make("Integer");
   public static Base JNULL  = Base.make("Nullable");
   public static Clz  JUBYTE = new Clz("XUByte");
@@ -326,6 +341,7 @@ public abstract class XType {
   public static Clz  JCHAR  = new Clz("Character");
   public static Clz  OBJECT = new Clz("Object");
   public static Clz  STRING = new Clz("String");
+  public static Clz  EXCEPTION = new Clz("Exception");
 
   // Java primitives or primitive classes
   public static Base BOOL = Base.make("boolean");
@@ -338,6 +354,7 @@ public abstract class XType {
   public static Base TRUE = Base.make("true");
   public static Base VOID = Base.make("void");
 
+  public static Ary ARY    = Ary.make(OBJECT);
   public static Ary ARYBOOL= Ary.make(BOOL);
   public static Ary ARYCHAR= Ary.make(CHAR);
   public static Ary ARYLONG= Ary.make(LONG);
@@ -379,6 +396,7 @@ public abstract class XType {
   public static Clz RANGEII     = new Clz("RangeII");
   public static Clz STRINGBUFFER= new Clz("StringBuffer");
   public static Clz TYPE        = new Clz("Type");
+  public static Clz UNSUPPORTEDOPERATION = new Clz("UnsupportedOperation");
   static final HashMap<String, Clz> IMPORT_XJMAP = new HashMap<>() {{
       put("Boolean+ecstasy/Boolean.x",JBOOL);      
       put("Char+ecstasy/text/Char.x",JCHAR);
@@ -396,6 +414,7 @@ public abstract class XType {
       put("StringBuffer+ecstasy/text/StringBuffer.x",STRINGBUFFER);
       put("Type+ecstasy/reflect/Type.x",TYPE);
       put("UIntNumber+ecstasy/numbers/UIntNumber.x",JULONG); // TODO: Java prim 'long' is not unsigned
+      put("UnsupportedOperation+ecstasy.x",UNSUPPORTEDOPERATION);
     }};
   private static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
 
@@ -545,7 +564,13 @@ public abstract class XType {
     //  
       // Attempt to use the Java class name
       if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") ) {
-        yield ((Clz)telem)._clzclz;
+        if( telem instanceof Clz tclz )
+          yield tclz._clzclz;
+        if( telem instanceof Ary ary )
+          yield ARY;
+        if( telem instanceof Base base )
+          yield Base.make("base clz (of java generic array)");
+        throw XEC.TODO();
       }
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
@@ -615,6 +640,9 @@ public abstract class XType {
     case Dec64Con dcon ->
       DEC64;
 
+    case ClassCon ccon ->
+      Clz.make(ccon.clz());
+    
     default -> throw XEC.TODO();
     };
   }

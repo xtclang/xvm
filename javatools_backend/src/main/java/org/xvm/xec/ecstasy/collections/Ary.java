@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.Appenderchar;
+import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xrun.Never;
 
@@ -88,6 +89,7 @@ public class Ary<E> extends XTC implements Iterable<E>, Stringable {
     Fixed,                      // Tuples and arrays are fixed length, but mutable
     Mutable;                    // Classic mutable    
     public static final Mutability[] VALUES = values();
+    public static final Enum GOLD = Enum.GOLD; // Dispatch against Ordered class same as Enum class
   }
 
   // --- text/Stringable

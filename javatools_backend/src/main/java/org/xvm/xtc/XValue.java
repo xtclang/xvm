@@ -2,6 +2,7 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
+import org.xvm.util.S;
 import org.xvm.util.SB;
 
 // Concrete java values from XTC values.
@@ -48,7 +49,7 @@ public abstract class XValue {
       } else {
         // Put qualified name if not in local namespace
         ClassPart clz = (ClassPart)meth._par._par;
-        if( clz!= ClzBuilder.CCLZ )
+        if( clz!= ClzBuilder.CMOD )
           name = clz._name+"."+name;
       }
       yield ASB.p(name);
@@ -60,8 +61,12 @@ public abstract class XValue {
       ASB.p(prop._name);
 
     // A class Type as a value
-    case ParamTCon ptc ->
-      ((XType.ClzClz)XType.xtype(ptc,false))._clz.clz(ASB).p(".GOLD");
+    case ParamTCon ptc -> {
+      XType xt = XType.xtype(ptc,false);
+      if( xt instanceof XType.ClzClz clzclz )
+        yield clzclz._clz.clz(ASB).p(".GOLD");
+      yield xt.clz(ASB).p(".ARYGENERIC.GOLD");
+    }
     
     // Enums
     case EnumCon econ -> {
@@ -80,7 +85,7 @@ public abstract class XValue {
     // Singleton class constants (that are not enums)
     case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
-        yield ASB.p( ClzBuilder.java_class_name(mod._name));
+        yield ASB.p( S.java_class_name(mod._name));
       if( con0.part() instanceof PropPart prop )
         yield ASB.p(PropBuilder.jname(prop)).p("$get()");
       throw XEC.TODO();
@@ -135,7 +140,13 @@ public abstract class XValue {
 
     case Dec64Con dcon -> 
       ASB.p("new Dec64(").p(dcon._dec.toString()).p(")");
-    
+
+    case ClassCon ccon -> {
+      ClzBuilder.add_import( ccon.clz() );
+      XType x = XType.xtype(ccon,false);
+      yield x.clz(ASB.p("new ")).p("()");
+    }
+
     default -> throw XEC.TODO();
     };
   }

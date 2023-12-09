@@ -75,7 +75,6 @@ public abstract class AST {
       _kids[i] = kid;
       _kids[i].do_rewrite();
     }
-    return;
   }
   
   // Rewrite some AST bits before Java
@@ -174,6 +173,7 @@ public abstract class AST {
     case SwitchStmt   ->   SwitchAST.make(X,false);
     case TemplateExpr -> TemplateAST.make(X);
     case TernaryExpr  ->  TernaryAST.make(X);
+    case ThrowExpr    ->    ThrowAST.make(X);
     case TryCatchStmt -> TryCatchAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
     case UnaryOpExpr  ->    UniOpAST.make(X);

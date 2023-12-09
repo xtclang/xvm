@@ -34,7 +34,8 @@ public class ClassPart extends Part {
   public final Contrib[] _contribs;
 
   public SB _header, _body;     // Java source code
-  public Class<XTC> _jclz;     // Matching java class
+  public XType.Clz _tclz;       // XType class
+  public Class<XTC> _jclz;      // Matching java class
   
   ClassPart( Part par, int nFlags, Const id, CondCon cond, CPool X, Part.Format f ) {
     super(par,nFlags,id,null,cond,X);

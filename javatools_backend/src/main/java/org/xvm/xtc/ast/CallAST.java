@@ -41,7 +41,7 @@ public class CallAST extends AST {
         if( clz._clz==XType.JLONG ) {
           if( con._con.equals("Int64.equals") ) return new BinOpAST("==","",XType.BOOL,_kids[2],_kids[3]);
           if( con._con.equals("IntNumber.compare") ) return new BinOpAST("<=>","",XType.BOOL,_kids[2],_kids[3]);
-          if( con._con.equals("Int64.hashCode") ) return _kids[3];
+          if( con._con.equals("Int64.hashCode") ) return _kids[2];
           throw XEC.TODO();
         }
         // Hard force  "funky dispatch" to Java primitive

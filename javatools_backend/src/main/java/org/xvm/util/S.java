@@ -12,8 +12,13 @@ public abstract class S {
   // Fast linear scan for a hit, returns index or -1.
   // Uses '==' not '.equals'
   public static <E> int find( E[] es, E e ) {
-    for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
+    if( es != null )
+      for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
     return -1;
   }
-  
+
+  public static String java_class_name( String xname ) {
+     return xname.replace(".","_");
+   }
+
 }

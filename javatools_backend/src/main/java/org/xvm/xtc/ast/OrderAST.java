@@ -23,7 +23,7 @@ class OrderAST extends AST {
         fun._args.length==3 &&
         fun._args[1]==XType.JLONG &&
         fun._args[2]==XType.JLONG ) {
-      return new BinOpAST(_op,"",XType.BOOL,call._kids[1],call._kids[2]);
+      return new BinOpAST(_op,"",XType.BOOL,call._kids[2],call._kids[3]);
     }
     
     // Order < or > converts an Ordered to a Boolean

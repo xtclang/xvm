@@ -15,6 +15,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
     Equal, 
     Greater;
     public static final Ordered[] VALUES = values();
+    public static final Enum GOLD = Enum.GOLD; // Dispatch against Ordered class same as Enum class
   }
 
   // The fully dynamic compare lookup
@@ -37,6 +38,9 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
    *  {@code public Ordered compare(XTC x0, XTC x1) { return compare$CLZ((CLZ)x0,(CLZ)x1) } }
    * Each implemention will also define (commonly with a default gen'd code):
    *  {@code public Ordered compare$CLZ(CLZ x0, CLZ x1) { ... field-by-field or user-speced... } }
+   *
+   *  The default implementation never uses the gold argument, but user-defined
+   *  equals have access to it.
   */
   
   /* Generate:

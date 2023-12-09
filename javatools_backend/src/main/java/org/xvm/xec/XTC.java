@@ -48,7 +48,7 @@ public abstract class XTC {
 
   // Trace
   public static <X extends XTC> X TRACE( X x ) { return x; }
-  public static Ordered TRACE( Ordered x ) { return x; }
+  public static <E extends Enum> E TRACE( E x ) { return x; }
   public static String TRACE(String x) { return x; }
   public static long TRACE(long x) { return x; }
   public static int  TRACE(int  x) { return x; }

@@ -25,13 +25,16 @@ public interface Comparable {
    *  {@code public boolean equals(XTC x0, XTC x1) { return equals$CLZ((CLZ)x0,(CLZ)x1) } }
    * Each implemention will also define (commonly with a default gen'd code):
    *  {@code public boolean equals$CLZ(CLZ x0, CLZ x1) { ... field-by-field or user-speced... } }
-  */
+   *
+   *  The default implementation never uses the gold argument, but user-defined
+   *  equals have access to it.
+   */
 
   /* Generate:
      public boolean equals( XTC x0, XTC x1 ) { // Called by the fully dynamic lookup
        return equals$CLZ(x0,x1);
      }
-     public static boolean equals$CLZ( int clzid, CLZ x0, CLZ x1 ) { 
+     public static boolean equals$CLZ( XTC gold, CLZ x0, CLZ x1 ) { 
        if( x0==x1 ) return true;
        return x0.fld0.equals(x1.fld0) && x0.fld1==x1.fld1 && ... x0.fldN.equals(x1.fldN);
      }

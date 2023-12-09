@@ -7,6 +7,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.ecstasy.Iterablelong;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xec.ecstasy.Appenderchar;
+import org.xvm.xec.ecstasy.collections.Ary.Mutability;
 
 import java.lang.Iterable;
 import java.util.Arrays;
@@ -30,7 +31,16 @@ public class Arylong extends XTC
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.applyAsLong(i);
   }
+  public Arylong(Mutability mutable, Arylong es) { throw XEC.TODO(); }
+
+  public boolean empty$get() { return _len==0; }
   
+  // Fetch element
+  public long at(long idx) {
+    if( 0 <= idx && idx < _len )
+      return _es[(int)idx];
+    throw new ArrayIndexOutOfBoundsException(""+idx+" >= "+_len);
+  }
 
   // Add an element, doubling base array as needed
   public Arylong add( long e ) {
@@ -43,12 +53,7 @@ public class Arylong extends XTC
     return this;
   }
 
-  // Fetch element
-  public long at(long idx) {
-    if( 0 <= idx && idx < _len )
-      return _es[(int)idx];
-    throw new ArrayIndexOutOfBoundsException(""+idx+" >= "+_len);
-  }
+  public Arylong addAll( Arylong ls ) { throw XEC.TODO(); }
 
   public void removeUnordered(long idx) { throw XEC.TODO(); }
   public void deleteUnordered(long idx) { throw XEC.TODO(); }
