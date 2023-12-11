@@ -36,10 +36,10 @@ public class FormalTypeChildConstant
      * auto-narrowing.
      *
      * @param pool         the ConstantPool that will contain this Constant
-     * @param constParent  the parent constant, which must be a FormalConstant
+     * @param constParent  the parent constant
      * @param sName        the formal child name
      */
-    public FormalTypeChildConstant(ConstantPool pool, IdentityConstant constParent, String sName)
+    public FormalTypeChildConstant(ConstantPool pool, FormalConstant constParent, String sName)
         {
         super(pool, constParent, sName);
         }
@@ -93,16 +93,14 @@ public class FormalTypeChildConstant
             return typeConstraint;
             }
 
-        FormalConstant idParent = (FormalConstant) getParentConstant();
-        String         sName    = getName();
-
-        typeConstraint = idParent.getConstraintType();
+        typeConstraint = getParentConstant().getConstraintType();
 
         // there is a possibility that this constant was constructed with some extra assumptions
         // during the compile time that are not "encoded" into the constant itself;
         // for example, the compiler may know that "CompileType" is an "Array", therefore
         // "CompileType.Element" is represented by a FormalTypeChildConstant, but that knowledge
         // is not encoded into the constant itself
+        String sName = getName();
         if (typeConstraint.containsGenericParam(sName))
             {
             if (typeConstraint.isTuple())
@@ -129,7 +127,7 @@ public class FormalTypeChildConstant
         TypeConstant typeResolved = resolver.resolveFormalType(this);
         if (typeResolved == null)
             {
-            FormalConstant idParent   = (FormalConstant) getParentConstant();
+            FormalConstant idParent   = getParentConstant();
             TypeConstant   typeParent = idParent.resolve(resolver);
 
             if (typeParent == null)
@@ -168,6 +166,12 @@ public class FormalTypeChildConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
+    public FormalConstant getParentConstant()
+        {
+        return (FormalConstant) super.getParentConstant();
+        }
+
+    @Override
     public TypeConstant getType()
         {
         return getConstantPool().ensureTerminalTypeConstant(this);
@@ -176,7 +180,7 @@ public class FormalTypeChildConstant
     @Override
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
         {
-        return that.getConstantPool().ensureFormalTypeChildConstant(that, getName());
+        return that.getConstantPool().ensureFormalTypeChildConstant((FormalConstant) that, getName());
         }
 
 
@@ -186,12 +190,6 @@ public class FormalTypeChildConstant
     public Format getFormat()
         {
         return Format.FormalTypeChild;
-        }
-
-    @Override
-    public boolean isClass()
-        {
-        return false;
         }
 
     @Override

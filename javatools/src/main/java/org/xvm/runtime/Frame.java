@@ -2686,7 +2686,7 @@ public class Frame
      * An internal VarInfo type resolver.
      */
     @FunctionalInterface
-    interface VarTypeResolver
+    public interface VarTypeResolver
         {
         TypeConstant resolve(Frame frame, int nTargetReg, int iAuxId);
         }

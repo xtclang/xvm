@@ -2078,7 +2078,7 @@ public class ConstantPool
      *
      * @return the FormalTypeChildConstant corresponding to the specified parent and name
      */
-    public FormalTypeChildConstant ensureFormalTypeChildConstant(IdentityConstant constFormal, String sName)
+    public FormalTypeChildConstant ensureFormalTypeChildConstant(FormalConstant constFormal, String sName)
         {
         return (FormalTypeChildConstant) register(new FormalTypeChildConstant(this, constFormal, sName));
         }

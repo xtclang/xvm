@@ -23,6 +23,7 @@ import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -732,7 +733,7 @@ public class NameResolver
                             {
                             m_component = null;
                             m_constant  = getPool().ensureFormalTypeChildConstant(
-                                    (IdentityConstant) m_constant, m_sName);
+                                    (FormalConstant) m_constant, m_sName);
                             return ResolutionResult.RESOLVED;
                             }
 
