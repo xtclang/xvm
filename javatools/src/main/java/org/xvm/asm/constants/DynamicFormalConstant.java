@@ -111,6 +111,14 @@ public class DynamicFormalConstant
                 : m_reg.getIndex();
         }
 
+    /**
+     * @return the containing MethodConstant
+     */
+    public MethodConstant getMethod()
+        {
+        return (MethodConstant) getParentConstant();
+        }
+
 
     // ----- DynamicConstant methods ---------------------------------------------------------------
 
@@ -131,8 +139,18 @@ public class DynamicFormalConstant
             {
             try
                 {
-                ObjectHandle hTarget = frame.getArgument(getRegisterIndex());
-                return m_constFormal.resolve(hTarget.getType());
+                // there are some rare instances (e.g. lambdas), when this FTC referes to a register
+                // from a caller's frame, in which case we need to follow the call chain
+                do
+                    {
+                    if (getMethod().equals(frame.f_function.getIdentityConstant()))
+                        {
+                        ObjectHandle hTarget = frame.getArgument(getRegisterIndex());
+                        return m_constFormal.resolve(hTarget.getType());
+                        }
+                    frame = frame.f_framePrev;
+                    }
+                while (frame != null);
                 }
             catch (ExceptionHandle.WrapperException ignore)
                 {
