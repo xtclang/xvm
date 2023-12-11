@@ -913,7 +913,7 @@ public class InvocationExpression
                 Map<FormalConstant, TypeConstant> mapTypeParams = Collections.emptyMap();
                 if (cTypeParams > 0)
                     {
-                    transformTypeArguments(ctx, method, listArgs, atypeArgs);
+                    transformTypeArguments(ctx, listArgs, atypeArgs);
 
                     // re-resolve against the validated types
                     mapTypeParams = method.resolveTypeParameters(pool,
@@ -1417,8 +1417,8 @@ public class InvocationExpression
                                 {
                                 Register regType = (Register) exprLeft.generateArgument(
                                                         ctx, code, fLocalPropOk, false, errs);
-                                m_idFormal = pool.ensureDynamicFormal(
-                                                idMethod, regType, m_idFormal, exprName.getName());
+                                m_idFormal = pool.ensureDynamicFormal(ctx.getMethod().getIdentityConstant(),
+                                        regType, m_idFormal, exprName.getName());
                                 }
                             }
                         argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
@@ -3202,7 +3202,7 @@ public class InvocationExpression
             atypeArgs[i] = listArgs.get(i).getImplicitType(ctx);
             }
 
-        transformTypeArguments(ctx, method, listArgs, atypeArgs);
+        transformTypeArguments(ctx, listArgs, atypeArgs);
 
         Map<FormalConstant, TypeConstant> mapTypeParams =
                 method.resolveTypeParameters(pool(), typeTarget, atypeArgs, atypeReturn, fAllowPending);

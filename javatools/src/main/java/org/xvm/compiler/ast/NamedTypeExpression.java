@@ -669,7 +669,7 @@ public class NamedTypeExpression
 
             if (exprNew.isSimpleName() && typeType.getParamType(0).equals(pool.typeObject()))
                 {
-                typeType = transformType(ctx, ctx.getMethod(), exprNew);
+                typeType = transformType(ctx, exprNew);
                 }
 
             // the underlying type could be either dynamic formal (e.g. array.Element),

@@ -1297,7 +1297,7 @@ public abstract class AstNode
             // and the method signature
             if (cTypeParams > 0)
                 {
-                atypeArgs = transformTypeArguments(ctx, method, listArgs, atypeArgs);
+                atypeArgs = transformTypeArguments(ctx, listArgs, atypeArgs);
 
                 ListMap<FormalConstant, TypeConstant> mapTypeParams =
                         method.resolveTypeParameters(pool, typeTarget, atypeArgs, atypeReturn, true);
@@ -1455,7 +1455,7 @@ public abstract class AstNode
      * Iterate over the specified argument list, and transform all canonical <code>Type<></code>
      * types to the corresponding dynamic types.
      */
-    protected TypeConstant[] transformTypeArguments(Context ctx, MethodStructure method,
+    protected TypeConstant[] transformTypeArguments(Context ctx,
                                                     List<Expression> listArgs, TypeConstant[] atypeArgs)
         {
         assert listArgs.size() == atypeArgs.length;
@@ -1468,7 +1468,7 @@ public abstract class AstNode
                     listArgs.get(i) instanceof NameExpression exprName &&
                         exprName.getMeaning() == Meaning.Variable)
                 {
-                type = transformType(ctx, method, exprName);
+                type = transformType(ctx, exprName);
                 }
 
             atypeArgs[i] = type;
@@ -1480,7 +1480,7 @@ public abstract class AstNode
      * Given a NameExpression whose type is <code>Type<></code>, transform it to a dynamic type
      * constant <code>Type<[name].DataType></code>.
      */
-    protected TypeConstant transformType(Context ctx, MethodStructure method, NameExpression exprName)
+    protected TypeConstant transformType(Context ctx, NameExpression exprName)
         {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
@@ -1489,7 +1489,7 @@ public abstract class AstNode
             {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(
-                method.getIdentityConstant(), reg, idProp, exprName.getName());
+                ctx.getMethod().getIdentityConstant(), reg, idProp, exprName.getName());
 
             type = pool.ensureParameterizedTypeConstant(type, idFormal.getType());
             }
