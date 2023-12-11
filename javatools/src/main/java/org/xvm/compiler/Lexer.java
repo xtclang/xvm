@@ -638,7 +638,10 @@ public class Lexer
 
                     source.rewind();
                     }
-                return new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, "$");
+
+                Token token = new Token(lInitPos, source.getPosition(), Id.IDENTIFIER, "$");
+                peekNotIdentifierOrNumber();
+                return token;
 
             case '#':
                 if (source.hasNext())
@@ -3039,7 +3042,16 @@ public class Lexer
      */
     public static boolean isIdentifierStart(char ch)
         {
-        return Character.isUnicodeIdentifierStart(ch) || ch == '_';
+        return switch (Character.getType(ch))
+            {
+            case Character.UPPERCASE_LETTER -> true;
+            case Character.LOWERCASE_LETTER -> true;
+            case Character.TITLECASE_LETTER -> true;
+            case Character.MODIFIER_LETTER  -> true;
+            case Character.OTHER_LETTER     -> true;
+
+            default -> ch == '_';
+            };
         }
 
     /**
@@ -3051,7 +3063,26 @@ public class Lexer
      */
     public static boolean isIdentifierPart(char ch)
         {
-        return Character.isUnicodeIdentifierPart(ch) || ch == '_';
+        return switch (Character.getType(ch))
+            {
+            case Character.UPPERCASE_LETTER       -> true;
+            case Character.LOWERCASE_LETTER       -> true;
+            case Character.TITLECASE_LETTER       -> true;
+            case Character.MODIFIER_LETTER        -> true;
+            case Character.OTHER_LETTER           -> true;
+
+            case Character.NON_SPACING_MARK       -> true;
+            case Character.COMBINING_SPACING_MARK -> true;
+            case Character.ENCLOSING_MARK         -> true;
+
+            case Character.DECIMAL_DIGIT_NUMBER   -> true;
+            case Character.LETTER_NUMBER          -> true;
+            case Character.OTHER_NUMBER           -> true;
+
+            case Character.CURRENCY_SYMBOL        -> true;
+
+            default -> ch == '_';
+            };
         }
 
     /**
