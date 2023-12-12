@@ -743,11 +743,11 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (indexes.size() == 1)
             {
-            return new ArrayAccessExprAST(expr.getExprAST(), indexes.get(0).getExprAST());
+            return new ArrayAccessExprAST(expr.getExprAST(ctx), indexes.get(0).getExprAST(ctx));
             }
         throw notImplemented();
         }

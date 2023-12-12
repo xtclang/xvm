@@ -5,12 +5,19 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.LinkedList;
+
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
+
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.PropertyExprAST;
+
+import org.xvm.compiler.ast.Context;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -157,6 +164,47 @@ public class DynamicFormalConstant
                 }
             }
         return null;
+        }
+
+    @Override
+    public ExprAST toExprAst(Context ctx)
+        {
+        if (!getMethod().equals(ctx.getMethod().getIdentityConstant()))
+            {
+            // the register doesn't belong to this method; this may require help from the run-time
+            return null;
+            }
+
+        FormalConstant constFormal = getFormalConstant();
+
+        // if the underlying constant is A.B.C, collect the names in reverse order (FILO)
+        LinkedList<FormalTypeChildConstant> listNames = null;
+        while (constFormal instanceof FormalTypeChildConstant idChild)
+            {
+            if (listNames == null)
+                {
+                listNames = new LinkedList<>();
+                }
+
+            listNames.addFirst(idChild);
+            constFormal = idChild.getParentConstant();
+            }
+
+        // we've reached the top; it must be a PropertyConstant
+        if (constFormal instanceof PropertyConstant idProp)
+            {
+            ExprAST astExpr = new PropertyExprAST(getRegister().getRegisterAST(), idProp);
+            if (listNames != null)
+                {
+                for (FormalTypeChildConstant idNext : listNames)
+                    {
+                    astExpr = new PropertyExprAST(astExpr, idNext);
+                    }
+                }
+            return astExpr;
+            }
+
+        throw new IllegalStateException("Unsupported formal: " + constFormal);
         }
 
 

@@ -1117,7 +1117,7 @@ public class NameExpression
                             Argument argLeft = left.generateArgument(ctx, code, false, true, errs);
                             code.add(new P_Get(idProp, argLeft, argLVal));
 
-                            m_astResult = new PropertyExprAST(left.getExprAST(), idProp);
+                            m_astResult = new PropertyExprAST(left.getExprAST(ctx), idProp);
                             break;
                             }
                         }
@@ -1191,7 +1191,7 @@ public class NameExpression
                     else
                         {
                         argTarget = left.generateArgument(ctx, code, true, true, errs);
-                        astTarget = left.getExprAST();
+                        astTarget = left.getExprAST(ctx);
                         }
 
                     if (m_mapTypeParams == null)
@@ -1266,7 +1266,8 @@ public class NameExpression
                     {
                     Register regFn = code.createRegister(argRaw.getType(), fUsedOnce);
                     bindTypeParameters(ctx, code, argRaw, regFn);
-                    // TODO m_astResult =
+                    System.err.println("TODO: AST for " + this);
+                    // TODO GG: m_astResult =
                     return regFn;
                     }
                 m_astResult = toExprAst(argRaw);
@@ -1425,7 +1426,7 @@ public class NameExpression
                             }
                         code.add(new P_Get(idProp, argLeft, regTemp));
 
-                        m_astResult = new PropertyExprAST(left.getExprAST(), idProp);
+                        m_astResult = new PropertyExprAST(left.getExprAST(ctx), idProp);
                         break;
                         }
 
@@ -1501,7 +1502,7 @@ public class NameExpression
                 Register regType   = code.createRegister(idChild.getType(), fUsedOnce);
                 code.add(new P_Get(idChild, argTarget, regType));
 
-                m_astResult = new PropertyExprAST(left.getExprAST(), idChild);
+                m_astResult = new PropertyExprAST(left.getExprAST(ctx), idChild);
                 return regType;
                 }
 
@@ -1530,7 +1531,7 @@ public class NameExpression
                 else
                     {
                     argTarget = left.generateArgument(ctx, code, true, true, errs);
-                    astTarget = left.getExprAST();
+                    astTarget = left.getExprAST(ctx);
                     }
 
                 Register regFn = code.createRegister(idMethod.getType(), fUsedOnce);
@@ -1795,7 +1796,7 @@ public class NameExpression
             case Left:
                 assert !idProp.getComponent().isStatic();
                 Argument arg = left.generateArgument(ctx, code, true, true, errs);
-                m_astRefTarget = left.getExprAST();
+                m_astRefTarget = left.getExprAST(ctx);
                 return arg;
 
             default:
@@ -1904,7 +1905,7 @@ public class NameExpression
                 else
                     {
                     argTarget = left.generateArgument(ctx, code, true, true, errs);
-                    astTarget = left.getExprAST();
+                    astTarget = left.getExprAST(ctx);
                     }
                 m_astResult = new PropertyExprAST(astTarget, idProp);
                 return new Assignable(argTarget, idProp);
@@ -1917,7 +1918,7 @@ public class NameExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (isConstant() && isRValue())
             {
@@ -1937,7 +1938,7 @@ public class NameExpression
             return toExprAst(argRaw);
             }
 
-        return super.getExprAST();
+        return super.getExprAST(ctx);
         }
 
 

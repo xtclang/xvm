@@ -472,7 +472,7 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public ExprAST getExprAST()
+        public ExprAST getExprAST(Context ctx)
             {
             List<Expression> listExprs = ensureExpressions();
             int              cExprs    = listExprs.size();
@@ -480,7 +480,7 @@ public class MultipleLValueStatement
 
             for (int i = 0; i < cExprs; ++i)
                 {
-                aAstExpr[i] = listExprs.get(i).getExprAST();
+                aAstExpr[i] = listExprs.get(i).getExprAST(ctx);
                 }
             return new MultiExprAST(aAstExpr);
             }

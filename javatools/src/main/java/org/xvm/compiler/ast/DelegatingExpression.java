@@ -196,9 +196,9 @@ public abstract class DelegatingExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
-        return expr.getExprAST();
+        return expr.getExprAST(ctx);
         }
 
 

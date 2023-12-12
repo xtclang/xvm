@@ -270,11 +270,11 @@ public class ConvertExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         return isConstant()
                 ? new ConstantExprAST(toConstant())
-                : new ConvertExprAST(expr.getExprAST(), getTypes(), m_aidConv);
+                : new ConvertExprAST(expr.getExprAST(ctx), getTypes(), m_aidConv);
         }
 
 

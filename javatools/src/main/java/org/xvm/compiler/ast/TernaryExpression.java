@@ -514,9 +514,10 @@ public class TernaryExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
-        return new TernaryExprAST(cond.getExprAST(), exprThen.getExprAST(), exprElse.getExprAST());
+        return new TernaryExprAST(cond.getExprAST(ctx),
+                exprThen.getExprAST(ctx), exprElse.getExprAST(ctx));
         }
 
 

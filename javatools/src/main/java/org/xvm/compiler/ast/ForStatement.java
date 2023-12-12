@@ -723,7 +723,7 @@ public class ForStatement
                     exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                     fBlockReachable &= exprCond.isCompletable();
 
-                    aCondAST[i] = exprCond.getExprAST();
+                    aCondAST[i] = exprCond.getExprAST(ctx);
                     }
                 }
             }

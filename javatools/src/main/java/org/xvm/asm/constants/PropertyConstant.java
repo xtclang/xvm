@@ -14,6 +14,11 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
 
+import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.PropertyExprAST;
+
+import org.xvm.compiler.ast.Context;
+
 
 /**
  * Represent a property constant, which identifies a particular property structure.
@@ -147,6 +152,15 @@ public class PropertyConstant
 
         return resolver.resolveFormalType(this);
         }
+
+    @Override
+    public ExprAST toExprAst(Context ctx)
+        {
+        return ctx.isMethod()
+                ? new PropertyExprAST(ctx.getThisRegisterAST(), this)
+                : null;
+        }
+
 
     // ----- type-specific functionality -----------------------------------------------------------
 

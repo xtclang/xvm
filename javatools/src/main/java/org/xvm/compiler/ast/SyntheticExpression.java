@@ -103,7 +103,7 @@ public abstract class SyntheticExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (isConstant())
             {
@@ -128,7 +128,7 @@ public abstract class SyntheticExpression
             throw new UnsupportedOperationException();
             }
 
-        return new UnaryOpExprAST(expr.getExprAST(), op, getType());
+        return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
         }
 
 

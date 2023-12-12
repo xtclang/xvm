@@ -1164,7 +1164,7 @@ public abstract class Expression
      *
      * @return an "AST node" from the expression branch of the BinaryAST hierarchy of classes
      */
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         assert isValidated();
         throw new UnsupportedOperationException(

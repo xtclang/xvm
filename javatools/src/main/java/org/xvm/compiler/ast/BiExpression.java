@@ -120,10 +120,10 @@ public abstract class BiExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
-        ExprAST ast1 = expr1.getExprAST();
-        ExprAST ast2 = expr2.getExprAST();
+        ExprAST ast1 = expr1.getExprAST(ctx);
+        ExprAST ast2 = expr2.getExprAST(ctx);
 
         Operator op;
         switch (operator.getId())

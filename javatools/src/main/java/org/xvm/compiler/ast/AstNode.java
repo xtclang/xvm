@@ -1807,7 +1807,33 @@ public abstract class AstNode
         }
 
     /**
-     * Convert the specified argument to a {@link ExprAST binady expression expression}.
+     * Convert the specified type parameter to a {@link ExprAST binary expression AST}.
+     *
+     * @param ctx  the current Context
+     * @param arg  the argument representing a formal type parameter
+     */
+    protected static ExprAST toTypeParameterAst(Context ctx, Argument arg)
+        {
+        if (arg instanceof TypeConstant type)
+            {
+            assert type.isTypeOfType();
+
+            TypeConstant typeData = type.getParamType(0);
+            if (typeData.isFormalType())
+                {
+                FormalConstant constFormal = (FormalConstant) typeData.getDefiningConstant();
+                ExprAST        ast         = constFormal.toExprAst(ctx);
+                if (ast != null)
+                    {
+                    return ast;
+                    }
+                }
+            }
+        return toExprAst(arg);
+        }
+
+    /**
+     * Convert the specified argument to a {@link ExprAST binary expression AST}.
      */
     protected static ExprAST toExprAst(Argument arg)
         {

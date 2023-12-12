@@ -508,7 +508,7 @@ public class CmpChainExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         int        cExpr = expressions.size();
         ExprAST[]  aAst  = new ExprAST[cExpr];
@@ -516,7 +516,7 @@ public class CmpChainExpression
 
         for (int i = 0; i < cExpr; i++)
             {
-            aAst[i] = expressions.get(i).getExprAST();
+            aAst[i] = expressions.get(i).getExprAST(ctx);
             if (i < cExpr-1)
                 {
                 aOp[i] = switch (operators[i].getId())

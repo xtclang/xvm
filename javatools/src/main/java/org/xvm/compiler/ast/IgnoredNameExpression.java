@@ -87,7 +87,7 @@ public class IgnoredNameExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         return new RegisterAST(Op.A_IGNORE, pool().typeObject(), null);
         }

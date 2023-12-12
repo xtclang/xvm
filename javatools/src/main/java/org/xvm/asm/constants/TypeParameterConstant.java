@@ -15,6 +15,10 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.ast.ExprAST;
+
+import org.xvm.compiler.ast.Context;
+
 import org.xvm.util.Hash;
 import org.xvm.util.TransientThreadLocal;
 
@@ -159,6 +163,12 @@ public class TypeParameterConstant
         return method == null
                 ? null
                 : resolver.resolveFormalType(this);
+        }
+
+    @Override
+    public ExprAST toExprAst(Context ctx)
+        {
+        return ctx.getParameter(getRegister()).getRegisterAST();
         }
 
 

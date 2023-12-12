@@ -455,7 +455,7 @@ public class ListExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (isConstant())
             {
@@ -468,7 +468,7 @@ public class ListExpression
 
         for (int i = 0; i < cArgs; ++i)
             {
-            aAstArg[i] = listExprs.get(i).getExprAST();
+            aAstArg[i] = listExprs.get(i).getExprAST(ctx);
             }
         return new ListExprAST(getType(), aAstArg);
         }

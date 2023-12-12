@@ -195,7 +195,7 @@ public abstract class PrefixExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         Operator op;
         switch (operator.getId())
@@ -204,7 +204,7 @@ public abstract class PrefixExpression
                 op = Operator.Not;
                 break;
             case ADD:
-                return expr.getExprAST();
+                return expr.getExprAST(ctx); // unary "+" is a no-op
             case SUB:
                 op = Operator.Minus;
                 break;
@@ -222,7 +222,7 @@ public abstract class PrefixExpression
                 throw new UnsupportedOperationException(operator.getValueText());
             }
 
-        return new UnaryOpExprAST(expr.getExprAST(), op, getType());
+        return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
         }
 
 

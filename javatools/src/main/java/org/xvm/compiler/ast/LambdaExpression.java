@@ -933,12 +933,12 @@ public class LambdaExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         return m_astLambda == null
                 ? isConstant()
                     ? new ConstantExprAST(toConstant())
-                    : super.getExprAST()
+                    : super.getExprAST(ctx)
                 : m_astLambda;
         }
 

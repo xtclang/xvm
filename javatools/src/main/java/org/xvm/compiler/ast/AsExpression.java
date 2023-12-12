@@ -146,9 +146,9 @@ public class AsExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
-        return new RelOpExprAST(expr1.getExprAST(), Operator.As, expr2.getExprAST(), getType());
+        return new RelOpExprAST(expr1.getExprAST(ctx), Operator.As, expr2.getExprAST(ctx), getType());
         }
 
     private TypeConstant getTargetType()

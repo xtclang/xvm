@@ -358,7 +358,7 @@ public class ReturnStatement
                     {
                     expr.generateVoid(ctx, code, errs);
                     }
-                aAst[i] = expr.getExprAST();
+                aAst[i] = expr.getExprAST(ctx);
                 }
             code.add(new Jump(exprStmt.body.getEndLabel()));
 
@@ -388,7 +388,7 @@ public class ReturnStatement
             code.add(new Return_T(arg));
 
             astResult = new ReturnStmtAST(new ExprAST[]{
-                            new UnpackExprAST(expr.getExprAST(),
+                            new UnpackExprAST(expr.getExprAST(ctx),
                                 atypeRets == null ? TypeConstant.NO_TYPES : atypeRets)});
             }
         else if (m_fConditionalTernary)
@@ -396,7 +396,7 @@ public class ReturnStatement
             TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
             exprTernary.generateConditionalReturn(ctx, code, errs);
 
-            TernaryExprAST astTernary = (TernaryExprAST) exprTernary.getExprAST();
+            TernaryExprAST astTernary = (TernaryExprAST) exprTernary.getExprAST(ctx);
 
             astResult = switch (exprTernary.getPlan())
                 {
@@ -510,7 +510,7 @@ public class ReturnStatement
                                     }
                                 }
                         }
-                    astResult = new ReturnStmtAST(new ExprAST[]{expr.getExprAST()});
+                    astResult = new ReturnStmtAST(new ExprAST[]{expr.getExprAST(ctx)});
                     break;
                     }
 
@@ -528,7 +528,7 @@ public class ReturnStatement
                         aArgs[i] = i == cExprs-1
                                 ? arg
                                 : expr.ensurePointInTime(code, arg);
-                        aASTs[i] = expr.getExprAST();
+                        aASTs[i] = expr.getExprAST(ctx);
                         }
 
                     Label labelFalse = fConditional ? new Label("false") : null;

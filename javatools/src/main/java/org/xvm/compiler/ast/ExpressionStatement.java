@@ -109,7 +109,7 @@ public class ExpressionStatement
         // so an expression is being used as a statement; blackhole the results
         expr.generateAssignments(ctx, code, Expression.NO_LVALUES, errs);
 
-        ctx.getHolder().setAst(this, expr.getExprAST());
+        ctx.getHolder().setAst(this, expr.getExprAST(ctx));
         return fCompletes;
         }
 

@@ -547,7 +547,7 @@ public class TupleExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (isConstant())
             {
@@ -560,7 +560,7 @@ public class TupleExpression
 
         for (int i = 0; i < cArgs; ++i)
             {
-            aAstArg[i] = listExprs.get(i).getExprAST();
+            aAstArg[i] = listExprs.get(i).getExprAST(ctx);
             }
         return new TupleExprAST(getType(), aAstArg);
         }

@@ -911,7 +911,7 @@ public class NewExpression
                 aArgs[i] = i == cArgs-1
                         ? arg
                         : ensurePointInTime(code, arg);
-                aAstArgs[i] = expr.getExprAST();
+                aAstArgs[i] = expr.getExprAST(ctx);
                 }
 
             if (anon != null)
@@ -928,10 +928,10 @@ public class NewExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         return m_astNew == null
-                ? super.getExprAST()
+                ? super.getExprAST(ctx)
                 : m_astNew;
         }
 
@@ -1028,7 +1028,7 @@ public class NewExpression
                 else
                     {
                     argOuter = left.generateArgument(ctx, code, true, true, errs);
-                    astOuter = left.getExprAST();
+                    astOuter = left.getExprAST(ctx);
                     }
                 }
 

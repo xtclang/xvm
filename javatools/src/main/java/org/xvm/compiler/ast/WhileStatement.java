@@ -863,7 +863,7 @@ public class WhileStatement
                     }
                 fCompletes &= exprCond.isCompletable();
 
-                aCondASTs[i] = exprCond.getExprAST();
+                aCondASTs[i] = exprCond.getExprAST(ctx);
                 }
             }
 

@@ -1460,12 +1460,12 @@ public class InvocationExpression
                                     {
                                     Expression expr = args.get(0);
                                     arg0  = expr.generateArgument(ctx, code, true, true, errs);
-                                    aAsts = new ExprAST[] {expr.getExprAST()};
+                                    aAsts = new ExprAST[] {expr.getExprAST(ctx)};
                                     }
                                 else if (cTypeParams == 1)
                                     {
                                     arg0  = aargTypeParams[0];
-                                    aAsts = new ExprAST[] {toExprAst(arg0)};
+                                    aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
                                     }
                                 else // (cDefaults == 1)
                                     {
@@ -1484,7 +1484,7 @@ public class InvocationExpression
                                     System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                                     for (int i = 0; i < cTypeParams; i++)
                                         {
-                                        aAsts[i] = toExprAst(aargTypeParams[i]);
+                                        aAsts[i] = toTypeParameterAst(ctx, aargTypeParams[i]);
                                         }
                                     }
 
@@ -1494,7 +1494,7 @@ public class InvocationExpression
                                     Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
                                     int        iArg = cTypeParams + i;
                                     aArgs[iArg] = i == cArgs-1 ? arg : ensurePointInTime(code, arg);
-                                    aAsts[iArg] = expr.getExprAST();
+                                    aAsts[iArg] = expr.getExprAST(ctx);
                                     }
 
                                 for (int i = 0; i < cDefaults; ++i)
@@ -1682,7 +1682,7 @@ public class InvocationExpression
                         {
                         // evaluate to find the argument (e.g. "var.prop", where prop holds a function)
                         argFn = exprName.generateArgument(ctx, code, false, fTargetOnStack, errs);
-                        astFn = exprName.getExprAST();
+                        astFn = exprName.getExprAST(ctx);
                         }
                     }
                 }
@@ -1692,7 +1692,7 @@ public class InvocationExpression
             // obtain the function that will be bound and/or called
             assert !m_fBindTarget;
             argFn = expr.generateArgument(ctx, code, false, fTargetOnStack, errs);
-            astFn = expr.getExprAST();
+            astFn = expr.getExprAST(ctx);
             assert argFn.getType().isA(pool.typeFunction());
             }
 
@@ -1741,12 +1741,12 @@ public class InvocationExpression
                         {
                         Expression expr = args.get(0);
                         arg0  = expr.generateArgument(ctx, code, true, true, errs);
-                        aAsts = new ExprAST[] {expr.getExprAST()};
+                        aAsts = new ExprAST[] {expr.getExprAST(ctx)};
                         }
                     else if (cTypeParams == 1)
                         {
                         arg0  = aargTypeParams[0];
-                        aAsts = new ExprAST[] {toExprAst(arg0)};
+                        aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
                         }
                     else // (cDefaults == 1)
                         {
@@ -1765,7 +1765,7 @@ public class InvocationExpression
                         System.arraycopy(aargTypeParams, 0, aArgs, 0, cTypeParams);
                         for (int i = 0; i < cTypeParams; i++)
                             {
-                            aAsts[i] = toExprAst(aArgs[i]);
+                            aAsts[i] = toTypeParameterAst(ctx, aArgs[i]);
                             }
                         }
 
@@ -1775,7 +1775,7 @@ public class InvocationExpression
                         Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
                         int        iArg = cTypeParams + i;
                         aArgs[iArg] = i == cArgs-1 ? arg : ensurePointInTime(code, arg);
-                        aAsts[iArg] = expr.getExprAST();
+                        aAsts[iArg] = expr.getExprAST(ctx);
                         }
 
                     for (int i = 0; i < cDefaults; ++i)
@@ -1947,7 +1947,7 @@ public class InvocationExpression
                 {
                 aiArg[i] = i;
                 aArg [i] = aargTypeParams[i];
-                aAst [i] = toExprAst(aargTypeParams[i]);
+                aAst [i] = toTypeParameterAst(ctx, aargTypeParams[i]);
                 }
 
             for (int i = 0, iBind = cTypeParams; i < cArgs; ++i)
@@ -1958,7 +1958,7 @@ public class InvocationExpression
                     aiArg[iBind] = cTypeParams + i;
                     aArg [iBind] = ensurePointInTime(code,
                             exprArg.generateArgument(ctx, code, false, true, errs));
-                    aAst [iBind] = exprArg.getExprAST();
+                    aAst [iBind] = exprArg.getExprAST(ctx);
 
                     iBind++;
                     }
@@ -2040,15 +2040,15 @@ public class InvocationExpression
         else
             {
             argTarget   = exprLeft.generateArgument(ctx, code, fLocalPropOk, fTargetOnStack, errs);
-            m_astTarget = exprLeft.getExprAST();
+            m_astTarget = exprLeft.getExprAST(ctx);
             }
         return argTarget;
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
-        return m_astInvoke == null ? super.getExprAST() : m_astInvoke;
+        return m_astInvoke == null ? super.getExprAST(ctx) : m_astInvoke;
         }
 
 

@@ -337,7 +337,7 @@ public class FileExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         assert isConstant();
         return toExprAst(toConstant());

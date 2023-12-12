@@ -347,14 +347,14 @@ public class IfStatement
                     // conditions, making the rest unreachable
                     fReachesThen = false;
                     code.add(new Jump(labelElse));
-                    listExprs.add(exprCond.getExprAST());
+                    listExprs.add(exprCond.getExprAST(ctx));
                     break;
                     }
                 else
                     {
                     fCompletes = exprCond.isCompletable();
                     exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
-                    listExprs.add(exprCond.getExprAST());
+                    listExprs.add(exprCond.getExprAST(ctx));
                     }
                 }
 

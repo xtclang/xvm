@@ -360,7 +360,8 @@ public class AssertStatement
                 assert interval != null;
                 code.add(new JumpNSample(
                     interval.generateArgument(ctx, code, true, true, errs), getEndLabel()));
-                astInterval = interval.getExprAST();
+
+                astInterval = interval.getExprAST(ctx);
                 }
             }
 
@@ -395,7 +396,7 @@ public class AssertStatement
                 code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
                 code.add(new Throw(argEx));
 
-                astMessage = message.getExprAST();
+                astMessage = message.getExprAST(ctx);
                 }
 
             holder.setAst(this, new AssertStmtAST(null, astInterval, astMessage));
@@ -503,7 +504,7 @@ public class AssertStatement
                 fCompletes &= exprCond.isCompletable();
                 argCond = exprCond.generateArgument(ctx, code, true, true, errs);
 
-                aAstCond[i] = exprCond.getExprAST();
+                aAstCond[i] = exprCond.getExprAST(ctx);
                 }
 
             if (message == null || fDebug)
@@ -557,7 +558,7 @@ public class AssertStatement
             code.add(new New_N(constNew, new Argument[]{argMsg, pool.valNull()}, argEx));
             code.add(new Throw(argEx));
 
-            astMessage = message.getExprAST();
+            astMessage = message.getExprAST(ctx);
             }
 
         holder.setAst(this, new AssertStmtAST(BinaryAST.makeCondition(aAstCond), astInterval, astMessage));

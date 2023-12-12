@@ -456,7 +456,7 @@ public class MapExpression
             aArg[i] = i == cArgs-1
                     ? arg
                     : ensurePointInTime(code, arg);
-            aAST[i] = expr.getExprAST();
+            aAST[i] = expr.getExprAST(ctx);
             }
 
         if (fKeys)
@@ -471,7 +471,7 @@ public class MapExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (m_aKeyAST == null)
             {

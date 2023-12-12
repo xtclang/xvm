@@ -799,7 +799,8 @@ public class AssignmentStatement
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
-                    astAssign = new AssignAST(stmtVar.getRegister().getRegAllocAST(), Operator.Asn, rvalue.getExprAST());
+                    astAssign = new AssignAST(stmtVar.getRegister().getRegAllocAST(),
+                                    Operator.Asn, rvalue.getExprAST(ctx));
                     break;
                     }
 
@@ -817,8 +818,8 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     }
 
-                astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
-                astAssign = new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST());
+                astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST(ctx));
+                astAssign = new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST(ctx));
                 break;
                 }
 
@@ -901,8 +902,8 @@ public class AssignmentStatement
                     operAsn = Operator.AsnIfNotFalse;
                     }
 
-                astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST());
-                astAssign = new AssignAST(astLVal, operAsn, rvalue.getExprAST());
+                astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST(ctx));
+                astAssign = new AssignAST(astLVal, operAsn, rvalue.getExprAST(ctx));
                 break;
                 }
 
@@ -941,7 +942,7 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     code.add(labelSkip);
 
-                    astAssign = new AssignAST(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                    astAssign = new AssignAST(lvalueExpr.getExprAST(ctx), operAsn, rvalue.getExprAST(ctx));
                     }
                 break;
                 }
@@ -971,7 +972,7 @@ public class AssignmentStatement
                             case BIT_XOR_ASN -> Operator.XorAsn;
                             default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
                             };
-                        astAssign = new AssignAST(lvalueExpr.getExprAST(), operAsn, rvalue.getExprAST());
+                        astAssign = new AssignAST(lvalueExpr.getExprAST(ctx), operAsn, rvalue.getExprAST(ctx));
                         }
                     }
                 break;

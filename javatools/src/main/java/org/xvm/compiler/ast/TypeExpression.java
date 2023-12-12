@@ -263,7 +263,7 @@ public abstract class TypeExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         TypeConstant type = getType();
         return new ConstantExprAST(type);

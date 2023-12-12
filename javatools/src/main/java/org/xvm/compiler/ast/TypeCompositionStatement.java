@@ -3194,7 +3194,7 @@ public class TypeCompositionStatement
                         Expression exprArg = listSuperArgs.get(i);
                         aSuperArgs[i] = exprArg.generateArgument(ctxEmit, code, true, true, errs);
 
-                        aAstArgs[i] = exprArg.getExprAST();
+                        aAstArgs[i] = exprArg.getExprAST(ctxEmit);
                         }
                     else
                         {

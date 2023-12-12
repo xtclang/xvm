@@ -323,7 +323,7 @@ public class CmpExpression
                 if (type1.isTypeOfType())
                     {
                     checkFormalType(ctx, expr2Name, type1);
-                    break CheckInference;
+                    // break CheckInference;
                     }
                 }
             }
@@ -593,7 +593,7 @@ public class CmpExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         if (false)
             {
@@ -609,11 +609,12 @@ public class CmpExpression
                 case COMP_ORD  -> BiExprAST.Operator.CompOrd;
                 default -> throw new UnsupportedOperationException(operator.getValueText());
                 };
-            return new CondOpExprAST(expr1.getExprAST(), op, expr2.getExprAST());
+            return new CondOpExprAST(expr1.getExprAST(ctx), op, expr2.getExprAST(ctx));
             }
 
-        ExprAST[] aAstArgs = new ExprAST[]
-                {toExprAst(m_typeCommon.getType()), expr1.getExprAST(), expr2.getExprAST()};
+        ExprAST[] aAstArgs = new ExprAST[] {
+                toTypeParameterAst(ctx, m_typeCommon.getType()),
+                expr1.getExprAST(ctx), expr2.getExprAST(ctx)};
 
         ConstantPool pool     = pool();
         ExprAST      exprCmp  = new ConstantExprAST(m_idCmp);

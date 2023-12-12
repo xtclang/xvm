@@ -380,7 +380,7 @@ public class ThrowExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         ExprAST astEx;
         ExprAST astMsg;
@@ -388,7 +388,7 @@ public class ThrowExpression
             {
             assert message == null;
 
-            astEx  = expr.getExprAST();
+            astEx  = expr.getExprAST(ctx);
             astMsg = null;
             }
         else
@@ -401,7 +401,7 @@ public class ThrowExpression
             astEx  = new ConstantExprAST(constEx);
             astMsg = message == null
                     ? new ConstantExprAST(pool.ensureStringConstant(computeMessage()))
-                    : message.getExprAST();
+                    : message.getExprAST(ctx);
             }
 
         TypeConstant typeResult = getType();

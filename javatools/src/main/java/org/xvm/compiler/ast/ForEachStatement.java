@@ -711,7 +711,7 @@ public class ForEachStatement
                 }
             }
 
-        ExprAST astLVal = m_exprLValue.getExprAST();
+        ExprAST astLVal = m_exprLValue.getExprAST(ctx);
         if (getCondition().getLValue() instanceof Statement stmt)
             {
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
@@ -751,7 +751,7 @@ public class ForEachStatement
         if (fCompletes)
             {
             holder.setAst(this, new ForEachStmtAST(nodeType, listSpecial.toArray(BinaryAST.NO_ALLOCS),
-                    astLVal, m_exprRValue.getExprAST(), holder.getAst(block)));
+                    astLVal, m_exprRValue.getExprAST(ctx), holder.getAst(block)));
             }
         return fCompletes;
         }

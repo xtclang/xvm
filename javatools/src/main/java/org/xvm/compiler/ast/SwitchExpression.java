@@ -340,7 +340,7 @@ public class SwitchExpression
                 code.add(new Jump(labelExit));
 
                 assert abastBody[iCase] == null;
-                abastBody[iCase] = expr.getExprAST();
+                abastBody[iCase] = expr.getExprAST(ctx);
                 }
             }
         code.add(labelExit);
@@ -380,7 +380,7 @@ public class SwitchExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         return new SwitchAST(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
                 m_aconstCases, m_abastBody, getTypes());

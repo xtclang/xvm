@@ -282,14 +282,14 @@ public class TemplateExpression
         }
 
     @Override
-    public ExprAST getExprAST()
+    public ExprAST getExprAST(Context ctx)
         {
         int       cExprs = exprs.size();
         ExprAST[] aExpr  = new ExprAST[1 + cExprs];
         aExpr[0] = m_reg$.getRegAllocAST();
         for (int i = 0; i < cExprs; i++)
             {
-            aExpr[i+1] = exprs.get(i).getExprAST();
+            aExpr[i+1] = exprs.get(i).getExprAST(ctx);
             }
         return new TemplateExprAST(aExpr);
         }

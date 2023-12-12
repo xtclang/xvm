@@ -1479,7 +1479,7 @@ public class CaseManager<CookieType>
 
             if (exprBast != null)
                 {
-                abast[ibast++] = exprBast.getExprAST();
+                abast[ibast++] = exprBast.getExprAST(ctx);
                 }
             }
         assert ofArgVal == aArgVal.length;
