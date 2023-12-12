@@ -3052,7 +3052,7 @@ public class NameExpression
                             // (see Frame.getArgument() check for a missing argument)
                             for (int i = cArgVisible-1; i > cArgDesired-1; i--)
                                 {
-                                typeFn = pool.bindFunctionParam(typeFn, i, null);
+                                typeFn = pool.bindFunctionParam(typeFn, i);
                                 }
                             }
                         }

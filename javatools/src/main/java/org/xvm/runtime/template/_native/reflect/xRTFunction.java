@@ -560,8 +560,9 @@ public class xRTFunction
                     }
                 }
 
-            return new SingleBoundHandle(frame.f_context.f_container,
-                pool.bindFunctionParam(f_type, iArg, resolver), this, iArg, hArg);
+            TypeConstant typeFn = pool.bindFunctionParam(f_type.resolveGenerics(pool, resolver), iArg);
+
+            return new SingleBoundHandle(frame.f_context.f_container, typeFn, this, iArg, hArg);
             }
 
         /**

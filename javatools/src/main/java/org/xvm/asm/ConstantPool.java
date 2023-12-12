@@ -3687,14 +3687,12 @@ public class ConstantPool
     /**
      * Create a new function type by binding the specified parameter of the passed in function type.
      *
-     * @param typeFn    the function type
-     * @param iParam    the parameter index
-     * @param resolver  (optional) generic type resolver to resolve the resulting type
+     * @param typeFn  the function type
+     * @param iParam  the parameter index
      *
      * @return a new function type that skips the specified parameter
      */
-    public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam,
-                                          GenericTypeResolver resolver)
+    public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam)
         {
         assert typeFn.isA(typeFunction()) && typeFn.getParamsCount() > 0;
 
@@ -3724,10 +3722,7 @@ public class ConstantPool
             typeP = ensureTupleType(atypeNew);
             }
 
-        TypeConstant typeNew = ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
-        return resolver == null
-                ? typeNew
-                : typeNew.resolveGenerics(this, resolver);
+        return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
         }
 
 
