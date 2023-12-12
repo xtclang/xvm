@@ -26,7 +26,7 @@ publishing {
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
         with (xtcGitHubClient) {
             if (verifyGitHubConfig()) {
-                logger.lifecycle("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
+                logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
                 maven {
                     name = "GitHub"
                     description = "Publish all publications to the xtclang.org GitHub repository."
@@ -98,30 +98,17 @@ val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to local repositories (e.g. build and mavenLocal)."
     dependsOn(publishAllPublicationsToBuildRepository, publishAllPublicationsToMavenLocalRepository)
-    doLast {
-        logger.lifecycle("$prefix Finished '$name' (local artifact publication to build and mavenLocal repositories).")
-    }
 }
 
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
     delete(buildRepoDirectory)
-    doLast {
-        logger.lifecycle("$prefix Finished '$name' (deleted build repo under ${buildRepoDirectory.get()}). Likely triggered by inserting XTC plugin into distribution.")
-    }
 }
 
 val publishAllPublicationsToBuildRepository by tasks.existing {
     dependsOn(pruneBuildRepo)
     mustRunAfter(pruneBuildRepo)
-    doLast {
-        logger.lifecycle("$prefix Finished '$name' (local artifact publication to build repository).")
-    }
 }
 
-val publishAllPublicationsToMavenLocalRepository by tasks.existing {
-    doLast {
-        logger.lifecycle("$prefix Finished '$name' (local artifact publication to Maven repository).")
-    }
-}
+val publishAllPublicationsToMavenLocalRepository by tasks.existing

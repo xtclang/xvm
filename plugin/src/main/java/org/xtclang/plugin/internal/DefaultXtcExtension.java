@@ -10,4 +10,9 @@ public class DefaultXtcExtension implements XtcExtension {
     public DefaultXtcExtension(final Project project) {
         this.project = project;
     }
+
+    @Override
+    public String toString() {
+        return project.getName() + " XTC extension";
+    }
 }

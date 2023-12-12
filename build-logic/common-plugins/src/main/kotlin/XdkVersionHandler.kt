@@ -8,7 +8,10 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         private const val XDK_VERSION_CATALOG_NAME = "libs"
         private const val XDK_VERSION_CATALOG_VERSION = "xdk"
-        private const val XDK_VERSION_CATALOG_GROUP = "xdk-group"
+        private const val XDK_VERSION_CATALOG_GROUP = "group-xdk"
+        private const val XTC_VERSION_PLUGIN_CATALOG_VERSION = "xtc-plugin"
+        private const val XTC_VERSION_PLUGIN_CATALOG_GROUP = "group-xtc-plugin"
+        private const val XDK_ROOT_PROJECT_NAME = "xvm"
 
         fun <T : Dependency> semanticVersionFor(dependency: Provider<T>): SemanticVersion {
             with(dependency.get()) {
@@ -18,7 +21,12 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
     }
 
     fun assignSemanticVersionFromCatalog(): SemanticVersion {
-        return assignSemanticVersion(catalogSemanticVersion())
+        val verXdk = catalogSemanticVersion(XDK_VERSION_CATALOG_GROUP, XDK_VERSION_CATALOG_VERSION)
+        val verXtcPlugin = catalogSemanticVersion(XTC_VERSION_PLUGIN_CATALOG_GROUP, XTC_VERSION_PLUGIN_CATALOG_VERSION)
+        if (verXdk != verXtcPlugin) {
+            throw project.buildException("Illegal state: version mismatch between XDK and XTC plugin: '$verXdk' != '$verXtcPlugin'")
+        }
+        return assignSemanticVersion(catalogSemanticVersion(XDK_VERSION_CATALOG_GROUP, XDK_VERSION_CATALOG_VERSION))
     }
 
     private fun assignSemanticVersion(semanticVersion: SemanticVersion): SemanticVersion {
@@ -33,6 +41,10 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
         project.group = group
         project.version = version
 
+        if (name == XDK_ROOT_PROJECT_NAME) {
+            return semanticVersion
+        }
+
         logger.lifecycle("$prefix XDK Project '$name' versioned as: '$semanticVersion'")
         with (project) {
             logger.info("""
@@ -46,9 +58,9 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
         return semanticVersion
     }
 
-    private fun catalogSemanticVersion(): SemanticVersion {
+    private fun catalogSemanticVersion(catalogGroup: String, catalogVersion: String): SemanticVersion {
         // Try to resolve group and version to assign for an unversioned project in this repo (XDK).
-        return SemanticVersion(catalogVersion(XDK_VERSION_CATALOG_GROUP), project.name, catalogVersion(XDK_VERSION_CATALOG_VERSION))
+        return SemanticVersion(catalogVersion(catalogGroup), project.name, catalogVersion(catalogVersion))
     }
 
     /**
@@ -63,7 +75,7 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
             val versionCatalog = catalogs.named(catalog)
             val value = versionCatalog.findVersion(name)
             if (value.isPresent) {
-                logger.lifecycle("$prefix Version catalog '$catalog': '$name' = '${value.get()}'")
+                logger.info("$prefix Version catalog '$catalog': '$name' = '${value.get()}'")
                 return value.get().toString()
             }
         }

@@ -4,8 +4,8 @@ import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 
 plugins {
-    id("org.xtclang.build.java")
-    id("org.xtclang.build.publish")
+    alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.gradle.portal.publish)
     alias(libs.plugins.tasktree)
 }
@@ -50,11 +50,11 @@ private val pluginVersion = getXdkProperty("org.xtclang.plugin.version", version
 
 private val shouldBundleJavaTools = getXdkPropertyBoolean("org.xtclang.plugin.bundle.javatools")
 
-logger.lifecycle("$prefix Plugin (id: $pluginId) will get project and artifact versions like this: '$pluginGroup:$pluginName:$pluginVersion'")
+logger.lifecycle("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
 publishing {
     publications {
-        register<MavenPublication>("xtcPlugin") {
+        val xtcPlugin by registering(MavenPublication::class) {
             groupId = pluginGroup
             artifactId = pluginName
             version = pluginVersion
@@ -65,6 +65,7 @@ publishing {
 }
 
 // TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
+@Suppress("UnstableApiUsage")
 gradlePlugin {
     // The built-in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
     // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
@@ -72,11 +73,9 @@ gradlePlugin {
     // get three artifacts.
     isAutomatedPublishing = getXdkPropertyBoolean("org.xtclang.plugin.isAutomatedPublishing", true)
 
-    logger.info("$prefix Configuring gradlePlugin; isAutomatedPublishing=$isAutomatedPublishing")
+    logger.info("$prefix Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishing")
 
-    @Suppress("UnstableApiUsage")
     vcsUrl = getXdkProperty("org.xtclang.plugin.vcs.url")
-    @Suppress("UnstableApiUsage")
     website = getXdkProperty("org.xtclang.plugin.website")
 
     plugins {
@@ -86,8 +85,7 @@ gradlePlugin {
             implementationClass = getXdkProperty("org.xtclang.plugin.implementation.class")
             displayName = getXdkProperty("org.xtclang.plugin.display.name")
             description = getXdkProperty("org.xtclang.plugin.description")
-            logger.lifecycle("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
-            @Suppress("UnstableApiUsage")
+            logger.info("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
             tags = listOfNotNull("xtc", "language", "ecstasy", "xdk")
         }
     }
@@ -95,11 +93,14 @@ gradlePlugin {
 
 tasks.withType<Javadoc>().configureEach {
     enabled = false
+    // TODO: Write JavaDocs for plugin.
+    logger.info("$prefix Note: JavaDoc task is currently disabled, but certain publication methods, such as for the Gradle plugin portal will still generate and publish JavaDocs.")
 }
 
 tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
     enabled = false
-    logger.lifecycle("$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent.")
+    // TODO: Reuse the exsting PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
+    logger.info("$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent.")
 }
 
 val jar by tasks.existing(Jar::class) {

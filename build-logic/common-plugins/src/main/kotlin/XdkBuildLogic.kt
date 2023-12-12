@@ -69,7 +69,6 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
         const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
         const val XDK_TASK_GROUP_DEBUG = "debug"
-        const val XDK_TASK_GROUP_VERSION = "version"
 
         private const val ENV_PATH = "PATH"
         private const val XTC_LAUNCHER = "xec"
@@ -81,9 +80,10 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
             // Companion objects are guaranteed to be singletons by Kotlin, so this cache works as build global cache.
             return cache[project] ?: XdkBuildLogic(project).also {
                 cache[project] = it
+                val logger = project.logger
                 val size = cache.size
                 val uniqueSize = cache.values.distinct().size
-                project.logger.lifecycle("${it.prefix} XDK build logic initialized (instances: ${size})")
+                logger.info("${it.prefix} XDK build logic initialized (instances: ${size})")
                 assert(size == uniqueSize)
             }
         }

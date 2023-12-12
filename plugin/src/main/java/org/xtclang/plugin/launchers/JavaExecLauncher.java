@@ -35,7 +35,7 @@ public class JavaExecLauncher extends XtcLauncher {
             throw buildException("Failed to resolve javatools.jar in any classpath.");
         }
         info("{} '{}' {}; Using javatools.jar in classpath from: {}", prefix, args.getIdentifier(), args.getClass(), javaToolsJar.getAbsolutePath());
-        lifecycle("{} JavaExec command: {}", prefix, args.toString(javaToolsJar));
+        info("{} JavaExec command: {}", prefix, args.toString(javaToolsJar));
 
         final var builder = XtcExecResult.builder(getClass(), args);
         return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {

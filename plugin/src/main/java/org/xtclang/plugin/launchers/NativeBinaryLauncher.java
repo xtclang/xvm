@@ -6,6 +6,7 @@ import org.gradle.process.ExecResult;
 import java.util.Objects;
 
 // TODO: Finish the support for native launchers from the local System PATH, and implement the "nativeLauncher = true" flag.
+//   This is code complete but should be tested.
 @SuppressWarnings("unused")
 public class NativeBinaryLauncher extends XtcLauncher {
 

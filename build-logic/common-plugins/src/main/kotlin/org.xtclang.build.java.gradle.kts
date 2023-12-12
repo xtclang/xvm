@@ -58,20 +58,24 @@ tasks.withType<JavaCompile>().configureEach {
 
     val args = buildList {
         add("-Xlint:${if (lint) "all" else "none"}")
+
         if (enablePreview) {
             add("--enable-preview")
             if (lint) {
                 add("-Xlint:preview")
             }
         }
+
         if (maxErrors > 0) {
             add("-Xmaxerrs")
             add("$maxErrors")
         }
+
         if (maxWarnings > 0) {
             add("-Xmaxwarns")
             add("$maxWarnings")
         }
+
         if (warningsAsErrors) {
             add("-Werror")
         }

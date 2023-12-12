@@ -15,7 +15,7 @@ import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResult> {
     protected XtcLauncher(final Project project, final String description) {
         super(project);
-        logger.info("{} (launcher {}) spawns '{}'.", prefix(project), JavaExecLauncher.class.getSimpleName(), description);
+        logger.info("{} (Launcher '{}') spawns '{}'.", prefix(project), JavaExecLauncher.class.getSimpleName(), description);
     }
 
     private static String nativeLauncherFor(final String mainClassName) {
@@ -57,7 +57,7 @@ public abstract class XtcLauncher extends ProjectDelegate<CommandLine, ExecResul
 
     public void logStream(final String name, final LogLevel level, final String output) {
         if (!output.isEmpty()) {
-            output.lines().forEach(line -> logger.log(level, "{} [{}] # {}", prefix, name, line));
+            output.lines().forEach(line -> logger.log(level, "{} [{}] @ {}", prefix, name, line));
         }
     }
 }

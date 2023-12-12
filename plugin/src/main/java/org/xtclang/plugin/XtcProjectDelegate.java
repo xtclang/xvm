@@ -217,9 +217,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.getOutputs().file(version);
             task.doLast(t -> {
                 final var semanticVersion = getSemanticVersion();
-                lifecycle("{} Writing version information: {}", prefix, semanticVersion);
+                final var file = version.get().getAsFile();
+                lifecycle("{} Writing version information: '{}' to '{}'", prefix, semanticVersion, file.getAbsolutePath());
                 try {
-                    Files.writeString(version.get().getAsFile().toPath(), semanticVersion + System.lineSeparator());
+                    Files.writeString(file.toPath(), semanticVersion + System.lineSeparator());
                 } catch (final IOException e) {
                     throw buildException("I/O error when writing version file: '" + e.getMessage() + '\'', e);
                 }

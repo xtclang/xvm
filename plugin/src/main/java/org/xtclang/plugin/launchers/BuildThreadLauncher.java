@@ -12,11 +12,18 @@ import java.net.URLClassLoader;
 import java.util.Objects;
 
 public class BuildThreadLauncher extends XtcLauncher {
+    /**
+     * The launcher invocation method, in a variant that cannot do System.exit, to safeguard the
+     * "fork = false" configuration, which should be used for debugging purposes only.
+     */
+
+    private static final String INVOKE_METHOD_NAME_NO_SYSTEM_EXIT = "call";
+
     private final Method main;
 
     BuildThreadLauncher(final Project project, final String mainClassName) {
         super(project, "In-process: " + mainClassName);
-        this.main = resolveMethod(mainClassName, "call", String[].class);
+        this.main = resolveMethod(mainClassName, INVOKE_METHOD_NAME_NO_SYSTEM_EXIT, String[].class);
     }
 
     @Override

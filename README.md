@@ -1,5 +1,3 @@
-# TINY TITLE CHANGE
-
 # Welcome to Ecstasy! #
 
 This is the public repository for the Ecstasy language ([xtclang.org](http://xtclang.org/)) and the
@@ -468,6 +466,27 @@ utility, depending on your platform. This will overwrite several libraries and f
 local installation.
 
 For more information about the XTC DSL, please see the README.md file in the "plugin" project.
+
+### Releasing and Publishing
+
+This is mostly relevant to the XDK development team with release management privileges. The workflow
+for adding XTC releases:
+
+https://www.baeldung.com/maven-snapshot-release-repository
+
+### Releasing
+1) Take the current version of master and create a release branch. 
+2) Set the VERSION in the release branch project root to reflect the version of the release.
+Typically an ongoing development branch will be a "-SNAPSHOT" suffixed release, but not
+an official XTC release, which just has a group:name:version number
+3) Build, tag and add the release using the GitHub release plugin.
+
+### Publishing 
+
+1) ./gradlew publish to build the artifacts and verify they work. This will publish the artifacts
+to a local repositories and the XTC GitHub org repository. 
+2) To publish the plugin to Gradle Plugin Portal: ./gradlew :plugin:publishPlugins (publish the plugin to gradlePortal)
+3) To publish the XDK distro to Maven Central: TODO
 
 ## Questions?
 

@@ -3,7 +3,8 @@
  */
 
 plugins {
-    id("org.xtclang.build.java")
+    alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.tasktree)
 }
 
 val semanticVersion: SemanticVersion by extra
@@ -31,6 +32,6 @@ val jar by tasks.existing(Jar::class) {
         )
     }
     doLast {
-        logger.info("$prefix Finished building Java utilities: '${archiveFile.get().asFile.absolutePath}' as artifact.") // '$semanticVersion'.")
+        logger.info("$prefix Finished building Java utilities: '${archiveFile.get().asFile.absolutePath}' as artifact.")
     }
 }

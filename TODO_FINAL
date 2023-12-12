@@ -7,6 +7,7 @@ TODO:
 * VERSION and GROUP files in the root.
 
 Maybe after merge:
+* Make property prefix "org.xtclang." a global constant or something we instantiate the XdkVersionHandler with.
 * Can we get rid of the gradlePluginPublish source and doc publications? Where does the publication come from?
 * UseLogging, prefix?
 * git maven plugin to help ease the correct git flow?

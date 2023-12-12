@@ -10,8 +10,9 @@ import de.undercouch.gradle.tasks.download.Download
 import org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP
 
 plugins {
-    id("org.xtclang.build.java")
+    alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.download)
+    alias(libs.plugins.tasktree)
 }
 
 dependencies {
@@ -59,7 +60,7 @@ val run by tasks.registering {
             classpath(configurations.runtimeClasspath)
             classpath(unicodeJar)
             args(localUcdZip.absolutePath)
-            mainClass.set("org.xvm.tool.BuildUnicodeTables")
+            mainClass = "org.xvm.tool.BuildUnicodeTables"
         }
     }
 }

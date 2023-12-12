@@ -1,9 +1,124 @@
+import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+
 /*
  * Main build file for the XVM project, producing the XDK.
  */
+group = libs.versions.group.xdk.get()
+version = libs.versions.xdk.get()
 
 plugins {
-    id("org.xtclang.build.version")
-    id("org.xtclang.build.aggregator")
+    alias(libs.plugins.xdk.build.version)
+    alias(libs.plugins.xdk.build.aggregator)
     alias(libs.plugins.tasktree)
+}
+
+private val distributionTaskGroup = "distribution"
+private val xdk = gradle.includedBuild("xdk")
+private val plugin = gradle.includedBuild("plugin")
+private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
+private val gitHubRepoTaskPrefixes = listOfNotNull("list", "delete")
+
+/**
+ * Installation and distribution tasks that aggregate publishable/distributable included
+ * build projects. The aggregator proper should be as small as possible, and only contains
+ * LifeCycle dependencies, aggregated through the various included builds. This creates as
+ * few bootstrapping problems as possible, since by the time we get to the configuration phase
+ * of the root build.gradle.kts, we have installed convention plugins, resolved version catalogs
+ * and similar things.
+ */
+
+val install by tasks.registering {
+    group = distributionTaskGroup
+    description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
+    doLast {
+        logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
+    }
+}
+
+install {
+    dependsOn(xdk.task(":installDist"))
+}
+
+val installLocalDist by tasks.registering {
+    group = distributionTaskGroup
+    description = "Build and overwrite any local distribution with the new distribution produced by the build."
+    dependsOn(xdk.task(":$name"))
+    doLast {
+        logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
+    }
+}
+
+val installInitScripts by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Build and overwrite any local distribution with the new distribution produced by the build."
+    dependsOn(xdk.task(":$name"))
+    doLast {
+        logger.lifecycle("$prefix Finished '$name' (task state: $state.)")
+    }
+}
+
+val importUnicodeFiles by tasks.registering {
+    group = BUILD_GROUP
+    description = "Download and regenerate the unicode file as resources."
+    dependsOn(xdk.task(":$name"))
+    doLast {
+        logger.lifecycle("$prefix Finished '$name' (generated and imported new unicode files)")
+    }
+}
+
+/*
+ * Register aggregated publication tasks to the top level project, to ensure we can publish both
+ * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or
+ * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
+ * in local repositories.
+ *
+ * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
+ * output directory, which should be the case here. If not, we will have to put back the
+ * parallel check/task failure condition.
+ */
+
+val publishRemote by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
+    includedBuildsWithPublications.forEach {
+        dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
+    }
+    doLast {
+        logger.lifecycle("$prefix Finished '$name'.")
+    }
+}
+
+val publishLocal by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
+    includedBuildsWithPublications.forEach {
+        dependsOn(it.task(":$name"))
+    }
+    doLast {
+        logger.lifecycle("$prefix Finished '$name'.")
+    }
+}
+
+val publish by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Task that aggregates publish tasks for builds with publications."
+    dependsOn(publishLocal, publishRemote)
+    doLast {
+        logger.lifecycle("$prefix Finished '$name'.")
+    }
+}
+
+gitHubRepoTaskPrefixes.forEach { taskPrefix ->
+    val taskName = "${taskPrefix}GitHubPublications"
+    tasks.register(taskName) {
+        group = PUBLISH_TASK_GROUP
+        description = "Task that aggregates '$taskName' tasks for builds with publications."
+        includedBuildsWithPublications.forEach {
+            dependsOn(it.task(":$taskName"))
+        }
+        doLast {
+            logger.lifecycle("$prefix Finished '$name'.")
+        }
+    }
 }

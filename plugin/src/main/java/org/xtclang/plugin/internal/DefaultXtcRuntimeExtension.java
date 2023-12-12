@@ -100,7 +100,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
      *
      * <p>
      * We are working on a more seamless approach, triggered on assert:debug in Ecstasy code, and
-     * controlling the executing process. While Gradle eats and thows away STDIN in lots of
+     * controlling the executing process. While Gradle eats and throws away STDIN in lots of
      * configurations, the "robust" way to make what we are trying to work, is to redirect
      * stdin and use it to talk to a debugger over the console. This requires, e.g. changing
      * the scope of a JavaExec so that it runs in the Gradle build process, with daemons enabled.
@@ -195,7 +195,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
     @Override
     public List<String> getModuleArgs() {
         final var list = modules.get().stream().map(m -> m.getArgs().get()).toList().stream().flatMap(Collection::stream).toList();
-        logger.lifecycle("{} flatmap args: ${}", prefix, list);
+        logger.info("{} flatmap args: ${}", prefix, list);
         return list;
     }
 

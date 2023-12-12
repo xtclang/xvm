@@ -16,7 +16,7 @@ plugins {
      *
      * TODO: A standalone "third party app" template repo is almost finished.
      */
-    id("org.xtclang.build.version")
+    alias(libs.plugins.xdk.build.version)
 
    /**
     * This is the XTC plugin. An external user would have a version catalog of their own, default location

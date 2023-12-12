@@ -10,7 +10,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
  */
 
 plugins {
-    id("org.xtclang.build.java")
+    alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.tasktree)
 }
 

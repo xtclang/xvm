@@ -3,6 +3,7 @@ package org.xtclang.plugin;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 
+@SuppressWarnings("unused")
 public interface XtcTaskExtension {
     ListProperty<String> getJvmArgs();
 

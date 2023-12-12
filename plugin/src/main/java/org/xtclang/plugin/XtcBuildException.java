@@ -3,7 +3,12 @@ package org.xtclang.plugin;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 
+import java.io.Serial;
+
 public class XtcBuildException extends GradleException {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     @SuppressWarnings("unused")
     public XtcBuildException(final String msg) {
         this(msg, null);

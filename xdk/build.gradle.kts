@@ -12,7 +12,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
  */
 
 plugins {
-    id("org.xtclang.build.publish")
+    alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
@@ -84,24 +84,36 @@ dependencies {
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
 
-internal val xdkDist = xdkBuildLogic.distro()
+// TODO: Enable maven central publication setup of snapshots and releases.
+private val xdkDist = xdkBuildLogic.distro()
 logger.lifecycle("$prefix *** Building XDK; semantic version: '${property("semanticVersion")}' ***")
+
+// TODO: Use the Nexus publication plugin and
+//    ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+//    (incorporate that in aggregate publish task in xvm/build.gradle.kts)
 
 publishing {
     publications {
-        register<MavenPublication>("xdkArchive") {
+        val xdkArchive by registering(MavenPublication::class) {
             with(project) {
                 groupId = group.toString()
                 artifactId = project.name
                 version = version.toString()
             }
-            logger.lifecycle("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
+            pom {
+                name = "xdk"
+                description = "XTC Language Software Development Kit (XDK) Distribution Archive"
+                url = "https://xtclang.org"
+            }
+            logger.info("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
                 extension = "zip"
             }
         }
     }
 }
+
+// TODO: Add Nexus snapshot and release repositories here:
 
 /**
  * Run once, to create templates in GRADLE_USER_HOME/init.d/ for an XTC Org user with
@@ -119,8 +131,7 @@ publishing {
  */
 val installInitScripts by tasks.registering(Copy::class) {
     group = PUBLISH_TASK_GROUP
-    description =
-        "Writes the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
+    description = "Write the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
     from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
         eachFile {
             // TODO: decide if "must be online" trumps "install once", as to which script template
@@ -212,26 +223,19 @@ val clean by tasks.existing {
             // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
             val subProjectBuildDir = it.layout.buildDirectory.get().asFile
             delete(it.layout.buildDirectory)
-            logger.lifecycle("$prefix $name Cleaned subproject ${it.name} build directory (buildDir: '$subProjectBuildDir')")
+            logger.info("$prefix Task '$name' cleaned subproject ${it.name} build directory (buildDir: '$subProjectBuildDir')")
         }
         delete(compositeRootBuildDirectory)
-        logger.lifecycle("$prefix $name Cleaned composite build common build directory: ${compositeRootBuildDirectory.get()}")
+        logger.info("$prefix Task '$name' cleaned composite build common build directory: ${compositeRootBuildDirectory.get()}")
     }
 }
 
 val distTar by tasks.existing(Tar::class) {
     compression = Compression.GZIP
-    archiveExtension.set("tar.gz")
-    doLast {
-        logger.lifecycle("$prefix Finished building distribution: '$name'")
-    }
+    archiveExtension = "tar.gz"
 }
 
-val distZip by tasks.existing(Zip::class) {
-    doLast {
-        logger.lifecycle("$prefix Finished building distribution: '$name'")
-    }
-}
+val distZip by tasks.existing(Zip::class)
 
 val assembleDist by tasks.existing {
     doFirst {
@@ -360,56 +364,6 @@ val installLocalDist by tasks.registering {
         logger.lifecycle("$prefix $name Finished.")
         XdkBuildLogic.listDirWithTimestamps(localDistDir).lines().forEach {
             logger.lifecycle("$prefix   $it")
-        }
-    }
-}
-
-/**
- * This task can update the Unicode data files, if a Unicode release has occurred and provided
- * a new `ucd.all.flat.zip`; that is the only time that the Unicode data files have to be updated.
- *
- * This task is used to force rebuild and input unicode files into our build. This is not part of the
- * common build, but there is no reason to not make it that, now that we have caching parallel
- * Gradle/Maven build infrastructure.
- */
-
-// TODO: We do NOT want the unicode consumer as a project dependency. We must resolve it in-task somehow.
-
-val importUnicodeFiles by tasks.registering {
-    group = BUILD_GROUP
-    description = "Copy the various Unicode data files from :javatools_unicode to :lib_ecstasy project."
-
-    logger.warn("$prefix '$name' is currently broken. There is a reported issue, and we will get to this very soon.")
-
-    alwaysRerunTask()
-    dependsOn(gradle.includedBuild("javatools_unicode").task(":run"))
-    dependsOn(xtcUnicodeConsumer)
-    inputs.files(xtcUnicodeConsumer)
-
-    val libEcstasy = project(XdkVersionHandler.semanticVersionFor(libs.xdk.ecstasy).artifactId)
-    val outputDir = File(libEcstasy.projectDir, "src/main/resources/ecstasy/text2")
-    outputs.dir(outputDir)
-
-    doLast {
-        logger.lifecycle("$prefix Trying to write unicode tables to ${outputDir.absolutePath}...")
-        logger.lifecycle("$prefix Provider files: ${xtcUnicodeConsumer.get().resolve()}")
-        fileTree(xtcUnicodeConsumer).forEach {
-            println(" *** TODO: WORK : $it")
-        }
-
-        copy {
-            from(fileTree(xtcUnicodeConsumer)) {
-                into(outputDir)
-            }
-            includeEmptyDirs = false
-            eachFile {
-                relativePath = RelativePath(true, name)
-                logger.lifecycle("$prefix Copying unicode file: ${file.absolutePath} to ${outputDir.absolutePath}.")
-            }
-        }
-        logger.lifecycle("$prefix Unicode files copied to ${outputDir.absolutePath}. Please verify your git diff, test and commit.")
-        fileTree(outputDir).forEach {
-            logger.lifecycle("$prefix     Destination: $it")
         }
     }
 }

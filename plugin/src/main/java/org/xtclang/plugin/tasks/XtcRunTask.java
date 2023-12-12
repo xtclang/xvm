@@ -187,7 +187,7 @@ public class XtcRunTask extends XtcDefaultTask {
 
     protected Stream<XtcRunModule> moduleRunQueue() {
         final var modulesToRun = resolveModulesToRun();
-        project.lifecycle("{} '{}' Queued up {} modules to execute:", prefix, name, modulesToRun.size());
+        project.lifecycle("{} '{}' Queued up {} module(s) to execute:", prefix, name, modulesToRun.size());
         return getAllowParallel().get() ? modulesToRun.parallelStream() : modulesToRun.stream();
     }
 
