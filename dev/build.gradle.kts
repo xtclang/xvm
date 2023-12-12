@@ -1,3 +1,4 @@
+import org.gradle.api.logging.LogLevel.INFO
 import org.xtclang.plugin.tasks.XtcCompileTask
 import org.xtclang.plugin.tasks.XtcRunTask
 
@@ -114,8 +115,8 @@ xtcRun {
 
 tasks.withType<XtcCompileTask>().configureEach {
     doLast {
-       printTaskInputs()
-       printTaskOutputs()
+       printTaskInputs(INFO)
+       printTaskOutputs(INFO)
     }
 }
 
@@ -129,7 +130,7 @@ tasks.withType<XtcRunTask>().configureEach {
      */
     //alwaysRerunTask()
     doLast {
-       printTaskInputs()
-       printTaskOutputs()
+       printTaskInputs(INFO)
+       printTaskOutputs(INFO)
     }
 }
