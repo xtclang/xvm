@@ -154,13 +154,16 @@ val pluginPublication by tasks.registering {
     // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
     dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
     outputs.dir(buildRepoDirectory)
+}
+
+pluginPublication {
     doLast {
         // TODO: Right now this is always executed, as we declare an outgoing artifact for it in plugin/build.gradle.kts
         //   May not be necessary. The reason it's there is because the installLocalDist wants it, but it should really
         //   only try to resolve that at runtime. However, the dependency will still be resolved, and can probably be
         //   more lazy.
         logger.lifecycle("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
-        //printTaskOutputs()
+        printTaskOutputs(INFO)
     }
 }
 
@@ -238,6 +241,10 @@ val distTar by tasks.existing(Tar::class) {
 val distZip by tasks.existing(Zip::class)
 
 val assembleDist by tasks.existing {
+    if (getXdkPropertyBoolean("org.xtclang.install.distExe", false)) {
+        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs makensis and the EnVar plugin.")
+        dependsOn(distExe)
+    }
     doFirst {
         logger.lifecycle("$prefix $name; Assembling distribution...")
     }
@@ -308,7 +315,7 @@ val test by tasks.existing {
  */
 val installDist by tasks.existing {
     doLast {
-        logger.lifecycle("$prefix '$name' Installed distribution to ${project.layout.buildDirectory}/install/ directory.")
+        logger.lifecycle("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
         logger.info("$prefix Installation files:")
         printTaskOutputs()
     }

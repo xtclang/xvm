@@ -47,10 +47,10 @@ tasks.withType<JavaExec>().configureEach {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    val lint = getXdkProperty("org.xtclang.java.lint", "false").toBoolean()
+    val lint = getXdkPropertyBoolean("org.xtclang.java.lint", false)
     val maxErrors = getXdkProperty("org.xtclang.java.maxErrors", "0").toInt()
     val maxWarnings = getXdkProperty("org.xtclang.java.maxWarnings", "0").toInt()
-    val warningsAsErrors = getXdkProperty("org.xtclang.java.warningsAsErrors", "false").toBoolean()
+    val warningsAsErrors = getXdkPropertyBoolean("org.xtclang.java.warningsAsErrors", false)
 
     if (!warningsAsErrors) {
         logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best-practice (Enable -Werror).")
