@@ -113,6 +113,9 @@ service HttpHandler
         });
     }
 
+
+    // ----- HttpHandler specific methods ----------------------------------------------------------
+
     /**
      * Shutdown this HttpHandler.
      */
