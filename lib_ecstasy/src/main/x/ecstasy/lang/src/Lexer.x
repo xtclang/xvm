@@ -64,9 +64,7 @@ class Lexer
     /**
      * True once the stream of characters is exhausted.
      */
-    public Boolean eof.get() {
-        return reader.eof;
-    }
+    public Boolean eof.get() =  reader.eof;
 
     /**
      * The number of characters past the EOF that the lexer has pretended to read.
@@ -129,9 +127,7 @@ class Lexer
     protected static const Mark(TextPosition position, Int pastEOF, Boolean whitespace);
 
     @Override
-    immutable Object mark() {
-        return new Mark(reader.position, pastEOF, whitespace);
-    }
+    immutable Object mark() = new Mark(reader.position, pastEOF, whitespace);
 
     @Override
     void restore(immutable Object mark, Boolean unmark = False) {
@@ -1625,9 +1621,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatStringLiteral(TextPosition before) {
-        return eatStringChars(before, False, False);
-    }
+    protected (Id id, Object value) eatStringLiteral(TextPosition before) = eatStringChars(before, False, False);
 
     /**
      * Eat the remainder of a multi-line string literal. The opening "\|" has already been eaten.
@@ -1637,9 +1631,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatMultilineLiteral(TextPosition before) {
-        return eatStringChars(before, False, True);
-    }
+    protected (Id id, Object value) eatMultilineLiteral(TextPosition before) = eatStringChars(before, False, True);
 
     /**
      * Lex a template literal, such as `$"x={x}"`. The opening `$"` has already been eaten.
@@ -1649,9 +1641,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatTemplateLiteral(TextPosition before) {
-        return eatStringChars(before, True, False);
-    }
+    protected (Id id, Object value) eatTemplateLiteral(TextPosition before) = eatStringChars(before, True, False);
 
     /**
      * Lex a multi-line template literal, such as:
@@ -1666,9 +1656,7 @@ class Lexer
      * @return id     the token id
      * @return value  the token value
      */
-    protected (Id id, Object value) eatMultilineTemplateLiteral(TextPosition before) {
-        return eatStringChars(before, True, True);
-    }
+    protected (Id id, Object value) eatMultilineTemplateLiteral(TextPosition before) = eatStringChars(before, True, True);
 
     /**
      * Lex a string or template literal, single- or multi-line.
@@ -2476,11 +2464,7 @@ class Lexer
         /**
          * @return the value's text, or if there is no value, then the token id's text
          */
-        String valueText.get() {
-            return value == Null
-                    ? (id.text? : "")
-                    : value.toString();
-        }
+        String valueText.get() = value == Null ? (id.text? : "") : value.toString();
 
         /**
          * @return a longer form of the `toString()` output that includes the token's position
@@ -2833,9 +2817,7 @@ class Lexer
      *
      * @return True iff the character can be used to begin an Ecstasy identifier
      */
-    static Boolean isIdentifierStart(Char ch) {
-        return ch.category.letter || ch == '_';
-    }
+    static Boolean isIdentifierStart(Char ch) = ch.category.letter || ch == '_';
 
     /**
      * Ecstasy identifiers can contain letters, marks, number, and currency symbols, as well as
@@ -2846,23 +2828,21 @@ class Lexer
      * @return True iff the character can be used to begin an Ecstasy identifier
      */
     static Boolean isIdentifierPart(Char ch) {
-        switch (ch.category) {
-        case UppercaseLetter:
-        case LowercaseLetter:
-        case TitlecaseLetter:
-        case ModifierLetter:
-        case OtherLetter:
-        case NonspacingMark:
-        case SpacingMark:
-        case EnclosingMark:
-        case DecimalNumber:
-        case LetterNumber:
-        case OtherNumber:
-        case CurrencySymbol:
-            return True;
+        return switch (ch.category) {
+            case UppercaseLetter:
+            case LowercaseLetter:
+            case TitlecaseLetter:
+            case ModifierLetter:
+            case OtherLetter:
+            case NonspacingMark:
+            case SpacingMark:
+            case EnclosingMark:
+            case DecimalNumber:
+            case LetterNumber:
+            case OtherNumber:
+            case CurrencySymbol: True;
 
-        default:
-            return ch == '_';
-        }
+            default: ch == '_';
+        };
     }
 }

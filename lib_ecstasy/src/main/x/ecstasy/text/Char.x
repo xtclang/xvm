@@ -158,58 +158,34 @@ const Char(UInt32 codepoint)
     // ----- Sequential ----------------------------------------------------------------------------
 
     @Override
-    conditional Char prev() {
-        if (codepoint > 0) {
-            return True, new Char(codepoint - 1);
-        }
-        return False;
-    }
+    conditional Char prev() = codepoint > 0 ? (True, new Char(codepoint - 1)) : False;
 
     @Override
-    conditional Char next() {
-        if (codepoint < MaxValue) {
-            return True, new Char(codepoint + 1);
-        }
-        return False;
-    }
+    conditional Char next() = codepoint < MaxValue ? (True, new Char(codepoint + 1)) : False;
 
     @Override
-    Int stepsTo(Char that) {
-        return that - this;
-    }
+    Int stepsTo(Char that) = that - this;
 
     @Override
-    Char skip(Int steps) {
-        return this + steps.toUInt32();
-    }
+    Char skip(Int steps) = this + steps.toUInt32();
 
 
     // ----- operators ---------------------------------------------------------------------------
 
     @Op("+")
-    Char add(UInt32 n) {
-        return new Char(codepoint + n);
-    }
+    Char add(UInt32 n) = new Char(codepoint + n);
 
     @Op("+")
-    String add(Char ch) {
-        return new StringBuffer(2).add(this).add(ch).toString();
-    }
+    String add(Char ch) = new StringBuffer(2).add(this).add(ch).toString();
 
     @Op("+")
-    String add(String s) {
-        return new StringBuffer(1 + s.size).add(this).addAll(s).toString();
-    }
+    String add(String s) = new StringBuffer(1 + s.size).add(this).addAll(s).toString();
 
     @Op("-")
-    Char sub(UInt32 n) {
-        return new Char(codepoint - n);
-    }
+    Char sub(UInt32 n) = new Char(codepoint - n);
 
     @Op("-")
-    UInt32 sub(Char ch) {
-        return this.codepoint - ch.codepoint;
-    }
+    UInt32 sub(Char ch) = this.codepoint - ch.codepoint;
 
     @Op("*")
     String dup(Int n) {
@@ -586,9 +562,7 @@ const Char(UInt32 codepoint)
     /**
      * Determine if the character is in the ASCII range.
      */
-    Boolean ascii.get() {
-        return codepoint <= 0x7F;
-    }
+    Boolean ascii.get() = codepoint <= 0x7F;
 
     /**
      * Determine if the character is an ASCII digit, one of the values '0'..'9'.
@@ -639,11 +613,7 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII uppercase letter
      * @return (conditional) this uppercase letter
      */
-    conditional Char asciiUppercase() {
-        return 'A' <= this <= 'Z'
-                ? (True, this)
-                : False;
-    }
+    conditional Char asciiUppercase() = 'A' <= this <= 'Z' ? (True, this) : False;
 
     /**
      * Determine if the character is an ASCII lowercase letter, one of the values 'a'..'z'.
@@ -651,11 +621,7 @@ const Char(UInt32 codepoint)
      * @return True iff the character is an ASCII lowercase letter
      * @return (conditional) this lowercase letter
      */
-    conditional Char asciiLowercase() {
-        return 'a' <= this <= 'z'
-                ? (True, this)
-                : False;
-    }
+    conditional Char asciiLowercase() = 'a' <= this <= 'z' ? (True, this) : False;
 
 
     // ----- numeric conversion support ------------------------------------------------------------
@@ -767,9 +733,7 @@ const Char(UInt32 codepoint)
     /**
      * True iff the codepoint is a defined Unicode character.
      */
-    Boolean unicode.get() {
-        return category != Unassigned;
-    }
+    Boolean unicode.get() = category != Unassigned;
 
     /**
      * The Unicode General Category of the character.
@@ -1448,12 +1412,8 @@ const Char(UInt32 codepoint)
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return 1;
-    }
+    Int estimateStringLength() = 1;
 
     @Override
-    Appender<Char!> appendTo(Appender<Char!> buf) {
-        return buf.add(this);
-    }
+    Appender<Char!> appendTo(Appender<Char!> buf) = buf.add(this);
 }
