@@ -3031,7 +3031,7 @@ public class Context
 
     // ----- data members --------------------------------------------------------------------------
 
-    protected enum Branch
+    public enum Branch
         {
         Always, WhenTrue, WhenFalse;
 
