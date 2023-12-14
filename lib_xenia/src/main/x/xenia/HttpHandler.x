@@ -93,19 +93,19 @@ service HttpHandler
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
-    void handle(RequestContext context, String uriString, String methodName, Boolean tls) {
+    void handle(RequestContext context, String uri, String methodName, Boolean tls) {
         if (closing) {
             httpServer.send(context, HttpStatus.Gone.code, [], [], []);
             return;
         }
 
         Int   index  = ensureDispatcher();
-        Tuple result = dispatchers[index].dispatch^(httpServer, context, tls, uriString, methodName);
+        Tuple result = dispatchers[index].dispatch^(httpServer, context, tls, uri, methodName);
         &result.whenComplete((response, e) -> {
             if (e != Null) {
                 // TODO GG: remove
                 @Inject Console console;
-                console.print($"HttpHandler: unhandled exception for {uriString.quoted()}: {e}");
+                console.print($"HttpHandler: unhandled exception for {uri.quoted()}: {e}");
 
                 httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
             }
@@ -117,19 +117,14 @@ service HttpHandler
     // ----- HttpHandler specific methods ----------------------------------------------------------
 
     /**
-     * Shutdown this HttpHandler.
+     * Shutdown this HttpHandler; it will stop accepting any new requests.
+     *
+     * @return False iff there any pending requests
      */
     @Synchronized
-    void shutdown() {
+    Boolean shutdown(Boolean force = False) {
         closing = True;
-
-        if (pendingRequests == 0) {
-            httpServer.close();
-        } else {
-            // wait a second (TODO: repeat a couple of times)
-            @Inject Timer timer;
-            timer.schedule(Second, () -> httpServer.close());
-        }
+        return pendingRequests == 0;
     }
 
     @Override

@@ -101,7 +101,14 @@ module xenia.xtclang.org {
 
             server.start(handler);
 
-            return () -> handler.shutdown();
+            return () -> {
+                if (handler.shutdown()) {
+                    server.close();
+                } else {
+                    // wait a second (TODO: repeat a couple of times)
+                    @Inject Timer timer;
+                    timer.schedule(Second, () -> server.close());
+                }};
             }
         catch (Exception e) {
             server.close(e);

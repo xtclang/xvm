@@ -18,6 +18,9 @@ interface HttpServer
      * HttpRequest handler.
      */
     static interface Handler {
+        /**
+         * Handle the incoming request.
+         */
         void handle(RequestContext context, String uri, String method, Boolean tls);
     }
 
@@ -204,7 +207,7 @@ interface HttpServer
          * @return the host name or Null if the name cannot be resolved
          */
         String? getClientHostName() {
-                return server.getClientHostName(context);
+          return server.getClientHostName(context);
         }
 
         /**
