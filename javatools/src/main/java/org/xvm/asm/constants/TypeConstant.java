@@ -3598,7 +3598,11 @@ public abstract class TypeConstant
                     {
                     // layer on "implicit" property accessors on top of the base chains;
                     // if explicit accessors exist, they will be placed on top later
-                    assert infoGet != null;
+                    if (infoGet == null)
+                        {
+                        throw new AssertionError("Missing getter for " + idGet.getValueString() +
+                            " at " + this.getValueString());
+                        }
 
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(
                             idGet, idGet.getSignature(), Implementation.Implicit)), false, errs);
