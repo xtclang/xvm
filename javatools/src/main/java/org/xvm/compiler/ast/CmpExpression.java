@@ -15,6 +15,7 @@ import org.xvm.asm.ast.CallExprAST;
 import org.xvm.asm.ast.CondOpExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.NotNullExprAST;
 import org.xvm.asm.ast.OrderedExprAST;
 import org.xvm.asm.ast.OrderedExprAST.Operator;
 import org.xvm.asm.ast.UnaryOpExprAST;
@@ -612,11 +613,36 @@ public class CmpExpression
             return new CondOpExprAST(expr1.getExprAST(ctx), op, expr2.getExprAST(ctx));
             }
 
-        ExprAST[] aAstArgs = new ExprAST[] {
-                toTypeParameterAst(ctx, m_typeCommon.getType()),
-                expr1.getExprAST(ctx), expr2.getExprAST(ctx)};
+        ConstantPool pool = pool();
+        ExprAST      ast1 = expr1.getExprAST(ctx);
+        ExprAST      ast2 = expr2.getExprAST(ctx);
 
-        ConstantPool pool     = pool();
+        if (m_fArg1Null || m_fArg2Null)
+            {
+            boolean fNot = false;
+            switch (operator.getId())
+                {
+                case COMP_EQ:
+                    break;
+                case COMP_NEQ:
+                    fNot = true;
+                    break;
+                default:
+                    throw new UnsupportedOperationException(operator.getValueText());
+                }
+
+            // we only have NotNullExprAst, so "x == Null" produces "!(x != Null)"
+            ExprAST exprAST = new NotNullExprAST(m_fArg1Null ? ast2 : ast1, pool.typeBoolean());
+            if (!fNot)
+                {
+                exprAST = new UnaryOpExprAST(exprAST, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
+                }
+            return exprAST;
+            }
+
+        ExprAST[] aAstArgs = new ExprAST[] {
+                toTypeParameterAst(ctx, m_typeCommon.getType()), ast1, ast2};
+
         ExprAST      exprCmp  = new ConstantExprAST(m_idCmp);
         boolean      fNot     = false;
         Operator     opCmp    = null;

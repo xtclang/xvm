@@ -156,7 +156,7 @@ public class PropertyConstant
     @Override
     public ExprAST toExprAst(Context ctx)
         {
-        return ctx.isMethod()
+        return ctx.isMethod() || ctx.isConstructor()
                 ? new PropertyExprAST(ctx.getThisRegisterAST(), this)
                 : null;
         }

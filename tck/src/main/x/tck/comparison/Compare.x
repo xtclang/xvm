@@ -126,6 +126,15 @@ class Compare {
         assert !checkEquals(si1, si2);
     }
 
+    @Test
+    void compareToNull() {
+        String? s1 = Null;
+        String? s2 = "";
+
+        assert s1 == Null;
+        assert s2 != Null;
+    }
+
     <T> Boolean checkEquals(T t1, T t2) {
         return t1 == t2;
     }
