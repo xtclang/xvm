@@ -99,7 +99,7 @@ public class IsExpression
             expr2 = exprTest;
             }
 
-        boolean        fSingle     = atypeRequired.length <= 1;
+        boolean        fSingle     = atypeRequired == null || atypeRequired.length <= 1;
         TypeConstant[] atypeActual = new TypeConstant[fSingle ? 1 : 2];
         Constant[]     aconstVal   = null;
 
