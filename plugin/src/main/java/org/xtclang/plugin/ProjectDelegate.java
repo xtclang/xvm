@@ -69,11 +69,11 @@ public abstract class ProjectDelegate<T, R> {
         this.objects = project.getObjects();
         this.layout = project.getLayout();
         this.gradle = project.getGradle();
-        this.configs = getProject().getConfigurations();
-        this.buildDir = layout.getBuildDirectory();
+        this.configs = project.getConfigurations();
         this.logger = project.getLogger();
         this.tasks = project.getTasks();
         this.extensions = project.getExtensions();
+        this.buildDir = layout.getBuildDirectory();
         this.extra = extensions.getByType(ExtraPropertiesExtension.class);
         this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
         this.component = component;

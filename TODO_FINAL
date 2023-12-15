@@ -1,6 +1,5 @@
 TODO:
 * Use the PluginMaven default publication, don't add a special one for XTC. This is hardcoded and forced to generate docs and source from the gradlePluginPortal logic anyway.
-* Rename "xdk" version tag to avoid conflicts with "xdk.group" during type safe version catalog resolution
 * Unicode as part of a property guarded normal build step for lib-ecstasy.
 * Nsis archive in corporate secrets?
 * Investigate the Git release plugin
@@ -15,6 +14,7 @@ Maybe after merge:
 * Native launcher compile and run tasks.
 
 Done:
+* Rename "xdk" version tag to avoid conflicts with "xdk.group" during type safe version catalog resolution
 * nsis, verify the installer
 * org.xtclang for mavenCentral
 * Simplest app template, or what is required.
@@ -51,15 +51,13 @@ wished I had something like that
 TODO: xtcRunTestAll should not break if we don't have test source sets, it should warn and exit.
 TODO: Move javatool_unicode generation tables to some other part of the build logic. If we reach lib_ecstasy and we have e.g. build logic cache hits for unicode generation, we should interpret it to mean that we want to overwrite the resources for lib_ecstasy because there are new tables.
 TODO runXtc/All should not fail for e.g. test when there is no test source set.
-TODO: Fix the unicode depenency problems.
+TODO Write tests that makes sure the plugins can parse a property from the right places and in the right order + respects the gradle -P flag, system properties from other places and the ENV
+TODO: Fix the unicode depenency problems, move unicode to environment or property thing.
 TODO: Add native launcher tasks.
 TODO: is pruneBuildRepo executed always in the config phase? That makes no sense!? WHY!
 TODO: XTC Language; Can we change the $ template operator to work like Kotlin does and just nearly like Kotlin, but different?
 TODO: Add a settings plugin that is also part of the distribution, which contains things like the github repository syntactic sugare, and maybe sugar for finding the local XDK installation and its repo.
-TODO: Make sure forceRebuild = true flag work for xtcCompile and its task environment.
 TODO: Gradle.useLogger - add a custom logger with timing, start and finish, indentation and levels, with possibilities to add outputs like a file or stderr. Configure through gradle properties?
-TODO: Maven plugin from flatfile/distro repo. Add our own plugindefinitionspdec ?
-TODO: Create a github template for the "simplest" xtc project possible
 TODO: Add runXtcNative and compileXtcNative, actually model a local distribution in a build logic.kt class.
 TODO: Get rid of the project delegate stuff, just extend project?
 TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurations. It should work for the former
@@ -71,9 +69,6 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./xdk/build.gradle.kts: * TODO: This task should create symlinks for the launcher names to the right binaries.
 ./xdk/build.gradle.kts: * TODO better copying, even if it means hardcoding directory names.
 ./xdk/build.gradle.kts:    // TODO: This can be done a lot more nicely with relative path copy/renaming as
-./xdk/build.gradle.kts:                    path = path.replace("libexec-", "xdk-") // TODO: Hacky.
-./xdk/build.gradle.kts:                exclude("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
-./xdk/build.gradle.kts:                include("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
 ./xdk/build.gradle.kts:// TODO: Add a sanity check, that makes sure all files in the distribution are there,
 ./xdk/build.gradle.kts:// TODO - Keep dir patterns here too, or have it return copy specs based on resources
 ./manualTests/webapp/build.gradle.kts:// TODO: xdkZip does not resolve on its own in this environment. It's not clear why.

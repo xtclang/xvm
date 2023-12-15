@@ -27,18 +27,21 @@ dependencyResolutionManagement {
     }
 
     // For bootstrapping reasons, we manually load the properties file, instead of falling back to the build logic automatic property handler.
-    val xdkVersionFile = compositeRootRelativeFile("VERSION")!!
-    val xtcPluginVersionFile = xdkVersionFile.parentFile.resolve("plugin/VERSION").let { if (it.isFile) it else xdkVersionFile }
-    val (xdkGroup, xdkVersion) = xdkVersionFile.readText().trim().split(':')
-    val (xtcPluginGroup, xtcPluginVersion) = xtcPluginVersionFile.readText().trim().split(':')
+    val xdkVersionInfo = compositeRootRelativeFile("GROUP")!! to compositeRootRelativeFile("VERSION")!!
+    val pluginDir = xdkVersionInfo.first.parentFile.resolve("plugin")
+    val xdkPluginVersionInfo = pluginDir.resolve("GROUP").let { if (it.isFile) it else xdkVersionInfo.first } to pluginDir.resolve("VERSION").let { if (it.isFile) it else xdkVersionInfo.second }
+    val (xdkGroup, xdkVersion) = xdkVersionInfo.toList().map { it.readText().trim() }
+    val (xtcPluginGroup, xtcPluginVersion) = xdkPluginVersionInfo.toList().map { it.readText().trim() }
     val prefix = "[${rootProject.name}]"
     logger.lifecycle("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
-    logger.info("""
+    logger.lifecycle(
+        """
         $prefix XDK VERSION INFO:
         $prefix     Project : '${rootProject.name}' 
         $prefix     Group   : '$xdkGroup' (plugin: '$xtcPluginGroup')
         $prefix     Version : '$xdkVersion' (plugin: '$xtcPluginVersion')
-    """.trimIndent())
+    """.trimIndent()
+    )
 
     versionCatalogs {
         val libs by creating {

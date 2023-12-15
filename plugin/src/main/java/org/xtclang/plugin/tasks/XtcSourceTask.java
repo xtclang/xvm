@@ -26,7 +26,8 @@ public abstract class XtcSourceTask extends XtcDefaultTask implements PatternFil
 
     private ConfigurableFileCollection sourceFiles;
 
-    public XtcSourceTask(final XtcProjectDelegate project) {
+    @SuppressWarnings("this-escape")
+    protected XtcSourceTask(final XtcProjectDelegate project) {
         super(project);
         this.patternSet = getPatternSetFactory().create();
         this.sourceFiles = project.getObjects().fileCollection();

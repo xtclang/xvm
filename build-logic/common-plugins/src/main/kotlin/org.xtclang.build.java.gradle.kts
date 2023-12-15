@@ -47,7 +47,11 @@ tasks.withType<JavaExec>().configureEach {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    val lint = getXdkPropertyBoolean("org.xtclang.java.lint", false)
+    fun isHardCodedDisabledLint(): Boolean {
+        return project.name != "xtc-plugin"
+    }
+
+    val lint = isHardCodedDisabledLint().not() && getXdkPropertyBoolean("org.xtclang.java.lint", false)
     val maxErrors = getXdkProperty("org.xtclang.java.maxErrors", "0").toInt()
     val maxWarnings = getXdkProperty("org.xtclang.java.maxWarnings", "0").toInt()
     val warningsAsErrors = getXdkPropertyBoolean("org.xtclang.java.warningsAsErrors", false)
