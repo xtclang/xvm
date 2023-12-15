@@ -116,6 +116,18 @@ class Compare {
     }
 
     @Test
+    void compareArraysFormal() {
+        Int[] a1 = [1, 2];
+        Int[] a2 = [2, 1];
+
+        Collection<Int> c1 = a1;
+        Collection<Int> c2 = a2;
+
+        assert !checkArrayEquals(a1, a2);
+        assert checkEquals(c1, c2);
+    }
+
+    @Test
     void compareComposite() {
         typedef String|Int as StrInt;
 
@@ -141,6 +153,10 @@ class Compare {
 
     <T extends Orderable> Boolean checkLess(T t1, T t2) {
         return t1 < t2;
+    }
+
+    <T> Boolean checkArrayEquals(T[] a1, T[] a2) {
+        return a1 == a2;
     }
 
     static const Point(Int x, Int y);
