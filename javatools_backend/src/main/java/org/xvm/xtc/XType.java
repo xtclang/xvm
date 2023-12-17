@@ -5,6 +5,7 @@ import org.xvm.xtc.cons.*;
 import org.xvm.util.*;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Arrays;
 
 // Concrete java types from XTC types.  All instances are interned so deep
@@ -95,39 +96,20 @@ public abstract class XType {
   public static class Clz extends XType {
     private static final HashMap<ClassPart,Clz> ZINTERN = new HashMap<>();
     public final String _name, _pack;
-    public       ClassPart _mod;      // Compilation unit class
-    public       ClassPart _clz;      // Self class, can be compilation unit
-    public final Clz _super;          // Super xtype or null
+    public       ModPart _mod;   // Self module
+    public       ClassPart _clz; // Self class, can be a module
+    public final Clz _super;     // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
     public final ClzClz _clzclz;
     private Clz( ClassPart clz ) {
       assert ClzBuilder.CMOD!=null; // Init error
       _super = clz._super==null ? null : make(clz._super);
-      _mod = ClzBuilder.CMOD;  // Compile unit class
+      _mod = clz.mod();  // Self module
       _clz = clz;
       // Class & package names.
-      // Assume fully qualified: tck_module.comparison.Compare.AnyValue
-      // Module: tck_module
-      // Package: comparison
-      // Class: Compare.AnyValue
-      String name = S.java_class_name(clz._name);
-      String pack = "";
-      // Part of local module, stack up packages
-      if( clz.mod()==ClzBuilder.CMOD && clz!= ClzBuilder.CMOD ) {
-        // Stack up packages in the local module
-        Part px = clz._par;
-        while( px != ClzBuilder.CMOD ) {
-          String pxname = S.java_class_name(px._name);
-          if( px instanceof PackagePart ) 
-            pack = pack.isEmpty() ? pxname : pxname+"."+pack;
-          else 
-            ; //name = pxname+"."+name;
-          px = px._par;
-        }
-      }
-      _name = name;
-      _pack = pack;
+      _name = S.java_class_name(clz.name());
+      _pack = pack(clz);
       
       _clzclz = new ClzClz(this);
       int len=0;
@@ -138,6 +120,34 @@ public abstract class XType {
       _xts  = new XType [len];
       // Split init from new to avoid infinite recursion on init
     }
+    
+    // Class & package names.
+
+    // Example: tck_module (the module itself)
+    // _pack: null;
+    // _name: tck_module
+    
+    // Example:  tck_module.comparison.Compare.AnyValue
+    // _pack: tck_module.comparison
+    // _name: Compare.AnyValue
+
+    // Example: ecstasy.Enum
+    // _pack: ecstasy
+    // _name: Enum
+    private String pack(ClassPart clz) {
+      assert _mod!=null;
+      if( clz == _mod ) return null; // XTC Modules never have a Java package
+      clz = (ClassPart)clz._par;     // Skip the class, already in the _name field
+      String pack = null;
+      while( true ) {
+        String pxname = S.java_class_name(clz.name());
+        pack = pack==null ? pxname : pxname+"."+pack;
+        if( clz == _mod ) break;
+        clz = (ClassPart)clz._par;
+      }
+      return pack.intern();
+    }
+    
     // Split init from new to avoid infinite recursion on init
     private Clz init() {
       int len=0;
@@ -148,42 +158,59 @@ public abstract class XType {
         }
       return this;
     }
+    
     // Made from XTC class
     public static Clz make( ClassPart clz ) {
       // Check for a pre-cooked class
       Clz xclz = (Clz)BASE_XJMAP.get(xjkey(clz));
       if( xclz != null ) return xclz;
+      xclz = IMPORT_XJMAP.get(xjkey(clz));
+      if( xclz != null ) return xclz.set(clz);
       xclz = ZINTERN.get(clz);
       if( xclz!=null ) return xclz;
+
       ZINTERN.put(clz,xclz = new Clz(clz));
       return xclz.init();
     }
     // Made from a Java class directly; the XTC class shows up later.  No
     // fields are mentioned, and are not needed since the class is pre
     // hand-built.
-    Clz( String name ) {
+    Clz( String pack, String name ) {
       _name = name;
-      _pack = null;
+      _pack = pack;
       // clz,mod set later
       _super=null;              // No super in the XTC sense
       _flds=null;
       _xts=null;
       _clzclz = new ClzClz(this);
     }
-    void set(ClassPart clz) {
-      if( _clz==clz ) return;
+    Clz set(ClassPart clz) {
+      if( _clz==clz ) return this;
       assert _clz==null;
-      // TODO: Set MOD to ECSTASY
       _clz=clz;
+      _mod = clz.mod();
+      // XTC classes mapped directly to e.g. java.lang.Long or java.lang.String
+      // take their Java class from rt.jar and NOT from the XEC directory.
+      if( !SPECIAL_RENAMES.contains(this) ) {
+        assert S.eq(_name,S.java_class_name(clz.name()));
+        assert S.eq(_pack,pack(clz));
+      }
+      return this;
     }
     @Override public boolean is_prim_base() { return false; }
     @Override public boolean needs_import() {
-      // Built-ins before being 'set' have no mod
-      if( _mod==null ) return false;
-      // Self module, no import
-      if( _mod==ClzBuilder.CMOD ) return false;
-      throw XEC.TODO();
+      // Built-ins before being 'set' have no mod.
+      // Self module is also compile module.
+      return _mod!=null && _mod != ClzBuilder.CMOD;
     }
+    public boolean needs_build() {
+      // Check for a pre-cooked class
+      String key = xjkey(_clz);
+      if(   BASE_XJMAP.containsKey(key) ) return false;
+      if( IMPORT_XJMAP.containsKey(key) ) return false;
+      return true;
+    }
+    
     // Find a field in the superclass chain
     static XType find(Clz clz, String fld) {
       for( ; clz!=null; clz = clz._super ) {
@@ -204,10 +231,23 @@ public abstract class XType {
       return sb.p("}").nl();
     }
     @Override public SB clz( SB sb ) { return sb.p(_name); }
+    
+    // Module: Lib  as  org.xv.xec.X$Lib
+    // Class : tck_module.comparison.Compare.AnyValue  as  org.xv.xec.tck_module.comparison.Compare.AnyValue
     public String qualified_name() {
-      if( _mod==_clz ) return XEC.XCLZ+".X$"+_name;
-      return XEC.XCLZ+"."+_pack+"."+_name;
+      if( S.eq(_pack,"java.lang") )
+        return half_qual_name(); // java.lang is not part of the XEC.XCLZ directory
+      return XEC.XCLZ + "." + (_mod==_clz
+        ? "X$"+_name
+        : half_qual_name());
     }
+    
+    // Class : tck_module.comparison.Compare.AnyValue
+    public String half_qual_name() {
+      assert _clz!=_mod;
+      return _pack==null ? _name : _pack+"."+_name;
+    }
+    
     // Using shallow equals,hashCode, not deep, because the parts are already interned
     @Override boolean eq(XType xt) {
       Clz clz = (Clz)xt;
@@ -336,12 +376,12 @@ public abstract class XType {
   // Java non-primitive classes
   public static Base JINT   = Base.make("Integer");
   public static Base JNULL  = Base.make("Nullable");
-  public static Clz  JUBYTE = new Clz("XUByte");
-  public static Clz  JBOOL  = new Clz("Boolean");
-  public static Clz  JCHAR  = new Clz("Character");
-  public static Clz  OBJECT = new Clz("Object");
-  public static Clz  STRING = new Clz("String");
-  public static Clz  EXCEPTION = new Clz("Exception");
+  public static Clz  JUBYTE = new Clz(null,"XUByte");
+  public static Clz  JBOOL  = new Clz(null,"Boolean");
+  public static Clz  JCHAR  = new Clz(null,"Character");
+  public static Clz  OBJECT = new Clz("ecstasy","Object");
+  public static Clz  STRING = new Clz(null,"String");
+  public static Clz  EXCEPTION = new Clz(null,"Exception");
 
   // Java primitives or primitive classes
   public static Base BOOL = Base.make("boolean");
@@ -378,25 +418,25 @@ public abstract class XType {
   
   // A set of common XTC classes, and their Java replacements...
   // AND these take the default import path from "org.xvm.xec.ecstasy...".
-  public static Clz APPENDERCHAR= new Clz("Appenderchar");
-  public static Clz CONSOLE     = new Clz("Console");
-  public static Clz CONST       = new Clz("Const");
-  public static Clz DEC64       = new Clz("Dec64");
-  public static Clz ENUM        = new Clz("Enum");
-  public static Clz ILLARGX     = new Clz("IllegalArgumentException");
-  public static Clz ILLSTATEX   = new Clz("IllegalStateX");
-  public static Clz ITER64      = new Clz("Iterablelong");
-  public static Clz JLONG       = new Clz("Long");
-  public static Clz JULONG      = new Clz("ULong");
-  public static Clz MUTABILITY  = new Clz("Mutability");
-  public static Clz NUMBER      = new Clz("Number");
-  public static Clz ORDERED     = new Clz("Ordered");
-  public static Clz RANGE       = new Clz("Range");
-  public static Clz RANGEIE     = new Clz("RangeIE");
-  public static Clz RANGEII     = new Clz("RangeII");
-  public static Clz STRINGBUFFER= new Clz("StringBuffer");
-  public static Clz TYPE        = new Clz("Type");
-  public static Clz UNSUPPORTEDOPERATION = new Clz("UnsupportedOperation");
+  public static Clz APPENDERCHAR= new Clz("ecstasy","Appenderchar");
+  public static Clz CONSOLE     = new Clz("ecstasy.io","Console");
+  public static Clz CONST       = new Clz("ecstasy","Const");
+  public static Clz DEC64       = new Clz("ecstasy.numbers","Dec64");
+  public static Clz ENUM        = new Clz("ecstasy","Enum");
+  public static Clz ILLARGX     = new Clz("XTC","IllegalArgument");
+  public static Clz ILLSTATEX   = new Clz("XTC","IllegalState");
+  public static Clz ITER64      = new Clz("ecstasy","Iterablelong");
+  public static Clz JLONG       = new Clz("java.lang","Long");
+  public static Clz JULONG      = new Clz("ecstasy.numbers","UIntNumber");
+  public static Clz MUTABILITY  = new Clz(null,"Mutability");
+  public static Clz NUMBER      = new Clz("ecstasy.numbers","Number");
+  public static Clz ORDERED     = new Clz("ecstasy","Ordered");
+  public static Clz RANGE       = new Clz("ecstasy","Range");
+  public static Clz RANGEIE     = new Clz("ecstasy","RangeIE");
+  public static Clz RANGEII     = new Clz("ecstasy","RangeII");
+  public static Clz STRINGBUFFER= new Clz("ecstasy.text","StringBuffer");
+  public static Clz TYPE        = new Clz("ecstasy.reflect","Type");
+  public static Clz UNSUPPORTEDOPERATION = new Clz("ecstasy","UnsupportedOperation");
   static final HashMap<String, Clz> IMPORT_XJMAP = new HashMap<>() {{
       put("Boolean+ecstasy/Boolean.x",JBOOL);      
       put("Char+ecstasy/text/Char.x",JCHAR);
@@ -417,6 +457,13 @@ public abstract class XType {
       put("UnsupportedOperation+ecstasy.x",UNSUPPORTEDOPERATION);
     }};
   private static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
+
+  private static HashSet<Clz> SPECIAL_RENAMES = new HashSet<>() {{
+      add(JLONG);               // Remapped to java.lang.Long
+      add(ILLSTATEX); // Remapped to avoid collision with java.lang.IllegalStateException
+      add(ILLARGX);   // Remapped to avoid collision with java.lang.IllegalArgumentException
+    }};
+  
 
   // Convert a Java primitive to the Java object version.
   private static final HashMap<Base, XType> XBOX = new HashMap<>() {{
@@ -489,27 +536,33 @@ public abstract class XType {
         Clz xclz = IMPORT_XJMAP.get(xjkey);
         if( xclz!=null ) {
           xclz.set(clz);
-          ClzBuilder.add_import(clz);
+          ClzBuilder.IMPORTS.add(xclz.qualified_name());
           yield xclz;
         }
         // Yet Another Special Case - Mutability comes from xt/c/Array.x,
         // which I am remapping to Ary.java
         if( "Mutability+ecstasy/collections/Array.x".equals(xjkey) ) {
-          ClzBuilder.XTC_IMPORTS.add("ecstasy.collections.Ary.Mutability");
+          ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.Ary.Mutability");
           yield MUTABILITY;
         }
         
         // Make one
         yield Clz.make(clz);
       }
+      
       if( ttc.part() instanceof ParmPart ) {
         if( ttc.id() instanceof TParmCon tpc ) {
-          yield ((ClzClz)xtype(tpc.parm()._con,boxed))._clz;
+          yield ((Clz)xtype(tpc.parm()._con,boxed));
         } else if( ttc.id() instanceof DynFormalCon dfc ) {
           yield xtype(dfc.type(),false);
         } else 
           throw XEC.TODO();
       }
+
+      // Hidden extra XTC type argument (GOLD instance of the class whos hash
+      // implementation to use)
+      if( ttc.part() instanceof PropPart prop )
+        yield XType.xtype(prop._con,false);
       
       throw XEC.TODO();
     }
@@ -525,7 +578,7 @@ public abstract class XType {
         if( telem == CHAR ) { imp="Arychar"; xt = ARYCHAR; } // Java ArrayList specialized to char
         if( telem == BOOL ) { imp="Aryboolean"; xt = ARYBOOL; } // Java ArrayList specialized to boolean
         if( xt==null ) xt = Ary.make(telem);
-        ClzBuilder.XTC_IMPORTS.add("ecstasy.collections."+imp);
+        ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections."+imp);
         yield xt;
       }
 
@@ -540,14 +593,14 @@ public abstract class XType {
       // All the long-based ranges, intervals and iterators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
-        ClzBuilder.XTC_IMPORTS.add("ecstasy.Range");        
+        ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Range");        
         if( telem== LONG || telem== JLONG ) yield RANGE; // Shortcut class
         else throw XEC.TODO();
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") ) {
         if( telem== LONG || telem== JLONG ) {
-          ClzBuilder.XTC_IMPORTS.add("ecstasy.Iterablelong");
+          ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Iterablelong");
           yield ITER64; // Shortcut class
         } else throw XEC.TODO();
       }
@@ -565,17 +618,19 @@ public abstract class XType {
       // Attempt to use the Java class name
       if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") ) {
         if( telem instanceof Clz tclz )
-          yield tclz._clzclz;
+          yield tclz;
         if( telem instanceof Ary ary )
           yield ARY;
         if( telem instanceof Base base )
           yield Base.make("base clz (of java generic array)");
+        if( telem instanceof ClzClz )
+          yield telem;
         throw XEC.TODO();
       }
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
         if( telem == CHAR || telem== JCHAR ) {
-          ClzBuilder.XTC_IMPORTS.add("ecstasy.Appenderchar");
+          ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Appenderchar");
           yield APPENDERCHAR; // Shortcut class
         }
         throw XEC.TODO();

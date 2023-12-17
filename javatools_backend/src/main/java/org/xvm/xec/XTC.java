@@ -2,9 +2,9 @@ package org.xvm.xec;
 
 import org.xvm.util.Ary;
 import org.xvm.xrun.*;
-import org.xvm.xec.ecstasy.Orderable.Ordered;
 import org.xvm.xec.ecstasy.collections.Ary.Mutability;
 import org.xvm.XEC;
+import org.xvm.xec.ecstasy.Ordered;
 
 import java.io.IOException;
 
@@ -55,7 +55,7 @@ public abstract class XTC {
 
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {
-    if( !cond ) throw new IllegalStateX();
+    if( !cond ) throw new IllegalState();
   }
   public static void xassert( ) { xassert(false); }
 
@@ -99,8 +99,13 @@ public abstract class XTC {
       So I am Once Again, asking for a language change: make the XTC assert
       throw e.g. AssertionError instead of IllegalStateException.
   */
-  // XTC IllegalStateException mapped to Java
-  public static class IllegalStateX extends RuntimeException {}
+  // XTC IllegalState mapped to Java
+  public static class IllegalState extends RuntimeException {}
+
+  // XTC IllegalArgument mapped to Java
+  public static class IllegalArgument extends IllegalArgumentException {
+    public IllegalArgument(String s) { super(s); }
+  }
 
   // XTC ReadOnlyException mapped to Java
   public class ReadOnlyException extends RuntimeException {}

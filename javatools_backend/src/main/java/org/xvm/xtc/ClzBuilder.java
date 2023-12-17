@@ -55,7 +55,7 @@ public class ClzBuilder {
   public static HashMap<String,String> XCLASSES;
 
   // A collection of extra imports, generated all along
-  public static HashSet<String> XTC_IMPORTS, LOCAL_IMPORTS;
+  public static HashSet<String> IMPORTS;
   
   // Make a nested java class builder
   public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
@@ -64,8 +64,7 @@ public class ClzBuilder {
   public ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean is_top ) {
     _is_top = is_top;
     if( is_top ) {
-      XTC_IMPORTS = new HashSet<>();  // Top-level XTC imports
-      LOCAL_IMPORTS = new HashSet<>(); // Top-level LOCAL imports
+      IMPORTS = new HashSet<>();  // Top-level imports
       XCLASSES = new HashMap<>(); // Top-level extra classes
       CMOD = mod;                 // Top-level compile unit
     }
@@ -83,6 +82,7 @@ public class ClzBuilder {
     _ltypes = new Ary<>(XType .class);
   }
   
+  // Fill in the body of the matching java class
   // Fill in the body of the matching java class
   public void jclass( ) {
     assert _is_top;
@@ -104,15 +104,12 @@ public class ClzBuilder {
       _sb.nl().p(source);
     _sb.p("// ---------------------------------------------------------------").nl();
     // Output imports in the header
-    for( String imp : XTC_IMPORTS )
-      _sbhead.p("import ").p(XEC.XCLZ).p(".").p(imp).p(";").nl();
-    for( String imp : LOCAL_IMPORTS )
+    for( String imp : IMPORTS )
       _sbhead.p("import ").p(imp).p(";").nl();
     _sbhead.nl();
     _clz._header = _sbhead;
     _clz._body = _sb;
-    XTC_IMPORTS = null;
-    LOCAL_IMPORTS = null;
+    IMPORTS = null;
     XCLASSES = null;
     CMOD = null;
   }
@@ -132,8 +129,8 @@ public class ClzBuilder {
       else if( _clz._f!=Part.Format.CONST ) _sb.p("XTC");
       else {
         _sb.p("Const");
-        XTC_IMPORTS.add("ecstasy.Const");
-        XTC_IMPORTS.add("ecstasy.Orderable.Ordered");
+        IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
+        IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
       } 
     }
     _sb.p(" {").nl().ii();
@@ -214,7 +211,6 @@ public class ClzBuilder {
           for( Part subpart : pack._name2kid.values() )
             if( !subpart._name.equals("construct") ) { // TODO: Ignore package init?
               ClassPart iclz = (ClassPart)subpart;      // Import user class; TODO: Only import class and package init expected
-              ClzBldSet.add(iclz.mod(),iclz);
               add_import(iclz);
             }
           break;
@@ -226,8 +222,7 @@ public class ClzBuilder {
         if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
           break;
         // Other imports
-        LOCAL_IMPORTS.add(((XType.Clz)XType.xtype(ttc,false)).qualified_name());
-        ClzBldSet.add((ModPart)ttc.part(),(ModPart)ttc.part());
+        add_import(ttc.clz());
         break;
         
       case PropPart pp:
@@ -392,12 +387,10 @@ public class ClzBuilder {
 
 
   public static void add_import( ClassPart clz ) {
-    String imp = clz._path._str;
-    if( !imp.equals("ecstasy.x") && clz.mod()!=ClzBuilder.CMOD  ) {
-      // Convert "ecstasy/io/Console.x" to "ecstasy.io.Console"
-      String imp2 = imp.substring(0,imp.lastIndexOf(".")).replace('/','.');
-      ClzBuilder.XTC_IMPORTS.add(imp2);
-    }
+    XType.Clz tclz = XType.Clz.make(clz);
+    ClzBuilder.IMPORTS.add(tclz.qualified_name());
+    if( tclz.needs_build() )
+      ClzBldSet.add(tclz._mod,tclz._clz);
   }
 
   

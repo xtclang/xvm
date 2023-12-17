@@ -5,8 +5,8 @@ import org.xvm.xec.XTC;
 import org.xvm.xrun.Never;
 import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Orderable;
+import org.xvm.xec.ecstasy.Ordered;
 import org.xvm.xec.ecstasy.text.Stringable;
-import org.xvm.xec.ecstasy.Orderable.Ordered;
 
 /**
      Support XTC Int64

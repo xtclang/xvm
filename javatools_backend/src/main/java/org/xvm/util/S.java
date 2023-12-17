@@ -4,8 +4,8 @@ package org.xvm.util;
 public abstract class S {
   public static boolean eq(String s0, String s1) {
     if( s0==s1 ) return true;
-    assert s0==s0.intern();
-    assert s1==s1.intern();
+    assert s0==null || s0==s0.intern();
+    assert s1==null || s1==s1.intern();
     return false;
   }
 

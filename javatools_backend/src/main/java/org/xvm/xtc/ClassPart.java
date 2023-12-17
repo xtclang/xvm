@@ -119,9 +119,16 @@ public class ClassPart extends Part {
     return null;
   }
 
+  // True if this is a subclass of the given super
   public boolean subclass( ClassPart sup ) {
     return this==sup || (_super!=null && _super.subclass(sup));
   }
+
+  // Modules in XTC do not have to be named after their file path, like they do in Java.
+  // Example: XTC Module ecstasy.xtclang.org is in a file ecstasy.x.
+  // I am using the file name as a Java file name... which is also the Java package.
+  // XTC classes can use their given name, and this will be prefixed with the module as needed.
+  String name() { return _name; }
   
   // Module for this class
   public ModPart mod() {

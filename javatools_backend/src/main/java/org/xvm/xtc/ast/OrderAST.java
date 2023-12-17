@@ -34,7 +34,7 @@ class OrderAST extends AST {
     };
     CallAST call = new CallAST(null,s,new ConAST("Orderable."+s),_kids[0]);
     call._type = XType.BOOL;
-    ClzBuilder.XTC_IMPORTS.add("ecstasy.Orderable");
+    ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Orderable");
     return call;
   }
   

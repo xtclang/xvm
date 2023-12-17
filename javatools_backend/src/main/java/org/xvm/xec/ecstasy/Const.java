@@ -32,11 +32,11 @@ public abstract class Const extends XTC
     sb.ip("StringBuilder sb = new StringBuilder().append(\"(\");\n");
     Ary<PropPart> pps = new Ary<>(PropPart.class);
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 )
+      if( p instanceof PropPart prop )
         pps.setX(prop._order,prop);
     for( int i=0; i<pps._len; i++ ) {
       sb.ip("sb.append(").p(pps._es[i]._name);
-      if( !xeq(pps._es[i]) ) sb.ip(".toString()");
+      if( !xeq(pps._es[i]) ) sb.p(".toString()");
       sb.p(").append(\"").p(i<pps._len-1 ? "," : ")").p("\");\n");
     }
     sb.ip("return sb.toString();\n").di();

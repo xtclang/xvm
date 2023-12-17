@@ -25,13 +25,15 @@ public abstract class ClzBldSet {
       JAVAC.push(clz);
       // ClzBuilder may add new modules+classes to compile
       new ClzBuilder(mod,clz,new SB(),new SB(),true).jclass();
+      //System.out.print(clz._header);
+      //System.out.print(clz._body);
       assert CLZS.find(clz)==-1;
       assert clz._header!=null;
     }
     // Compile and load the Java classes as a complete set
     ArrayList<JavaC.JavaSrc> srcs = new ArrayList<>();
     for( ClassPart c : JAVAC )
-      srcs.add(new JavaC.JavaSrc(ClzBuilder.qual_jname(c._name),
+      srcs.add(new JavaC.JavaSrc(c._tclz.qualified_name(),
                                  c._header.toString() + c._body.toString()));
     JavaC.compile(srcs,JAVAC);
     JAVAC.clear();

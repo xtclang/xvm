@@ -49,8 +49,12 @@ public abstract class XValue {
       } else {
         // Put qualified name if not in local namespace
         ClassPart clz = (ClassPart)meth._par._par;
-        if( clz!= ClzBuilder.CMOD )
-          name = clz._name+"."+name;
+        if( clz!= ClzBuilder.CMOD ) {
+          name = clz._name + "." + name;
+          // Modules always mangled to X$module
+          if( clz instanceof ModPart )
+            name = "X$"+name;
+        }
       }
       yield ASB.p(name);
     }
@@ -63,8 +67,8 @@ public abstract class XValue {
     // A class Type as a value
     case ParamTCon ptc -> {
       XType xt = XType.xtype(ptc,false);
-      if( xt instanceof XType.ClzClz clzclz )
-        yield clzclz._clz.clz(ASB).p(".GOLD");
+      if( xt instanceof XType.Clz clz )
+        yield clz.clz(ASB).p(".GOLD");
       yield xt.clz(ASB).p(".ARYGENERIC.GOLD");
     }
     
@@ -95,7 +99,7 @@ public abstract class XValue {
       String ext = rcon._xlo
         ? (rcon._xhi ? "EE" : "EI")
         : (rcon._xhi ? "IE" : "II");
-      ClzBuilder.XTC_IMPORTS.add("ecstasy.Range"+ext);
+      ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Range"+ext);
       ASB.p("new Range").p(ext).p("(");
       _val(rcon._lo).p(",");
       _val(rcon._hi).p(")");

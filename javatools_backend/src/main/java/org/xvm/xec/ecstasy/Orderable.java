@@ -3,20 +3,13 @@ package org.xvm.xec.ecstasy;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.Ordered;
 import org.xvm.xtc.*;
 
 // XTC Orderable adds 'compare'.
 // Any XTC classes which implement XTC 'Orderable' should also implement Java
 // 'compareTo'.
 public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
-
-  public enum Ordered {
-    Lesser,
-    Equal, 
-    Greater;
-    public static final Ordered[] VALUES = values();
-    public static final Enum GOLD = Enum.GOLD; // Dispatch against Ordered class same as Enum class
-  }
 
   // The fully dynamic compare lookup
   public static Ordered compare( XTC gold_type, XTC x0, XTC x1 ) {
@@ -64,7 +57,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
 
     Ary<PropPart> pps = new Ary<>(PropPart.class);
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 )
+      if( p instanceof PropPart prop )
         pps.setX(prop._order,prop);
     for( PropPart prop : pps ) {
       String fld = prop._name;

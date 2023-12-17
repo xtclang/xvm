@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.MethodCon;
@@ -18,7 +19,7 @@ class NewAST extends AST {
     _type = type;
     _meth = meth;
     if( type.needs_import() )
-      ClzBuilder.LOCAL_IMPORTS.add(type.clz());
+      ClzBuilder.add_import(((XType.Clz)type)._clz);
   }
   private static AST[] kids_plus_clz(AST[] kids, XType type) {
     // If type is generic, add the generic class explicitly

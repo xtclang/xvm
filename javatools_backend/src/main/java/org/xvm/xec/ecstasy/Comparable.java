@@ -8,18 +8,18 @@ import org.xvm.xtc.*;
 public interface Comparable {
 
   // The fully dynamic equals lookup, based on the given compile-time class
-  public static boolean equals( XTC gold_type, XTC x0, XTC x1 ) {
+  static boolean equals( XTC gold_type, XTC x0, XTC x1 ) {
     return gold_type.equals(x0,x1); // Dynamic against gold
   }
 
   // Require implementations define this, which can typically be done with a
   // default implementation.  This same signature appears in the XTC base
   // class, so we can do a v-call instead of an i-call.
-  public abstract boolean equals( XTC x0, XTC x1 );
+  boolean equals( XTC x0, XTC x1 );
 
   // If the XTC compiler knows 'this' and 'x1' are the same class it emits a
   // short-form equals call in which dispatch to either side is ok.  
-  default public boolean equals( XTC x1 ) { return equals((XTC)this,x1); }
+  default boolean equals( XTC x1 ) { return equals((XTC)this,x1); }
   
   /** Each implementation will define the above abstract equals as:
    *  {@code public boolean equals(XTC x0, XTC x1) { return equals$CLZ((CLZ)x0,(CLZ)x1) } }
@@ -45,7 +45,7 @@ public interface Comparable {
     sb.ip(  "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
+      if( p instanceof PropPart prop && (any=true) ) {
         XType xt = XType.xtype(prop._con,false);
         xt.do_eq(sb.p("x0.").p(prop._name),"x1."+prop._name).p(" && ");
       }

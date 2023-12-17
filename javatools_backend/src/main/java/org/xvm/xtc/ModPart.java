@@ -74,6 +74,15 @@ public class ModPart extends ClassPart {
     return null;
   }
 
+  // Modules in XTC do not have to be named after their file path, like they do in Java.
+  // Example: XTC Module ecstasy.xtclang.org is in a file ecstasy.x.
+  // I am using the file name as a Java file name... which is also the Java package.
+  @Override String name() {
+    // Subtract off the path ".x" extension and return it as the Java file/package name.
+    return _path._str.substring(0,_path._str.length()-2);
+  }
+
+  
   // ----- ModuleType enumeration ----------------------------------------------------------------
   /**
    * A module serves one of three primary purposes:

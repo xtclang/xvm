@@ -3,7 +3,6 @@ package org.xvm.xec.ecstasy;
 import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.xrun.Never;
-import org.xvm.xec.ecstasy.Orderable.Ordered;
 
 public class Enum extends Const {
   public static final Enum GOLD = new Enum();

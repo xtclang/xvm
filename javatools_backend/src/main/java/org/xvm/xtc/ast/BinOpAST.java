@@ -50,7 +50,7 @@ class BinOpAST extends AST {
         return new InvokeAST("equals",XType.BOOL,_kids[0],_kids[1]).do_type();
     }
     if( _op0.equals("<=>") ) {
-      ClzBuilder.XTC_IMPORTS.add("ecstasy.Orderable");
+      ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Orderable");
       return new InvokeAST("spaceship",XType.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).do_type();
     }
 
@@ -95,7 +95,7 @@ class BinOpAST extends AST {
   }
 
   private AST do_range( XType.Clz rng ) {
-    ClzBuilder.XTC_IMPORTS.add("ecstasy."+rng._name);
+    ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy."+rng._name);
     return new NewAST(_kids,rng,null);
   }
   
