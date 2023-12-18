@@ -19,7 +19,7 @@ class NewAST extends AST {
     _type = type;
     _meth = meth;
     if( type.needs_import() )
-      ClzBuilder.add_import(((XType.Clz)type)._clz);
+      ClzBuilder.add_import((XType.Clz)type);
   }
   private static AST[] kids_plus_clz(AST[] kids, XType type) {
     // If type is generic, add the generic class explicitly

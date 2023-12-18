@@ -101,7 +101,6 @@ public abstract class XType {
     public final Clz _super;     // Super xtype or null
     public final String[] _flds;
     public final XType[] _xts;
-    public final ClzClz _clzclz;
     private Clz( ClassPart clz ) {
       assert ClzBuilder.CMOD!=null; // Init error
       _super = clz._super==null ? null : make(clz._super);
@@ -111,7 +110,6 @@ public abstract class XType {
       _name = S.java_class_name(clz.name());
       _pack = pack(clz);
       
-      _clzclz = new ClzClz(this);
       int len=0;
       for( Part part : clz._name2kid.values() )
         if( part instanceof PropPart prop && find(_super,prop._name)==null )
@@ -182,7 +180,6 @@ public abstract class XType {
       _super=null;              // No super in the XTC sense
       _flds=null;
       _xts=null;
-      _clzclz = new ClzClz(this);
     }
     Clz set(ClassPart clz) {
       if( _clz==clz ) return this;
@@ -199,9 +196,9 @@ public abstract class XType {
     }
     @Override public boolean is_prim_base() { return false; }
     @Override public boolean needs_import() {
-      // Built-ins before being 'set' have no mod.
+      // Built-ins before being 'set' have no clz, and do not needs_import
       // Self module is also compile module.
-      return _mod!=null && _mod != ClzBuilder.CMOD;
+      return _mod!=null && _clz != ClzBuilder.CCLZ;
     }
     public boolean needs_build() {
       // Check for a pre-cooked class
@@ -238,7 +235,7 @@ public abstract class XType {
       if( S.eq(_pack,"java.lang") )
         return half_qual_name(); // java.lang is not part of the XEC.XCLZ directory
       return XEC.XCLZ + "." + (_mod==_clz
-        ? "X$"+_name
+        ? _name+".X$"+_name
         : half_qual_name());
     }
     
@@ -246,6 +243,13 @@ public abstract class XType {
     public String half_qual_name() {
       assert _clz!=_mod;
       return _pack==null ? _name : _pack+"."+_name;
+    }
+
+    // "package org.xvm.xec.tck" or
+    // "package org.xvm.xec.tck.arrays"
+    public String package_name() {
+      assert !"java.lang".equals(_pack);
+      return XEC.XCLZ + "." + (_mod==_clz ? _name : _pack);
     }
     
     // Using shallow equals,hashCode, not deep, because the parts are already interned
@@ -259,22 +263,6 @@ public abstract class XType {
   }
   
 
-  // The *class* of a instance, defined as a class.
-  // Example:
-  //   Value:  (2,3)
-  //   XType:  Point
-  //   ClzClz: Point.class
-  // Passed about as an XTC instance got from Point.GOLD
-  public static class ClzClz extends XType {
-    public final Clz _clz;
-    ClzClz(Clz clz) { _clz = clz; }
-    @Override public boolean is_prim_base() { return false; }
-    @Override public SB str( SB sb ) { return sb.p("XTC"); }
-    @Override public SB clz( SB sb ) { return str(sb); }
-    @Override boolean eq(XType xt) { return _clz.equals(((ClzClz)xt)._clz);  }
-    @Override int hash() { return _clz.hashCode()^123456789; }
-  }
-  
   // Basically a Java class as an array
   public static class Ary extends XType {
     private static Ary FREE = new Ary(null);
@@ -425,6 +413,7 @@ public abstract class XType {
   public static Clz ENUM        = new Clz("ecstasy","Enum");
   public static Clz ILLARGX     = new Clz("XTC","IllegalArgument");
   public static Clz ILLSTATEX   = new Clz("XTC","IllegalState");
+  public static Clz HASHABLE    = new Clz("ecstasy.collections","Hashable");
   public static Clz ITER64      = new Clz("ecstasy","Iterablelong");
   public static Clz JLONG       = new Clz("java.lang","Long");
   public static Clz JULONG      = new Clz("ecstasy.numbers","UIntNumber");
@@ -444,6 +433,7 @@ public abstract class XType {
       put("Const+ecstasy/Const.x",CONST);
       put("Dec64+ecstasy/numbers/Dec64.x",DEC64);
       put("Enum+ecstasy/Enum.x",ENUM);
+      put("Hashable+ecstasy/collections/Hashable.x", HASHABLE);
       put("IllegalArgument+ecstasy.x",ILLARGX);
       put("IllegalState+ecstasy.x",ILLSTATEX);
       put("IntNumber+ecstasy/numbers/IntNumber.x",JLONG);
@@ -623,8 +613,6 @@ public abstract class XType {
           yield ARY;
         if( telem instanceof Base base )
           yield Base.make("base clz (of java generic array)");
-        if( telem instanceof ClzClz )
-          yield telem;
         throw XEC.TODO();
       }
 

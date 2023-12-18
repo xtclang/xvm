@@ -29,6 +29,8 @@ public abstract class PropBuilder {
     String pname = jname(pp);
 
     XType xtype = XType.xtype(pp._con,false);
+    if( xtype instanceof XType.Clz xclz )
+      ClzBuilder.add_import(xclz);
     String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     boolean lazy = "LazyVar".equals(ano);
     boolean stat = (pp._nFlags & Part.STATIC_BIT)!=0;

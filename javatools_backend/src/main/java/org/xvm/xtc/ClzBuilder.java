@@ -21,11 +21,12 @@ public class ClzBuilder {
   // XTC Module, which is the base Java class
   public final ModPart _mod;
   public final XType.Clz _tmod; // Module XType
-  public static ClassPart CMOD; // Compile unit class
+  public static ClassPart CMOD; // Compile unit module
   
   // XTC class, which is also the top-level Java class
   public final ClassPart _clz;
   public final XType.Clz _tclz; // Class XType
+  public static ClassPart CCLZ; // Compile unit class
 
   // XTC Module vs XTC class
   public final boolean _is_module;
@@ -73,6 +74,7 @@ public class ClzBuilder {
     _tmod = mod==null ? null : XType.Clz.make(mod);
     _clz = clz;
     _tclz = clz==null ? null : XType.Clz.make(clz);
+    CCLZ = clz==null ? mod : clz; // Compile unit class
     if( clz != null ) clz._tclz = _tclz;
     _sbhead = sbhead;
     _sb = sb;
@@ -91,10 +93,7 @@ public class ClzBuilder {
     // XTC modules are all unique at the same level (the Repo level).
     // XTC classes are unique within a module, but not across modules.
     // Java package name includes the XTC module name.
-    _sbhead.p("package ").p(XEC.XCLZ);
-    if( !_is_module )
-      _sbhead.p(".").p(_tmod._name).p(".").p(_tclz._pack);
-    _sbhead.p(";").nl().nl();
+    _sbhead.p("package ").p(_tclz.package_name()).p(";").nl().nl();
     _sbhead.p("import ").p(XEC.ROOT).p(".xec.*;").nl();
     _sbhead.p("import ").p(XEC.ROOT).p(".xrun.*;").nl();
     _sbhead.p("import static ").p(XEC.ROOT).p(".xrun.XRuntime.$t;").nl();
@@ -112,6 +111,7 @@ public class ClzBuilder {
     IMPORTS = null;
     XCLASSES = null;
     CMOD = null;
+    CCLZ = null;
   }
   
   // Java Class body; can be nested (static inner class)
@@ -121,17 +121,17 @@ public class ClzBuilder {
     _sb.nl();                   // Blank line
     _sb.ip("// XTC ").p( _is_module ? "module ": "class ").p(_clz._path._str).p(":").p(_clz._name).p(" as Java class ").p(java_class_name).nl();
 
-    if( _is_top ) {
-      _sb.p("public class ").p(java_class_name).p(" extends ").p(is_runclz() ? "XRunClz" : "XTC");
-    } else {
-      _sb.ip("public static class ").p(java_class_name).p(" extends ");
-      if( _clz._super != null ) _sb.p(_clz._super._name);
-      else if( _clz._f!=Part.Format.CONST ) _sb.p("XTC");
-      else {
-        _sb.p("Const");
-        IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
-        IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
-      } 
+    
+    _sb.p("public ");
+    if( !_is_top ) _sb.p("static ");
+    _sb.p("class ").p(java_class_name).p(" extends ");
+
+    if( _clz._super != null ) _sb.p(_clz._super._name);
+    else if( _clz._f!=Part.Format.CONST ) _sb.p(is_runclz() ? "XRunClz" : "XTC");
+    else {
+      _sb.p("Const");
+      IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
+      IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
     }
     _sb.p(" {").nl().ii();
 
@@ -139,20 +139,26 @@ public class ClzBuilder {
     // Required constructor to inject the container
     if( _is_module && is_runclz() )
       _sb.ip("public ").p(java_class_name).p("( Container container ) { super(container); }").nl();
-    
-    // Get a GOLDen instance for faster special dispath rules
+
+    // Get a GOLDen instance for faster special dispath rules.
+    // Use the sentinel "Never" type to get a true Java no-arg constructor
     _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
-    _sb.ifmt("private %0(Never n){super(n);}\n",java_class_name);
+    _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
     MethodPart construct = (MethodPart)mm.child(mm._name);
     if( construct != null ) {
       assert _locals.isEmpty(); // No locals mapped yet
-      assert construct._sibling==null;
+      assert construct._sibling==null; // TODO: Can be many constructors
+      _sb.nl();
       // Skip common empty constructor
-      if( !construct.is_empty_function() ) {
-        _sb.nl();
+      if( construct.is_empty_function() ) {
+        // Empty constructor is specified, must be added now - BECAUSE I
+        // already added another constuctor so I do not get the default Java
+        // empty constructor "for free"
+        _sb.ifmt("public %0(){ super((Never)null); } // default XTC empty constructor\n",java_class_name);
+      } else {
         if( _is_top ) {
           _sb.ip("static {").nl();
           ast(construct).jcode(_sb );
@@ -387,10 +393,19 @@ public class ClzBuilder {
 
 
   public static void add_import( ClassPart clz ) {
-    XType.Clz tclz = XType.Clz.make(clz);
-    ClzBuilder.IMPORTS.add(tclz.qualified_name());
-    if( tclz.needs_build() )
-      ClzBldSet.add(tclz._mod,tclz._clz);
+    add_import(XType.Clz.make(clz));
+  }
+  public static void add_import( XType.Clz tclz ) {
+    if( tclz._mod == null ) return; // Built-in types may not have a mod, but still do not needs_build
+    // If the compiling class has the same path, tclz will be compiled in the
+    // same source code
+    if( S.eq(CCLZ._path._str,tclz._clz._path._str) )
+      return;
+    if( tclz.needs_import() ) {
+      ClzBuilder.IMPORTS.add(tclz.qualified_name());
+      if( tclz.needs_build() )
+        ClzBldSet.add(tclz._mod,tclz._clz);
+    }
   }
 
   
