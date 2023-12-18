@@ -1005,6 +1005,7 @@ public final class DebugConsole
 
             case "VF":
                 m_viewMode = ViewMode.Services;
+                System.gc();
                 writer.println(renderServices());
                 return Op.R_REPEAT;
 
