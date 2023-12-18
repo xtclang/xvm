@@ -4,6 +4,6 @@ plugins {
 }
 
 dependencies {
-    xtcJavaTools(libs.javatools)
+    xdkJavaTools(libs.javatools)
     xtcModule(libs.xdk.ecstasy)
 }

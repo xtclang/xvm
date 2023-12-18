@@ -20,32 +20,23 @@ import org.gradle.api.tasks.TaskContainer;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-import static org.xtclang.plugin.Constants.XTC_MAGIC;
-import static org.xtclang.plugin.Constants.XTC_MODULE_FILE_EXTENSION;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MAGIC;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
 
 public abstract class ProjectDelegate<T, R> {
-    private static final boolean LOG_ALL_LEVELS_TO_STDERR;
-    private static final boolean LOG_ALL_LEVELS_TO_BUILD_FILE;
-
-    static {
-        LOG_ALL_LEVELS_TO_STDERR = queryProperty("XTC_LOG_STDERR", false); // or system property xtc.log.stderr = ...
-        LOG_ALL_LEVELS_TO_BUILD_FILE = queryProperty("XTC_LOG_FILE", false); // or system property xtc.log.file = ...
-    }
-
     protected final Project project;
     protected final String projectName;
     protected final String prefix;
     protected final ObjectFactory objects;
     protected final Logger logger;
     protected final Gradle gradle;
+    protected final LogLevel logLevel;
+    protected final boolean overrideVerboseLogging;
     protected final ConfigurationContainer configs;
     protected final AdhocComponentWithVariants component;
     protected final URL pluginUrl;
@@ -55,7 +46,6 @@ public abstract class ProjectDelegate<T, R> {
     protected final ExtraPropertiesExtension extra;
     protected final ExtensionContainer extensions;
     protected final VersionCatalogsExtension versionCatalogExtension;
-    protected final List<File> logFiles;
 
     @SuppressWarnings("unused")
     protected ProjectDelegate(final Project project) {
@@ -69,6 +59,7 @@ public abstract class ProjectDelegate<T, R> {
         this.objects = project.getObjects();
         this.layout = project.getLayout();
         this.gradle = project.getGradle();
+        this.logLevel = gradle.getStartParameter().getLogLevel();
         this.configs = project.getConfigurations();
         this.logger = project.getLogger();
         this.tasks = project.getTasks();
@@ -78,10 +69,17 @@ public abstract class ProjectDelegate<T, R> {
         this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
         this.component = component;
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
-        this.logFiles = new ArrayList<>();
 
         // add a property to the existing environment, project.setProperty assumes the property exists already
         extra.set("logPrefix", prefix);
+
+        // Used to print only key messages with an "always" semantic. Used to quickly switch on and off,
+        // or perist in the shell, a setting that is used for stuff like always printing launcher command
+        // lines, regardless of log level, but not doing it if the override is turned off (default).
+        this.overrideVerboseLogging = "true".equals(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
+        if (overrideVerboseLogging) {
+            logger.info("{} XTC_PLUGIN_VERBOSE=true; The XTC Plugin may log important 'info' level events at 'lifecycle' level instead.", prefix);
+        }
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -96,10 +94,6 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public XtcBuildException buildException(final Throwable cause, final String msg) {
-        if (LOG_ALL_LEVELS_TO_STDERR) {
-            error(msg);
-        }
-        logToFiles(LogLevel.ERROR, msg);
         return XtcBuildException.buildException(logger, prefix + ": " + msg, cause);
     }
 
@@ -115,7 +109,7 @@ public abstract class ProjectDelegate<T, R> {
             final var c = template.charAt(i);
             if (c == '#') {
                 if (pos >= list.size()) {
-                    throw new IllegalStateException("More ellipses than tokens in expansion.");
+                    throw new IllegalArgumentException("More ellipses than tokens in expansion.");
                 }
                 sb.append(list.get(pos++));
             } else {
@@ -123,6 +117,18 @@ public abstract class ProjectDelegate<T, R> {
             }
         }
         return buildException(cause, sb.toString());
+    }
+
+    /**
+     * We count everything with the log level "info" or finer as verbose logging.
+     *
+     * @return True of we are running with verbose logging enabled, false otherwise.
+     */
+    public boolean hasVerboseLogging() {
+        return switch (logLevel) {
+            case DEBUG, INFO -> true;
+            default -> overrideVerboseLogging;
+        };
     }
 
     public final String prefix() {
@@ -142,12 +148,7 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public void log(final LogLevel level, final String str, final Object... args) {
-        final String msg = String.format(str.replace("{}", "%s"), args);
-        if (LOG_ALL_LEVELS_TO_STDERR) {
-            System.err.println(msg);
-        }
-        logToFiles(level, msg);
-        logger.log(level, msg);
+        logger.log(level, String.format(str.replace("{}", "%s"), args));
     }
 
     public void error(final String str, final Object... args) {
@@ -206,6 +207,10 @@ public abstract class ProjectDelegate<T, R> {
         return project.getLogger();
     }
 
+    public LogLevel getLogLevel() {
+        return logLevel;
+    }
+
     public static boolean hasFileExtension(final File file, final String extension) {
         return getFileExtension(file).equalsIgnoreCase(extension);
     }
@@ -220,10 +225,18 @@ public abstract class ProjectDelegate<T, R> {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
     }
 
+    /**
+     * Flag task as always needing to be re-run. Cached state will be ignored.
+     * <p>
+     * Can be used to implement, e.g., forceRebuild, and other behaviors that require a task to run fresh every
+     * time. that absolutely need to be rerun every time. Note that it's easier to just flag a task implementation
+     * as @NonCacheable. This is intended for unit tested, extended existing tasks and finer granularity levels
+     * of dependencies. The implementation forbids the task to cache outputs, and it will never be reported as
+     * up to date. Be aware that this totally removes most of the benefits of Gradle.
+     *
+     * @param task Task to flag as perpetually not up to date.
+     */
     public void alwaysRerunTask(final Task task) {
-        // Used to implement forceRebuild
-        // To work around Gradle caches, we are also marking this task as always stale, refusing it to cache inputs -> outputs. Be aware that
-        // this will totally remove most of the benefits of Gradle.
         task.getOutputs().cacheIf(t -> false);
         task.getOutputs().upToDateWhen(t -> false);
         warn("{} WARNING: Task '{}:{}' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...", prefix, projectName, task.getName());
@@ -264,41 +277,5 @@ public abstract class ProjectDelegate<T, R> {
             return defaultValue;
         }
         return Boolean.parseBoolean(envKey) || Boolean.parseBoolean(propKey);
-    }
-
-    private Gradle rootGradle() {
-        Gradle gradle = project.getGradle();
-        while (gradle.getParent() != null) {
-            gradle = gradle.getParent();
-        }
-        // TODO: Add Gradle.useLogger, with a project prefixed logger.
-        return gradle;
-    }
-
-    private File logFileFull() {
-        return new File(rootGradle().getRootProject().getLayout().getBuildDirectory().get().getAsFile(), "build-xdk.log");
-    }
-
-    private File logFile() {
-        return new File(layout.getBuildDirectory().get().getAsFile(), "build-" + projectName + ".log");
-    }
-
-    private void logToFiles(final LogLevel level, final String msg) {
-        if (LOG_ALL_LEVELS_TO_BUILD_FILE) {
-            if (logFiles.isEmpty()) {
-                logFiles.add(logFileFull());
-                logFiles.add(logFile());
-            }
-            logFiles.forEach(log -> {
-                try (final var out = new PrintWriter(new FileWriter(log, true), true)) {
-                    final String hash = "0x" + Integer.toHexString(gradle.hashCode());
-                    final long pid = ProcessHandle.current().pid();
-                    out.println(hash + ' ' + pid + ' ' + level.name() + ": " + msg);
-                } catch (final IOException e) {
-                    throw buildException("Failed to write log files to '{}' and/or '{}'", logFile().getAbsolutePath(), logFileFull().getAbsolutePath(), e);
-//                    throw new GradleException(prefix + " Failed to write log files to. " + logFile().getAbsolutePath() + " and/or " + logFileFull().getAbsolutePath(), e);
-                }
-            });
-        }
     }
 }

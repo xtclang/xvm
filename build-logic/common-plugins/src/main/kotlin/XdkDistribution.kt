@@ -1,3 +1,4 @@
+import XdkBuildLogic.Companion.getDateTimeStampWithTz
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
@@ -5,7 +6,8 @@ import org.gradle.internal.os.OperatingSystem
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
-        const val DISTRIBUTION_GROUP = "distribution"
+        const val DISTRIBUTION_TASK_GROUP = "distribution"
+        const val MAKENSIS = "makensis"
 
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
@@ -13,6 +15,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         private val CURRENT_OS = OperatingSystem.current()
         private val CI_ENABLED = System.getenv(CI) == "true"
+
+        val distributionTasks = listOfNotNull("distTar", "distZip", "distExe")
     }
 
     init {
@@ -42,8 +46,26 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    fun getLocalDistBackupDir(localDistVersion: String): Provider<Directory> {
-        return project.layout.buildDirectory.dir("$LOCALDIST_BACKUP_DIR/$localDistVersion")
+    fun getLocalDistBackupDir(localDistPath: String): Provider<Directory> {
+        val path = "$LOCALDIST_BACKUP_DIR/$localDistPath/${getDateTimeStampWithTz().replace(' ', '-')}"
+        return project.layout.buildDirectory.dir(path)
+    }
+
+    fun shouldPublishPluginToLocalDist(): Boolean {
+        return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
+    }
+
+    fun shouldCreateWindowsDistribution(): Boolean {
+        val runDistExe = project.getXdkPropertyBoolean("org.xtclang.install.distExe", false)
+        if (runDistExe) {
+            logger.info("$prefix 'distExe' task is enabled; will attempt to build Windows installer.")
+            if (XdkBuildLogic.findExecutableOnPath(MAKENSIS) == null) {
+                throw project.buildException("Illegal configuration; project is set to weave a Windows installer, but '$MAKENSIS' is not on the PATH.")
+            }
+            return true
+        }
+        logger.warn("$prefix 'distExe' is disabled for building distributions. Only 'tar.gz' and 'zip' are allowed.")
+        return false
     }
 
     override fun toString(): String {

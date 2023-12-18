@@ -4,6 +4,7 @@ import org.gradle.process.ExecResult;
 import org.gradle.process.internal.ExecException;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 
 public final class XtcExecResult implements ExecResult {
@@ -12,15 +13,15 @@ public final class XtcExecResult implements ExecResult {
     private final String out;
     private final String err;
 
-    XtcExecResult(final int exitValue, final Throwable failure, final OutputStream out, final OutputStream err) {
+    XtcExecResult(final int exitValue, final Throwable failure, final String out, final String err) {
         this.exitValue = exitValue;
         this.failure = failure;
-        this.out = out == null ? "" : out.toString();
-        this.err = err == null ? "" : err.toString();
+        this.out = out == null ? "" : out;
+        this.err = err == null ? "" : err;
     }
 
-    public static XtcExecResultBuilder builder(final Class<? extends XtcLauncher> launcherClass, final CommandLine args) {
-        return new XtcExecResultBuilder(launcherClass, args);
+    public static XtcExecResultBuilder builder(final Class<? extends XtcLauncher> launcherClass, final CommandLine cmd, final boolean logOutput) {
+        return new XtcExecResultBuilder(launcherClass, cmd, logOutput);
     }
 
     @SuppressWarnings("unused")
@@ -48,7 +49,7 @@ public final class XtcExecResult implements ExecResult {
         return exitValue;
     }
 
-    boolean hasOutputs() {
+    public boolean hasOutputs() {
         return !out.isEmpty() || !err.isEmpty();
     }
 
@@ -87,24 +88,56 @@ public final class XtcExecResult implements ExecResult {
     }
 
     /**
+     * Extension of output stream that also flushes and echoes to console, as well as
+     * the cached stream. TODO: Make configurable.
+     */
+    private static class XtcExecOutputStream extends OutputStream {
+        private final OutputStream out;
+        private final boolean alwaysFlush;
+
+        @SuppressWarnings("unused")
+        XtcExecOutputStream() {
+            this(false);
+        }
+
+        XtcExecOutputStream(final boolean alwaysFlush) {
+            this.out = new ByteArrayOutputStream();
+            this.alwaysFlush = alwaysFlush;
+        }
+
+        @Override
+        public void write(final int b) throws IOException {
+            out.write(b);
+            if (alwaysFlush) {
+                out.flush();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return out.toString();
+        }
+    }
+
+    /**
      * Subclass to a Gradle Exec Result.
      */
     public static final class XtcExecResultBuilder {
         private final Class<? extends XtcLauncher> launcherClass;
-        private final CommandLine args;
+        private final CommandLine cmd;
+        private final XtcExecOutputStream out;
+        private final XtcExecOutputStream err;
 
         private int exitValue;
         private boolean hasExitValue;
         private Throwable failure;
-        private OutputStream out;
-        private OutputStream err;
 
-        private XtcExecResultBuilder(final Class<? extends XtcLauncher> launcherClass, final CommandLine args) {
+        private XtcExecResultBuilder(final Class<? extends XtcLauncher> launcherClass, final CommandLine cmd, final boolean logOutputs) {
             this.launcherClass = launcherClass;
-            this.args = args;
+            this.cmd = cmd;
             this.hasExitValue = false; // has exit value been set?
-            out(new ByteArrayOutputStream());
-            err(new ByteArrayOutputStream());
+            this.out = new XtcExecOutputStream(logOutputs);
+            this.err = new XtcExecOutputStream(logOutputs);
         }
 
         boolean hasExitValue() {
@@ -118,7 +151,7 @@ public final class XtcExecResult implements ExecResult {
 
         @SuppressWarnings("unused")
         CommandLine getCommandLine() {
-            return args;
+            return cmd;
         }
 
         OutputStream getOut() {
@@ -126,26 +159,13 @@ public final class XtcExecResult implements ExecResult {
         }
 
         OutputStream getErr() {
-            return out;
-        }
-
-        @SuppressWarnings("UnusedReturnValue")
-        XtcExecResultBuilder out(final OutputStream out) {
-            this.out = out;
-            return this;
-        }
-
-        @SuppressWarnings("UnusedReturnValue")
-        XtcExecResultBuilder err(final OutputStream err) {
-            this.err = err;
-            return this;
+            return err;
         }
 
         @SuppressWarnings("UnusedReturnValue")
         XtcExecResultBuilder exitValue(final int exitValue) {
             this.exitValue = exitValue;
             this.hasExitValue = true;
-            // If we have a wrapper exec result, add it?
             return this;
         }
 
@@ -167,8 +187,12 @@ public final class XtcExecResult implements ExecResult {
             return this;
         }
 
+        private static String outputAsString(final XtcExecOutputStream out) {
+            return out.toString();
+        }
+
         XtcExecResult build() {
-            return new XtcExecResult(exitValue, failure, out, err);
+            return new XtcExecResult(exitValue, failure, outputAsString(out), outputAsString(err));
         }
     }
 }

@@ -22,10 +22,12 @@ import java.util.Properties
  */
 class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
     private val secrets = mutableSetOf<String>()
-    private val properties: Properties = resolve()
+    private val properties: Properties
 
     init {
+        this.properties = resolve()
         toString().lines().forEach { logger.info("$prefix $it") }
+        logger.info("$prefix Resolved ${properties.size} properties for project.")
     }
 
     /**
@@ -47,11 +49,32 @@ class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
      * build breaks.
      */
     fun get(key: String, defaultValue: String? = null): String {
+        // First check a system env override
+        val envKey = toSystemEnvKey(key)
+        val envValue = System.getenv(envKey)
+        if (envValue != null) {
+            logger.info("$prefix XdkProperties; resolved System ENV property '$key' (${envKey}).")
+            return envValue.toString()
+        }
+
+        val sysPropValue = System.getProperty(key)
+        if (sysPropValue != null) {
+            logger.info("$prefix XdkProperties; resolved Java System property '$key'.")
+            return sysPropValue.toString()
+        }
+
+        // Finally, look up in table or fallback to default value.
         val value = properties[key] ?: System.getenv(toSystemEnvKey(key)) ?: defaultValue
         if (value == null && defaultValue == null) {
-            throw project.buildException("ERROR: Property '$key' has no value, and no default was given.")
+            throw project.buildException("ERROR: XdkProperty '$key' has no value, and no default was given.")
         }
+
+        logger.info("$prefix XdkProperties; resolved property '$key' from properties table (defaultValue: '$defaultValue')")
         return value.toString()
+    }
+
+    fun has(key: String): Boolean {
+        return properties[key] != null
     }
 
     override fun toString(): String {
@@ -105,7 +128,7 @@ class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
     /**
      * Accessor to check if a property key resolved by this project has a secret value.
      * This means that we should never log it, print it, or in any way leak it from a run.
-     * Secret values <=> properties defined outside the project hiearchy, e.g. in
+     * Secret values <=> properties defined outside the project hierarchy, e.g. in
      * GRADLE_USER_HOME or GRADLE_USER_HOME/init.d, or similar well-defined places.
      */
     private fun isSecret(key: String): Boolean {

@@ -1,5 +1,5 @@
+import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
-import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -13,11 +13,11 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-private val distributionTaskGroup = "distribution"
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
-private val gitHubRepoTaskPrefixes = listOfNotNull("list", "delete")
+
+XdkBuildLogic.registerGlobalRootProject(project)
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -29,7 +29,7 @@ private val gitHubRepoTaskPrefixes = listOfNotNull("list", "delete")
  */
 
 val install by tasks.registering {
-    group = distributionTaskGroup
+    group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     doLast {
         logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
@@ -37,11 +37,14 @@ val install by tasks.registering {
 }
 
 install {
+    XdkDistribution.distributionTasks.forEach {
+        dependsOn(xdk.task(":$it"))
+    }
     dependsOn(xdk.task(":installDist"))
 }
 
 val installLocalDist by tasks.registering {
-    group = distributionTaskGroup
+    group = DISTRIBUTION_TASK_GROUP
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(xdk.task(":$name"))
     doLast {
@@ -51,19 +54,10 @@ val installLocalDist by tasks.registering {
 
 val installInitScripts by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Build and overwrite any local distribution with the new distribution produced by the build."
+    description = "Install bootstrapping scripts for the XTC Organization GitHub Maven package registry."
     dependsOn(xdk.task(":$name"))
     doLast {
         logger.lifecycle("$prefix Finished '$name' (task state: $state.)")
-    }
-}
-
-val importUnicodeFiles by tasks.registering {
-    group = BUILD_GROUP
-    description = "Download and regenerate the unicode file as resources."
-    dependsOn(xdk.task(":$name"))
-    doLast {
-        logger.lifecycle("$prefix Finished '$name' (generated and imported new unicode files)")
     }
 }
 
@@ -109,8 +103,8 @@ val publish by tasks.registering {
     }
 }
 
-gitHubRepoTaskPrefixes.forEach { taskPrefix ->
-    val taskName = "${taskPrefix}GitHubPublications"
+GitHubPackages.gitHubRepoTaskPrefixes.forEach { taskPrefix ->
+    val taskName = "${taskPrefix}AllXtcLangGitHubPublications"
     tasks.register(taskName) {
         group = PUBLISH_TASK_GROUP
         description = "Task that aggregates '$taskName' tasks for builds with publications."

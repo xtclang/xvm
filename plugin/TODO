@@ -4,6 +4,7 @@ Prio:
 * Native launcher compile and run tasks.
 * Simplest app template, or what is required.
 * Add git script helpers and lock down master from direct pushes by anyone.
+* Accumulate in folder.
 
 val debugPort = "8000"
 
@@ -25,7 +26,6 @@ TODO: xtcRunTestAll should not break if we don't have test source sets, it shoul
 TODO: Move javatool_unicode generation tables to some other part of the build logic. If we reach lib_ecstasy and we have e.g. build logic cache hits for unicode generation, we should interpret it to mean that we want to overwrite the resources for lib_ecstasy because there are new tables.
 TODO runXtc/All should not fail for e.g. test when there is no test source set.
 TODO: Fix the unicode depenency problems.
-TODO: Add native launcher tasks.
 TODO: is pruneBuildRepo executed always in the config phase? That makes no sense!? WHY!
 TODO: XTC Language; Can we change the $ template operator to work like Kotlin does and just nearly like Kotlin, but different?
 TODO: Add a settings plugin that is also part of the distribution, which contains things like the github repository syntactic sugare, and maybe sugar for finding the local XDK installation and its repo.
@@ -49,7 +49,6 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./xdk/build.gradle.kts:                include("**/javatools*") // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a seprate configuration.
 ./xdk/build.gradle.kts:// TODO: Add a sanity check, that makes sure all files in the distribution are there,
 ./xdk/build.gradle.kts:// TODO - Keep dir patterns here too, or have it return copy specs based on resources
-./manualTests/webapp/build.gradle.kts:// TODO: xdkZip does not resolve on its own in this environment. It's not clear why.
 ./manualTests/webapp/build.gradle.kts:    // TODO: webappConsumer(project(":webapp"))
 ./manualTests/webapp/build.gradle.kts:// TODO: Right now processResources exists through the xtc plugin, is run, and copies src/<sourceSet>/resources to build resources for that source set
 ./manualTests/build.gradle.kts:// TODO: Add source set for negative tests.

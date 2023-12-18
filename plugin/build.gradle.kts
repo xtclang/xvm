@@ -10,45 +10,34 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
+val pprefix = "org.xtclang"
+// TODO we could put the loggers in extra.
 val semanticVersion: SemanticVersion by extra
 
-val xtcJavaToolsJarConsumer by configurations.registering {
+val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
-    outgoing.artifact(tasks.jar)
+    //outgoing.artifact(tasks.jar)
     attributes {
         attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(JAR))
-    }
-}
-
-val xtcPluginRepoProvider by configurations.registering {
-    isCanBeResolved = false
-    isCanBeConsumed = true
-    outgoing.artifact(buildRepoDirectory) {
-        builtBy("publishAllPublicationsToBuildRepository")
-        type = ArtifactTypeDefinition.DIRECTORY_TYPE
-    }
-    attributes {
-        attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("buildRepo"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("javatools-fatjar"))
     }
 }
 
 dependencies {
     @Suppress("UnstableApiUsage")
-    xtcJavaToolsJarConsumer(libs.javatools)
+    xdkJavaToolsJarConsumer(libs.javatools)
 }
 
 // Properties for the ID (unique to a plugin)
-private val pluginId = getXdkProperty("org.xtclang.plugin.id")
+private val pluginId = getXdkProperty("$pprefix.plugin.id")
 
 // Properties for the artifact
 private val pluginName = project.name
-private val pluginGroup = getXdkProperty("org.xtclang.plugin.group", group.toString())
-private val pluginVersion = getXdkProperty("org.xtclang.plugin.version", version.toString())
+private val pluginGroup = getXdkProperty("$pprefix.plugin.group", group.toString())
+private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.toString())
 
-private val shouldBundleJavaTools = getXdkPropertyBoolean("org.xtclang.plugin.bundle.javatools")
+private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
 
 logger.lifecycle("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
@@ -71,20 +60,20 @@ gradlePlugin {
     // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
     // being published. To read it from at least a local repo, we need that artifact too, hence we
     // get three artifacts.
-    isAutomatedPublishing = getXdkPropertyBoolean("org.xtclang.plugin.isAutomatedPublishing", true)
+    isAutomatedPublishing = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
 
     logger.info("$prefix Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishing")
 
-    vcsUrl = getXdkProperty("org.xtclang.plugin.vcs.url")
-    website = getXdkProperty("org.xtclang.plugin.website")
+    vcsUrl = getXdkProperty("$pprefix.plugin.vcs.url")
+    website = getXdkProperty("$pprefix.plugin.website")
 
     plugins {
         val xtc by registering {
             version = pluginVersion
             id = pluginId
-            implementationClass = getXdkProperty("org.xtclang.plugin.implementation.class")
-            displayName = getXdkProperty("org.xtclang.plugin.display.name")
-            description = getXdkProperty("org.xtclang.plugin.description")
+            implementationClass = getXdkProperty("$pprefix.plugin.implementation.class")
+            displayName = getXdkProperty("$pprefix.plugin.display.name")
+            description = getXdkProperty("$pprefix.plugin.description")
             logger.info("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
             tags = listOfNotNull("xtc", "language", "ecstasy", "xdk")
         }
@@ -106,7 +95,15 @@ tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publis
 val jar by tasks.existing(Jar::class) {
     dependsOn(gradle.includedBuild("javatools").task(":jar"))
     if (shouldBundleJavaTools) {
-        from(zipTree(xtcJavaToolsJarConsumer.get().singleFile))
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
+        val javatoolsJars = xdkJavaToolsJarConsumer.get().files
+        System.err.println("*** javatoolsJar: "  + javatoolsJars)
+        javatoolsJars.forEach {
+            logger.lifecycle("$prefix Adding zipTree from $it to plugin jar.")
+            from(zipTree(it))
+        }
+//        from(zipTree(xdkJavaToolsJarConsumer.get().singleFile))
         doLast {
             logger.info("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
         }
@@ -115,7 +112,7 @@ val jar by tasks.existing(Jar::class) {
         attributes(
             "Manifest-Version" to "1.0",
             "Xdk-Version" to semanticVersion.toString(),
-            "Main-Class" to "org.xtclang.plugin.Usage",
+            "Main-Class" to "$pprefix.plugin.Usage",
             "Name" to "/org/xtclang/plugin/",
             "Sealed" to "true",
             "Specification-Title" to "XTC Gradle and Maven Plugin",

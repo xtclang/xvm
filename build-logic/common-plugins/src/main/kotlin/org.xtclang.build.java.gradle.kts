@@ -14,10 +14,12 @@ plugins {
 }
 
 private val enablePreview = enablePreview()
+private val pprefix = "org.xtclang.java"
+private val lintProperty = "$pprefix.lint"
 
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("org.xtclang.java.jdk", DEFAULT_JAVA_BYTECODE_VERSION).toInt())
+        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION).toInt())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             throw buildException("Error in Java toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
@@ -37,7 +39,7 @@ testing {
 
 tasks.withType<JavaExec>().configureEach {
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
-    javaLauncher.set(javaToolchains.launcherFor(java.toolchain)) // Or the plugin breaks
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     if (enablePreview) {
         jvmArgs("--enable-preview")
     }
@@ -46,18 +48,45 @@ tasks.withType<JavaExec>().configureEach {
     }
 }
 
-tasks.withType<JavaCompile>().configureEach {
-    fun isHardCodedDisabledLint(): Boolean {
-        return project.name != "xtc-plugin"
+//val assemble by tasks.existing
+val checkWarnings by tasks.registering {
+    if (!getXdkPropertyBoolean(lintProperty, false)) {
+        val lintPropertyHasValue = isXdkPropertySet(lintProperty)
+        if (lintPropertyHasValue) {
+            logger.warn("$prefix *** WARNING: Project EXPLICITLY disables Java linting/warnings in its properties. DO NOT RELEASE PRODUCTION CODE COMPILED WITH DISABLED WARNINGS!")
+        } else {
+            logger.warn("$prefix *** WARNING: Java linting/warnings disabled for project. This is not best practice!")
+        }
     }
+}
 
-    val lint = isHardCodedDisabledLint().not() && getXdkPropertyBoolean("org.xtclang.java.lint", false)
-    val maxErrors = getXdkProperty("org.xtclang.java.maxErrors", "0").toInt()
-    val maxWarnings = getXdkProperty("org.xtclang.java.maxWarnings", "0").toInt()
-    val warningsAsErrors = getXdkPropertyBoolean("org.xtclang.java.warningsAsErrors", false)
+val assemble by tasks.existing {
+    dependsOn(checkWarnings)
+}
 
+/*
+tasks.named(LifecycleBasePlugin.ASSEMBLE_TASK_NAME).configure {
+    //doFirst {
+    //    logger.warn("Run once!")
+        val lint = getXdkPropertyBoolean(lintProperty, false)
+        if (!lint) {
+            val lintPropertyHasValue = isXdkPropertySet(lintProperty)
+            if (lintPropertyHasValue) {
+                logger.warn("$prefix *** WARNING: Project EXPLICITLY disables Java linting/warnings in its properties. DO NOT RELEASE PRODUCTION CODE COMPILED WITH DISABLED WARNINGS!")
+            } else {
+                logger.warn("$prefix *** WARNING: Java linting/warnings disabled for project. This is not best practice!")
+            }
+        }
+    //}
+}*/
+
+tasks.withType<JavaCompile>().configureEach {
+    val lint = getXdkPropertyBoolean(lintProperty, false)
+    val maxErrors = getXdkProperty("$pprefix.maxErrors", "0").toInt()
+    val maxWarnings = getXdkProperty("$pprefix.maxWarnings", "0").toInt()
+    val warningsAsErrors = getXdkPropertyBoolean("$pprefix.warningsAsErrors", true)
     if (!warningsAsErrors) {
-        logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best-practice (Enable -Werror).")
+        logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
     }
 
     val args = buildList {
@@ -90,6 +119,7 @@ tasks.withType<JavaCompile>().configureEach {
         isDeprecation = lint
         isWarnings = lint
         encoding = UTF_8.toString()
+        isFork = false
     }
 
     doLast {
@@ -101,9 +131,9 @@ tasks.withType<Test>().configureEach {
     if (enablePreview) {
         jvmArgs("--enable-preview")
     }
-    maxHeapSize = getXdkProperty("org.xtclang.java.maxHeap", "4G")
+    maxHeapSize = getXdkProperty("$pprefix.maxHeap", "4G")
     testLogging {
-        showStandardStreams = getXdkPropertyBoolean("org.xtclang.java.test.stdout")
+        showStandardStreams = getXdkPropertyBoolean("$pprefix.test.stdout")
         if (showStandardStreams) {
             events(STANDARD_OUT, STANDARD_ERROR, SKIPPED, STARTED, PASSED, FAILED)
         }
@@ -114,7 +144,7 @@ tasks.withType<Test>().configureEach {
 }
 
 private fun enablePreview(): Boolean {
-    val enablePreview = getXdkPropertyBoolean("org.xtclang.java.enablePreview")
+    val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview")
     if (enablePreview) {
         logger.warn("$prefix WARNING: Project has Java preview features enabled.")
     }

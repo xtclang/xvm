@@ -15,13 +15,18 @@ plugins {
 
 gradleEnterprise {
     buildScan {
+        val isCi = System.getenv("CI") != null
+        val isGitHubAction = System.getenv("GITHUB_ACTIONS") == "true"
+        publishAlwaysIf(isGitHubAction)
+        publishOnFailure()
         termsOfServiceUrl = "https://gradle.com/terms-of-service"
         termsOfServiceAgree = "yes"
-        isUploadInBackground = System.getenv("CI") != null
-        publishAlwaysIf(System.getenv("GITHUB_ACTIONS") == "true")
-        publishOnFailure()
+        isUploadInBackground = isCi
+        tag(if (isCi) "CI" else "LOCAL")
         capture {
-            isTaskInputFiles = System.getProperty("slow.internet.connection", "false").toBoolean()
+            isTaskInputFiles = true
+            isBuildLogging = true
+            isTestLogging = true
         }
     }
 }
@@ -33,6 +38,5 @@ includeBuild("plugin")
 includeBuild("xdk")
 includeBuild("manualTests")
 includeBuild("manualTests/webapp")
-//includeBuild("dev")
 
 rootProject.name = "xvm"

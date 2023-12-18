@@ -8,4 +8,3 @@ plugins {
 }
 
 rootProject.name = "javatools-unicode"
-

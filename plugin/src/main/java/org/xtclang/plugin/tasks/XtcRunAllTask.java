@@ -15,7 +15,7 @@ public class XtcRunAllTask extends XtcRunTask {
     @Override
     @TaskAction
     public void run() {
-        project.warn("{} '{}' Running all XTC modules, even if they aren't configured to be run by default.", project.prefix(), getName());
+        project.warn("{} '{}' Running all XTC modules, even if they aren't configured to be run by default.", prefix, getName());
         super.run();
     }
 }

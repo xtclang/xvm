@@ -16,19 +16,7 @@ plugins {
 
 val semanticVersion: SemanticVersion by extra
 
-// TODO: Move these to buildSrc, the XDK composite build does use them in some different places.
-val xtcJavaToolsProvider by configurations.registering {
-    description = "Provider configuration of the The XVM Java Tools jar artifact: 'javatools-$version.jar'"
-    isCanBeResolved = false
-    isCanBeConsumed = true
-    outgoing.artifact(tasks.jar)
-    attributes {
-        attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(JAR))
-    }
-}
-
-val xtcJavaToolsUtils by configurations.registering {
+val xdkJavaToolsUtils by configurations.registering {
     description = "Consumer configuration of the XVM Java Tools Utils jar artifact: 'javatools_utils-$version.jar'"
     isCanBeResolved = true
     isCanBeConsumed = false
@@ -40,8 +28,11 @@ val xtcJavaToolsUtils by configurations.registering {
 
 dependencies {
     @Suppress("UnstableApiUsage")
-    xtcJavaToolsUtils(libs.javatools.utils)
-    compileOnly(libs.javatools.utils) // We include the javautils utils in the Javatools uber-jar, so we need it only as compile only.
+    xdkJavaToolsUtils(libs.javatools.utils)
+    // Normal use case: The javatools-utils is included in the Javatools uber-jar, so we need it only as compile only.
+    // compileOnly(libs.javatools.utils)
+    // Debugging use case: If we want IDE debugging, executing the Compiler or Runner manually, we need javatools-utils as an implementation dependency.
+    implementation(libs.javatools.utils)
     testImplementation(libs.javatools.utils)
 }
 
@@ -50,7 +41,7 @@ val jar by tasks.existing(Jar::class) {
 
     // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
     //  apparent how to get that correct for includedBuilds.
-    from(xtcJavaToolsUtils)
+    from(xdkJavaToolsUtils)
     from(file(xdkImplicitsPath)) // TODO Hack: this should be changed to use a consumable configuration, and/or moving javautils as a subproject, as it is never used standalone, just as part of a fat javatools jar.
 
     manifest {
@@ -69,7 +60,9 @@ val jar by tasks.existing(Jar::class) {
         )
     }
     doLast {
-        logger.info("$prefix Finished building Java tools (fat jar including javatools-utils): '${archiveFile.get().asFile.absolutePath}' as artifact.")
+        val path = archiveFile.map { it.asFile.absolutePath }
+        logger.info("$prefix Finished building Java tools (fat jar including javatools-utils): '$path' as artifact.")
+        printTaskOutputs()
     }
 }
 
@@ -88,6 +81,8 @@ val sanityCheckJar by tasks.registering {
         checkJar
     }
     val expectedEntryCount = getXdkProperty("org.xtclang.javatools.verifyJar.expectedFileCount", "-1").toInt()
+    inputs.file(jar.get().archiveFile)
+    noOutputs()
 
     logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
     doLast {
@@ -104,5 +99,17 @@ val sanityCheckJar by tasks.registering {
             expectedEntryCount) // Check for files in both javatools_utils and javatools + implicit.x
 
         logger.info("$prefix Sanity check of javatools.jar completed successfully.")
+    }
+}
+
+// TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
+val xdkJavaToolsProvider by configurations.registering {
+    description = "Provider configuration of the The XVM Java Tools jar artifact: 'javatools-$version.jar'"
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    outgoing.artifact(jar)
+    attributes {
+        attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("javatools-fatjar"))
     }
 }

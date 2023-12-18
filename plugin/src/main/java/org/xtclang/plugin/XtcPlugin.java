@@ -30,7 +30,7 @@ public class XtcPlugin implements Plugin<Project> {
 
         @Inject
         XtcProjectPlugin(final SoftwareComponentFactory softwareComponentFactory) {
-            this.xtcComponent = softwareComponentFactory.adhoc(Constants.XTC_COMPONENT_NAME);
+            this.xtcComponent = softwareComponentFactory.adhoc(XtcPluginConstants.XTC_COMPONENT_NAME);
         }
 
         @Override

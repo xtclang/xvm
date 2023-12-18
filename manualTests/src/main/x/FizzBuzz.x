@@ -1,6 +1,10 @@
 module TestFizzBuzz {
-    void run() {
+    void run(String[] args = []) {
         @Inject Console console;
+
+        loop: for (String arg : args) {
+            console.print($"TestFizzBuzzArgument: (args[{loop.count}] = {arg})");
+        }
 
         for (Int x : 1..100) {
             console.print(

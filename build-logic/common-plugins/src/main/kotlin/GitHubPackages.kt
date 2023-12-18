@@ -32,6 +32,8 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
         private const val GITHUB_USER_RO_DEFAULT_VALUE = "xtclang-bot"
         private const val GITHUB_TOKEN_RO_DEFAULT_VALUE = "Z2hwX0ZjNGRWeDhNYmxPcnZDYWZrRW96Q0NrQXAzaVZ5RjBUb0NheAo="
 
+        val gitHubRepoTaskPrefixes = listOfNotNull("list", "delete")
+
         fun restHeaders(token: String): List<Pair<String, String>> = listOfNotNull(
             "Accept" to "application/vnd.github+json",
             "X-GitHub-Api-Version" to "2022-11-28",

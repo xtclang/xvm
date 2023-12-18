@@ -3,6 +3,7 @@ package org.xtclang.plugin;
 import org.gradle.api.Action;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 
 import java.util.List;
 
@@ -16,11 +17,17 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
 
         Property<String> getMethodName();
 
-        ListProperty<String> getArgs();
+        List<Provider<String>> getModuleArgs();
 
-        void args(List<String> args);
+        List<String> resolveModuleArgs();
 
-        void args(Object... args);
+        void setModuleArgs(Iterable<?> args);
+
+        void setModuleArgs(Object... args);
+
+        void moduleArgs(Iterable<?> args);
+
+        void moduleArgs(Object... args);
 
         default boolean hasDefaultMethodName() {
             return DEFAULT_METHOD_NAME.equals(getMethodName().get());

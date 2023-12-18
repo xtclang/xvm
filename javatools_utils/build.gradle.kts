@@ -9,7 +9,7 @@ plugins {
 
 val semanticVersion: SemanticVersion by extra
 
-val xtcJavaToolsUtilsProvider by configurations.registering {
+val xdkJavaToolsUtilsProvider by configurations.registering {
     description = "Provider configuration of the XVM java_utils-$version artifacts (classes/jars)."
     isCanBeResolved = false
     isCanBeConsumed = true
@@ -32,6 +32,7 @@ val jar by tasks.existing(Jar::class) {
         )
     }
     doLast {
-        logger.info("$prefix Finished building Java utilities: '${archiveFile.get().asFile.absolutePath}' as artifact.")
+        val path = archiveFile.map { it.asFile.absolutePath }
+        logger.info("$prefix Finished building Java utilities: '$path' as artifact.")
     }
 }

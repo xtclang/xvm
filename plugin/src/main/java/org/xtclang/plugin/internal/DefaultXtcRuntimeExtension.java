@@ -5,27 +5,29 @@ import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
 import org.xtclang.plugin.XtcRuntimeExtension;
 
 import javax.inject.Inject;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
-import static org.xtclang.plugin.Constants.XTC_DEFAULT_RUN_METHOD_NAME_PREFIX;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_DEFAULT_RUN_METHOD_NAME_PREFIX;
 
 public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implements XtcRuntimeExtension {
-
     // TODO: Make it possible to add to the module path, both here and in the XTC compiler with explicit paths.
     //  well in the compiler, it just corresponds to the SourceSet and you can edit that already (except for
     //  maybe the XDK handling behind the scenes). Anyway I'll make it a common property for both environments.
     //  You never know.
     public static class DefaultXtcRunModule implements XtcRunModule {
+        private final Project project;
         private final Property<String> moduleName; // mandatory
-        private final Property<String> methodName; // TODO check that name works
-        private final ListProperty<String> args;
+        private final Property<String> methodName;
+        private final List<Provider<String>> moduleArgs;
 
         @Inject
         @SuppressWarnings("unused")
@@ -38,17 +40,18 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
 
         public DefaultXtcRunModule(final Project project, final String moduleName, final String method, final List<String> args) {
+            this.project = project;
             final var objects = requireNonNull(project.getObjects());
             this.moduleName = objects.property(String.class);
             this.methodName = objects.property(String.class).value(requireNonNull(method));
-            this.args = objects.listProperty(String.class).value(requireNonNull(args));
+            this.moduleArgs = new ArrayList<>(requireNonNull(args).stream().map(arg -> project.provider(() -> arg)).toList());
             if (moduleName != null) {
                 this.moduleName.set(moduleName);
             }
         }
 
         static List<Object> getModuleInputs(final XtcRunModule module) {
-            return List.of(module.getModuleName(), module.getMethodName(), module.getArgs());
+            return List.of(module.getModuleName(), module.getMethodName(), module.getModuleArgs());
         }
 
         @Override
@@ -62,28 +65,75 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
         }
 
         @Override
-        public ListProperty<String> getArgs() {
-            return args;
+        public List<Provider<String>> getModuleArgs() {
+            return moduleArgs;
         }
 
         @Override
-        public void args(final List<String> args) {
-            args(args.toArray());
+        public List<String> resolveModuleArgs() {
+            return moduleArgs.stream().map(Provider::get).toList();
         }
 
         @Override
-        public void args(final Object... args) {
-            this.args.addAll(Arrays.stream(args).map(String::valueOf).toList());
+        public void moduleArgs(final Iterable<?> args) {
+            moduleArgs((Object)iterableToArray(args));
+        }
+
+        @Override
+        public void moduleArgs(final Object... args) {
+            moduleArgs.addAll(argProviderList(project, args));
+        }
+
+        @Override
+        public void setModuleArgs(final Iterable<?> args) {
+            setModuleArgs((Object)iterableToArray(args));
+        }
+
+        @Override
+        public void setModuleArgs(final Object... args) {
+            moduleArgs.clear();
+            moduleArgs(args);
+        }
+
+        @SuppressWarnings("unchecked")
+        private static <T> T[] iterableToArray(final Iterable<T> iterable) {
+            final var list = new ArrayList<T>();
+            iterable.forEach(list::add);
+            return (T[])list.toArray();
+        }
+
+        @SuppressWarnings("unchecked")
+        private static List<Provider<String>> argProviderList(final Project project, final Object... args) {
+            // Args are added in the form of providers for their String.value of value.
+            final var argList = new ArrayList<Provider<String>>();
+            for (final var arg : args) {
+                if (arg instanceof Provider<?>) {
+                    argList.add((Provider<String>)arg);
+                } else {
+                    argList.add(project.provider(() -> String.valueOf(arg)));
+                }
+            }
+            return argList;
         }
 
         @Override
         public boolean validate() {
-            return moduleName.isPresent() && methodName.isPresent() && args.isPresent();
+            return moduleName.isPresent() && methodName.isPresent(); // && args.isPresent();
         }
 
         @Override
         public String toString() {
-            return "[xtcRunModule: moduleName='" + (moduleName.isPresent() ? moduleName.get() : "none") + "', methodName='" + methodName.get() + "', args=" + args.get() + ']';
+            return toString(false);
+        }
+
+        public String toString(final boolean resolve) {
+            return "[xtcRunModule: moduleName='" +
+                    (moduleName.isPresent() ? moduleName.get() : "NONE") +
+                    "', methodName='" +
+                    (methodName.isPresent() ? methodName.get() : "NONE") +
+                    "', methodArgs='" +
+                    (resolve ? resolveModuleArgs() : getModuleArgs()) +
+                    "']";
         }
     }
 
@@ -194,8 +244,8 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcTaskExtension implemen
 
     @Override
     public List<String> getModuleArgs() {
-        final var list = modules.get().stream().map(m -> m.getArgs().get()).toList().stream().flatMap(Collection::stream).toList();
-        logger.info("{} flatmap args: ${}", prefix, list);
+        final var list = modules.get().stream().map(XtcRunModule::resolveModuleArgs).toList().stream().flatMap(Collection::stream).toList();
+        logger.lifecycle("{} Flatmap args: ${}", prefix, list);
         return list;
     }
 

@@ -23,4 +23,4 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Execute Gradle build
-        run: ./gradlew build --info
+        run: ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME=true ./gradlew build --info

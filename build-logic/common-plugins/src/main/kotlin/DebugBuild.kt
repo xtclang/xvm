@@ -1,15 +1,19 @@
+@file:Suppress("DEPRECATION")
+
 import org.gradle.BuildListener
 import org.gradle.BuildResult
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.execution.TaskExecutionListener
 import org.gradle.api.initialization.Settings
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.TaskState
 import org.gradle.kotlin.dsl.*
 import java.io.File
 import java.net.URI
@@ -95,16 +99,18 @@ fun Project.printResolvedConfigFiles(level: LogLevel = LIFECYCLE, configName: St
 
 fun Project.printTaskInputs(level: LogLevel = LIFECYCLE, taskName: String) {
     val task = tasks.getByName(taskName)
-    val outputs = task.inputs.files
-    logger.log(level, "$prefix Task '$taskName' has ${outputs.files.size} inputs:")
-    outputs.asFileTree.forEach { logger.log(level, "$prefix   input : '$it'") }
+    val inputs = task.inputs.files
+    logger.log(level, "$prefix Task '$taskName' has ${inputs.count()} inputs:")
+    inputs.forEach { logger.log(level, "$prefix     input: '$it' (type: ${it.javaClass.name})") }
+    //inputs.asFileTree.forEach { logger.log(level, "$prefix   input : '$it'") }
 }
 
 fun Project.printTaskOutputs(level: LogLevel = LIFECYCLE, taskName: String) {
     val task = tasks.getByName(taskName)
     val outputs = task.outputs.files
-    logger.log(level, "$prefix Task '$taskName' has ${outputs.files.size} outputs:")
-    outputs.asFileTree.forEach { logger.log(level, "$prefix   output: '$it'") }
+    logger.log(level, "$prefix Task '$taskName' has ${outputs.count()} outputs:")
+    outputs.forEach { logger.log(level, "$prefix     output: '$it' (type: ${it.javaClass.name})") }
+    //outputs.asFileTree.forEach { logger.log(level, "$prefix   output: '$it'") }
 }
 
 fun Project.printResolvedConfigFile(level: LogLevel = LIFECYCLE, configName: String) {
@@ -128,13 +134,21 @@ fun Project.printTaskDependencies(level: LogLevel = LIFECYCLE, taskName: String)
     val parents = task.taskDependencies.getDependencies(task).toSet()
     logger.log(level, "$prefix     Task '$projectName:$taskName' depends on ${parents.size} other tasks.")
     parents.forEach {
-        logger.log(level, "$prefix         Task '$projectName:$taskName' <- dependsOn: '$projectName:${it.name}'")
+        logger.log(level, "$prefix             Task '$projectName:$taskName' <- dependsOn: '$projectName:${it.name}'")
     }
-
-    val children = project.tasks.filter { it.dependsOn.contains(task) }.toSet()
+    val children = project.tasks.filter {
+        var match = false // TODO: Better kotlin.
+        for (d in it.dependsOn) {
+            if (d.toString() == taskName) {
+                match = true
+                break
+            }
+        }
+        match
+    }.toSet()
     logger.log(level, "$prefix     Task '$projectName:$taskName' is a dependency of ${children.size} other tasks.")
     children.forEach {
-        logger.log(level, "$prefix     Task '$projectName:taskName' -> isDependencyOf: '$projectName:${it.name}'")
+        logger.log(level, "$prefix         Task '$projectName:$taskName' -> isDependencyOf: '$projectName:${it.name}'")
     }
 }
 
@@ -213,7 +227,7 @@ class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
     }
 }
 
-class XdkBuildListener(project: Project) : XdkProjectBuildLogic(project), BuildListener {
+class XdkBuildListener(project: Project) : XdkProjectBuildLogic(project), BuildListener, TaskExecutionListener {
     private val callbackPrefix = "$prefix [BUILD CALLBACK]"
     private var settings: Settings? = null
     private var loaded: Boolean = false
@@ -234,10 +248,15 @@ class XdkBuildListener(project: Project) : XdkProjectBuildLogic(project), BuildL
         logger.info("$callbackPrefix Projects evaluated.")
     }
 
-    @Deprecated("BuildListener.buildFinished is deprecated")
-    @SuppressWarnings("deprecated")
+    @Deprecated("The Config Cache breaks build listeners.")
     override fun buildFinished(result: BuildResult) {
-        // no-op, remove this when the Gradle API changes.
+        // TODO: Deprecated for config cache.
+    }
+
+    override fun beforeExecute(task: Task) {
+    }
+
+    override fun afterExecute(task: Task, state: TaskState) {
     }
 
     override fun toString(): String {

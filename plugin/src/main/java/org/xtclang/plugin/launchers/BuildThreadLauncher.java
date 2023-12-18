@@ -2,6 +2,7 @@ package org.xtclang.plugin.launchers;
 
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
+import org.xtclang.plugin.internal.DefaultXtcTaskExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,30 +14,43 @@ import java.util.Objects;
 
 public class BuildThreadLauncher extends XtcLauncher {
     /**
-     * The launcher invocation method, in a variant that cannot do System.exit, to safeguard the
+     * The launcher invocation method, in a variant that cannot do System.exit(), to safeguard the
      * "fork = false" configuration, which should be used for debugging purposes only.
      */
-
     private static final String INVOKE_METHOD_NAME_NO_SYSTEM_EXIT = "call";
 
     private final Method main;
 
-    BuildThreadLauncher(final Project project, final String mainClassName) {
-        super(project, "In-process: " + mainClassName);
+    BuildThreadLauncher(final Project project, final String mainClassName, final boolean logOutputs) {
+        super(project, "In-process: " + mainClassName, logOutputs);
         this.main = resolveMethod(mainClassName, INVOKE_METHOD_NAME_NO_SYSTEM_EXIT, String[].class);
     }
 
     @Override
-    public ExecResult apply(final CommandLine args) {
-        Objects.requireNonNull(args);
-        warn("{} WARNING: XTC Plugin will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, args.getMainClassName());
+    protected boolean validateCommandLine(final CommandLine cmd) {
+        Objects.requireNonNull(cmd);
+        final var mainClassName = cmd.getMainClassName();
+        final var jvmArgs = cmd.getJvmArgs();
+        warn("{} WARNING: XTC Plugin will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, mainClassName);
+        if (DefaultXtcTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
+            warn("{} WARNING: XTC Plugin '{}' has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", prefix, mainClassName, jvmArgs);
+        }
+        return false;
+    }
+
+    @Override
+    public ExecResult apply(final CommandLine cmd) {
+        validateCommandLine(cmd);
+
         final var oldOut = System.out;
         final var oldErr = System.err;
-        final var builder = XtcExecResult.builder(getClass(), args);
+        final var builder = resultBuilder(cmd);
         try {
-            System.setOut(new PrintStream(builder.getOut()));
-            System.setErr(new PrintStream(builder.getErr()));
-            main.invoke(null, (Object)args.toList().toArray(new String[0]));
+            if (logOutputs) {
+                System.setOut(new PrintStream(builder.getOut()));
+                System.setErr(new PrintStream(builder.getErr()));
+            }
+            main.invoke(null, (Object)cmd.toList().toArray(new String[0]));
             builder.exitValue(0);
         } catch (final IllegalAccessException e) {
             throw buildException("Failed to invoke '{}.{}' through reflection: {}", main.getDeclaringClass().getName(), main.getName(), e.getMessage());
@@ -75,6 +89,7 @@ public class BuildThreadLauncher extends XtcLauncher {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private Method resolveMethod(final String className, final String methodName, final Class<?>... parameterTypes) {
         try {
             return Class.forName(className).getMethod(methodName, parameterTypes);

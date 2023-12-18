@@ -8,11 +8,10 @@ import org.gradle.api.provider.Property;
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcTaskExtension;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
+public abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
     protected final Project project;
@@ -24,17 +23,18 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     protected final Property<Boolean> isVerbose;
     protected final Property<Boolean> isFork;
     protected final Property<Boolean> useNativeLauncher;
+    protected final Property<Boolean> logOutputs;
 
     protected DefaultXtcTaskExtension(final Project project) {
         this.project = project;
         this.prefix = ProjectDelegate.prefix(project);
         this.objects = project.getObjects();
         this.logger = project.getLogger();
-        //this.jvmArgs = project.getObjects().listProperty(String.class).value(new ArrayList<>(DEFAULT_JVM_ARGS));
-        this.jvmArgs = project.getObjects().listProperty(String.class).value(DEFAULT_JVM_ARGS);
-        this.isVerbose = project.getObjects().property(Boolean.class).value(false);
-        this.isFork = project.getObjects().property(Boolean.class).value(true);
-        this.useNativeLauncher = project.getObjects().property(Boolean.class).value(false);
+        this.jvmArgs = objects.listProperty(String.class).value(DEFAULT_JVM_ARGS);
+        this.isVerbose = objects.property(Boolean.class).value(false);
+        this.isFork = objects.property(Boolean.class).value(true);
+        this.useNativeLauncher = objects.property(Boolean.class).value(false);
+        this.logOutputs = objects.property(Boolean.class).value(true);
     }
 
     @Override
@@ -45,6 +45,11 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     @Override
     public Property<Boolean> getUseNativeLauncher() {
         return useNativeLauncher;
+    }
+
+    @Override
+    public Property<Boolean> getLogOutputs() {
+        return logOutputs;
     }
 
     @Override
@@ -79,5 +84,9 @@ abstract class DefaultXtcTaskExtension implements XtcTaskExtension {
     public XtcTaskExtension jvmArgs(final Object... jvmArgs) {
         Arrays.stream(jvmArgs).forEach(jvmArg -> this.jvmArgs.add(jvmArg.toString()));
         return this;
+    }
+
+    public static boolean hasModifiedJvmArgs(final List<String> jvmArgs) {
+        return !DEFAULT_JVM_ARGS.equals(jvmArgs);
     }
 }

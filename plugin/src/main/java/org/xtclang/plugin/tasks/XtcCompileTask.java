@@ -1,7 +1,6 @@
 package org.xtclang.plugin.tasks;
 
 import org.gradle.api.file.Directory;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
@@ -9,168 +8,147 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
-import org.xtclang.plugin.launchers.CommandLine;
 import org.xtclang.plugin.XtcCompilerExtension;
-import org.xtclang.plugin.launchers.XtcLauncher;
 import org.xtclang.plugin.XtcProjectDelegate;
+import org.xtclang.plugin.launchers.CommandLine;
+import org.xtclang.plugin.launchers.XtcLauncher;
 
 import javax.inject.Inject;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
-import static org.xtclang.plugin.Constants.XTC_COMPILER_CLASS_NAME;
-import static org.xtclang.plugin.Constants.XTC_CONFIG_NAME_JAVATOOLS_INCOMING;
-import static org.xtclang.plugin.Constants.XTC_LANGUAGE_NAME;
-import static org.xtclang.plugin.Constants.XTC_SOURCE_FILE_EXTENSION;
-import static org.xtclang.plugin.tasks.XtcExtractXdkTask.EXTRACT_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcProjectDelegate.hasFileExtension;
-import static org.xtclang.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask {
-    private final XtcProjectDelegate project;
-    private final String prefix;
-    private final SourceSet sourceSet;
-    private final XtcCompilerExtension extCompiler;
-    private final XtcLauncher launcher;
+    private final XtcCompilerExtension ext;
+    private final Provider<XtcLauncher> launcher;
 
+    /**
+     * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
+     * the project ObjectFactory.
+     * <p<
+     * The reason we need the @Inject is that the Kotlin compiler adds a secret parameter to the generated
+     * constructor, if the class uses variables from the build script. That parameter is a reference to the
+     * enclosing build script. As a result, the task needs to have the @Inject annotation in the constructor
+     * so that Gradle will correctly instantiate the task with build script reference (which is what happens
+     * when you instantiate it from the ObjectFactory in a project):
+     */
     @Inject
     public XtcCompileTask(final XtcProjectDelegate project, final SourceSet sourceSet) {
-        super(project);
-        this.project = project;
-        this.prefix = project.prefix();
-        this.sourceSet = sourceSet;
-        this.extCompiler = project.xtcCompileExtension();
-        this.launcher = XtcLauncher.create(project.getProject(), XTC_COMPILER_CLASS_NAME, getIsFork().get(), getUseNativeLauncher().get());
-        configureTask();
-    }
-
-    private void configureTask() {
-        final var name = getName();
-        setGroup(BUILD_GROUP);
-        setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
-
-        dependsOn(EXTRACT_TASK_NAME);
-        setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
-
-        project.info("{} Associating {} compile task {} with SourceDirectorySet: {}", prefix, sourceSet.getName(), name, getSource().getFiles());
-
-        if (extCompiler.getForceRebuild().get()) {
-            project.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
-            project.alwaysRerunTask(this);
-            touchAllSource();
-        }
-
-        doLast(t -> {
-            // This happens during task execution, after the config phase.
-            project.info("{} '{}' Finished. Outputs in: {}", prefix, t.getName(), t.getOutputs().getFiles().getAsFileTree());
-            sourceSet.getOutput().getAsFileTree().forEach(it -> project.info("{} compileXtc sourceSet output: {}", prefix, it));
-        });
-
-        project.info("{} '{}' Registered and configured compile task for sourceSet: {}", prefix, getName(), sourceSet.getName());
-    }
-
-    @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
-    public FileCollection getInputXtcJavaToolsConfig() {
-        return project.getProject().files(project.getProject().getConfigurations().getByName(XTC_CONFIG_NAME_JAVATOOLS_INCOMING));
+        super(project, sourceSet);
+        this.ext = project.xtcCompileExtension();
+        this.launcher = project.getProject().provider(() -> XtcLauncher.create(project.getProject(), XTC_COMPILER_CLASS_NAME, ext));
     }
 
     // Depend on xdkModule declarations if declared (or xtcModuleTest for test source set)
+ /*
     @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
-    public FileCollection getInputDeclaredDependencyModules() {
+    FileCollection getInputDeclaredDependencyModules() {
         // The source sets are already an implicit input since this is a source task.
         return project.filesFrom(incomingXtcModuleDependencies(sourceSet)); // look for xdkModules that have been added as dependencies.
-    }
+    }*/
 
     @InputDirectory
     @PathSensitive(PathSensitivity.ABSOLUTE)
-    public Provider<Directory> getInputXdkContents() {
+    Provider<Directory> getInputXdkContents() {
         return project.getXdkContentsDir();
     }
 
     @OutputDirectory
-    public Provider<Directory> getOutputXtcModules() {
+    Provider<Directory> getOutputXtcModules() {
         return project.getXtcCompilerOutputDirModules(sourceSet);
     }
 
     @Input
-    public Property<Boolean> getFork() {
-        return extCompiler.getFork();
+    Property<Boolean> getFork() {
+        return ext.getFork();
     }
 
     @Input
     Property<Boolean> getUseNativeLauncher() {
-        return extCompiler.getUseNativeLauncher();
+        return ext.getUseNativeLauncher();
     }
 
     @Input
-    public ListProperty<String> getJvmArgs() {
-        return extCompiler.getJvmArgs();
+    Property<Boolean> getLogOutputs() {
+        return ext.getLogOutputs();
     }
 
     @Input
-    public Property<Boolean> getNoWarn() {
-        return extCompiler.getNoWarn();
+    ListProperty<String> getJvmArgs() {
+        return ext.getJvmArgs();
     }
 
     @Input
-    public Property<Boolean> getIsFork() {
-        return extCompiler.getFork();
+    Property<Boolean> getNoWarn() {
+        return ext.getNoWarn();
     }
 
     @Input
-    public Property<Boolean> getIsVerbose() {
-        return extCompiler.getVerbose();
+    Property<Boolean> getIsFork() {
+        return ext.getFork();
     }
 
     @Input
-    public Property<Boolean> getIsStrict() {
-        return extCompiler.getStrict();
+    Property<Boolean> getIsVerbose() {
+        return ext.getVerbose();
     }
 
     @Input
-    public Property<Boolean> getQualifiedOutputName() {
-        return extCompiler.getQualifiedOutputName();
+    Property<Boolean> getIsStrict() {
+        return ext.getStrict();
     }
 
     @Input
-    public Property<Boolean> getVersionedOutputName() {
-        return extCompiler.getVersionedOutputName();
+    Property<Boolean> getQualifiedOutputName() {
+        return ext.getQualifiedOutputName();
     }
 
     @Input
-    public Property<Boolean> getForceRebuild() {
-        return extCompiler.getForceRebuild();
+    Property<Boolean> getVersionedOutputName() {
+        return ext.getVersionedOutputName();
     }
 
     @Input
-    public MapProperty<String, String> getRenameOutput() {
-        return extCompiler.getRenameOutput();
+    Property<Boolean> getForceRebuild() {
+        return ext.getForceRebuild();
     }
 
     @Input
-    public Property<String> getOutputFilename() {
-        return extCompiler.getOutputFilename();
+    MapProperty<String, String> getRenameOutput() {
+        return ext.getRenameOutput();
+    }
+
+    @Input
+    Property<String> getOutputFilename() {
+        return ext.getOutputFilename();
     }
 
     @OutputDirectory
-    public Provider<Directory> getOutputDirectory() {
+    Provider<Directory> getOutputDirectory() {
         return project.getXtcCompilerOutputDirModules(sourceSet);
     }
 
     @TaskAction
     public void compile() {
+        start();
+
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, getJvmArgs().get());
+
+        if (getForceRebuild().get()) {
+            project.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
+            touchAllSource(); // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
+        }
 
         final var outputFilename = getOutputFilename().get();
         if (outputFilename.contains(File.separator)) {
@@ -186,12 +164,18 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         project.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
 
         // Resource should already be an input because we inherit the SourceTask, which uses a project wide file change policy.
-        final var resourceDirs = sourceSet.getResources().getSrcDirs();
-        resourceDirs.forEach(dir -> {
+        //final var outputResources = project.getProject().files(sourceSet.getOutput().getResourcesDir()).getFiles(); // ugly hack to find directories.
+        //final var outputResourceDirs = outputResources.stream().filter(File::isDirectory).toList();
+        //System.err.println("output resource dirs: " + outputResourceDirs);
+        //final var resourceFiles = sourceSet.getResources().getFiles();
+        // Replace sourceset dir with its rebase relative path under build.   src/xxx/resource -> sourceSetOutput (i.e. build/xdk/
+        //sourceSet.getResources().getSrcDirs().forEach(dir -> project.lifecycle("{} Resource SOURCE dir (pre-transform): '{}'", prefix, dir));
+        sourceSet.getResources().getSrcDirs().forEach(dir -> {
+            project.info("{} Resolving resource dir (build): '{}'.", prefix, dir);
             if (!dir.exists()) {
-                project.info("{} Resource directory does not exist: {} (ignoring passing as input to compiler)", prefix, dir);
+                project.info("{} Resource does not exist: '{}' (ignoring passing as input to compiler)", prefix, dir);
             } else {
-                project.info("{} Adding resource directory: {}", prefix, dir);
+                project.info("{} Adding resource: {}", prefix, dir);
                 args.add("-r", dir.getAbsolutePath());
             }
         });
@@ -210,17 +194,20 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         }
         sourceFiles.forEach(args::addRaw);
 
-        handleExecResult(project.getProject(), launcher.apply(args));
+        handleExecResult(project.getProject(), launcher.get().apply(args));
         // TODO: A little bit kludgy, but the outputFilename property in the xtcCompile extension as some directory vs file issue (a bug).
         renameOutputs();
     }
 
     private void renameOutputs() {
+        final var map = getRenameOutput().get();
         project.getProject().fileTree(getOutputXtcModules()).filter(project::isXtcBinary).forEach(file -> {
             final String oldName = file.getName();
-            final String newName = getRenameOutput().get().get(oldName);
-            project.info("{} Filtering file {} to {}", prefix, oldName, newName);
-            if (newName != null) {
+            final String newName = map.get(oldName);
+            if (newName == null) {
+                project.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
+            } else {
+                project.info("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
                 final File newFile = new File(file.getParentFile(), newName);
                 project.info("{} File tree scan: {} should be renamed to {}", project, file, newFile);
                 if (!file.renameTo(newFile)) {
@@ -241,20 +228,6 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         return project.resolveModulePath(getName(), getInputDeclaredDependencyModules());
     }
 
-    private boolean isTopLevelSource(final File file) {
-        assert file.isFile();
-        final var topLevelSourceDirs = new HashSet<>(sourceSet.getAllSource().getSrcDirs());
-        final var dir = file.getParentFile();
-        assert(dir != null && dir.isDirectory());
-        final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        project.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
-        if (isTopLevelSrc || "mack.x".equalsIgnoreCase(file.getName())) {
-            project.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
-            return true;
-        }
-        return false;
-    }
-
     private boolean isXtcSourceFile(final File file) {
         // TODO: Previously we called a Launcher method to ensure this was a module, but all these files should be in the top
         //   level directory of a source set, and this means that xtc will assume they are all module definitions, and fail if this
@@ -266,5 +239,19 @@ public abstract class XtcCompileTask extends XtcSourceTask {
 
     private boolean isTopLevelXtcSourceFile(final File file) {
         return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(file);
+    }
+
+    private boolean isTopLevelSource(final File file) {
+        assert file.isFile();
+        final var topLevelSourceDirs = new HashSet<>(sourceSet.getAllSource().getSrcDirs());
+        final var dir = file.getParentFile();
+        assert (dir != null && dir.isDirectory());
+        final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
+        project.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
+        if (isTopLevelSrc || "mack.x".equalsIgnoreCase(file.getName())) {
+            project.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
+            return true;
+        }
+        return false;
     }
 }

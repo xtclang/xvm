@@ -1,19 +1,39 @@
 TODO:
 * Use the PluginMaven default publication, don't add a special one for XTC. This is hardcoded and forced to generate docs and source from the gradlePluginPortal logic anyway.
-* Unicode as part of a property guarded normal build step for lib-ecstasy.
-* Nsis archive in corporate secrets?
-* Investigate the Git release plugin
-* VERSION and GROUP files in the root.
+* Allow configuration based running xtc module from gradlew
+* Abort if running gradle and not gradlew.
+* speed up build
+* Investigate debugger
+* Build accumulator
 
 Maybe after merge:
+* Investigate the Git release plugin
+* Add a timer so we can get task events reported at the end of each action, or XTCTask.
+* Add a unit test to the test source set of something and just make sure the runXtcTest and compileXtcTest tasks
+work. Source set specific configuration? We don't have that yet, I guess? Or do we? Check what we can derive
+from the source set sent into the compile and run tasks for the test source set set.
 * Make property prefix "org.xtclang." a global constant or something we instantiate the XdkVersionHandler with.
 * Can we get rid of the gradlePluginPublish source and doc publications? Where does the publication come from?
 * UseLogging, prefix?
+* Revisit all file/dir references in Gradle build scripts, or any providers in general, to ensure laziness and
+  to avoid ugly hacks (especially to create paths). Like, there are serveral places that will look a lot prettier
+  with the "provider {}" DSL sugar.
 * git maven plugin to help ease the correct git flow?
-* org.xtclang for gradlePluginPortal
-* Native launcher compile and run tasks.
+* More laziness for getting files etc:
+   val output: Provider<RegularFile> = layout.buildDirectory.file("myOutput.txt")
+   // If you really need the java.io.File for a non lazy API
+   output.get().asFile
+   // Or a path for a lazy String based API
+   output.map { it.asFile.path }
+   Look for all get() and see if they can be lazy instead.
 
 Done:
+* Unicode as part of a property guarded normal build step for lib-ecstasy.
+* org.xtclang for gradlePluginPortal
+* Run task does not seem to print to stdout as it should? Reset stdout stding.
+* Native launcher compile and run tasks.
+* VERSION and GROUP files in the root.
+* Nsis archive in corporate secrets?
 * Rename "xdk" version tag to avoid conflicts with "xdk.group" during type safe version catalog resolution
 * nsis, verify the installer
 * org.xtclang for mavenCentral
@@ -44,6 +64,8 @@ val value: String, val debugString: String = "",
         }
     )
 }
+TODO: Properties from properties file should always be overridden by System.getenv or System.getProperties equivalents
+  for that property, if they exist. Right now it's the other way around, which confuses people.
 TODO: Add byte ingestion counters for the compiler, perhaps, so we can tell if a rerun actually took place just by looking at the screen.
 TODO: Add a configuraton/text file/dsl, anything that can be read from disk that is interpreted as arguments for the launcher. This would be
 useful and could be drawn out directly from xtc kotlin gradle dsls in the plugin with very low complexity. I have at a few occaasins
@@ -71,7 +93,6 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./xdk/build.gradle.kts:    // TODO: This can be done a lot more nicely with relative path copy/renaming as
 ./xdk/build.gradle.kts:// TODO: Add a sanity check, that makes sure all files in the distribution are there,
 ./xdk/build.gradle.kts:// TODO - Keep dir patterns here too, or have it return copy specs based on resources
-./manualTests/webapp/build.gradle.kts:// TODO: xdkZip does not resolve on its own in this environment. It's not clear why.
 ./manualTests/webapp/build.gradle.kts:    // TODO: webappConsumer(project(":webapp"))
 ./manualTests/webapp/build.gradle.kts:// TODO: Right now processResources exists through the xtc plugin, is run, and copies src/<sourceSet>/resources to build resources for that source set
 ./manualTests/build.gradle.kts:// TODO: Add source set for negative tests.
@@ -83,35 +104,3 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./javatools/build.gradle.kts:    from(file(xdkImplicitsPath)) // TODO Hack: this should be changed to use a consumable configuration, and/or moving javautils as a subproject, as it is never used standalone, just as part of a fat javatools jar.
 TODO: SAVE THE BUILD SCAN FROM THE LATEST BUILD SOMEWHERE LOCAL WHERE WE CAN LOOK LATER. CONTAINER OUR OWN GRADLE ENTERPRISE SERVER.
 
-:publishPlugins
-+--- :assemble
-|    +--- :jar
-|    |    +--- :classes
-|    |    |    +--- :compileJava
-|    |    |    \--- :processResources
-|    |    |         \--- :pluginDescriptors
-|    |    +--- :compileJava *
-|    |    \--- :jar (included build 'javatools')
-|    +--- :javadocJar
-|    |    \--- :javadoc
-|    |         +--- :classes *
-|    |         \--- :compileJava *
-|    +--- :publishAllPublicationsToBuildRepository
-|    |    +--- :pruneBuildRepo
-|    |    +--- :publishPluginMavenPublicationToBuildRepository
-|    |    |    +--- :generateMetadataFileForPluginMavenPublication
-|    |    |    |    +--- :jar *
-|    |    |    |    +--- :javadocJar *
-|    |    |    |    \--- :sourcesJar
-|    |    |    +--- :generatePomFileForPluginMavenPublication
-|    |    |    +--- :jar *
-|    |    |    +--- :javadocJar *
-|    |    |    \--- :sourcesJar *
-|    |    +--- :publishXtcPluginMarkerMavenPublicationToBuildRepository
-|    |    |    \--- :generatePomFileForXtcPluginMarkerMavenPublication
-|    |    \--- :publishXtcPluginPublicationToBuildRepository
-|    |         +--- :generatePomFileForXtcPluginPublication
-|    |         \--- :jar *
-|    \--- :sourcesJar *
-+--- :generateMetadataFileForPluginMavenPublication *
-\--- :generatePomFileForPluginMavenPublication *

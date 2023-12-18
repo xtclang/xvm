@@ -9,7 +9,7 @@ plugins {
 }
 
 dependencies {
-    xtcJavaTools(libs.javatools)
+    xdkJavaTools(libs.javatools)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.collections)

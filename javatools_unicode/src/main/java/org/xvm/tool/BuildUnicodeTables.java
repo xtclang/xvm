@@ -168,9 +168,20 @@ public class BuildUnicodeTables {
 
     private File resolveArgumentAsFile() {
         if (asArgs.length > 0) {
-            return new File(asArgs[0]);
+            final File ucdZip = new File(asArgs[0]);
+            out(getClass().getSimpleName() + " UCD zip file: " + ucdZip.getAbsolutePath());
+            return ucdZip;
         }
         return null;
+    }
+
+    private File resolveArgumentAsDestinationDir() {
+        if (asArgs.length > 1) {
+            final File destDir = new File(asArgs[1]);
+            out(getClass().getSimpleName() + " destination directory: " + destDir.getAbsolutePath());
+            return destDir;
+        }
+        return OUTPUT_DIR;
     }
 
     private ZipFile getZipFile() throws IOException {
@@ -234,26 +245,27 @@ public class BuildUnicodeTables {
         writeResult(name, ConstOrdinalList.compress(array, 256));
     }
 
+    private File resolveOutput(final String name, final String extension) throws IOException {
+        final var filename = "Char" + name + '.' + extension;
+        final var dir = resolveArgumentAsDestinationDir();
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IOException("Could not access or create dir: '" + dir.getAbsolutePath() + '\'');
+        }
+        assert dir.canWrite();
+        return new File(dir, filename);
+    }
+
     void writeResult(final String name, final byte[] data) throws IOException {
-        final var filename = "Char" + name + ".dat";
-        final var dir = new File(OUTPUT_DIR, "tables");
-        final var exists = dir.exists() && dir.isDirectory() && dir.canWrite();
-        final var file = exists ? new File(dir, filename) : new File(filename);
-        try (final var out = new FileOutputStream(file)) {
+        try (final var out = new FileOutputStream(resolveOutput(name, "dat"))) {
             out.write(data);
         }
     }
 
     void writeDetails(final String name, final String details) throws IOException {
-        final var filename = "Char" + name + ".txt";
-        final var dir = OUTPUT_DIR;
-        final var exists = dir.exists() && dir.isDirectory() && dir.canWrite();
-        final var file = exists ? new File(dir, filename) : new File(filename);
-        try (final var out = new FileWriter(file)) {
+        try (final var out = new FileWriter(resolveOutput(name, "txt"))) {
             out.write(details);
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

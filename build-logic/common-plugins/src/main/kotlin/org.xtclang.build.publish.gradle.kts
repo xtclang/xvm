@@ -5,7 +5,8 @@ plugins {
     id("maven-publish")
 }
 
-internal val xtcGitHubClient = xdkBuildLogic.github()
+private val xtcGitHubClient = xdkBuild.github()
+private val publishLocalDist = xdkBuild.distro().shouldPublishPluginToLocalDist()
 
 /**
  * Configure repositories for XDK artifact publication. Currently, we publish the XDK zip "xdkArchive", and
@@ -16,11 +17,13 @@ publishing {
         logger.info("$prefix Configuring publications for repository mavenLocal().")
         mavenLocal()
 
-        logger.info("$prefix Configuring publications for repository local flat dir: '$buildRepoDirectory'")
-        maven {
-            name = "build"
-            description = "Publish all publications to the local build directory repository."
-            url = uri(buildRepoDirectory)
+        if (publishLocalDist) {
+            logger.info("$prefix Configuring publications for repository local flat dir: '$buildRepoDirectory'")
+            maven {
+                name = "build"
+                description = "Publish all publications to the local build directory repository."
+                url = uri(buildRepoDirectory)
+            }
         }
 
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
@@ -63,7 +66,37 @@ publishing {
     }
 }
 
-val listGitHubPublications by tasks.registering {
+val publishLocal by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Task that publishes project publications to local repositories (e.g. build and mavenLocal)."
+    dependsOn(publishAllPublicationsToMavenLocalRepository)
+}
+
+val pruneBuildRepo by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
+    if (publishLocalDist) {
+        logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
+        delete(buildRepoDirectory)
+    }
+}
+
+if (publishLocalDist) {
+    logger.warn("$prefix Configuring local distribution plugin publication.")
+    val publishAllPublicationsToBuildRepository by tasks.existing {
+        if (publishLocalDist) {
+            dependsOn(pruneBuildRepo)
+            mustRunAfter(pruneBuildRepo)
+        }
+    }
+    publishLocal {
+        dependsOn(publishAllPublicationsToBuildRepository)
+    }
+}
+
+val publishAllPublicationsToMavenLocalRepository by tasks.existing
+
+val listAllXtcLangGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
@@ -85,7 +118,7 @@ val listGitHubPublications by tasks.registering {
     }
 }
 
-val deleteGitHubPublications by tasks.registering {
+val deleteAllXtcLangGitHubPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description =  "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
@@ -93,22 +126,3 @@ val deleteGitHubPublications by tasks.registering {
         logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
     }
 }
-
-val publishLocal by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Task that publishes project publications to local repositories (e.g. build and mavenLocal)."
-    dependsOn(publishAllPublicationsToBuildRepository, publishAllPublicationsToMavenLocalRepository)
-}
-
-val pruneBuildRepo by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
-    delete(buildRepoDirectory)
-}
-
-val publishAllPublicationsToBuildRepository by tasks.existing {
-    dependsOn(pruneBuildRepo)
-    mustRunAfter(pruneBuildRepo)
-}
-
-val publishAllPublicationsToMavenLocalRepository by tasks.existing

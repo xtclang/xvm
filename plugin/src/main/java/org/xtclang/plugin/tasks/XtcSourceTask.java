@@ -11,6 +11,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SkipWhenEmpty;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
 import org.gradle.internal.Factory;
@@ -21,14 +22,14 @@ import javax.inject.Inject;
 import java.io.File;
 import java.util.Set;
 
-public abstract class XtcSourceTask extends XtcDefaultTask implements PatternFilterable {
+public abstract class XtcSourceTask extends XtcLauncherTask implements PatternFilterable {
     private final PatternFilterable patternSet;
 
     private ConfigurableFileCollection sourceFiles;
 
     @SuppressWarnings("this-escape")
-    protected XtcSourceTask(final XtcProjectDelegate project) {
-        super(project);
+    protected XtcSourceTask(final XtcProjectDelegate project, final SourceSet sourceSet) {
+        super(project, sourceSet);
         this.patternSet = getPatternSetFactory().create();
         this.sourceFiles = project.getObjects().fileCollection();
     }
@@ -172,7 +173,7 @@ public abstract class XtcSourceTask extends XtcDefaultTask implements PatternFil
      * only for "forceRebuild", which really making the compileXtc<SourceSetName> tasks non-cacheable and never up
      * to date during configuration, should be enough to accomplish. TODO: Verify this.
      */
-    protected void touchAllSource() {
+    public void touchAllSource() {
         getSource().forEach(src -> {
             final var before = src.lastModified();
             final var after = touch(src);

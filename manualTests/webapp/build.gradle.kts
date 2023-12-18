@@ -3,18 +3,13 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-// TODO: xdkZip does not resolve on its own in this environment. It's not clear why.
+// TODO: xdkDistribution does not resolve on its own in this environment. It's not clear why.
 dependencies {
     xdk(libs.xdk)
 }
 
-val runXtc by tasks.existing {
-    xtcRun {
-        moduleName("welcomeTest")
-    }
-    doFirst {
-        logger.lifecycle("The default runXtc task needs no other extension than its modules. We can put a default configuration for all run tasks in the build.gradle.kts file.")
-    }
+xtcRun {
+    moduleName("welcomeTest")
 }
 
 val runTestNativeLauncher by tasks.registering {
