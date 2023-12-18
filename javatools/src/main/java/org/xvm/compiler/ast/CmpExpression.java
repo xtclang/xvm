@@ -298,12 +298,14 @@ public class CmpExpression
                 break CheckInference;
                 }
 
+            m_fArg1Null = type1.equals(pool.typeNull());
+            m_fArg2Null = type2.equals(pool.typeNull());
+
             if (expr1New instanceof NameExpression expr1Name)
                 {
-                if (type2.equals(pool().typeNull()))
+                if (m_fArg2Null)
                     {
-                    m_fArg2Null = true;
-                    fValid      = checkNullComparison(ctx, expr1Name, errs);
+                    fValid = checkNullComparison(ctx, expr1Name, errs);
                     break CheckInference;
                     }
                 if (type2.isTypeOfType())
@@ -315,10 +317,9 @@ public class CmpExpression
 
             if (expr2New instanceof NameExpression expr2Name)
                 {
-                if (type1.equals(pool().typeNull()))
+                if (m_fArg1Null)
                     {
-                    m_fArg1Null = true;
-                    fValid      = checkNullComparison(ctx, expr2Name, errs);
+                    fValid = checkNullComparison(ctx, expr2Name, errs);
                     break CheckInference;
                     }
                 if (type1.isTypeOfType())
