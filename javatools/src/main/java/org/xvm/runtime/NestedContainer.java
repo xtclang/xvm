@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -76,7 +77,7 @@ public class NestedContainer
             f_mapResources.put(key, (frame, hOpts) ->
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
-                ahArg[0] = hOpts;
+                ahArg[0] = hOpts == ObjectHandle.DEFAULT ? xNullable.NULL : hOpts;
 
                 switch (hProxy.call1(frame, null, ahArg, Op.A_STACK))
                     {
@@ -144,7 +145,7 @@ public class NestedContainer
         InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
         return supplier == null
                 ? null
-                : maskInjection(supplier.supply(frame, hOpts), type);
+                : maskInjection(frame, supplier.supply(frame, hOpts), type);
         }
 
     @Override

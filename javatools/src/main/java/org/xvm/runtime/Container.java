@@ -617,23 +617,24 @@ public abstract class Container
     /**
      * Mask the resource if necessary.
      *
+     * @param frame       the current frame
      * @param hResource   the resource handle
      * @param typeInject  the desired injection type
      *
      * @return the injected resource of the specified type
      */
-    protected ObjectHandle maskInjection(ObjectHandle hResource, TypeConstant typeInject)
+    protected ObjectHandle maskInjection(Frame frame, ObjectHandle hResource, TypeConstant typeInject)
         {
         if (hResource instanceof DeferredCallHandle hDeferred)
             {
             hDeferred.addContinuation(frameCaller ->
-                frameCaller.pushStack(completeMasking(frameCaller.popStack(), typeInject)));
+                frameCaller.pushStack(completeMasking(frameCaller, frameCaller.popStack(), typeInject)));
             return hResource;
             }
-        return completeMasking(hResource, typeInject);
+        return completeMasking(frame, hResource, typeInject);
         }
 
-    private ObjectHandle completeMasking(ObjectHandle hResource, TypeConstant typeInject)
+    private ObjectHandle completeMasking(Frame frame, ObjectHandle hResource, TypeConstant typeInject)
         {
         TypeConstant typeResource = hResource.getComposition().getType();
         if (typeResource.isShared(getConstantPool()))
@@ -661,7 +662,9 @@ public abstract class Container
                     ? hResource
                     : hResource.maskAs(this, typeInject);
             }
-        throw new UnsupportedOperationException("Pure type injection");
+
+        return new DeferredCallHandle(xException.makeHandle(frame,
+                "Injection type is not a shared: \"" + typeResource.getValueString() + '"'));
         }
 
 

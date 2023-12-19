@@ -54,6 +54,8 @@ import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.runtime.template.reflect.xInjector;
+
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -400,6 +402,11 @@ public class NativeContainer
         xRTCompiler  templateCompiler = xRTCompiler.INSTANCE;
         TypeConstant typeCompiler     = templateCompiler.getCanonicalType();
         addResourceSupplier(new InjectionKey("compiler", typeCompiler), templateCompiler::ensureCompiler);
+
+        // +++ reflect.Injector
+        xInjector templateInjector = xInjector.INSTANCE;
+        TypeConstant typeInjector = templateInjector.getCanonicalType();
+        addResourceSupplier(new InjectionKey("injector", typeInjector), templateInjector::ensureInjector);
 
         // +++ xvmProperties
         TypeConstant typeProps = pool.ensureMapType(pool.typeString(), pool.typeString());

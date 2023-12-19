@@ -35,7 +35,7 @@ module Runner {
         try {
             ModuleTemplate   template = repository.getResolvedModule(moduleName);
             ConsoleBuffer    buffer   = new ConsoleBuffer();
-            ResourceProvider injector = new ModuleResourceProvider(&buffer.maskAs(Console));
+            ResourceProvider injector = new RunnerResourceProvider(&buffer.maskAs(Console));
 
             Container container =
                 new Container(template, Lightweight, repository, injector);
@@ -81,46 +81,13 @@ module Runner {
         }
     }
 
-    service ModuleResourceProvider(Console console)
-            extends BasicResourceProvider {
+    service RunnerResourceProvider(Console console)
+            extends PassThroughResourceProvider {
         @Override
         Supplier getResource(Type type, String name) {
-            switch (type) {
-            case Console:
-                if (name == "console") {
-                    return console;
-                    }
-                break;
-
-            case FileStore:
-                if (name == "storage")
-                    {
-                    @Inject FileStore storage;
-                    return storage;
-                    }
-                break;
-
-            case Directory:
-                switch (name) {
-                case "rootDir":
-                    @Inject Directory rootDir;
-                    return rootDir;
-
-                case "homeDir":
-                    @Inject Directory homeDir;
-                    return homeDir;
-
-                case "curDir":
-                    @Inject Directory curDir;
-                    return curDir;
-
-                case "tmpDir":
-                    @Inject Directory tmpDir;
-                    return tmpDir;
-                }
-                break;
-            }
-            return super(type, name);
+            return type == Console && name == "console"
+                ? console
+                : super(type, name);
         }
     }
 }

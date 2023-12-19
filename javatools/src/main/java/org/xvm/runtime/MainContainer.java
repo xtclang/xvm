@@ -34,7 +34,7 @@ public class MainContainer
 
         return hResource == null
                 ? null
-                : maskInjection(hResource, type);
+                : maskInjection(frame, hResource, type);
         }
 
 
