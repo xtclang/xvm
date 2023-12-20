@@ -9,11 +9,6 @@ service PassThroughResourceProvider
     @Inject Injector injector;
 
     @Override
-    Supplier getResource(Type type, String name) {
-        import annotations.InjectedRef;
-
-        return (InjectedRef.Options opts) -> {
-            return injector.inject(type, name, opts);
-        };
-    }
+    Supplier getResource(Type type, String name) =
+        opts -> injector.inject(type, name, opts);
 }
