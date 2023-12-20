@@ -52,6 +52,7 @@ public abstract class XTC {
   public static String TRACE(String x) { return x; }
   public static long TRACE(long x) { return x; }
   public static int  TRACE(int  x) { return x; }
+  public static boolean TRACE(boolean x) { return x; }
 
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {

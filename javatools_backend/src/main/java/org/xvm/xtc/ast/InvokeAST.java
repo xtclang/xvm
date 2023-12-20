@@ -8,6 +8,7 @@ import org.xvm.util.SB;
 
 class InvokeAST extends AST {
   final String _meth;
+  final XType[] _args;
   final XType[] _rets;
 
   static InvokeAST make( ClzBuilder X ) {
@@ -23,8 +24,10 @@ class InvokeAST extends AST {
     // Calling target.method(args)
     MethodPart meth = (MethodPart)((MethodCon)methcon).part();
     _meth = meth.jname();
-    // Returns
-    _rets = XType.xtypes(retTypes);
+    if( meth._args != null && meth._xargs==null )   meth._xargs = XType.xtypes(meth._args);
+    if( meth._rets != null && meth._xrets==null )   meth._xrets = XType.xtypes(retTypes);
+    _args = meth._xargs;
+    _rets = meth._xrets;
     
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -42,6 +45,7 @@ class InvokeAST extends AST {
   InvokeAST( String meth, XType[] rets, AST... kids ) {
     super(kids);
     _meth = meth;
+    _args = null;
     _rets = rets;
     _type = _type();
   }
@@ -72,7 +76,7 @@ class InvokeAST extends AST {
     if( _kids[0]._type == XType.STRING ) {
       switch( _meth ) {
       case "toCharArray":
-        return new NewAST(_kids,XType.ARYCHAR,null);
+        return new NewAST(_kids,XType.ARYCHAR);
       case "equals":
         return this;
       // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
@@ -84,8 +88,15 @@ class InvokeAST extends AST {
         throw XEC.TODO();
       }
     }
+
+    // Auto-box arguments
+    if( _args!=null )
+      for( int i=0; i<_args.length; i++ )
+        if( _args[i] instanceof XType.Base && _kids[i+1]._type==_args[i].box() )
+          _kids[i+1] = new UniOpAST(new AST[]{_kids[i+1]},null,"._i",null);
     
-    if( !(_kids[0]._type instanceof XType.Base jt) ) return this;
+    if( !(_kids[0]._type instanceof XType.Base jt) )
+      return this;
     // Cannot invoke directly on java primitives
     switch( jt._jtype ) {
 
@@ -100,7 +111,7 @@ class InvokeAST extends AST {
         return this;
       }
       if( _meth.equals("toUInt32") )
-        return new BinOpAST("&","",XType.JLONG,new AST[]{new ConAST("0xFFFFFFFF00000000L"),_kids[0]});
+        return new BinOpAST("&","",XType.JLONG,new AST[]{new ConAST("0xFFFFFFFFL"),_kids[0]});
       // Actually needs a cast
       throw XEC.TODO();
     }

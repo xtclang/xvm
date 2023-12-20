@@ -20,6 +20,7 @@ public class Arychar<A extends Arychar> extends XTC
   public int _len;
   public Arychar() { _cs = new char[1]; }
   public Arychar(String s) { _cs = s.toCharArray(); _len = _cs.length; }  
+  public Arychar(Arychar ac) { throw XEC.TODO(); }  
   public Arychar( long len, LongUnaryOperator fcn ) {
     _len = (int)len;
     if( _len != len ) throw XEC.TODO(); // Too Big
@@ -29,6 +30,8 @@ public class Arychar<A extends Arychar> extends XTC
       throw XEC.TODO();
   }
   
+  public boolean empty$get() { return _len==0; }
+
   // Add an element, doubling base array as needed
   public A add( char c ) {
     if( _len >= _cs.length ) _cs = Arrays.copyOf(_cs,Math.max(1,_cs.length<<1));

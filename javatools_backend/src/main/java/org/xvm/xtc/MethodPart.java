@@ -23,10 +23,12 @@ public class MethodPart extends MMethodPart {
 
   // Return types
   public final Parameter[] _rets;
+  public XType[] _xrets;
 
   // Argument types
   public final Parameter[] _args;
   public final int _nDefaults;  // Number of default arguments
+  public XType[] _xargs;
 
   // Constants for code
   public final Const[] _cons;

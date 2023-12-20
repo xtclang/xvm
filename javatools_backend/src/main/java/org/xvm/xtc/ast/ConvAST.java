@@ -32,7 +32,7 @@ class ConvAST extends AST {
   @Override XType _type() { return _type; }
   
   @Override public SB jcode( SB sb ) {
-    _type.p(sb.p("(")).p(")");
+    _type.str(sb.p("(")).p(")");
     _kids[0].jcode(sb);
     return sb;    
   }

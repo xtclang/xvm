@@ -21,12 +21,12 @@ class ExprAST extends AST {
   // new Runnable() { void run() { ....; } }.run()
   @Override void jpre( SB sb ) {
     sb.p("new XExpr() { public ");
-    _type.p(sb).p(" get_");
-    _type.p(sb).p("() {").ii().nl();
+    _type.clz(sb).p(" get_");
+    _type.clz(sb).p("() {").ii().nl();
   }
   @Override void jmid( SB sb, int i ) { sb.p(";").nl(); }
   @Override void jpost( SB sb ) {
     sb.di().ip("}}.get_");
-    _type.p(sb).p("()");
+    _type.clz(sb).p("()");
   }
 }

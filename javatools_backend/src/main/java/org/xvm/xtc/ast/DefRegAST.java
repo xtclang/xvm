@@ -40,7 +40,7 @@ class DefRegAST extends AST {
   @Override XType _type() { return _type; }
   
   @Override void jpre( SB sb ) {
-    sb.p(_type.clz()).p(" ").p(_name);
+    _type.clz(sb).p(" ").p(_name);
     if( _init != null ) sb.p(" = ").p(_init);
   }
 }

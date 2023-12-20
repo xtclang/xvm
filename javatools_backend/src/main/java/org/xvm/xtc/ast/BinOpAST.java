@@ -35,7 +35,7 @@ class BinOpAST extends AST {
   @Override XType _type() {
     if( _op0.equals(".at(") ) {
       XType.Ary arytype = (XType.Ary)_kids[0]._type;
-      return arytype._e;
+      return arytype.e();
     }
     return _type;
   }
@@ -50,7 +50,7 @@ class BinOpAST extends AST {
         return new InvokeAST("equals",XType.BOOL,_kids[0],_kids[1]).do_type();
     }
     if( _op0.equals("<=>") ) {
-      ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Orderable");
+      ClzBuilder.add_import(XType.ORDERABLE);
       return new InvokeAST("spaceship",XType.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).do_type();
     }
 
@@ -95,8 +95,7 @@ class BinOpAST extends AST {
   }
 
   private AST do_range( XType.Clz rng ) {
-    ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy."+rng._name);
-    return new NewAST(_kids,rng,null);
+    return new NewAST(_kids,ClzBuilder.add_import(rng));
   }
   
   @Override public SB jcode( SB sb ) {

@@ -4,7 +4,6 @@ import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.BinOp;
-import java.util.HashMap;
 
 class DivRemAST extends AST {
   final String _op;

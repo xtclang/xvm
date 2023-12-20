@@ -21,7 +21,7 @@ class ListAST extends AST {
   
   @Override void jpre( SB sb ) {
     if( !_tuple ) throw XEC.TODO();
-    _type.p(sb.p("new ")).p("(");
+    _type.str(sb.p("new ")).p("(");
   }
   @Override void jmid( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) { sb.unchar(2).p(")"); }

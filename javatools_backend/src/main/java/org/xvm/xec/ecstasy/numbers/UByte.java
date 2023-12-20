@@ -9,19 +9,19 @@ import org.xvm.xec.ecstasy.Ordered;
 import org.xvm.xec.ecstasy.text.Stringable;
 
 /**
-     Support XTC Int64
+     Support XTC UByte
 */
-public class Int64 extends IntNumber {
-  public static final Int64 GOLD = new Int64(null);
-  public Int64(Never n ) { this(0); } // No-arg constructor
+public class UByte extends UIntNumber {
+  public static final UByte GOLD = new UByte(null);
+  public UByte(Never n ) { this(0); } // No-arg constructor
   
-  public final long _i;
+  final byte _i;
   
-  public Int64( long i ) { _i = i; }
+  public UByte( int i ) { _i = (byte)i; }
 
 
   @Override public long hash() { return _i; }
-  @Override public boolean equals ( XTC x0, XTC x1 ) { throw XEC.TODO(); }
+  @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
   @Override public Ordered compare( XTC x0, XTC x1 ) { throw XEC.TODO(); }
 
   @Override public final String toString() { return ""+_i; }

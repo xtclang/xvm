@@ -33,7 +33,7 @@ class UniOpAST extends AST {
     return new UniOpAST(kids,pre,post,type);
   }
   
-  private UniOpAST( AST[] kids, String pre, String post, Const type ) {
+  UniOpAST( AST[] kids, String pre, String post, Const type ) {
     super(kids);
     _pre = pre;
     _post = post;

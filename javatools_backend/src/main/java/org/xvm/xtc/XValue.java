@@ -68,7 +68,7 @@ public abstract class XValue {
     case ParamTCon ptc -> {
       XType xt = XType.xtype(ptc,false);
       if( xt instanceof XType.Clz clz )
-        yield clz.clz(ASB).p(".GOLD");
+        yield ClzBuilder.add_import(clz).clz(ASB).p(".GOLD");
       yield xt.clz(ASB).p(".ARYGENERIC.GOLD");
     }
     
@@ -113,7 +113,7 @@ public abstract class XValue {
       // new Ary<String>( "abc", "def");
       // new Arylong( 0, 1, 2 );
       // new Ary<Arylong>( new Arylong(0) )
-      ary.p(ASB.p("new "));
+      ary.str(ASB.p("new "));
       ASB.p("(  ");
       if( ac.cons()!=null )
         for( Const con : ac.cons() )

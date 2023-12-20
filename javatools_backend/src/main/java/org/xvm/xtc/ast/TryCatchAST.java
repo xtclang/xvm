@@ -62,7 +62,7 @@ class TryCatchAST extends AST {
       sb.ip("catch( ");
       BlockAST blk = (BlockAST)_kids[i];
       DefRegAST ex = (DefRegAST)blk._kids[0];
-      ex._type.p(sb).p(" ").p(ex.name()).p(" ) ");
+      ex._type.clz(sb).p(" ").p(ex.name()).p(" ) ");
       blk._kids[1].jcode(sb);
     }
     return sb;

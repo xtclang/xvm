@@ -3,10 +3,12 @@ package org.xvm.xtc.ast;
 import org.xvm.util.SB;
 import org.xvm.XEC;
 import org.xvm.xtc.ClzBuilder;
+import org.xvm.xtc.MethodPart;
 import org.xvm.xtc.XType;
 
 public class ReturnAST extends AST {
   private final String _ztype;  // Set if this is a conditional return
+  private final MethodPart _meth;
   static ReturnAST make( ClzBuilder X, int n ) {
 
     String ztype=null;
@@ -14,9 +16,9 @@ public class ReturnAST extends AST {
       XType type = XType.xtype(X._meth._rets[1]._con,false);
       ztype = type.ztype();
     }    
-    return new ReturnAST(X.kids(n), ztype);
+    return new ReturnAST(X.kids(n), ztype, X._meth);
   }
-  ReturnAST( AST[] kids, String ztype) { super(kids);  _ztype=ztype; }
+  ReturnAST( AST[] kids, String ztype, MethodPart meth) { super(kids);  _ztype=ztype;  _meth=meth; }
 
   @Override XType _type() {
     if( _ztype==null )
@@ -26,6 +28,11 @@ public class ReturnAST extends AST {
       return cond._kids[1]._type;
     // Conditional, always false, no other returned type
     return XType.VOID;
+  }
+
+  @Override AST rewrite() {
+    autobox(0,_meth._xrets==null ? null : _meth._xrets[0]);
+    return this;
   }
 
   @Override public SB jcode( SB sb ) {

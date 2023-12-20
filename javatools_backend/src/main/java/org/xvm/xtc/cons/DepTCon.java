@@ -10,8 +10,8 @@ import org.xvm.util.SB;
   Exploring XEC Constants
  */
 public abstract class DepTCon extends TCon implements ClzCon {
-  TCon _par;
-  Part _part;
+  public TCon _par;
+  public Part _part;
   DepTCon( CPool X ) { X.u31(); }
   @Override public SB str(SB sb) {
     sb.p("<dep>");

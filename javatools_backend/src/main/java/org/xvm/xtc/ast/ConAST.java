@@ -1,6 +1,5 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.MethodPart;
@@ -21,10 +20,20 @@ public class ConAST extends AST {
     _type = type;
     _X = X;
   }
+  
   @Override AST rewrite() {
     
+    // Embedded Lambda
     if( _con.equals("->") ) {
-      // Embedded Lambda
+      // If the parent started as a BindFunc, the BindFunc will print the
+      // lambda header.  If there are no extra args, BAST skips the BindFunc,
+      // but we still need a header
+      if( !(_par instanceof BindFuncAST && _par._kids[0]==this) ) {
+        BindFuncAST bind = new BindFuncAST(null,new AST[]{this},null,null);
+        bind.do_type();
+        return bind;
+      }
+      
       MethodPart lam = (MethodPart)((MethodCon)_tcon).part();
       // A builder for the lambda method
       ClzBuilder X2 = new ClzBuilder(_X,null);
@@ -44,6 +53,7 @@ public class ConAST extends AST {
       if( body instanceof BlockAST && body._kids.length==1 &&
           body._kids[0] instanceof ReturnAST ret && ret._kids!=null && ret._kids.length==1 )
         body = ret._kids[0];
+      
       // Swap out the method constant for the AST body
       return body;
     }

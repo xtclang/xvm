@@ -27,11 +27,14 @@ class AssignAST extends AST {
         // Replace with "ary.set(idx,val)"
         bin._op0.equals(".at(") )
       return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
-    // Stupidly in Java: "Long x = 4;" fails
-    if( _kids[0]._type==XType.JLONG && _kids[1] instanceof ConAST con &&
-        !con._con.equals("null") && !con._con.endsWith("L") )
-      _kids[1] = new ConAST(con._con+"L");
 
+    // Add/push element to array
+    if( _op==AsnOp.AddAsn && _kids[0]._type instanceof XType.Ary ary && ary.e()==_kids[1]._type )
+      return new InvokeAST("add",ary.e(),_kids);
+    
+    // Autobox into _kids[0] from Base in _kids[1]
+    autobox(1,_kids[0]._type);
+    
     // var := (true,val)  or  var ?= not_null;
     if( _op == AsnOp.AsnIfNotFalse || _op == AsnOp.AsnIfNotNull) {
       XType type = _kids[0]._type;

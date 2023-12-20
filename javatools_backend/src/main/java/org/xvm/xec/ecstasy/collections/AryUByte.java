@@ -4,67 +4,59 @@ import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.util.SB;
 
-import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterablelong;
-import org.xvm.xec.ecstasy.collections.Ary.Mutability;
 import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xec.ecstasy.Appenderchar;
+import org.xvm.xec.ecstasy.collections.Ary.Mutability;
 
 import java.lang.Iterable;
 import java.util.Arrays;
-import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Arylong extends XTC
+public class AryUByte extends XTC
   implements Iterable<Long>, Stringable
 {
-  public static final Arylong GOLD = new Arylong();
+  public static final AryUByte GOLD = new AryUByte();
   
-  public long[] _es;
+  public byte[] _es;
   public int _len;
-  public Arylong() { _es = new long[1]; }
-  public Arylong(long... es) { _es = es; _len=es.length; }
-  public Arylong( long len, LongUnaryOperator fcn ) {
-    _len = (int)len;
-    if( _len != len ) throw XEC.TODO(); // Too Big
-    _es = new long[_len];
-    for( int i=0; i<_len; i++ )
-      _es[i] = fcn.applyAsLong(i);
-  }
-  public Arylong(Mutability mutable, Arylong es) { throw XEC.TODO(); }
+  public AryUByte() { _es = new byte[1]; }
+  public AryUByte(byte... es) { _es = es; _len=es.length; }
+  public AryUByte(Mutability mutable, AryUByte es) { throw XEC.TODO(); }
 
   public boolean empty$get() { return _len==0; }
   
-  // Fetch element
-  public long at(long idx) {
+  // Fetch element; cannot specify an "unsigned" get at the java level
+  public byte at(int idx) {
     if( 0 <= idx && idx < _len )
-      return _es[(int)idx];
+      return _es[idx];
     throw new ArrayIndexOutOfBoundsException(""+idx+" >= "+_len);
   }
 
   // Add an element, doubling base array as needed
-  public Arylong add( long e ) {
+  public AryUByte add( int e ) {
     if( _len >= _es.length ) {
       int len=1;
       while( len <= _es.length ) len<<=1;
       _es = Arrays.copyOf(_es,len);
     }
-    _es[_len++] = e;
+    _es[_len++] = (byte)e;
     return this;
   }
 
-  public Arylong addAll( Arylong ls ) { throw XEC.TODO(); }
+  public AryUByte addAll( AryUByte ls ) { throw XEC.TODO(); }
 
-  public void removeUnordered(long idx) { throw XEC.TODO(); }
-  public void deleteUnordered(long idx) { throw XEC.TODO(); }
-  public Arylong delete(long idx) { throw XEC.TODO(); }
+  public void removeUnordered(byte idx) { throw XEC.TODO(); }
+  public void deleteUnordered(byte idx) { throw XEC.TODO(); }
+  public void delete(byte idx) { throw XEC.TODO(); }
 
   
   private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
     for( int i=0; i<_len; i++ )
-      SBX.p(_es[i]).p(", ");
+      SBX.p(_es[i]&0xFF).p(", ");
     String str = SBX.unchar(2).p(']').toString();
     SBX.clear();
     return str;
@@ -75,7 +67,7 @@ public class Arylong extends XTC
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    if( !(o instanceof Arylong ary) ) return false;
+    if( !(o instanceof AryUByte ary) ) return false;
     if( _len != ary._len ) return false;
     if( _es == ary._es ) return true;
     for( int i=0; i<_len; i++ )
@@ -95,7 +87,7 @@ public class Arylong extends XTC
   @Override public Iterablelong iterator() { return new Iterablelong(0,_len); }
 
   // --- text/Stringable
-  @Override public long estimateStringLength() { return _len*10; }
+  @Override public long estimateStringLength() { return _len*5; }
   @Override public Appenderchar appendTo(Appenderchar ary) {
     throw XEC.TODO();
   }

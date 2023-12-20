@@ -16,7 +16,7 @@ class NarrowAST extends AST {
     super(kids);
     _type = type instanceof AccessTCon
       ? XType.OBJECT
-      : XType.xtype(type,false);
+      : XType.xtype(type,true);
   }
   @Override XType _type() { return _type; }
   @Override String name() { return _kids[0].name(); }

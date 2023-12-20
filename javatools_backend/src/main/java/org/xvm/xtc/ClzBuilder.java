@@ -56,7 +56,7 @@ public class ClzBuilder {
   public static HashMap<String,String> XCLASSES;
 
   // A collection of extra imports, generated all along
-  public static HashSet<String> IMPORTS;
+  static HashSet<String> IMPORTS;
   
   // Make a nested java class builder
   public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
@@ -71,10 +71,10 @@ public class ClzBuilder {
     }
     _is_module = mod==clz;
     _mod = mod;
+    CCLZ = clz==null ? mod : clz; // Compile unit class
     _tmod = mod==null ? null : XType.Clz.make(mod);
     _clz = clz;
     _tclz = clz==null ? null : XType.Clz.make(clz);
-    CCLZ = clz==null ? mod : clz; // Compile unit class
     if( clz != null ) clz._tclz = _tclz;
     _sbhead = sbhead;
     _sb = sb;
@@ -155,7 +155,7 @@ public class ClzBuilder {
       // Skip common empty constructor
       if( construct.is_empty_function() ) {
         // Empty constructor is specified, must be added now - BECAUSE I
-        // already added another constuctor so I do not get the default Java
+        // already added another constructor, so I do not get the default Java
         // empty constructor "for free"
         _sb.ifmt("public %0(){ super((Never)null); } // default XTC empty constructor\n",java_class_name);
       } else {
@@ -291,13 +291,13 @@ public class ClzBuilder {
     if( access==Part.ACCESS_PUBLIC    ) _sb.p("public "   );
     if( (m._nFlags & Part.STATIC_BIT) != 0 ) _sb.p("static ");
     // Return type
-    XType[] xrets = XType.xtypes(m._rets);
-    if( xrets==null ) _sb.p("void ");
-    else if( xrets.length == 1 ) xrets[0].p(_sb).p(' ');
+    m._xrets = XType.xtypes(m._rets);
+    if( m._xrets==null ) _sb.p("void ");
+    else if( m._xrets.length == 1 ) m._xrets[0].clz(_sb).p(' ');
     else if( m.is_cond_ret() ) {
       // Conditional return!  Passes the extra return in XRuntime$COND.
       // The m._rets[0] is the boolean
-      xrets[1].p(_sb).p(' ');
+      m._xrets[1].clz(_sb).p(' ');
     } else {
       throw XEC.TODO(); // Multi-returns will need much help
     }
@@ -312,12 +312,12 @@ public class ClzBuilder {
   public void jmethod_body( MethodPart m, String mname, boolean constructor ) {
     // Argument list
     _sb.p(mname).p("( ");
-    XType[] xargs = XType.xtypes(m._args);
-    if( xargs!=null ) {
-      for( int i = 0; i < xargs.length; i++ ) {
+    m._xargs = XType.xtypes(m._args);
+    if( m._xargs!=null ) {
+      for( int i = 0; i < m._xargs.length; i++ ) {
         Parameter p = m._args[i];
-        xargs[i].p(_sb).p(' ').p(p._name).p(", ");
-        define(p._name,xargs[i]);
+        m._xargs[i].clz(_sb).p(' ').p(p._name).p(", ");
+        define(p._name,m._xargs[i]);
       }
       _sb.unchar(2);
     }
@@ -392,22 +392,27 @@ public class ClzBuilder {
   }
 
 
-  public static void add_import( ClassPart clz ) {
-    add_import(XType.Clz.make(clz));
+  public static XType.Clz add_import( ClassPart clz ) {
+    return add_import(XType.Clz.make(clz));
   }
-  public static void add_import( XType.Clz tclz ) {
-    if( tclz._mod == null ) return; // Built-in types may not have a mod, but still do not needs_build
+  public static XType.Clz add_import( XType.Clz tclz ) {
+    if( ClzBuilder.IMPORTS==null ) return tclz;
     // If the compiling class has the same path, tclz will be compiled in the
     // same source code
-    if( S.eq(CCLZ._path._str,tclz._clz._path._str) )
-      return;
+    if( tclz._clz!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) )
+      return tclz;
     if( tclz.needs_import() ) {
       ClzBuilder.IMPORTS.add(tclz.qualified_name());
       if( tclz.needs_build() )
         ClzBldSet.add(tclz._mod,tclz._clz);
     }
+    return tclz;
   }
-
+  public static XType.Ary add_import( XType.Ary tary ) {
+    if( ClzBuilder.IMPORTS!=null ) 
+      ClzBuilder.IMPORTS.add(tary.import_name());
+    return tary;
+  }
   
   // --------------------------------------------------------------------------
 

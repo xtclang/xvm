@@ -1,6 +1,5 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.*;
@@ -10,7 +9,7 @@ class BindFuncAST extends AST {
   // Which arguments are being bound here.  This is basically reverse-currying
   // by any other name.
   final int[] _idxs;            // Which args are being bound
-  String[] _args;         // Remaining args
+  String[] _args;               // Remaining args
   private final ClzBuilder _X;
 
   static BindFuncAST make( ClzBuilder X ) {
@@ -27,7 +26,7 @@ class BindFuncAST extends AST {
     return new BindFuncAST( X, kids, idxs, type );
   }
     
-  private BindFuncAST( ClzBuilder X, AST[] kids, int[] idxs, Const type ) {
+  BindFuncAST( ClzBuilder X, AST[] kids, int[] idxs, Const type ) {
     super(kids);
     _idxs = idxs;
     _X = X;
@@ -51,8 +50,7 @@ class BindFuncAST extends AST {
       // Currying: pre-binding some method args
     } else {
       assert nargs==_idxs.length; // Every 
-      XType.Fun lam = (XType.Fun)_kids[0]._type;
-      return lam;
+      return _kids[0]._type;
     } 
   }
   
@@ -79,14 +77,14 @@ class BindFuncAST extends AST {
     for( int i=0; i<lam.nargs(); i++ )
       ikids[i + 1] = j < nargs && _idxs[j]==i
         ? _kids[1 + j++] // The jth curried arg
-        : new RegAST(i-j,_args[i-j] = "x"+i,lam._args[i]); // The ith arg e.g. "x0"
+        : new RegAST(i-j,_args[i-j] = "x"+i,lam.arg(i)); // The ith arg e.g. "x0"
     
     // If kid0 is a BindMeth, then called as "expr.call(args)"
     // else                        called as "this.fun (args)"
     String fname = _kids[0] instanceof BindMethAST ? _kids[0].name()   : "call";
     ikids[0]     = _kids[0] instanceof BindMethAST ? new RegAST(-5,_X) : _kids[0];
     // Update this BindFunc to just call with the curried arguments
-    _kids[0] = new InvokeAST(fname,lam._rets,ikids);
+    _kids[0] = new InvokeAST(fname,lam.rets(),ikids);
     return this;
   }
 

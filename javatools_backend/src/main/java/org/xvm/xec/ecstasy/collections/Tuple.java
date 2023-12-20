@@ -110,8 +110,7 @@ public abstract class Tuple extends XTC implements Cloneable {
   // be used many times.
   public static XType.Tuple make_class( HashMap<String,String> cache, XType.Tuple xtt ) {
     // Lookup cached version
-    XType[] xts = xtt._xts;
-    int N = xts.length;
+    int N = xtt.nargs();
     if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime
     
     String tclz = xtt.clz();
@@ -134,11 +133,11 @@ public abstract class Tuple extends XTC implements Cloneable {
     sb.fmt("class %0 extends Tuple%1 {\n",tclz,N).ii();
     // N field declares
     for( int i=0; i<N; i++ )
-      sb.ifmt("public %0 _f%1;\n",xts[i].toString(),i);
+      sb.ifmt("public %0 _f%1;\n",xtt.arg(i).toString(),i);
     // Constructor, taking N arguments
     sb.ip(tclz).p("( ");
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xts[i].toString(),i);
+      sb.fmt("%0 f%1, ",xtt.arg(i).toString(),i);
     sb.unchar(2).p(") {\n").ii().i();
     // N arg to  field assigns
     for( int i=0; i<N; i++ )
@@ -149,7 +148,7 @@ public abstract class Tuple extends XTC implements Cloneable {
       sb.ifmt("public Object f%0() { return _f%0; }\n",i);
     // Abstract setters
     for( int i=0; i<N; i++ )
-      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xts[i].box().toString()).p(")e; }\n");
+      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xtt.arg(i).box().toString()).p(")e; }\n");
     // Class end
     sb.di().ip("}\n");
     cache.put(tclz,sb.toString());

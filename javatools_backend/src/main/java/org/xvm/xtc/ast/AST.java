@@ -37,6 +37,15 @@ public abstract class AST {
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
 
+  void autobox( int basex, XType tbox) {
+    if( tbox==null ) return;
+    XType tbase = _kids[basex]._type;
+    if( tbase instanceof XType.Base && tbase.box() == tbox ) {
+      _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbox);
+    }
+  }
+
+  
   // Recursively walk the AST, setting the _type field.
   public final void type( ) {
     if( _kids != null )

@@ -1,7 +1,6 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
-import org.xvm.XEC;
 import org.xvm.xtc.*;
 
 public class MultiAST extends AST {

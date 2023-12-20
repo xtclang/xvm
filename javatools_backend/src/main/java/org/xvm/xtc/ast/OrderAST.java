@@ -3,7 +3,6 @@ package org.xvm.xtc.ast;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
-import org.xvm.xtc.cons.*;
 
 class OrderAST extends AST {
   String _op;
@@ -20,11 +19,10 @@ class OrderAST extends AST {
         call._kids[0] instanceof ConAST con &&
         con._con.endsWith("compare") &&
         con._type instanceof XType.Fun fun &&
-        fun._args.length==3 &&
-        fun._args[1]==XType.JLONG &&
-        fun._args[2]==XType.JLONG ) {
+        fun.nargs()==3 &&
+        XType.JLONG.subClasses(fun.arg(1)) &&
+        XType.JLONG.subClasses(fun.arg(2)) ) 
       return new BinOpAST(_op,"",XType.BOOL,call._kids[2],call._kids[3]);
-    }
     
     // Order < or > converts an Ordered to a Boolean
     String s = switch(_op) {
@@ -34,7 +32,7 @@ class OrderAST extends AST {
     };
     CallAST call = new CallAST(null,s,new ConAST("Orderable."+s),_kids[0]);
     call._type = XType.BOOL;
-    ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Orderable");
+    ClzBuilder.add_import(XType.ORDERABLE);
     return call;
   }
   

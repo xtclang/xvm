@@ -6,12 +6,14 @@ import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xec.ecstasy.Range;
 import org.xvm.xrun.Never;
 
 import java.lang.Iterable;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.function.LongFunction;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
@@ -29,14 +31,26 @@ public class Ary<E> extends XTC implements Iterable<E>, Stringable {
     _es = es;
     _len = len;
   }
+  public Ary(Class<E> clazz, int len, LongFunction<E> fcn ) {
+    _es = (E[])Array.newInstance(clazz, len);
+    _len = len;
+    for( int i=0; i<len; i++ )
+      _es[i] = fcn.apply(i);
+  }
+  public Ary(Class<E> clazz, Mutability mut, Ary<E> as ) {
+    throw XEC.TODO();
+  }
 
+  /** Empty, as encoded as a size property read */
+  public boolean empty$get() { return _len==0; }
+  
   /** Length, as encoded as a size property read */
   public int size$get() { return _len; }
   
   /** Element at */
-  public E at( int idx ) {
-    if( idx >= _len ) throw new ArrayIndexOutOfBoundsException(idx);
-    return _es[idx];
+  public E at( long idx ) {
+    if( idx >= _len ) throw new ArrayIndexOutOfBoundsException((int)idx);
+    return _es[(int)idx];
   }
   
   /** Add an element, doubling base array as needed */
@@ -46,6 +60,11 @@ public class Ary<E> extends XTC implements Iterable<E>, Stringable {
     return this;
   }
 
+  /** Slice */
+  public Ary<E> at( Range r ) {
+    throw XEC.TODO();
+  }
+  
   /** @return an iterator */
   @Override public Iterator<E> iterator() { return new Iter(); }
   private class Iter implements Iterator<E> {
