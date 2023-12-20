@@ -1920,10 +1920,6 @@ public class NameExpression
     @Override
     public ExprAST getExprAST(Context ctx)
         {
-        if (isConstant() && isRValue())
-            {
-            return new ConstantExprAST(toConstant());
-            }
         if (m_astResult != null)
             {
             return m_astResult;
@@ -1932,13 +1928,17 @@ public class NameExpression
         // there is a possibility that the caller never called generateArgument/Assignment, which
         // would be the case if this is an LValue
         Argument argRaw = m_arg;
-        if (argRaw instanceof PropertyConstant ||
+        if (argRaw instanceof PropertyConstant && m_plan == Plan.PropertyDeref ||
             argRaw instanceof Register reg && !reg.isStack())
             {
+            // for [static] properties we generate a ConstantExprAST based on the property id rather
+            // than the property value, leaving an optimization possibility to the BAST compiler
             return toExprAst(argRaw);
             }
 
-        return super.getExprAST(ctx);
+        return isConstant() && isRValue()
+                ? new ConstantExprAST(toConstant())
+                : super.getExprAST(ctx);
         }
 
 
