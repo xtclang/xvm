@@ -9,20 +9,26 @@ import org.xvm.xtc.XType;
 public class ReturnAST extends AST {
   private final String _ztype;  // Set if this is a conditional return
   private final MethodPart _meth;
+  private final ExprAST _expr;
   static ReturnAST make( ClzBuilder X, int n ) {
 
     String ztype=null;
-    if( X._meth.is_cond_ret() ) {
-      XType type = XType.xtype(X._meth._rets[1]._con,false);
-      ztype = type.ztype();
-    }    
-    return new ReturnAST(X.kids(n), ztype, X._meth);
+    if( X._expr==null && X._meth.is_cond_ret() )
+      ztype = X._meth._xrets[1].ztype();
+    return new ReturnAST(X.kids(n), ztype, X._meth, X._expr);
   }
-  ReturnAST( AST[] kids, String ztype, MethodPart meth) { super(kids);  _ztype=ztype;  _meth=meth; }
+  ReturnAST( AST[] kids, String ztype, MethodPart meth, ExprAST expr) {
+    super(kids);
+    _ztype= ztype;
+    _meth = meth;
+    _expr = expr;
+  }
 
   @Override XType _type() {
+    if( _expr !=null )
+      return _expr._type;
     if( _ztype==null )
-      return _kids==null ? XType.VOID : _kids[0]._type;
+      return _kids==null ? XType.VOID : _meth._xrets[0];
     // Conditional, report the non-boolean type
     if( _kids[0] instanceof MultiAST cond )
       return cond._kids[1]._type;
@@ -31,7 +37,7 @@ public class ReturnAST extends AST {
   }
 
   @Override AST rewrite() {
-    autobox(0,_meth._xrets==null ? null : _meth._xrets[0]);
+    autobox(0,_type);
     return this;
   }
 

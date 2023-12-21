@@ -78,7 +78,7 @@ class UniOpAST extends AST {
 
   @Override AST rewrite() {
     if( is_trace() )
-      return new InvokeAST("TRACE",(XType)null,new ConAST("XTC"),_kids[0]).do_type();
+      return new InvokeAST("TRACE",_type,new ConAST("XTC"),_kids[0]).do_type();
     if( "!".equals(_pre) && _kids[0] instanceof OrderAST ord ) {
       // Invert the bang directly
       ord._op = switch( ord._op ) {

@@ -7,5 +7,4 @@ public class Type extends Const {
   public static final Type GOLD = new Type();
   public Type(Never n) {}
   public Type() {}
-  @Override public long hash() { return 0; }  
 }

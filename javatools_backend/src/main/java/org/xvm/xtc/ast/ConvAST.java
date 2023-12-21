@@ -31,9 +31,17 @@ class ConvAST extends AST {
 
   @Override XType _type() { return _type; }
   
+  @Override AST rewrite() {
+    if( !(_type.is_prim_base() && _kids[0]._type.is_prim_base()) )
+      // Need a converting constructor; e.g. "new Dec64(ary.at(i))"
+      return new NewAST(_kids,_type);
+    // Use a normal explicit Java cast; e.g. "(long)ary.at(i)"
+    return this;
+  }
+  
+  
   @Override public SB jcode( SB sb ) {
-    _type.str(sb.p("(")).p(")");
-    _kids[0].jcode(sb);
-    return sb;    
+    _type.clz(sb.p("(")).p(")");
+    return _kids[0].jcode(sb);
   }
 }

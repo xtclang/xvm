@@ -2,7 +2,7 @@ package org.xvm.xec;
 
 import org.xvm.util.Ary;
 import org.xvm.xrun.*;
-import org.xvm.xec.ecstasy.collections.Ary.Mutability;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.XEC;
 import org.xvm.xec.ecstasy.Ordered;
 
@@ -42,6 +42,14 @@ public abstract class XTC {
   //                GOLDS[Enum.idx].equals(...);
   // TODO: Instead: Enum.GOLD      .equals(...)  should work
   public boolean equals(Ordered x0, Ordered x1) { return x0==x1; }
+
+  // Ecstasy's normal "hash" call calls the "hash" from "clz" and not a
+  // subclass implementation.  This requires a runtime lookup, unless clz is a
+  // constant.  This call is done in the Hashable interface, but it uses this
+  // signature so can use a java virtual call instead of a java interface call.
+  // This will only be called with a Hashable.
+  public long hashCode( XTC x ) { throw XEC.TODO(); }
+  
   
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }

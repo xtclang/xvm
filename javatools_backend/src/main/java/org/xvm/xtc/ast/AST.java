@@ -34,14 +34,26 @@ public abstract class AST {
   }
   boolean is_loopswitch() { return false; }
 
+  // Use the _par parent to find an enclosing Expr or not
+  ExprAST enclosing_expr() {
+    AST ast = this;
+    while( !(ast instanceof ExprAST expr) ) {
+      ast = ast._par;
+      if( ast==null ) return null;
+    }
+    return expr;
+  }
+
+  
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
 
   void autobox( int basex, XType tbox) {
-    if( tbox==null ) return;
+    if( tbox==XType.VOID ) return;
     XType tbase = _kids[basex]._type;
-    if( tbase instanceof XType.Base && tbase.box() == tbox ) {
-      _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbox);
+    if( tbase==XType.VOID ) return;
+    if( tbase instanceof XType.Base && tbase.box().subClasses(tbox) ) {
+      _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbase.box());
     }
   }
 

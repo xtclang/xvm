@@ -43,6 +43,7 @@ public abstract class Const extends XTC
     sb.ip("@Override public String toString() {\n").ii();
     sb.ip("StringBuilder sb = new StringBuilder().append(\"(\");\n");
     Ary<PropPart> pps = new Ary<>(PropPart.class);
+    // TODO: Need a static cutout test
     for( Part p : clz._name2kid.values() )
       if( p instanceof PropPart prop )
         pps.setX(prop._order,prop);

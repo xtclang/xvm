@@ -7,5 +7,4 @@ public class Argument extends Const {
   public static final Argument GOLD = new Argument();
   public Argument(Never n) {}
   public Argument() {}
-  @Override public long hash() { return 0; }  
 }

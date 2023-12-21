@@ -44,6 +44,7 @@ public class ClzBuilder {
   
   // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
+  public ExprAST _expr;         // True if AST is parse inside an ExprAST, similar to a nested method
   private CPool _pool;          // Parser for code buffer
   
   final HashMap<String,String> _names; // Java namification
@@ -79,7 +80,6 @@ public class ClzBuilder {
     _sbhead = sbhead;
     _sb = sb;
     _names = new HashMap<>();
-    // TODO: Move to XMethBuilder
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
   }
@@ -119,20 +119,36 @@ public class ClzBuilder {
     String java_class_name = _clz._tclz._name;
     if( _is_module ) java_class_name = "X$"+java_class_name; // Cannot clash java package name and XTC module-as-java name
     _sb.nl();                   // Blank line
-    _sb.ip("// XTC ").p( _is_module ? "module ": "class ").p(_clz._path._str).p(":").p(_clz._name).p(" as Java class ").p(java_class_name).nl();
+    boolean is_iface = _clz._f==Part.Format.INTERFACE;
+    String jpart = is_iface ? "interface " : "class ";
+    String xpart = _is_module ? "module ": jpart;
+    _sb.ip("// XTC ").p(xpart).p(_clz._path._str).p(":").p(_clz._name).p(" as Java ").p(jpart).p(java_class_name).nl();
 
-    
-    _sb.p("public ");
+    // public static class CLZ extends ...
+    _sb.ip("public ");
     if( !_is_top ) _sb.p("static ");
-    _sb.p("class ").p(java_class_name).p(" extends ");
+    _sb.p(jpart).p(java_class_name).p(" ");
 
-    if( _clz._super != null ) _sb.p(_clz._super._name);
-    else if( _clz._f!=Part.Format.CONST ) _sb.p(is_runclz() ? "XRunClz" : "XTC");
+    // ... extends Const/XTC/etc
+    if( _clz._super != null ) _sb.p("extends ").p(_clz._super._name);
+    else if( is_iface ) ; // No extends
+    else if( _clz._f!=Part.Format.CONST ) _sb.p("extends ").p(is_runclz() ? "XRunClz" : "XTC");
     else {
-      _sb.p("Const");
+      _sb.p("extends Const");
       IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
       IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
     }
+
+    // ...implements IMPL
+    if( _clz._contribs!=null )
+      for( Contrib c : _clz._contribs )
+        if( c._comp==Part.Composition.Implements ) {
+          ClassPart iface = ((ParamTCon)c._tContrib).clz();
+          _sb.p(" implements ").p(iface._name);
+          ClzBldSet.add(iface.mod(),iface);
+          add_import(iface);
+        }
+    
     _sb.p(" {").nl().ii();
 
     
@@ -142,33 +158,38 @@ public class ClzBuilder {
 
     // Get a GOLDen instance for faster special dispath rules.
     // Use the sentinel "Never" type to get a true Java no-arg constructor
-    _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
-    _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
+    if( !is_iface ) {
+      _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
+      _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
+    }
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
-    MethodPart construct = (MethodPart)mm.child(mm._name);
-    if( construct != null ) {
-      assert _locals.isEmpty(); // No locals mapped yet
-      assert construct._sibling==null; // TODO: Can be many constructors
-      _sb.nl();
-      // Skip common empty constructor
-      if( construct.is_empty_function() ) {
-        // Empty constructor is specified, must be added now - BECAUSE I
-        // already added another constructor, so I do not get the default Java
-        // empty constructor "for free"
-        _sb.ifmt("public %0(){ super((Never)null); } // default XTC empty constructor\n",java_class_name);
-      } else {
-        if( _is_top ) {
-          _sb.ip("static {").nl();
-          ast(construct).jcode(_sb );
-          _sb.ip("}").nl().nl();
+    if( mm != null ) {
+      MethodPart construct = (MethodPart)mm.child(mm._name);
+      if( construct != null ) {
+        assert _locals.isEmpty(); // No locals mapped yet
+        assert construct._sibling==null; // TODO: Can be many constructors
+        _sb.nl();
+        // Skip common empty constructor
+        if( construct.is_empty_function() ) {
+          // Empty constructor is specified, must be added now - BECAUSE I
+          // already added another constructor, so I do not get the default Java
+          // empty constructor "for free"
+          _sb.ifmt("public %0(){ super((Never)null); } // default XTC empty constructor\n",java_class_name);
         } else {
-          _sb.i();
-          jmethod_body(construct,java_class_name,true);
+          if( _is_top ) {
+            _sb.ip("static {").nl();
+            ast(construct).jcode(_sb );
+            _sb.ip("}").nl().nl();
+          } else {
+            _sb.i();
+            jmethod_body(construct,java_class_name,true);
+          }
         }
       }
     }
+   
 
     // Output Java methods for all class methods
     MethodPart run=null;
@@ -216,7 +237,7 @@ public class ClzBuilder {
         if( pack._contribs == null ) {
           for( Part subpart : pack._name2kid.values() )
             if( !subpart._name.equals("construct") ) { // TODO: Ignore package init?
-              ClassPart iclz = (ClassPart)subpart;      // Import user class; TODO: Only import class and package init expected
+              ClassPart iclz = (ClassPart)subpart; // Import user class; TODO: Only import class and package init expected
               add_import(iclz);
             }
           break;
@@ -263,9 +284,9 @@ public class ClzBuilder {
     // - make a no-arg run, which calls the arg-run with nulls.
     // - make a main() which forwards to the arg-run
     if( _is_module && run != null && run._args != null ) {
-      _sb.ip("public void run() { run(new Ary<String>(new String[0])); }").nl();
+      _sb.ip("public void run() { run(new Array<String>(new String[0])); }").nl();
       _sb.ip("public void main(String[] args) {").nl().ii();
-      _sb.ip(" run( new Ary<String>(args) );").nl().di();
+      _sb.ip(" run( new Array<String>(args) );").nl().di();
       _sb.ip("}").nl();
     }
 
@@ -290,6 +311,7 @@ public class ClzBuilder {
     if( access==Part.ACCESS_PROTECTED ) _sb.p("protected ");
     if( access==Part.ACCESS_PUBLIC    ) _sb.p("public "   );
     if( (m._nFlags & Part.STATIC_BIT) != 0 ) _sb.p("static ");
+    if( m._ast.length==0 ) _sb.p("abstract ");
     // Return type
     m._xrets = XType.xtypes(m._rets);
     if( m._xrets==null ) _sb.p("void ");
@@ -322,15 +344,22 @@ public class ClzBuilder {
       _sb.unchar(2);
     }
     _sb.p(" ) ");
-    // Parse the Body
-    AST ast = ast(m);
-    // If a constructor, move the super-call up front
-    if( constructor && _clz._super!=null ) do_super((MultiAST)ast);
-    // Wrap in required "{}"
-    if( !(ast instanceof BlockAST) )
-      ast = new BlockAST(ast);
-    ast.jcode(_sb);
-    _sb.nl();
+
+    // Abstract method, no body
+    if( m._ast.length==0 ) {
+      _sb.p(";").nl();
+    } else {
+    
+      // Parse the Body
+      AST ast = ast(m);
+      // If a constructor, move the super-call up front
+      if( constructor && _clz._super!=null ) do_super((MultiAST)ast);
+      // Wrap in required "{}"
+      if( !(ast instanceof BlockAST) )
+        ast = new BlockAST(ast);
+      ast.jcode(_sb);
+      _sb.nl();
+    }
 
     // Popped back to the original args
     assert (m._args==null ? 0 : m._args.length) == nlocals();
@@ -417,6 +446,8 @@ public class ClzBuilder {
   // --------------------------------------------------------------------------
 
   public AST ast( MethodPart m ) {
+    // Pre-cook XType returns
+    if( m._xrets==null ) m._xrets = XType.xtypes(m._rets);
     // Build the AST from bytes
     _meth = m;
     _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser

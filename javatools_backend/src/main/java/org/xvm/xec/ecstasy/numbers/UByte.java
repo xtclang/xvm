@@ -20,8 +20,8 @@ public class UByte extends UIntNumber {
   public UByte( int i ) { _i = (byte)i; }
 
 
-  @Override public long hash() { return _i; }
-  @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
+  @Override public long hashCode( XTC x ) { throw XEC.TODO(); }
+  @Override public boolean equals ( XTC x0, XTC x1 ) { throw XEC.TODO(); }
   @Override public Ordered compare( XTC x0, XTC x1 ) { throw XEC.TODO(); }
 
   @Override public final String toString() { return ""+_i; }

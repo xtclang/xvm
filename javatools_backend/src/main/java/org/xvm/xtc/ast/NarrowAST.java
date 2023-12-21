@@ -15,7 +15,7 @@ class NarrowAST extends AST {
   private NarrowAST( AST[] kids, Const type ) {
     super(kids);
     _type = type instanceof AccessTCon
-      ? XType.OBJECT
+      ? XType.XXTC
       : XType.xtype(type,true);
   }
   @Override XType _type() { return _type; }

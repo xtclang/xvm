@@ -62,8 +62,8 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
     for( PropPart prop : pps ) {
       String fld = prop._name;
       sb.ip(  "if( ($x=");
-      if( xeq(prop) ) sb.p("Orderable.spaceship( x0.").p(fld).p(",x1.").p(fld).p(")");
-      else            sb.p("x0.").p(fld).p(".compare(x1.").p(fld).p(")");
+      if( xeq(prop) ) { sb.p("Orderable.spaceship( x0.").p(fld).p(",x1.").p(fld).p(")");  ClzBuilder.add_import(XType.ORDERABLE); }
+      else            { sb.p("x0.").p(fld).p(".compare(x1.").p(fld).p(")"); }
       sb.p(") != Ordered.Equal ) return $x;\n");
     }
     sb.ip(  "return Ordered.Equal;\n").di();

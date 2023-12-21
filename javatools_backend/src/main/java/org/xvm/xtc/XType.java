@@ -202,10 +202,11 @@ public abstract class XType {
     // Made from XTC class
     public static Clz make( ClassPart clz ) {
       // Check for a pre-cooked class
-      Clz xclz = (Clz)BASE_XJMAP.get(xjkey(clz));
-      if( xclz != null ) return xclz;
+      Clz xclz;
       xclz = IMPORT_XJMAP.get(xjkey(clz));
       if( xclz != null ) return xclz.set(clz);
+      xclz = (Clz)BASE_XJMAP.get(xjkey(clz));
+      if( xclz != null ) return xclz;
       xclz = ZINTERN.get(clz);
       if( xclz!=null ) return xclz;
 
@@ -213,8 +214,8 @@ public abstract class XType {
       return xclz.init();
     }
     // Made from a Java class directly; the XTC class shows up later.  No
-    // fields are mentioned, and are not needed since the class is pre
-    // hand-built.
+    // fields are mentioned, and are not needed since the class is pre hand-
+    // built.
     Clz( String pack, String name, Clz supr ) {
       _name = name;
       _pack = pack;
@@ -246,7 +247,7 @@ public abstract class XType {
     }
 
     // You'd think the clz._super would be it, but not for enums
-    Clz get_super( ClassPart clz ) {
+    static Clz get_super( ClassPart clz ) {
       if( clz._super!=null )
         return make(clz._super);
       // The XTC Enum is a special interface, extending the XTC Const interface.
@@ -256,6 +257,9 @@ public abstract class XType {
       // _super field set.
       if( clz._f==Part.Format.CONST ) return CONST;
       if( clz._f==Part.Format.ENUM  ) return ENUM ;
+      // Special intercept for the Const "interface", which maps to the Java
+      // class (NOT interface) Const.java
+      if( S.eq(clz._path._str,"ecstasy/Const.x") ) return XXTC;
       return null;
     }
 
@@ -274,6 +278,7 @@ public abstract class XType {
     @Override public boolean needs_import() {
       // Built-ins before being 'set' have no clz, and do not needs_import
       // Self module is also compile module.
+      if( this==XXTC ) return false;
       return !S.eq("java.lang",_pack) && _clz != ClzBuilder.CCLZ;
     }
     public boolean needs_build() {
@@ -359,11 +364,11 @@ public abstract class XType {
     
     @Override public SB str( SB sb, VBitSet visit, VBitSet dups, boolean clz ) {
       XType e = e();
-      sb.p("Ary");
       // Primitives print as "Arylong" or "Arychar" classes
       // Generics as "Ary<String>"
       boolean generic = generic();
-      if( generic ) sb.p("<");
+      if( generic ) sb.p("Array<");
+      else sb.p("Ary");
       e.str(sb,visit,dups,true);
       if( generic ) sb.p(">");
       return sb;
@@ -372,7 +377,7 @@ public abstract class XType {
     public String import_name() {
       SB sb = new SB();
       sb.p(XEC.XCLZ).p(".ecstasy.collections.");
-      if( generic() ) sb.p("Ary");
+      if( generic() ) sb.p("Array");
       else str(sb,null,null,false);
       return sb.toString();
     }
@@ -487,17 +492,16 @@ public abstract class XType {
   }
 
   // --------------------------------------------------------------------------
-  
-  public static Clz CONST   = new Clz("ecstasy","Const",null);
+
+  public static Clz XXTC    = new Clz("","XTC",null);
+  public static Clz CONST   = new Clz("ecstasy","Const",XXTC);
   public static Clz ENUM    = new Clz("ecstasy","Enum",CONST);
   
   // Java non-primitive classes
-  public static Base JINT   = Base.make("Integer");
-  public static Base JNULL  = Base.make("Nullable");
+  public static Clz  JNULL  = new Clz("ecstasy","Nullable",null);
   public static Clz  JUBYTE = new Clz("ecstasy.numbers","UByte",null);
   public static Clz  JBOOL  = new Clz("ecstasy","Boolean",ENUM);
   public static Clz  JCHAR  = new Clz("ecstasy.text","Char",null);
-  public static Clz  OBJECT = new Clz("ecstasy","Object",null);
   public static Clz  STRING = new Clz("java.lang","String",null);
   public static Clz  EXCEPTION = new Clz("java.lang","Exception",null);
 
@@ -513,7 +517,7 @@ public abstract class XType {
   public static Base TRUE = Base.make("true");
   public static Base VOID = Base.make("void");
 
-  public static Ary ARY    = Ary.make(OBJECT);
+  public static Ary ARY    = Ary.make(XXTC);
   public static Ary ARYBOOL= Ary.make(BOOL);    // No Ecstasy matching class
   public static Ary ARYCHAR= Ary.make(CHAR);    // No Ecstasy matching class
   public static Ary ARYUBYTE= Ary.make(JUBYTE); // No Ecstasy matching class
@@ -531,7 +535,7 @@ public abstract class XType {
       put("Exception+ecstasy/Exception.x",EXCEPTION);
       put("Int64+ecstasy/numbers/Int64.x",LONG);
       put("IntLiteral+ecstasy/numbers/IntLiteral.x",LONG);
-      put("Object+ecstasy/Object.x",OBJECT);
+      put("Object+ecstasy/Object.x",XXTC);
       put("String+ecstasy/text/String.x",STRING);      
       put("UInt8+ecstasy/numbers/UInt8.x",JUBYTE);
     }};
@@ -544,7 +548,7 @@ public abstract class XType {
   public static Clz ILLSTATEX   = new Clz("XTC","IllegalState",null);
   public static Clz HASHABLE    = new Clz("ecstasy.collections","Hashable",null);
   public static Clz ITER64      = new Clz("ecstasy","Iterablelong",null);
-  public static Clz MUTABILITY  = new Clz("ecstasy.collections.Ary","Mutability",ENUM);
+  public static Clz MUTABILITY  = new Clz("ecstasy.collections.Array","Mutability",ENUM);
   public static Clz ORDERABLE   = new Clz("ecstasy","Orderable",null);
   public static Clz ORDERED     = new Clz("ecstasy","Ordered",ENUM);
   public static Clz RANGE       = new Clz("ecstasy","Range",null);
@@ -581,6 +585,7 @@ public abstract class XType {
       put("Int64+ecstasy/numbers/Int64.x",JLONG);
       put("IntNumber+ecstasy/numbers/IntNumber.x",INTNUM);
       put("Iterable+ecstasy/Iterable.x",ITER64);
+      put("Mutability+ecstasy/collections/Array.x",MUTABILITY);
       put("Number+ecstasy/numbers/Number.x",NUMBER);
       put("Orderable+ecstasy/Orderable.x",ORDERABLE);
       put("Ordered+ecstasy.x",ORDERED);
@@ -603,22 +608,20 @@ public abstract class XType {
   
 
   // Convert a Java primitive to the Java object version.
-  private static final HashMap<Base, XType> XBOX = new HashMap<>() {{
+  private static final HashMap<Base, Clz> XBOX = new HashMap<>() {{
       put(BOOL,JBOOL);
       put(CHAR,JCHAR);
-      put(INT ,JINT);
       put(LONG,JLONG);
       put(NULL,JNULL);
     }};
-  public XType box() {
-    XType jt = XBOX.get(this);
-    return jt==null ? this : jt;
+  public Clz box() {
+    if( this instanceof Clz clz ) return clz;
+    return XBOX.get(this);
   }
   // Convert a Java wrapped primitive to the unwrapped primitive
   static final HashMap<XType, Base> UNBOX = new HashMap<>() {{
       put(JBOOL,BOOL);
       put(JCHAR,CHAR);
-      put(JINT ,INT );
       put(JLONG,LONG);
       put(JNULL,NULL);
     }};
@@ -675,11 +678,6 @@ public abstract class XType {
           xclz.set(clz);
           yield ClzBuilder.add_import(xclz);
         }
-        // Yet Another Special Case - Mutability comes from xt/c/Array.x,
-        // which I am remapping to Ary.java
-        if( "Mutability+ecstasy/collections/Array.x".equals(xjkey) )
-          yield ClzBuilder.add_import(MUTABILITY);
-        
         // Make one
         yield Clz.make(clz);
       }
@@ -795,8 +793,15 @@ public abstract class XType {
     case StringCon sc ->
       STRING;
 
-    case EnumCon econ ->
-      Base.make(((ClassPart)econ.part())._super._name).unbox();
+    case EnumCon econ -> {
+      // The enum instance as a ClassPart
+      ClassPart eclz = (ClassPart)econ.part();
+      // Th Enum class itself
+      Clz xclz = Clz.make(eclz._super);
+      yield new Clz(xclz._name,eclz._name,xclz);
+      //yield Base.make(eclz._super._name).unbox();
+      //throw XEC.TODO();
+    }
 
     case LitCon lit -> {
       if( lit._f==Const.Format.IntLiteral )

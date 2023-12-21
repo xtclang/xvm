@@ -15,5 +15,5 @@ public class Enum extends Const {
   public Enum(Never n) {}       // Forced   no-arg-no-work constructor
   public static <E extends java.lang.Enum> boolean equals$Enum( XTC gold, E       ord0, E       ord1 ) { return ord0==ord1; }
   public static <E extends java.lang.Enum> boolean equals$Enum( XTC gold, boolean ord0, boolean ord1 ) { return ord0==ord1; }
-  @Override public long hash() { return 0; }
+  
 }

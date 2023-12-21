@@ -9,5 +9,12 @@ import org.xvm.xrun.Never;
 */
 public abstract class FPNumber extends Number {
   public FPNumber(Never n ) {}
-  public FPNumber() {} 
+  public FPNumber() {}
+
+  /**
+   * Options for rounding.
+   *
+   * These are the rounding directions defined by the IEEE 754 standard.
+   */
+  enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
 }

@@ -33,6 +33,8 @@ class DefRegAST extends AST {
     _name = name==null ? null : ((StringCon)name)._str;
     if( name!=null )
       X.define(_name,_type);
+    if( _type instanceof XType.Clz clz )
+      ClzBuilder.add_import(clz);
   }
   DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   

@@ -6,7 +6,7 @@ import org.xvm.util.SB;
 
 import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterablelong;
-import org.xvm.xec.ecstasy.collections.Ary.Mutability;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.ecstasy.text.Stringable;
 
 import java.lang.Iterable;

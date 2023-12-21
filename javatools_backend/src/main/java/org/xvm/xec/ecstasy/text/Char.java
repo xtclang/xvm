@@ -10,5 +10,4 @@ public class Char extends Const {
   public Char(Never n) {}
   public Char() {}
   public static <E extends Char> boolean equals$Char( XTC gold, E ord0, E ord1 ) { return ord0==ord1; }
-  @Override public long hash() { throw XEC.TODO(); }
 }

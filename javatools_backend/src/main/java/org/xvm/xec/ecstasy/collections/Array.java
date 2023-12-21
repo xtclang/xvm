@@ -10,34 +10,33 @@ import org.xvm.xec.ecstasy.Range;
 import org.xvm.xrun.Never;
 
 import java.lang.Iterable;
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.function.LongFunction;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public class Ary<E> extends XTC implements Iterable<E>, Stringable {
-  public static final Ary GOLD = new Ary();
-  public Ary(Never n) { }       // No arg constructor
+public class Array<E> extends XTC implements Iterable<E>, Stringable {
+  public static final Array GOLD = new Array();
+  public Array(Never n) { }       // No arg constructor
 
   public E[] _es;
   public int _len;
   
   @SuppressWarnings("unchecked")
-  public Ary(Class<E> clazz) { this((E[]) Array.newInstance(clazz, 1),0); }
-  public Ary( E... es ) { this(es,es.length); }
-  public Ary( E[] es, int len ) {
+  public Array(Class<E> clazz) { this((E[]) java.lang.reflect.Array.newInstance(clazz, 1),0); }
+  public Array( E... es ) { this(es,es.length); }
+  public Array( E[] es, int len ) {
     _es = es;
     _len = len;
   }
-  public Ary(Class<E> clazz, int len, LongFunction<E> fcn ) {
-    _es = (E[])Array.newInstance(clazz, len);
+  public Array(Class<E> clazz, int len, LongFunction<E> fcn ) {
+    _es = (E[])java.lang.reflect.Array.newInstance(clazz, len);
     _len = len;
     for( int i=0; i<len; i++ )
       _es[i] = fcn.apply(i);
   }
-  public Ary(Class<E> clazz, Mutability mut, Ary<E> as ) {
+  public Array(Class<E> clazz, Mutability mut, Array<E> as ) {
     throw XEC.TODO();
   }
 
@@ -54,14 +53,14 @@ public class Ary<E> extends XTC implements Iterable<E>, Stringable {
   }
   
   /** Add an element, doubling base array as needed */
-  public Ary<E> add( E e ) {
+  public Array<E> add( E e ) {
     if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));
     _es[_len++] = e;
     return this;
   }
 
   /** Slice */
-  public Ary<E> at( Range r ) {
+  public Array<E> at( Range r ) {
     throw XEC.TODO();
   }
   
@@ -88,7 +87,7 @@ public class Ary<E> extends XTC implements Iterable<E>, Stringable {
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
     if( this==o ) return true;
-    return o instanceof Ary ary
+    return o instanceof Array ary
       && _len != ary._len
       && Arrays.equals(_es,ary._es);
   }

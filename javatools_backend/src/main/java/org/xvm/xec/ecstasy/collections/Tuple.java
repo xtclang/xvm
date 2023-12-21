@@ -5,7 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xtc.XType;
 import org.xvm.xec.ecstasy.Range;
-import org.xvm.xec.ecstasy.collections.Ary.Mutability;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
 import java.util.Objects;
 import java.util.HashMap;

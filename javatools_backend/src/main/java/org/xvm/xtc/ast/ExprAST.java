@@ -4,21 +4,27 @@ import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const;
 
-class ExprAST extends AST {
+public class ExprAST extends AST {
   static ExprAST make( ClzBuilder X ) {
+
+    // Kids are nested in an Expr "method" and not the outer method
+    assert X._expr==null;            // No double nesting
+    ExprAST expr = X._expr = new ExprAST();
     
     // Parse kids in order as stmts not exprs
-    AST kid = ast(X);
+    expr._kids[0] = ast(X);
+    // Done with the nested expr "method"
+    X._expr = null;
+
     // Types?
     Const[] types = X.consts();
-    XType type = XType.xtype(types[0],false);
-    return new ExprAST(type,kid);
+    expr._type = XType.xtype(types[0],false);
+    return expr;
   }
   
-  ExprAST( XType type, AST... kids ) { super(kids);  _type = type; }
+  private ExprAST( ) { super(new AST[1]); }
   @Override XType _type() { return _type; }
 
-  // new Runnable() { void run() { ....; } }.run()
   @Override void jpre( SB sb ) {
     sb.p("new XExpr() { public ");
     _type.clz(sb).p(" get_");

@@ -5,7 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xec.ecstasy.Appenderchar;
-import org.xvm.xec.ecstasy.collections.Ary.Mutability;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
 import java.util.Arrays;
 import java.util.function.LongUnaryOperator;

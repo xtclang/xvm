@@ -6,25 +6,41 @@ import org.xvm.xtc.*;
 
 public interface Hashable extends org.xvm.xec.ecstasy.Comparable {
 
-  abstract long hash();
+  // The fully dynamic hash lookup
+  public static long hashCode( XTC gold_type, XTC x ) {
+    return gold_type.hashCode(x); // Dynamic against gold
+  }
+
+
+  // Require implementations define this, which can typically be done with a
+  // default implementation.  This same signature appears in the XTC base
+  // class, so we can do a v-call instead of an i-call.
+  public abstract long hashCode( XTC x );
+
+  // If the XTC compiler knows 'this' it emits a short-form hash call
+  //default long hashCode( ) { return hashCode((XTC)this); }
   
+
   /* Generate:
-     public long hash() {
-       return fld0.hash()^fld1^...^fldN.hash();
+     public long hash(XTC x0) { // Called by the fully dynamic lookup
+       return hash$CLZ(GOLD,(CLZ)x0);
      }
-     public static long hash( Class<CLZ> clz, CLZ x ) { return x.hash(); }
+     public static long hash$CLZ( XTC gold, CLZ x ) {
+       return x.fld0.hash()^x.fld1^...^x.fldN.hash();
+     }
   */
   static void make_hashCode_default( ClassPart clz, String clzname, SB sb ) {
-    sb.ip("public long hash() {\n").ii();
-    sb.ip(  "return ");
+    sb.ifmt("public static long hashCode$%0(XTC gold, %0 x) {\n",clzname).ii();
+    sb.ip(    "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
+      // TODO: Probably static not synthetic
       if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (any=true) ) {
-        sb.p(prop._name);
+        sb.p("x.").p(prop._name);
         XType xt = XType.xtype(prop._con,false);
         if( xt.primeq() ) ; // Numbers as themselves for hash
         else if( xt.is_jdk() ) sb.p(".hashCode()");
-        else sb.p(".hash()");
+        else sb.p(".hashCode()");
         sb.p(" ^ ");
       }
     if( any ) sb.unchar(3);
@@ -33,9 +49,8 @@ public interface Hashable extends org.xvm.xec.ecstasy.Comparable {
     sb.ip("}\n");
   };
   static void make_hashCode( String clzname, SB sb ) {
-    // Static XTC inverted hashCode
-    sb.ip("// Default hashCode\n");
-    sb.ifmt("public static long hash( %0 x ) { return x.hash(); }\n",clzname);
+    sb.ip("// Default hash\n");
+    sb.ifmt("public long hashCode( XTC x ) { return hashCode$%0(GOLD,(%0)x); }\n",clzname);
   }
 
   // Java 32-bit hashCode() wrapping XTC 64-bit hash()

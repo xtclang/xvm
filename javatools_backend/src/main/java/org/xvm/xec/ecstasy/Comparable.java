@@ -32,7 +32,7 @@ public interface Comparable {
 
   /* Generate:
      public boolean equals( XTC x0, XTC x1 ) { // Called by the fully dynamic lookup
-       return equals$CLZ(x0,x1);
+       return equals$CLZ(GOLD,(CLZ)x0,(CLZ)x1);
      }
      public static boolean equals$CLZ( XTC gold, CLZ x0, CLZ x1 ) { 
        if( x0==x1 ) return true;
