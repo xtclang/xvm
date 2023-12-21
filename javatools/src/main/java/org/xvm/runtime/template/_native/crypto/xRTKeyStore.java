@@ -211,8 +211,8 @@ public class xRTKeyStore
             }
         catch (Exception e)
             {
-            return new DeferredCallHandle(
-                    xException.makeHandle(frame, "Illegal KeyStore arguments"));
+            return new DeferredCallHandle(xException.makeHandle(frame,
+                    "Illegal KeyStore arguments: " + e.getMessage()));
             }
         }
 

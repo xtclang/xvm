@@ -264,7 +264,7 @@ public class xRTServer
             hServer.configure(httpServer, httpsServer);
             return Op.R_NEXT;
             }
-        catch (IOException | GeneralSecurityException e)
+        catch (Exception e)
             {
             frame.f_context.f_container.terminate(hServer.f_context);
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
