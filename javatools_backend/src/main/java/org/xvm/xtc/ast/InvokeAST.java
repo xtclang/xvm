@@ -92,10 +92,10 @@ class InvokeAST extends AST {
     // Auto-box arguments
     if( _args!=null )
       for( int i=0; i<_args.length; i++ )
-        if( _args[i] instanceof XType.Base && _kids[i+1]._type==_args[i].box() )
-          _kids[i+1] = new UniOpAST(new AST[]{_kids[i+1]},null,"._i",null);
+        if( _args[i] instanceof XBase base && _kids[i+1]._type==base.box() )
+          _kids[i+1] = new UniOpAST(new AST[]{_kids[i+1]},null,"._i",base);
     
-    if( !(_kids[0]._type instanceof XType.Base jt) )
+    if( !(_kids[0]._type instanceof XBase jt) )
       return this;
     // Cannot invoke directly on java primitives
     switch( jt._jtype ) {

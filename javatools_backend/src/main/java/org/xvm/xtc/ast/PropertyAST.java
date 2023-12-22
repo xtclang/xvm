@@ -28,7 +28,7 @@ class PropertyAST extends AST {
   @Override AST rewrite() {
     // Java strings do not have any properties, just rewrite to the java name
     if( _prop.equals("size") ) {
-      if( _kids[0]._type instanceof XType.Ary )
+      if( _kids[0]._type instanceof XAry )
         { _prop="_len"; _type=XType.LONG; }
       if( _kids[0]._type == XType.STRING )
         { _prop="length()"; _type=XType.LONG; }

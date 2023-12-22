@@ -20,12 +20,12 @@ public class ClzBuilder {
   
   // XTC Module, which is the base Java class
   public final ModPart _mod;
-  public final XType.Clz _tmod; // Module XType
+  public final XClz _tmod;      // Module XType
   public static ClassPart CMOD; // Compile unit module
   
   // XTC class, which is also the top-level Java class
   public final ClassPart _clz;
-  public final XType.Clz _tclz; // Class XType
+  public final XClz _tclz;      // Class XType
   public static ClassPart CCLZ; // Compile unit class
 
   // XTC Module vs XTC class
@@ -73,9 +73,9 @@ public class ClzBuilder {
     _is_module = mod==clz;
     _mod = mod;
     CCLZ = clz==null ? mod : clz; // Compile unit class
-    _tmod = mod==null ? null : XType.Clz.make(mod);
+    _tmod = mod==null ? null : XClz.make(mod);
     _clz = clz;
-    _tclz = clz==null ? null : XType.Clz.make(clz);
+    _tclz = clz==null ? null : XClz.make(clz);
     if( clz != null ) clz._tclz = _tclz;
     _sbhead = sbhead;
     _sb = sb;
@@ -284,9 +284,10 @@ public class ClzBuilder {
     // - make a no-arg run, which calls the arg-run with nulls.
     // - make a main() which forwards to the arg-run
     if( _is_module && run != null && run._args != null ) {
-      _sb.ip("public void run() { run(new Array<String>(new String[0])); }").nl();
-      _sb.ip("public void main(String[] args) {").nl().ii();
-      _sb.ip(" run( new Array<String>(args) );").nl().di();
+      add_import(XType.ARYSTRING);
+      _sb.ip("public void run() { run(new AryString()); }").nl();
+      _sb.ip("public void main( AryString args ) {").nl().ii();
+      _sb.ip(" run( args );").nl().di();
       _sb.ip("}").nl();
     }
 
@@ -421,10 +422,10 @@ public class ClzBuilder {
   }
 
 
-  public static XType.Clz add_import( ClassPart clz ) {
-    return add_import(XType.Clz.make(clz));
+  public static XClz add_import( ClassPart clz ) {
+    return add_import(XClz.make(clz));
   }
-  public static XType.Clz add_import( XType.Clz tclz ) {
+  public static XClz add_import( XClz tclz ) {
     if( ClzBuilder.IMPORTS==null ) return tclz;
     // If the compiling class has the same path, tclz will be compiled in the
     // same source code
@@ -437,7 +438,7 @@ public class ClzBuilder {
     }
     return tclz;
   }
-  public static XType.Ary add_import( XType.Ary tary ) {
+  public static XAry add_import( XAry tary ) {
     if( ClzBuilder.IMPORTS!=null ) 
       ClzBuilder.IMPORTS.add(tary.import_name());
     return tary;

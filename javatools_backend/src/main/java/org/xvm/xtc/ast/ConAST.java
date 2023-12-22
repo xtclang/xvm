@@ -1,10 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
-import org.xvm.xtc.ClzBuilder;
-import org.xvm.xtc.MethodPart;
-import org.xvm.xtc.XType;
-import org.xvm.xtc.XValue;
+import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 
 public class ConAST extends AST {
@@ -12,7 +9,7 @@ public class ConAST extends AST {
   public String _con;
   private final ClzBuilder _X;
   ConAST( ClzBuilder X, Const con ) { this(X,(TCon)con, XValue.val(con), XType.xtype(con,false)); }
-  ConAST( String con ) { this(null,null,con, XType.Base.make(con)); }
+  ConAST( String con ) { this(null,null,con, XBase.make(con)); }
   ConAST( ClzBuilder X, TCon tcon, String con, XType type ) {
     super(null);
     _tcon = tcon;

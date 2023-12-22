@@ -36,7 +36,7 @@ public class CallAST extends AST {
   @Override AST rewrite() {
     // Try to rewrite constant calls to the XTC special equals.
     if( _kids[0] instanceof ConAST con ) {
-      if( con._type instanceof XType.Fun fun && fun.nargs()>0 && fun.arg(0) instanceof XType.Clz clz ) {
+      if( con._type instanceof XFun fun && fun.nargs()>0 && fun.arg(0) instanceof XClz clz ) {
         // Hard force Int64/IntNumber "funky dispatch" to Java primitive
         if( clz.subClasses(XType.INTNUM) ) {
           if( con._con.endsWith(".equals"  ) ) return new BinOpAST("==","",XType.BOOL,_kids[2],_kids[3]);

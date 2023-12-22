@@ -45,7 +45,7 @@ class BindFuncAST extends AST {
          _args[i-nargs] = name;
         xargs[i-nargs] = atype;
       }
-      return XType.Fun.make(xargs,XType.xtypes(lam._rets));
+      return XFun.make(xargs,XType.xtypes(lam._rets));
       
       // Currying: pre-binding some method args
     } else {
@@ -57,7 +57,7 @@ class BindFuncAST extends AST {
   @Override AST rewrite() {
     if( _kids[0] instanceof ConAST con && con._con.equals("->") )
       return this;
-    XType.Fun lam = (XType.Fun)_type;
+    XFun lam = (XFun)_type;
 
     int nargs = _kids.length-1;
     // The idx[] args are pre-defined; the remaining args are passed along.

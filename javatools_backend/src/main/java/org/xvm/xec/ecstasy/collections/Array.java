@@ -17,26 +17,29 @@ import java.util.function.LongFunction;
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
 public class Array<E> extends XTC implements Iterable<E>, Stringable {
-  public static final Array GOLD = new Array();
-  public Array(Never n) { }       // No arg constructor
+  public static final Array GOLD = new Array((Never)null);
+  public Array(Never n) { _gold=null; } // No-arg-no-work constructor
 
+  public final E _gold;         // Golden instance type
   public E[] _es;
   public int _len;
   
   @SuppressWarnings("unchecked")
-  public Array(Class<E> clazz) { this((E[]) java.lang.reflect.Array.newInstance(clazz, 1),0); }
-  public Array( E... es ) { this(es,es.length); }
-  public Array( E[] es, int len ) {
+  public Array( E gold ) { this(gold,(E[]) java.lang.reflect.Array.newInstance(gold.getClass(), 0)); }
+  public Array( E... es ) { this(es[0], Arrays.copyOfRange(es,1,es.length)); }
+  public Array( E gold, E[] es ) {
+    _gold = gold;
     _es = es;
-    _len = len;
+    _len = es.length;
   }
-  public Array(Class<E> clazz, int len, LongFunction<E> fcn ) {
-    _es = (E[])java.lang.reflect.Array.newInstance(clazz, len);
+  public Array(E gold, int len, LongFunction<E> fcn ) {
+    _gold = gold;
+    _es = (E[])java.lang.reflect.Array.newInstance(gold.getClass(), len);
     _len = len;
     for( int i=0; i<len; i++ )
       _es[i] = fcn.apply(i);
   }
-  public Array(Class<E> clazz, Mutability mut, Array<E> as ) {
+  public Array(E gold, Mutability mut, Array<E> as ) {
     throw XEC.TODO();
   }
 

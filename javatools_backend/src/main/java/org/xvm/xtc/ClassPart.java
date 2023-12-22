@@ -24,8 +24,8 @@ Can drop the env lookup I think.
 
  */
 public class ClassPart extends Part {
-  private final HashMap<String,TCon> _tcons; // String->TCon mapping
-  public final LitCon _path;                 // File name compiling this file
+  public final HashMap<String,TCon> _tcons; // String->TCon mapping
+  public final LitCon _path;                // File name compiling this file
   public final Part.Format _f; // Class, Interface, Mixin, Enum, Module, Package
 
   public ClassPart _super; // Super-class.  Note that "_par" field is the containing Package, not the superclass
@@ -34,7 +34,7 @@ public class ClassPart extends Part {
   public final Contrib[] _contribs;
 
   public SB _header, _body;     // Java source code
-  public XType.Clz _tclz;       // XType class
+  public XClz _tclz;            // XType class
   public Class<XTC> _jclz;      // Matching java class
   
   ClassPart( Part par, int nFlags, Const id, CondCon cond, CPool X, Part.Format f ) {

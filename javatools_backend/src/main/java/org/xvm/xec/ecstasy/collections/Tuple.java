@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xtc.XType;
+import org.xvm.xtc.XTuple;
 import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
@@ -108,7 +109,7 @@ public abstract class Tuple extends XTC implements Cloneable {
 
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
-  public static XType.Tuple make_class( HashMap<String,String> cache, XType.Tuple xtt ) {
+  public static XTuple make_class( HashMap<String,String> cache, XTuple xtt ) {
     // Lookup cached version
     int N = xtt.nargs();
     if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime

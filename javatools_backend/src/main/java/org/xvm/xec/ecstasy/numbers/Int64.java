@@ -12,11 +12,12 @@ import org.xvm.xec.ecstasy.text.Stringable;
      Support XTC Int64
 */
 public class Int64 extends IntNumber {
-  public static final Int64 GOLD = new Int64(null);
+  public static final Int64 GOLD = new Int64((Never)null);
   public Int64(Never n ) { this(0); } // No-arg constructor
   
   public final long _i;
   
+  public Int64(String s) { this(Long.valueOf(s)); }
   public Int64( long i ) { _i = i; }
 
 

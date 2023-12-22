@@ -34,7 +34,7 @@ class BinOpAST extends AST {
 
   @Override XType _type() {
     if( _op0.equals(".at(") ) {
-      XType.Ary arytype = (XType.Ary)_kids[0]._type;
+      XAry arytype = (XAry)_kids[0]._type;
       return arytype.e();
     }
     return _type;
@@ -94,7 +94,7 @@ class BinOpAST extends AST {
     return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
   }
 
-  private AST do_range( XType.Clz rng ) {
+  private AST do_range( XClz rng ) {
     return new NewAST(_kids,ClzBuilder.add_import(rng));
   }
   

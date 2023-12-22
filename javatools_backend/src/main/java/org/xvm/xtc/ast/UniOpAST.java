@@ -34,15 +34,19 @@ class UniOpAST extends AST {
   }
   
   UniOpAST( AST[] kids, String pre, String post, Const type ) {
+    this(kids,pre,post,
+         // TRACE is given a type in BAST, but its not the full type - its
+         // "boolean" if the kid is conditional, instead of the kids value
+         // type.  TRACE can compute its type from its kid later.
+         is_trace(post) || type==null ? null : XType.xtype(type,false));
+  }
+  UniOpAST( AST[] kids, String pre, String post, XType type ) {
     super(kids);
     _pre = pre;
     _post = post;
-    // TRACE is given a type in BAST, but its not the full type - its "boolean"
-    // if the kid is conditional, instead of the kids value type.  TRACE can
-    // compute its type from its kid later.
-    if( is_trace() ) type=null;
-    _type = type==null ? null : XType.xtype(type,false);
+    _type = type;
   }
+  
   boolean is_elvis() { return "ELVIS".equals(_pre); }
   static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern.is_elvis(); }
   static AST find_elvis(AST ast) {
@@ -57,7 +61,8 @@ class UniOpAST extends AST {
     }
     return null;
   }
-  boolean is_trace() { return ".TRACE()".equals(_post); }
+  boolean is_trace() { return is_trace(_post); }
+  static boolean is_trace(String s) { return ".TRACE()".equals(s); }
 
   @Override XType _type() {
     // "!" is given a type in BAST (always "boolean"), but it uses a condition

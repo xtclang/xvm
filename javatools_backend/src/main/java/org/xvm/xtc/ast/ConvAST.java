@@ -34,7 +34,7 @@ class ConvAST extends AST {
   @Override AST rewrite() {
     if( !(_type.is_prim_base() && _kids[0]._type.is_prim_base()) )
       // Need a converting constructor; e.g. "new Dec64(ary.at(i))"
-      return new NewAST(_kids,_type);
+      return new NewAST(_kids,(XClz)_type);
     // Use a normal explicit Java cast; e.g. "(long)ary.at(i)"
     return this;
   }

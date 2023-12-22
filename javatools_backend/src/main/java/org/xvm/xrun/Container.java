@@ -5,6 +5,7 @@ import org.xvm.xtc.ClzBldSet;
 import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.xec.XRunClz;
+import org.xvm.xec.ecstasy.collections.AryString;
 
 import java.lang.reflect.Constructor;
 
@@ -43,7 +44,7 @@ public abstract class Container {
     XRunClz runner = (XRunClz)jobj;
     // Invoke the method with args, in another thread.
     if( args==null ) runner.run();
-    else             runner.main(args);
+    else             runner.run(new AryString(args));
     // Return a Joinable on the running thread.
     return null;
   }

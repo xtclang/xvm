@@ -67,7 +67,7 @@ public abstract class XValue {
     // A class Type as a value
     case ParamTCon ptc -> {
       XType xt = XType.xtype(ptc,false);
-      if( xt instanceof XType.Clz clz )
+      if( xt instanceof XClz clz )
         yield ClzBuilder.add_import(clz).clz(ASB).p(".GOLD");
       yield xt.clz(ASB).p(".ARYGENERIC.GOLD");
     }
@@ -109,12 +109,14 @@ public abstract class XValue {
     // Array constants
     case AryCon ac -> {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
-      XType.Ary ary = (XType.Ary)XType.xtype(ac.type(),false);
+      XAry ary = (XAry)XType.xtype(ac.type(),false);
       // new Ary<String>( "abc", "def");
       // new Arylong( 0, 1, 2 );
       // new Ary<Arylong>( new Arylong(0) )
       ary.str(ASB.p("new "));
       ASB.p("(  ");
+      if( ary.generic() )
+        ary.e().clz(ASB).p(".GOLD, ");
       if( ac.cons()!=null )
         for( Const con : ac.cons() )
           _val( con ).p(", ");

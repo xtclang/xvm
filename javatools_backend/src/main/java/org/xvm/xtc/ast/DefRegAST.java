@@ -2,9 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
-import org.xvm.xtc.ClzBuilder;
-import org.xvm.xtc.XType;
-import org.xvm.xtc.XValue;
+import org.xvm.xtc.*;
 import org.xvm.util.SB;
 
 class DefRegAST extends AST {
@@ -33,7 +31,7 @@ class DefRegAST extends AST {
     _name = name==null ? null : ((StringCon)name)._str;
     if( name!=null )
       X.define(_name,_type);
-    if( _type instanceof XType.Clz clz )
+    if( _type instanceof XClz clz )
       ClzBuilder.add_import(clz);
   }
   DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }

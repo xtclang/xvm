@@ -16,5 +16,5 @@ public abstract class FPNumber extends Number {
    *
    * These are the rounding directions defined by the IEEE 754 standard.
    */
-  enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
+  public enum Rounding {TiesToEven, TiesToAway, TowardPositive, TowardZero, TowardNegative}
 }

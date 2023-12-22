@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
 import org.xvm.util.SB;
@@ -8,34 +9,34 @@ class NewAST extends AST {
   static NewAST make( ClzBuilder X ) {
     return new NewAST(X.con(),X.con(),X.kids());
   }
-  private NewAST( Const xtype, Const meth, AST[] kids ) {
-    this(kids,XType.xtype(xtype,false));
+  private NewAST( Const type, Const meth, AST[] kids ) {
+    this(kids,XType.xtype(type,true));
   }
   NewAST( AST[] kids, XType type ) {
     super(kids_plus_clz(kids,type));
     _type = type;
     if( type.needs_import() )
-      ClzBuilder.add_import((XType.Clz)type);
+      ClzBuilder.add_import((XClz)type);
   }
   private static AST[] kids_plus_clz(AST[] kids, XType type) {
-    // If type is generic, add the generic class explicitly
-    if( !(type instanceof XType.Ary tary ) ) return kids;
-    if( tary.is_prim_base() ) return kids;
-    AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+1];
-    if( kids!=null ) System.arraycopy(kids,0,kids2,1,kids.length);
-    XType gen = tary.e();
-    kids2[0] = new ConAST(null,null,gen.clz()+".class",gen);
+    // Add type parameters, if any
+    int nTypeParms = type.nTypeParms();
+    if( nTypeParms == 0 ) return kids;
+    // Primitive base arrays have a fixed known type parameter, no need to pass
+    if( type instanceof XAry ary && !ary.generic() )
+      return kids;
+    
+    AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+nTypeParms];
+    if( kids!=null ) System.arraycopy(kids,0,kids2,nTypeParms,kids.length);
+    for( int i=0; i<nTypeParms; i++ ) {
+      XType gen = type.typeParm(i);
+      XClz box = gen.box();
+      kids2[i] = new ConAST(null,null,(box==null ? gen : box).clz()+".GOLD",gen);
+    }
     return kids2;
   }
   @Override XType _type() { return _type; }
 
-  @Override AST rewrite() {
-    // Weird syntax for conversion "new long(e0)" is same as "Long.valueOf(e0)"
-    if( _type==XType.LONG )
-      return new InvokeAST("valueOf",XType.LONG,new ConAST("Long"),_kids[0]).do_type();
-    return this;
-  }
-  
   @Override void jpre ( SB sb ) { _type.clz(sb.p("new ")).p("("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) {    

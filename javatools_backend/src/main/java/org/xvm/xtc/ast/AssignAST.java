@@ -29,7 +29,7 @@ class AssignAST extends AST {
       return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
 
     // Add/push element to array
-    if( _op==AsnOp.AddAsn && _kids[0]._type instanceof XType.Ary ary && ary.e()==_kids[1]._type )
+    if( _op==AsnOp.AddAsn && _kids[0]._type instanceof XAry ary && ary.e()==_kids[1]._type )
       return new InvokeAST("add",ary.e(),_kids);
     
     // Autobox into _kids[0] from Base in _kids[1]

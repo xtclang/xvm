@@ -1,6 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
+import org.xvm.xtc.XBase;
 import org.xvm.xtc.XType;
 import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.cons.Const.NodeType;
@@ -52,8 +53,12 @@ public abstract class AST {
     if( tbox==XType.VOID ) return;
     XType tbase = _kids[basex]._type;
     if( tbase==XType.VOID ) return;
-    if( tbase instanceof XType.Base && tbase.box().subClasses(tbox) ) {
+    // Box the base
+    if( tbase instanceof XBase && tbase.box().subClasses(tbox) ) {
       _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbase.box());
+    } else if( tbox instanceof XBase && tbox.box().subClasses(tbase) ) {
+      // Unbox the base
+      _kids[basex] = new UniOpAST(new AST[]{_kids[basex]},null,"._i",tbox);
     }
   }
 

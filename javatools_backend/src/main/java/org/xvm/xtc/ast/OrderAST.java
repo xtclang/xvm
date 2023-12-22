@@ -18,7 +18,7 @@ class OrderAST extends AST {
     if( _kids[0] instanceof CallAST call &&
         call._kids[0] instanceof ConAST con &&
         con._con.endsWith("compare") &&
-        con._type instanceof XType.Fun fun &&
+        con._type instanceof XFun fun &&
         fun.nargs()==3 &&
         XType.JLONG.subClasses(fun.arg(1)) &&
         XType.JLONG.subClasses(fun.arg(2)) ) 
