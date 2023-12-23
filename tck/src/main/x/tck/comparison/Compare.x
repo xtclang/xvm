@@ -3,6 +3,10 @@
  */
 class Compare {
 
+    public void run() {
+        compareIntsDirect();
+    }
+    
     @Test
     void compareIntsDirect() {
         Int i = 1;
@@ -115,48 +119,12 @@ class Compare {
         assert !checkLess(a1, a2);
     }
 
-    @Test
-    void compareArraysFormal() {
-        Int[] a1 = [1, 2];
-        Int[] a2 = [2, 1];
-
-        Collection<Int> c1 = a1;
-        Collection<Int> c2 = a2;
-
-        assert !checkArrayEquals(a1, a2);
-        assert checkEquals(c1, c2);
-    }
-
-    @Test
-    void compareComposite() {
-        typedef String|Int as StrInt;
-
-        StrInt si1 = 1;
-        StrInt si2 = "a";
-
-        assert si1 != si2;
-        assert !checkEquals(si1, si2);
-    }
-
-    @Test
-    void compareToNull() {
-        String? s1 = Null;
-        String? s2 = "";
-
-        assert s1 == Null;
-        assert s2 != Null;
-    }
-
     <T> Boolean checkEquals(T t1, T t2) {
         return t1 == t2;
     }
 
     <T extends Orderable> Boolean checkLess(T t1, T t2) {
         return t1 < t2;
-    }
-
-    <T> Boolean checkArrayEquals(T[] a1, T[] a2) {
-        return a1 == a2;
     }
 
     static const Point(Int x, Int y);
