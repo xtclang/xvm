@@ -1,0 +1,4417 @@
+commit a43cbfabcafc767815a25f3cfdff1dea2b47b612
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Dec 22 09:56:25 2023 -0800
+
+    Progress on TCKs
+    
+    Add XTC flavored String, requires fully qualified names to dodge java.lang.String.
+    Add AryString, intercepting String same as Arylong intercepts long.
+    Better array "generic", used in more places.
+    Split the subclasses of XType into their own files.
+    Track explicit Ecstasy type parameters in XTypes.
+    NewAST adds the explicit type parameters.
+    Minor implementation bits in various number subclasses.
+    main() and run() get AryString arguments instead of "String[]"
+    More autoboxing.
+
+commit f210ad7d220ba3496ab434d2f01e28d0e6797d8d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Dec 21 12:38:29 2023 -0800
+
+    Progress towards TCK
+    
+    Rename Ary to Array to match Ecstasy spelling.
+    Implement funky dispatch on hashCode.
+    Hooks for Dec64 ceil,floor, rounding mode
+    Some TODO comments.
+    Drop Object, just map to XTC class.
+    Fine tune autobox rules
+    Implement explicit Java cast
+    ExprAST basically wraps a "method like" around the subtype; needed to track return type for autobox.
+    Implement java interface from XTC interface
+
+commit 6838ece23df3ccedc7b74df9346af0be4200a054
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Dec 20 10:31:26 2023 -0800
+
+    Progress on TCK
+    
+    Autoboxing; rename java.lang.Long as xtc.ectasy.numbers.Int64, which requires manual autoboxing.
+    Add Java impls for Boolean, UByte, AryUByte, Char, reflect/Argument
+    More implementation for Ary, Arychar, Arylong, Tuple, Int64, UIntNumber,
+    Array "+=" op
+    Comments Const, Enum.
+    Complete revamp of XType print, to support cyclic type printing.
+    NewAST drops meth.
+    ClzBuilder.add_import used uniformly.
+
+commit f10812232f1654de38b8d8f91dc0f718ed9b1214
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Dec 18 11:12:27 2023 -0800
+
+    Progress on TCKs
+    
+    More smarts on required imports or needing a build.
+    Properties need to auto-import.
+    Remove ill-fated XType ClzClz.
+    Support for java "package" naming.
+
+commit 23d59e62606ebe8dc97bde358ce3a93464c6a9f7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Dec 17 14:55:14 2023 -0800
+
+    Remove incorrect level of class indirection in several places.
+    
+    Class name and Mod name use a v-call; Mods use the file name NOT the baked-in name - because Java also does.
+    
+    XType gets more rigourous of the class name/part splits; asserts correct when lazy loading.
+    
+    Drop split XTC_IMPORTS and LOCAL_IMPORTS for just plain IMPORTS.
+    
+    Move Ordered into ecstasy.Ordered same as XTC lib.
+    Move UnsupportedOperation same as XTC lib.
+    Move IllegalStateX to IllegalState, same as XTClib.
+    Move IllegalArgument to ecstasy/IllegalArgument (same as XTC lib) and extend Java IllegalArgumentException.
+    Drop Part.SYNTHETIC_BIT from part checks; otherwise NaturalHasher.Value property is dropped.
+    S.eq allows nulls
+
+commit f716ac319fcfa83b4fa7af57a5b211bdb49a8e1e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Dec 9 07:51:58 2023 -0800
+
+    Progress on TCKs
+    
+    More build support.
+    Handle "TODO" and throw UnsupportException.
+    Handle change in BAST for adding a type parameter.
+
+commit c5c5fc0f82f5e87286d48b1df93e7b896b93d9e2
+Merge: 0e1900ba4 c9d56d64c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Dec 7 09:40:34 2023 -0800
+
+    Merge branch 'cc_xcodes_explore' of https://github.com/xtclang/xvm into cc_xcodes_explore
+
+commit 0e1900ba412621a305036775dffe850a064e991f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Dec 7 09:39:54 2023 -0800
+
+    The funky-dispatch calls got a missing, required, initial type parm.
+    
+    Makefile TCK picks $(XDK) dep; also force XTC to rebuild if the XDK changes even if the TCK source files do not.
+
+commit 942f3525b54888291f74079581127461753e34bd
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Dec 6 16:06:21 2023 -0800
+
+    Progress on TCK
+    
+    many more default impls; cast long to uint32, more Mutability
+
+commit 48bd10bb307adeb3df6389224f080c72fabc77a7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Dec 5 13:12:06 2023 -0800
+
+    First pass TCKs
+    
+    Generates code for all, but code doesn't compile.
+    Mutability moves to Array class.
+    Add Java wrappers for UIntNumber, FPNumber, DecimalFPNumber, Dec64.
+    Add DivRem support, and "is"/instanceof.
+    Split imports into XTC-subclass (java direct replacements for XTC classes) and imports for wholly generated classes.
+    Convert has both conditional and non-conditional variants.
+    Another instance of XType.Clz toString vs clz().
+    Packages get added to the ClzBldSet.
+    More classes become XType.Clz instead of Base.
+
+commit b69c9ae1bf9a53b7897e775a21fd271e52b6850a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 30 12:52:50 2023 -0800
+
+    Hit by lack of XTC ISA test
+    
+    A bunch of comments and partial implementation work
+
+commit c7be1443f06dd294447c42d4ca1439ffdedc5d30
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 15:46:03 2023 -0800
+
+    Handle new BAST after rebase
+    
+    Minor changes to CmpChain, sig compares of immutable arrays
+    Minor updates to Makefile
+
+commit 0dc524548a5943e737c223db5eafb4a893f225ef
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 14:52:51 2023 -0800
+
+    Update Makefile
+
+commit ff893513575e3b0180a6f13f0ced45dfe87cf48b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 14:10:14 2023 -0800
+
+    Drop KID for GOLD
+
+commit 7f6ae6e9546ef0504f5fe68dd699b334f257a81a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 12:11:10 2023 -0800
+
+    Missed one
+
+commit c8dcfc529e8f05afbbfb33ee436739b10b040350
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 12:06:53 2023 -0800
+
+    Updates post rebase; all tests pass
+    
+    Revamp "funky dispatch" to dispatch on a klass-id.
+    Requires a no-arg constructor for the golden instance.
+    No-arg constructors for all.
+    Const is both Comprable and Orderable.
+    Add a Java mapping for the XTC Enum class, Number, IntNumber.
+    Handle OrderAST BAST types.
+    CallAST&InvokeAST directly intercepting Longs & Strings are now by XType and not String name.
+    MultiAST Elvis rewrites happen at any kid
+    UniOp !(x<y) wrapper flips to (x>=y)
+    ClzBuilder splits out top-level classes from modules from nested classes
+    XType String becomes a Clz like "Long" does
+
+commit 580896046d352bf19ec2252046ca20808ddebb16
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 22 14:48:21 2023 -0800
+
+    Swap to a sentinal Never for no-args constructor.
+    
+    Add <,> Uniops (still missing actual impls).
+    Copy the XTC base change for BinOp ordering
+    Treat IntNumber as a proxy for 'Long' ?
+
+commit fb180d9d3ec58c6fc7622163b17803ffacf2d59e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 21 12:19:40 2023 -0800
+
+    Started implementing Hasher/Hashable
+    
+    Needs some BAST love first.
+
+commit 4258f19b62d4d2b09fc30c781722d49c31dc3954
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Nov 17 16:02:50 2023 -0800
+
+    Handle default compare, same as equals
+
+commit 3e7716865cbdb171c9d3180c4bf6e0de91c760be
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 16 10:05:24 2023 -0800
+
+    Yet Another Major Refactor
+    
+    Move all java support classes to the exact name and location as their XTC variants, all under org/xvm/xtc.  i.e. xrun/XStringable -> xtc/ecstasy/test/Stringable
+
+commit 584b8b0e1c2d3f47df4fb1a2ef0dae61ce6b8e78
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 15 15:22:06 2023 -0800
+
+    Handle class inheritance; construct has to call super() first.
+    
+    push/pop locals around all BAST "Statement" flavors.
+    Switch NBHMLong for Ary.
+    XType for Clz skips fields in super.
+    Slightly better MultiAST printing.
+
+commit f5dc3fce61adfc6d751aeb028c937342326c96a4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 14:13:38 2023 -0800
+
+    A real cross-module call
+    
+    Restructure (again) module/class compilation.
+    Gather multiple xtc file code-gen jobs.
+    Generate source for them all, lazily discovering new things to compile.
+    Split headers from bodies to add imports.
+    Compile in bulk all connected classes.
+
+commit e969b45993bb04aca1d3ee280f05924b91a388c0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 11:00:16 2023 -0800
+
+    Rename
+    
+    Rename XClzBuilder -> ClzBuilder
+    Rename XModBuilder -> ModBuilder
+    Rename XClzCompiler -> JavaC
+
+commit 679cfc12bc63abf379494e0dc691be153ac053f1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 10:54:56 2023 -0800
+
+    Gen imports
+    
+    and qualified call names.
+    Props can have imports.
+    Use switch expr in XType.
+
+commit 0b14bdf302003af16db800f7e281dc42eb3b0543
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 09:34:15 2023 -0800
+
+    Move value_tcon to its own file
+
+commit 60b7ebeff6f1e518b4a32f3e2ed437b10d6df373
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 13 16:26:40 2023 -0800
+
+    Major restructure part#2
+    
+    XModBuilder builds modules, which can be 1-class short forms.
+    XClzBuilder builds classes (including modules).  No shortcuts.
+    Proper XTypes for classes, with fields/properties.
+
+commit 512352270c2b1148992c10753f4545ab212475f0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 9 16:02:47 2023 -0800
+
+    Restructure.
+    
+    * org/xvm/XEC.java - entry point
+    * org/xvm/xtc - Read an XTC file support classes; ClassPart, *Part, CPool,Version,VerTree
+    * org/xvm/xtc/cons - "cons" things from XTC files
+    * org/xvm/xtc/AST  - "AST"  things from XTC files
+    
+    org/xvm/xec - generated class strings act "as if" loaded from here
+    * org/xvm/xec - runtime support classes (no ties with gen classes)
+    * org/xvm/xec/XClz - base class for gen'd classes.
+    * org/xvm/xec/XRunClz - Runnable XClz
+
+commit 97cc45718b96d70466837f22303926ce41e4bc4f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 14:34:05 2023 -0800
+
+    Const classes get a toString
+
+commit cf09d2acc2d8fd26492cfb320a1e4a487b71c7d4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 13:58:42 2023 -0800
+
+    Move project from javatools/.../cc_explore to javatools_backend/...
+
+commit 519cf751ae20933d24f84965e71b3eff751143d6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 11:19:05 2023 -0800
+
+    more separation between XTC modules and XTC classes.
+    
+    modules gets a global;
+    Find module-internal classes before they are defined.
+    Const classes get stringable methods.
+
+commit 228a6df2868ca87d699a023649a2a2180641b25c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 15:36:56 2023 -0800
+
+    Yet One More Variant of Switch
+    
+    Add a 4th switch variant.  Now:
+    - complex multi-armed ternary trees
+    - simple equals-only ternary trees
+    - int ranges using switch
+    - string/enum using switch
+    Chained compares "a < b < c"
+    Remove a bunch of extra imports.
+    XConst is now Comparable
+    Properties can have inits
+
+commit 13c71b8ba6b1ade39c38ff478366abfc3f6b501c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 09:41:05 2023 -0800
+
+    Const class set throws ReadOnly
+
+commit a9efa388025242b373c7c6ba8a64201ac7b4fc4f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:54:35 2023 -0800
+
+    No set methods on Const classes
+
+commit a6388bb7d1e1e6c51c1bb972f340b85485e85769
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:50:36 2023 -0800
+
+    Handle a Const class
+    
+    Has default impls for hash,equals,compare.
+    Maintain the load-order for properties/fields, for correct compares.
+
+commit a3cd9b3db9e208446b3082965689f1576e0288ca
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 10:20:09 2023 -0800
+
+    Rebase fixup
+    
+    Bump version number.
+    Correct child lookup to include mixins.
+
+commit ee10b5d99d5881b16f4a3c3d9d4997d0cd439e31
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 1 16:06:57 2023 -0700
+
+    Handle currying functions
+    
+    Rename the XType types to shorter names.
+
+commit c27079278f3fc2bc9696c70d4d9cef015cafde31
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 31 12:27:54 2023 -0700
+
+    Change types from Strings to XType
+    
+    First-class citizen types, needed for XTC functions (currying).
+    This is a big change, and is most of the commit.
+    Yank unused TVars.  Another big, but mindless, change.
+
+commit 44e575328d04efc052f2db9a2874f2dd701d4649
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 24 16:50:40 2023 -0700
+
+    Progress towards testChars
+    
+    Better _type calculation; touches lots of things.
+    Compute _cond conditional-result.
+    New sparse-array unpacking.
+    Bump minor version
+    Separate ConvAST from UniOp
+    Support run() with arguments.
+
+commit 90e43d3c4bda6a374878bf79246a3720f3473f62
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Oct 18 14:35:48 2023 -0700
+
+    First cut try/catch
+
+commit 42a6b344b6e3876d84f6faa53ea2ea621ba6b255
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 16:17:52 2023 -0700
+
+    more assign ops
+    
+    static/instance nested methods
+
+commit 555328eaf4dce4dce92c46ecbee84e5a29d4b573
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 12:21:54 2023 -0700
+
+    StmtExpr
+
+commit 3ba95e9c764487ddaec5b6dc28b97a68fa17cb95
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Oct 12 12:42:29 2023 -0700
+
+    Conditions!
+    
+    Conditions are not 1st class values, so can be always be passed as 2 parts with the boolean in a global, and the other part becomes the normal return type.
+    TODO: multi-threaded.
+    MultiAst with >1kid is "(e0 && e1 && ... )"
+    Condition Returns explicitly call SET$COND()
+    Methods flagged as conditional returns.  See large comment in MethodPart.
+    Handle elvis ops:  (e0?.e1 ... : alt ) ==> (e0==null ? alt : e0.e1)
+    Handle elvis ops:  (e0?.e1 , alts ) ==> ((e0==null || e0.e1) && alts)
+    Minor restructure BinOp, Block to allow Java "...".
+    UniOp.is_elvis
+    IfAST print handles else clauses
+    Bugfix: DefReg does not define BAST name "$"
+    NarrowAST is a cast, typically a no-op since already type-checked.
+    Prop: "string.size$get()" ==> "string.length()"
+    assert UniOp "e0.TRACE()" ==> "XClz.TRACE(e0)"
+
+commit b696300712b311e7142e3942201cbaec1a88fb17
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 11:26:22 2023 -0700
+
+    Another elvis test
+    
+    plus an embedded named function
+
+commit 69b25b65aa39b71fc6ff72f912fafb6af7348add
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 10:06:34 2023 -0700
+
+    Support elvis operator
+
+commit f13da7f6c2f258c2d7e8a203ee703e2e7289c791
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 16:37:36 2023 -0700
+
+    Progress on TestMisc.x
+    
+    Handle more condition cases
+    Handle some null+types.
+    Fix count-down bug on ranges.
+    Allow ranges to be in asserts
+
+commit def56f9abd649aa1da09fc6a2eb79d293c0d4415
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 15:12:48 2023 -0700
+
+    Fix count down ranges
+
+commit 61643ce568bfe01d1ff5a9dcf3aa262538840c36
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:11:43 2023 -0700
+
+    Punt on continue in the middle of a case, vs the end
+
+commit 91e0fdb28e591d4cd1c18def4dcf0c28e2f87848
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:01:29 2023 -0700
+
+    turn on a few more tests
+    
+    Block temps can be given a name.
+    ContinueAST punts on continue in switch.
+    AssignAST with AsnIfNotFalse explodes out a conditional.
+    XClz is self-typed, so TRACE doesn't lose type info.
+    Partial split of modules from classes.
+    AryI64 gets an iterator which passes a conditional.
+
+commit 7864da6a1c3434cd7ceaeeaccc58eba773ae5d0e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 12:03:19 2023 -0700
+
+    Handle spaceship for ints
+    
+    Handle switch-of-enums.
+    Keep more type info in BinOp.
+    Fix tmp naming bug.
+
+commit 8f518e61daac8996fa7c1965cb7f34d82540de71
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 10:14:24 2023 -0700
+
+    A few more switch variants
+    
+    Compiling with java 17 and enable-preview on the gen'd code
+    Breaks & continues 1 level deep.
+    While loops.
+    pre/post dec/inc.
+    multi expr of 1
+    Smarter BinOp paren grouping
+
+commit cf44ef279b4c882e0e2ab06ad086794e4d248a07
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 12:54:49 2023 -0700
+
+    Progress on misc tests
+    
+    Rename misc.x to TestMisc.x to match the module name.
+    Comment out tests not currently working.
+    Add print to Range; handle Inteval and Iterator as just another Range.
+    UniOp partial support for converts; support for Boolean "~"
+    BinOp all operator precedences.
+    Template strings add some spaces.
+
+commit d139a45d1f45789d435611a51bde3992f180c40d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 10:10:40 2023 -0700
+
+    Yank tvars
+    
+    Thought they might be needed, not needed yet.  Will revisit if problems show up in mixin composition.
+    Another little bit of tuple improvements.
+
+commit 15a95cf9e7bad344aa1cfd9472e8709a6212d139
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 09:33:15 2023 -0700
+
+    Handle lazy props
+    
+    Be more generic in a bunch of places
+
+commit 214121d801320951ab7c5f1e7ec515a214c67689
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 16:34:08 2023 -0700
+
+    Progress on tuples
+    
+    Map (shell, not implemented) & Map constants.
+    For statement, some more simple ASTs.
+    UniOps can be either pre or post
+    Some cleanup in XClzBuilder
+
+commit 73d87d403de4def19d31e9955b11bba258747b0d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 13:15:32 2023 -0700
+
+    More tuple support
+    
+    addAll, equals, at(range), slice
+    More tuple constructors.
+    Calling 1.toInt() turns into Long.valueOf(1)
+
+commit 487146b3c0984ffeb538e1f716db1fb4984dac2a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 11:34:36 2023 -0700
+
+    Change tuple mutability
+    
+    and the equals test, and asserts
+
+commit ec9f2ad39cf819c989be3339ba538855ee89e450
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 10:23:32 2023 -0700
+
+    Handle dynamic tuples
+
+commit b0dd9833b182b9bd01742188d5063f2f706ab926
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 27 14:40:09 2023 -0700
+
+    Progress towards tuples
+    
+    Split XClz into XRunClz (has container, run method).
+    XClz picks up mutability question.
+    Properties on instances and classes.
+    DefReg uses "var " instead of the full type.
+
+commit b8c43df48ef9fdbfbc3e16422e2d267532687763
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 12:01:41 2023 -0700
+
+    Drop the X
+    
+    from most runtime files.  Gonna need to disambiguate with other generated names using the Java path anyways.
+
+commit 17615d6c883b7384bb464b27070136d1be37bd6d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 11:33:12 2023 -0700
+
+    InvokeAST takes a generic LHS not a register
+    
+    First cut PropertyAST
+
+commit 253d943f3c6bff8c5cb85550b5ae7f60d63b4751
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 15:26:39 2023 -0700
+
+    make builds examples and manual tests
+
+commit 5771c42830f1410f77c12e3b6d1a5750fc48f43c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 14:04:36 2023 -0700
+
+    rebase, drop unused TODOAST
+
+commit 6790b4a491c8a80bb8475631880fb5989117dced
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 13:45:19 2023 -0700
+
+    Permute runs
+    
+    Prints a passed XTC lambda as a Java lambda.  Uses recursive XClzBuilder.
+    Prints XTC binary expressions with proper grouping.
+    Swap out XTC flex-sized arrays for "XAry" variants of Java ArrayList.  Includes direct array constant constructors, and explicit generic types.
+
+commit 134bff6627dbdf7afb19ea88aa701b4b66bb2297
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 13:01:15 2023 -0700
+
+    Split byte AST reading from AST constructors
+    
+    Drop / rename a few old methods also.
+
+commit ca3c3dfb29c8806bc530153d1a2f06b6b6a60640
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 11:29:09 2023 -0700
+
+    1/2 flip to a new (old) binary parser
+
+commit 4d276b4eb0bf531d00832b653ccf40d850e52e36
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 19 16:29:09 2023 -0700
+
+    Progress towards handling XTC lambdas
+
+commit 90f7b10d883ffd9c760413f1d8c921b071cadad2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Sep 18 15:26:39 2023 -0700
+
+    Progress towards Permutations
+    
+    Starting in on the embedded Lambda.
+    Flip the AST default for parsing ast_term instead of ast.
+    Fix bug for XRange missing inclusive/exclusive endpoints.
+
+commit 56493f9d5e1b9c763544bbdfe8ee2f04dbe3a38f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Sep 17 16:13:03 2023 -0700
+
+    Progress Permutations.x
+    
+    Handles FizzBuzz.x also.
+    First cut Switch, ForRange, and Range.
+    More smarts about NL & indenting.
+    Add a trailing NL test to SB.
+
+commit 8cc004d341c0e488bee10ec99b412eafd0c3b27d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Sep 16 11:11:47 2023 -0700
+
+    Progress on Permutations.x, compiles now, missing for loops
+    
+    Move examples to more Java-ish style (open braces on same line).
+    Move support classes into XRUN directory.
+    Add a XAryInt64 support class, e.g. ArrayList with primitive longs.
+    AST parser changes slightly to match new format.
+    Bug fixes in constant array initializers.
+
+commit f0e0a6f821bead35336834146e79a561d5c250ba
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Sep 15 14:17:14 2023 -0700
+
+    Progress on Permutation.x
+    
+    Mostly minor printing stuff; TemplateAST.
+
+commit 7c65770b0691b8da7819007618fff4f8e74808ac
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 19:52:29 2023 -0700
+
+    Progress on AST towards Permute.x
+
+commit 63067b85dddbd433cffdaa11188b22a373a3c776
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 15:49:02 2023 -0700
+
+    Buncha new AST nodes
+    
+    Better parsing exprs vs AST
+
+commit a8b0b0796adf42ea68eb46466ed4e53ae4f19cab
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 13 16:32:56 2023 -0700
+
+    Run HelloWorld
+    
+    parse ast_op - peeks 1st byte, if negative, that's the value.  if positive use the full packed64.
+    Parse invokes, constants, default "register".  Fill in default values.
+    Push/pop local names on scope change.
+    XConsole print takes a boolean for newln
+
+commit 276d661b802a91737350d6e2eeebd402a3e3b575
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 6 14:39:15 2023 -0700
+
+    Handle more AST
+    
+    Back to using the MethodPart pool.
+    No need to set/restore the CPool parser.
+    Add a bunch of "_ast" parser bits, will probably toss the old stuff next go 'round.
+
+commit c80f54480594ea16f8cc8a8b0c3729873d9b95a5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 5 16:17:29 2023 -0700
+
+    A little AST restructure
+    
+    Also rebase from master
+
+commit 532a705b3b685878730844a5d16923f01d06aef5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Aug 19 09:01:14 2023 -0700
+
+    comment
+
+commit 645f05b2622fbc37fbf54d03015f8b024383a35f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 18 13:27:45 2023 -0700
+
+    Rebuild examples when XTC compiler changes
+
+commit bb4c8ecda243cc1c0004b34674c477920075e32c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 12:58:13 2023 -0700
+
+    Initial cut AST parser
+
+commit f287360284ff9dada7fc3236ff61a7c3af90aa4e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 11:58:08 2023 -0700
+
+    Fix minor constant dependencies that changed
+
+commit 9d2389ee72f3e40cdaf0ae94b8f3971ebbe02d84
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 11 14:53:14 2023 -0700
+
+    Minor cleanup
+    
+    Study how to reverse exploded for(Range)
+
+commit ab01650f409d72029874da88e9850c70f0de3a8c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 10 11:09:32 2023 -0700
+
+    All the ops for Permutation's main method
+    
+    Fails in pass#2 for bytecode layout, but gets all the ops in pass#1.
+    CALL_11, NVOK_11, FBIND, NEWG_1, NEWG_N, RETURN_1, JMP_NEQ, JMP_LT, JMP_GT, JMP_GTE, GP_SUB, GP_IRANGEE, P_GET, IP_DEC, I_GET
+
+commit 90231f7c5684baa8d8d48a452420bb666a3d894f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 14:00:22 2023 -0700
+
+    Compile and run FizzBuzz
+    
+    Actually classForNames
+
+commit 3677ab4d235faae17086c368527e8069b5e56619
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 11:58:17 2023 -0700
+
+    Add auto-gen imports
+    
+    Some public methods; able to run the gen'd code inline.
+    Not yet compiling on the fly.
+
+commit 54ef17f3285ce5b6218dc0d7385338de497a83e6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 3 15:26:03 2023 -0700
+
+    First cut FizzBuzz code
+    
+    Definitely over-optimized
+
+commit 6eecf77bc3de64c684f3f1281e4f0cc46bbd4258
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 2 17:10:55 2023 -0700
+
+    Pretty-print FizzBuzz
+    
+    Not entirely valid Java syntax yet, but getting closer.
+    Makes some simple function calls.
+    Still has GOTO's instead of structured control flow.
+
+commit 75b934762ee87a8a7b573c0f3f90dc8ed2e80991
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 12:18:07 2023 -0700
+
+    A few more opcodes
+    
+    ENTER, VAR_N, VAR_IN
+
+commit d7bc47cc216936482a51c2e763a7d0dc8fde2f38
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 11:07:29 2023 -0700
+
+    Partial handle VAR_DN opcode
+    
+    Or at least the direct Console injection part anyways
+
+commit 52def478acb11e826987aa52e0f5f1be9c90bf6c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 31 15:57:45 2023 -0700
+
+    Handle generic type parms better.  Links all constants in all libs
+    
+    Sig matching has recursion issues.  First try matching on sig arg length alone; if this fails THEN link the signature.
+    Minor version bump because rebase.
+
+commit 8b26f467e39faadea0da616c35a298e68fcdca0b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jul 28 08:34:39 2023 -0700
+
+    More signature matching shenanigans
+    
+    DynamicFormal & VirtualTCons are still busted.
+    Handle more natives.
+    Swap out IdHashMap for NBHM, to avoid CME; use my open source version.
+
+commit 4a0cc8a41209a3e921b370762f6d0c2d01133d31
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jul 27 10:05:43 2023 -0700
+
+    Fix ints after rebase from master
+    
+    Update minor version.
+    Start on opcode parsing.
+    Start on first native method.
+
+commit 8b5ab86022de9972cd1af75c78e2f346f44fed26
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 16:09:13 2023 -0700
+
+    First cut TypeInfo stuff
+    
+    Really HM types, but surely full of bugs.
+    No asserts, does all of XTC libs.
+
+commit 56934305b10b3c3f96d2bd8bee11d51932e56165
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 15:31:12 2023 -0700
+
+    Progress on TypeInfo
+    
+    Getting pretty far...
+    Add a bunch more linking behavior, including DepTCon & children.
+    Add a bunch more setype behavior, in a dozen "*Con.java" classes.
+
+commit 3977e27fd6627f648357b5ab2a62c25d12b33439
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jul 19 10:09:36 2023 -0700
+
+    More TypeInfo
+    
+    First (bad) cut of union/interface type.
+    mostly got classes & interfaces.
+    might have mixins sorta right.
+
+commit 0d0b3b5986ff19a715de7ccbd6811c05d83ddd09
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 08:33:53 2023 -0700
+
+    Comments
+
+commit 2519db90f3967c5741ebf677fae26499fcca5f0d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 07:53:34 2023 -0700
+
+    Turn on a few missed link steps
+    
+    AryCon, MapCon now link.
+    Drop repo link parm from setype.
+    Force all parts to support setype.
+
+commit 73321deebbf950ca5bd2ccf963cb37af8ebeeb10
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 17 16:17:57 2023 -0700
+
+    Get thru linking & some (not all) TypeInfo
+    
+    Skips most setype calls.
+    Implements link() calls for most things.
+    Implements setype() calls for most things, but mostly not called yet.
+    Finally resolved multi-method selection (keeps MethodCon around).
+    Several class heiarchary restructurings.
+    Shorter printout; 18640 total Parts
+    TVar trial_unify_ok returns boolean.
+    Add TVBase.
+
+commit c1228b45020ceb387f3efc2d3841f1fcf6b5166c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Jul 16 08:13:34 2023 -0700
+
+    Handle mixins with generified types
+
+commit b625828e3ca1b8c214ba6f2b8faf65c117637d33
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jul 15 11:20:18 2023 -0700
+
+    Staring at my 1st real mixin
+    
+    Record super-class chain from EXTENDS.
+    Ignore various marker MIXINs.
+    Generic link various Consts.
+    Get generic types for methods.
+    RelTCon types parts but doesn't make a real union/interface type (yet).
+    Immut adds hidden internal immutable interface.  Drop TVImmut
+    ParamTCon simplifies.
+    Pretty-print linker progress
+
+commit 3947782c4970d91013d462d8e02729da850e4bed
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 14:52:08 2023 -0700
+
+    Up to typing Immutable
+    
+    Dunno the semantics of the immutable keyword yet.
+    What's it mean `iface A extends immutable iface B` ?
+
+commit b365bdcc1c0b2ca7cc1ad3116946e5000cecf8b7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 09:42:43 2023 -0700
+
+    Better thinking on interfaces
+
+commit 55934ff58fe916c2076c1299d6afc76cacdcad37
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 29 16:43:45 2023 -0700
+
+    Parts link, Types setype, Values are yet to be done.
+    
+    Most TCons have commented-out old link calls, yet to be replaced with setypes.
+    Add an type Env for carrying type-names through the Part tree.
+    TVStructs carry a debug name.
+    Do not add Class fields to a TVStruct until the type parents are done.
+    That means Extends and Implements both; several Parts complete their innards calls but none yet complete the entire Part.
+    Start to handle Into (the mixin).
+    Sharpen several default fields/Const.
+    Lots of comments about the expected type fields.
+    Hide name2kid, use child().
+
+commit 9ec811bd6d8f3d24405d68d590cfc0241da0ff4c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 27 10:08:05 2023 -0700
+
+    Drop XType, add NBHML, TVar.
+    
+    Move Contribs to its own file.  Move _contribs to Class and Prop and out of Part.
+    Add NBHML and helper methods to util.
+    Add TVar,TVLeaf.
+    Hooks for computing TVar.
+    Add CPool.isDigit to remove hook on Handy, to allow make/clean/make without gradle.
+
+commit 5539c76f3dddbc188ce1248bd5f99736d2790ea6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 23 13:04:27 2023 -0700
+
+    Handling multiple methods under a MultiMethod
+    
+    More improved prints.
+    More null-vs-zero-length arrays
+
+commit 6d7c1fe363e9a7be435783020f6bc2cf960572f9
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 22 11:57:01 2023 -0700
+
+    Add a XType above ClassPart and PropPart;
+    
+    Intending to start hanging more type info on XType.  Sharpen (or loosen) a bunch of link() steps to return ClassPart or XType.
+    Add a better recursive toString using SB.
+    Uses a null instead of a zero-length array for Const, TCons, Annons.
+    Method parses the lambda index.
+
+commit f45499d34decff1e748cd1c78901c0736e4ca93c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 14:08:00 2023 -0700
+
+    Wrap up initial parsing.  Start on a naive java class file
+
+commit 6d5f4f60f2a54a03bc1cc9ac18f73a8df671d75f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 11:39:44 2023 -0700
+
+    Child lookup must link.
+    
+    Class lookup in both Implements and Extends.
+    Cleanup MMethod linking.
+    Handle AnonClz, Formal, ParClz.
+
+commit 1a534c35f0388446c743029c654d9d4b010fa262
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:05:54 2023 -0700
+
+    Yank generic type
+    
+    Added 20 lines to avoid 2 casts
+
+commit 5a9541ab4013cd116cadf0600749b2742fc0d462
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:04:07 2023 -0700
+
+    Progress on parsing FizzBuzz
+    
+    FormalCon has no Part.
+
+commit 625485cf0cae03f2b4016ab1acdf4714d1c21cf5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jun 17 09:35:44 2023 -0700
+
+    Progress on linking
+    
+    Linking should remove the need for the CPool everywhere.  Recursively find all XXXCon items and add a cached XXXPart instead.  This search crosses CPool borders in some cases and thus requires the full Repo.  Handles interface method lookups, but not globals like toString.
+    All the XXXCon classes cache something after linking, so a 2nd call to link does nothing (as a form of visit bit).  The XXXPart classes use an external visit bit to avoid double-linking.
+    Hide more of the XXXCon fields and use the XXXPart fields instead.
+    Replace more StringCon with interned String.
+    MethodPart is now a MMEthodPart with more stuff; MMethods retain the notion of a collection of Methods, and both can be stored in a MMethod array.
+
+commit 10d3e49614ca7a5f8a69fc852412aed9b874a3f4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 15 12:51:26 2023 -0700
+
+    Restructure while its cheap
+    
+    Parsing into CPool, which isn't needed after parsing.
+    Replace most StringCon with String.
+    Replace PsuedoCon with IdCon.
+    TermTCon wraps an IdCon.
+
+commit 49ef5ee4e9c8f033a05e58d39a396c7143ec0295
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 16:54:34 2023 -0700
+
+    Remove all transient fields after resolution
+
+commit 77b0aee53bbd3d8e540bdc377cc9c7111d85800c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 15:22:23 2023 -0700
+
+    Clean/restructure building XClz java clazz wrapper
+
+commit 2c497b30aee966ce01756cf148a08ae86cffc7b6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 10:20:34 2023 -0700
+
+    Start building Container notions
+    
+    Hook to make a java clazz from XTC clazz & run it.
+
+commit 5e78521b3738fda31d5ce431e80f0f3a4ff001af
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 19:38:18 2023 -0700
+
+    Link the repo
+    
+    Also drop failed generify of Part (more errors and warnigns than casts saved)
+
+commit c84d62537c7fb432308a63df5d6e7f2b0364ca3e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 13:41:53 2023 -0700
+
+    Actually load all provided libs
+    
+    Was not loading (lazy) 2-deep nested kids; fixed now loading all things.
+    Loading Methods with code.
+    
+    Short cuts for loading arrays of Const, TCon, Annots.
+    Added some toStrings.
+
+commit 10ea25fdf5599adfeb284f78ce32856cc4f0ade1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:40 2023 -0700
+
+    Cleanup
+
+commit aa5f4c505ef8c0110a07e2e78a82760bd2814072
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:03 2023 -0700
+
+    Load all provided libs
+
+commit 267a59d50b40eef955a1710f69f9514b5c74246f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 15:57:04 2023 -0700
+
+    Finish repo setup
+    
+    Doesn't actually load anything into the repo, that happens after making a container
+
+commit 340f2dbfa55dbac5e3188aebed5f2ec6518bc871
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 14:31:43 2023 -0700
+
+    Cleanup
+
+commit af1a3cf1ac7d8512dcb38d39ecb909f479b92352
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 11:23:14 2023 -0700
+
+    All the XTC in XDK parses constant pool
+
+commit fdd2692ce45d13ad5705c1cab0b355a9df65f43f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 09:47:00 2023 -0700
+
+    All the manualTests XTC files
+
+commit e4175bded92a154e8be76ba2d3a81c3cf66e9876
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 15:17:05 2023 -0700
+
+    Parses TestAnnotations
+
+commit 503965745d5478de5dfd09a9d56958f41c7a7b50
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 14:00:31 2023 -0700
+
+    Parse TestArray
+
+commit f7bbf984c6821c3d6119e42834aace983ac6b14e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 13:08:01 2023 -0700
+
+    Parse constant pool of TestNumbers
+
+commit 8bd6923fe8f3aca070ab04822b87791718cdbf6f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:52:24 2023 -0700
+
+    Cleanup extra v-calls
+
+commit 5a1f506fd5600ead6b9c793a794f43aa371c6a55
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:48:42 2023 -0700
+
+    Parse ConstantPool of TestLiteral.x
+    
+    Replace IOException & IllegalStateException with unchecked IllegalArgumentException.
+
+commit ec7255431b36f900e9182446d718e73b2d81ff7d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 16:57:06 2023 -0700
+
+    Parses FizzBuzz.xtc
+    
+    nothing executes of course... nor reads system libs
+
+commit f7714117151acd97a2951d81c5b988915b35003d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 15:43:53 2023 -0700
+
+    Parse a Module OK
+    
+    Need to add a child component/part
+
+commit ecb7c16d589dfe93e9cb95ab35f840d26304b60c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 14:27:14 2023 -0700
+
+    Rename Component -> Part
+
+commit 44d32e1645a783a3a4a733b093c1dd856db9b5b2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 12:46:05 2023 -0700
+
+    Progress towards a XEC parser
+
+commit 03337a417d25f29e93c95d0be10cb78deb3ccf22
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 23:31:11 2023 -0700
+
+    Finish loading FizzBuzz constant pool
+
+commit 945a01be899e4f95e5d8b1cdca562246e1b01844
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 16:23:11 2023 -0700
+
+    Finish renaming all const files to con
+
+commit 36dcc024b2d4e8ed801c9f3daf8c8acfbb7ef1f7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:57:23 2023 -0700
+
+    Bulk rename files
+
+commit adeae913f3fd40bc7328f2a4350cdbdc82bdd097
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:07:14 2023 -0700
+
+    Progress on a XEC constant pool reader
+    
+    Exploring the grand world of XEC files.
+
+commit a1fc429efc17ed04bfea26cb449295aa53d2fe7e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon May 29 12:08:31 2023 -0700
+
+    initial makefile
+
+commit e78d17bb401247d31fb7eb456707e51a358f4e22
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 21 16:30:18 2023 -0800
+
+    Revamp equals,compare,hashCode handling
+    
+    Revamp ClzClz to encode as a unique klass ID, KID.
+    Dynamic dispatch does a lookup on the KID to a no-args blank instance and v-calls from there.
+    Move the default hashCode,equals,compare generation logic to the appropriate interfaces and out of Const.
+
+commit b00e23b25565576d7886cc44078a5d4390b85db6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 21 12:19:40 2023 -0800
+
+    Started implementing Hasher/Hashable
+    
+    Needs some BAST love first.
+
+commit b29c1639d1ba9079777aa82ebb32b9e19f5d6d41
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 20 16:10:04 2023 -0800
+
+    More special handling of equals,compare
+    
+    Allow user overrides of equals.  Requires changing the signature to
+    `public static boolean equals$CLZ( Class<CLZ> clz, CLZ x0, CLZ x1) { ... }`
+    Define an explicit XType.ClzClz for reified XTC Classes.
+
+commit 25964581a12a04d8a483faf1b4aff80a3d267984
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Nov 17 16:02:50 2023 -0800
+
+    Handle default compare, same as equals
+
+commit 68ab9f2b33f4ff561210a4ec312b7696f12655a7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 16 17:02:07 2023 -0800
+
+    Progress towards TestModIFace
+    
+    Bunch of stuff around Stringable and Appender and StringBuffer.
+    Appenderchar.java is now a handrolled Appender<char>.x
+    The handrolled Ary<>.java are now all Stringable.x
+    String is_jdk and not is_prim (requires a "null" not "0").
+    Stringable requires a Appenderchar appendTo(Appenderchar buf).
+    XType now has most hand-rolled java classes as Clz not Base.
+    TemplateAST now calls a chain of appendTo instead of using Java string concat.
+    RegAST + CallAST handles super calls.
+
+commit 9424b1b2ba61d9110433d2c3aec16869a698fcc3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 16 10:05:24 2023 -0800
+
+    Yet Another Major Refactor
+    
+    Move all java support classes to the exact name and location as their XTC variants, all under org/xvm/xtc.  i.e. xrun/XStringable -> xtc/ecstasy/test/Stringable
+
+commit 4f9b131dec69c92af9a026340b1df03dbfb900c4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 15 15:22:06 2023 -0800
+
+    Handle class inheritance; construct has to call super() first.
+    
+    push/pop locals around all BAST "Statement" flavors.
+    Switch NBHMLong for Ary.
+    XType for Clz skips fields in super.
+    Slightly better MultiAST printing.
+
+commit f3f360c5cab61a61e82b2da9a029806a7e4ddca4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 14:13:38 2023 -0800
+
+    A real cross-module call
+    
+    Restructure (again) module/class compilation.
+    Gather multiple xtc file code-gen jobs.
+    Generate source for them all, lazily discovering new things to compile.
+    Split headers from bodies to add imports.
+    Compile in bulk all connected classes.
+
+commit 1af9acd2ed82d9e5b0600585f32d1b2cd0825a18
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 11:00:16 2023 -0800
+
+    Rename
+    
+    Rename XClzBuilder -> ClzBuilder
+    Rename XModBuilder -> ModBuilder
+    Rename XClzCompiler -> JavaC
+
+commit 221a63948f116fb70bfc0a44e2c0efde6348f27a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 10:54:56 2023 -0800
+
+    Gen imports
+    
+    and qualified call names.
+    Props can have imports.
+    Use switch expr in XType.
+
+commit 347fa424e8687a32b3e81b056c627ec1b414f632
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 09:34:15 2023 -0800
+
+    Move value_tcon to its own file
+
+commit 217f280bd131cea81ad5c8aa5165cd3ada6d0c50
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 13 16:26:40 2023 -0800
+
+    Major restructure part#2
+    
+    XModBuilder builds modules, which can be 1-class short forms.
+    XClzBuilder builds classes (including modules).  No shortcuts.
+    Proper XTypes for classes, with fields/properties.
+
+commit 2b29909b267148a20046697bfd2e75f35379f15a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 9 16:02:47 2023 -0800
+
+    Restructure.
+    
+    * org/xvm/XEC.java - entry point
+    * org/xvm/xtc - Read an XTC file support classes; ClassPart, *Part, CPool,Version,VerTree
+    * org/xvm/xtc/cons - "cons" things from XTC files
+    * org/xvm/xtc/AST  - "AST"  things from XTC files
+    
+    org/xvm/xec - generated class strings act "as if" loaded from here
+    * org/xvm/xec - runtime support classes (no ties with gen classes)
+    * org/xvm/xec/XClz - base class for gen'd classes.
+    * org/xvm/xec/XRunClz - Runnable XClz
+
+commit b797abd9428b487edbfb19354014a3bb0ac014b0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 14:34:05 2023 -0800
+
+    Const classes get a toString
+
+commit 806ad99078a9856ce8093c2e19a385a8cff07dde
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 13:58:42 2023 -0800
+
+    Move project from javatools/.../cc_explore to javatools_backend/...
+
+commit 1983f41a2d7d2d0794577d69998ff326044b58aa
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 11:19:05 2023 -0800
+
+    more separation between XTC modules and XTC classes.
+    
+    modules gets a global;
+    Find module-internal classes before they are defined.
+    Const classes get stringable methods.
+
+commit 42c0951a88357ba92583f3ee88a1833516cb41a8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 15:36:56 2023 -0800
+
+    Yet One More Variant of Switch
+    
+    Add a 4th switch variant.  Now:
+    - complex multi-armed ternary trees
+    - simple equals-only ternary trees
+    - int ranges using switch
+    - string/enum using switch
+    Chained compares "a < b < c"
+    Remove a bunch of extra imports.
+    XConst is now Comparable
+    Properties can have inits
+
+commit eb056dda8058c6fbebd7910e8eafb5162ea92fc7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 09:41:05 2023 -0800
+
+    Const class set throws ReadOnly
+
+commit a3a46ae571bf7264ddc7b152a0185ded21dd4e15
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:54:35 2023 -0800
+
+    No set methods on Const classes
+
+commit 9f8249698b210732a908de70b3a2fc291ef88ded
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:50:36 2023 -0800
+
+    Handle a Const class
+    
+    Has default impls for hash,equals,compare.
+    Maintain the load-order for properties/fields, for correct compares.
+
+commit aea9b807e881a5c79feff182186e107166d58ee7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 10:20:09 2023 -0800
+
+    Rebase fixup
+    
+    Bump version number.
+    Correct child lookup to include mixins.
+
+commit aff73d266aa0113ac62092beef70373ebba72e47
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 1 16:06:57 2023 -0700
+
+    Handle currying functions
+    
+    Rename the XType types to shorter names.
+
+commit 631f110aefbc8f23735d1759f1ab45882f68fb1a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 31 12:27:54 2023 -0700
+
+    Change types from Strings to XType
+    
+    First-class citizen types, needed for XTC functions (currying).
+    This is a big change, and is most of the commit.
+    Yank unused TVars.  Another big, but mindless, change.
+
+commit fabfc0feb44dc24fad4160259fa48d54c89f528e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 24 16:50:40 2023 -0700
+
+    Progress towards testChars
+    
+    Better _type calculation; touches lots of things.
+    Compute _cond conditional-result.
+    New sparse-array unpacking.
+    Bump minor version
+    Separate ConvAST from UniOp
+    Support run() with arguments.
+
+commit 3db031f7695cd02b4aaba9776865a732d9a55845
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Oct 18 14:35:48 2023 -0700
+
+    First cut try/catch
+
+commit e20332abe4770ce29e9dd69b9007404b5a721c50
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 16:17:52 2023 -0700
+
+    more assign ops
+    
+    static/instance nested methods
+
+commit 71feaf31a1d304552fff54e8fb9b8a1d435f7890
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 12:21:54 2023 -0700
+
+    StmtExpr
+
+commit 0dbd895ff96c2971a3b45518cad109aa1072a65e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Oct 12 12:42:29 2023 -0700
+
+    Conditions!
+    
+    Conditions are not 1st class values, so can be always be passed as 2 parts with the boolean in a global, and the other part becomes the normal return type.
+    TODO: multi-threaded.
+    MultiAst with >1kid is "(e0 && e1 && ... )"
+    Condition Returns explicitly call SET$COND()
+    Methods flagged as conditional returns.  See large comment in MethodPart.
+    Handle elvis ops:  (e0?.e1 ... : alt ) ==> (e0==null ? alt : e0.e1)
+    Handle elvis ops:  (e0?.e1 , alts ) ==> ((e0==null || e0.e1) && alts)
+    Minor restructure BinOp, Block to allow Java "...".
+    UniOp.is_elvis
+    IfAST print handles else clauses
+    Bugfix: DefReg does not define BAST name "$"
+    NarrowAST is a cast, typically a no-op since already type-checked.
+    Prop: "string.size$get()" ==> "string.length()"
+    assert UniOp "e0.TRACE()" ==> "XClz.TRACE(e0)"
+
+commit 3c3becc1cdb1feb7ff831d3bf4a4109aa8061835
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 11:26:22 2023 -0700
+
+    Another elvis test
+    
+    plus an embedded named function
+
+commit 911a31f6c83a6b87f40a52ef19d933910e309e40
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 10:06:34 2023 -0700
+
+    Support elvis operator
+
+commit eb78542300b280ec60b94bf35f309ffa04782c17
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 16:37:36 2023 -0700
+
+    Progress on TestMisc.x
+    
+    Handle more condition cases
+    Handle some null+types.
+    Fix count-down bug on ranges.
+    Allow ranges to be in asserts
+
+commit d5520520822e705da3736dc1990ff8ae6c806516
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 15:12:48 2023 -0700
+
+    Fix count down ranges
+
+commit 2379623648b296e492be0ec74dd400fb8356c073
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:11:43 2023 -0700
+
+    Punt on continue in the middle of a case, vs the end
+
+commit a8217245c68ecae1ca86536718688e08adf1da13
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:01:29 2023 -0700
+
+    turn on a few more tests
+    
+    Block temps can be given a name.
+    ContinueAST punts on continue in switch.
+    AssignAST with AsnIfNotFalse explodes out a conditional.
+    XClz is self-typed, so TRACE doesn't lose type info.
+    Partial split of modules from classes.
+    AryI64 gets an iterator which passes a conditional.
+
+commit 50b6581229523a502b4b65b61e73ec261a2761d9
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 12:03:19 2023 -0700
+
+    Handle spaceship for ints
+    
+    Handle switch-of-enums.
+    Keep more type info in BinOp.
+    Fix tmp naming bug.
+
+commit bbf2ada5c593849a0f4eee3ef02550316092a777
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 10:14:24 2023 -0700
+
+    A few more switch variants
+    
+    Compiling with java 17 and enable-preview on the gen'd code
+    Breaks & continues 1 level deep.
+    While loops.
+    pre/post dec/inc.
+    multi expr of 1
+    Smarter BinOp paren grouping
+
+commit 828be8e6d6a8d6db3132fd0819d38ca61af8e6d5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 12:54:49 2023 -0700
+
+    Progress on misc tests
+    
+    Rename misc.x to TestMisc.x to match the module name.
+    Comment out tests not currently working.
+    Add print to Range; handle Inteval and Iterator as just another Range.
+    UniOp partial support for converts; support for Boolean "~"
+    BinOp all operator precedences.
+    Template strings add some spaces.
+
+commit 4924c9eaf02d21571f2fcf2023c0f95bd6c836b8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 10:10:40 2023 -0700
+
+    Yank tvars
+    
+    Thought they might be needed, not needed yet.  Will revisit if problems show up in mixin composition.
+    Another little bit of tuple improvements.
+
+commit 1d3ff80989277def5c15b4c58fbf5588c687312b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 09:33:15 2023 -0700
+
+    Handle lazy props
+    
+    Be more generic in a bunch of places
+
+commit a7d78e39a90276f0d9c2d2601e76763fed5afde4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 16:34:08 2023 -0700
+
+    Progress on tuples
+    
+    Map (shell, not implemented) & Map constants.
+    For statement, some more simple ASTs.
+    UniOps can be either pre or post
+    Some cleanup in XClzBuilder
+
+commit 5d5790ee3ae1d547c0853aa0dac591ae957e064b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 13:15:32 2023 -0700
+
+    More tuple support
+    
+    addAll, equals, at(range), slice
+    More tuple constructors.
+    Calling 1.toInt() turns into Long.valueOf(1)
+
+commit f54aee83e41a698b89bedc4f654867fde4a7bb8a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 11:34:36 2023 -0700
+
+    Change tuple mutability
+    
+    and the equals test, and asserts
+
+commit fa5d283c54eb80ad7d6c5d3cadeae9b6df6295ed
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 10:23:32 2023 -0700
+
+    Handle dynamic tuples
+
+commit ba6b316ad6236eb59450a6f20b4c7fc82b3f9246
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 27 14:40:09 2023 -0700
+
+    Progress towards tuples
+    
+    Split XClz into XRunClz (has container, run method).
+    XClz picks up mutability question.
+    Properties on instances and classes.
+    DefReg uses "var " instead of the full type.
+
+commit f2a79876460a19ff049e28d28d4fa227a9fb1ac5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 12:01:41 2023 -0700
+
+    Drop the X
+    
+    from most runtime files.  Gonna need to disambiguate with other generated names using the Java path anyways.
+
+commit fae1cec37cd8efc1a7723b3cf360f895362bf29b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 11:33:12 2023 -0700
+
+    InvokeAST takes a generic LHS not a register
+    
+    First cut PropertyAST
+
+commit ab5abaa84fc4b0ddd6889002470647bb18877176
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 15:26:39 2023 -0700
+
+    make builds examples and manual tests
+
+commit 604b161b2e103293e3a3a578d499c931ea6e8935
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 14:04:36 2023 -0700
+
+    rebase, drop unused TODOAST
+
+commit 2e3e0cf95327ba2b418191689553561b5dfd74cc
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 13:45:19 2023 -0700
+
+    Permute runs
+    
+    Prints a passed XTC lambda as a Java lambda.  Uses recursive XClzBuilder.
+    Prints XTC binary expressions with proper grouping.
+    Swap out XTC flex-sized arrays for "XAry" variants of Java ArrayList.  Includes direct array constant constructors, and explicit generic types.
+
+commit 1389f1352b91fe6646702460d58964844ddee1ab
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 13:01:15 2023 -0700
+
+    Split byte AST reading from AST constructors
+    
+    Drop / rename a few old methods also.
+
+commit 61d8496ad8498d6b473cd5d056ab984e5bdeddf6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 11:29:09 2023 -0700
+
+    1/2 flip to a new (old) binary parser
+
+commit 60e39d340e11ff0555941f45b4805de6eff2288b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 19 16:29:09 2023 -0700
+
+    Progress towards handling XTC lambdas
+
+commit 466a5a393e2a45a2e202be61e6317840011d3f56
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Sep 18 15:26:39 2023 -0700
+
+    Progress towards Permutations
+    
+    Starting in on the embedded Lambda.
+    Flip the AST default for parsing ast_term instead of ast.
+    Fix bug for XRange missing inclusive/exclusive endpoints.
+
+commit bdddcdc38cf2b216ba8a000a42dc4b8d268e98ef
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Sep 17 16:13:03 2023 -0700
+
+    Progress Permutations.x
+    
+    Handles FizzBuzz.x also.
+    First cut Switch, ForRange, and Range.
+    More smarts about NL & indenting.
+    Add a trailing NL test to SB.
+
+commit 63aa9b0e3ed8eba6d7c627ce07978055c0b40cac
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Sep 16 11:11:47 2023 -0700
+
+    Progress on Permutations.x, compiles now, missing for loops
+    
+    Move examples to more Java-ish style (open braces on same line).
+    Move support classes into XRUN directory.
+    Add a XAryInt64 support class, e.g. ArrayList with primitive longs.
+    AST parser changes slightly to match new format.
+    Bug fixes in constant array initializers.
+
+commit 6efed110ed736fc70360724464550a55467d7048
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Sep 15 14:17:14 2023 -0700
+
+    Progress on Permutation.x
+    
+    Mostly minor printing stuff; TemplateAST.
+
+commit 17bef7fac2cf3936c3c62e91301ef7c80c02af41
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 19:52:29 2023 -0700
+
+    Progress on AST towards Permute.x
+
+commit d07923718178bbcc3f380cc32820cfb53f2a8ba1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 15:49:02 2023 -0700
+
+    Buncha new AST nodes
+    
+    Better parsing exprs vs AST
+
+commit d29a12f82c52b5ae466b602bc320d2ce3fcba913
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 13 16:32:56 2023 -0700
+
+    Run HelloWorld
+    
+    parse ast_op - peeks 1st byte, if negative, that's the value.  if positive use the full packed64.
+    Parse invokes, constants, default "register".  Fill in default values.
+    Push/pop local names on scope change.
+    XConsole print takes a boolean for newln
+
+commit ec74f13a1bafabbb8b2fe556115777694bdf7e57
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 6 14:39:15 2023 -0700
+
+    Handle more AST
+    
+    Back to using the MethodPart pool.
+    No need to set/restore the CPool parser.
+    Add a bunch of "_ast" parser bits, will probably toss the old stuff next go 'round.
+
+commit 88bbaaed77e3671151237124eca40a8e3be8e5bb
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 5 16:17:29 2023 -0700
+
+    A little AST restructure
+    
+    Also rebase from master
+
+commit 7bf1be591af3746079fe3fd074a51462f273a106
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Aug 19 09:01:14 2023 -0700
+
+    comment
+
+commit f3497dc901c350dc744f41667e3e0cba7ee8b0e2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 18 13:27:45 2023 -0700
+
+    Rebuild examples when XTC compiler changes
+
+commit 6760eb2ef8c70ee59cca0841212e7edcad8b6eb8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 12:58:13 2023 -0700
+
+    Initial cut AST parser
+
+commit ef3b1e7e929b079c6bd596c371dbee30d959c182
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 11:58:08 2023 -0700
+
+    Fix minor constant dependencies that changed
+
+commit c2e24aff390ca5adbbb498751a354d1868aa2c56
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 11 14:53:14 2023 -0700
+
+    Minor cleanup
+    
+    Study how to reverse exploded for(Range)
+
+commit 2791fae89a100223ed231907d72dd1c4e1574f2d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 10 11:09:32 2023 -0700
+
+    All the ops for Permutation's main method
+    
+    Fails in pass#2 for bytecode layout, but gets all the ops in pass#1.
+    CALL_11, NVOK_11, FBIND, NEWG_1, NEWG_N, RETURN_1, JMP_NEQ, JMP_LT, JMP_GT, JMP_GTE, GP_SUB, GP_IRANGEE, P_GET, IP_DEC, I_GET
+
+commit 201f02693ae0d15262de41cef10750b4d5c28d52
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 14:00:22 2023 -0700
+
+    Compile and run FizzBuzz
+    
+    Actually classForNames
+
+commit ee3f3fd5cdf7972c76a3dc651a81cbf313455732
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 11:58:17 2023 -0700
+
+    Add auto-gen imports
+    
+    Some public methods; able to run the gen'd code inline.
+    Not yet compiling on the fly.
+
+commit ea1bf23c3039e5dfec33bc014e6c216c3a1b9f4d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 3 15:26:03 2023 -0700
+
+    First cut FizzBuzz code
+    
+    Definitely over-optimized
+
+commit 18648df2e55adfd238fa325107a6faecd405ed47
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 2 17:10:55 2023 -0700
+
+    Pretty-print FizzBuzz
+    
+    Not entirely valid Java syntax yet, but getting closer.
+    Makes some simple function calls.
+    Still has GOTO's instead of structured control flow.
+
+commit 94a60df91605867495738fd19987fe299949d178
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 12:18:07 2023 -0700
+
+    A few more opcodes
+    
+    ENTER, VAR_N, VAR_IN
+
+commit 7c7e54a2ee60e8bea448686e9214b94a3a5476c5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 11:07:29 2023 -0700
+
+    Partial handle VAR_DN opcode
+    
+    Or at least the direct Console injection part anyways
+
+commit 55ece20a8e405c5d9e7d96b65145720f87aad52b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 31 15:57:45 2023 -0700
+
+    Handle generic type parms better.  Links all constants in all libs
+    
+    Sig matching has recursion issues.  First try matching on sig arg length alone; if this fails THEN link the signature.
+    Minor version bump because rebase.
+
+commit 85c3d7020d5626cb63a3d0fa4258532406934325
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jul 28 08:34:39 2023 -0700
+
+    More signature matching shenanigans
+    
+    DynamicFormal & VirtualTCons are still busted.
+    Handle more natives.
+    Swap out IdHashMap for NBHM, to avoid CME; use my open source version.
+
+commit f9592406da09debf2c0e8471234f395cfd60ee8c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jul 27 10:05:43 2023 -0700
+
+    Fix ints after rebase from master
+    
+    Update minor version.
+    Start on opcode parsing.
+    Start on first native method.
+
+commit a4fa954f51d6647e6a7636ed6e3d3f6f34f7a442
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 16:09:13 2023 -0700
+
+    First cut TypeInfo stuff
+    
+    Really HM types, but surely full of bugs.
+    No asserts, does all of XTC libs.
+
+commit 97ca544c582d6c585c142c056f99509d2d73a50e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 15:31:12 2023 -0700
+
+    Progress on TypeInfo
+    
+    Getting pretty far...
+    Add a bunch more linking behavior, including DepTCon & children.
+    Add a bunch more setype behavior, in a dozen "*Con.java" classes.
+
+commit 7fdf88143564a5fbe43d3d2f059f6b98d944bd86
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jul 19 10:09:36 2023 -0700
+
+    More TypeInfo
+    
+    First (bad) cut of union/interface type.
+    mostly got classes & interfaces.
+    might have mixins sorta right.
+
+commit fbaeea4696138c197cccf3cc98eac46f1a9f929d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 08:33:53 2023 -0700
+
+    Comments
+
+commit 734915023bbf66ce9a0ec09c8c700fee963d3066
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 07:53:34 2023 -0700
+
+    Turn on a few missed link steps
+    
+    AryCon, MapCon now link.
+    Drop repo link parm from setype.
+    Force all parts to support setype.
+
+commit bf5a354dca20a2bc6fb2bd40e4f84a7f348fe18f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 17 16:17:57 2023 -0700
+
+    Get thru linking & some (not all) TypeInfo
+    
+    Skips most setype calls.
+    Implements link() calls for most things.
+    Implements setype() calls for most things, but mostly not called yet.
+    Finally resolved multi-method selection (keeps MethodCon around).
+    Several class heiarchary restructurings.
+    Shorter printout; 18640 total Parts
+    TVar trial_unify_ok returns boolean.
+    Add TVBase.
+
+commit db2a29713f9209bf2726a673c50aeb8665ae0435
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Jul 16 08:13:34 2023 -0700
+
+    Handle mixins with generified types
+
+commit e4172360969f4bac0467376597ab848ce2dda135
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jul 15 11:20:18 2023 -0700
+
+    Staring at my 1st real mixin
+    
+    Record super-class chain from EXTENDS.
+    Ignore various marker MIXINs.
+    Generic link various Consts.
+    Get generic types for methods.
+    RelTCon types parts but doesn't make a real union/interface type (yet).
+    Immut adds hidden internal immutable interface.  Drop TVImmut
+    ParamTCon simplifies.
+    Pretty-print linker progress
+
+commit 5ea89f00bbc1a13d0930b2c6c31e6d0a4bb3571e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 14:52:08 2023 -0700
+
+    Up to typing Immutable
+    
+    Dunno the semantics of the immutable keyword yet.
+    What's it mean `iface A extends immutable iface B` ?
+
+commit 8fc8ef3658d7597bd9e9814bf5169c7758c1f66e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 09:42:43 2023 -0700
+
+    Better thinking on interfaces
+
+commit 80f3809ea979876dbc214020751540e2e1044f0b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 29 16:43:45 2023 -0700
+
+    Parts link, Types setype, Values are yet to be done.
+    
+    Most TCons have commented-out old link calls, yet to be replaced with setypes.
+    Add an type Env for carrying type-names through the Part tree.
+    TVStructs carry a debug name.
+    Do not add Class fields to a TVStruct until the type parents are done.
+    That means Extends and Implements both; several Parts complete their innards calls but none yet complete the entire Part.
+    Start to handle Into (the mixin).
+    Sharpen several default fields/Const.
+    Lots of comments about the expected type fields.
+    Hide name2kid, use child().
+
+commit c9314efd35b737d43724b3de1ff67a6e19443f91
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 27 10:08:05 2023 -0700
+
+    Drop XType, add NBHML, TVar.
+    
+    Move Contribs to its own file.  Move _contribs to Class and Prop and out of Part.
+    Add NBHML and helper methods to util.
+    Add TVar,TVLeaf.
+    Hooks for computing TVar.
+    Add CPool.isDigit to remove hook on Handy, to allow make/clean/make without gradle.
+
+commit eef932a40c14e282bae86649a1c4b3c7cb029a88
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 23 13:04:27 2023 -0700
+
+    Handling multiple methods under a MultiMethod
+    
+    More improved prints.
+    More null-vs-zero-length arrays
+
+commit 8fc492f3bfa9993c87329bcf4cc25253bc72a9e3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 22 11:57:01 2023 -0700
+
+    Add a XType above ClassPart and PropPart;
+    
+    Intending to start hanging more type info on XType.  Sharpen (or loosen) a bunch of link() steps to return ClassPart or XType.
+    Add a better recursive toString using SB.
+    Uses a null instead of a zero-length array for Const, TCons, Annons.
+    Method parses the lambda index.
+
+commit d8b09251f684ff2a109853e90afc8abc91e1a0f9
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 14:08:00 2023 -0700
+
+    Wrap up initial parsing.  Start on a naive java class file
+
+commit fd89276e3e1f7e640cb0eb6015c05dc3d2ab2611
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 11:39:44 2023 -0700
+
+    Child lookup must link.
+    
+    Class lookup in both Implements and Extends.
+    Cleanup MMethod linking.
+    Handle AnonClz, Formal, ParClz.
+
+commit efec460c4ed6399ab5e0dc361e9616b63f04f5f7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:05:54 2023 -0700
+
+    Yank generic type
+    
+    Added 20 lines to avoid 2 casts
+
+commit a581de9ff3f12f136d8f3abd2b8eb1b08c43887b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:04:07 2023 -0700
+
+    Progress on parsing FizzBuzz
+    
+    FormalCon has no Part.
+
+commit 76bb506705df1531c76dd3ce7f003e2bbbdbfc95
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jun 17 09:35:44 2023 -0700
+
+    Progress on linking
+    
+    Linking should remove the need for the CPool everywhere.  Recursively find all XXXCon items and add a cached XXXPart instead.  This search crosses CPool borders in some cases and thus requires the full Repo.  Handles interface method lookups, but not globals like toString.
+    All the XXXCon classes cache something after linking, so a 2nd call to link does nothing (as a form of visit bit).  The XXXPart classes use an external visit bit to avoid double-linking.
+    Hide more of the XXXCon fields and use the XXXPart fields instead.
+    Replace more StringCon with interned String.
+    MethodPart is now a MMEthodPart with more stuff; MMethods retain the notion of a collection of Methods, and both can be stored in a MMethod array.
+
+commit 3e3b2da74d9d36945c7af00ed65cea4572698d93
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 15 12:51:26 2023 -0700
+
+    Restructure while its cheap
+    
+    Parsing into CPool, which isn't needed after parsing.
+    Replace most StringCon with String.
+    Replace PsuedoCon with IdCon.
+    TermTCon wraps an IdCon.
+
+commit 3840b38231a253a60df3bfd52ec439298128747c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 16:54:34 2023 -0700
+
+    Remove all transient fields after resolution
+
+commit 150df58023fcfc8fa1ecb3a8e561f6521918e514
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 15:22:23 2023 -0700
+
+    Clean/restructure building XClz java clazz wrapper
+
+commit 8a37bbb0ad898a28ccc223a5840b4a63703ab8dc
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 10:20:34 2023 -0700
+
+    Start building Container notions
+    
+    Hook to make a java clazz from XTC clazz & run it.
+
+commit cc1711816961960cc47890964643eddc8ed63a79
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 19:38:18 2023 -0700
+
+    Link the repo
+    
+    Also drop failed generify of Part (more errors and warnigns than casts saved)
+
+commit fa29c8e90b6f8a8d95fe294f020fed3947b1737d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 13:41:53 2023 -0700
+
+    Actually load all provided libs
+    
+    Was not loading (lazy) 2-deep nested kids; fixed now loading all things.
+    Loading Methods with code.
+    
+    Short cuts for loading arrays of Const, TCon, Annots.
+    Added some toStrings.
+
+commit adb2ee5f9a2d6984b98382cace9e9804568f22ee
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:40 2023 -0700
+
+    Cleanup
+
+commit 579fcf9d190c2721e7728dbbe4b6532c44941f91
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:03 2023 -0700
+
+    Load all provided libs
+
+commit 57233265bbc39383af03f691a745e16f9f6706df
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 15:57:04 2023 -0700
+
+    Finish repo setup
+    
+    Doesn't actually load anything into the repo, that happens after making a container
+
+commit 648d8f86ff7ddb808c6d976b20ff5eda200eab1a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 14:31:43 2023 -0700
+
+    Cleanup
+
+commit b70b901919f553d017ee6d0cad7d0b2c694a7d09
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 11:23:14 2023 -0700
+
+    All the XTC in XDK parses constant pool
+
+commit 4170e90a57d2321d75af4fe4848dddb15a9d45ea
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 09:47:00 2023 -0700
+
+    All the manualTests XTC files
+
+commit 491544f81eea830a62be57c7ec90eddecf01e938
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 15:17:05 2023 -0700
+
+    Parses TestAnnotations
+
+commit 04af4e4ae5a532b8290f40dcbce0a9ed3a69cace
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 14:00:31 2023 -0700
+
+    Parse TestArray
+
+commit a8c632dc0a1c9575780205a3d30c973b4daab49d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 13:08:01 2023 -0700
+
+    Parse constant pool of TestNumbers
+
+commit ea3680a833cde1cb6b7eccab9197953568a6c0e9
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:52:24 2023 -0700
+
+    Cleanup extra v-calls
+
+commit 53427bbf3c4ccc8c1c4259b0d39324216a70df85
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:48:42 2023 -0700
+
+    Parse ConstantPool of TestLiteral.x
+    
+    Replace IOException & IllegalStateException with unchecked IllegalArgumentException.
+
+commit c54310e64849137fc7b7f9ac11b2d9520b6c7766
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 16:57:06 2023 -0700
+
+    Parses FizzBuzz.xtc
+    
+    nothing executes of course... nor reads system libs
+
+commit 9fee643deeb8987a93c29c19b359679c8d2b0079
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 15:43:53 2023 -0700
+
+    Parse a Module OK
+    
+    Need to add a child component/part
+
+commit feb89d38cd0861fb4880e7e81b1d0cb1e1149417
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 14:27:14 2023 -0700
+
+    Rename Component -> Part
+
+commit 4f8e27ae21303f5bf9b5fae744788b478a132b38
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 12:46:05 2023 -0700
+
+    Progress towards a XEC parser
+
+commit 3749c9f463a7f2090947efa1aa520c4d98a3d0ca
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 23:31:11 2023 -0700
+
+    Finish loading FizzBuzz constant pool
+
+commit ec2239bf1148c0ce887f9b0cfa13c91932ffe953
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 16:23:11 2023 -0700
+
+    Finish renaming all const files to con
+
+commit 65ca768b75e9c0fa8c70570918ddca1dfa914ec9
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:57:23 2023 -0700
+
+    Bulk rename files
+
+commit 433a673aff7a4a2c9f3275ff90dc054dc18f8898
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:07:14 2023 -0700
+
+    Progress on a XEC constant pool reader
+    
+    Exploring the grand world of XEC files.
+
+commit 8c6ea98b191f8efbada00738f41f866e50090d66
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon May 29 12:08:31 2023 -0700
+
+    initial makefile
+
+commit c9d56d64cc64077a08439f24c7d5134348bb13b8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Dec 6 16:06:21 2023 -0800
+
+    Progress on TCK
+    
+    many more default impls; cast long to uint32, more Mutability
+
+commit d7af2cc8c5a50f0ab4d2df3b933c13855fb78f00
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Dec 5 13:12:06 2023 -0800
+
+    First pass TCKs
+    
+    Generates code for all, but code doesn't compile.
+    Mutability moves to Array class.
+    Add Java wrappers for UIntNumber, FPNumber, DecimalFPNumber, Dec64.
+    Add DivRem support, and "is"/instanceof.
+    Split imports into XTC-subclass (java direct replacements for XTC classes) and imports for wholly generated classes.
+    Convert has both conditional and non-conditional variants.
+    Another instance of XType.Clz toString vs clz().
+    Packages get added to the ClzBldSet.
+    More classes become XType.Clz instead of Base.
+
+commit 9d9de6a46173101d09ad77f852f2f9232f22a11c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 30 12:52:50 2023 -0800
+
+    Hit by lack of XTC ISA test
+    
+    A bunch of comments and partial implementation work
+
+commit 1197e326ff9196cf15decd490e0ba90acad9f40d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 15:46:03 2023 -0800
+
+    Handle new BAST after rebase
+    
+    Minor changes to CmpChain, sig compares of immutable arrays
+    Minor updates to Makefile
+
+commit f1fadac0a3a8bbdb0986973401a75a39b1aabbff
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 14:52:51 2023 -0800
+
+    Update Makefile
+
+commit d593cf679ddac2a5b0befb73bba7a2702acee50b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 14:10:14 2023 -0800
+
+    Drop KID for GOLD
+
+commit 73af6d49be1153b73284d567c7967262c2b133ea
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 12:11:10 2023 -0800
+
+    Missed one
+
+commit bc10badba9510bdd1ca685725c0fdaece45fc86e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 29 12:06:53 2023 -0800
+
+    Updates post rebase; all tests pass
+    
+    Revamp "funky dispatch" to dispatch on a klass-id.
+    Requires a no-arg constructor for the golden instance.
+    No-arg constructors for all.
+    Const is both Comprable and Orderable.
+    Add a Java mapping for the XTC Enum class, Number, IntNumber.
+    Handle OrderAST BAST types.
+    CallAST&InvokeAST directly intercepting Longs & Strings are now by XType and not String name.
+    MultiAST Elvis rewrites happen at any kid
+    UniOp !(x<y) wrapper flips to (x>=y)
+    ClzBuilder splits out top-level classes from modules from nested classes
+    XType String becomes a Clz like "Long" does
+
+commit ddcbf9f2d3be48c5f4f3ec4c4705c76c1cf8f1f1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 22 14:48:21 2023 -0800
+
+    Swap to a sentinal Never for no-args constructor.
+    
+    Add <,> Uniops (still missing actual impls).
+    Copy the XTC base change for BinOp ordering
+    Treat IntNumber as a proxy for 'Long' ?
+
+commit ec7e03f462a85ff305b3a9119bdcca6f3b9788e3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 21 12:19:40 2023 -0800
+
+    Started implementing Hasher/Hashable
+    
+    Needs some BAST love first.
+
+commit 4cfa18bd643e6c38ef2045f019223cd6d12168bb
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Nov 17 16:02:50 2023 -0800
+
+    Handle default compare, same as equals
+
+commit c5154f5e41c0f3bcd16080a1589bedf63f1fa4f7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 16 10:05:24 2023 -0800
+
+    Yet Another Major Refactor
+    
+    Move all java support classes to the exact name and location as their XTC variants, all under org/xvm/xtc.  i.e. xrun/XStringable -> xtc/ecstasy/test/Stringable
+
+commit fb519fc90eb42049b9842be20f80666a620be9d3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 15 15:22:06 2023 -0800
+
+    Handle class inheritance; construct has to call super() first.
+    
+    push/pop locals around all BAST "Statement" flavors.
+    Switch NBHMLong for Ary.
+    XType for Clz skips fields in super.
+    Slightly better MultiAST printing.
+
+commit 99578089715473fe3290d800b56ed701fd371142
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 14:13:38 2023 -0800
+
+    A real cross-module call
+    
+    Restructure (again) module/class compilation.
+    Gather multiple xtc file code-gen jobs.
+    Generate source for them all, lazily discovering new things to compile.
+    Split headers from bodies to add imports.
+    Compile in bulk all connected classes.
+
+commit db7870940c1b28c37344e1cd4f5eec2ff1be9e8d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 11:00:16 2023 -0800
+
+    Rename
+    
+    Rename XClzBuilder -> ClzBuilder
+    Rename XModBuilder -> ModBuilder
+    Rename XClzCompiler -> JavaC
+
+commit 87954dd9ef71a8b77b1156a49ddaca2daa7ff787
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 10:54:56 2023 -0800
+
+    Gen imports
+    
+    and qualified call names.
+    Props can have imports.
+    Use switch expr in XType.
+
+commit f73ef339dfd6956dc112754cb9d46ad004159c0a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 09:34:15 2023 -0800
+
+    Move value_tcon to its own file
+
+commit d4106432d2cf33f9f4eae5eeab3545f629bb7130
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 13 16:26:40 2023 -0800
+
+    Major restructure part#2
+    
+    XModBuilder builds modules, which can be 1-class short forms.
+    XClzBuilder builds classes (including modules).  No shortcuts.
+    Proper XTypes for classes, with fields/properties.
+
+commit 8b746ba1e68aaa68aa6b953c7edea62d9e241bb5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 9 16:02:47 2023 -0800
+
+    Restructure.
+    
+    * org/xvm/XEC.java - entry point
+    * org/xvm/xtc - Read an XTC file support classes; ClassPart, *Part, CPool,Version,VerTree
+    * org/xvm/xtc/cons - "cons" things from XTC files
+    * org/xvm/xtc/AST  - "AST"  things from XTC files
+    
+    org/xvm/xec - generated class strings act "as if" loaded from here
+    * org/xvm/xec - runtime support classes (no ties with gen classes)
+    * org/xvm/xec/XClz - base class for gen'd classes.
+    * org/xvm/xec/XRunClz - Runnable XClz
+
+commit 4c8f1246fceb1699eeae94a6faa9efa0db03e926
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 14:34:05 2023 -0800
+
+    Const classes get a toString
+
+commit 1143cd70f17eed8663cfd7b8795217c2bad705f1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 13:58:42 2023 -0800
+
+    Move project from javatools/.../cc_explore to javatools_backend/...
+
+commit 3998ef0c7df3026ed75a9bb4843f7ab712970f50
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 11:19:05 2023 -0800
+
+    more separation between XTC modules and XTC classes.
+    
+    modules gets a global;
+    Find module-internal classes before they are defined.
+    Const classes get stringable methods.
+
+commit 5eaadef40cafe681aa3c36a049e2826b592b677d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 15:36:56 2023 -0800
+
+    Yet One More Variant of Switch
+    
+    Add a 4th switch variant.  Now:
+    - complex multi-armed ternary trees
+    - simple equals-only ternary trees
+    - int ranges using switch
+    - string/enum using switch
+    Chained compares "a < b < c"
+    Remove a bunch of extra imports.
+    XConst is now Comparable
+    Properties can have inits
+
+commit dd32cd4eadae75260c980648e0d2a808a2dfbfe7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 09:41:05 2023 -0800
+
+    Const class set throws ReadOnly
+
+commit 069f6ffb2e27779e240279b241b98318c7f15c3f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:54:35 2023 -0800
+
+    No set methods on Const classes
+
+commit d238302c9d377ce519681ce7a3535a94fd66c211
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:50:36 2023 -0800
+
+    Handle a Const class
+    
+    Has default impls for hash,equals,compare.
+    Maintain the load-order for properties/fields, for correct compares.
+
+commit bb4d19ea1130648f35941b18d4ce32930531a278
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 10:20:09 2023 -0800
+
+    Rebase fixup
+    
+    Bump version number.
+    Correct child lookup to include mixins.
+
+commit 082940878beed069d163dc6476479781bfe981ef
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 1 16:06:57 2023 -0700
+
+    Handle currying functions
+    
+    Rename the XType types to shorter names.
+
+commit e007f00f658fd4a507b7b36db1db3d8f33d1c672
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 31 12:27:54 2023 -0700
+
+    Change types from Strings to XType
+    
+    First-class citizen types, needed for XTC functions (currying).
+    This is a big change, and is most of the commit.
+    Yank unused TVars.  Another big, but mindless, change.
+
+commit 2934ed6a51cc8e0d251b1e75209e24a2cfef6469
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 24 16:50:40 2023 -0700
+
+    Progress towards testChars
+    
+    Better _type calculation; touches lots of things.
+    Compute _cond conditional-result.
+    New sparse-array unpacking.
+    Bump minor version
+    Separate ConvAST from UniOp
+    Support run() with arguments.
+
+commit 34433acfbe2ccbbf3e96a36b956f9b6c15e4c5f3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Oct 18 14:35:48 2023 -0700
+
+    First cut try/catch
+
+commit f2c12375c6d83915a1a51e4e0609ff6a050f6278
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 16:17:52 2023 -0700
+
+    more assign ops
+    
+    static/instance nested methods
+
+commit ce54c164ce09e8bc2855978bf803ced4b666fe66
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 12:21:54 2023 -0700
+
+    StmtExpr
+
+commit 4328d27caf991538790fdfa6a4cd2bb1648efc4f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Oct 12 12:42:29 2023 -0700
+
+    Conditions!
+    
+    Conditions are not 1st class values, so can be always be passed as 2 parts with the boolean in a global, and the other part becomes the normal return type.
+    TODO: multi-threaded.
+    MultiAst with >1kid is "(e0 && e1 && ... )"
+    Condition Returns explicitly call SET$COND()
+    Methods flagged as conditional returns.  See large comment in MethodPart.
+    Handle elvis ops:  (e0?.e1 ... : alt ) ==> (e0==null ? alt : e0.e1)
+    Handle elvis ops:  (e0?.e1 , alts ) ==> ((e0==null || e0.e1) && alts)
+    Minor restructure BinOp, Block to allow Java "...".
+    UniOp.is_elvis
+    IfAST print handles else clauses
+    Bugfix: DefReg does not define BAST name "$"
+    NarrowAST is a cast, typically a no-op since already type-checked.
+    Prop: "string.size$get()" ==> "string.length()"
+    assert UniOp "e0.TRACE()" ==> "XClz.TRACE(e0)"
+
+commit 329ea72b339f1aef0e43bda5ecd12c0813894267
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 11:26:22 2023 -0700
+
+    Another elvis test
+    
+    plus an embedded named function
+
+commit 5f93123518aa1bfe9393bd29e436793ac6197cfc
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 10:06:34 2023 -0700
+
+    Support elvis operator
+
+commit 5415a8f14119c2c24054e69e608e6121bc2a03fb
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 16:37:36 2023 -0700
+
+    Progress on TestMisc.x
+    
+    Handle more condition cases
+    Handle some null+types.
+    Fix count-down bug on ranges.
+    Allow ranges to be in asserts
+
+commit e3baccc4304732d2cd2c3834ea9a50ca5b1d84b5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 15:12:48 2023 -0700
+
+    Fix count down ranges
+
+commit 075682458c87a985d8914f6ae6f29e27763958e4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:11:43 2023 -0700
+
+    Punt on continue in the middle of a case, vs the end
+
+commit 457ec534f6d0e456a6594570765bf4e9100870f3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:01:29 2023 -0700
+
+    turn on a few more tests
+    
+    Block temps can be given a name.
+    ContinueAST punts on continue in switch.
+    AssignAST with AsnIfNotFalse explodes out a conditional.
+    XClz is self-typed, so TRACE doesn't lose type info.
+    Partial split of modules from classes.
+    AryI64 gets an iterator which passes a conditional.
+
+commit 2a10f3bddae036f1c7fd9378151a4f441d880f4c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 12:03:19 2023 -0700
+
+    Handle spaceship for ints
+    
+    Handle switch-of-enums.
+    Keep more type info in BinOp.
+    Fix tmp naming bug.
+
+commit 1e0e66e69d9d40fd0ddeb24b4d40da283b43de6b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 10:14:24 2023 -0700
+
+    A few more switch variants
+    
+    Compiling with java 17 and enable-preview on the gen'd code
+    Breaks & continues 1 level deep.
+    While loops.
+    pre/post dec/inc.
+    multi expr of 1
+    Smarter BinOp paren grouping
+
+commit 31d5436c2303554c63b495ce78322ca76fba093d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 12:54:49 2023 -0700
+
+    Progress on misc tests
+    
+    Rename misc.x to TestMisc.x to match the module name.
+    Comment out tests not currently working.
+    Add print to Range; handle Inteval and Iterator as just another Range.
+    UniOp partial support for converts; support for Boolean "~"
+    BinOp all operator precedences.
+    Template strings add some spaces.
+
+commit 15e4a4f41d916c029a992c688038aa4e411720f0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 10:10:40 2023 -0700
+
+    Yank tvars
+    
+    Thought they might be needed, not needed yet.  Will revisit if problems show up in mixin composition.
+    Another little bit of tuple improvements.
+
+commit da424c6456365dd74eaf91828708802f28984e08
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 09:33:15 2023 -0700
+
+    Handle lazy props
+    
+    Be more generic in a bunch of places
+
+commit 8ba08a78b3d893c586fc71f49ddb4f605021ece4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 16:34:08 2023 -0700
+
+    Progress on tuples
+    
+    Map (shell, not implemented) & Map constants.
+    For statement, some more simple ASTs.
+    UniOps can be either pre or post
+    Some cleanup in XClzBuilder
+
+commit ad89e90b06b11f85b46c9bd7236563fd28da664d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 13:15:32 2023 -0700
+
+    More tuple support
+    
+    addAll, equals, at(range), slice
+    More tuple constructors.
+    Calling 1.toInt() turns into Long.valueOf(1)
+
+commit c9467085bd77039af2f3c4e12afc4e7c5c885e45
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 11:34:36 2023 -0700
+
+    Change tuple mutability
+    
+    and the equals test, and asserts
+
+commit 14a9b548b0015f3a24e3d2d6d235a4bb8e2ed502
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 10:23:32 2023 -0700
+
+    Handle dynamic tuples
+
+commit e111552d461dedf87c067037f065497675634268
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 27 14:40:09 2023 -0700
+
+    Progress towards tuples
+    
+    Split XClz into XRunClz (has container, run method).
+    XClz picks up mutability question.
+    Properties on instances and classes.
+    DefReg uses "var " instead of the full type.
+
+commit a5707b96ae4b994f2fd7ea876294ca116b18a03f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 12:01:41 2023 -0700
+
+    Drop the X
+    
+    from most runtime files.  Gonna need to disambiguate with other generated names using the Java path anyways.
+
+commit d3b568a831c13024aeac2414681ec99bd0645fcf
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 11:33:12 2023 -0700
+
+    InvokeAST takes a generic LHS not a register
+    
+    First cut PropertyAST
+
+commit 48b1743bc8fcd9740a13cb2f1fe1bebce17bc08d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 15:26:39 2023 -0700
+
+    make builds examples and manual tests
+
+commit 92e33814748f73134b156b6562bf20922e649d7e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 14:04:36 2023 -0700
+
+    rebase, drop unused TODOAST
+
+commit 2f48a2bcf4c1c19b752101b194b8e991668f2e85
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 13:45:19 2023 -0700
+
+    Permute runs
+    
+    Prints a passed XTC lambda as a Java lambda.  Uses recursive XClzBuilder.
+    Prints XTC binary expressions with proper grouping.
+    Swap out XTC flex-sized arrays for "XAry" variants of Java ArrayList.  Includes direct array constant constructors, and explicit generic types.
+
+commit 7c77639fa1e748fe751384313b00c79cbfbcf158
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 13:01:15 2023 -0700
+
+    Split byte AST reading from AST constructors
+    
+    Drop / rename a few old methods also.
+
+commit 653ae9b95262711ee41d5239b49ea8f0de953034
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 11:29:09 2023 -0700
+
+    1/2 flip to a new (old) binary parser
+
+commit f7e15a9d23852cd65920374d7b954f333c2dd82d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 19 16:29:09 2023 -0700
+
+    Progress towards handling XTC lambdas
+
+commit f3ff69c3a2c8d366bebe53eb4a9e6c9cfc4fc260
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Sep 18 15:26:39 2023 -0700
+
+    Progress towards Permutations
+    
+    Starting in on the embedded Lambda.
+    Flip the AST default for parsing ast_term instead of ast.
+    Fix bug for XRange missing inclusive/exclusive endpoints.
+
+commit f118deca5d32ace94335a1d3cc3775058edb0f3d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Sep 17 16:13:03 2023 -0700
+
+    Progress Permutations.x
+    
+    Handles FizzBuzz.x also.
+    First cut Switch, ForRange, and Range.
+    More smarts about NL & indenting.
+    Add a trailing NL test to SB.
+
+commit f76095553164e3a66fbc9a22ea49b14fd74f956e
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Sep 16 11:11:47 2023 -0700
+
+    Progress on Permutations.x, compiles now, missing for loops
+    
+    Move examples to more Java-ish style (open braces on same line).
+    Move support classes into XRUN directory.
+    Add a XAryInt64 support class, e.g. ArrayList with primitive longs.
+    AST parser changes slightly to match new format.
+    Bug fixes in constant array initializers.
+
+commit a50c22aec4c44490ba32f22cdad2a777ad1b15d8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Sep 15 14:17:14 2023 -0700
+
+    Progress on Permutation.x
+    
+    Mostly minor printing stuff; TemplateAST.
+
+commit f6f2acd8f8c1e5b5047a891c7bae09ab05bba92f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 19:52:29 2023 -0700
+
+    Progress on AST towards Permute.x
+
+commit 021dfc550b711cc879f273e4c304377409b82e65
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 15:49:02 2023 -0700
+
+    Buncha new AST nodes
+    
+    Better parsing exprs vs AST
+
+commit 542ef721844c73e42e85bbfdbce895d71bb86624
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 13 16:32:56 2023 -0700
+
+    Run HelloWorld
+    
+    parse ast_op - peeks 1st byte, if negative, that's the value.  if positive use the full packed64.
+    Parse invokes, constants, default "register".  Fill in default values.
+    Push/pop local names on scope change.
+    XConsole print takes a boolean for newln
+
+commit 1c76237b2fb71898be82bb6425e2f6fe6f120053
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 6 14:39:15 2023 -0700
+
+    Handle more AST
+    
+    Back to using the MethodPart pool.
+    No need to set/restore the CPool parser.
+    Add a bunch of "_ast" parser bits, will probably toss the old stuff next go 'round.
+
+commit be812e6bdadf05390798f299b8b625d017968c97
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 5 16:17:29 2023 -0700
+
+    A little AST restructure
+    
+    Also rebase from master
+
+commit 8460770891da527d86d60f1a8fefd56058c7ced5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Aug 19 09:01:14 2023 -0700
+
+    comment
+
+commit 4b7882bbc60ba0b9cdd498e31710cf8d10a3fbab
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 18 13:27:45 2023 -0700
+
+    Rebuild examples when XTC compiler changes
+
+commit 8328868f8ae3911a504efc1cd7d2b1d4b9dc8a18
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 12:58:13 2023 -0700
+
+    Initial cut AST parser
+
+commit c8d7525409cfec46048e7457afd2a790a3c5494f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 11:58:08 2023 -0700
+
+    Fix minor constant dependencies that changed
+
+commit 7c7a05765b1be460b1299313d1422e625b3fb721
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 11 14:53:14 2023 -0700
+
+    Minor cleanup
+    
+    Study how to reverse exploded for(Range)
+
+commit ac1823925ec253aa35b0d109c3f5cc17cf3f0ca4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 10 11:09:32 2023 -0700
+
+    All the ops for Permutation's main method
+    
+    Fails in pass#2 for bytecode layout, but gets all the ops in pass#1.
+    CALL_11, NVOK_11, FBIND, NEWG_1, NEWG_N, RETURN_1, JMP_NEQ, JMP_LT, JMP_GT, JMP_GTE, GP_SUB, GP_IRANGEE, P_GET, IP_DEC, I_GET
+
+commit b0f9da2843a6e4f5ac15257740ab05a5924ef544
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 14:00:22 2023 -0700
+
+    Compile and run FizzBuzz
+    
+    Actually classForNames
+
+commit 606aa9034e0f0f500a8cfcdaa0fca1a2114bbf44
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 11:58:17 2023 -0700
+
+    Add auto-gen imports
+    
+    Some public methods; able to run the gen'd code inline.
+    Not yet compiling on the fly.
+
+commit 062aa3b06812816212e61239e93666a75e980c11
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 3 15:26:03 2023 -0700
+
+    First cut FizzBuzz code
+    
+    Definitely over-optimized
+
+commit 2bdba152edfc2939c0024f9d2c0d3763aaefc9af
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 2 17:10:55 2023 -0700
+
+    Pretty-print FizzBuzz
+    
+    Not entirely valid Java syntax yet, but getting closer.
+    Makes some simple function calls.
+    Still has GOTO's instead of structured control flow.
+
+commit e8a033cf2e6c590b82cfab86bc9006abda76e20d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 12:18:07 2023 -0700
+
+    A few more opcodes
+    
+    ENTER, VAR_N, VAR_IN
+
+commit 9e089a00c2f60fddfb8f97442faed430774f45a0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 11:07:29 2023 -0700
+
+    Partial handle VAR_DN opcode
+    
+    Or at least the direct Console injection part anyways
+
+commit 769f8eca0dfa63a812612ba76baf79798a719e7a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 31 15:57:45 2023 -0700
+
+    Handle generic type parms better.  Links all constants in all libs
+    
+    Sig matching has recursion issues.  First try matching on sig arg length alone; if this fails THEN link the signature.
+    Minor version bump because rebase.
+
+commit a264472a67ec1e421555d5655840c19d57401134
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jul 28 08:34:39 2023 -0700
+
+    More signature matching shenanigans
+    
+    DynamicFormal & VirtualTCons are still busted.
+    Handle more natives.
+    Swap out IdHashMap for NBHM, to avoid CME; use my open source version.
+
+commit 4440615fbd325ba430b4662be47ba651a9cd626d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jul 27 10:05:43 2023 -0700
+
+    Fix ints after rebase from master
+    
+    Update minor version.
+    Start on opcode parsing.
+    Start on first native method.
+
+commit 264283eccd65edc3edb6eae3c9f46bf354225b5d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 16:09:13 2023 -0700
+
+    First cut TypeInfo stuff
+    
+    Really HM types, but surely full of bugs.
+    No asserts, does all of XTC libs.
+
+commit 30bf2f9efbc96e20a546229624537424fabc4d48
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 15:31:12 2023 -0700
+
+    Progress on TypeInfo
+    
+    Getting pretty far...
+    Add a bunch more linking behavior, including DepTCon & children.
+    Add a bunch more setype behavior, in a dozen "*Con.java" classes.
+
+commit 9c013bd661a8ab947ef953f9b3ef0edc25e68bb2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jul 19 10:09:36 2023 -0700
+
+    More TypeInfo
+    
+    First (bad) cut of union/interface type.
+    mostly got classes & interfaces.
+    might have mixins sorta right.
+
+commit e90ab71c0039b6bfa30c80444b56ff9871eb1cce
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 08:33:53 2023 -0700
+
+    Comments
+
+commit 04156eeb2a0338be2e41ce5bc2677090d365a486
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 07:53:34 2023 -0700
+
+    Turn on a few missed link steps
+    
+    AryCon, MapCon now link.
+    Drop repo link parm from setype.
+    Force all parts to support setype.
+
+commit 956c9ff246db899240b424036782b51c87d6164a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 17 16:17:57 2023 -0700
+
+    Get thru linking & some (not all) TypeInfo
+    
+    Skips most setype calls.
+    Implements link() calls for most things.
+    Implements setype() calls for most things, but mostly not called yet.
+    Finally resolved multi-method selection (keeps MethodCon around).
+    Several class heiarchary restructurings.
+    Shorter printout; 18640 total Parts
+    TVar trial_unify_ok returns boolean.
+    Add TVBase.
+
+commit c144a8c286e764fa66a1c0ecb03114e1d5804896
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Jul 16 08:13:34 2023 -0700
+
+    Handle mixins with generified types
+
+commit e7310a0968027aa01be73d1335f5685d4f5784d1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jul 15 11:20:18 2023 -0700
+
+    Staring at my 1st real mixin
+    
+    Record super-class chain from EXTENDS.
+    Ignore various marker MIXINs.
+    Generic link various Consts.
+    Get generic types for methods.
+    RelTCon types parts but doesn't make a real union/interface type (yet).
+    Immut adds hidden internal immutable interface.  Drop TVImmut
+    ParamTCon simplifies.
+    Pretty-print linker progress
+
+commit dbc541a55b00552465242403c349e3137b47ba19
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 14:52:08 2023 -0700
+
+    Up to typing Immutable
+    
+    Dunno the semantics of the immutable keyword yet.
+    What's it mean `iface A extends immutable iface B` ?
+
+commit fa4ddf037e8af40a75d9b59f1b625592fd6485da
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 09:42:43 2023 -0700
+
+    Better thinking on interfaces
+
+commit 64a20559de5d5199e0a656f35729db94cb3da753
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 29 16:43:45 2023 -0700
+
+    Parts link, Types setype, Values are yet to be done.
+    
+    Most TCons have commented-out old link calls, yet to be replaced with setypes.
+    Add an type Env for carrying type-names through the Part tree.
+    TVStructs carry a debug name.
+    Do not add Class fields to a TVStruct until the type parents are done.
+    That means Extends and Implements both; several Parts complete their innards calls but none yet complete the entire Part.
+    Start to handle Into (the mixin).
+    Sharpen several default fields/Const.
+    Lots of comments about the expected type fields.
+    Hide name2kid, use child().
+
+commit 8fcd2c41795b5c96ca516a4586b55928756ea458
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 27 10:08:05 2023 -0700
+
+    Drop XType, add NBHML, TVar.
+    
+    Move Contribs to its own file.  Move _contribs to Class and Prop and out of Part.
+    Add NBHML and helper methods to util.
+    Add TVar,TVLeaf.
+    Hooks for computing TVar.
+    Add CPool.isDigit to remove hook on Handy, to allow make/clean/make without gradle.
+
+commit ca00f4fd2ae082094e3510fe97c4e2747f633fe6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 23 13:04:27 2023 -0700
+
+    Handling multiple methods under a MultiMethod
+    
+    More improved prints.
+    More null-vs-zero-length arrays
+
+commit afede97d4c951252f9de7b45ac926c1334286b02
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 22 11:57:01 2023 -0700
+
+    Add a XType above ClassPart and PropPart;
+    
+    Intending to start hanging more type info on XType.  Sharpen (or loosen) a bunch of link() steps to return ClassPart or XType.
+    Add a better recursive toString using SB.
+    Uses a null instead of a zero-length array for Const, TCons, Annons.
+    Method parses the lambda index.
+
+commit c1d269ad202695483a9bf7e90ea2490ad01b89ae
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 14:08:00 2023 -0700
+
+    Wrap up initial parsing.  Start on a naive java class file
+
+commit 643f5b5309f40416abb1d97e4e807236c064ee7f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 11:39:44 2023 -0700
+
+    Child lookup must link.
+    
+    Class lookup in both Implements and Extends.
+    Cleanup MMethod linking.
+    Handle AnonClz, Formal, ParClz.
+
+commit e3f6b85659e7d3ca0aa59909d6121821cae73322
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:05:54 2023 -0700
+
+    Yank generic type
+    
+    Added 20 lines to avoid 2 casts
+
+commit 51fab00aaed2fc9919b15ec1e3165bb9ac05da63
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:04:07 2023 -0700
+
+    Progress on parsing FizzBuzz
+    
+    FormalCon has no Part.
+
+commit fd1ee8321f4e51076ebf858dba3f38a8cd821310
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jun 17 09:35:44 2023 -0700
+
+    Progress on linking
+    
+    Linking should remove the need for the CPool everywhere.  Recursively find all XXXCon items and add a cached XXXPart instead.  This search crosses CPool borders in some cases and thus requires the full Repo.  Handles interface method lookups, but not globals like toString.
+    All the XXXCon classes cache something after linking, so a 2nd call to link does nothing (as a form of visit bit).  The XXXPart classes use an external visit bit to avoid double-linking.
+    Hide more of the XXXCon fields and use the XXXPart fields instead.
+    Replace more StringCon with interned String.
+    MethodPart is now a MMEthodPart with more stuff; MMethods retain the notion of a collection of Methods, and both can be stored in a MMethod array.
+
+commit 8dad68f4c9a2aa00241caa5172efdd99ad8b7a08
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 15 12:51:26 2023 -0700
+
+    Restructure while its cheap
+    
+    Parsing into CPool, which isn't needed after parsing.
+    Replace most StringCon with String.
+    Replace PsuedoCon with IdCon.
+    TermTCon wraps an IdCon.
+
+commit 31317e7ea4e6b05db5ae56362c6e20337d5cb22d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 16:54:34 2023 -0700
+
+    Remove all transient fields after resolution
+
+commit 99bde4207f1d0215b56f99212cc5306ba5f67090
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 15:22:23 2023 -0700
+
+    Clean/restructure building XClz java clazz wrapper
+
+commit 46dfe494cce021a0ff8e513e6cc9538b11ed39b1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 10:20:34 2023 -0700
+
+    Start building Container notions
+    
+    Hook to make a java clazz from XTC clazz & run it.
+
+commit a5fb540a6c376bba2ecf794a5d238f3bbf16a88d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 19:38:18 2023 -0700
+
+    Link the repo
+    
+    Also drop failed generify of Part (more errors and warnigns than casts saved)
+
+commit f0b280d7532f54037564cdd5656f55d3190e5443
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 13:41:53 2023 -0700
+
+    Actually load all provided libs
+    
+    Was not loading (lazy) 2-deep nested kids; fixed now loading all things.
+    Loading Methods with code.
+    
+    Short cuts for loading arrays of Const, TCon, Annots.
+    Added some toStrings.
+
+commit 598dab4abcdfdd79a128d8af3f102448b1df5ed3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:40 2023 -0700
+
+    Cleanup
+
+commit 977e3b8ffc1632abf0b0237bc147951bca088518
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:03 2023 -0700
+
+    Load all provided libs
+
+commit b8f88b957241b0185b73d005b4dbd6dd9cc198d3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 15:57:04 2023 -0700
+
+    Finish repo setup
+    
+    Doesn't actually load anything into the repo, that happens after making a container
+
+commit 97881c55a8d5a88c3b6ecf23bb373f4304343670
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 14:31:43 2023 -0700
+
+    Cleanup
+
+commit 2d32b9f8acdb091ebabe01c3a799e7e5782401e2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 11:23:14 2023 -0700
+
+    All the XTC in XDK parses constant pool
+
+commit a7f2ee040e100d3bf104096961bbab4919e2254d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 09:47:00 2023 -0700
+
+    All the manualTests XTC files
+
+commit 505c4295a3b51d3ca6c68c6fba517e346b2c63d4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 15:17:05 2023 -0700
+
+    Parses TestAnnotations
+
+commit 6ab7341d4b9e7b30729f01a453c92a7996119da6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 14:00:31 2023 -0700
+
+    Parse TestArray
+
+commit c94ce0fdec4ddb94f69200ed61fec3447905e459
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 13:08:01 2023 -0700
+
+    Parse constant pool of TestNumbers
+
+commit b1e85686d639c767a214a29c5a76fc91d750a7b8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:52:24 2023 -0700
+
+    Cleanup extra v-calls
+
+commit 65616bf344c536f66cd634def78468d4f38ca43b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:48:42 2023 -0700
+
+    Parse ConstantPool of TestLiteral.x
+    
+    Replace IOException & IllegalStateException with unchecked IllegalArgumentException.
+
+commit b9b19993f5989b586f080cb7a39b96f0a3cbc072
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 16:57:06 2023 -0700
+
+    Parses FizzBuzz.xtc
+    
+    nothing executes of course... nor reads system libs
+
+commit 86cc70696f441407cd3ad3015abe9bfdbe2c3f41
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 15:43:53 2023 -0700
+
+    Parse a Module OK
+    
+    Need to add a child component/part
+
+commit dae172e76c97f704d8e923b4444cade1dff22de6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 14:27:14 2023 -0700
+
+    Rename Component -> Part
+
+commit 9cf7545ad2c43ccdf32b0ecff2562c6e8c77b275
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 12:46:05 2023 -0700
+
+    Progress towards a XEC parser
+
+commit 20bf67650811690a08caef43d0d8a64bee130873
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 23:31:11 2023 -0700
+
+    Finish loading FizzBuzz constant pool
+
+commit 154dbce114bd9323e8d97a8e6c3aba1082c176c1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 16:23:11 2023 -0700
+
+    Finish renaming all const files to con
+
+commit 1fbb4c4af2062bcdb680435439e83156d145e21d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:57:23 2023 -0700
+
+    Bulk rename files
+
+commit e5d0acf406bb8cd11c45ea34252989e4f30e15ed
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:07:14 2023 -0700
+
+    Progress on a XEC constant pool reader
+    
+    Exploring the grand world of XEC files.
+
+commit 3b8ebf5bbaa08d1db027090e986f263c31a4991c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon May 29 12:08:31 2023 -0700
+
+    initial makefile
+
+commit 97cc25cfacb7cb4b0a25e7a4b7a4be8ce713682d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 21 16:30:18 2023 -0800
+
+    Revamp equals,compare,hashCode handling
+    
+    Revamp ClzClz to encode as a unique klass ID, KID.
+    Dynamic dispatch does a lookup on the KID to a no-args blank instance and v-calls from there.
+    Move the default hashCode,equals,compare generation logic to the appropriate interfaces and out of Const.
+
+commit 7a0f2ab7beced3b94aaf5e18fa5e103e5968742d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 21 12:19:40 2023 -0800
+
+    Started implementing Hasher/Hashable
+    
+    Needs some BAST love first.
+
+commit 571cd0bfddd3db2a59bcf2d8f7a2428b6e2da839
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 20 16:10:04 2023 -0800
+
+    More special handling of equals,compare
+    
+    Allow user overrides of equals.  Requires changing the signature to
+    `public static boolean equals$CLZ( Class<CLZ> clz, CLZ x0, CLZ x1) { ... }`
+    Define an explicit XType.ClzClz for reified XTC Classes.
+
+commit 4aa5f72d79ba50842747941678ba750634d3b4a2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Nov 17 16:02:50 2023 -0800
+
+    Handle default compare, same as equals
+
+commit e8d3aad4b1b19fe0c55481dcded1991d5265c327
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 16 17:02:07 2023 -0800
+
+    Progress towards TestModIFace
+    
+    Bunch of stuff around Stringable and Appender and StringBuffer.
+    Appenderchar.java is now a handrolled Appender<char>.x
+    The handrolled Ary<>.java are now all Stringable.x
+    String is_jdk and not is_prim (requires a "null" not "0").
+    Stringable requires a Appenderchar appendTo(Appenderchar buf).
+    XType now has most hand-rolled java classes as Clz not Base.
+    TemplateAST now calls a chain of appendTo instead of using Java string concat.
+    RegAST + CallAST handles super calls.
+
+commit 1a38e8987abfe089028388481568359bbb44d560
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 16 10:05:24 2023 -0800
+
+    Yet Another Major Refactor
+    
+    Move all java support classes to the exact name and location as their XTC variants, all under org/xvm/xtc.  i.e. xrun/XStringable -> xtc/ecstasy/test/Stringable
+
+commit f86200a87c1d9aba2ea9cfe84dbf8a797c85ab19
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 15 15:22:06 2023 -0800
+
+    Handle class inheritance; construct has to call super() first.
+    
+    push/pop locals around all BAST "Statement" flavors.
+    Switch NBHMLong for Ary.
+    XType for Clz skips fields in super.
+    Slightly better MultiAST printing.
+
+commit e515615343bc4a1807d0e85d8c2f0d52535dadf8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 14:13:38 2023 -0800
+
+    A real cross-module call
+    
+    Restructure (again) module/class compilation.
+    Gather multiple xtc file code-gen jobs.
+    Generate source for them all, lazily discovering new things to compile.
+    Split headers from bodies to add imports.
+    Compile in bulk all connected classes.
+
+commit 19221a19421ab9eceb6b1f54e1ec3a22003df7d8
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 11:00:16 2023 -0800
+
+    Rename
+    
+    Rename XClzBuilder -> ClzBuilder
+    Rename XModBuilder -> ModBuilder
+    Rename XClzCompiler -> JavaC
+
+commit 54b8229f72687f68738117f3c0e50e8da614962b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 10:54:56 2023 -0800
+
+    Gen imports
+    
+    and qualified call names.
+    Props can have imports.
+    Use switch expr in XType.
+
+commit 4c1e583ce0a6ddd3e2552cf21289aa70397c572d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 14 09:34:15 2023 -0800
+
+    Move value_tcon to its own file
+
+commit e4ae79fa0f113fbce6d37c38a33ad02769e3bc0f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 13 16:26:40 2023 -0800
+
+    Major restructure part#2
+    
+    XModBuilder builds modules, which can be 1-class short forms.
+    XClzBuilder builds classes (including modules).  No shortcuts.
+    Proper XTypes for classes, with fields/properties.
+
+commit ba581b24682c00cb373bd6b63f0c07fb495c47bd
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Nov 9 16:02:47 2023 -0800
+
+    Restructure.
+    
+    * org/xvm/XEC.java - entry point
+    * org/xvm/xtc - Read an XTC file support classes; ClassPart, *Part, CPool,Version,VerTree
+    * org/xvm/xtc/cons - "cons" things from XTC files
+    * org/xvm/xtc/AST  - "AST"  things from XTC files
+    
+    org/xvm/xec - generated class strings act "as if" loaded from here
+    * org/xvm/xec - runtime support classes (no ties with gen classes)
+    * org/xvm/xec/XClz - base class for gen'd classes.
+    * org/xvm/xec/XRunClz - Runnable XClz
+
+commit 1aa6f4c17c18ba9f67e0df196680eb2944b9010b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 14:34:05 2023 -0800
+
+    Const classes get a toString
+
+commit cfdbacd690d25c53b324fec4a45cbdc7ce9adc2a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 13:58:42 2023 -0800
+
+    Move project from javatools/.../cc_explore to javatools_backend/...
+
+commit c501277e885885190a2999171ecae1ae90d0c2ab
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 8 11:19:05 2023 -0800
+
+    more separation between XTC modules and XTC classes.
+    
+    modules gets a global;
+    Find module-internal classes before they are defined.
+    Const classes get stringable methods.
+
+commit 3638e6536a08303fe60a3cc4c8fd439482a1450d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 15:36:56 2023 -0800
+
+    Yet One More Variant of Switch
+    
+    Add a 4th switch variant.  Now:
+    - complex multi-armed ternary trees
+    - simple equals-only ternary trees
+    - int ranges using switch
+    - string/enum using switch
+    Chained compares "a < b < c"
+    Remove a bunch of extra imports.
+    XConst is now Comparable
+    Properties can have inits
+
+commit d2861088c0315e944da28466b160be15ba648d53
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Nov 7 09:41:05 2023 -0800
+
+    Const class set throws ReadOnly
+
+commit 6d1b30574b8755eba02e9b7c76e8ff648420e8e3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:54:35 2023 -0800
+
+    No set methods on Const classes
+
+commit 30856c29a8a28c36dd6e8ac2935e90fa819a016d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 14:50:36 2023 -0800
+
+    Handle a Const class
+    
+    Has default impls for hash,equals,compare.
+    Maintain the load-order for properties/fields, for correct compares.
+
+commit cd2f11306bec6f13b1045319ba26efe96cf9a272
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Nov 6 10:20:09 2023 -0800
+
+    Rebase fixup
+    
+    Bump version number.
+    Correct child lookup to include mixins.
+
+commit 6b8d4751f7ff7b72ba6de8d819e0d45fb892cf1f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Nov 1 16:06:57 2023 -0700
+
+    Handle currying functions
+    
+    Rename the XType types to shorter names.
+
+commit ae3ba1a289289de32f98679a6a1d4e41f4ad4039
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 31 12:27:54 2023 -0700
+
+    Change types from Strings to XType
+    
+    First-class citizen types, needed for XTC functions (currying).
+    This is a big change, and is most of the commit.
+    Yank unused TVars.  Another big, but mindless, change.
+
+commit f204e294fc7105d93d5f3f306a9063dca0398936
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 24 16:50:40 2023 -0700
+
+    Progress towards testChars
+    
+    Better _type calculation; touches lots of things.
+    Compute _cond conditional-result.
+    New sparse-array unpacking.
+    Bump minor version
+    Separate ConvAST from UniOp
+    Support run() with arguments.
+
+commit aff4efe3101f184ba6b5df99f1a8bb3f1e550823
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Oct 18 14:35:48 2023 -0700
+
+    First cut try/catch
+
+commit eb15c21f0de0022e8305b086a317ac7a76dcdd78
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 16:17:52 2023 -0700
+
+    more assign ops
+    
+    static/instance nested methods
+
+commit 813d039b20a9089ab4faef0a4373ad3f15067517
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 16 12:21:54 2023 -0700
+
+    StmtExpr
+
+commit 4c227e46b617dedfa8597e4b664d574624223baa
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Oct 12 12:42:29 2023 -0700
+
+    Conditions!
+    
+    Conditions are not 1st class values, so can be always be passed as 2 parts with the boolean in a global, and the other part becomes the normal return type.
+    TODO: multi-threaded.
+    MultiAst with >1kid is "(e0 && e1 && ... )"
+    Condition Returns explicitly call SET$COND()
+    Methods flagged as conditional returns.  See large comment in MethodPart.
+    Handle elvis ops:  (e0?.e1 ... : alt ) ==> (e0==null ? alt : e0.e1)
+    Handle elvis ops:  (e0?.e1 , alts ) ==> ((e0==null || e0.e1) && alts)
+    Minor restructure BinOp, Block to allow Java "...".
+    UniOp.is_elvis
+    IfAST print handles else clauses
+    Bugfix: DefReg does not define BAST name "$"
+    NarrowAST is a cast, typically a no-op since already type-checked.
+    Prop: "string.size$get()" ==> "string.length()"
+    assert UniOp "e0.TRACE()" ==> "XClz.TRACE(e0)"
+
+commit 32e03a88ea7098ecfdb5cc871c7d3f5aa66b2090
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 11:26:22 2023 -0700
+
+    Another elvis test
+    
+    plus an embedded named function
+
+commit 796414599f3110d9ca926350e91440c359e9bf38
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 10 10:06:34 2023 -0700
+
+    Support elvis operator
+
+commit 75fb1b777a0aa0320706de12f33bf8937c1b89a3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 16:37:36 2023 -0700
+
+    Progress on TestMisc.x
+    
+    Handle more condition cases
+    Handle some null+types.
+    Fix count-down bug on ranges.
+    Allow ranges to be in asserts
+
+commit 64c765237b74776f1505aadb69ca3cd50c04fd26
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 15:12:48 2023 -0700
+
+    Fix count down ranges
+
+commit 9c1b5321e01568d752572350fb80073157b7a64a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:11:43 2023 -0700
+
+    Punt on continue in the middle of a case, vs the end
+
+commit 2a6d4dc421d84f1dde187b8ef1784445382559d4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 9 12:01:29 2023 -0700
+
+    turn on a few more tests
+    
+    Block temps can be given a name.
+    ContinueAST punts on continue in switch.
+    AssignAST with AsnIfNotFalse explodes out a conditional.
+    XClz is self-typed, so TRACE doesn't lose type info.
+    Partial split of modules from classes.
+    AryI64 gets an iterator which passes a conditional.
+
+commit 4265384e989e7bae397fbbd286c2d34b0f81ab46
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 12:03:19 2023 -0700
+
+    Handle spaceship for ints
+    
+    Handle switch-of-enums.
+    Keep more type info in BinOp.
+    Fix tmp naming bug.
+
+commit 1a0ed370491253c622b57a41e134d25794a9827b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Oct 3 10:14:24 2023 -0700
+
+    A few more switch variants
+    
+    Compiling with java 17 and enable-preview on the gen'd code
+    Breaks & continues 1 level deep.
+    While loops.
+    pre/post dec/inc.
+    multi expr of 1
+    Smarter BinOp paren grouping
+
+commit 9707e4ffe3c54bec6003ca0c885133c0edce1e29
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 12:54:49 2023 -0700
+
+    Progress on misc tests
+    
+    Rename misc.x to TestMisc.x to match the module name.
+    Comment out tests not currently working.
+    Add print to Range; handle Inteval and Iterator as just another Range.
+    UniOp partial support for converts; support for Boolean "~"
+    BinOp all operator precedences.
+    Template strings add some spaces.
+
+commit 3a60e67114b69b052489591f01d04184cd404cdd
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 10:10:40 2023 -0700
+
+    Yank tvars
+    
+    Thought they might be needed, not needed yet.  Will revisit if problems show up in mixin composition.
+    Another little bit of tuple improvements.
+
+commit e785a34c5100983513df5d2a67d8b2a62b0f2ce5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Oct 2 09:33:15 2023 -0700
+
+    Handle lazy props
+    
+    Be more generic in a bunch of places
+
+commit 32198dc93dd919915c8590b773f4479e2145d2bb
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 16:34:08 2023 -0700
+
+    Progress on tuples
+    
+    Map (shell, not implemented) & Map constants.
+    For statement, some more simple ASTs.
+    UniOps can be either pre or post
+    Some cleanup in XClzBuilder
+
+commit 796980e722c88c87f81c021e33bece217888b998
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 13:15:32 2023 -0700
+
+    More tuple support
+    
+    addAll, equals, at(range), slice
+    More tuple constructors.
+    Calling 1.toInt() turns into Long.valueOf(1)
+
+commit 0d3422c7ea9077b840f8238b86fff3d4b98f9c68
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 11:34:36 2023 -0700
+
+    Change tuple mutability
+    
+    and the equals test, and asserts
+
+commit f92b6b2ace7a22c68b495471df92071cbcae9e79
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 28 10:23:32 2023 -0700
+
+    Handle dynamic tuples
+
+commit da6e7e3f8bef85f8b689d3c7a68c1205faefd42a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 27 14:40:09 2023 -0700
+
+    Progress towards tuples
+    
+    Split XClz into XRunClz (has container, run method).
+    XClz picks up mutability question.
+    Properties on instances and classes.
+    DefReg uses "var " instead of the full type.
+
+commit 03f1145009dcbcdfadf1501ec6d2f65b643a54c7
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 12:01:41 2023 -0700
+
+    Drop the X
+    
+    from most runtime files.  Gonna need to disambiguate with other generated names using the Java path anyways.
+
+commit 8b4b92838698b666651e7477ccea7e1fefb9027c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 26 11:33:12 2023 -0700
+
+    InvokeAST takes a generic LHS not a register
+    
+    First cut PropertyAST
+
+commit 24a7c5034ecc12a8f63c36dc8ef200cc9b9fa811
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 15:26:39 2023 -0700
+
+    make builds examples and manual tests
+
+commit 3a1ba0924339b8fc7cd5d7fe2fad5f4c4abcd771
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 14:04:36 2023 -0700
+
+    rebase, drop unused TODOAST
+
+commit 53138dfa997d91ae328a8795a9caaf7285123b70
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 21 13:45:19 2023 -0700
+
+    Permute runs
+    
+    Prints a passed XTC lambda as a Java lambda.  Uses recursive XClzBuilder.
+    Prints XTC binary expressions with proper grouping.
+    Swap out XTC flex-sized arrays for "XAry" variants of Java ArrayList.  Includes direct array constant constructors, and explicit generic types.
+
+commit 098be28307d9a35e19dc582a42de6b5dbf1fc893
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 13:01:15 2023 -0700
+
+    Split byte AST reading from AST constructors
+    
+    Drop / rename a few old methods also.
+
+commit a57a62129ae57b7698eee885f2097b0d3f9ed3c5
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 20 11:29:09 2023 -0700
+
+    1/2 flip to a new (old) binary parser
+
+commit c42a3cd6f72ec41458cdb2594ff2d3fba9575968
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 19 16:29:09 2023 -0700
+
+    Progress towards handling XTC lambdas
+
+commit 4962fae9e748036c0d5d21d0d102a5cc6b6c9aeb
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Sep 18 15:26:39 2023 -0700
+
+    Progress towards Permutations
+    
+    Starting in on the embedded Lambda.
+    Flip the AST default for parsing ast_term instead of ast.
+    Fix bug for XRange missing inclusive/exclusive endpoints.
+
+commit 64be7ff8c94f4aae2a526b51627c1e158102a4ff
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Sep 17 16:13:03 2023 -0700
+
+    Progress Permutations.x
+    
+    Handles FizzBuzz.x also.
+    First cut Switch, ForRange, and Range.
+    More smarts about NL & indenting.
+    Add a trailing NL test to SB.
+
+commit 5d2ced46ed97829108fd7ac7c870aedc0938b7bd
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Sep 16 11:11:47 2023 -0700
+
+    Progress on Permutations.x, compiles now, missing for loops
+    
+    Move examples to more Java-ish style (open braces on same line).
+    Move support classes into XRUN directory.
+    Add a XAryInt64 support class, e.g. ArrayList with primitive longs.
+    AST parser changes slightly to match new format.
+    Bug fixes in constant array initializers.
+
+commit 01b64f195460acb50c41fd8ef7c772451a463e69
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Sep 15 14:17:14 2023 -0700
+
+    Progress on Permutation.x
+    
+    Mostly minor printing stuff; TemplateAST.
+
+commit 674b629706c6623084f7e586d30c3a4adcdd7839
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 19:52:29 2023 -0700
+
+    Progress on AST towards Permute.x
+
+commit f8f15d68d18fced2c6c18c008a376357f45b2b66
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Sep 14 15:49:02 2023 -0700
+
+    Buncha new AST nodes
+    
+    Better parsing exprs vs AST
+
+commit e7f3ee8d3bc91380ff4da951cd7b54f19be7cae1
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 13 16:32:56 2023 -0700
+
+    Run HelloWorld
+    
+    parse ast_op - peeks 1st byte, if negative, that's the value.  if positive use the full packed64.
+    Parse invokes, constants, default "register".  Fill in default values.
+    Push/pop local names on scope change.
+    XConsole print takes a boolean for newln
+
+commit e5bea2841804d6995c5e89948a54a553b26ebc8f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Sep 6 14:39:15 2023 -0700
+
+    Handle more AST
+    
+    Back to using the MethodPart pool.
+    No need to set/restore the CPool parser.
+    Add a bunch of "_ast" parser bits, will probably toss the old stuff next go 'round.
+
+commit 20032b7a41424a21489ab361d49d2f01da6f2622
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Sep 5 16:17:29 2023 -0700
+
+    A little AST restructure
+    
+    Also rebase from master
+
+commit 325887f88e087b87c48ba1c8b4b4449a3f825982
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Aug 19 09:01:14 2023 -0700
+
+    comment
+
+commit 5783806bfb727dd8a7725693856662a875442888
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 18 13:27:45 2023 -0700
+
+    Rebuild examples when XTC compiler changes
+
+commit e5a87efff38e64f35d7e0067d0de50d5f59d87e2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 12:58:13 2023 -0700
+
+    Initial cut AST parser
+
+commit 3939d5e8940c80f1a5bf8aa481a6176a18bc3ff2
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 16 11:58:08 2023 -0700
+
+    Fix minor constant dependencies that changed
+
+commit ef0fc0aa48c295b3fd2e06dbcc204abb1296774a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Aug 11 14:53:14 2023 -0700
+
+    Minor cleanup
+    
+    Study how to reverse exploded for(Range)
+
+commit 2a7f8941a8a932481391bcfaca4327bd8b25c70f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 10 11:09:32 2023 -0700
+
+    All the ops for Permutation's main method
+    
+    Fails in pass#2 for bytecode layout, but gets all the ops in pass#1.
+    CALL_11, NVOK_11, FBIND, NEWG_1, NEWG_N, RETURN_1, JMP_NEQ, JMP_LT, JMP_GT, JMP_GTE, GP_SUB, GP_IRANGEE, P_GET, IP_DEC, I_GET
+
+commit 702a16586adfd110b1d71c6394302adcc51974ce
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 14:00:22 2023 -0700
+
+    Compile and run FizzBuzz
+    
+    Actually classForNames
+
+commit 21747b8324d2100c60bd1c2fd289e614ceaa6e77
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 8 11:58:17 2023 -0700
+
+    Add auto-gen imports
+    
+    Some public methods; able to run the gen'd code inline.
+    Not yet compiling on the fly.
+
+commit 6c2a70ee49fb72a7317b871eab36d529b364f914
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Aug 3 15:26:03 2023 -0700
+
+    First cut FizzBuzz code
+    
+    Definitely over-optimized
+
+commit 877f1df48657b3662b3875d7f54ae74ae51049e3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Aug 2 17:10:55 2023 -0700
+
+    Pretty-print FizzBuzz
+    
+    Not entirely valid Java syntax yet, but getting closer.
+    Makes some simple function calls.
+    Still has GOTO's instead of structured control flow.
+
+commit 516fd82e572eb6bdee0703bf9e6a6840c95a1334
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 12:18:07 2023 -0700
+
+    A few more opcodes
+    
+    ENTER, VAR_N, VAR_IN
+
+commit 27c1f06586e3141f64ce4f1d29ef5fc98477827b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Aug 1 11:07:29 2023 -0700
+
+    Partial handle VAR_DN opcode
+    
+    Or at least the direct Console injection part anyways
+
+commit ed42bc83fcc7aa3369372e545d86faaaaa0b754d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 31 15:57:45 2023 -0700
+
+    Handle generic type parms better.  Links all constants in all libs
+    
+    Sig matching has recursion issues.  First try matching on sig arg length alone; if this fails THEN link the signature.
+    Minor version bump because rebase.
+
+commit 8691e3eeb8cdf3cb4c39e5a0ae02378937bda596
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jul 28 08:34:39 2023 -0700
+
+    More signature matching shenanigans
+    
+    DynamicFormal & VirtualTCons are still busted.
+    Handle more natives.
+    Swap out IdHashMap for NBHM, to avoid CME; use my open source version.
+
+commit b92f2b6430c337438fa507d9a5f8c2435c4a3b93
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jul 27 10:05:43 2023 -0700
+
+    Fix ints after rebase from master
+    
+    Update minor version.
+    Start on opcode parsing.
+    Start on first native method.
+
+commit 8e55171d66bc1d1513885e1005ab32395b29f31b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 16:09:13 2023 -0700
+
+    First cut TypeInfo stuff
+    
+    Really HM types, but surely full of bugs.
+    No asserts, does all of XTC libs.
+
+commit 250c44ec88bee6ed69b5e6655f156cf4298c0b8d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 24 15:31:12 2023 -0700
+
+    Progress on TypeInfo
+    
+    Getting pretty far...
+    Add a bunch more linking behavior, including DepTCon & children.
+    Add a bunch more setype behavior, in a dozen "*Con.java" classes.
+
+commit 3a93485e0664ba66b60e3a4a1db4b23097651990
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jul 19 10:09:36 2023 -0700
+
+    More TypeInfo
+    
+    First (bad) cut of union/interface type.
+    mostly got classes & interfaces.
+    might have mixins sorta right.
+
+commit f5e5a462a5792981d896d32a9ed3dd8890a445f3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 08:33:53 2023 -0700
+
+    Comments
+
+commit 8dc194f856e06b11e9b7382d98767f288e0ca576
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jul 18 07:53:34 2023 -0700
+
+    Turn on a few missed link steps
+    
+    AryCon, MapCon now link.
+    Drop repo link parm from setype.
+    Force all parts to support setype.
+
+commit 05e5902ac019063f692ab845b049a5c27a2f8897
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jul 17 16:17:57 2023 -0700
+
+    Get thru linking & some (not all) TypeInfo
+    
+    Skips most setype calls.
+    Implements link() calls for most things.
+    Implements setype() calls for most things, but mostly not called yet.
+    Finally resolved multi-method selection (keeps MethodCon around).
+    Several class heiarchary restructurings.
+    Shorter printout; 18640 total Parts
+    TVar trial_unify_ok returns boolean.
+    Add TVBase.
+
+commit ba84ddaa916d520009e6a60cbb83a7e7637ef883
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sun Jul 16 08:13:34 2023 -0700
+
+    Handle mixins with generified types
+
+commit 52f0714666a8648e0792ed52d9e6cd63ac53e156
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jul 15 11:20:18 2023 -0700
+
+    Staring at my 1st real mixin
+    
+    Record super-class chain from EXTENDS.
+    Ignore various marker MIXINs.
+    Generic link various Consts.
+    Get generic types for methods.
+    RelTCon types parts but doesn't make a real union/interface type (yet).
+    Immut adds hidden internal immutable interface.  Drop TVImmut
+    ParamTCon simplifies.
+    Pretty-print linker progress
+
+commit 9abd6275fb3cb53cbb591d5ce197eb43e9fd1118
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 14:52:08 2023 -0700
+
+    Up to typing Immutable
+    
+    Dunno the semantics of the immutable keyword yet.
+    What's it mean `iface A extends immutable iface B` ?
+
+commit e397154620ea03b77ef2fc0559e04eccfaeb75e6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 30 09:42:43 2023 -0700
+
+    Better thinking on interfaces
+
+commit 29ec7cb6d6a98c35ffb1e8c76cf0095106a20e6b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 29 16:43:45 2023 -0700
+
+    Parts link, Types setype, Values are yet to be done.
+    
+    Most TCons have commented-out old link calls, yet to be replaced with setypes.
+    Add an type Env for carrying type-names through the Part tree.
+    TVStructs carry a debug name.
+    Do not add Class fields to a TVStruct until the type parents are done.
+    That means Extends and Implements both; several Parts complete their innards calls but none yet complete the entire Part.
+    Start to handle Into (the mixin).
+    Sharpen several default fields/Const.
+    Lots of comments about the expected type fields.
+    Hide name2kid, use child().
+
+commit 4c558af7dfbfb352972153d20413a795b6c2bee3
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 27 10:08:05 2023 -0700
+
+    Drop XType, add NBHML, TVar.
+    
+    Move Contribs to its own file.  Move _contribs to Class and Prop and out of Part.
+    Add NBHML and helper methods to util.
+    Add TVar,TVLeaf.
+    Hooks for computing TVar.
+    Add CPool.isDigit to remove hook on Handy, to allow make/clean/make without gradle.
+
+commit 6f8f9a5c4a2fe6127a14640ffa95a6a7149399df
+Author: Cliff Click <cliffc@acm.org>
+Date:   Fri Jun 23 13:04:27 2023 -0700
+
+    Handling multiple methods under a MultiMethod
+    
+    More improved prints.
+    More null-vs-zero-length arrays
+
+commit e9b750ec29b9e1b6a8a22cd57b9b01bda5592846
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 22 11:57:01 2023 -0700
+
+    Add a XType above ClassPart and PropPart;
+    
+    Intending to start hanging more type info on XType.  Sharpen (or loosen) a bunch of link() steps to return ClassPart or XType.
+    Add a better recursive toString using SB.
+    Uses a null instead of a zero-length array for Const, TCons, Annons.
+    Method parses the lambda index.
+
+commit 57a6949309df5701a0006f56a8582588a54fabe4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 14:08:00 2023 -0700
+
+    Wrap up initial parsing.  Start on a naive java class file
+
+commit 03576e042b3f004d951dc5e67bc865d020d5cb5c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 11:39:44 2023 -0700
+
+    Child lookup must link.
+    
+    Class lookup in both Implements and Extends.
+    Cleanup MMethod linking.
+    Handle AnonClz, Formal, ParClz.
+
+commit 3b533017e49f058216f41d6ecb8e6e6bb57d6333
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:05:54 2023 -0700
+
+    Yank generic type
+    
+    Added 20 lines to avoid 2 casts
+
+commit 4ccc54a393bc9f8dcc0c2b883a7eafe5b2dac148
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 20 10:04:07 2023 -0700
+
+    Progress on parsing FizzBuzz
+    
+    FormalCon has no Part.
+
+commit c281ef0bea925ec089a1c79ca961c03eaf39d761
+Author: Cliff Click <cliffc@acm.org>
+Date:   Sat Jun 17 09:35:44 2023 -0700
+
+    Progress on linking
+    
+    Linking should remove the need for the CPool everywhere.  Recursively find all XXXCon items and add a cached XXXPart instead.  This search crosses CPool borders in some cases and thus requires the full Repo.  Handles interface method lookups, but not globals like toString.
+    All the XXXCon classes cache something after linking, so a 2nd call to link does nothing (as a form of visit bit).  The XXXPart classes use an external visit bit to avoid double-linking.
+    Hide more of the XXXCon fields and use the XXXPart fields instead.
+    Replace more StringCon with interned String.
+    MethodPart is now a MMEthodPart with more stuff; MMethods retain the notion of a collection of Methods, and both can be stored in a MMethod array.
+
+commit 68ed3f80a49a299c00d818f89ddad0c267bb9eab
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 15 12:51:26 2023 -0700
+
+    Restructure while its cheap
+    
+    Parsing into CPool, which isn't needed after parsing.
+    Replace most StringCon with String.
+    Replace PsuedoCon with IdCon.
+    TermTCon wraps an IdCon.
+
+commit d32c5fd6c71af74b9d448579ed6d0aed044bb169
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 16:54:34 2023 -0700
+
+    Remove all transient fields after resolution
+
+commit c85bb4a820f27fb8c7847308bcdf5698fd6830a0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 15:22:23 2023 -0700
+
+    Clean/restructure building XClz java clazz wrapper
+
+commit 6087073852b5081cf9b2e6c5eed7b0c73da84e8a
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 14 10:20:34 2023 -0700
+
+    Start building Container notions
+    
+    Hook to make a java clazz from XTC clazz & run it.
+
+commit 26a76f67721fa7926208b82bd397cc445989a0c0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 19:38:18 2023 -0700
+
+    Link the repo
+    
+    Also drop failed generify of Part (more errors and warnigns than casts saved)
+
+commit f05137aac078b1589d96ae8200b9df4c719c468d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 13 13:41:53 2023 -0700
+
+    Actually load all provided libs
+    
+    Was not loading (lazy) 2-deep nested kids; fixed now loading all things.
+    Loading Methods with code.
+    
+    Short cuts for loading arrays of Const, TCon, Annots.
+    Added some toStrings.
+
+commit c202f4eb7b05acd80c37d363fa85ae0f0b7f7cbc
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:40 2023 -0700
+
+    Cleanup
+
+commit 760b90c8fb9309e61f93937843527f6bb44b1304
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon Jun 12 10:29:03 2023 -0700
+
+    Load all provided libs
+
+commit 91a0c9ffb401dbccbf5e95e8443de3d52e372b7c
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 15:57:04 2023 -0700
+
+    Finish repo setup
+    
+    Doesn't actually load anything into the repo, that happens after making a container
+
+commit 2f71318b4c713e9f3ef863cc30eb2e7955ddb885
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 14:31:43 2023 -0700
+
+    Cleanup
+
+commit 5c50ea3bb57ad1e395cf06e661fe55d7dca94e2d
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 11:23:14 2023 -0700
+
+    All the XTC in XDK parses constant pool
+
+commit b4398eb94c4ff854b601e9ba24fabd4cd26cd1e4
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 8 09:47:00 2023 -0700
+
+    All the manualTests XTC files
+
+commit 5db28ff138bbede23a3dc261f7cd2f34e987b588
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 15:17:05 2023 -0700
+
+    Parses TestAnnotations
+
+commit a6f190214547d85dc2760af9e5d4e3f8fdcf7a33
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 14:00:31 2023 -0700
+
+    Parse TestArray
+
+commit 74699b4dfa6156fcf4a5a9b43f2bd5a5f691072f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed Jun 7 13:08:01 2023 -0700
+
+    Parse constant pool of TestNumbers
+
+commit 3080efc4f4010154df8d0e07c3637855303965bc
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:52:24 2023 -0700
+
+    Cleanup extra v-calls
+
+commit 0a309ba63671fd5513405ccd145754f7244544c6
+Author: Cliff Click <cliffc@acm.org>
+Date:   Tue Jun 6 16:48:42 2023 -0700
+
+    Parse ConstantPool of TestLiteral.x
+    
+    Replace IOException & IllegalStateException with unchecked IllegalArgumentException.
+
+commit 92e75770511b460de626c6ac871aa9f07b09f55b
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 16:57:06 2023 -0700
+
+    Parses FizzBuzz.xtc
+    
+    nothing executes of course... nor reads system libs
+
+commit 2daf0d110d0415e5851c117c9c237f81c45d4c83
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 15:43:53 2023 -0700
+
+    Parse a Module OK
+    
+    Need to add a child component/part
+
+commit e1b1070388898feff76af89d972a24a2f2400efa
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 14:27:14 2023 -0700
+
+    Rename Component -> Part
+
+commit dbfa55fcddedcaad5fdecd57d70fc1cd45de6a2f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Thu Jun 1 12:46:05 2023 -0700
+
+    Progress towards a XEC parser
+
+commit c47bd3a4c71a028380b9b64150c98da4d01be39f
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 23:31:11 2023 -0700
+
+    Finish loading FizzBuzz constant pool
+
+commit 81f527eaed2a4c4145f518400855602d80a2eeaf
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 16:23:11 2023 -0700
+
+    Finish renaming all const files to con
+
+commit 0369c077e00cf3557a2566b2e03378a35c7e6cff
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:57:23 2023 -0700
+
+    Bulk rename files
+
+commit 80406ecfa50cf172f9aacc90a5fe012608656604
+Author: Cliff Click <cliffc@acm.org>
+Date:   Wed May 31 15:07:14 2023 -0700
+
+    Progress on a XEC constant pool reader
+    
+    Exploring the grand world of XEC files.
+
+commit 45b2ce3bb36712b301175486acfffeb2e58435d0
+Author: Cliff Click <cliffc@acm.org>
+Date:   Mon May 29 12:08:31 2023 -0700
+
+    initial makefile
