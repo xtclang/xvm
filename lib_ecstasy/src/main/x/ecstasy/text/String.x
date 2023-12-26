@@ -99,13 +99,28 @@ const String
     // ----- operations ----------------------------------------------------------------------------
 
     /**
-     * Obtain a portion of this String, beginning with at specified character index.
+     * Obtain a portion of this String, beginning at the specified character index, and continuing
+     * to the end of the String.
      *
-     * @param startAt  the index of the first character of the new string
+     * To obtain a starting or middle portion of this string, use the [slice] method instead of this
+     * method.
+     *
+     * This method is tolerant of a starting index that is not within the bounds of this string. An
+     * index less than zero indicates the number of characters from the end of this string to take
+     * as the substring. An index is greater than or equal to the size of this string indicates that
+     * an empty string should be returned.
+     *
+     * @param startAt  the index into this string of the first character of the string to return; a
+     *                 negative value indicates the number of characters from the end of this string
+     *                 to take as the substring
      *
      * @return the specified sub-string
      */
     String! substring(Int startAt) {
+        if (startAt < 0) {
+            startAt += size;
+        }
+
         return startAt <= 0   ? this                   :
                startAt < size ? this[startAt ..< size] : "";
     }
@@ -263,7 +278,7 @@ const String
     /**
      * A lightweight, immutable Map implementation over a delimited String. Note that the
      * implementation does not attempt to de-duplicate keys; the search for a specified key is
-     * sequential, e.g. a call to `get(k)` in the Map will return the value from  the first entry
+     * sequential, e.g. a call to `get(k)` in the Map will return the value from the first entry
      * with that key.
      */
     protected static const StringMap(String                 data,
@@ -722,9 +737,9 @@ const String
 
     /**
      * Format this String into a right-justified String of the specified length, with the remainder
-     * of the new String filled with the specified character. If the specified length is shorter
-     * than the size of this String, then the result will be a truncated copy of this String,
-     * containing only the last _length_ characters of this String.
+     * of the new String left-filled with the specified `fill` character. If the specified length is
+     * shorter than the size of this String, then the result will be a truncated copy of this
+     * String, containing only the last _length_ characters of this String.
      *
      * @param length  the size of the resulting String
      * @param fill    an optional fill character to use
@@ -750,10 +765,12 @@ const String
                 return this;
 
             case Positive:
-                return new StringBuffer(length)
-                        .addAll(fill * append)
-                        .addAll(this)
-                        .toString();
+                val buf = new StringBuffer(length);
+                for (Int i = 0; i < append; ++i) {
+                    buf.add(fill);
+                }
+                buf.addAll(chars);
+                return buf.toString();
             }
         }
     }

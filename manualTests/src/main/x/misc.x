@@ -7,6 +7,7 @@ module TestMisc {
         testBools();
         testChars();
         testInts();
+        testStrings();
         testCast();
         testTernary();
         testSpaceship();
@@ -107,6 +108,31 @@ module TestMisc {
         // this also tests the conditional UInt8 to Int conversion
         assert Int n := chars[0].asciiDigit(), n == 1;
         assert !chars[1].asciiDigit();
+    }
+
+    void testStrings() {
+        console.print("\n** testStrings()");
+        assert "abcde"[2] == 'c';
+
+        assert "abcde".substring(0) == "abcde";
+        assert "abcde".substring(-5) == "abcde";
+        assert "abcde".substring(-99) == "abcde";
+        assert "abcde".substring(2) == "cde";
+        assert "abcde".substring(-3) == "cde";
+        assert "abcde".substring(4) == "e";
+        assert "abcde".substring(-1) == "e";
+        assert "abcde".substring(5) == "";
+        assert "abcde".substring(6) == "";
+        assert "abcde".substring(99) == "";
+
+        assert "abcde"[1..2] == "bc";
+        assert "abcde"[2..1] == "cb";
+        assert "abcde"[1..<2] == "b";
+        assert "abcde"[2..<1] == "c";
+        assert "abcde"[1>..<2] == "";
+        assert "abcde"[2>..<1] == "";
+        assert "abcde"[1>..2] == "c";
+        assert "abcde"[2>..1] == "b";
     }
 
     void testCast() {

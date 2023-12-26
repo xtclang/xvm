@@ -79,7 +79,6 @@ public class xString
         markNativeMethod("construct", STRING, VOID);
         markNativeMethod("indexOf", new String[]{"text.Char", "numbers.Int64"},
                                     new String[]{"Boolean", "numbers.Int64"});
-        markNativeMethod("substring", INT,  STRING);
         markNativeMethod("hashCode",  null, INT);
         markNativeMethod("equals",    null, BOOLEAN);
         markNativeMethod("compare",   null, null);
@@ -156,40 +155,6 @@ public class xString
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
-                             ObjectHandle hArg, int iReturn)
-        {
-        StringHandle hThis = (StringHandle) hTarget;
-
-        switch (method.getName())
-            {
-            case "substring": // (Int starAt)
-                {
-                int    ofStart = (int) ((JavaLong) hArg).getValue();
-                char[] ach     = hThis.m_achValue;
-                int    cch     = ach.length;
-
-                if (ofStart <= 0)
-                    {
-                    return frame.assignValue(iReturn, hThis);
-                    }
-
-                if (ofStart >= cch)
-                    {
-                    return frame.assignValue(iReturn, EMPTY_STRING);
-                    }
-
-                int    cchNew = cch - ofStart;
-                char[] achNew = new char[cchNew];
-                System.arraycopy(ach, ofStart, achNew, 0, cchNew);
-                return frame.assignValue(iReturn, makeHandle(achNew));
-                }
-            }
-
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
 
     @Override
