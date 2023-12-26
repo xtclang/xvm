@@ -49,41 +49,27 @@ const IPAddress(Byte[] bytes)
     /**
      * The Internet Protocol version of the address; either 4 or 6.
      */
-    Int version.get() {
-        return v4 ? 4 : 6;
-    }
+    Int version.get() = v4 ? 4 : 6;
 
     /**
      * True iff the address is an Internet Protocol version 4 address.
      */
-    Boolean v4.get() {
-        return bytes.size == 4;
-    }
+    Boolean v4.get() = bytes.size == 4;
 
     /**
      * True iff the address is an Internet Protocol version 6 address.
      */
-    Boolean v6.get() {
-        return bytes.size == 16;
-    }
+    Boolean v6.get() = bytes.size == 16;
 
     /**
      * True iff the address is a multicast address
      */
-    Boolean multicast.get() {
-        return v4
-                ? bytes[0] & 0xF0 == 0xE0
-                : bytes[0] == 0xFF;
-    }
+    Boolean multicast.get() = v4 ? bytes[0] & 0xF0 == 0xE0 : bytes[0] == 0xFF;
 
     /**
      * True iff the address is a loopback address.
      */
-    Boolean loopback.get() {
-        return v4
-                ? bytes[0] == 127
-                : this == IPv6Loopback;
-    }
+    Boolean loopback.get() = v4 ? bytes[0] == 127 : this == IPv6Loopback;
 
     /**
      * True iff the address is a link-local address.
@@ -97,11 +83,7 @@ const IPAddress(Byte[] bytes)
     /**
      * True iff the address is the "any" address.
      */
-    Boolean any.get() {
-        return v4
-                ? this == IPv4Any
-                : this == IPv6Any;
-    }
+    Boolean any.get() = v4 ? this == IPv4Any : this == IPv6Any;
 
     @Override
     String toString() {
