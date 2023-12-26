@@ -240,7 +240,7 @@ service Dispatcher {
                 // correct cookies for the current version of the session
                 if (!redirect) {
                     // check for any IP address and/or user agent change in the connection
-                    redirect = session.updateConnection_(extractUserAgent(requestInfo),
+                    redirect = session.updateConnection_(requestInfo.getUserAgent(),
                             requestInfo.getClientAddress());
                 }
 

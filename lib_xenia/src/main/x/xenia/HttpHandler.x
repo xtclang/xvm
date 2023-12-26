@@ -1,5 +1,6 @@
-import web.HttpStatus;
+import crypto.Decryptor;
 
+import web.HttpStatus;
 
 import web.codecs.Registry;
 
@@ -93,6 +94,11 @@ service HttpHandler
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
+    void configure(Decryptor decryptor) {
+        sessionManager.configureEncryption(decryptor);
+    }
+
+    @Override
     void handle(RequestContext context, String uri, String methodName, Boolean tls) {
         if (closing) {
             httpServer.send(context, HttpStatus.Gone.code, [], [], []);
@@ -122,7 +128,7 @@ service HttpHandler
      * @return False iff there any pending requests
      */
     @Synchronized
-    Boolean shutdown(Boolean force = False) {
+    Boolean shutdown() {
         closing = True;
         return pendingRequests == 0;
     }
@@ -209,8 +215,7 @@ service HttpHandler
             };
         }
 
-        SessionManager mgr = new SessionManager(new SessionStore(), sessionProducer, httpServer.plainPort, httpServer.tlsPort);
-        httpServer.configureService(mgr);
-        return mgr;
+        return new SessionManager(
+            new SessionStore(), sessionProducer, httpServer.plainPort, httpServer.tlsPort);
     }
 }

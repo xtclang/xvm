@@ -16,25 +16,32 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.Principal;
 import java.security.PrivateKey;
 
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
+import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
+import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManager;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
-import javax.net.ssl.X509KeyManager;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -69,7 +76,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.StringArrayHandle;
 
-import org.xvm.runtime.template._native.crypto.xRTKeyStore;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
@@ -97,10 +103,12 @@ public class xRTServer
     @Override
     public void initNative()
         {
-        markNativeMethod("configureImpl", null, VOID);
-        markNativeMethod("start"       , null, VOID);
-        markNativeMethod("send"        , null, VOID);
-        markNativeMethod("close"       , null, VOID);
+        markNativeMethod("configureImpl"  , null, VOID);
+        markNativeMethod("addRouteImpl"   , null, VOID);
+        markNativeMethod("removeRouteImpl", null, VOID);
+        markNativeMethod("start"          , null, VOID);
+        markNativeMethod("send"           , null, VOID);
+        markNativeMethod("close"          , null, VOID);
 
         markNativeMethod("getClientAddressBytes",  null, null);
         markNativeMethod("getClientHostName",      null, null);
@@ -146,15 +154,6 @@ public class xRTServer
         {
         switch (method.getName())
             {
-            case "start":
-                {
-                HttpServerHandle hService = (HttpServerHandle) hTarget;
-                return frame.f_context == hService.f_context
-                        ? invokeStart(frame, hService, (ServiceHandle) hArg)
-                        : xRTFunction.makeAsyncNativeHandle(method).
-                                call1(frame, hService, new ObjectHandle[]{hArg}, iReturn);
-                }
-
             case "getClientHostName":
                 return invokeGetClientHostName(frame, (HttpContextHandle) hArg, iReturn);
 
@@ -182,6 +181,9 @@ public class xRTServer
             case "getHeaderNames":
                 return invokeGetHeaderNames(frame, (HttpContextHandle) hArg, iReturn);
 
+            case "removeRouteImpl":
+                return invokeRemoveRoute(frame, (HttpServerHandle) hTarget, (StringHandle) hArg);
+
             case "close":
                 {
                 HttpServerHandle hService = (HttpServerHandle) hTarget;
@@ -200,8 +202,20 @@ public class xRTServer
         {
         switch (method.getName())
             {
+            case "start":
+                {
+                HttpServerHandle hService = (HttpServerHandle) hTarget;
+                return frame.f_context == hService.f_context
+                        ? invokeStart(frame, hService)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                                call1(frame, hService, Utils.OBJECTS_NONE, iReturn);
+                }
+
             case "configureImpl":
-                return invokeConfigure(frame, (HttpServerHandle) hTarget,  ahArg);
+                return invokeConfigure(frame, (HttpServerHandle) hTarget, ahArg);
+
+            case "addRouteImpl":
+                return invokeAddRoute(frame, (HttpServerHandle) hTarget, ahArg);
 
             case "send":
                 {
@@ -240,8 +254,7 @@ public class xRTServer
     // ----- native implementations ----------------------------------------------------------------
 
     /**
-     * Implementation of "void configureImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort,
-     *                          KeyStore keystore, String? tlsKey)" method.
+     * Implementation of "void configureImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
      */
     private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
@@ -250,18 +263,14 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String         sBindAddr   = ((StringHandle)   ahArg[0]).getStringValue();
-        int            nHttpPort   = (int) ((JavaLong) ahArg[1]).getValue();
-        int            nHttpsPort  = (int) ((JavaLong) ahArg[2]).getValue();
-        KeyStoreHandle hKeystore   = (KeyStoreHandle)  ahArg[3];
-        String         sTlsKey     = ahArg[4] instanceof StringHandle hS ? hS.getStringValue() : null;
+        String sBindAddr  = ((StringHandle)   ahArg[0]).getStringValue();
+        int    nHttpPort  = (int) ((JavaLong) ahArg[1]).getValue();
+        int    nHttpsPort = (int) ((JavaLong) ahArg[2]).getValue();
 
         try
             {
-            HttpServer  httpServer  = createHttpServer (new InetSocketAddress(sBindAddr, nHttpPort));
-            HttpsServer httpsServer = createHttpsServer(new InetSocketAddress(sBindAddr, nHttpsPort),
-                                                            hKeystore, sTlsKey);
-            hServer.configure(httpServer, httpsServer);
+            configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
+            configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
             return Op.R_NEXT;
             }
         catch (Exception e)
@@ -271,41 +280,21 @@ public class xRTServer
             }
         }
 
-    private HttpServer createHttpServer(InetSocketAddress addr)
+    private void configureHttpServer(HttpServerHandle hServer, InetSocketAddress addr)
             throws IOException
         {
-        return HttpServer.create(addr, 0);
+        hServer.setHttpServer(HttpServer.create(addr, 0));
         }
 
-    private HttpsServer createHttpsServer(InetSocketAddress addr, KeyStoreHandle hKeystore,
-                                          String sTlsKey)
+    private void configureHttpsServer(HttpServerHandle hServer, InetSocketAddress addr)
             throws IOException, GeneralSecurityException
         {
-        KeyManager[] aKeyManagers;
-        if (sTlsKey == null)
-            {
-            if (xRTKeyStore.findTlsKey(hKeystore) == null)
-                {
-                throw new KeyStoreException("Tls key is missing at the keystore");
-                }
-            aKeyManagers = new KeyManager[] {hKeystore.f_keyManager};
-            }
-        else
-            {
-            if (!hKeystore.f_keyStore.isKeyEntry(sTlsKey))
-                {
-                throw new IllegalArgumentException("Invalid alias: " + sTlsKey);
-                }
-
-            aKeyManagers = new KeyManager[] {new SimpleKeyManager(hKeystore.f_keyManager, sTlsKey, sTlsKey)};
-            }
-
-        TrustManager[] aTrustManagers = new TrustManager[] {hKeystore.f_trustManager};
-
-        SSLContext ctxSSL = SSLContext.getInstance("TLS");
-        ctxSSL.init(aKeyManagers, aTrustManagers, null);
-
         HttpsServer httpsServer = HttpsServer.create(addr, 0);
+        SSLContext  ctxSSL      = SSLContext.getInstance("TLS");
+
+        KeyManager[] aKeyManagers = new KeyManager[] {new SimpleKeyManager(hServer)};
+        ctxSSL.init(aKeyManagers, null, null);
+
         httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL)
             {
             @Override
@@ -327,13 +316,71 @@ public class xRTServer
                     }
                 }
             });
-        return httpsServer;
+        hServer.setHttpsServer(httpsServer);
         }
 
     /**
-     * Implementation of "start(Handler handler)" method.
+     * Implementation of "void addRouteImpl(String hostName, Handler handler, KeyStore keystore,
+     *                    String? tlsKey=Null)" method.
      */
-    private int invokeStart(Frame frame, HttpServerHandle hServer, ServiceHandle hHandler)
+    private int invokeAddRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
+        {
+        StringHandle   hHostName  = (StringHandle) ahArg[0];
+        ServiceHandle  hHandler   = (ServiceHandle) ahArg[1];
+        KeyStoreHandle hKeystore  = (KeyStoreHandle)  ahArg[2];
+        String         sTlsKey    = ahArg[3] instanceof StringHandle hS ? hS.getStringValue() : null;
+        Router         router     = hServer.getRouter();
+
+        if (sTlsKey == null && router.mapRoutes.isEmpty())
+            {
+            // find a public/private key pair that could be used to encrypt tls communications
+            try
+                {
+                KeyStore keystore = hKeystore.f_keyStore;
+                for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();)
+                    {
+                    String sName = it.nextElement();
+                    if (keystore.isKeyEntry(sName) &&
+                            hKeystore.getKey(sName) instanceof PrivateKey &&
+                            keystore.getCertificate(sName) != null)
+                        {
+                        sTlsKey = sName;
+                        break;
+                        }
+                    }
+                }
+            catch (GeneralSecurityException ignore) {}
+
+            if (sTlsKey == null)
+                {
+                return frame.raiseException("The Tls key name must be specified");
+                }
+            }
+
+        ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
+        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 4);
+        assert method != null;
+
+        FunctionHandle hFunction = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hHandler);
+        RequestHandler handler   = new RequestHandler(hHandler.f_context, hFunction);
+
+        router.mapRoutes.put(hHostName.getStringValue(), new RouteInfo(handler, hKeystore, sTlsKey));
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Implementation of "void removeRouteImpl(String hostName)" method.
+     */
+    private int invokeRemoveRoute(Frame frame, HttpServerHandle hServer, StringHandle hHostName)
+        {
+        hServer.getRouter().mapRoutes.remove(hHostName.getStringValue());
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Implementation of "start()" method.
+     */
+    private int invokeStart(Frame frame, HttpServerHandle hServer)
         {
         HttpServer  httpServer  = hServer.getHttpServer();
         HttpsServer httpsServer = hServer.getHttpsServer();
@@ -343,7 +390,7 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is not configured"));
             }
 
-        if (hServer.getRequestHandler() == null)
+        if (httpServer.getExecutor() == null)
             {
             // this is a very first call; set up the thread pool
             String        sName   = "HttpHandler";
@@ -371,23 +418,11 @@ public class xRTServer
 
             // prevent the container from being terminated
             hServer.f_context.f_container.getServiceContext().registerNotification();
+
+            Router router = hServer.getRouter();
+            httpServer .createContext("/", router);
+            httpsServer.createContext("/", router);
             }
-        else
-            {
-            httpServer .removeContext("/");
-            httpsServer.removeContext("/");
-            }
-
-        ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
-        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 4);
-        assert method != null;
-        FunctionHandle  hFunction  = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hHandler);
-
-        RequestHandler handler = new RequestHandler(hHandler.f_context, hFunction);
-        httpServer .createContext("/", handler);
-        httpsServer.createContext("/", handler);
-
-        hServer.setRequestHandler(handler);
         return Op.R_NEXT;
         }
 
@@ -396,15 +431,7 @@ public class xRTServer
      */
     private int invokeGetClientHostName(Frame frame, HttpContextHandle hCtx, int iResult)
         {
-        String sHost = hCtx.f_exchange.getRequestHeaders().getFirst("Host");
-        if (sHost != null)
-            {
-            int ofPort = sHost.lastIndexOf(':');
-            if (ofPort >= 0)
-                {
-                sHost = sHost.substring(0, ofPort);
-                }
-            }
+        String sHost = getClientHostName(hCtx.f_exchange);
 
         return frame.assignValue(iResult, sHost == null
                 ? xNullable.NULL
@@ -427,20 +454,7 @@ public class xRTServer
      */
     private int invokeGetClientPort(Frame frame, HttpContextHandle hCtx, int iResult)
         {
-        int    nPort = -1;
-        String sHost = hCtx.f_exchange.getRequestHeaders().getFirst("Host");
-        if (sHost != null)
-            {
-            int ofPort = sHost.lastIndexOf(':');
-            if (ofPort >= 0)
-                {
-                nPort = Integer.valueOf(sHost.substring(ofPort + 1));
-                }
-            }
-        if (nPort == -1)
-            {
-            nPort = hCtx.f_exchange.getRemoteAddress().getPort();
-            }
+        int nPort = getClientPort(hCtx.f_exchange);
 
         return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(nPort));
         }
@@ -583,7 +597,7 @@ public class xRTServer
                 ((ExecutorService) httpServer.getExecutor()).shutdown();
                 hServer.f_context.f_container.getServiceContext().unregisterNotification();
                 }
-            hServer.setRequestHandler(null);
+            hServer.getRouter().mapRoutes.clear();
             }
 
         return Op.R_NEXT;
@@ -629,6 +643,37 @@ public class xRTServer
                 }
             }
         return Op.R_NEXT;
+        }
+
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    protected static String getClientHostName(HttpExchange exchange)
+        {
+        String sHost = exchange.getRequestHeaders().getFirst("Host");
+        if (sHost != null)
+            {
+            int ofPort = sHost.lastIndexOf(':');
+            if (ofPort >= 0)
+                {
+                sHost = sHost.substring(0, ofPort);
+                }
+            }
+        return sHost;
+        }
+
+    protected static int getClientPort(HttpExchange exchange)
+        {
+        String sHost = exchange.getRequestHeaders().getFirst("Host");
+        if (sHost == null)
+            {
+            return exchange.getRemoteAddress().getPort();
+            }
+
+        int ofPort = sHost.lastIndexOf(':');
+        return ofPort >= 0
+            ? Integer.valueOf(sHost.substring(ofPort + 1))
+            : exchange instanceof HttpsExchange ? 443 : 80;
         }
 
 
@@ -704,78 +749,148 @@ public class xRTServer
     protected static class SimpleKeyManager
             extends X509ExtendedKeyManager
         {
-        public SimpleKeyManager(X509KeyManager keyManager, String sClient, String sServer)
+        public SimpleKeyManager(HttpServerHandle hServer)
             {
-            f_keyManager   = keyManager;
-            f_sClientAlias = sClient;
-            f_sServerAlias = sServer;
+            f_hServer = hServer;
             }
 
         @Override
         public String[] getClientAliases(String keyType, Principal[] issuers)
             {
-            return new String[] {f_sClientAlias};
+            throw new UnsupportedOperationException();
             }
 
         @Override
         public String chooseEngineClientAlias(String[] asKeyType, Principal[] issuers, SSLEngine engine)
             {
-            return f_sClientAlias;
+            throw new UnsupportedOperationException();
             }
 
         @Override
         public String chooseClientAlias(String[] asKeyType, Principal[] issuers, Socket socket)
             {
-            return f_sClientAlias;
+            throw new UnsupportedOperationException();
             }
 
         @Override
         public String[] getServerAliases(String keyType, Principal[] issuers)
             {
-            return new String[] {f_sServerAlias};
+            throw new UnsupportedOperationException();
             }
 
         @Override
         public String chooseEngineServerAlias(String keyType, Principal[] issuers, SSLEngine engine)
             {
-            return f_sServerAlias;
+            SSLSession session = engine.getHandshakeSession();
+            if (session instanceof ExtendedSSLSession sessionEx)
+                {
+                List<SNIServerName> listNames = sessionEx.getRequestedServerNames();
+                if (!listNames.isEmpty())
+                    {
+                    String    sHost = ((SNIHostName) listNames.get(0)).getAsciiName();
+                    RouteInfo route = f_hServer.getRouter().mapRoutes.get(sHost);
+                    if (route != null)
+                        {
+                        f_tloKeyStore.set(route.hKeyStore);
+                        return route.sTlsKey;
+                        }
+                    }
+                else
+                    {
+                    // TODO: REMOVE
+                    System.err.println("*** Handshake from unspecified host");
+                    }
+                }
+            else
+                {
+                // TODO: REMOVE
+                System.err.println("*** Handshake from unknown session");
+                }
+            return null;
             }
 
         @Override
         public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket)
             {
-            return f_sServerAlias;
+            throw new UnsupportedOperationException();
             }
 
         @Override
         public X509Certificate[] getCertificateChain(String sAlias)
             {
-            return f_keyManager.getCertificateChain(sAlias);
+            try
+                {
+                Certificate[] aCerts = f_tloKeyStore.get().f_keyStore.getCertificateChain(sAlias);
+                if (aCerts instanceof X509Certificate[] aX509Certs)
+                    {
+                    return aX509Certs;
+                    }
+                int               cCerts     = aCerts.length;
+                X509Certificate[] aX509Certs = new X509Certificate[cCerts];
+
+                // this call also asserts that all certificates are X509Certificate instances
+                System.arraycopy(aCerts, 0, aX509Certs, 0, cCerts);
+                return aX509Certs;
+                }
+            catch (KeyStoreException e)
+                {
+                return new X509Certificate[0];
+                }
             }
 
         @Override
         public PrivateKey getPrivateKey(String sAlias)
             {
-            return f_keyManager.getPrivateKey(sAlias);
+            try
+                {
+                KeyStoreHandle hKeyStore = f_tloKeyStore.get();
+                return (PrivateKey) hKeyStore.getKey(sAlias);
+                }
+            catch (GeneralSecurityException e)
+                {
+                return null;
+                }
             }
 
         // ----- data fields -----------------------------------------------------------------------
 
         /**
-         * The underlying manager.
+         * The HttpServer handle.
          */
-        private final X509KeyManager f_keyManager;
+        private final HttpServerHandle f_hServer;
 
         /**
-         * The alias to use for client calls.
+         * The key store handle used by the current thread.
          */
-        private final String f_sClientAlias;
-
-        /**
-         * The alias to use for server calls.
-         */
-        private final String f_sServerAlias;
+        private final ThreadLocal<KeyStoreHandle> f_tloKeyStore = new ThreadLocal<>();
         }
+
+
+    // ---- Router ---------------------------------------------------------------------------------
+
+    protected static class Router
+            implements HttpHandler
+        {
+        @Override
+        public void handle(HttpExchange exchange)
+                throws IOException
+            {
+            String    sHost = getClientHostName(exchange);
+            RouteInfo route = mapRoutes.get(sHost);
+            if (route == null)
+                {
+                exchange.sendResponseHeaders(444, -1); // HttpStatus.NoResponse
+                }
+            else
+                {
+                route.handler.handle(exchange);
+                }
+            }
+
+        public final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
+        }
+
+    protected record RouteInfo(RequestHandler handler, KeyStoreHandle hKeyStore, String sTlsKey) {}
 
 
     // ----- ObjectHandles -------------------------------------------------------------------------
@@ -786,21 +901,27 @@ public class xRTServer
     protected static class HttpServerHandle
             extends ServiceHandle
         {
-        protected HttpServerHandle(TypeComposition clazz, ServiceContext context)
-            {
-            super(clazz, context);
-            }
-
         /**
          * The underlying native state needs to be kept in an array, so cloning the handle would
          * not splinter the state.
          */
         private final Object[] f_aoNative = new Object[3];
 
-        protected void configure(HttpServer httpServer, HttpsServer httpsServer)
+        protected HttpServerHandle(TypeComposition clazz, ServiceContext context)
             {
-            f_aoNative[0] = httpServer;
-            f_aoNative[1] = httpsServer;
+            super(clazz, context);
+
+            f_aoNative[0] = new Router();
+            }
+
+        protected void setHttpServer(HttpServer httpServer)
+            {
+            f_aoNative[1] = httpServer;
+            }
+
+        protected void setHttpsServer(HttpsServer httpsServer)
+            {
+            f_aoNative[2] = httpsServer;
             }
 
         @Override
@@ -813,11 +934,19 @@ public class xRTServer
             }
 
         /**
+         * @return the request router
+         */
+        protected Router getRouter()
+            {
+            return (Router) f_aoNative[0];
+            }
+
+        /**
          * @return underlying {@link HttpServer}.
          */
         protected HttpServer getHttpServer()
             {
-            return (HttpServer) f_aoNative[0];
+            return (HttpServer) f_aoNative[1];
             }
 
         /**
@@ -825,23 +954,7 @@ public class xRTServer
          */
         protected HttpsServer getHttpsServer()
             {
-            return (HttpsServer) f_aoNative[1];
-            }
-
-        /**
-         * @return the http(s) request handler
-         */
-        protected RequestHandler getRequestHandler()
-            {
-            return (RequestHandler) f_aoNative[2];
-            }
-
-        /**
-         * Store the http(s) request handler.
-         */
-        protected void setRequestHandler(RequestHandler handler)
-            {
-            f_aoNative[2] = handler;
+            return (HttpsServer) f_aoNative[2];
             }
         }
 

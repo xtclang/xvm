@@ -82,12 +82,14 @@ module xenia.xtclang.org {
      * Create and start an HTTP/HTTPS server for the specified web application.
      *
      * @param webApp     the WebApp to dispatch the HTTP requests to
-     * @param bindAddr   the address (name) to bind the server to (could be the same as hostName)
+     * @param bindAddr   the host name to bind the server to and use for request routing
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
      * @param keystore   the keystore to use for tls certificates and encryption
-     * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls
-     * @param cookieKey  (optional) the name of the secret key in the keystore to use for cookie encryption
+     * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls; if not
+     *                   specified, the first key pair will be used
+     * @param cookieKey  (optional) the name of the secret key in the keystore to use for cookie
+     *                   encryption; if not specified, the first secret key will be used
      *
      * @return a function that allows to shutdown the server
      */
@@ -95,11 +97,12 @@ module xenia.xtclang.org {
                                   KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null) {
         @Inject HttpServer server;
         try {
-            server.configure(bindAddr, httpPort, httpsPort, keystore, tlsKey);
+            server.configure(bindAddr, httpPort, httpsPort);
 
             HttpHandler handler = new HttpHandler(server, webApp);
 
-            server.start(handler);
+            server.addRoute(bindAddr, handler, keystore, tlsKey, cookieKey);
+            server.start();
 
             return () -> {
                 if (handler.shutdown()) {
@@ -125,15 +128,5 @@ module xenia.xtclang.org {
     static void log(String text) {
         @Inject Console console;
         console.print($"**Log: {text}");
-    }
-
-    /**
-     * Obtain the user agent string.
-     */
-    static String extractUserAgent(HttpServer.RequestInfo requestInfo) {
-        if (String[] values := requestInfo.getHeaderValuesForName(web.Header.UserAgent)) {
-            return values[0];
-        }
-        return "";
     }
 }

@@ -1,3 +1,5 @@
+import crypto.Decryptor;
+
 import web.Header;
 import web.HttpMethod;
 import web.Protocol;
@@ -19,13 +21,21 @@ interface HttpServer
      */
     static interface Handler {
         /**
+         * Configure the handler.
+         *
+         * @param decryptor  a decryptor that can be used to encrypt/decrypt application specific
+         *                   information (e.g. cookies)
+         */
+        void configure(Decryptor decryptor);
+
+        /**
          * Handle the incoming request.
          */
         void handle(RequestContext context, String uri, String method, Boolean tls);
     }
 
     /**
-     * The address the server is bound to (can be the same as hostName).
+     * The address the server is bound to.
      */
     @RO String bindAddr;
 
@@ -45,23 +55,42 @@ interface HttpServer
      * @param bindAddr   the address (name) to bind the server to
      * @param httpPort   the port for plain text (insecure) communications
      * @param httpsPort  the port for encrypted (tls) communications
+     */
+    void configure(String bindAddr, UInt16 httpPort=80, UInt16 httpsPort=443);
+
+    /**
+     * Add a route for this server. Each incoming request that has a "Host" header value equal to
+     * the specified 'hostName' will be passed to the specified handler.
+     *
+     * This method can be called before and/or after [start].
+     *
+     * @param hostName   the host name the handler may receive requests for
+     * @param handler    the request handler
      * @param keystore   the KeyStore to use for tls certificates and encryption
-     * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls
+     * @param tlsKey     the name of the key pair in the keystore to use for Tls; if
+     *                   not specified, the keystore must have one and only one
+     *                   [key-pair](crypto.KeyForm.Pair) entry, which will be used for Tls encryption
      * @param cookieKey  (optional) the name of the secret key in the keystore to use for cookie
-     *                   encryption
+     *                   encryption; if not specified, the keystore must have one and only one
+     *                   [secret](crypto.KeyForm.Secret) key, which will be used for cookies encryption
      */
-    void configure(String bindAddr, UInt16 httpPort, UInt16 httpsPort,
-                   KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null);
+    void addRoute(String hostName, Handler handler, KeyStore keystore,
+                  String? tlsKey=Null, String? cookieKey=Null);
 
     /**
-     * Configure a Xenia service.
+     * Remove the specified route. After this method returns, no more requests are going to be
+     * passed to this route's handler. However, it's a responsibility of the caller to shutdown
+     * (deal with all in-flight requests for) the corresponding handler.
+     *
+     * @param hostName  the host name to stop processing requests for
      */
-    void configureService((service) svc);
+    void removeRoute(String hostName);
 
     /**
-     * Start the server, routing all incoming requests to the specified handler.
+     * Start the server, routing each incoming request to the handler that corresponds to the
+     * request's "Host" header value.
      */
-    void start(Handler handler);
+    void start();
 
     /**
      * Send a response.
@@ -328,6 +357,16 @@ interface HttpServer
         }
 
         /**
+         * Obtain the user agent string.
+         */
+        String getUserAgent() {
+            if (String[] values := getHeaderValuesForName(Header.UserAgent)) {
+                return values[0];
+            }
+            return "";
+        }
+
+        /**
          * Obtain the URL that converts this request to the corresponding TLS request.
          *
          * @return the URL string representing the TLS request
@@ -340,8 +379,14 @@ interface HttpServer
             UInt16 tlsPort   = server.tlsPort;
             String hostName  = server.getClientHostName(context)? : assert as $"cannot upgrade {scheme}";
 
+            // if the client request comes from the standard http port 80, and the server http port
+            // is not standard, it's an indication that a reverse proxy or the Network Address
+            // Translation (NAT) is in play (e.g. using "pfctl" on Mac OS), in which case we should
+            // not add the server port the redirecting Url
+            Boolean showPort = getClientPort() != 80 && tlsPort != 443;
+
             return $|{tlsScheme.name}://{hostName}\
-                    |{{if (tlsPort!=443) {$.add(':').append(tlsPort);}}}\
+                    |{{if (showPort) {$.add(':').append(tlsPort);}}}\
                     |{server.getUriString(context)}
                     ;
         }

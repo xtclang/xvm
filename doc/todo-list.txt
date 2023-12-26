@@ -1,3 +1,5 @@
+- CP: do we need HttpServer.replaceRoute() API
+
 - CP: make DigestAuthenticator.NonceTable into a service
 
 - GG: add support for runtime constants that cross the module line; may need to restore the removed

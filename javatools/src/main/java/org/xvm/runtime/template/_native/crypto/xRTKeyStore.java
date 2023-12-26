@@ -427,7 +427,7 @@ public class xRTKeyStore
                 int nType;
                 if (keyStore.getCertificate(sName) == null)
                     {
-                    Key key = keyStore.getKey(sName, hStore.f_achPwd);
+                    Key key = hStore.getKey(sName);
 
                     assert key != null;
 
@@ -473,7 +473,7 @@ public class xRTKeyStore
             {
             if (keyStore.isKeyEntry(sName))
                 {
-                Key key = keyStore.getKey(sName, hStore.f_achPwd);
+                Key key = hStore.getKey(sName);
                 if (key == null)
                     {
                     return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -528,7 +528,7 @@ public class xRTKeyStore
         String sName = hName.getStringValue();
         try
             {
-            Key key = hStore.f_keyStore.getKey(sName, hStore.f_achPwd);
+            Key key = hStore.getKey(sName);
             if (key instanceof PBEKey keyPwd)
                 {
                 return frame.assignValues(aiReturn,
@@ -549,28 +549,6 @@ public class xRTKeyStore
             }
         }
 
-    /**
-     * Find a public/private key pair that could be used to encrypt tls communications.
-     *
-     * @return the alias for the first (in the order of iteration) PrivateKey; null if none is found
-     */
-    public static String findTlsKey(KeyStoreHandle hKeystore)
-                throws GeneralSecurityException
-        {
-        KeyStore keystore = hKeystore.f_keyStore;
-        for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();)
-            {
-            String sName = it.nextElement();
-            if (keystore.isKeyEntry(sName) &&
-                    keystore.getKey(sName, hKeystore.f_achPwd) instanceof PrivateKey &&
-                    keystore.getCertificate(sName) != null)
-                {
-                return sName;
-                }
-            }
-        return null;
-        }
-
 
     // ----- handle --------------------------------------------------------------------------------
 
@@ -589,6 +567,12 @@ public class xRTKeyStore
             f_achPwd       = achPwd;
             f_keyManager   = keyManager;
             f_trustManager = trustManager;
+            }
+
+        public Key getKey(String sName)
+                throws GeneralSecurityException
+            {
+            return f_keyStore.getKey(sName, f_achPwd);
             }
 
         /**

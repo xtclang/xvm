@@ -62,7 +62,7 @@ service SessionImpl
         structure.lastUse         = now;
         structure.versionChanged_ = now;
         structure.ipAddress       = requestInfo.getClientAddress();
-        structure.userAgent       = extractUserAgent(requestInfo);
+        structure.userAgent       = requestInfo.getUserAgent();
         structure.cookieConsent   = None;
         structure.trustLevel      = None;
         structure.roles           = [];
