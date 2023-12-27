@@ -99,7 +99,7 @@ const OSFileNode
 
     // ----- internal ------------------------------------------------------------------------------
 
-    protected String pathString.get() { TODO("native"); }
+    String pathString.get() { TODO("native"); }
 
     private Int createdMillis.get()   { TODO("native"); }
     private Int accessedMillis.get()  { TODO("native"); }

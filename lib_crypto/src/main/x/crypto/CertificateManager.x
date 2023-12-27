@@ -40,13 +40,47 @@ interface CertificateManager {
      *  - receive the revocation confirmation from the SA
      *  - remove the private key and the certificate from the specified keystore
      *
-     * @param file      the file object representing the store ('PKCS12' type)
+     * @param keystore  the file object representing the store ('PKCS12' type)
      * @param password  the password for the keystore
      * @param name      the name the certificate is known by the KeyStore
      *
      * @throws IOException if anything goes wrong
      */
     void revokeCertificate(File keystore, String password, String name);
+
+    /**
+     * Create a secret (symmetric) key.
+     *
+     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param password  the password for the keystore
+     * @param name      the name the symmetric key is known by the KeyStore
+     *
+     * @throws IOException if anything goes wrong
+     */
+    void createSymmetricKey(File keystore, String password, String name);
+
+    /**
+     * Create a password entry.
+     *
+     * @param keystore       the file object representing the store ('PKCS12' type)
+     * @param storePassword  the password for the keystore
+     * @param name           the name the password entry is known by the KeyStore
+     * @param passwordValue  the value of the password entry
+     *
+     * @throws IOException if anything goes wrong
+     */
+    void createPassword(File keystore, String storePassword, String name, String passwordValue);
+
+    /**
+     * Change the keystore password.
+     *
+     * @param keystore     the file object representing the store ('PKCS12' type)
+     * @param password     the password for the keystore
+     * @param newPassword  the new password for the keystore
+     *
+     * @throws IOException if anything goes wrong
+     */
+    void changeStorePassword(File keystore, String password, String newPassword);
 
     /**
      * Helper function to create a distinguished name in the format prescribed by the (X.509

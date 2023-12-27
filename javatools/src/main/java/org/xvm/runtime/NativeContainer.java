@@ -62,6 +62,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template._native.xTerminalConsole;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms;
+import org.xvm.runtime.template._native.crypto.xRTCertificateManager;
 import org.xvm.runtime.template._native.crypto.xRTKeyStore;
 
 import org.xvm.runtime.template._native.lang.src.xRTCompiler;
@@ -362,15 +363,20 @@ public class NativeContainer
         TypeConstant typeKeyStore     = templateKeyStore.getCanonicalType();
         addResourceSupplier(new InjectionKey("keystore", typeKeyStore), templateKeyStore::ensureKeyStore);
 
+        // +++ crypto:CertificateManager
+        xRTCertificateManager templateCertManager = xRTCertificateManager.INSTANCE;
+        TypeConstant          typeCertManager     = templateCertManager.getCanonicalType();
+        addResourceSupplier(new InjectionKey("manager", typeCertManager), templateCertManager::ensureManager);
+
         // +++ crypto:Algorithms
         xRTAlgorithms templateAlgorithms = xRTAlgorithms.INSTANCE;
-        TypeConstant typeAlgorithms = pool.ensureTerminalTypeConstant(
+        TypeConstant  typeAlgorithms     = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensureModuleConstant("crypto.xtclang.org"), "Algorithms"));
         addResourceSupplier(new InjectionKey("algorithms", typeAlgorithms), templateAlgorithms::ensureAlgorithms);
 
         // +++ web:Client.Connector
         xRTConnector templateConnector = xRTConnector.INSTANCE;
-        TypeConstant typeConnector = templateConnector.getCanonicalType();
+        TypeConstant typeConnector     = templateConnector.getCanonicalType();
         addResourceSupplier(new InjectionKey("connector", typeConnector), templateConnector::ensureConnector);
 
         // +++ web:WebServer
@@ -379,8 +385,8 @@ public class NativeContainer
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
         // +++ web:Authenticator (Nullable|Authenticator)
-        ModuleConstant  moduleWeb       = pool.ensureModuleConstant("web.xtclang.org");
-        TypeConstant typeAuthenticator = pool.ensureTerminalTypeConstant(
+        ModuleConstant moduleWeb         = pool.ensureModuleConstant("web.xtclang.org");
+        TypeConstant   typeAuthenticator = pool.ensureTerminalTypeConstant(
                 pool.ensureClassConstant(pool.ensurePackageConstant(moduleWeb, "security"), "Authenticator")).
                     ensureNullable();
         // the NativeContainer can only supply a trivial result; anything better than that must be

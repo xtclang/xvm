@@ -27,7 +27,7 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
 
 
 /**
- * Native implementation of the xRTSigner.x service.
+ * Native implementation of the xRTDecryptor.x service.
  */
 public class xRTDecryptor
         extends xService

@@ -19,7 +19,7 @@ import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SecretHandle;
 
 
 /**
- * Native implementation of the xRTSigner.x service.
+ * Native implementation of the xRTKeyGenerator.x service.
  */
 public class xRTKeyGenerator
         extends xService

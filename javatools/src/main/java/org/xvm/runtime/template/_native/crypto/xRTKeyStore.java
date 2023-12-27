@@ -11,7 +11,6 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import java.security.cert.Certificate;
@@ -29,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.List;
 
 import javax.crypto.interfaces.PBEKey;

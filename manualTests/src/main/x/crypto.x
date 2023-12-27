@@ -1,21 +1,3 @@
-/**
- * This test assumes that the keystore (test_store.p12) contains two keys:
- *  - a public/private pair created by the command like:
- *
- *    keytool -genkeypair -alias test_pair -keyalg RSA -keysize 2048 -validity 365
- *            -dname "cn=xqiz.it, ou=manual_test"\
- *            -keystore src/main/x/test_store.p12 -storetype PKCS12 -storepass password
- *
- *  - a symmetrical key created by the command like:
- *
- *    keytool -genseckey -alias test_sym -keyalg AES -keysize 256\
- *            -keystore src/main/x/test_store.p12 -storepass password
- *
- * - a password entry is created by the command like:
- *
- *    keytool -importpass -alias test_pass
- *            -keystore src/main/x/test_store.p12 -storepass password
- */
 module TestCrypto {
     @Inject Console console;
 
@@ -24,12 +6,21 @@ module TestCrypto {
     import crypto.*;
 
     void run(String[] args = ["password"]) {
-        File   store    = File:./test_store.p12;
+        @Inject Directory curDir;
+        File store = curDir.fileFor("test.p12");
+
+        String password = args[0];
         String pairName = "test_pair";
+        String dName    = CertificateManager.distinguishedName("xqiz.it", orgUnit="Crypto Test");
         String symName  = "test_sym";
         String pwdName  = "test_pass";
 
-        @Inject(opts=new KeyStore.Info(store.contents, args[0])) KeyStore keystore;
+        @Inject CertificateManager manager;
+        manager.createCertificate(store, password, pairName, dName);
+        manager.createSymmetricKey(store, password, symName);
+        manager.createPassword(store, password, pwdName, "super-secret");
+
+        @Inject(opts=new KeyStore.Info(store.contents, password)) KeyStore keystore;
 
         assert CryptoKey keyPair := keystore.getKey(pairName);
         assert CryptoKey symKey  := keystore.getKey(symName);
@@ -69,8 +60,10 @@ module TestCrypto {
         PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.bytes(8));
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
 
-        assert CryptoPassword password := keystore.getPassword(pwdName);
-        console.print($"{password}; type={&password.actualType}");
+        assert CryptoPassword pwd := keystore.getPassword(pwdName);
+        console.print($"{pwd}; type={&password.actualType}");
+
+        store.delete();
     }
 
     void testDecryptor(Algorithms algorithms, String name, CryptoKey key, String text) {
