@@ -783,9 +783,9 @@ public class Compiler
      */
     public static final String CONSTANT_REQUIRED                  = "COMPILER-47";
     /**
-     * A value is required.
+     * An l-value is required.
      */
-    public static final String VALUE_REQUIRED                     = "COMPILER-48";
+    public static final String LVALUE_REQUIRED                    = "COMPILER-48";
     /**
      * Return is missing.
      */

@@ -1019,6 +1019,12 @@ public class InvocationExpression
                     }
                 else
                     {
+                    if (atypeReturn == null || atypeReturn.length == 0)
+                        {
+                        // binding without an l-value to assign the result into makes no sense
+                        log(errs, Severity.ERROR, Compiler.LVALUE_REQUIRED);
+                        return null;
+                        }
                     TypeConstant typeFn = m_fBindTarget
                             ? idMethod.getSignature().asFunctionType()
                             : idMethod.getValueType(pool, typeLeft);
@@ -1972,28 +1978,32 @@ public class InvocationExpression
             aAst  = ExprAST.NO_EXPRS;
             }
 
-        if (cLVals > 0)
+        if (cLVals == 0)
             {
-            Assignable lval = aLVal[0];
-            if (aiArg == null)
+            // should never get here - already checked during validation
+            log(errs, Severity.ERROR, Compiler.LVALUE_REQUIRED);
+            return;
+            }
+
+        Assignable lval = aLVal[0];
+        if (aiArg == null)
+            {
+            lval.assign(argFn, code, errs);
+            m_astInvoke = astFn;
+            }
+        else
+            {
+            if (lval.isLocalArgument())
                 {
-                lval.assign(argFn, code, errs);
-                m_astInvoke = astFn;
+                code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
                 }
             else
                 {
-                if (lval.isLocalArgument())
-                    {
-                    code.add(new FBind(argFn, aiArg, aArg, lval.getLocalArgument()));
-                    }
-                else
-                    {
-                    Register regFn = code.createRegister(getType());
-                    code.add(new FBind(argFn, aiArg, aArg, regFn));
-                    lval.assign(regFn, code, errs);
-                    }
-                m_astInvoke = new BindFunctionAST(astFn, aiArg, aAst, getType());
+                Register regFn = code.createRegister(getType());
+                code.add(new FBind(argFn, aiArg, aArg, regFn));
+                lval.assign(regFn, code, errs);
                 }
+            m_astInvoke = new BindFunctionAST(astFn, aiArg, aAst, getType());
             }
         }
 
