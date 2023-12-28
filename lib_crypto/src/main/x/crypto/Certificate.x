@@ -81,4 +81,13 @@ interface Certificate {
      * @return (conditional) the key, iff the Certificate contains one
      */
     conditional CryptoKey containsKey();
+
+    /**
+     * `True` iff the certificate is valid (not premature and not expired).
+     */
+    @RO Boolean valid.get() {
+        @Inject Clock clock;
+
+        return lifetime.lowerBound <= clock.now.date < lifetime.upperBound;
+    }
 }
