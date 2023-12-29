@@ -370,9 +370,18 @@ public class ArrayAccessExpression
         if (typeArray != null && typeArray.isTuple()
                 || typeArray == null && exprArray.testFit(ctx, pool.typeTuple(), false, null) == TypeFit.Fit)
             {
-            typeArrayReq = typeArray == null
-                    ? pool.typeTuple()
-                    : determineTupleTestType(typeRequired);
+            if (typeArray == null)
+                {
+                typeArrayReq = pool.typeTuple();
+                }
+            else
+                {
+                TypeConstant typeTupleTest = determineTupleTestType(typeRequired);
+                if (exprArray.testFit(ctx, typeTupleTest, false, null).isFit())
+                    {
+                    typeArrayReq = typeTupleTest;
+                    }
+                }
             }
         // test for List<T> and Array<T> (aka T[]) etc.
         else if (testType(ctx, exprArray, typeArray, pool.typeList()) && cIndexes == 1)

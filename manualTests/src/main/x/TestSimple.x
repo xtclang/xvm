@@ -2,13 +2,8 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Test t = new Test();
-        t.&test(True); // this used to assert in the compiler
-    }
-
-    class Test {
-        void test(Boolean flag) {
-            console.print(flag);
-        }
+        val t = ("s", 1);
+        Int x = t[1]; // this used to fail to compile (IntLiteral conversion)
+        console.print($"{x=} {&x.actualType=}");
     }
 }
