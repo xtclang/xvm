@@ -62,7 +62,7 @@ class StringBuffer
     StringBuffer truncate(Int newSize) {
         Int size = this.size;
         if (newSize < 0) {
-            newSize = size + newSize;
+            newSize += size;
         }
 
         assert:bounds 0 <= newSize < size;
