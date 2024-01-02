@@ -52,25 +52,25 @@ module json.xtclang.org
     /**
      * @return a new instance of a mutable `JsonObject`.
      */
-    JsonObject newObject() new ListMap<String, Doc>();
+    JsonObject newObject() = new ListMap<String, Doc>();
 
     /**
      * @return a builder that can produce immutable JSON object instances.
      */
-    JsonObjectBuilder objectBuilder() return new JsonObjectBuilder();
+    JsonObjectBuilder objectBuilder() = new JsonObjectBuilder();
 
     /**
      * @return a new instance of a mutable `JsonArray`.
      */
-    JsonArray newArray() return new Array<Doc>();
+    JsonArray newArray() = new Array<Doc>();
 
     /**
      * @return a builder that can produce immutable JSON array instances.
      */
-    JsonArrayBuilder arrayBuilder() return new JsonArrayBuilder();
+    JsonArrayBuilder arrayBuilder() = new JsonArrayBuilder();
 
     /**
      * @return a builder that can produce immutable JSON patch instances.
      */
-    JsonPatch.Builder patchBuilder() return JsonPatch.builder();
+    JsonPatch.Builder patchBuilder() = JsonPatch.builder();
 }
