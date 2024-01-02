@@ -50,9 +50,7 @@ mixin JsonPatch
      *
      * @return a `JsonPatch` builder
      */
-    static Builder builder() {
-        return new Builder();
-    }
+    static Builder builder() = new Builder();
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -68,7 +66,7 @@ mixin JsonPatch
             case JsonObject: applyAddToObject(target, path, value);
             case JsonArray:  applyAddToArray(target, path, value);
             case Primitive:  applyAddToPrimitive(target, path, value);
-            default:         assert as $"Invalid JSON type {&doc.actualType}";
+            default:         assert as $"Invalid JSON type {&target.actualType}";
         };
     }
 
@@ -384,9 +382,7 @@ mixin JsonPatch
         /**
          * The number of operations the builder contains.
          */
-        Int size.get() {
-            return ops.size;
-        }
+        Int size.get() = ops.size;
 
         /**
          * Add an operation to the builder.
@@ -408,9 +404,7 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder add(String path, Doc value) {
-            return add(JsonPointer.from(path), value);
-        }
+        Builder add(String path, Doc value) = add(JsonPointer.from(path), value);
 
         /**
          * Add an "add" operation to the builder.
@@ -420,9 +414,7 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder add(JsonPointer path, Doc value) {
-            return withOperation(new Operation(Add, path, value));
-        }
+        Builder add(JsonPointer path, Doc value) = withOperation(new Operation(Add, path, value));
 
         /**
          * Add a "remove" operation to the builder.
@@ -431,9 +423,16 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder remove(JsonPointer path) {
-            return withOperation(new Operation(Remove, path));
-        }
+        Builder remove(String path) = remove(JsonPointer.from(path));
+
+        /**
+         * Add a "remove" operation to the builder.
+         *
+         * @param path   the path to the value to remove
+         *
+         * @return this `Builder`
+         */
+        Builder remove(JsonPointer path) = withOperation(new Operation(Remove, path));
 
         /**
          * Add a "replace" operation to the builder.
@@ -443,9 +442,7 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder replace(JsonPointer path, Doc value) {
-            return withOperation(new Operation(Replace, path, value));
-        }
+        Builder replace(JsonPointer path, Doc value) = withOperation(new Operation(Replace, path, value));
 
         /**
          * Add a "move" operation to the builder.
@@ -455,9 +452,7 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder move(JsonPointer from, JsonPointer to) {
-            return withOperation(new Operation(Move, to, Null, from));
-        }
+        Builder move(JsonPointer from, JsonPointer to) = withOperation(new Operation(Move, to, Null, from));
 
         /**
          * Add a "copy" operation to the builder.
@@ -467,9 +462,7 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder copy(JsonPointer from, JsonPointer to) {
-            return withOperation(new Operation(Copy, to, Null, from));
-        }
+        Builder copy(JsonPointer from, JsonPointer to) = withOperation(new Operation(Copy, to, Null, from));
 
         /**
          * Add a "test" operation to the builder.
@@ -479,17 +472,13 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
-        Builder test(JsonPointer path, Doc value) {
-            return withOperation(new Operation(Test, path, value));
-        }
+        Builder test(JsonPointer path, Doc value) = withOperation(new Operation(Test, path, value));
 
         /**
          * Build an immutable `JsonPatch`.
          *
          * @return an immutable `JsonPatch`
          */
-        JsonPatch build() {
-            return JsonPatch.create(ops);
-        }
+        JsonPatch build() = JsonPatch.create(ops);
     }
 }

@@ -37,9 +37,7 @@ class JsonArrayBuilder
     /**
      * @return the number of values that have been added to the builder.
      */
-    Int size.get() {
-        return values.size;
-    }
+    Int size.get() = values.size;
 
     /**
      * Add a value to the `JsonArray`.
@@ -60,9 +58,7 @@ class JsonArrayBuilder
      *
      * @return this `JsonBuilder`
      */
-    JsonArrayBuilder add(JsonBuilder builder) {
-        return add(builder.build());
-    }
+    JsonArrayBuilder add(JsonBuilder builder) = add(builder.build());
 
     /**
      * Add all the values to the `JsonArray`.
@@ -93,9 +89,7 @@ class JsonArrayBuilder
      * @param builder  the `JsonBuilder` that will build the `Doc` value to set
      * @param value    the value to set at the specified index
      */
-    JsonArrayBuilder set(Int index, JsonBuilder builder) {
-        return set(index, builder.build());
-    }
+    JsonArrayBuilder set(Int index, JsonBuilder builder) = set(index, builder.build());
 
     /**
      * Build an immutable `JsonArray` from the values added to this builder.
@@ -108,19 +102,13 @@ class JsonArrayBuilder
     }
 
     @Override
-    protected Int id(JsonPointer path) {
-        return path.index ?: assert;
-    }
+    protected Int id(JsonPointer path) = path.index ?: assert;
 
     @Override
-    protected Doc get(Int index) {
-        return values[index];
-    }
+    protected Doc get(Int index) = values[index];
 
     @Override
-    protected void update(Int index, Doc doc) {
-        set(index, doc);
-    }
+    protected void update(Int index, Doc doc) = set(index, doc);
 
     @Override
     protected void merge(Int index, Doc value) {

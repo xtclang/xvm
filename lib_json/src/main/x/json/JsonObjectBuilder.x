@@ -2,7 +2,7 @@
  * A fluent API to build instances of `JsonObject`.
  */
 class JsonObjectBuilder
-        extends JsonBuilder<JsonObjectBuilder, JsonObject, String> {
+        extends JsonBuilder<JsonObject, String> {
 
     /**
      * A type that is a function that can create a new instance of a mutable `JsonObject`.
@@ -37,9 +37,7 @@ class JsonObjectBuilder
     /**
      * @return the number of values that have been added to the builder.
      */
-    Int size.get() {
-        return values.size;
-    }
+    Int size.get() = values.size;
 
     /**
      * Add a value to the `JsonObject`.
@@ -62,9 +60,7 @@ class JsonObjectBuilder
      *
      * @return this `JsonBuilder`
      */
-    JsonObjectBuilder add(String key, JsonBuilder builder) {
-        return add(key, builder.build());
-    }
+    JsonObjectBuilder add(String key, JsonBuilder builder) = add(key, builder.build());
 
     /**
      * Add all the values contained in the `Map`
@@ -101,19 +97,13 @@ class JsonObjectBuilder
     }
 
     @Override
-    protected String id(JsonPointer path) {
-        return path.key;
-    }
+    protected String id(JsonPointer path) = path.key;
 
     @Override
-    protected Doc get(String key) {
-        return values[key];
-    }
+    protected Doc get(String key) = values[key];
 
     @Override
-    protected void update(String key, Doc doc) {
-        add(key, doc);
-    }
+    protected void update(String key, Doc doc) = add(key, doc);
 
     @Override
     protected void merge(String key, Doc value) {

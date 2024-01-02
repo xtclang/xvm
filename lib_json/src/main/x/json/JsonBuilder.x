@@ -5,15 +5,7 @@
  * @param Id        the type of the identifier used to identify entries in the builder
  */
 @Abstract
-class JsonBuilder<JsonType extends Doc, Id extends IdType> {
-
-    /**
-     * A type representing the different identifier types in a JSON structure.
-     *
-     * - For a JSON array the identifier types are Int indexes.
-     * - For a JSON object the identifier types are string keys.
-     */
-    typedef Int | String as IdType;
+class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
 
     /**
      * Build a JSON value.

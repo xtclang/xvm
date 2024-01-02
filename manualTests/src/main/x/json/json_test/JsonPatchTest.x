@@ -28,7 +28,7 @@ class JsonPatchTest {
     }
 
     @Test
-    void shouldCreatePatchWithSingleAddOps() {
+    void shouldCreatePatchWithMultipleAddOps() {
         JsonPatch patch = json.patchBuilder()
             .add("/one/two", "value-two")
             .add("/one/three", "value-three")
@@ -55,7 +55,7 @@ class JsonPatchTest {
         try {
             patch.apply(doc);
             assert as "should have thrown exception";
-        } catch (IllegalState e) {
+        } catch (IllegalArgument e) {
             // expected
         }
     }
@@ -97,6 +97,28 @@ class JsonPatchTest {
         JsonObject          value    = Map:["a"="b"];
         JsonPatch.Operation expected = new JsonPatch.Operation(Add, JsonPointer.from("/one/two"), value);
         assertOperation(jsonOp, expected);
+    }
+
+    @Test
+    void shouldCreatePatchWithSingleRemoveOp() {
+        JsonPatch patch = json.patchBuilder()
+            .remove("/one/two")
+            .build();
+        assert patch.size == 1;
+        assert patch[0] == new JsonPatch.Operation(Action.Remove, JsonPointer.from("/one/two"));
+    }
+
+    @Test
+    void shouldCreatePatchWithMultipleRemoveOps() {
+        JsonPatch patch = json.patchBuilder()
+            .remove("/one/two")
+            .remove("/one/three")
+            .remove("/four")
+            .build();
+        assert patch.size == 3;
+        assert patch[0] == new JsonPatch.Operation(Action.Remove, JsonPointer.from("/one/two"));
+        assert patch[1] == new JsonPatch.Operation(Action.Remove, JsonPointer.from("/one/three"));
+        assert patch[2] == new JsonPatch.Operation(Action.Remove, JsonPointer.from("/four"));
     }
 
     @Test

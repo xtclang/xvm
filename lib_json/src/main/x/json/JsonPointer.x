@@ -62,17 +62,13 @@ const JsonPointer {
      * A flag that is `True` if this pointer is the last pointer
      * in the chain.
      */
-    @Lazy Boolean isEmpty.calc() {
-        return key == "";
-    }
+    @Lazy Boolean isEmpty.calc() = key == "";
 
     /**
      * A flag that is `True` if this pointer is the last pointer
      * in the chain.
      */
-    @Lazy Boolean isLeaf.calc() {
-        return remainder == Null;
-    }
+    @Lazy Boolean isLeaf.calc() = remainder == Null;
 
     /**
      * If this pointer represents an array index, then return
@@ -142,12 +138,8 @@ const JsonPointer {
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return pointer.size;
-    }
+    Int estimateStringLength() = pointer.size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return pointer.appendTo(buf);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = pointer.appendTo(buf);
 }
