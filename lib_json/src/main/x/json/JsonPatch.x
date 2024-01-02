@@ -158,9 +158,9 @@ mixin JsonPatch
      */
     private Doc applyRemove(Doc target, JsonPointer path) {
         return switch (target.is(_)) {
-            case JsonObject: applyRemoveFromObject(target, path, value);
-            case JsonArray:  applyRemoveFromArray(target, path, value);
-            case Primitive:  applyRemovePrimitive(target, path, value);
+            case JsonObject: applyRemoveFromObject(target, path);
+            case JsonArray:  applyRemoveFromArray(target, path);
+            case Primitive:  Null;
             default:         assert as "invalid JSON type {&doc.actualType}";
         };
     }
@@ -183,7 +183,7 @@ mixin JsonPatch
         }
         if (Doc doc := mutable.get(path.key)) {
             if (remainder.is(JsonPointer)) {
-                mutable.put(path.key, applyRemove(doc, remainder, value));
+                mutable.put(path.key, applyRemove(doc, remainder));
             } else {
                 mutable.remove(path.key);
             }
@@ -198,9 +198,8 @@ mixin JsonPatch
      *
      * @param target  the `JsonArray` to perform the remove operation on
      * @param path    the path specifying the location in the target to remove
-     * @param value   the JSON value to remove
      */
-    private Doc applyRemoveFromArray(JsonArray array, JsonPointer path, Doc value) {
+    private Doc applyRemoveFromArray(JsonArray array, JsonPointer path) {
         Int? index = path.index;
         if (index.is(Int)) {
             JsonPointer? remainder = path.remainder;
@@ -213,33 +212,17 @@ mixin JsonPatch
             }
             if (remainder.is(JsonPointer)) {
                 Doc doc = array[index];
-                mutable[index] = applyRemove(doc, remainder, value);
+                mutable[index] = applyRemove(doc, remainder);
             } else {
                 // if the index is the AppendIndex or it is the array size,
                 // then remove the value, else update the value at the index
-                if (index == JsonPointer.AppendIndex || index == mutable.size) {
-                    mutable.remove(value);
-                } else {
-                    mutable.replace(index, value);
-                }
+                assert index < 0 || index >= mutable.size
+                        as $"Cannot perform remove operation on JSON array, index {index} out of bounds 0..<{mutable.size}";
+                mutable.delete(index);
             }
             return mutable;
         }
         throw new IllegalArgument($"Cannot perform remove operation on JSON array, path {path} is not an array index");
-    }
-
-    /**
-     * Perform an remove operation on a `Primitive`.
-     *
-     * @param target  the `Primitive` to perform the remove operation on
-     * @param path    the path specifying the location in the target to remove
-     * @param value   the JSON value to remove
-     *
-     * @throws IllegalArgument if the path argument is not a leaf pointer
-     */
-    private Doc applyRemovePrimitive(Primitive p, JsonPointer path, Doc value) {
-        assert:arg path.isEmpty as $"Cannot perform remove operation on primitive value {p} path {path} is not a leaf";
-        return value;
     }
 
     // ----- Operation inner class -----------------------------------------------------------------
