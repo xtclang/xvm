@@ -1,11 +1,11 @@
 /**
  * A base class for JSON value builders.
  *
- * @param Builder   the type of the builder sub-class
  * @param JsonType  the type of the JSON value the builder builds
  * @param Id        the type of the identifier used to identify entries in the builder
  */
-@Abstract class JsonBuilder<Builder extends JsonBuilder, JsonType extends Doc, Id extends IdType> {
+@Abstract
+class JsonBuilder<JsonType extends Doc, Id extends IdType> {
 
     /**
      * A type representing the different identifier types in a JSON structure.
@@ -66,7 +66,7 @@
      *
      * @return this `Builder`
      */
-    Builder merge(JsonStruct s) {
+    JsonBuilder merge(JsonStruct s) {
         switch (s.is(_)) {
         case JsonObject:
             mergeObject(s);
@@ -77,7 +77,7 @@
         default:
             assert;
         }
-        return this.as(Builder);
+        return this;
     }
 
     /**
@@ -88,7 +88,7 @@
      *
      * @return this `Builder`
      */
-    Builder deepMerge(JsonPointer path, Doc doc) {
+    JsonBuilder deepMerge(JsonPointer path, Doc doc) {
         Id id = id(path);
         if (path.isLeaf) {
             merge(id, doc);
@@ -108,7 +108,7 @@
                 assert;
             }
         }
-        return this.as(Builder);
+        return this;
     }
 
     /**

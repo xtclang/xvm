@@ -68,7 +68,7 @@ mixin JsonPatch
             case JsonObject: applyAddToObject(target, path, value);
             case JsonArray:  applyAddToArray(target, path, value);
             case Primitive:  applyAddToPrimitive(target, path, value);
-            default:         assert as "invalid JSON type {&doc.actualType}";
+            default:         assert as $"Invalid JSON type {&doc.actualType}";
         };
     }
 
@@ -245,7 +245,7 @@ mixin JsonPatch
             this.op = op;
             this.path = path;
             if (op == Copy || op == Move) {
-                assert:arg from != Null as $"A {op} operation must have a from JSON pointer";
+                assert:arg from != Null as $"A {op} operation must have a 'from' JSON pointer";
             }
             this.value = value;
             this.from = from;
@@ -284,27 +284,13 @@ mixin JsonPatch
 
             Doc doc1 = value1.value;
             Doc doc2 = value2.value;
-            switch (doc1.is(_)) {
-            case JsonObject:
-                if (doc2.is(JsonObject)) {
-                    return doc1 == doc2;
-                }
-                return False;
-            case JsonArray:
-                if (doc2.is(JsonArray)) {
-                    return doc1 == doc2;
-                }
-                return False;
-            case Primitive:
-                if (doc2.is(Primitive)) {
-                    return doc1 == doc2;
-                }
-                return False;
-            default:
-                assert;
-            }
+            return switch (doc1.is(_)) {
+                case JsonObject: doc2.is(JsonObject) && doc1 == doc2;
+                case JsonArray:  doc2.is(JsonArray)  && doc1 == doc2;
+                case Primitive:  doc2.is(Primitive)  && doc1 == doc2;
+                default: assert;
+            };
         }
-
     }
 
     // ----- Action inner enum ---------------------------------------------------------------------

@@ -74,8 +74,10 @@ class JsonMergePatch(Doc patch) {
 
     /**
      * Generate a JSON Merge Patch from the source and target {@code JsonValue}.
+     *
      * @param source the source
      * @param target the target
+     *
      * @return a JSON Patch which when applied to the source, yields the target
      */
     private static Doc diff(Doc source, Doc target) {

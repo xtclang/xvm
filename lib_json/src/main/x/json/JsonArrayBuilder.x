@@ -2,7 +2,7 @@
  * A fluent API to build instances of `JsonArray`.
  */
 class JsonArrayBuilder
-        extends JsonBuilder<JsonArrayBuilder, JsonArray, Int> {
+        extends JsonBuilder<JsonArray, Int> {
 
     /**
      * A type that is a function that can create a new instance of a mutable `JsonArray`.
@@ -46,9 +46,9 @@ class JsonArrayBuilder
      *
      * @param value  the `Doc` value to add
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
-    Builder add(Doc value) {
+    JsonArrayBuilder add(Doc value) {
         values.add(value);
         return this;
     }
@@ -58,9 +58,9 @@ class JsonArrayBuilder
      *
      * @param builder  the `JsonBuilder` that will build the `Doc` value to add
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
-    Builder add(JsonBuilder builder) {
+    JsonArrayBuilder add(JsonBuilder builder) {
         return add(builder.build());
     }
 
@@ -69,9 +69,9 @@ class JsonArrayBuilder
      *
      * @param values  the values to add
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
-    Builder addAll(Doc[] values) {
+    JsonArrayBuilder addAll(Doc[] values) {
         this.values.addAll(values);
         return this;
     }
@@ -82,7 +82,7 @@ class JsonArrayBuilder
      * @param index  the index to add the value at
      * @param value  the value to set at the specified index
      */
-    Builder set(Int index, Doc value) {
+    JsonArrayBuilder set(Int index, Doc value) {
         values.replace(index, value);
         return this;
     }
@@ -93,7 +93,7 @@ class JsonArrayBuilder
      * @param builder  the `JsonBuilder` that will build the `Doc` value to set
      * @param value    the value to set at the specified index
      */
-    Builder set(Int index, JsonBuilder builder) {
+    JsonArrayBuilder set(Int index, JsonBuilder builder) {
         return set(index, builder.build());
     }
 
@@ -190,7 +190,10 @@ class JsonArrayBuilder
             JsonPointer pointer = JsonPointer.from(entry.key);
             Int?        index   = pointer.index;
             assert index != Null as $"Cannot merge JSON Object with non-Int keys into a JSON array";
-            assert index >= 0 && index < values.size as $"Cannot merge JSON Object into JSON array - key {entry.key} does not match an existing array entry in the range 0..<{values.size}";
+            assert index >= 0 && index < values.size as
+                    $|Cannot merge JSON Object into JSON array - key\
+                     | "{entry.key}" does not match an existing array entry in the range 0..<{values.size}
+                     ;
             map.put(pointer, entry.value);
         }
 

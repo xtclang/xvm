@@ -14,7 +14,9 @@ const JsonPointer {
      */
     private construct (String pointer, String key = "", JsonPointer? remainder = Null) {
         if (key == "-") {
-            assert remainder == Null as $"Invalid pointer, '{pointer}' the array append path '-' can only be used as the final pointer element";
+            assert remainder == Null as $|Invalid pointer, "{pointer}" the array append path "-"\
+                                         | can only be used as the final pointer element
+                                         ;
         }
         if (key.indexOf('~')) {
             StringBuffer refToken = new StringBuffer();
@@ -132,7 +134,7 @@ const JsonPointer {
             if (remainder.size == 1) {
                 return new JsonPointer(pointer[0 ..< pointer.size - 1], pointer[1 ..< index]);
             }
-            return new JsonPointer(pointer, pointer[1 ..< index], JsonPointer.from(pointer[index ..< pointer.size]));
+            return new JsonPointer(pointer, pointer[1 ..< index], JsonPointer.from(remainder));
         }
         return new JsonPointer(pointer, pointer[1 ..< pointer.size]);
     }

@@ -47,9 +47,9 @@ class JsonObjectBuilder
      * @param key    the key representing the path in the `JsonObject` to add the value
      * @param value  the `Doc` value to add
      *
-     * @return this `Builder`
+     * @return this `JsobBuilder`
      */
-    Builder add(String key, Doc value) {
+    JsonObjectBuilder add(String key, Doc value) {
         values.put(key, value);
         return this;
     }
@@ -60,9 +60,9 @@ class JsonObjectBuilder
      * @param key      the `JsonPointer` representing the path in the `JsonObject` to add the value
      * @param builder  the `JsonBuilder` that will build the `Doc` value to add
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
-    Builder add(String key, JsonBuilder builder) {
+    JsonObjectBuilder add(String key, JsonBuilder builder) {
         return add(key, builder.build());
     }
 
@@ -71,9 +71,9 @@ class JsonObjectBuilder
      *
      * @param map  the map of values to add
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
-    Builder addAll(Map<String, Doc> map) {
+    JsonObjectBuilder addAll(Map<String, Doc> map) {
         values.putAll(map);
         return this;
     }
@@ -83,9 +83,9 @@ class JsonObjectBuilder
      *
      * @param map  the map of values to add
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
-    Builder addAll(JsonObject o) {
+    JsonObjectBuilder addAll(JsonObject o) {
         values.putAll(o);
         return this;
     }
