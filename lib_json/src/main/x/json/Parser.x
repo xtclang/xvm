@@ -454,7 +454,7 @@ class Parser
      */
     @Override
     Array<Doc> parseArray() {
-        Doc[] array = new Doc[];
+        JsonArray array = json.newArray();
         expect(ArrayEnter);
         if (!match(ArrayExit)) {
             do {
@@ -553,8 +553,8 @@ class Parser
      * @return a Map representing a JSON object
      */
     @Override
-    Map<String, Doc> parseObject() {
-        ListMap<String, Doc> map = new ListMap();
+    JsonObject parseObject() {
+        JsonObject map = json.newObject();
         expect(ObjectEnter);
         if (!match(ObjectExit)) {
             @Volatile Set<String>? dups = Null;
@@ -796,7 +796,7 @@ class Parser
         (Token first, Token last) skipArray(Token[]? skipped = Null);
         conditional ArrayParser matchArray();
         ArrayParser expectArray();
-        Map<String, Doc> parseObject();
+        JsonObject parseObject();
         (Token first, Token last) skipObject(Token[]? skipped = Null);
         conditional ObjectParser matchObject();
         ObjectParser expectObject();
@@ -905,9 +905,9 @@ class Parser
         }
 
         @Override
-        Map<String, Doc> parseObject() {
+        JsonObject parseObject() {
             checkEof();
-            Map<String, Doc> map = raw.parseObject();
+            JsonObject map = raw.parseObject();
             checkDelimiter();
             return map;
         }
