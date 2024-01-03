@@ -6,8 +6,6 @@ import web.Header;
  * a client.
  */
 const Http1Response {
-    // TODO
-
     /**
      * Helper to transform a [Response] object into the constituent pieces used to send a response
      * via the HTTP/1-based prototype.
@@ -17,6 +15,7 @@ const Http1Response {
             String[] headerValues,
             Byte[]   body)
         prepare(ResponseOut response) {
+
         Int      status       = response.status.code;
         String[] headerNames  = new String[];
         String[] headerValues = new String[];
