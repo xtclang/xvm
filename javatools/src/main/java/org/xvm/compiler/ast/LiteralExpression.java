@@ -269,7 +269,7 @@ public class LiteralExpression
     @Override
     public ExprAST getExprAST(Context ctx)
         {
-        return new ConstantExprAST(getLiteralConstant());
+        return new ConstantExprAST(toConstant());
         }
 
 
