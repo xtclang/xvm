@@ -2,7 +2,6 @@ import json.Doc;
 import json.JsonArray;
 import json.JsonObject;
 import json.JsonObjectBuilder;
-import json.JsonStructWithValue;
 
 class JsonBuilderTest {
 
@@ -90,28 +89,6 @@ class JsonBuilderTest {
         }
         // target should be unchanged
         assert target == Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
-    }
-
-    @Test
-    void shouldMergeObjectWithPrimitiveIntoObjectWithExistingObject() {
-        JsonObject target = Map:["a"="b", "c"=Map<String, Doc>:["one"="two"]];
-        JsonObject source = Map:["c"="updated"];
-        JsonObject result = new JsonObjectBuilder(target).merge(source).build();
-        assert result == target;
-        assert Doc doc := result.get("c");
-        assert doc.is(JsonStructWithValue);
-        assert doc.as(JsonStructWithValue).value == "updated";
-    }
-
-    @Test
-    void shouldMergeObjectWithPrimitiveIntoObjectWithExistingArray() {
-        JsonObject target = Map:["a"="b", "c"=Array<Doc>:["one", "two"]];
-        JsonObject source = Map:["c"="updated"];
-        JsonObject result = new JsonObjectBuilder(target).merge(source).build();
-        assert result == target;
-        assert Doc doc := result.get("c");
-        assert doc.is(JsonStructWithValue);
-//        assert doc.as(JsonStructWithValue).value == "updated";
     }
 
     @Test

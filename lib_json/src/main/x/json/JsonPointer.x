@@ -40,7 +40,7 @@ const JsonPointer {
             this.key = key;
         }
         this.remainder = remainder;
-        this.pointer = pointer;
+        this.pointer   = pointer;
     }
 
     /**
@@ -90,6 +90,33 @@ const JsonPointer {
         } catch (Exception ignored) {
         }
         return Null;
+    }
+
+    /**
+     * Determine whether this `JsonPointer` is equivalent to, or is a parent
+     * of the specified `JsonPointer`.
+     *
+     * @param p  the `JsonPointer` that may be a child of this `JsonPointer`
+     *
+     * @returns `True` iff this `JsonPointer` is equivalent to, or is a  parent
+     *          of the specified `JsonPointer`
+     */
+    Boolean isParent(JsonPointer p) {
+        if (isEmpty) {
+            return True;
+        }
+        if (this.key != p.key) {
+            return False;
+        }
+        JsonPointer? remainderThis  = this.remainder;
+        JsonPointer? remainderOther = p.remainder;
+        return switch (remainderThis.is(_), remainderOther.is(_)) {
+            case (Null, Null):               True;
+            case (Null, JsonPointer):        True;
+            case (JsonPointer, Null):        False;
+            case (JsonPointer, JsonPointer): remainderThis.isParent(remainderOther);
+            default: assert;
+        };
     }
 
     /**

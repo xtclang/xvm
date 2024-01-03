@@ -8,14 +8,16 @@ mixin JsonPatch
     /**
      * Apply this patch to the specified `Doc`.
      *
-     * @param doc  the `Doc§ to apply the patch to
+     * @param doc  the `Doc` to apply the patch to
      *
      * @return the patched `Doc`
      */
     Doc apply(Doc doc) {
         for (Operation op : this) {
             doc = switch (op.op) {
-                case Add: applyAdd(doc, op.path, op.value);
+                case Add:     applyAdd(doc, op.path, op.value);
+                case Remove:  applyRemove(doc, op.path);
+//                case Replace: applyReplace(doc, op.path, op.value);
                 default:  assert;
             };
         }
@@ -158,7 +160,7 @@ mixin JsonPatch
         return switch (target.is(_)) {
             case JsonObject: applyRemoveFromObject(target, path);
             case JsonArray:  applyRemoveFromArray(target, path);
-            case Primitive:  Null;
+            case Primitive:  applyRemoveFromPrimitive(target, path);
             default:         assert as "invalid JSON type {&doc.actualType}";
         };
     }
@@ -179,14 +181,13 @@ mixin JsonPatch
             mutable = json.newObject();
             mutable.putAll(obj);
         }
-        if (Doc doc := mutable.get(path.key)) {
-            if (remainder.is(JsonPointer)) {
-                mutable.put(path.key, applyRemove(doc, remainder));
-            } else {
-                mutable.remove(path.key);
-            }
+        assert:arg Doc doc := mutable.get(path.key) as $|Cannot perform remove operation on JSON object,\
+                                                        | missing key '{path.key}' from path '{path}'
+                                                        ;
+        if (remainder.is(JsonPointer)) {
+            mutable.put(path.key, applyRemove(doc, remainder));
         } else {
-            throw new IllegalState($"Cannot perform remove operation on JSON object, missing key '{path.key}'");
+            mutable.remove(path.key);
         }
         return mutable;
     }
@@ -223,6 +224,11 @@ mixin JsonPatch
         throw new IllegalArgument($"Cannot perform remove operation on JSON array, path {path} is not an array index");
     }
 
+    private Doc applyRemoveFromPrimitive(Primitive p, JsonPointer path) {
+        assert:arg path.isEmpty as $"Cannot perform remove operation on primitive value {p} path '{path}' is not a leaf";
+        return Null;
+    }
+
     // ----- Operation inner class -----------------------------------------------------------------
 
     /**
@@ -243,7 +249,10 @@ mixin JsonPatch
             this.op = op;
             this.path = path;
             if (op == Copy || op == Move) {
-                assert:arg from != Null as $"A {op} operation must have a 'from' JSON pointer";
+                assert:arg from.is(JsonPointer) as $"A {op} operation must have a 'from' JSON pointer";
+                assert:arg op == Copy || !from.isParent(path) as $|Invalid move operation, the from location "{from}" \
+                                                                  | cannot be a parent of the destination path "{path}"
+                                                                  ;
             }
             this.value = value;
             this.from = from;
@@ -442,7 +451,27 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
+        Builder replace(String path, Doc value) = replace(JsonPointer.from(path), value);
+
+        /**
+         * Add a "replace" operation to the builder.
+         *
+         * @param path   the path to the value to replace
+         * @param value  the new JSON value to add at the path location
+         *
+         * @return this `Builder`
+         */
         Builder replace(JsonPointer path, Doc value) = withOperation(new Operation(Replace, path, value));
+
+        /**
+         * Add a "move" operation to the builder.
+         *
+         * @param from  the path to the value to move
+         * @param to    the path to the new location to add the value being moved
+         *
+         * @return this `Builder`
+         */
+        Builder move(String from, String to) = move(JsonPointer.from(from), JsonPointer.from(to));
 
         /**
          * Add a "move" operation to the builder.
@@ -462,7 +491,27 @@ mixin JsonPatch
          *
          * @return this `Builder`
          */
+        Builder copy(String from, String to) = copy(JsonPointer.from(from), JsonPointer.from(to));
+
+        /**
+         * Add a "copy" operation to the builder.
+         *
+         * @param from  the path to the value to copy
+         * @param to    the path to the location to add the copied value
+         *
+         * @return this `Builder`
+         */
         Builder copy(JsonPointer from, JsonPointer to) = withOperation(new Operation(Copy, to, Null, from));
+
+        /**
+         * Add a "test" operation to the builder.
+         *
+         * @param path  the path to the value to test
+         * @param value the expected value
+         *
+         * @return this `Builder`
+         */
+        Builder test(String path, Doc value) = test(JsonPointer.from(path), value);
 
         /**
          * Add a "test" operation to the builder.

@@ -42,14 +42,6 @@ module json.xtclang.org
     typedef JsonObject | JsonArray as JsonStruct;
 
     /**
-     * A JSON struct with a value.
-     * ToDo JK: I'm thinking to remove this, it is something really related to use of JSON in config and
-     * the more I think about it the more I think we don;t want it as it add needless complications.
-     */
-    mixin JsonStructWithValue(Primitive value)
-            into JsonStruct;
-
-    /**
      * @return a new instance of a mutable `JsonObject`.
      */
     JsonObject newObject() = new ListMap<String, Doc>();

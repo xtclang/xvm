@@ -101,4 +101,34 @@ class JsonPointerTest {
         Int? index = pointer.index;
         assert index == Null;
     }
+
+    @Test
+    void shouldBeParent() {
+        JsonPointer root  = JsonPointer.from("/");
+        JsonPointer one   = JsonPointer.from("/foo");
+        JsonPointer two   = JsonPointer.from("/foo/bar");
+        JsonPointer three = JsonPointer.from("/foo/bar/baz");
+        assert root.isParent(root);
+        assert root.isParent(one);
+        assert root.isParent(two);
+        assert root.isParent(three);
+        assert one.isParent(one);
+        assert one.isParent(two);
+        assert one.isParent(three);
+        assert two.isParent(two);
+        assert two.isParent(three);
+    }
+
+    @Test
+    void shouldNotBeParent() {
+        JsonPointer root  = JsonPointer.from("/");
+        JsonPointer one   = JsonPointer.from("/foo");
+        JsonPointer two   = JsonPointer.from("/foo/bar");
+        JsonPointer three = JsonPointer.from("/foo/bar/baz");
+        assert two.isParent(root) == False;
+        assert two.isParent(one) == False;
+        assert three.isParent(root) == False;
+        assert three.isParent(one) == False;
+        assert three.isParent(two) == False;
+    }
 }

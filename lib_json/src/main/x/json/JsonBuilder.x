@@ -164,12 +164,8 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      * @param id    the id of the entry being merged into
      */
     protected void mergePrimitiveMember(Primitive p, JsonPointer path, Doc doc, Id id) {
-        // Now we have lost the old primitive (p) and replaced it with a JsonObject
-        // We can "save" it if JsonObject could have a value - which is what @JsonStructWithValue does
         JsonPointer remainder = path.remainder ?: assert;
-        JsonObject  updated   = new JsonObjectBuilder(factory = () -> new @JsonStructWithValue(p) ListMap<String, Doc>())
-                                        .deepMerge(remainder, doc).build();
-
+        JsonObject  updated   = new JsonObjectBuilder().deepMerge(remainder, doc).build();
         update(id, updated);
     }
 }

@@ -114,4 +114,13 @@ module json_test.xtclang.org {
         }
         return False;
     }
+
+    static <E extends Exception> E assertThrows(function void () fn) {
+        try {
+            fn();
+            assert as $"Expected instance of {E} to be thrown";
+        } catch (E expected) {
+            return expected;
+        }
+    }
 }

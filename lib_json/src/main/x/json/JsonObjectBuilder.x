@@ -45,7 +45,7 @@ class JsonObjectBuilder
      * @param key    the key representing the path in the `JsonObject` to add the value
      * @param value  the `Doc` value to add
      *
-     * @return this `JsobBuilder`
+     * @return this `JsonObjectBuilder`
      */
     JsonObjectBuilder add(String key, Doc value) {
         values.put(key, value);
@@ -110,46 +110,27 @@ class JsonObjectBuilder
         Doc existing = values[key];
         switch (existing.is(_)) {
         case JsonObject:
-            JsonObject o;
             if (value.is(JsonStruct)) {
-                o = new JsonObjectBuilder(existing).merge(value).build();
+                JsonObject o = new JsonObjectBuilder(existing).merge(value).build();
+                add(key, o);
             } else if (value.is(Primitive)) {
-                o = new JsonObjectBuilder(existing, () -> new @JsonStructWithValue(value) ListMap<String, Doc>()).build();
+                add(key, value);
             } else {
                 assert;
             }
-            add(key, o);
             break;
         case JsonArray:
-            JsonArray a;
             if (value.is(JsonStruct)) {
-                a = new JsonArrayBuilder(existing).merge(value).build();
+                JsonArray a = new JsonArrayBuilder(existing).merge(value).build();
+                add(key, a);
             } else if (value.is(Primitive)) {
-                a = new JsonArrayBuilder(existing, () -> new @JsonStructWithValue(value) Array<Doc>()).build();
+                add(key, value);
             } else {
                 assert;
             }
-            add(key, a);
             break;
         case Primitive:
-            Primitive p = value.is(JsonStructWithValue) ? value.value : existing;
-            switch (value.is(_)) {
-            case JsonObject:
-                JsonObject o = new JsonObjectBuilder(value,
-                        () -> new @JsonStructWithValue(p) ListMap<String, Doc>()).build();
-                add(key, o);
-                break;
-            case JsonArray:
-                JsonArray a = new JsonArrayBuilder(value,
-                        factory = () -> new @JsonStructWithValue(p) Array<Doc>()).build();
-                add(key, a);
-                break;
-            case Primitive:
-                add(key, value);
-                break;
-            default:
-                assert;
-            }
+            add(key, value);
             break;
         default:
             assert;
