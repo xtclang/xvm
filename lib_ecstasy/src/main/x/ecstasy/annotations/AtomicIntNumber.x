@@ -7,17 +7,17 @@
 mixin AtomicIntNumber<Referent extends IntNumber>
         into AtomicVar<Referent> {
 
-    @Op void increment() {
+    @Op("++") void increment() {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.nextValue())) {}
     }
 
-    @Op void decrement() {
+    @Op("--") void decrement() {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.prevValue())) {}
     }
 
-    @Op Referent preIncrement() {
+    @Op("++#") Referent preIncrement() {
         Referent oldValue = get();
         Referent newValue;
         do {
@@ -26,7 +26,7 @@ mixin AtomicIntNumber<Referent extends IntNumber>
         return newValue;
     }
 
-    @Op Referent preDecrement() {
+    @Op("--#") Referent preDecrement() {
         Referent oldValue = get();
         Referent newValue;
         do {
@@ -35,13 +35,13 @@ mixin AtomicIntNumber<Referent extends IntNumber>
         return newValue;
     }
 
-    @Op Referent postIncrement() {
+    @Op("#++") Referent postIncrement() {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.nextValue())) {}
         return oldValue;
     }
 
-    @Op Referent postDecrement() {
+    @Op("#--") Referent postDecrement() {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue.prevValue())) {}
         return oldValue;
