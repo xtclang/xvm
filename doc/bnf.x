@@ -134,15 +134,40 @@ ElseComposition
     "else" "{" Compositions "}"
 
 Composition
-    "extends" TypeExpression ArgumentList-opt
-    "implements" ExtendedTypeExpression
-    "delegates" AnyTypeExpression "(" Expression ")"
-    "incorporates" IncorporatesFinish
+    "extends" ExtendsList
+    "implements" ImplementsList
+    "delegates" DelegatesList
+    "incorporates" IncorporatesList
     "into" AnyTypeExpression
     "import" ImportModifier-opt QualifiedName VersionRequirement-opt ResourceProvider-opt
     "default" "(" Expression ")"
 
-IncorporatesFinish
+ExtendsList
+    ExtendsSingle
+    ExtendsList "," ExtendsSingle
+
+ExtendsSingle
+    TypeExpression ArgumentList-opt
+
+ImplementsList
+    ImplementsSingle
+    ImplementsList "," ImplementsSingle
+
+ImplementsSingle
+    ExtendedTypeExpression
+
+DelegatesList
+    DelegatesSingle
+    DelegatesList "," DelegatesSingle
+
+DelegatesSingle
+    AnyTypeExpression "(" Expression ")"
+
+IncorporatesList
+    IncorporatesSingle
+    IncorporatesList "," IncorporatesSingle
+
+IncorporatesSingle
     "conditional" QualifiedName TypeParameterList ArgumentList-opt
     TypeExpression ArgumentList-opt
 

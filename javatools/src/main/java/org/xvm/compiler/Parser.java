@@ -435,10 +435,14 @@ public class Parser
             Token keyword;
             if ((keyword = match(Id.EXTENDS)) != null)
                 {
-                TypeExpression   type = parseExtendedTypeExpression();
-                List<Expression> args = parseArgumentList(false, false, false);
-                compositions.add(new CompositionNode.Extends(null, keyword, type, args,
-                        prev().getEndPosition()));
+                do
+                    {
+                    TypeExpression   type = parseExtendedTypeExpression();
+                    List<Expression> args = parseArgumentList(false, false, false);
+                    compositions.add(new CompositionNode.Extends(null, keyword, type, args,
+                            prev().getEndPosition()));
+                    }
+                while (match(Id.COMMA) != null);
                 }
             else if ((keyword = match(Id.IMPLEMENTS)) != null)
                 {
