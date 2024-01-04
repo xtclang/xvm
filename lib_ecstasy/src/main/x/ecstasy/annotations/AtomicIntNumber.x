@@ -47,57 +47,57 @@ mixin AtomicIntNumber<Referent extends IntNumber>
         return oldValue;
     }
 
-    @Op void addAssign(Referent n) {
+    @Op("+=") void addAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue + n)) {}
     }
 
-    @Op void subAssign(Referent n) {
+    @Op("-=") void subAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue - n)) {}
     }
 
-    @Op void mulAssign(Referent n) {
+    @Op("*=") void mulAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue * n)) {}
     }
 
-    @Op void divAssign(Referent n) {
+    @Op("/=") void divAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue / n)) {}
     }
 
-    @Op void modAssign(Referent n) {
+    @Op("%=") void modAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue % n)) {}
     }
 
-    @Op void andAssign(Referent n) {
+    @Op("&=") void andAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue & n)) {}
     }
 
-    @Op void orAssign(Referent n) {
+    @Op("|=") void orAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue | n)) {}
     }
 
-    @Op void xorAssign(Referent n) {
+    @Op("^=") void xorAssign(Referent n) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue ^ n)) {}
     }
 
-    @Op void shiftLeftAssign(Int count) {
+    @Op("<<=") void shiftLeftAssign(Int count) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue << count)) {}
     }
 
-    @Op void shiftRightAssign(Int count) {
+    @Op(">>=") void shiftRightAssign(Int count) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue >> count)) {}
     }
 
-    @Op void shiftAllRightAssign(Int count) {
+    @Op(">>>=") void shiftAllRightAssign(Int count) {
         Referent oldValue = get();
         while (oldValue := replaceFailed(oldValue, oldValue >>> count)) {}
     }

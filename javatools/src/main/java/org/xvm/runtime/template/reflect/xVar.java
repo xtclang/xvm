@@ -191,7 +191,7 @@ public class xVar
 
     public int invokeVarAdd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "+=", hArg);
+        CallChain chain = findOpChain(hTarget, "addAssign", "+=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.ADD, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -200,7 +200,7 @@ public class xVar
     @Override
     public int invokeVarSub(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "-=", hArg);
+        CallChain chain = findOpChain(hTarget, "subAssign", "-=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.SUB, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -209,7 +209,7 @@ public class xVar
     @Override
     public int invokeVarMul(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "*=", hArg);
+        CallChain chain = findOpChain(hTarget, "mulAssign", "*=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.MUL, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -218,7 +218,7 @@ public class xVar
     @Override
     public int invokeVarDiv(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "/=", hArg);
+        CallChain chain = findOpChain(hTarget, "divAssign", "/=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.DIV, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -227,7 +227,7 @@ public class xVar
     @Override
     public int invokeVarMod(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "%=", hArg);
+        CallChain chain = findOpChain(hTarget, "modAssign", "%=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.MOD, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -236,7 +236,7 @@ public class xVar
     @Override
     public int invokeVarShl(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "<<=", hArg);
+        CallChain chain = findOpChain(hTarget, "shiftLeftAssign", "<<=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.SHL, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -245,7 +245,7 @@ public class xVar
     @Override
     public int invokeVarShr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, ">>=", hArg);
+        CallChain chain = findOpChain(hTarget, "shiftRightAssign", ">>=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.SHR, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -254,7 +254,7 @@ public class xVar
     @Override
     public int invokeVarShrAll(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, ">>>=", hArg);
+        CallChain chain = findOpChain(hTarget, "shiftAllRightAssign", ">>>=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.USHR, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -263,7 +263,7 @@ public class xVar
     @Override
     public int invokeVarAnd(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "&=", hArg);
+        CallChain chain = findOpChain(hTarget, "andAssign", "&=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.AND, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -272,7 +272,7 @@ public class xVar
     @Override
     public int invokeVarOr(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "|=", hArg);
+        CallChain chain = findOpChain(hTarget, "orAssign", "|=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.OR, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
@@ -281,7 +281,7 @@ public class xVar
     @Override
     public int invokeVarXor(Frame frame, RefHandle hTarget, ObjectHandle hArg)
         {
-        CallChain chain = findOpChain(hTarget, null, "^=", hArg);
+        CallChain chain = findOpChain(hTarget, "xorAssign", "^=", hArg);
         return chain == null
             ? new InPlaceVarBinary(BinaryAction.XOR, hTarget, hArg).doNext(frame)
             : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
