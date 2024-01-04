@@ -88,6 +88,32 @@ public class ConstantPool
         }
 
     /**
+     * Determine the current number of constants in the pool.
+     *
+     * @return the count of constants in the pool
+     */
+    public int size()
+        {
+        return m_listConst.size();
+        }
+
+    /**
+     * Obtain an array containing all of the constants from the pool, in the order that they exist
+     * in the pool. The array is NOT an internal array from the constant pool, so the caller can
+     * safely modify the array. The constants in the array are the actual constants in the constant
+     * pool, so the caller must NOT modify them.
+     *
+     * Warning: Do NOT use this method in any performance sensitive tool.
+     *
+     * @return the Constant at that index
+     */
+    public Constant[] getConstants()
+        {
+        // note: this is expensive!!! (but purposeful)
+        return m_listConst.toArray(Constant.NO_CONSTS);
+        }
+
+    /**
      * Obtain the corresponding Constant that is currently stored in this pool.
      *
      * @param constant  the Constant to find in the pool

@@ -5,17 +5,26 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.TextStyle;
+
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import org.xvm.asm.Component;
+import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
-
 import org.xvm.asm.ModuleRepository;
 
+import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.MethodConstant;
 
+import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 
@@ -97,7 +106,15 @@ public class Disassembler
             }
         checkErrors();
 
-        component.visitChildren(this::dump, false, true);
+        if (options().specified("files"))
+            {
+            dumpFiles(component);
+            }
+        else
+            {
+            component.visitChildren(this::dump, false, true);
+            }
+        ConstantPool pool = component.getConstantPool();
         }
 
     public void dump(Component component)
@@ -117,6 +134,258 @@ public class Disassembler
                 out("** no code for " + id);
                 out("");
                 }
+            }
+        }
+
+    private static final byte FREE    = 0;
+    private static final byte DIR     = 1;
+    private static final byte FILE    = 2;
+    private static final byte EXISTS  = DIR | FILE;
+    private static final byte CLAIMED = 4;
+    private static final LocalDateTime SOON   = LocalDateTime.now().plusDays(1);
+    private static final LocalDateTime RECENT = LocalDateTime.now().minusMonths(6);
+
+    public void dumpFiles(Component component)
+        {
+        Constant[] aconst  = component.getConstantPool().getConstants();
+        int        cConsts = aconst.length;
+        byte[]     aflags  = new byte[cConsts];
+        int        maxSize = 0;
+        int        maxId   = 0;
+        int        cDirs   = 0;
+        int        cFiles  = 0;
+
+        // first, identify all filing system nodes
+        for (int i = 0; i < cConsts; ++i)
+            {
+            Constant constant = aconst[i];
+            if (constant instanceof FSNodeConstant fsNode)
+                {
+                if (i > maxId)
+                    {
+                    maxId = i;
+                    }
+
+                switch (constant.getFormat())
+                    {
+                    case FSDir:
+                        aflags[i] |= DIR;
+                        for (FSNodeConstant fsChildNode : fsNode.getDirectoryContents())
+                            {
+                            claimNode(fsChildNode, aflags);
+                            }
+                        ++cDirs;
+                        break;
+
+                    case FSFile:
+                        aflags[i] |= FILE;
+                        int size = fsNode.getFileBytes().length;
+                        if (size > maxSize)
+                            {
+                            maxSize = size;
+                            }
+                        ++cFiles;
+                        break;
+
+                    case FSLink:
+                        aflags[i] |= FILE;
+                        claimNode(fsNode.getLinkTarget(), aflags);
+                        ++cFiles;
+                        break;
+                    }
+                ++cFiles;
+                }
+            }
+
+        if (cDirs > 0 || cFiles > 0)
+            {
+            // print all unclaimed filing system nodes (which recursively will print the claimed nodes)
+            out("Module contains " + cDirs + " directories and " + cFiles + " files:");
+            boolean[] visited = new boolean[cConsts];
+            for (int i = 0; i < cConsts; ++i)
+                {
+                if ((aflags[i] & EXISTS) != 0 && (aflags[i] & CLAIMED) == 0)
+                    {
+                    FSNodeConstant fsNode = (FSNodeConstant) aconst[i];
+                    printNode(fsNode, "", false, false, visited,
+                              String.valueOf(maxId).length(), String.valueOf(maxSize).length());
+                    }
+                }
+            }
+        else
+            {
+            out("Module contains no files.");
+            }
+        }
+
+    private void claimNode(FSNodeConstant fsNode, byte[] aflags)
+        {
+        int i = fsNode.getPosition();
+        if ((aflags[i] & CLAIMED) == 0)
+            {
+            aflags[i] |= CLAIMED;
+            switch (fsNode.getFormat())
+                {
+                case FSDir:
+                    for (FSNodeConstant fsChildNode : fsNode.getDirectoryContents())
+                        {
+                        claimNode(fsChildNode, aflags);
+                        }
+                    break;
+
+                case FSLink:
+                    claimNode(fsNode.getLinkTarget(), aflags);
+                    break;
+                }
+            }
+        }
+
+    private void printNode(FSNodeConstant fsNode,
+                           String         indent,
+                           boolean        last,
+                           boolean        linked,
+                           boolean[]      visited,
+                           int            idLen,
+                           int            sizeLen)
+        {
+        StringBuilder buf = new StringBuilder();
+
+        // constant id
+        int    id     = fsNode.getPosition();
+        String idText = String.valueOf(id);
+        buf.append('[');
+        for (int i = 0, c = Math.max(0, idLen - idText.length()); i < c; ++i)
+            {
+            buf.append(' ');
+            }
+        buf.append(idText)
+           .append(']');
+
+        // permissions
+        boolean fDir = fsNode.getFormat() == Format.FSDir;
+        buf.append(fDir ? " dr-- " : " -r-- ");
+
+        // size
+        String sizeText = fsNode.getFormat() == Format.FSFile
+                ? String.valueOf(fsNode.getFileBytes().length)
+                : "";
+        for (int i = 0, c = Math.max(0, sizeLen - sizeText.length()); i < c; ++i)
+            {
+            buf.append(' ');
+            }
+        buf.append(sizeText);
+
+        // date/time
+        buf.append(' ');
+        LocalDateTime time = null;
+        try
+            {
+            time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
+            }
+        catch (Exception ignore) {}
+        if (time == null)
+            {
+            buf.append("??? ??  ????");
+            }
+        else
+            {
+            buf.append(time.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
+               .append(' ');
+            int day = time.getDayOfMonth();
+            if (day < 10)
+                {
+                buf.append(' ');
+                }
+            buf.append(day);
+            buf.append(' ');
+            // within the last 6 months, we show time, otherwise year
+            if (time.isAfter(RECENT) && time.isBefore(SOON))
+                {
+                int hour = time.getHour();
+                if (hour < 10)
+                    {
+                    buf.append(0);
+                    }
+                buf.append(hour)
+                   .append(':');
+                int minute = time.getMinute();
+                if (minute < 10)
+                    {
+                    buf.append(0);
+                    }
+                buf.append(minute);
+                }
+            else
+                {
+                buf.append(' ');
+                // four digit year
+                String s = String.valueOf(10000+time.getYear());
+                buf.append(s.substring(s.length()-4));
+                }
+            }
+
+        // name
+        buf.append(' ');
+        if (linked)
+            {
+            if (indent.length() > 0)
+                {
+                buf.append(indent.substring(0, indent.length()-4))
+                   .append(" |  ");
+                }
+            buf.append("-> ");
+            }
+        else
+            {
+            buf.append(indent);
+            }
+        String name = fsNode.getName();
+        if (name.length() == 0)
+            {
+            buf.append('/');
+            }
+        else
+            {
+            Handy.appendString(buf, name);
+            }
+
+        boolean alreadyVisited = visited[id];
+        visited[id] = true;
+        switch (fsNode.getFormat())
+            {
+            case FSDir:
+                if (alreadyVisited)
+                    {
+                    buf.append(" (see above)");
+                    out(buf);
+                    }
+                else
+                    {
+                    out(buf);
+                    FSNodeConstant[] aKidNodes  = fsNode.getDirectoryContents();
+                    int              cKidNodes  = aKidNodes.length;
+                    String           nextIndent = " |- ";
+                    if (indent.length() > 0)
+                        {
+                        nextIndent = indent.substring(0, indent.length()-4)
+                                   + (last ? "    " : " |  ")
+                                   + nextIndent;
+                        }
+                    for (int i = 0; i < cKidNodes; ++i)
+                        {
+                        printNode(aKidNodes[i], nextIndent, i == cKidNodes-1, false, visited, idLen, sizeLen);
+                        }
+                    }
+                break;
+
+            case FSLink:
+                out(buf);
+                printNode(fsNode.getLinkTarget(), indent, last, true, visited, idLen, sizeLen);
+                break;
+
+            default:
+                out(buf);
+                break;
             }
         }
 
@@ -169,9 +438,10 @@ public class Disassembler
             {
             super();
 
-            addOption("L",      Form.Repo  , true , "Module path; a \"" + File.pathSeparator
+            addOption("L",      Form.Repo, true , "Module path; a \"" + File.pathSeparator
                                                   + "\"-delimited list of file and/or directory names");
-            addOption(Trailing, Form.File  , false, "Module file name (.xtc) to disassemble");
+            addOption("files",  Form.Name, false, "List all files embedded in the module");
+            addOption(Trailing, Form.File, false, "Module file name (.xtc) to disassemble");
             }
 
         /**
