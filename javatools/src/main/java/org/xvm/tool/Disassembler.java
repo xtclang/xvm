@@ -7,8 +7,11 @@ import java.io.IOException;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
 import java.time.format.TextStyle;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -23,9 +26,18 @@ import org.xvm.asm.ModuleRepository;
 
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.StringConstant;
+import org.xvm.asm.constants.UInt8ArrayConstant;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
+
+
+import static org.xvm.compiler.ast.FileExpression.createdTime;
+import static org.xvm.compiler.ast.FileExpression.modifiedTime;
+
+import static org.xvm.util.Handy.readFileBytes;
+import static org.xvm.util.Handy.readFileChars;
 
 
 /**
@@ -109,6 +121,10 @@ public class Disassembler
         if (options().specified("files"))
             {
             dumpFiles(component);
+            }
+        else if (options().specified("findfile"))
+            {
+            findFile(component, (File) options().values().get("findfile"));
             }
         else
             {
@@ -389,6 +405,102 @@ public class Disassembler
             }
         }
 
+    public void findFile(Component component, File target)
+        {
+        if (target == null)
+            {
+            out("No file specified.");
+            return;
+            }
+
+        if (!target.exists())
+            {
+            out("File " + target + " does not exist.");
+            return;
+            }
+
+        if (!target.isFile() || !target.canRead())
+            {
+            out("Can not read file: " + target);
+            return;
+            }
+
+        // load the file contents to search for; the contents can occur as a String or Byte[]
+        // constant in the module
+        byte[] findBytes;
+        try
+            {
+            findBytes = readFileBytes(target);
+            }
+        catch (IOException e)
+            {
+            out("Failure reading " + target + ":\n" + e);
+            return;
+            }
+        String findString = null;
+        try
+            {
+            findString = new String(readFileChars(target));
+            }
+        catch (IOException ignore) {}
+
+        // load the file metadata
+        String   findName     = target.getName();
+        String   findCreated  = createdTime(target).toInstant().atOffset(ZoneOffset.UTC).toString();
+        String   findModified = modifiedTime(target).toInstant().atOffset(ZoneOffset.UTC).toString();
+        int      findSize     = findBytes.length;
+
+        ConstantPool pool = component.getConstantPool();
+        int matches = 0;
+        for (int i = 0, c = pool.size(); i < c; ++i)
+            {
+            Constant constant = pool.getConstant(i);
+            switch (constant.getFormat())
+                {
+                case FSFile ->
+                    {
+                    FSNodeConstant fsnode = (FSNodeConstant) constant;
+                    if (fsnode.getName().equals(findName) && Arrays.equals(fsnode.getFileBytes(), findBytes))
+                        {
+                        out("File constant [" + constant.getPosition() + "] matches file name and contents");
+                        if (!fsnode.getCreated().equals(findCreated))
+                            {
+                            out("  -> File creation " + findCreated + " does not match constant: " + fsnode.getCreated());
+                            }
+                        if (!fsnode.getModified().equals(findModified))
+                            {
+                            out("  -> File modified " + findModified + " does not match constant: " + fsnode.getModified());
+                            }
+                        ++matches;
+                        }
+                    }
+                case String ->
+                    {
+                    if (findString != null && ((StringConstant) constant).getValue().equals(findString))
+                        {
+                        out("String constant [" + constant.getPosition() + "] matches file contents");
+                        ++matches;
+                        }
+                    }
+                case UInt8Array ->
+                    {
+                    if (findSize > 0 && Arrays.equals(((UInt8ArrayConstant) constant).getValue(), findBytes))
+                        {
+                        out("Byte[] constant [" + constant.getPosition() + "] matches file contents");
+                        ++matches;
+                        }
+                    }
+                }
+            }
+
+        out(switch (matches)
+            {
+            case 0 -> "No matches found.";
+            case 1 -> "1 match found.";
+            default -> matches + " matches found.";
+            });
+        }
+
 
     // ----- text output and error handling --------------------------------------------------------
 
@@ -438,10 +550,11 @@ public class Disassembler
             {
             super();
 
-            addOption("L",      Form.Repo, true , "Module path; a \"" + File.pathSeparator
-                                                  + "\"-delimited list of file and/or directory names");
-            addOption("files",  Form.Name, false, "List all files embedded in the module");
-            addOption(Trailing, Form.File, false, "Module file name (.xtc) to disassemble");
+            addOption("L",        Form.Repo, true , "Module path; a \"" + File.pathSeparator
+                                                    + "\"-delimited list of file and/or directory names");
+            addOption("files",    Form.Name, false, "List all files embedded in the module");
+            addOption("findfile", Form.File, false, "File to search for in the module");
+            addOption(Trailing,   Form.File, false, "Module file name (.xtc) to disassemble");
             }
 
         /**
