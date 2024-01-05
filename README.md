@@ -492,4 +492,68 @@ to a local repositories and the XTC GitHub org repository.
 
 To submit a contributor agreement, sign up for very hard work, fork over a giant
 pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please
-understand if we cannot respond to every e.mail. Thank you.
+understand if we cannot respond to every e-mail. Thank you.
+
+## Appendix: Gradle fundamentals
+
+We have striven hard to create an easy-to-use build system based on industry standards and
+expected behavior. These days, most software is based on the Maven/Gradle model, which 
+provides repositories of semantically versioned artifacts, cached incremental builds and 
+mature support for containerization.
+
+The principle of least astonishment permeates the philosophy behind the entire build system.
+This means that a modern developer, should be immediately familiar with how to build and run 
+the XDK project, i.e. clone it from GitHub and execute "./gradlew build". It should also
+import complaint free, and with dependency chains understood by any IDE that has support
+for Gradle projects. "It should just work", out of the box, and should look familiar to any
+developer with basic experience as a Gradle user. Nothing should require more than a single
+command like to build or execute the system or anything built on top of it.
+
+Implementing language support for an alien language on top of Gradle, however, is a fairly
+complex undertaking, and requires deeper knowledge of the Gradle architecture. It is 
+our firm belief, though, that the user should not have to drill down to these levels, unless he/she 
+specifically wants to. As it is, any open source developer today still needs to grasp some basic 
+fundamentals about artifacts and the Gradle build system. This is not just our assumption; it is 
+actually industry-wide. 
+
+We believe the following concepts are necessary to understand, in order to work with XDK 
+projects or the XDK. None of them are at all specific to XTC:
+
+(TODO: Add hyperlinks to more information for each bullet point below.)
+
+* The concept of "gradlew" (or "gradlew.bat" on Windows) wrapper, and why it should ALWAYS
+  be used instead of a "gradle" binary on the local system. And why it's actually a bad idea to
+  have a specific "gradle" binary in your PATH at all. (This goes for other dependent binaries
+  as well).
+* The concept of a versioned Maven artifact, and its descriptor "group:artifactId:version"
+* The concept of release vs snapshot artifact versions in the Maven model.
+* The concept of local and remote artifact repositories, and how they are used by the build.
+* The concept of the Maven/Gradle build lifecycle, its fundamental tasks, and how they depend
+  on each other ("clean", "assemble", "build" and "check"). This includes understanding the Gradle
+  cache, daemons, and why "clean" is not what you think of as "clean" in a C++ Makefile and why  
+  is it often better not to use it, in a cached, incrementally built Gradle project.
+* The concept of Maven/Gradle SourceSets.
+* The concept of a Gradle Build Scan, and understanding how to inspect it and how to use it to 
+spot build issues.
+* The concept of goal of self-contained software, which specifies its complete dependencies
+as part of its source controlled configuration. 
+  * On the Maven model level, this means semantically versioned Maven artifacts. 
+  * On the software build and execution level, this also means specific versions of external
+  pieces of software, for example Java, NodeJS or Yarn. This also means that we can and SHOULD
+  always be able to containerize. 
+  
+      *(Not only does this mean that we can build and run bit identical software on any machine
+      with any configuration. It also means that we do not install any additional software
+      on the build machine outside the repository. Why this is absolutely fundamental, can be 
+      understood by imagining an example where developer has three different open source 
+      projects on his/her development machine, each requiring an exact version of NodeJS or
+      Java, but different versions for different projects. Another reason is that large parts
+      of modern software architecture, for example CI/CD pipelines, REQUIRE that it's easy 
+      to build and run software on a virgin system, with "a single command line".)*
+
+Today, it is pretty safe to assume that any open source developer who has worked on any Gradle
+or Maven based project has the above knowledge, and that it's more often the case than not.
+We have spent significant effort on our architectural design to ensure that an adopter who 
+wants to become an XTC or XDK user or developer does not need to acquire *any* knowledge that is
+more domain specific than concepts listed above.
+
