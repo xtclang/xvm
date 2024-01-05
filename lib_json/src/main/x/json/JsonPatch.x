@@ -8,26 +8,39 @@ mixin JsonPatch
     /**
      * Apply this patch to the specified `Doc`.
      *
-     * @param doc  the `Doc` to apply the patch to
+     * @param target   the `Doc` to apply the patch to
+     * @param options  the options to control patching behaviour
      *
-     * @return the patched `Doc`
+     * @return an JSON `Doc` that is the result of applying this patch
+     *         to the target JSON `Doc`
+     *
+     * @throws IllegalArgument if any of the operations contains an invalid parameter
+     * @throws IllegalState    if applying any of the operations fails
      */
-    Doc apply(Doc doc) {
+    Doc apply(Doc target, Options? options = Null) {
+        Doc     doc  = target;
+        Options opts = options ?: Options.Default;
+
         for (Operation op : this) {
             doc = switch (op.op) {
-                case Add:     applyAdd(doc, op.path, op.value);
-                case Remove:  applyRemove(doc, op.path);
-//                case Replace: applyReplace(doc, op.path, op.value);
-                default:  assert;
+                case Add:     applyAdd(doc, op.path, op.value, opts);
+                case Remove:  applyRemove(doc, op.path, opts);
+                case Replace: applyReplace(doc, op.path, op.value, opts);
+                case Move:    applyMove(doc, op.from, op.path, opts);
+                case Copy:    applyCopy(doc, op.from, op.path, opts);
+                case Test:    applyTest(doc, op.path, op.value, opts);
+                default:      assert;
             };
         }
-        switch (doc.is(_)) {
-            case JsonObject:
-                doc.makeImmutable();
-                break;
-            case JsonArray:
-                doc.makeImmutable();
-                break;
+        if (target.is(JsonStruct) && target.inPlace) {
+            switch (doc.is(_)) {
+                case JsonObject:
+                    doc.makeImmutable();
+                    break;
+                case JsonArray:
+                    doc.makeImmutable();
+                    break;
+            }
         }
         return doc;
     }
@@ -59,14 +72,15 @@ mixin JsonPatch
     /**
      * Perform an add operation.
      *
-     * @param target  the JSON value to perform the add operation on
-     * @param path    the path specifying the location in the target to add value to
-     * @param value   the JSON value to add
+     * @param target   the JSON value to perform the add operation on
+     * @param path     the path specifying the location in the target to add value to
+     * @param value    the JSON value to add
+     * @param options  the options to control patching behaviour
      */
-    private Doc applyAdd(Doc target, JsonPointer path, Doc value) {
+    private Doc applyAdd(Doc target, JsonPointer path, Doc value, Options options) {
         return switch (target.is(_)) {
-            case JsonObject: applyAddToObject(target, path, value);
-            case JsonArray:  applyAddToArray(target, path, value);
+            case JsonObject: applyAddToObject(target, path, value, options);
+            case JsonArray:  applyAddToArray(target, path, value, options);
             case Primitive:  applyAddToPrimitive(target, path, value);
             default:         assert as $"Invalid JSON type {&target.actualType}";
         };
@@ -75,11 +89,12 @@ mixin JsonPatch
     /**
      * Perform an add operation on a `JsonObject`.
      *
-     * @param target  the `JsonObject` to perform the add operation on
-     * @param path    the path specifying the location in the target to add value to
-     * @param value   the JSON value to add
+     * @param target   the `JsonObject` to perform the add operation on
+     * @param path     the path specifying the location in the target to add value to
+     * @param value    the JSON value to add
+     * @param options  the options to control patching behaviour
      */
-    private Doc applyAddToObject(JsonObject obj, JsonPointer path, Doc value) {
+    private Doc applyAddToObject(JsonObject obj, JsonPointer path, Doc value, Options options) {
         JsonPointer? remainder = path.remainder;
         JsonObject   mutable;
 
@@ -91,9 +106,14 @@ mixin JsonPatch
         }
         if (remainder.is(JsonPointer)) {
             if (Doc doc := mutable.get(path.key)) {
-                mutable.put(path.key, applyAdd(doc, remainder, value));
+                mutable.put(path.key, applyAdd(doc, remainder, value, options));
             } else {
-                throw new IllegalState($"Cannot perform add operation on JSON object for path {path}, missing key '{path.key}'");
+                if (options.ensurePathExistsOnAdd) {
+                    // we are allowing missing elements on add, we just need to add a new object
+                    mutable.put(path.key, applyAdd(json.newObject(), remainder, value, options));
+                } else {
+                    assert:arg as $"Cannot perform add operation on JSON object for path {path}, missing key '{path.key}'";
+                }
             }
         } else {
             mutable.put(path.key, value);
@@ -104,36 +124,42 @@ mixin JsonPatch
     /**
      * Perform an add operation on a `JsonArray`.
      *
-     * @param target  the `JsonArray` to perform the add operation on
-     * @param path    the path specifying the location in the target to add value to
-     * @param value   the JSON value to add
+     * @param target   the `JsonArray` to perform the add operation on
+     * @param path     the path specifying the location in the target to add value to
+     * @param value    the JSON value to add
+     * @param options  the options to control patching behaviour
      */
-    private Doc applyAddToArray(JsonArray array, JsonPointer path, Doc value) {
+    private Doc applyAddToArray(JsonArray array, JsonPointer path, Doc value, Options options) {
+        JsonArray    mutable;
+        if (array.mutability == Mutable) {
+            mutable = array;
+        } else {
+            mutable = json.newArray();
+            mutable.addAll(array);
+        }
+
+        if (path.key == JsonPointer.AppendKey) {
+            mutable.add(value);
+            return mutable;
+        }
+
         Int? index = path.index;
         if (index.is(Int)) {
+            index = validateIndex(Add, index, array, options);
             JsonPointer? remainder = path.remainder;
-            JsonArray    mutable;
-            if (array.mutability == Mutable) {
-                mutable = array;
-            } else {
-                mutable = json.newArray();
-                mutable.addAll(array);
-            }
             if (remainder.is(JsonPointer)) {
                 Doc doc = array[index];
-                mutable[index] = applyAdd(doc, remainder, value);
+                mutable[index] = applyAdd(doc, remainder, value, options);
             } else {
-                // if the index is the AppendIndex or it is the array size,
-                // then add the value, else update the value at the index
-                if (index == JsonPointer.AppendIndex || index == mutable.size) {
+                if (index == mutable.size) {
                     mutable.add(value);
                 } else {
-                    mutable.replace(index, value);
+                    mutable.insert(index, value);
                 }
             }
             return mutable;
         }
-        throw new IllegalArgument($"Cannot perform remove operation on JSON array, path {path} is not an array index");
+        assert:arg as $"Cannot perform remove operation on JSON array, path {path} is not an array index";
     }
 
     /**
@@ -153,13 +179,14 @@ mixin JsonPatch
     /**
      * Perform an remove operation.
      *
-     * @param target  the JSON value to perform the remove operation on
-     * @param path    the path specifying the location in the target to remove
+     * @param target   the JSON value to perform the remove operation on
+     * @param path     the path specifying the location in the target to remove
+     * @param options  the options to control patching behaviour
      */
-    private Doc applyRemove(Doc target, JsonPointer path) {
+    private Doc applyRemove(Doc target, JsonPointer path, Options options) {
         return switch (target.is(_)) {
-            case JsonObject: applyRemoveFromObject(target, path);
-            case JsonArray:  applyRemoveFromArray(target, path);
+            case JsonObject: applyRemoveFromObject(target, path, options);
+            case JsonArray:  applyRemoveFromArray(target, path, options);
             case Primitive:  applyRemoveFromPrimitive(target, path);
             default:         assert as "invalid JSON type {&doc.actualType}";
         };
@@ -168,10 +195,11 @@ mixin JsonPatch
     /**
      * Perform an remove operation on a `JsonObject`.
      *
-     * @param target  the `JsonObject` to perform the remove operation on
-     * @param path    the path specifying the location in the target to remove
+     * @param target   the `JsonObject` to perform the remove operation on
+     * @param path     the path specifying the location in the target to remove
+     * @param options  the options to control patching behaviour
      */
-    private Doc applyRemoveFromObject(JsonObject obj, JsonPointer path) {
+    private Doc applyRemoveFromObject(JsonObject obj, JsonPointer path, Options options) {
         JsonPointer? remainder = path.remainder;
         JsonObject   mutable;
 
@@ -181,52 +209,287 @@ mixin JsonPatch
             mutable = json.newObject();
             mutable.putAll(obj);
         }
-        assert:arg Doc doc := mutable.get(path.key) as $|Cannot perform remove operation on JSON object,\
-                                                        | missing key '{path.key}' from path '{path}'
-                                                        ;
-        if (remainder.is(JsonPointer)) {
-            mutable.put(path.key, applyRemove(doc, remainder));
-        } else {
-            mutable.remove(path.key);
+
+        if (Doc doc := mutable.get(path.key)) {
+            if (remainder.is(JsonPointer)) {
+                mutable.put(path.key, applyRemove(doc, remainder, options));
+            } else {
+                mutable.remove(path.key);
+            }
+            return mutable;
         }
-        return mutable;
+        // there is no element in the JsonObject for the path key
+        if (options.allowMissingPathOnRemove) {
+            // we are allowing missing elements on remove so return the unmodified original object
+            return obj;
+        }
+        assert:arg as $"Cannot perform remove operation on JSON object, missing key '{path.key}' from path '{path}'";
     }
 
     /**
      * Perform an remove operation on a `JsonArray`.
      *
-     * @param target  the `JsonArray` to perform the remove operation on
-     * @param path    the path specifying the location in the target to remove
+     * @param target   the `JsonArray` to perform the remove operation on
+     * @param path     the path specifying the location in the target to remove
+     * @param options  the options to control patching behaviour
      */
-    private Doc applyRemoveFromArray(JsonArray array, JsonPointer path) {
+    private Doc applyRemoveFromArray(JsonArray array, JsonPointer path, Options options) {
+        assert:arg path.key != JsonPointer.AppendKey as $"Cannot use append key '-' in a remove operation on a JSON array";
+
         Int? index = path.index;
+        Int  size  = array.size;
         if (index.is(Int)) {
+            // valid index is 0 ..< array.size || -array.size >.. -1
+            if (index >= size || index <= -size) {
+                if (options.allowMissingPathOnRemove) {
+                    // the index is out of bounds, but the options allow this, so return the original, unmodified array
+                    return array;
+                } else {
+                    // we are not allowing invalid indexes
+                    assert:arg  as $|Cannot perform remove operation on JSON array, \
+                                    | index {index} out of bounds 0 ..< {size}
+                                    ;
+                }
+            }
+
+            index = validateIndex(Remove, index, array, options);
+
             JsonPointer? remainder = path.remainder;
             JsonArray    mutable;
             if (array.mutability == Mutable) {
                 mutable = array;
             } else {
                 mutable = json.newArray();
-                mutable.removeAll(array);
+                mutable.addAll(array);
             }
+
             if (remainder.is(JsonPointer)) {
                 Doc doc = array[index];
-                mutable[index] = applyRemove(doc, remainder);
+                mutable[index] = applyRemove(doc, remainder, options);
             } else {
-                // if the index is the AppendIndex or it is the array size,
-                // then remove the value, else update the value at the index
-                assert index < 0 || index >= mutable.size
-                        as $"Cannot perform remove operation on JSON array, index {index} out of bounds 0..<{mutable.size}";
                 mutable.delete(index);
             }
             return mutable;
         }
-        throw new IllegalArgument($"Cannot perform remove operation on JSON array, path {path} is not an array index");
+        assert:arg as $"Cannot perform remove operation on JSON array, path {path} is not an array index";
     }
 
+    /**
+     * Remove the primitive pointed to by the path
+     *
+     * @param p     the `Primitive` to be removed
+     * @param path  the `JsonPointer` pointing to the primitive
+     *
+     * @throws IllegalArgument iff the pointer is not a leaf pointer
+     */
     private Doc applyRemoveFromPrimitive(Primitive p, JsonPointer path) {
         assert:arg path.isEmpty as $"Cannot perform remove operation on primitive value {p} path '{path}' is not a leaf";
         return Null;
+    }
+
+    /**
+     * Perform a replace operation.
+     *
+     * @param target   the JSON value to perform the replace operation on
+     * @param path     the path specifying the location in the target to replace
+     * @param value    the new JSON value to replace the target value
+     * @param options  the options to control patching behaviour
+     */
+    private Doc applyReplace(Doc target, JsonPointer path, Doc value, Options options) {
+        return switch (target.is(_)) {
+            case JsonObject: applyReplaceToObject(target, path, value, options);
+            case JsonArray:  applyReplaceToArray(target, path, value, options);
+            case Primitive:  applyReplaceToPrimitive(target, path, value);
+            default:         assert as $"Invalid JSON type {&target.actualType}";
+        };
+    }
+
+    /**
+     * Perform a replace operation on a `JsonObject`.
+     *
+     * @param target   the `JsonObject` to perform the replace operation on
+     * @param path     the path specifying the location in the target to replace
+     * @param value    the new JSON value to replace the target value
+     * @param options  the options to control patching behaviour
+     */
+    private Doc applyReplaceToObject(JsonObject obj, JsonPointer path, Doc value, Options options) {
+        JsonPointer? remainder = path.remainder;
+        JsonObject   mutable;
+
+        if (obj.inPlace) {
+            mutable = obj;
+        } else {
+            mutable = json.newObject();
+            mutable.putAll(obj);
+        }
+        if (remainder.is(JsonPointer)) {
+            assert Doc doc := mutable.get(path.key) as $|Cannot perform replace operation on JSON object \
+                                                        | for path '{path}', missing key '{path.key}'
+                                                        ;
+
+            mutable.put(path.key, applyReplace(doc, remainder, value, options));
+        } else {
+            assert:arg mutable.contains(path.key) as $|Cannot perform replace operation on JSON object \
+                                                 | for path '{path}', missing key '{path.key}'
+                                                 ;
+            mutable.put(path.key, value);
+        }
+        return mutable;
+    }
+
+    /**
+     * Perform an replace operation on a `JsonArray`.
+     *
+     * @param target   the `JsonArray` to perform the replace operation on
+     * @param path     the path specifying the location in the target to replace
+     * @param value    the new JSON value to replace the target value
+     * @param options  the options to control patching behaviour
+     */
+    private Doc applyReplaceToArray(JsonArray array, JsonPointer path, Doc value, Options options) {
+        assert:arg path.key != JsonPointer.AppendKey as $"Cannot use append key '-' in a replace operation on a JSON array";
+
+        Int? index = path.index;
+        if (index.is(Int)) {
+            index = validateIndex(Replace, index, array, options);
+
+            JsonPointer? remainder = path.remainder;
+            JsonArray    mutable;
+
+            if (array.mutability == Mutable) {
+                mutable = array;
+            } else {
+                mutable = json.newArray();
+                mutable.addAll(array);
+            }
+
+            if (remainder.is(JsonPointer)) {
+                Doc doc = mutable[index];
+                mutable[index] = applyReplace(doc, remainder, value, options);
+            } else {
+                mutable.replace(index, value);
+            }
+            return mutable;
+        }
+        assert:arg as $"Cannot perform replace operation on JSON array, path {path} is not an array index";
+    }
+
+    /**
+     * Perform an replace operation on a `Primitive`.
+     *
+     * @param target  the `Primitive` to perform the replace operation on
+     * @param path    the path specifying the location in the target to replace
+     * @param value   the new JSON value to replace the target value
+     *
+     * @throws IllegalArgument if the path argument is not a leaf pointer
+     */
+    private Doc applyReplaceToPrimitive(Primitive p, JsonPointer path, Doc value) {
+        assert:arg path.isEmpty as $"Cannot perform replace operation on primitive value {p} path {path} is not a leaf";
+        return value;
+    }
+
+    /**
+     * Perform an move operation.
+     *
+     * @param target   the JSON value to perform the move operation on
+     * @param from     the `JsonPointer` specifying the location in the value to move
+     * @param to       the `JsonPointer` specifying the destination of the moved value
+     * @param options  the options to control patching behaviour
+     */
+    private Doc applyMove(Doc target, JsonPointer? from, JsonPointer to, Options options) {
+        assert:arg from.is(JsonPointer) as $"A move operation must have a 'from' JSON pointer";
+        assert:arg !from.isParent(to) as $|Invalid move operation, the from location "{from}" \
+                                          | cannot be a parent of the destination path "{to}"
+                                          ;
+
+        assert Doc toMove := from.get(target) as $"Move operation failed, no value exists at location '{from}'";
+        return applyAdd(applyRemove(target, from, options), to, toMove, options);
+    }
+
+    /**
+     * Perform an copy operation.
+     *
+     * @param target   the JSON value to perform the copy operation on
+     * @param from     the `JsonPointer` specifying the location in the value to copy
+     * @param to       the `JsonPointer` specifying the destination of the copied value
+     * @param options  the options to control patching behaviour
+     */
+    private Doc applyCopy(Doc target, JsonPointer? from, JsonPointer to, Options options) {
+        assert:arg from.is(JsonPointer) as $"A copy operation must have a 'from' JSON pointer";
+        assert Doc toCopy := from.get(target, options.supportNegativeIndices)
+                as $"Copy operation failed, no value exists at location '{from}'";
+        return applyAdd(target, to, toCopy, options);
+    }
+
+    /**
+     * Perform a test operation.
+     *
+     * @param target    the JSON value to perform the add operation on
+     * @param path      the path specifying the location in the target to add value to
+     * @param expected  the JSON value to add
+     * @param options   the options to control patching behaviour
+     *
+     * @return the unmodified `target`
+     *
+     * @throws IllegalState iff the value in the `target` at the specified `path` is not equal to the `expected` value
+     */
+    private Doc applyTest(Doc target, JsonPointer path, Doc expected, Options options) {
+        if (Doc existing := path.get(target)) {
+            assert existing == expected as $|Test operation failed, value at location "{path}" is "{existing}" \
+                       | but expected value "{expected}"
+                       ;
+            return target;
+        }
+        assert as $|Test operation failed, value at location "{path}" is Null \
+                   | but expected value "{expected}"
+                   ;
+    }
+
+    /**
+     * Validate an array index, converting negative indexes into their corresponding positive value.
+     *
+     * If `options.supportNegativeIndices` is `True` negative indexes are allowed. In this case -1 refers
+     * to the last element in the array, -2 the second to last, and so on up to -(array.size - 1) which
+     * refers to the element at index zero.
+     *
+     * - If the index is zero or positive, it must be in the range 0 ..< array.size
+     * - If the index is negative, `options.supportNegativeIndices` must be `True` and the index
+     *   must be in the range -array.size .. -1
+     *
+     * @param op       the `Action` being executed
+     * @param index    the index to validate
+     * @param array    the array the index is for
+     * @param options  the options controlling the operation
+     *
+     * @return the valid index (negative values will have been converted to the correct positive index)
+     */
+    private Int validateIndex(Action op, Int index, JsonArray array, Options options) {
+        if (index >= 0 && index < array.size) {
+            // index is valid
+            return index;
+        }
+
+        if (index > 0) {
+            // invalid positive index
+            assert:arg as $"Cannot perform {op} on JSON array, index {index} out of bounds, valid range 0 ..< {array.size}";
+        }
+
+        // index is negative
+        if (options.supportNegativeIndices) {
+            // We allow negative indexes, which means the index counts
+            // from the end of the array, so valid values are [-array.size >.. 0]
+            // We already know we are not zero
+            if (index < -array.size) {
+                // the index is too negative
+                assert:arg as $|Cannot perform {op} on JSON array, negative array index \
+                               | {index} out of bounds, expected -{array.size} .. -1
+                               ;
+            }
+            return index + array.size;
+        }
+        // negative indexes not allowed
+        assert:arg as $|Cannot perform {op} on JSON array, negative array index {index} not allowed, \
+                       | valid range 0 ..< {array.size}
+                       ;
     }
 
     // ----- Operation inner class -----------------------------------------------------------------
@@ -246,16 +509,10 @@ mixin JsonPatch
          * @throws IllegalArgument if the operation is a copy or a move and the from parameter is null
          */
         construct (Action op, JsonPointer path, Doc value = Null, JsonPointer? from = Null) {
-            this.op = op;
-            this.path = path;
-            if (op == Copy || op == Move) {
-                assert:arg from.is(JsonPointer) as $"A {op} operation must have a 'from' JSON pointer";
-                assert:arg op == Copy || !from.isParent(path) as $|Invalid move operation, the from location "{from}" \
-                                                                  | cannot be a parent of the destination path "{path}"
-                                                                  ;
-            }
+            this.op    = op;
+            this.path  = path;
             this.value = value;
-            this.from = from;
+            this.from  = from;
         }
 
         /**
@@ -375,6 +632,30 @@ mixin JsonPatch
         Test("test"),
     }
 
+
+    // ----- Options inner class -------------------------------------------------------------------
+
+	/**
+	 * A set of options that can be used to control the patching behaviour. These options typically change the
+	 * behavior from the standard specified by https://datatracker.ietf.org/doc/html/rfc6902
+	 *
+     * @param ensurePathExistsOnAdd     a flag to indicate that an add operation should recursively create the missing
+     *                                  parts of path. For example adding "/foo/bar" if "foo" does not exist a JSON
+     *                                  object will be added at key "foo" and then "bar" will be added to that object.
+	 * @param allowMissingPathOnRemove  a flag to indicate that remove operations should not fail if the target path is
+	 *                                  missing. The default is `False`
+	 * @param supportNegativeIndices    support the non-standard use of negative indices for JSON arrays to mean indices
+	 *                                  starting at the end of an array. For example, -1 points to the last element in
+	 *                                  the array. Valid negative indices are -1 ..< -array.size The default is `False`
+	 */
+    static const Options(Boolean ensurePathExistsOnAdd    = False,
+                         Boolean allowMissingPathOnRemove = False,
+                         Boolean supportNegativeIndices   = False) {
+        /**
+         * The default options.
+         */
+        static Options Default = new Options();
+    }
 
     // ----- Builder inner class -------------------------------------------------------------------
 

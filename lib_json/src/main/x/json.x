@@ -60,9 +60,4 @@ module json.xtclang.org
      * @return a builder that can produce immutable JSON array instances.
      */
     JsonArrayBuilder arrayBuilder() = new JsonArrayBuilder();
-
-    /**
-     * @return a builder that can produce immutable JSON patch instances.
-     */
-    JsonPatch.Builder patchBuilder() = JsonPatch.builder();
 }

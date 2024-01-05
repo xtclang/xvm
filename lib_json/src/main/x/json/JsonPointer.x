@@ -20,8 +20,7 @@ const JsonPointer {
         }
         if (key.indexOf('~')) {
             StringBuffer refToken = new StringBuffer();
-            Int last = key.size - 1;
-            for (Int c = 0; c < key.size; c++) {
+            for (Int c = 0, Int last = key.size - 1; c <= last; c++) {
                 Char ch = key[c];
                 if (c != last && ch == '~') {
                     Char next = key[c + 1];
@@ -41,6 +40,8 @@ const JsonPointer {
         }
         this.remainder = remainder;
         this.pointer   = pointer;
+        this.isEmpty   = key == "";
+        this.isLeaf    = remainder == Null;
     }
 
     /**
@@ -62,13 +63,13 @@ const JsonPointer {
      * A flag that is `True` if this pointer is the last pointer
      * in the chain.
      */
-    @Lazy Boolean isEmpty.calc() = key == "";
+    Boolean isEmpty;
 
     /**
      * A flag that is `True` if this pointer is the last pointer
      * in the chain.
      */
-    @Lazy Boolean isLeaf.calc() = remainder == Null;
+    Boolean isLeaf;
 
     /**
      * If this pointer represents an array index, then return
@@ -78,45 +79,15 @@ const JsonPointer {
      * representing a non-negative `Int` value.
      */
     @Lazy Int? index.calc() {
-        if (key == "-") {
-            return AppendIndex;
+        if (key == AppendKey) {
+            return Null;
         }
         try {
             IntLiteral lit = new IntLiteral(key);
             Int i = lit.toInt64();
-            if (i >= 0) {
-                return i;
-            }
-        } catch (Exception ignored) {
-        }
+            return i;
+        } catch (Exception ignored) {}
         return Null;
-    }
-
-    /**
-     * Determine whether this `JsonPointer` is equivalent to, or is a parent
-     * of the specified `JsonPointer`.
-     *
-     * @param p  the `JsonPointer` that may be a child of this `JsonPointer`
-     *
-     * @returns `True` iff this `JsonPointer` is equivalent to, or is a  parent
-     *          of the specified `JsonPointer`
-     */
-    Boolean isParent(JsonPointer p) {
-        if (isEmpty) {
-            return True;
-        }
-        if (this.key != p.key) {
-            return False;
-        }
-        JsonPointer? remainderThis  = this.remainder;
-        JsonPointer? remainderOther = p.remainder;
-        return switch (remainderThis.is(_), remainderOther.is(_)) {
-            case (Null, Null):               True;
-            case (Null, JsonPointer):        True;
-            case (JsonPointer, Null):        False;
-            case (JsonPointer, JsonPointer): remainderThis.isParent(remainderOther);
-            default: assert;
-        };
     }
 
     /**
@@ -126,9 +97,9 @@ const JsonPointer {
     static JsonPointer Append = from("/-");
 
     /**
-     * The index value used to indicate a value should be appended to the array.
+     * The key used to indicate a value should be appended to the array.
      */
-    static Int AppendIndex = -1;
+    static String AppendKey = "-";
 
     /**
      * Create a `JsonPointer` from a `String` representation of a JSON Pointer as defined
@@ -160,6 +131,93 @@ const JsonPointer {
             return new JsonPointer(pointer, pointer[1 ..< index], JsonPointer.from(remainder));
         }
         return new JsonPointer(pointer, pointer[1 ..< pointer.size]);
+    }
+
+    /**
+     * Determine whether this `JsonPointer` is equivalent to, or is a parent
+     * of the specified `JsonPointer`.
+     *
+     * @param p  the `JsonPointer` that may be a child of this `JsonPointer`
+     *
+     * @returns `True` iff this `JsonPointer` is equivalent to, or is a  parent
+     *          of the specified `JsonPointer`
+     */
+    Boolean isParent(JsonPointer p) {
+        if (isEmpty) {
+            return True;
+        }
+        if (this.key != p.key) {
+            return False;
+        }
+        JsonPointer? remainderThis  = this.remainder;
+        JsonPointer? remainderOther = p.remainder;
+        return switch (remainderThis.is(_), remainderOther.is(_)) {
+            case (Null, Null):               True;
+            case (Null, JsonPointer):        True;
+            case (JsonPointer, Null):        False;
+            case (JsonPointer, JsonPointer): remainderThis.isParent(remainderOther);
+            default: assert;
+        };
+    }
+
+    /**
+     * Obtain the value from the specified JSON `Doc` at the location
+     * pointed to by this `JsonPointer`.
+     *
+     * @param doc                   the JSON `Doc` to obtain the value from
+	 * @param allowNegativeIndices  support the non-standard use of negative indices for JSON arrays to mean indices
+	 *                              starting at the end of an array. For example, -1 points to the last element in
+	 *                              the array. Valid negative indices are -1 ..< -array.size The default is `False`
+     *
+     * @return `True` iff the doc contains a value at the location of this pointer
+     * @return the JSON value in the doc at the location of this pointer
+     */
+    conditional Doc get(Doc doc, Boolean supportNegativeIndices = False) {
+        JsonPointer? remainder = this.remainder;
+        switch (doc.is(_)) {
+            case JsonObject:
+                if (Doc child := doc.get(this.key)) {
+                    if (remainder.is(JsonPointer)) {
+                        return remainder.get(child, supportNegativeIndices);
+                    }
+                    return True, child;
+                }
+                break;
+            case JsonArray:
+                if (Int index := ensurePositiveIndex(this.index, doc, supportNegativeIndices)) {
+                    Doc child = doc[index];
+                    if (remainder.is(JsonPointer)) {
+                        return remainder.get(child, supportNegativeIndices);
+                    }
+                    return True, child;
+                }
+                break;
+            case Primitive:
+                if (remainder == Null) {
+                    return True, doc;
+                }
+                break;
+        }
+        return False;
+    }
+
+    /**
+     * Ensure the specified index is a positive index into the array
+     *
+     * @return False if the array is empty, or True if the index is zero or positive in the range 0 ..< array.size,
+     *         or True if the index is negative in the range -array.size >.. -1
+     * @return a valid index into the array
+     */
+    private conditional Int ensurePositiveIndex(Int? index, JsonArray array, Boolean supportNegativeIndices) {
+        if (index.is(Int)) {
+            if (index >= 0 && index < array.size) {
+                return True, index;
+            }
+            if (supportNegativeIndices && index < 0 && index >= -array.size) {
+                return True, index + array.size;
+            }
+        }
+        return False;
     }
 
     // ----- Stringable methods --------------------------------------------------------------------
