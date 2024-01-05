@@ -428,7 +428,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
         // Ensure that any produced XTC module files are publishable if we publish the xtcComponent.
         // (symmetrical to e.g. jar files and the "java" component)
-        List.of(XTC_COMPONENT_VARIANT_COMPILE, XTC_COMPONENT_VARIANT_RUNTIME).forEach(v -> component.addVariantsFromConfiguration(xtcModuleProvider.get(), new JavaConfigurationVariantMapping(v, true)));
+        // List.of(XTC_COMPONENT_VARIANT_COMPILE, XTC_COMPONENT_VARIANT_RUNTIME).forEach(v -> component.addVariantsFromConfiguration(xtcModuleProvider.get(), new JavaConfigurationVariantMapping(v, true)));
     }
 
     private void createXdkDependencyConfigs() {

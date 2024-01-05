@@ -15,6 +15,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.TaskContainer;
 
 import java.io.DataInputStream;
@@ -74,7 +75,7 @@ public abstract class ProjectDelegate<T, R> {
         extra.set("logPrefix", prefix);
 
         // Used to print only key messages with an "always" semantic. Used to quickly switch on and off,
-        // or perist in the shell, a setting that is used for stuff like always printing launcher command
+        // or persist in the shell, a setting that is used for stuff like always printing launcher command
         // lines, regardless of log level, but not doing it if the override is turned off (default).
         this.overrideVerboseLogging = "true".equals(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
         if (overrideVerboseLogging) {
@@ -129,6 +130,14 @@ public abstract class ProjectDelegate<T, R> {
             case DEBUG, INFO -> true;
             default -> overrideVerboseLogging;
         };
+    }
+
+    public static Provider<?> stringProvider(final Project project, final Object object) {
+        return object instanceof Provider<?> ? (Provider<?>) object : project.provider(() -> String.valueOf(object));
+    }
+
+    public static String provideString(final Object object) {
+       return String.valueOf(((Provider<?>)object).get());
     }
 
     public final String prefix() {

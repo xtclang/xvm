@@ -49,15 +49,6 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         this.launcher = project.getProject().provider(() -> XtcLauncher.create(project.getProject(), XTC_COMPILER_CLASS_NAME, ext));
     }
 
-    // Depend on xdkModule declarations if declared (or xtcModuleTest for test source set)
- /*
-    @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
-    FileCollection getInputDeclaredDependencyModules() {
-        // The source sets are already an implicit input since this is a source task.
-        return project.filesFrom(incomingXtcModuleDependencies(sourceSet)); // look for xdkModules that have been added as dependencies.
-    }*/
-
     @InputDirectory
     @PathSensitive(PathSensitivity.ABSOLUTE)
     Provider<Directory> getInputXdkContents() {
@@ -125,13 +116,8 @@ public abstract class XtcCompileTask extends XtcSourceTask {
     }
 
     @Input
-    MapProperty<String, String> getRenameOutput() {
-        return ext.getRenameOutput();
-    }
-
-    @Input
-    Property<String> getOutputFilename() {
-        return ext.getOutputFilename();
+    MapProperty<Object, Object> getModuleFilenames() {
+        return ext.getModuleFilenames();
     }
 
     @OutputDirectory
@@ -150,26 +136,11 @@ public abstract class XtcCompileTask extends XtcSourceTask {
             touchAllSource(); // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
         }
 
-        final var outputFilename = getOutputFilename().get();
-        if (outputFilename.contains(File.separator)) {
-            throw project.buildException(String.format("%s has invalid output filename: %s.", prefix, outputFilename));
-        }
-
         File outputDir = project.getXtcCompilerOutputDirModules(sourceSet).get().getAsFile();
-        if (!outputFilename.isEmpty()) {
-            outputDir = new File(outputDir, outputFilename);
-            project.warn("{} Overrides outputDir with output filename path: {}", prefix, outputFilename);
-        }
         args.add("-o", outputDir.getAbsolutePath());
+
         project.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
 
-        // Resource should already be an input because we inherit the SourceTask, which uses a project wide file change policy.
-        //final var outputResources = project.getProject().files(sourceSet.getOutput().getResourcesDir()).getFiles(); // ugly hack to find directories.
-        //final var outputResourceDirs = outputResources.stream().filter(File::isDirectory).toList();
-        //System.err.println("output resource dirs: " + outputResourceDirs);
-        //final var resourceFiles = sourceSet.getResources().getFiles();
-        // Replace sourceset dir with its rebase relative path under build.   src/xxx/resource -> sourceSetOutput (i.e. build/xdk/
-        //sourceSet.getResources().getSrcDirs().forEach(dir -> project.lifecycle("{} Resource SOURCE dir (pre-transform): '{}'", prefix, dir));
         sourceSet.getResources().getSrcDirs().forEach(dir -> {
             project.info("{} Resolving resource dir (build): '{}'.", prefix, dir);
             if (!dir.exists()) {
@@ -200,11 +171,10 @@ public abstract class XtcCompileTask extends XtcSourceTask {
     }
 
     private void renameOutputs() {
-        final var map = getRenameOutput().get();
         project.getProject().fileTree(getOutputXtcModules()).filter(project::isXtcBinary).forEach(file -> {
             final String oldName = file.getName();
-            final String newName = map.get(oldName);
-            if (newName == null) {
+            final String newName = ext.resolveModuleFilename(oldName);
+            if (oldName.equals(newName)) {
                 project.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
             } else {
                 project.info("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);

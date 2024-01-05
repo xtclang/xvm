@@ -7,6 +7,10 @@ import org.xtclang.plugin.XtcCompilerExtension;
 
 import javax.inject.Inject;
 import java.util.HashMap;
+import java.util.Map;
+
+import static org.xtclang.plugin.ProjectDelegate.provideString;
+import static org.xtclang.plugin.ProjectDelegate.stringProvider;
 
 public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension implements XtcCompilerExtension {
     private final Property<Boolean> disableWarnings;
@@ -14,8 +18,8 @@ public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension impleme
     private final Property<Boolean> hasQualifiedOutputName;
     private final Property<Boolean> hasVersionedOutputName;
     private final Property<Boolean> shouldForceRebuild;
-    private final MapProperty<String, String> renameOutput;
-    private final Property<String> outputFilename;
+    private final Map<Object, Object> renameOutputMap;
+    private final MapProperty<Object, Object> renameOutput;
 
     @Inject
     public DefaultXtcCompilerExtension(final Project project) {
@@ -25,8 +29,13 @@ public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension impleme
         this.hasQualifiedOutputName = objects.property(Boolean.class).value(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).value(false);
         this.shouldForceRebuild = objects.property(Boolean.class).value(false);
-        this.outputFilename = objects.property(String.class).value("");
-        this.renameOutput = objects.mapProperty(String.class, String.class).value(new HashMap<>());
+        this.renameOutputMap = new HashMap<>();
+        this.renameOutput = objects.mapProperty(Object.class, Object.class).value(renameOutputMap);
+    }
+
+    @Override
+    public void moduleFilename(final Object from, final Object to) {
+        renameOutputMap.put(stringProvider(project, from), stringProvider(project, to));
     }
 
     @Override
@@ -55,12 +64,16 @@ public class DefaultXtcCompilerExtension extends DefaultXtcTaskExtension impleme
     }
 
     @Override
-    public Property<String> getOutputFilename() {
-        return outputFilename;
+    public MapProperty<Object, Object> getModuleFilenames() {
+        return renameOutput;
     }
 
-    @Override
-    public MapProperty<String, String> getRenameOutput() {
-        return renameOutput;
+    public String resolveModuleFilename(final String from) {
+        for (Map.Entry<Object, Object> entry : renameOutput.get().entrySet()) {
+            if (provideString(entry.getKey()).equals(from)) {
+                return provideString(entry.getValue());
+            }
+        }
+        return from;
     }
 }

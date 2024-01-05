@@ -17,7 +17,6 @@ val semanticVersion: SemanticVersion by extra
 val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
-    //outgoing.artifact(tasks.jar)
     attributes {
         attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
         attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("javatools-fatjar"))
@@ -95,15 +94,12 @@ tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publis
 val jar by tasks.existing(Jar::class) {
     dependsOn(gradle.includedBuild("javatools").task(":jar"))
     if (shouldBundleJavaTools) {
-        duplicatesStrategy = DuplicatesStrategy.WARN
-
-        val javatoolsJars = xdkJavaToolsJarConsumer.get().files
-        System.err.println("*** javatoolsJar: "  + javatoolsJars)
-        javatoolsJars.forEach {
-            logger.lifecycle("$prefix Adding zipTree from $it to plugin jar.")
+        val javatoolsFiles = xdkJavaToolsJarConsumer.get().files
+        assert(javatoolsFiles.count() == 1)
+        javatoolsFiles.forEachIndexed { i, it ->
+            logger.info("$prefix Adding zipTree from $it to plugin jar (artifact ${i + 1} / ${javatoolsFiles.count()}).")
             from(zipTree(it))
         }
-//        from(zipTree(xdkJavaToolsJarConsumer.get().singleFile))
         doLast {
             logger.info("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
         }

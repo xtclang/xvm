@@ -1,6 +1,7 @@
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
+import org.jetbrains.kotlin.incremental.makeModuleFile
 
 /*
  * Build file for the Ecstasy core library of the XDK.
@@ -30,7 +31,7 @@ dependencies {
 }
 
 xtcCompile {
-    renameOutput.put("mack.xtc", "javatools_turtle.xtc")
+    moduleFilename("mack.xtc", "javatools_turtle.xtc")
 }
 
 /**
@@ -50,10 +51,6 @@ sourceSets.main {
             exclude("**/ecstasy/text**")
         }
     }
-}
-
-val compileXtc by tasks.existing {
-    // resourcePath
 }
 
 // We need extra resources.

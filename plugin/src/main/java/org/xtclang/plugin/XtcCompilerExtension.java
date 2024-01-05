@@ -5,10 +5,18 @@ import org.gradle.api.provider.Property;
 
 public interface XtcCompilerExtension extends XtcTaskExtension {
     Property<Boolean> getNoWarn();
+
     Property<Boolean> getStrict();
+
     Property<Boolean> getQualifiedOutputName();
+
     Property<Boolean> getVersionedOutputName();
+
     Property<Boolean> getForceRebuild();
-    Property<String> getOutputFilename();
-    MapProperty<String, String> getRenameOutput();
+
+    MapProperty<Object, Object> getModuleFilenames();
+
+    void moduleFilename(Object from, Object to);
+
+    String resolveModuleFilename(String from);
 }

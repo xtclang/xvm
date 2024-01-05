@@ -6,6 +6,13 @@
 #  responsibility to manually ensure the branch tests clean during
 #  development and before submission as pull request)
 #
+# TODO: The run command could be augmented with an environment variable that
+# XDK Gradle mirrors to a Gradle property, as per the convention like:
+#
+#  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME=true ./gradlew build
+#
+# But of course that doesn't work on Windows. Need to split though out
+#
 name: Build and verify Ecstasy project on push
 on: push
 jobs:
@@ -23,4 +30,4 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Execute Gradle build
-        run: ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME=true ./gradlew build --info
+        run: ./gradlew build --info

@@ -535,11 +535,13 @@ projects or the XDK. None of them are at all specific to XTC:
 * The concept of Maven/Gradle SourceSets.
 * The concept of a Gradle Build Scan, and understanding how to inspect it and how to use it to 
 spot build issues.
+* The standard flags that can be used to control Gradle debug log levels, --info, -q, --stacktrace
+and so on.
 * The concept of goal of self-contained software, which specifies its complete dependencies
 as part of its source controlled configuration. 
   * On the Maven model level, this means semantically versioned Maven artifacts. 
   * On the software build and execution level, this also means specific versions of external
-  pieces of software, for example Java, NodeJS or Yarn. This also means that we can and SHOULD
+  pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
   always be able to containerize. 
   
       *(Not only does this mean that we can build and run bit identical software on any machine

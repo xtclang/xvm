@@ -1,6 +1,5 @@
 import org.gradle.api.attributes.LibraryElements.CLASSES
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
-import org.gradle.api.attributes.LibraryElements.JAR
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
@@ -17,7 +16,7 @@ plugins {
 val semanticVersion: SemanticVersion by extra
 
 val xdkJavaToolsUtils by configurations.registering {
-    description = "Consumer configuration of the XVM Java Tools Utils jar artifact: 'javatools_utils-$version.jar'"
+    description = "Consumer configuration of the classes for the XVM Java Tools Utils project (version $version)"
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
@@ -36,13 +35,34 @@ dependencies {
     testImplementation(libs.javatools.utils)
 }
 
+/**
+ * TODO: Someone please determine if this is something we should fix or not:
+ *
+ * We add the implicits.x file to the resource set, to both make it part of the javatools.jar + available.
+ * IntelliJ may warn that we have a "duplicate resource folder" if this is executed by a Run/Debug configuration.
+ * This is because lib_ecstasy is the place where these resources are originally placed. I'm not sure if
+ * they need to be there to be compiled into the ecstasy.xtc binary, in order for the launchers to work, or
+ * if they only need to be in the javatools.jar. If the latter is the case, we should move them. If the
+ * former is the case, they should be resolved from the the built ecstasy.xtc module on the module path
+ * anyway.
+ *
+ * We also need to refer to the "mack" module during runtime in the debugger. I suppose we can't access that
+ * due to a similar reason as above - IntelliJ needs a reference to it to be able to invoke it in
+ * the debug session, and it resides in a different module too (javatools_turtle). Seems weird that it
+ * doesn't get that from the ecstasy.xtc file that actually IS on the module path in the debug run.
+ */
+sourceSets.main {
+    resources {
+        srcDir(file(xdkImplicitsFile.parent))
+    }
+}
+
 val jar by tasks.existing(Jar::class) {
     archiveBaseName = "javatools"
 
     // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
     //  apparent how to get that correct for includedBuilds.
     from(xdkJavaToolsUtils)
-    from(file(xdkImplicitsPath)) // TODO Hack: this should be changed to use a consumable configuration, and/or moving javautils as a subproject, as it is never used standalone, just as part of a fat javatools jar.
 
     manifest {
         attributes(

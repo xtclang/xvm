@@ -23,7 +23,6 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_IN
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
 public class JavaExecLauncher extends XtcLauncher {
-
     JavaExecLauncher(final Project project, final String mainClass, final boolean logOutputs) {
         super(project, mainClass, logOutputs);
     }
@@ -40,18 +39,17 @@ public class JavaExecLauncher extends XtcLauncher {
         }
 
         final var builder = resultBuilder(cmd);
-        return createExecResult(builder.execResult(
-            project.getProject().javaexec(spec -> {
-                if (logOutputs) {
-                    spec.setStandardOutput(builder.getOut());
-                    spec.setErrorOutput(builder.getErr());
-                }
-                spec.classpath(javaToolsJar);
-                spec.getMainClass().set(cmd.getMainClassName());
-                spec.args(cmd.toList());
-                spec.jvmArgs(cmd.getJvmArgs());
-                spec.setIgnoreExitValue(true);
-            })));
+        return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {
+            if (logOutputs) {
+                spec.setStandardOutput(builder.getOut());
+                spec.setErrorOutput(builder.getErr());
+            }
+            spec.classpath(javaToolsJar);
+            spec.getMainClass().set(cmd.getMainClassName());
+            spec.args(cmd.toList());
+            spec.jvmArgs(cmd.getJvmArgs());
+            spec.setIgnoreExitValue(true);
+        })));
     }
 
     private String readXdkVersionFromJar(final File jar) {
@@ -77,9 +75,7 @@ public class JavaExecLauncher extends XtcLauncher {
     }
 
     private boolean isJavaToolsJar(final File file) {
-        if (ProjectDelegate.hasFileExtension(file, "jar") &&
-            file.getName().startsWith(XDK_JAVATOOLS_ARTIFACT_ID) &&
-            readXdkVersionFromJar(file) != null) {
+        if (ProjectDelegate.hasFileExtension(file, "jar") && file.getName().startsWith(XDK_JAVATOOLS_ARTIFACT_ID) && readXdkVersionFromJar(file) != null) {
             info("{} Detected 'javatools.jar' file at: '{}'", prefix, file.getAbsolutePath());
             return true;
         }
@@ -135,17 +131,14 @@ public class JavaExecLauncher extends XtcLauncher {
          * fail if there are multiple configurations. However, in order to ensure correctness of all dependencies,
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
-         *
-         * TODO: It might be the case that the IDE integrated runner for the Javatools project still has
-         *   issues by referring to a finished jar artifact, and not somehow to the included build, but
-         *   we believe IntelliJ may fix that because it understands correctly written Gradle build script
-         *   semantics. Verify this.
          */
         final var javaToolsFromConfig = filesFrom(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(this::isJavaToolsJar);
-        final var javaToolsFromXdk =
-                project.getProject().fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(this::isJavaToolsJar);
-        System.err.println("** javatools config: " + javaToolsFromConfig.getFiles());
-        System.err.println("** javatools xdk   : " + javaToolsFromXdk.getFiles());
+        final var javaToolsFromXdk = project.getProject().fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(this::isJavaToolsJar);
+
+        info("""            
+                {} javaToolsFromConfig files: {}
+                {} javaToolsFromXdk files: {}
+                """.trim(), prefix, javaToolsFromConfig.getFiles(), prefix, javaToolsFromXdk.getFiles());
 
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
@@ -154,11 +147,9 @@ public class JavaExecLauncher extends XtcLauncher {
         }
 
         info("""
-            {} Check for javatools.jar in {} config and XDK (unpacked zip, or module collection) dependency, if present.
-            {}     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
-            """.trim(),
-                prefix, XDK_CONFIG_NAME_JAVATOOLS_INCOMING,
-                prefix, resolvedFromConfig, resolvedFromXdk);
+                {} Check for 'javatools.jar' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
+                {}     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
+                """.trim(), prefix, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, prefix, resolvedFromConfig, resolvedFromXdk);
 
         final String versionConfig = readXdkVersionFromJar(resolvedFromConfig);
         final String versionXdk = readXdkVersionFromJar(resolvedFromXdk);

@@ -21,5 +21,5 @@ dependencies {
 
 xtcCompile {
     // TODO: outputFilename = "_native.xtc" has a bug. Figure out why.
-    renameOutput.put("_native.xtc", "javatools_bridge.xtc")
+    moduleFilename("_native.xtc", "javatools_bridge.xtc")
 }

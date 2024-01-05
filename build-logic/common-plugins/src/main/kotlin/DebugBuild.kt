@@ -1,25 +1,29 @@
-@file:Suppress("DEPRECATION")
-
-import org.gradle.BuildListener
-import org.gradle.BuildResult
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
-import org.gradle.api.execution.TaskExecutionListener
-import org.gradle.api.initialization.Settings
-import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.TaskState
-import org.gradle.kotlin.dsl.*
+import org.gradle.kotlin.dsl.findByType
+import org.gradle.kotlin.dsl.withType
 import java.io.File
 import java.net.URI
 import java.util.Enumeration
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
+import kotlin.collections.Collection
+import kotlin.collections.List
+import kotlin.collections.Set
+import kotlin.collections.count
+import kotlin.collections.filter
+import kotlin.collections.forEach
+import kotlin.collections.forEachIndexed
+import kotlin.collections.map
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.collections.toSet
 
 /**
  * Simple helper functions, mostly printing out dependencies, inputs and outputs and other
@@ -223,48 +227,6 @@ class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
                 return null
             }
             return config
-        }
-    }
-}
-
-class XdkBuildListener(project: Project) : XdkProjectBuildLogic(project), BuildListener, TaskExecutionListener {
-    private val callbackPrefix = "$prefix [BUILD CALLBACK]"
-    private var settings: Settings? = null
-    private var loaded: Boolean = false
-    private var evaluated: Boolean = false
-
-    override fun settingsEvaluated(settings: Settings) {
-        this.settings = settings
-        logger.info("$callbackPrefix Settings evaluated.")
-    }
-
-    override fun projectsLoaded(gradle: Gradle) {
-        this.loaded = true
-        logger.info("$callbackPrefix Projects loaded.")
-    }
-
-    override fun projectsEvaluated(gradle: Gradle) {
-        this.evaluated = true
-        logger.info("$callbackPrefix Projects evaluated.")
-    }
-
-    @Deprecated("The Config Cache breaks build listeners.")
-    override fun buildFinished(result: BuildResult) {
-        // TODO: Deprecated for config cache.
-    }
-
-    override fun beforeExecute(task: Task) {
-    }
-
-    override fun afterExecute(task: Task, state: TaskState) {
-    }
-
-    override fun toString(): String {
-        return buildString {
-            appendLine("$prefix BuildListener:")
-            appendLine("  Settings evaluated: ${settings != null}")
-            appendLine("  Projects loaded: $loaded")
-            appendLine("  Projects evaluated: $evaluated")
         }
     }
 }

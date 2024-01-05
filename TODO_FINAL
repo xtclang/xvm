@@ -1,12 +1,14 @@
 TODO:
 * Use the PluginMaven default publication, don't add a special one for XTC. This is hardcoded and forced to generate docs and source from the gradlePluginPortal logic anyway.
 * Allow configuration based running xtc module from gradlew
-* Abort if running gradle and not gradlew.
-* speed up build
-* Investigate debugger
+* Unicode dependencies.
 * Build accumulator
+* Move all constants like "javatools-fatjar" into the XdkBuild framework.
+* Create first release from master when merged, and add github release plugin.
 
 Maybe after merge:
+* Speed up build part 2
+* Abort if running gradle and not gradlew. We just need a way to detect it.
 * Investigate the Git release plugin
 * Add a timer so we can get task events reported at the end of each action, or XTCTask.
 * Add a unit test to the test source set of something and just make sure the runXtcTest and compileXtcTest tasks
@@ -28,6 +30,7 @@ from the source set sent into the compile and run tasks for the test source set 
    Look for all get() and see if they can be lazy instead.
 
 Done:
+* Investigate debugger use case for javatools launcher.
 * Unicode as part of a property guarded normal build step for lib-ecstasy.
 * org.xtclang for gradlePluginPortal
 * Run task does not seem to print to stdout as it should? Reset stdout stding.

@@ -1,14 +1,16 @@
-import gradle.kotlin.dsl.accessors._0ac9a36cec4eeb1254edca678008b431.ext
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
+import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.file.Directory
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.provider.Provider
-import org.gradle.kotlin.dsl.extra
+import org.gradle.kotlin.dsl.named
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
@@ -26,8 +28,6 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
-    private val xdkBuildListener = XdkBuildListener(project)
-
     private val xdkProperties = XdkProperties(project)
 
     private val xdkGitHub: GitHubPackages by lazy {
@@ -40,10 +40,6 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
 
     private val xdkDistributions: XdkDistribution by lazy {
         XdkDistribution(project)
-    }
-
-    init {
-        project.gradle.addBuildListener(xdkBuildListener)
     }
 
     fun versions(): XdkVersionHandler {
@@ -85,26 +81,12 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
         const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
         const val XDK_TASK_GROUP_DEBUG = "debug"
-        const val XTC_GLOBAL_ROOT_PROJECT_PROPERTY = "xtcGlobalRootProject"
 
         private const val ENV_PATH = "PATH"
         private const val XTC_LAUNCHER = "xec"
-        private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS" // default "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+        private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
         private val cache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
-
-        private var globalRootProject: Project? = null
-
-        fun registerGlobalRootProject(project: Project) {
-            with (project) {
-                if (globalRootProject != null) {
-                    logger.warn("$prefix Attempting to register root project '${project.name}', but '${globalRootProject!!.name}' is already registered.")
-                }
-                logger.lifecycle("$prefix Registering global root project: '${project.name}'.")
-                extra[XTC_GLOBAL_ROOT_PROJECT_PROPERTY] = project
-            }
-            this.globalRootProject = project
-        }
 
         fun resolve(project: Project): XdkBuildLogic {
             // Companion objects are guaranteed to be singletons by Kotlin, so this cache works as build global cache.
@@ -202,8 +184,11 @@ val Project.prefix
 val Project.xdkImplicitsPath: String
     get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
 
+val Project.xdkImplicitsFile: File
+    get() = File(xdkImplicitsPath)
+
 // TODO: Hacky, for same reason as above.
-val Project.xtcIconFile: String
+val Project.xdkIconFile: String
     get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
 
 fun Project.isXdkPropertySet(key: String): Boolean {
@@ -226,6 +211,23 @@ fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable 
     val prefixed = "$prefix $msg"
     logger.log(level, prefixed)
     return GradleException(prefixed)
+}
+
+fun Configuration.xdkConsumable(project: Project, artifactCategory: String, artifactName: String) {
+    return xdkConfiguration(project, true, artifactCategory, artifactName)
+}
+
+fun Configuration.xdkResolvable(project: Project, artifactCategory: String, artifactName: String) {
+    return xdkConfiguration(project, false, artifactCategory, artifactName)
+}
+
+fun Configuration.xdkConfiguration(project: Project, isConsumable: Boolean,  artifactCategory: String, artifactName: String) {
+    isCanBeConsumed = isConsumable
+    isCanBeResolved = !isConsumable
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, project.objects.named(artifactCategory))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, project.objects.named(artifactName))
+    }
 }
 
 /**
