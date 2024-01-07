@@ -382,8 +382,10 @@ public class SwitchExpression
     @Override
     public ExprAST getExprAST(Context ctx)
         {
-        return new SwitchAST(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
-                m_aconstCases, m_abastBody, getTypes());
+        return isConstant()
+                ? toExprAst(toConstant())
+                : new SwitchAST(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
+                        m_aconstCases, m_abastBody, getTypes());
         }
 
 
