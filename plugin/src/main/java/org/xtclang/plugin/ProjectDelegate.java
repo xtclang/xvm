@@ -132,8 +132,14 @@ public abstract class ProjectDelegate<T, R> {
         };
     }
 
-    public static Provider<?> stringProvider(final Project project, final Object object) {
-        return object instanceof Provider<?> ? (Provider<?>) object : project.provider(() -> String.valueOf(object));
+    @SuppressWarnings("unchecked")
+    public Provider<String> stringProvider(final Object object) {
+        return object instanceof Provider<?> ? (Provider<String>)object : project.provider(() -> String.valueOf(object));
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Provider<String> stringProvider(final Project project, final Object object) {
+        return object instanceof Provider<?> ? (Provider<String>)object : project.provider(() -> String.valueOf(object));
     }
 
     public static String provideString(final Object object) {

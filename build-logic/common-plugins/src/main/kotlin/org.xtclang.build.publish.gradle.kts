@@ -7,6 +7,7 @@ plugins {
 
 private val xtcGitHubClient = xdkBuild.github()
 private val publishLocalDist = xdkBuild.distro().shouldPublishPluginToLocalDist()
+private val localPublishTasks = provider { tasks.withType<PublishToMavenRepository>().filter{ it.name.contains("Local") }.toList() }
 
 /**
  * Configure repositories for XDK artifact publication. Currently, we publish the XDK zip "xdkArchive", and
@@ -96,11 +97,42 @@ if (publishLocalDist) {
 
 val publishAllPublicationsToMavenLocalRepository by tasks.existing
 
-val listAllXtcLangGitHubPublications by tasks.registering {
+val deleteAllLocalPublications by tasks.registering {
+    doLast {
+        logger.warn("Task '$name' is not implemented yet. Delete your \$HOME/.m2 directory and any other local repositories manually.")
+    }
+}
+
+val listAllLocalPublications by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
+    doLast {
+        logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
+        localPublishTasks.get().forEach {
+            with(it.publication) {
+                logger.lifecycle("$prefix     '${it.name}' (${artifacts.count()} artifacts):")
+                val baseUrl = "${it.repository.url}${groupId.replace('.', '/')}/$artifactId/$version/$artifactId"
+                artifacts.forEach { artifact ->
+                    val desc = buildString {
+                        append(baseUrl)
+                        append("-$version")
+                        if (artifact.classifier != null) {
+                            append("-${artifact.classifier}")
+                        }
+                        append(".${artifact.extension}")
+                    }
+                    logger.lifecycle("$prefix         Local Artifact: '$desc'")
+                }
+            }
+        }
+    }
+}
+
+val listAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
-        logger.lifecycle("$prefix '$name' Listing publications for project '${project.group}:${project.name}':")
+        logger.lifecycle("$prefix '$name' Listing remote publications for project '${project.group}:${project.name}':")
         val packageNames = xtcGitHubClient.queryXtcLangPackageNames()
         if (packageNames.isEmpty()) {
             logger.lifecycle("$prefix   No Maven packages found.")
@@ -118,11 +150,11 @@ val listAllXtcLangGitHubPublications by tasks.registering {
     }
 }
 
-val deleteAllXtcLangGitHubPublications by tasks.registering {
+val deleteAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description =  "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
-        xtcGitHubClient.deleteXtcLangPackages()
+        xtcGitHubClient.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
         logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
     }
 }

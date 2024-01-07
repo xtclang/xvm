@@ -6,6 +6,8 @@ module TestFizzBuzz {
             console.print($"TestFizzBuzzArgument: (args[{loop.count}] = {arg})");
         }
 
+        //assert:debug;
+
         for (Int x : 1..100) {
             console.print(
                 switch (x % 3, x % 5) {

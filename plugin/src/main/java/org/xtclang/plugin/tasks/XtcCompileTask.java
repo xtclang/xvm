@@ -1,13 +1,15 @@
 package org.xtclang.plugin.tasks;
 
+import kotlin.Pair;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -19,18 +21,31 @@ import org.xtclang.plugin.launchers.CommandLine;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 import javax.inject.Inject;
+import java.nio.file.Files;
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcProjectDelegate.hasFileExtension;
 
 @CacheableTask
-public abstract class XtcCompileTask extends XtcSourceTask {
-    private final XtcCompilerExtension ext;
-    private final Provider<XtcLauncher> launcher;
+public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
+    // Per-task configuration properties only.
+    private final ListProperty<String> outputFilenames;
+
+    // Default values for inputs and outputs below are inherited from extension, can be reset per task
+    private final DirectoryProperty additionalOutputDir;
+    private final Property<Boolean> disableWarnings;
+    private final Property<Boolean> isStrict;
+    private final Property<Boolean> hasQualifiedOutputName;
+    private final Property<Boolean> hasVersionedOutputName;
+    private final Property<Boolean> shouldForceRebuild;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -43,86 +58,101 @@ public abstract class XtcCompileTask extends XtcSourceTask {
      * when you instantiate it from the ObjectFactory in a project):
      */
     @Inject
-    public XtcCompileTask(final XtcProjectDelegate project, final SourceSet sourceSet) {
-        super(project, sourceSet);
-        this.ext = project.xtcCompileExtension();
-        this.launcher = project.getProject().provider(() -> XtcLauncher.create(project.getProject(), XTC_COMPILER_CLASS_NAME, ext));
+    public XtcCompileTask(final XtcProjectDelegate delegate, final SourceSet sourceSet) {
+        super(delegate, sourceSet, delegate.xtcCompileExtension());
+        this.outputFilenames = delegate.getObjects().listProperty(String.class).value(new ArrayList<>());
+        // Conventions inherited from extension, can be reset on a per-task basis, of course.
+        final XtcCompilerExtension ext = delegate.xtcCompileExtension();
+        this.additionalOutputDir = delegate.getObjects().directoryProperty().convention(ext.getAdditionalOutputDir());
+        this.disableWarnings = objects.property(Boolean.class).convention(ext.getDisableWarnings());
+        this.isStrict = objects.property(Boolean.class).convention(ext.getStrict());
+        this.hasQualifiedOutputName = objects.property(Boolean.class).convention(ext.getQualifiedOutputName());
+        this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
+        this.shouldForceRebuild = objects.property(Boolean.class).convention(ext.getForceRebuild());
+    }
+
+    @Optional
+    @OutputDirectory
+    public DirectoryProperty getAdditionalOutputDir() {
+        return additionalOutputDir;
+    }
+
+    public void setAdditionalOutputDir(final Directory dir) {
+        additionalOutputDir.value(dir);
+    }
+
+    public void setAdditionalOutputDir(final Provider<Directory> dir) {
+        additionalOutputDir.value(dir);
+    }
+
+    /**
+     * Add an output Filename mapping.
+     */
+    public void outputFilename(final String from, final String to) {
+        outputFilenames.add(from);
+        outputFilenames.add(to);
+    }
+
+    public void outputFilename(final Pair<String, String> pair) {
+        outputFilenames.add(pair.getFirst());
+        outputFilenames.add(pair.getSecond());
+    }
+
+    public void outputFilename(final Provider<String> from, final Provider<String> to) {
+        outputFilenames.add(from);
+        outputFilenames.add(to);
+    }
+
+    @Input
+    ListProperty<String> getOutputFilenames() {
+        return outputFilenames;
     }
 
     @InputDirectory
     @PathSensitive(PathSensitivity.ABSOLUTE)
     Provider<Directory> getInputXdkContents() {
-        return project.getXdkContentsDir();
+        return delegate.getXdkContentsDir();
     }
 
     @OutputDirectory
     Provider<Directory> getOutputXtcModules() {
-        return project.getXtcCompilerOutputDirModules(sourceSet);
+        return delegate.getXtcCompilerOutputDirModules(sourceSet);
     }
 
     @Input
-    Property<Boolean> getFork() {
-        return ext.getFork();
+    @Override
+    public Property<Boolean> getQualifiedOutputName() {
+        return hasQualifiedOutputName;
     }
 
     @Input
-    Property<Boolean> getUseNativeLauncher() {
-        return ext.getUseNativeLauncher();
+    @Override
+    public Property<Boolean> getVersionedOutputName() {
+        return hasVersionedOutputName;
     }
 
     @Input
-    Property<Boolean> getLogOutputs() {
-        return ext.getLogOutputs();
+    @Override
+    public Property<Boolean> getStrict() {
+        return isStrict;
     }
 
     @Input
-    ListProperty<String> getJvmArgs() {
-        return ext.getJvmArgs();
+    @Override
+    public Property<Boolean> getForceRebuild() {
+        return shouldForceRebuild;
     }
 
     @Input
-    Property<Boolean> getNoWarn() {
-        return ext.getNoWarn();
-    }
-
-    @Input
-    Property<Boolean> getIsFork() {
-        return ext.getFork();
-    }
-
-    @Input
-    Property<Boolean> getIsVerbose() {
-        return ext.getVerbose();
-    }
-
-    @Input
-    Property<Boolean> getIsStrict() {
-        return ext.getStrict();
-    }
-
-    @Input
-    Property<Boolean> getQualifiedOutputName() {
-        return ext.getQualifiedOutputName();
-    }
-
-    @Input
-    Property<Boolean> getVersionedOutputName() {
-        return ext.getVersionedOutputName();
-    }
-
-    @Input
-    Property<Boolean> getForceRebuild() {
-        return ext.getForceRebuild();
-    }
-
-    @Input
-    MapProperty<Object, Object> getModuleFilenames() {
-        return ext.getModuleFilenames();
+    @Override
+    public Property<Boolean> getDisableWarnings() {
+        return disableWarnings;
     }
 
     @OutputDirectory
     Provider<Directory> getOutputDirectory() {
-        return project.getXtcCompilerOutputDirModules(sourceSet);
+        // TODO We can make this configurable later.
+        return delegate.getXtcCompilerOutputDirModules(sourceSet);
     }
 
     @TaskAction
@@ -132,28 +162,28 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, getJvmArgs().get());
 
         if (getForceRebuild().get()) {
-            project.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
+            delegate.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
             touchAllSource(); // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
         }
 
-        File outputDir = project.getXtcCompilerOutputDirModules(sourceSet).get().getAsFile();
+        File outputDir = delegate.getXtcCompilerOutputDirModules(sourceSet).get().getAsFile();
         args.add("-o", outputDir.getAbsolutePath());
 
-        project.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
+        delegate.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
 
         sourceSet.getResources().getSrcDirs().forEach(dir -> {
-            project.info("{} Resolving resource dir (build): '{}'.", prefix, dir);
+            delegate.info("{} Resolving resource dir (build): '{}'.", prefix, dir);
             if (!dir.exists()) {
-                project.info("{} Resource does not exist: '{}' (ignoring passing as input to compiler)", prefix, dir);
+                delegate.info("{} Resource does not exist: '{}' (ignoring passing as input to compiler)", prefix, dir);
             } else {
-                project.info("{} Adding resource: {}", prefix, dir);
+                delegate.info("{} Adding resource: {}", prefix, dir);
                 args.add("-r", dir.getAbsolutePath());
             }
         });
 
-        args.addBoolean("-nowarn", getNoWarn().get());
+        args.addBoolean("-nowarn", getDisableWarnings().get());
         args.addBoolean("-verbose", getIsVerbose().get());
-        args.addBoolean("-strict", getIsStrict().get());
+        args.addBoolean("-strict", getStrict().get());
         args.addBoolean("-qualify", getQualifiedOutputName().get());
         args.addBoolean("-rebuild", getForceRebuild().get());
         args.addBoolean("-version", getVersionedOutputName().get());
@@ -161,41 +191,59 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         args.addRepeated("-L", resolveXtcModulePath());
         final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).toList();
         if (sourceFiles.isEmpty()) {
-            project.warn("{} No source file found for sourceSet: '{}'", prefix, sourceSet.getName());
+            delegate.warn("{} No source file found for sourceSet: '{}'", prefix, sourceSet.getName());
         }
         sourceFiles.forEach(args::addRaw);
 
-        handleExecResult(project.getProject(), launcher.get().apply(args));
+        final var launcher = createLauncher();
+        handleExecResult(delegate.getProject(), launcher.apply(args));
         // TODO: A little bit kludgy, but the outputFilename property in the xtcCompile extension as some directory vs file issue (a bug).
-        renameOutputs();
+        finalizeOutputs();
     }
 
-    private void renameOutputs() {
-        project.getProject().fileTree(getOutputXtcModules()).filter(project::isXtcBinary).forEach(file -> {
-            final String oldName = file.getName();
-            final String newName = ext.resolveModuleFilename(oldName);
+    private void finalizeOutputs() {
+        final Directory extraDestDir = additionalOutputDir.getOrNull();
+        delegate.getProject().fileTree(getOutputXtcModules()).filter(delegate::isXtcBinary).forEach(oldFile -> {
+            final String oldName = oldFile.getName();
+            final String newName = resolveOutputFilename(oldName);
+            final File newFile;
             if (oldName.equals(newName)) {
-                project.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
+                newFile = oldFile;
+                delegate.lifecycle("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
             } else {
-                project.info("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
-                final File newFile = new File(file.getParentFile(), newName);
-                project.info("{} File tree scan: {} should be renamed to {}", project, file, newFile);
-                if (!file.renameTo(newFile)) {
+                newFile = new File(oldFile.getParentFile(), newName);
+                delegate.lifecycle("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
+                delegate.info("{} File tree scan: {} should be renamed to {}", delegate, oldFile, newFile);
+                if (!oldFile.renameTo(newFile)) {
                     // TODO does this update the output? Seems like it. Write a unit test.
-                    throw project.buildException("Failed to rename " + file + " to " + newFile);
+                    throw delegate.buildException("Failed to rename " + oldFile + " to " + newFile);
                 }
+            }
+
+            if (extraDestDir != null) {
+                try {
+                    delegate.lifecycle("{} Copying {} to accumulative dir: {}", prefix, oldFile, extraDestDir.getAsFile());
+                    Files.copy(
+                        newFile.toPath(),
+                        new File(extraDestDir.getAsFile(), newName).toPath(),
+                        REPLACE_EXISTING);
+                } catch (final IOException e) {
+                    throw delegate.buildException(e, "Could not copy '{}' to accumulative output directory: '{}'.", oldFile.getAbsolutePath(), extraDestDir.getAsFile().getAbsolutePath());
+                }
+            } else {
+                delegate.lifecycle("{} No extra output required.", prefix);
             }
         });
     }
 
     private Set<File> resolveXtcSourceFiles() {
         final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
-        project.info("{} Resolved top level sources (should be module definitions, or XTC will fail later): {}", prefix, resolvedSources);
+        delegate.info("{} Resolved top level sources (should be module definitions, or XTC will fail later): {}", prefix, resolvedSources);
         return resolvedSources;
     }
 
     private Set<File> resolveXtcModulePath() {
-        return project.resolveModulePath(getName(), getInputDeclaredDependencyModules());
+        return delegate.resolveModulePath(getName(), getInputDeclaredDependencyModules());
     }
 
     private boolean isXtcSourceFile(final File file) {
@@ -217,11 +265,29 @@ public abstract class XtcCompileTask extends XtcSourceTask {
         final var dir = file.getParentFile();
         assert (dir != null && dir.isDirectory());
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        project.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
+        delegate.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || "mack.x".equalsIgnoreCase(file.getName())) {
-            project.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
+            delegate.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
             return true;
         }
         return false;
     }
+
+    private String resolveOutputFilename(final String from) {
+        final List<String> list = outputFilenames.get();
+        for (int i = 0; i < list.size(); i += 2) {
+            final String key = list.get(i);
+            final String value = list.get(i + 1);
+            if (key.equals(from)) {
+                return value;
+            }
+        }
+        return from;
+    }
+
+    @Override
+    protected XtcLauncher<XtcCompilerExtension, ? extends XtcLauncherTask<XtcCompilerExtension>> createLauncher() {
+        return XtcLauncher.create(delegate.getProject(), XTC_COMPILER_CLASS_NAME, this);
+    }
 }
+

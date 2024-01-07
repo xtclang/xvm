@@ -22,7 +22,7 @@ java {
         val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION).toInt())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
-            throw buildException("Error in Java toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
+            throw buildException("Error in Java Toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
         }
         logger.info("$prefix Java Toolchain config; binary format version: 'JDK $xdkJavaVersion' (build process version: 'JDK $buildProcessJavaVersion')")
         languageVersion.set(xdkJavaVersion)
@@ -63,22 +63,6 @@ val checkWarnings by tasks.registering {
 val assemble by tasks.existing {
     dependsOn(checkWarnings)
 }
-
-/*
-tasks.named(LifecycleBasePlugin.ASSEMBLE_TASK_NAME).configure {
-    //doFirst {
-    //    logger.warn("Run once!")
-        val lint = getXdkPropertyBoolean(lintProperty, false)
-        if (!lint) {
-            val lintPropertyHasValue = isXdkPropertySet(lintProperty)
-            if (lintPropertyHasValue) {
-                logger.warn("$prefix *** WARNING: Project EXPLICITLY disables Java linting/warnings in its properties. DO NOT RELEASE PRODUCTION CODE COMPILED WITH DISABLED WARNINGS!")
-            } else {
-                logger.warn("$prefix *** WARNING: Java linting/warnings disabled for project. This is not best practice!")
-            }
-        }
-    //}
-}*/
 
 tasks.withType<JavaCompile>().configureEach {
     val lint = getXdkPropertyBoolean(lintProperty, false)

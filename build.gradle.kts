@@ -75,6 +75,7 @@ val publishRemote by tasks.registering {
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
+        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately efter plugin branch gets merged to master)
     }
     doLast {
         logger.lifecycle("$prefix Finished '$name'.")
@@ -101,16 +102,21 @@ val publish by tasks.registering {
     }
 }
 
-GitHubPackages.gitHubRepoTaskPrefixes.forEach { taskPrefix ->
-    val taskName = "${taskPrefix}AllXtcLangGitHubPublications"
-    tasks.register(taskName) {
-        group = PUBLISH_TASK_GROUP
-        description = "Task that aggregates '$taskName' tasks for builds with publications."
-        includedBuildsWithPublications.forEach {
-            dependsOn(it.task(":$taskName"))
-        }
-        doLast {
-            logger.lifecycle("$prefix Finished '$name'.")
+GitHubPackages.publishTaskPrefixes.forEach { prefix ->
+    buildList {
+        addAll(GitHubPackages.publishTaskSuffixesLocal)
+        addAll(GitHubPackages.publishTaskSuffixesRemote)
+    }.forEach { suffix ->
+        val taskName = "$prefix$suffix"
+        tasks.register(taskName) {
+            group = PUBLISH_TASK_GROUP
+            description = "Task that aggregates '$taskName' tasks for builds with publications."
+            includedBuildsWithPublications.forEach {
+                dependsOn(it.task(":$taskName"))
+            }
+            doLast {
+                logger.lifecycle("$prefix Finished '$name'.")
+            }
         }
     }
 }

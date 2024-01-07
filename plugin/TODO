@@ -53,7 +53,6 @@ TODO: Add include and exclude patterns for the xtcCompile and xtcRun configurati
 ./manualTests/webapp/build.gradle.kts:// TODO: Right now processResources exists through the xtc plugin, is run, and copies src/<sourceSet>/resources to build resources for that source set
 ./manualTests/build.gradle.kts:// TODO: Add source set for negative tests.
 ./manualTests/build.gradle.kts:// TODO: Add modules { } dsl section to collect single module { } configurations, instead of listing them in the config as a sequence.
-./javatools_bridge/build.gradle.kts:    // TODO: outputFilename = "_native.xtc" has a bug. Figure out why.
 ./javatools_launcher/build.gradle.kts: * TODO: We could add a mechanism to native compile this, but it would have to cross compile
 ./javatools/build.gradle.kts:// TODO: Move these to buildSrc, the XDK composite build does use them in some different places.
 ./javatools/build.gradle.kts:    // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not

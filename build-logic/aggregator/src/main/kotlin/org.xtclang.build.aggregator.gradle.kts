@@ -26,6 +26,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
     }
 
     private fun aggregateLifeCycleTasks() {
+        System.err.println("HEllo aggregate : " + project.name);
         lifeCycleTasks.forEach { taskName ->
             logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
             tasks.named(taskName) {

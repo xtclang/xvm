@@ -37,6 +37,5 @@ includeBuild("javatools_unicode")
 includeBuild("plugin")
 includeBuild("xdk")
 includeBuild("manualTests")
-includeBuild("manualTests/webapp")
 
 rootProject.name = "xvm"

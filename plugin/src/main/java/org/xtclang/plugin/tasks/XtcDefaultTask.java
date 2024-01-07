@@ -9,9 +9,6 @@ import org.gradle.process.ExecResult;
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcProjectDelegate;
 
-import java.io.File;
-import java.util.Collection;
-
 // TODO: This is intended a common superclass to avoid the messy delegate pattern.
 //   We also put XTC launcher common logic in here, like e.g. fork, jvmArgs and such.
 
@@ -19,7 +16,8 @@ import java.util.Collection;
 //   now that we have a working inheritance hierarchy no longer constrained to multiple inheritance
 //   or various Gradle APIs.
 public abstract class XtcDefaultTask extends DefaultTask {
-    protected final XtcProjectDelegate project;
+    protected final XtcProjectDelegate delegate;
+    protected final Project proj;  // TOOD rename project. Just calling it "not project" do avoid sneaky name collision bugs for delegates that may still be named "project" for legacy reasons.
     protected final String prefix;
     protected final String name;
     protected final ObjectFactory objects;
@@ -27,12 +25,13 @@ public abstract class XtcDefaultTask extends DefaultTask {
 
     private boolean isResolvable;
 
-    protected XtcDefaultTask(final XtcProjectDelegate project) {
-        this.project = project;
-        this.prefix = project.prefix();
-        this.name = project.getProject().getName();
-        this.objects = project.getObjects();
-        this.logger = project.getLogger();
+    protected XtcDefaultTask(final XtcProjectDelegate delegate) {
+        this.delegate = delegate;
+        this.proj = delegate.getProject();
+        this.prefix = delegate.prefix();
+        this.name = delegate.getProject().getName();
+        this.objects = delegate.getObjects();
+        this.logger = delegate.getLogger();
     }
 
     protected void start() {
@@ -52,7 +51,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
     protected <T> T checkResolvable(final T configData) {
         // Used to implement sanity checks that we have started a TaskAction before resolving configuration contents.
         if (!isResolvable()) {
-            throw project.buildException("Task '{}' attempts to use configuration before it is fully resolved.");
+            throw delegate.buildException("Task '{}' attempts to use configuration before it is fully resolved.");
         }
         return configData;
     }
@@ -65,15 +64,5 @@ public abstract class XtcDefaultTask extends DefaultTask {
         result.rethrowFailure();
         result.assertNormalExitValue();
         return result;
-    }
-
-    // TODO: Likely we can just replace this with SourceDirectorySet::srcDirs for most things and will drastically simplify generated command lines.
-    protected static Collection<File> filesToDirs(final Collection<File> files) {
-        // Shorten a file set to a directory set
-        // TODO: Also add logic to filter out subdirectories to parents already in the set.
-        // TODO: Also use on module path.
-        final var dirs = files.stream().map(r -> r.isDirectory() ? r : r.getParentFile()).distinct().toList();
-        assert dirs.size() <= files.size() : "Directory filtering should be shorter.";
-        return dirs;
     }
 }

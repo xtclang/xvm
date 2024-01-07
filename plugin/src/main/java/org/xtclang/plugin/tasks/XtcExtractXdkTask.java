@@ -22,7 +22,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 
 @CacheableTask
-public class XtcExtractXdkTask extends XtcDefaultTask {
+public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     private static final String ARCHIVE_EXTENSION = "zip";
 
     @Inject
@@ -37,12 +37,12 @@ public class XtcExtractXdkTask extends XtcDefaultTask {
     @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
     FileCollection getInputXdkArchive() {
-        return project.filesFrom(XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING);
+        return delegate.filesFrom(XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING);
     }
 
     @OutputDirectory
     Provider<Directory> getOutputXtcModules() {
-        return project.getXdkContentsDir();
+        return delegate.getXdkContentsDir();
     }
 
     @TaskAction
@@ -50,22 +50,20 @@ public class XtcExtractXdkTask extends XtcDefaultTask {
         start();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
-        final var archives = project
+        final var archives = delegate
                 .filesFrom(true, XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING)
                 .filter(XtcExtractXdkTask::isXdkArchive);
 
         if (archives.isEmpty()) {
-            project.info("{} Project does NOT depend on the XDK; {} is a nop.", prefix, getName());
+            delegate.info("{} Project does NOT depend on the XDK; {} is a nop.", prefix, getName());
             return;
         }
 
         // If there are no archives, we do not depend on the XDK.
         final var archiveFile = archives.getSingleFile();
-
-        // TODO: Should probably add a configuration xdkJavaToolsProvider.
-        project.getProject().copy(config -> {
-            project.info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);
-            config.from(project.getProject().zipTree(archiveFile));
+        delegate.getProject().copy(config -> {
+            delegate.info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);
+            config.from(delegate.getProject().zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
                     "**/" + XDK_JAVATOOLS_ARTIFACT_ID + "*jar",
@@ -75,6 +73,6 @@ public class XtcExtractXdkTask extends XtcDefaultTask {
             config.into(getOutputXtcModules());
         });
 
-        project.info("{} Finished unpacking XDK archive: {} -> {}.", prefix, archiveFile.getAbsolutePath(), getOutputXtcModules().get());
+        delegate.info("{} Finished unpacking XDK archive: {} -> {}.", prefix, archiveFile.getAbsolutePath(), getOutputXtcModules().get());
     }
 }

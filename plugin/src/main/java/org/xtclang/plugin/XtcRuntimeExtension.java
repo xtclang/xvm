@@ -3,44 +3,13 @@ package org.xtclang.plugin;
 import org.gradle.api.Action;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 
 import java.util.List;
 
 @SuppressWarnings("unused") // TODO Implement and code coverage test all configurations.
-public interface XtcRuntimeExtension extends XtcTaskExtension {
-
-    String DEFAULT_METHOD_NAME = "run";
-
-    interface XtcRunModule {
-        Property<String> getModuleName();
-
-        Property<String> getMethodName();
-
-        List<Provider<String>> getModuleArgs();
-
-        List<String> resolveModuleArgs();
-
-        void setModuleArgs(Iterable<?> args);
-
-        void setModuleArgs(Object... args);
-
-        void moduleArgs(Iterable<?> args);
-
-        void moduleArgs(Object... args);
-
-        default boolean hasDefaultMethodName() {
-            return DEFAULT_METHOD_NAME.equals(getMethodName().get());
-        }
-
-        boolean validate();
-    }
+public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
 
     Property<Boolean> getShowVersion();
-
-    Property<Boolean> getAllowParallel();
-
-    Property<Boolean> getDebugEnabled();
 
     XtcRunModule module(Action<XtcRunModule> action);
 
@@ -48,25 +17,24 @@ public interface XtcRuntimeExtension extends XtcTaskExtension {
 
     void moduleName(String name);
 
-    XtcRuntimeExtension moduleNames(String... modules);
+    void moduleNames(String... modules);
 
-    XtcRuntimeExtension setModules(List<XtcRunModule> modules);
+    void setModules(List<XtcRunModule> modules);
 
-    XtcRuntimeExtension setModules(XtcRunModule... modules);
+    void setModules(XtcRunModule... modules);
 
-    XtcRuntimeExtension setModuleNames(List<String> moduleNames);
+    void setModuleNames(List<String> moduleNames);
 
-    XtcRuntimeExtension setModuleNames(String... moduleNames);
+    void setModuleNames(String... moduleNames);
 
-    ListProperty<Object> getModuleInputs();
-
-    List<XtcRunModule> validatedModules();
+    //ListProperty<Object> getModuleInputs();
 
     boolean isEmpty();
 
-    List<String> getModuleNames();
+    /*
+    ListProperty<String> getModuleNames();
 
-    List<String> getModuleMethods();
+    ListProperty<String> getModuleMethods();
 
-    List<String> getModuleArgs();
+    ListProperty<String> getModuleArgs();*/
 }

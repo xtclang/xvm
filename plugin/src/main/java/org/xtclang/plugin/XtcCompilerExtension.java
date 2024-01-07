@@ -1,10 +1,10 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.provider.MapProperty;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 
-public interface XtcCompilerExtension extends XtcTaskExtension {
-    Property<Boolean> getNoWarn();
+public interface XtcCompilerExtension extends XtcLauncherTaskExtension {
+    Property<Boolean> getDisableWarnings();
 
     Property<Boolean> getStrict();
 
@@ -14,9 +14,5 @@ public interface XtcCompilerExtension extends XtcTaskExtension {
 
     Property<Boolean> getForceRebuild();
 
-    MapProperty<Object, Object> getModuleFilenames();
-
-    void moduleFilename(Object from, Object to);
-
-    String resolveModuleFilename(String from);
+    DirectoryProperty getAdditionalOutputDir();
 }

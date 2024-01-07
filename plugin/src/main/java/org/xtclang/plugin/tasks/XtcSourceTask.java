@@ -16,22 +16,23 @@ import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
 import org.gradle.internal.Factory;
 import org.jetbrains.annotations.NotNull;
+import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 import java.io.File;
 import java.util.Set;
 
-public abstract class XtcSourceTask extends XtcLauncherTask implements PatternFilterable {
+public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
     private final PatternFilterable patternSet;
 
     private ConfigurableFileCollection sourceFiles;
 
     @SuppressWarnings("this-escape")
-    protected XtcSourceTask(final XtcProjectDelegate project, final SourceSet sourceSet) {
-        super(project, sourceSet);
+    protected XtcSourceTask(final XtcProjectDelegate delegate, final SourceSet sourceSet, final XtcCompilerExtension ext) {
+        super(delegate, sourceSet, ext);
         this.patternSet = getPatternSetFactory().create();
-        this.sourceFiles = project.getObjects().fileCollection();
+        this.sourceFiles = delegate.getObjects().fileCollection();
     }
 
     @Inject
@@ -79,7 +80,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask implements PatternFi
      * @param source The source.
      */
     public void setSource(final Object source) {
-        sourceFiles = project.getObjects().fileCollection().from(source);
+        sourceFiles = delegate.getObjects().fileCollection().from(source);
     }
 
     /**
@@ -177,9 +178,9 @@ public abstract class XtcSourceTask extends XtcLauncherTask implements PatternFi
         getSource().forEach(src -> {
             final var before = src.lastModified();
             final var after = touch(src);
-            project.info("{} *** File: {} (before: {}, after: {})", prefix, src.getAbsolutePath(), before, after);
+            delegate.info("{} *** File: {} (before: {}, after: {})", prefix, src.getAbsolutePath(), before, after);
         });
-        project.info("{} Updated lastModified of {}.getSource() and resources to 'now' in the epoch.", prefix, getName());
+        delegate.info("{} Updated lastModified of {}.getSource() and resources to 'now' in the epoch.", prefix, getName());
     }
 
     private long touch(final File file) {
@@ -189,9 +190,9 @@ public abstract class XtcSourceTask extends XtcLauncherTask implements PatternFi
     private long touch(final File file, final long now) {
         final var oldLastModified = file.lastModified();
         if (!file.setLastModified(now)) {
-            project.warn("{} Failed to update modification time stamp for file: {}", prefix, file.getAbsolutePath());
+            delegate.warn("{} Failed to update modification time stamp for file: {}", prefix, file.getAbsolutePath());
         }
-        project.info("{} Touch file: {} (timestamp: {} -> {})", prefix, file.getAbsolutePath(), oldLastModified, now);
+        delegate.info("{} Touch file: {} (timestamp: {} -> {})", prefix, file.getAbsolutePath(), oldLastModified, now);
         assert(file.lastModified() == now);
         return now;
     }

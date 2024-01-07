@@ -1,3 +1,5 @@
+import org.xtclang.plugin.tasks.XtcCompileTask
+
 /*
  * Build file for the JavaTools "bridge" (aka "_native") module that is used to connect the Java
  * runtime to the Ecstasy type system.
@@ -19,7 +21,6 @@ dependencies {
     xtcModule(libs.xdk.web)
 }
 
-xtcCompile {
-    // TODO: outputFilename = "_native.xtc" has a bug. Figure out why.
-    moduleFilename("_native.xtc", "javatools_bridge.xtc")
+val compileXtc by tasks.existing(XtcCompileTask::class) {
+    outputFilename("_native.xtc" to "javatools_bridge.xtc")
 }

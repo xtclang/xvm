@@ -21,5 +21,8 @@ then
     rm -fr $HOME/.gradle/caches
     rm -fr $HOME/.gradle/daemons
 
+    echo "Deleting local maven repository"
+    rm -fr $HOME/.m2/repository
+    
     echo "Purged." 
 fi

@@ -43,7 +43,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             name = "xdkRepo"
             url = repoPath.toUri()
         }.also {
-            logger.quiet("[xdk] *** Added orgXtcLangLocalDist() repository: ${it.name} (url ${it.url})")
+            logger.info("[xdk] *** Added orgXtcLangLocalDist() repository: ${it.name} (url ${it.url})")
         }
     }
 
@@ -62,7 +62,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
                 }
             }
         }.also {
-            logger.quiet("[xdk] *** Added orgXtcLang() repository: ${it.name} (url ${it.url})")
+            logger.info("[xdk] *** Added orgXtcLang() repository: ${it.name} (url ${it.url})")
         }
     }
 
@@ -100,7 +100,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             try {
                 return loadFromUrl(XTC_REPO_INIT_PROPERTIES_URL).also { logger.info("[xdk] Loaded XTC Repo properties from remote URL: $it") }
             } catch (t: Throwable) {
-                logger.error("[xdk] init.d: Failed to resolve remote properties from: $XTC_REPO_INIT_PROPERTIES_URL")
+                logger.error("[xdk] init.d: Failed to resolve remote properties from: $XTC_REPO_INIT_PROPERTIES_URL (already gave up on local).")
                 throw GradleException(t.message ?: t.javaClass.simpleName, t)
             }
         }

@@ -5,6 +5,8 @@ import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcProjectDelegate;
+import org.xtclang.plugin.XtcLauncherTaskExtension;
+import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,9 +24,9 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_IN
 /**
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
-public class JavaExecLauncher extends XtcLauncher {
-    JavaExecLauncher(final Project project, final String mainClass, final boolean logOutputs) {
-        super(project, mainClass, logOutputs);
+public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
+    JavaExecLauncher(final Project project, final String mainClass, final T ext) {
+        super(project, mainClass, ext);
     }
 
     @Override
@@ -33,17 +35,14 @@ public class JavaExecLauncher extends XtcLauncher {
         if (javaToolsJar == null) {
             throw buildException("Failed to resolve 'javatools.jar' in any classpath.");
         }
-        info("{} '{}' {}; Using 'javatools.jar' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), javaToolsJar.getAbsolutePath());
+        info("{} '{}' {}; Using 'javatools.jar' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), javaToolsJar);
         if (hasVerboseLogging()) {
             lifecycle("{} JavaExec command: {}", prefix, cmd.toString(javaToolsJar));
         }
 
         final var builder = resultBuilder(cmd);
         return createExecResult(builder.execResult(project.getProject().javaexec(spec -> {
-            if (logOutputs) {
-                spec.setStandardOutput(builder.getOut());
-                spec.setErrorOutput(builder.getErr());
-            }
+            redirectIo(builder, spec);
             spec.classpath(javaToolsJar);
             spec.getMainClass().set(cmd.getMainClassName());
             spec.args(cmd.toList());

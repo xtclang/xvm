@@ -2,6 +2,7 @@ import org.gradle.api.attributes.LibraryElements.CLASSES
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
+import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /**
@@ -51,9 +52,11 @@ dependencies {
  * the debug session, and it resides in a different module too (javatools_turtle). Seems weird that it
  * doesn't get that from the ecstasy.xtc file that actually IS on the module path in the debug run.
  */
-sourceSets.main {
-    resources {
-        srcDir(file(xdkImplicitsFile.parent))
+sourceSets {
+    main {
+        resources {
+            srcDir(file(xdkImplicitsFile.parent)) // May trigger a warning in your IDE, since we are referencing someone else's (javatools_turtle) main resource path. IDEs like to have one.
+        }
     }
 }
 
@@ -82,7 +85,7 @@ val jar by tasks.existing(Jar::class) {
     doLast {
         val path = archiveFile.map { it.asFile.absolutePath }
         logger.info("$prefix Finished building Java tools (fat jar including javatools-utils): '$path' as artifact.")
-        printTaskOutputs()
+        printTaskOutputs(INFO)
     }
 }
 
@@ -92,7 +95,8 @@ val assemble by tasks.existing {
 
 val sanityCheckJar by tasks.registering {
     group = VERIFICATION_GROUP
-    description = "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
+    description =
+        "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
 
     dependsOn(jar)
 
@@ -116,7 +120,8 @@ val sanityCheckJar by tasks.registering {
                 "org/xvm/tool/Runner",
                 "org/xvm/util/Severity" // verify the
             ),
-            expectedEntryCount) // Check for files in both javatools_utils and javatools + implicit.x
+            expectedEntryCount
+        ) // Check for files in both javatools_utils and javatools + implicit.x
 
         logger.info("$prefix Sanity check of javatools.jar completed successfully.")
     }

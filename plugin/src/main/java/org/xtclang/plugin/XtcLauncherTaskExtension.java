@@ -2,13 +2,18 @@ package org.xtclang.plugin;
 
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
+
+import java.io.InputStream;
+import java.io.OutputStream;
 
 @SuppressWarnings("unused")
-public interface XtcTaskExtension {
+public interface XtcLauncherTaskExtension {
     // TODO: Increase granularity for this later, so that we can control individual module execution fork policies from the run tasks?
     //   (the easiest solution, would likely be to just add setters that manipulate the extension values in the tasks, or maybe resetting them)
     // TODO: This may be a current source of confusion - allowing a task property getter, and changing its value, will lead to the entire extension for
     //   all tasks of that kind being changed, and that is something we should definitely fix.
+    // Todo Turn these into inputs directly?
     Property<Boolean> getFork();
 
     Property<Boolean> getUseNativeLauncher();
@@ -19,11 +24,19 @@ public interface XtcTaskExtension {
 
     ListProperty<String> getJvmArgs();
 
-    XtcTaskExtension jvmArgs(Object... jvmArgs);
+    Property<InputStream> getStdin();
 
-    XtcTaskExtension jvmArgs(Iterable<?> jvmArgs);
+    Property<OutputStream> getStdout();
 
-    XtcTaskExtension setJvmArgs(Object... jvmArgs);
+    Property<OutputStream> getStderr();
 
-    XtcTaskExtension setJvmArgs(Iterable<?> jvmArgs);
+    void jvmArgs(Object... args);
+
+    void jvmArgs(Iterable<? extends String> args);
+
+    void jvmArgs(Provider<? extends Iterable<? extends String>> provider);
+
+    void setJvmArgs(Iterable<? extends String> elements);
+
+    void setJvmArgs(Provider<? extends Iterable<? extends String>> provider);
 }

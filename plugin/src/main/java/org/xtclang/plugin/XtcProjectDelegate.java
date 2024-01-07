@@ -13,7 +13,6 @@ import org.gradle.api.internal.tasks.DefaultSourceSet;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
-import org.gradle.api.plugins.internal.JavaConfigurationVariantMapping;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
@@ -55,8 +54,6 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPONENT_VARIANT_COMPILE;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPONENT_VARIANT_RUNTIME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING_TEST;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
@@ -194,7 +191,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     public static Provider<Directory> getXdkContentsDir(final Project project) {
-        return project.getLayout().getBuildDirectory().dir("xdk/common/lib");
+        return project.getLayout().getBuildDirectory().dir("xtc/xdk/lib");
     }
 
     public Provider<Directory> getXdkContentsDir() {
@@ -202,15 +199,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     public FileCollection getXtcCompilerOutputModules(final SourceSet sourceSet) {
-        return buildDir.files("xdk/" + sourceSet.getName() + "/lib");
+        return buildDir.files(XTC_LANGUAGE_NAME + '/' + sourceSet.getName() + "/lib");
     }
 
     public Provider<Directory> getXtcCompilerOutputDirModules(final SourceSet sourceSet) {
-        return buildDir.dir("xdk/" + sourceSet.getName() + "/lib");
+        return buildDir.dir(XTC_LANGUAGE_NAME + '/' + sourceSet.getName() + "/lib");
     }
 
     public Provider<Directory> getXtcCompilerOutputResourceDir(final SourceSet sourceSet) {
-        return buildDir.dir("xdk/" + sourceSet.getName() + "/resources");
+        return buildDir.dir(XTC_LANGUAGE_NAME + '/' + sourceSet.getName() + "/resources");
     }
 
     Set<File> resolveFiles(final FileCollection files) {
@@ -547,7 +544,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             addJavaToolsContentsAttributes(config);
         });
 
-        info("{} Created {} config and added dependencies.", prefix, xdkJavaTools);
+        info("{} Created {} config and added dependencies.", prefix, xdkJavaTools.getName());
     }
 
     private static String xtcModuleLibraryElementName(final Configuration config) {

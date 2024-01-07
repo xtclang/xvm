@@ -20,7 +20,7 @@ public final class XtcExecResult implements ExecResult {
         this.err = err == null ? "" : err;
     }
 
-    public static XtcExecResultBuilder builder(final Class<? extends XtcLauncher> launcherClass, final CommandLine cmd, final boolean logOutput) {
+    public static XtcExecResultBuilder builder(final Class<?> launcherClass, final CommandLine cmd, final boolean logOutput) {
         return new XtcExecResultBuilder(launcherClass, cmd, logOutput);
     }
 
@@ -123,7 +123,7 @@ public final class XtcExecResult implements ExecResult {
      * Subclass to a Gradle Exec Result.
      */
     public static final class XtcExecResultBuilder {
-        private final Class<? extends XtcLauncher> launcherClass;
+        private final Class<?> launcherClass;
         private final CommandLine cmd;
         private final XtcExecOutputStream out;
         private final XtcExecOutputStream err;
@@ -132,7 +132,7 @@ public final class XtcExecResult implements ExecResult {
         private boolean hasExitValue;
         private Throwable failure;
 
-        private XtcExecResultBuilder(final Class<? extends XtcLauncher> launcherClass, final CommandLine cmd, final boolean logOutputs) {
+        private XtcExecResultBuilder(final Class<?> launcherClass, final CommandLine cmd, final boolean logOutputs) {
             this.launcherClass = launcherClass;
             this.cmd = cmd;
             this.hasExitValue = false; // has exit value been set?
