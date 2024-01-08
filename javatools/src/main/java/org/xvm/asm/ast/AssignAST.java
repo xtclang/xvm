@@ -5,12 +5,14 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.Assign;
 import static org.xvm.asm.ast.BinaryAST.NodeType.BinOpAssign;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -22,9 +24,10 @@ import static org.xvm.util.Handy.writePackedLong;
 public class AssignAST
         extends ExprAST {
 
-    ExprAST  lhs;
-    Operator op;
-    ExprAST  rhs;
+    ExprAST        lhs;
+    Operator       op;
+    ExprAST        rhs;
+    MethodConstant method;
 
     public enum Operator {
         Asn           ("="   ),     // includes "<-" expression
@@ -84,10 +87,21 @@ public class AssignAST
      * @param rhs   right-hand-side expression to assign to
      */
     public AssignAST(ExprAST lhs, Operator op, ExprAST rhs) {
+        this(lhs, op, rhs, null);
+    }
+
+    /**
+     * @param lhs    left-hand-side expression to assign to
+     * @param op     assignment operator
+     * @param rhs    right-hand-side expression to assign to
+     * @param method (optional) method to use for the operation
+     */
+    public AssignAST(ExprAST lhs, Operator op, ExprAST rhs, MethodConstant method) {
         assert lhs != null && lhs.isAssignable() && op != null && rhs != null;
-        this.lhs = lhs;
-        this.op  = op;
-        this.rhs = rhs;
+        this.lhs    = lhs;
+        this.op     = op;
+        this.rhs    = rhs;
+        this.method = method;
     }
 
     public ExprAST getLValue() {
@@ -100,6 +114,10 @@ public class AssignAST
 
     public ExprAST getRValue() {
         return rhs;
+    }
+
+    public MethodConstant getMethod() {
+        return method;
     }
 
     @Override
@@ -125,12 +143,18 @@ public class AssignAST
             op = Operator.valueOf(readMagnitude(in));
         }
         rhs = readExprAST(in, res);
+
+        int methodId = readPackedInt(in);
+        method = methodId < 0
+            ? null
+            : (MethodConstant) res.getConstant(methodId);
     }
 
     @Override
     public void prepareWrite(ConstantResolver res) {
         lhs.prepareWrite(res);
         rhs.prepareWrite(res);
+        method = (MethodConstant) res.register(method);
     }
 
     @Override
@@ -141,11 +165,15 @@ public class AssignAST
             writePackedLong(out, op.ordinal());
         }
         rhs.writeExpr(out, res);
+        if (method == null) {
+            writePackedLong(out, -1);
+        } else {
+            writePackedLong(out, res.indexOf(method));
+        }
     }
 
     @Override
     public String toString() {
-        // TODO special handling for Operator.Deref
         return lhs + " " + op.text + " " + rhs;
     }
 }

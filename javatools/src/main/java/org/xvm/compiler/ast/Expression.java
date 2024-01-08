@@ -2297,6 +2297,18 @@ public abstract class Expression
             }
 
         /**
+         * @return true iff the lvalue is a property
+         */
+        public boolean isProperty()
+            {
+            return switch (m_form)
+                {
+                case LocalProp, TargetProp -> true;
+                default                    -> false;
+                };
+            }
+
+        /**
          * @return the register for a LocalVar, the property constant for a LocalProp, or the
          *         black-hole register for a BlackHole
          */

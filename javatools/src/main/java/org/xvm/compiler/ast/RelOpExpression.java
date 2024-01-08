@@ -970,7 +970,7 @@ public class RelOpExpression
      *
      * @return the best method id or null if nothing matches or ambiguous
      */
-    private MethodConstant chooseBestMethod(Set<MethodConstant> setOps, TypeConstant typeActual)
+    public static MethodConstant chooseBestMethod(Set<MethodConstant> setOps, TypeConstant typeActual)
         {
         MethodConstant idBest = null;
         for (Iterator<MethodConstant> iter = setOps.iterator(); iter.hasNext();)
@@ -985,14 +985,17 @@ public class RelOpExpression
 
             if (typeActual.isA(typeParam))
                 {
-                idBest = idMethod;
-                }
-            else
-                {
-                iter.remove();
+                if (idBest == null)
+                    {
+                    idBest = idMethod;
+                    }
+                else
+                    {
+                    return null; // ambiguous
+                    }
                 }
             }
-        return setOps.size() == 1 ? idBest : null;
+        return idBest;
         }
 
     @Override

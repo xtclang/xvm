@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -13,14 +14,19 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.AssignAST.Operator;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.InvokeExprAST;
 import org.xvm.asm.ast.MultiExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST;
 
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
@@ -957,7 +963,9 @@ public class AssignmentStatement
                         {
                         LVal.assignInPlaceResult(op, argRVal, code, errs);
 
-                        Operator operAsn = switch (op.getId())
+                        ExprAST  astLValue = lvalueExpr.getExprAST(ctx);
+                        ExprAST  astRValue = rvalue.getExprAST(ctx);
+                        Operator operAsn   = switch (op.getId())
                             {
                             case ADD_ASN     -> Operator.AddAsn;
                             case SUB_ASN     -> Operator.SubAsn;
@@ -972,7 +980,46 @@ public class AssignmentStatement
                             case BIT_XOR_ASN -> Operator.XorAsn;
                             default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
                             };
-                        astAssign = new AssignAST(lvalueExpr.getExprAST(ctx), operAsn, rvalue.getExprAST(ctx));
+
+                        if (LVal.isProperty())
+                            {
+                            // check if an assignment such as "c.p += k" or "p += k" is for an
+                            // atomic property
+                            PropertyConstant  idProp = LVal.getProperty();
+                            PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
+                            if (prop != null && prop.isAtomic())
+                                {
+                                MethodConstant idOp = findAtomicInPlaceAssignMethod(ctx, LVal.getType());
+                                if (idOp != null)
+                                    {
+                                    ExprAST astVar = new UnaryOpExprAST(
+                                            astLValue, UnaryOpExprAST.Operator.Var, idProp.getRefType(null));
+                                    astAssign = new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar,
+                                            new ExprAST[] {astRValue}, false);
+                                    break;
+                                    }
+                                }
+                            }
+
+                        // otherwise create a regular assignment operation
+                        TypeConstant typeTarget = astLValue.getType(0);
+                        TypeConstant typeArg    = astRValue.getType(0);
+
+                        if (typeTarget == null)
+                            {
+                            typeTarget = lvalueExpr.getType();
+                            }
+                        if (typeTarget.containsFormalType(true))
+                            {
+                            typeTarget = ctx.resolveFormalType(typeTarget);
+                            }
+                        if (typeArg == null)
+                            {
+                            typeArg = rvalue.getType();
+                            }
+
+                        astAssign = new AssignAST(astLValue, operAsn, astRValue,
+                            findInPlaceAssignMethod(ctx, typeTarget, typeArg, errs));
                         }
                     }
                 break;
@@ -988,6 +1035,70 @@ public class AssignmentStatement
             }
 
         return fCompletes;
+        }
+
+    private MethodConstant findAtomicInPlaceAssignMethod(Context ctx, TypeConstant typeArg)
+        {
+        if (lvalueExpr instanceof NameExpression exprLValue)
+            {
+            String sMethod, sOp;
+            switch (op.getId())
+                {
+                case ADD_ASN     -> {sMethod = "addAssign"          ; sOp = "+="  ;}
+                case SUB_ASN     -> {sMethod = "subAssign"          ; sOp = "-="  ;}
+                case MUL_ASN     -> {sMethod = "mulAssign"          ; sOp = "*="  ;}
+                case DIV_ASN     -> {sMethod = "divAssign"          ; sOp = "/="  ;}
+                case MOD_ASN     -> {sMethod = "modAssign"          ; sOp = "%="  ;}
+                case SHL_ASN     -> {sMethod = "shiftLeftAssign"    ; sOp = "<<=" ;}
+                case SHR_ASN     -> {sMethod = "shiftRightAssign"   ; sOp = ">>=" ;}
+                case USHR_ASN    -> {sMethod = "shiftAllRightAssign"; sOp = ">>>=";}
+                case BIT_AND_ASN -> {sMethod = "andAssign"          ; sOp = "&="  ;}
+                case BIT_OR_ASN  -> {sMethod = "orAssign"           ; sOp = "|="  ;}
+                case BIT_XOR_ASN -> {sMethod = "xorAssign"          ; sOp = "^="  ;}
+                default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
+                }
+            return exprLValue.findAtomicInPlaceAssignMethod(ctx, sMethod, sOp, typeArg);
+            }
+        return null;
+        }
+
+    private MethodConstant findInPlaceAssignMethod(Context ctx, TypeConstant typeTarget,
+                                                   TypeConstant typeArg, ErrorListener errs)
+        {
+        String sMethod, sOp;
+        switch (op.getId())
+            {
+            case ADD_ASN     -> {sMethod = "add"          ; sOp = "+"  ;}
+            case SUB_ASN     -> {sMethod = "sub"          ; sOp = "-"  ;}
+            case MUL_ASN     -> {sMethod = "mul"          ; sOp = "*"  ;}
+            case DIV_ASN     -> {sMethod = "div"          ; sOp = "/"  ;}
+            case MOD_ASN     -> {sMethod = "mod"          ; sOp = "%"  ;}
+            case SHL_ASN     -> {sMethod = "shiftLeft"    ; sOp = "<<" ;}
+            case SHR_ASN     -> {sMethod = "shiftRight"   ; sOp = ">>" ;}
+            case USHR_ASN    -> {sMethod = "shiftAllRight"; sOp = ">>>";}
+            case BIT_AND_ASN -> {sMethod = "and"          ; sOp = "&"  ;}
+            case BIT_OR_ASN  -> {sMethod = "or"           ; sOp = "|"  ;}
+            case BIT_XOR_ASN -> {sMethod = "xor"          ; sOp = "^"  ;}
+            default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
+            }
+
+        Set<MethodConstant> setMethods = typeTarget.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
+        MethodConstant      idOp       = switch (setMethods.size())
+            {
+            case 0  -> null;
+            case 1  -> setMethods.iterator().next();
+            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
+            };
+
+        if (idOp != null)
+            {
+            return idOp;
+            }
+
+        lvalueExpr.log(errs, Severity.ERROR, setMethods == null ?
+                        Compiler.MISSING_OPERATOR : Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
+                op.getValueText(), typeTarget.getValueString());
+        return null;
         }
 
     /**

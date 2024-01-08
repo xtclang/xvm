@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import java.util.stream.Collectors;
 
@@ -3403,6 +3404,40 @@ public class NameExpression
         return PropertyAccess.Left;
         }
 
+    /**
+     * Helper method for BAST production for in-place operations for atomic properties.
+     *
+     * @param typeArg  if null, the operation is a unary one (e.g. "preIncrement"), otherwise a
+     *                   binary (e.g. "addAssign")
+     */
+    protected MethodConstant findAtomicInPlaceAssignMethod(
+                Context ctx, String sMethod, String sOp, TypeConstant typeArg)
+        {
+        TypeConstant typeTarget = switch (calculatePropertyAccess(true))
+            {
+            // "p += k" -> "&p.addAssign(k)"
+            case This -> ctx.getThisType();
+
+            // "c.p += k"    -> "c.&p.addAssign(k)"
+            // "f().p += k"  -> "f().&p.addAssign(k)"
+            // "a[0].p += k" -> "a[0].&p.addAssign(k)"
+            case Left -> getLeftExpression().getType();
+
+            default ->
+                throw new IllegalStateException();
+            };
+
+        int                 cArgs      = typeArg == null ? 0 : 1;
+        PropertyConstant    idProp     = (PropertyConstant) m_arg;
+        TypeConstant        typeVar    = idProp.getRefType(typeTarget);
+        Set<MethodConstant> setMethods = typeVar.ensureTypeInfo().findOpMethods(sMethod, sOp, cArgs);
+        return switch (setMethods.size())
+            {
+            case 0  -> null;
+            case 1  -> setMethods.iterator().next();
+            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
+            };
+        }
 
     /**
      * Narrow the type of the variable represented by this expression for the specified context branch.

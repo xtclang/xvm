@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 
+import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -49,7 +50,16 @@ public class PropertyExprAST
     @Override
     public TypeConstant getType(int i) {
         assert i == 0;
-        return property.getType();
+
+        TypeConstant typeProp = property.getType();
+        if (typeProp.isFormalType()) {
+            TypeConstant typeResolved = getExpr().getType(0).
+                resolveFormalType((FormalConstant) typeProp.getDefiningConstant());
+            if (typeResolved != null) {
+                return typeResolved;
+            }
+        }
+        return typeProp;
     }
 
     @Override
