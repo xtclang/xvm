@@ -66,8 +66,6 @@ val compileAll = tasks.register<JavaExec>("compileAll") {
 
     dependsOn(xdk.tasks["build"])
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
 
     val opts = listOf<String>(
@@ -86,8 +84,6 @@ tasks.register<JavaExec>("runAll") {
 
     dependsOn(xdk.tasks["build"])
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     // the first two paths contain classes that are present in the javatoolsJar,
     // but gradle's classpath() doesn't allow combining a jar with a regular path
     classpath(
@@ -104,8 +100,6 @@ tasks.register<JavaExec>("runAllParallel") {
     description = "Run all tests"
 
     dependsOn(xdk.tasks["build"], compileAll)
-
-    jvmArgs("-Xms2048m", "-Xmx2048m", "-ea")
 
     classpath(javatoolsJar)
 
@@ -145,8 +139,6 @@ tasks.register<JavaExec>("runOne") {
     dependsOn(xdk.tasks["build"], compileOne)
 
     val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
-
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
 
     classpath(javatoolsJar)
 

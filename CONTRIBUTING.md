@@ -39,7 +39,7 @@ Create an "xvm" project in IDEA for the `./xvm/` directory. Build the project, w
 To run an individual test in IDEA, you will find that the Ecstasy source tests are located under `./xvm/xsrc/tests`. The following instructions assume that your local repository is located at `~/Development/xvm/`, and that you are trying to compile and run `misc.x`. To compile and run the Ecstasy `misc.x` test in JetBrains IntelliJ IDEA, create a "Run/Debug Configuration" as follows:
 
 * Main class=`org.xvm.runtime.TestConnector`
-* VM options=-`Xms256m -Xmx1g -ea`
+* VM options=-`-ea`
 * Program arguments=`TestMisc ./tests/manual/misc.x`
 * Working directory=`~/Development/xvm/xsrc/`
 

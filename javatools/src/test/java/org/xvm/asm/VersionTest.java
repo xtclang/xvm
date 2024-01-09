@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -264,6 +265,46 @@ public class VersionTest
         assertEquals(new Version("2.2.0.1"), tree.findHighestVersion(new Version("2.1")));
         }
 
+    @Test
+    public void testBuildString()
+        {
+        assertTrue(new Version("1.2.3").isSameAs(new Version("1.2.3+this-is.a-Build.string-4.5.6")));
+        }
+
+    @Test
+    public void testMnemonics()
+        {
+        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.Alpha")));
+        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.A")));
+        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.a")));
+        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.aLpHa")));
+        assertTrue(new Version("1.2.3.alpha2").isSameAs(new Version("1.2.3.Alpha2")));
+        assertTrue(new Version("1.2.3.alpha3").isSameAs(new Version("1.2.3.A3")));
+        assertTrue(new Version("1.2.3.alpha4").isSameAs(new Version("1.2.3.a4")));
+        assertTrue(new Version("1.2.3.alpha5").isSameAs(new Version("1.2.3.aLpHa5")));
+        assertTrue(new Version("1.2.3.alpha2").isSameAs(new Version("1.2.3.alpha.2")));
+        assertTrue(new Version("1.2.3.alpha2").isSameAs(new Version("1.2.3.Alpha.2")));
+        assertTrue(new Version("1.2.3.alpha3").isSameAs(new Version("1.2.3.A.3")));
+        assertTrue(new Version("1.2.3.alpha4").isSameAs(new Version("1.2.3.a.4")));
+        assertTrue(new Version("1.2.3.alpha5").isSameAs(new Version("1.2.3.aLpHa.5")));
+        assertTrue(new Version("1.2.beta3").isSameAs(new Version("1.2.B3")));
+        assertTrue(new Version("1.2.3rc").isSameAs(new Version("1.2.3R")));
+        assertTrue(new Version("ci").isSameAs(new Version("C")));
+        assertTrue(new Version("1.2.qa3").isSameAs(new Version("1.2.Q-3")));
+        }
+
+    @Test
+    public void testBadVersions()
+        {
+        assertThrows(IllegalStateException.class, () -> { new Version(""); });
+        assertThrows(IllegalStateException.class, () -> { new Version("1."); });
+        assertThrows(IllegalStateException.class, () -> { new Version(".1"); });
+        assertThrows(IllegalStateException.class, () -> { new Version("1.alpha.beta"); });
+        assertThrows(IllegalStateException.class, () -> { new Version("1.0alph"); });
+        assertThrows(IllegalStateException.class, () -> { new Version("1.0be"); });
+        assertThrows(IllegalStateException.class, () -> { new Version("1.0+^"); });
+        assertThrows(IllegalStateException.class, () -> { new Version("1.2.3B4+build!12345"); });
+        }
 
     static VersionTree<String> genTree()
         {

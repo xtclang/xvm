@@ -124,7 +124,7 @@ public abstract class Launcher
         boolean fHelp = opts.parse(m_asArgs);
         if (Runtime.version().version().get(0) < 21)
             {
-            log(Severity.WARNING, "The required JVM version is 21; this JVM version ("
+            log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
                     + Runtime.version() + ") appears to be older");
             }
         else
@@ -464,6 +464,7 @@ public abstract class Launcher
             addOption("help"   , Form.Name, false, "Displays this help message");
             addOption("v"      , Form.Name, false, "Enables \"verbose\" logging and messages");
             addOption("verbose", Form.Name, false, "Enables \"verbose\" logging and messages");
+            addOption("version", Form.Name, false, "Displays the Ecstasy runtime version");
             }
 
         /**
@@ -685,6 +686,14 @@ public abstract class Launcher
                 {
                 return false;
                 }
+            }
+
+        /**
+         * @return true if a "show version" option has been specified
+         */
+        boolean isShowVersion()
+            {
+            return specified("version");
             }
 
         /**
@@ -1309,6 +1318,23 @@ public abstract class Launcher
                     + " due to missing module:" + sMissing);
                 }
             }
+        }
+
+    /**
+     * Display "xdk version" string.
+     *
+     * @param reposLib  the repository that contains the Ecstasy library
+     */
+    protected void showSystemVersion(ModuleRepository reposLib)
+        {
+        String sVer = "???";
+        try
+            {
+            sVer = reposLib.loadModule(Constants.ECSTASY_MODULE).getVersionString();
+            }
+        catch (Exception ignore) {}
+        out("xdk version " + (sVer == null ? "<none>" : sVer)
+                + " (" + Constants.VERSION_MAJOR_CUR + "." + Constants.VERSION_MINOR_CUR + ")");
         }
 
 

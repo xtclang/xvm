@@ -165,7 +165,7 @@ public class xModule
     public int getPropertyVersion(Frame frame, PackageHandle hModule, int iReturn)
         {
         ModuleStructure module = (ModuleStructure) hModule.getId().getComponent();
-        VersionConstant ver    = module.getVersion();
+        VersionConstant ver    = module.getVersionConstant();
 
         return frame.assignDeferredValue(iReturn,
             frame.getConstHandle(ver == null ? VERSION_DEFAULT : ver));

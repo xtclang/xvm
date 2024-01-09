@@ -100,11 +100,9 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
     dependsOn(javatools.tasks["build"])
     dependsOn(copyJavatools)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "$ecstasyMain/x/ecstasy.x",
          "$turtleMain/x/mack.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -124,11 +122,9 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
 
     shouldRunAfter(compileCollections)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$aggregateMain/x/aggregate.x")
@@ -143,11 +139,9 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
 
     shouldRunAfter(compileEcstasy)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$collectionsMain/x/collections.x")
@@ -162,11 +156,9 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
 
     shouldRunAfter(compileEcstasy)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$cryptoMain/x/crypto.x")
@@ -181,11 +173,9 @@ val compileNet  = tasks.register<JavaExec>("compileNet") {
 
     shouldRunAfter(compileCrypto)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -201,11 +191,9 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 
     shouldRunAfter(compileEcstasy)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$jsonMain/x/json.x")
@@ -220,11 +208,9 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
 
     shouldRunAfter(compileEcstasy)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$oodbMain/x/oodb.x")
@@ -239,11 +225,9 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
 
     shouldRunAfter(compileJson, compileOODB)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -259,11 +243,9 @@ val compileWeb  = tasks.register<JavaExec>("compileWeb") {
 
     shouldRunAfter(compileNet, compileJson)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -279,11 +261,9 @@ val compileWebauth = tasks.register<JavaExec>("compileWebauth") {
 
     shouldRunAfter(compileOODB, compileWeb)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -299,11 +279,9 @@ val compileXenia = tasks.register<JavaExec>("compileXenia") {
 
     shouldRunAfter(compileWeb, compileWebauth)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -319,11 +297,9 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
 
     shouldRunAfter(compileCollections, compileOODB, compileNet, compileWeb, compileXenia)
 
-    jvmArgs("-Xms1024m", "-Xmx1024m", "-ea")
-
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-version", "$xdkVersion",
+         "-stamp", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",

@@ -4,6 +4,8 @@ package org.xvm.asm;
 import java.util.ArrayList;
 
 import static org.xvm.util.Handy.isDigit;
+import static org.xvm.util.Handy.quotedChar;
+import static org.xvm.util.Handy.quotedString;
 
 
 /**
@@ -25,118 +27,195 @@ public class Version
         String             sBuild    = null;
         int                cLen      = sLiteral.length();
         int                ix        = 0;
-        boolean            fErr      = false;
+        String             sErr      = null;
 
-        while (ix < cLen && isDigit(sLiteral.charAt(ix)))
+        boolean requiredNumber = false;
+        Numbers: while (ix < cLen)
             {
-            int n = 0;
-            do
+            char ch = sLiteral.charAt(ix);
+            switch (ch)
                 {
-                n = n * 10 + (sLiteral.charAt(ix++) - '0');
-                }
-            while (ix < cLen && isDigit(sLiteral.charAt(ix)));
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
+                    int n = 0;
+                    do
+                        {
+                        if (n > 200000000)
+                            {
+                            sErr = "version number overflow";
+                            break Numbers;
+                            }
+                        n = n * 10 + (sLiteral.charAt(ix++) - '0');
+                        }
+                    while (ix < cLen && isDigit(sLiteral.charAt(ix)));
+                    listParts.add(n);
+                    requiredNumber = false;
+                    break;
 
-            listParts.add(n);
-
-            if (ix == cLen)
-                {
-                break;
-                }
-
-            switch (sLiteral.charAt(ix))
-                {
                 case '.':
                 case '-':
+                    if (requiredNumber || ix == 0)
+                        {
+                        sErr = "number expected; '" + ch + "' found";
+                        break Numbers;
+                        }
                     ix++;
-                    continue;
+                    requiredNumber = true;
+                    break;
+
+                case 'A':
+                case 'a':
+                case 'B':
+                case 'b':
+                case 'C':
+                case 'c':
+                case 'D':
+                case 'd':
+                case 'Q':
+                case 'q':
+                case 'R':
+                case 'r':
+                    requiredNumber = false;
+                    break Numbers;
 
                 case '+':
-                    break;
+                    break Numbers;
 
                 default:
-                    fErr = true;
-                    break;
+                    sErr = "unknown version component " + quotedString(sLiteral.substring(ix));
+                    break Numbers;
                 }
             }
 
-        if (!fErr && ix < cLen)
+        if (requiredNumber && sErr == null)
             {
+            sErr = "number expected; " + quotedString(sLiteral.substring(ix) + " found");
+            }
+
+        if (sErr == null && ix < cLen)
+            {
+            String expectedWord = null;
             switch (sLiteral.charAt(ix))
                 {
                 case 'A':
                 case 'a':
                     listParts.add(-3);
-                    fErr = !match(sLiteral, ix, "alpha");
-                    ix += 5;
+                    expectedWord = "alpha";
                     break;
 
                 case 'B':
                 case 'b':
                     listParts.add(-2);
-                    fErr = !match(sLiteral, ix, "beta");
-                    ix += 4;
+                    expectedWord = "beta";
                     break;
 
                 case 'C':
                 case 'c':
                     listParts.add(-6);
-                    fErr = !match(sLiteral, ix, "ci");
-                    ix += 2;
+                    expectedWord = "ci";
                     break;
 
                 case 'D':
                 case 'd':
                     listParts.add(-5);
-                    fErr = !match(sLiteral, ix, "dev");
-                    ix += 3;
+                    expectedWord = "dev";
                     break;
 
                 case 'Q':
                 case 'q':
                     listParts.add(-4);
-                    fErr = !match(sLiteral, ix, "qa");
-                    ix += 2;
+                    expectedWord = "qa";
                     break;
 
                 case 'R':
                 case 'r':
                     listParts.add(-1);
-                    fErr = !match(sLiteral, ix, "rc");
-                    ix += 2;
+                    expectedWord = "rc";
                     break;
 
                 case '+':
-                    // parse the build string, which must be the remainder of the version
-                    sBuild = sLiteral.substring(ix + 1);
-                    ix = cLen;
-
-                    // semver states that only A..Z, a..z, 0..9, and '-' may occur in the build
-                    // metadata, but the examples given also include '.', so Ecstasy considers the
-                    // '.' to be legal
-                    fErr = !sBuild.matches("[A-Za-z0-9\\-\\.]*");
+                    // the "build string" is handled later
                     break;
 
                 default:
-                    fErr = true;
+                    sErr = "illegal character " + quotedChar(sLiteral.charAt(ix));
                     break;
                 }
 
-            while (!fErr && ix < cLen && isDigit(sLiteral.charAt(ix)))
+            if (expectedWord != null)
                 {
-                int n = 0;
-                do
+                String word    = grabLetters(sLiteral, ix);
+                int    wordlen = word.length();
+                ix += wordlen;
+                if (wordlen > 1 && !word.equalsIgnoreCase(expectedWord))
                     {
-                    n = n * 10 + (sLiteral.charAt(ix++) - '0');
+                    sErr = "expected \"" + expectedWord + "\" but encountered \"" + word + "\"";
                     }
-                while (ix < cLen && isDigit(sLiteral.charAt(ix)));
+                else if (ix < cLen)
+                    {
+                    boolean requireDigits = false;
+                    char ch = sLiteral.charAt(ix);
+                    if (ch == '.' || ch == '-')
+                        {
+                        ++ix;
+                        requireDigits = true;
+                        ch = ix < cLen ? sLiteral.charAt(ix) : '?';
+                        }
 
-                listParts.add(n);
+                    if (isDigit(ch))
+                        {
+                        int n = 0;
+                        do
+                            {
+                            if (n > 200000000)
+                                {
+                                sErr = "version number overflow";
+                                break;
+                                }
+                            n = n * 10 + (ch - '0');
+                            ++ix;
+                            }
+                        while (ix < cLen && isDigit(ch = sLiteral.charAt(ix)));
+                        listParts.add(n);
+                        }
+                    else if (requireDigits)
+                        {
+                        sErr = "expected trailing version; " + quotedChar(ch) + " found";
+                        }
+                    }
                 }
             }
 
-        if (fErr)
+        if (sErr == null && ix < cLen)
             {
-            throw new IllegalStateException("illegal version: " + sLiteral);
+            if (sLiteral.charAt(ix) == '+')
+                {
+                // parse the build string, which must be the remainder of the version
+                sBuild = sLiteral.substring(ix + 1);
+                ix = cLen;
+
+                // semver states that only A..Z, a..z, 0..9, and '-' may occur in the build
+                // metadata, but the examples given also include '.', so Ecstasy considers the
+                // '.' to be legal
+                if (!sBuild.matches("[A-Za-z0-9\\-\\.]*"))
+                    {
+                    sErr = "illegal build string \"" + sBuild + "\"; only A-Z, a-z, 0-9, '-', and '.' are permitted";
+                    }
+                }
+            else
+                {
+                sErr = "invalid trailing string: " + quotedString(sLiteral.substring(ix));
+                }
+            }
+
+        if (sErr == null && listParts.isEmpty())
+            {
+            sErr = "no version number";
+            }
+
+        if (sErr != null)
+            {
+            throw new IllegalStateException("illegal version string \"" + sLiteral + "\": " + sErr);
             }
 
         int   cParts  = listParts.size();
@@ -584,9 +663,18 @@ public class Version
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private boolean match(String sLiteral, int of, String sPrefix)
+    /**
+     * @return the string of letters starting at the specified offset
+     */
+    private String grabLetters(String sLiteral, int of)
         {
-        return sLiteral.regionMatches(true, of, sPrefix, 0, sPrefix.length());
+        int start  = of;
+        int strlen = sLiteral.length();
+        while (of < strlen && Character.isLetter(sLiteral.charAt(of)))
+            {
+            ++of;
+            }
+        return sLiteral.substring(start, of);
         }
 
     /**

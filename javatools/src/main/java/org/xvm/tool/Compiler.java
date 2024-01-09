@@ -134,6 +134,11 @@ public class Compiler
     @Override
     protected void process()
         {
+        if (options().isShowVersion())
+            {
+            showSystemVersion(ensureLibraryRepo());
+            }
+
         // source tree setup
         log(Severity.INFO, "Selecting compilation targets");
         File[]       resourceDirs = options().getResourceLocation();
@@ -145,7 +150,10 @@ public class Compiler
         int cTargets = aTarget.length;
         if (cTargets == 0)
             {
-            displayHelp();
+            if (!options().isShowVersion())
+                {
+                displayHelp();
+                }
             return;
             }
 
@@ -223,13 +231,15 @@ public class Compiler
         checkErrors();
 
         boolean fRebuild = options().isForcedRebuild();
+        Version verStamp = options().getVersion();
         log(Severity.INFO, "Output-path=" + outputLoc + ", force-rebuild=" + fRebuild);
 
         Map<File, Node> mapTargets     = new ListMap<>(cTargets);
         int             cSystemModules = 0;
         for (ModuleInfo moduleInfo : aTarget)
             {
-            log(Severity.INFO, "Loading and parsing sources for module: " + moduleInfo);
+            log(Severity.INFO, "Loading and parsing sources for module: "
+                    + moduleInfo.getQualifiedModuleName());
             Node node = moduleInfo.getSourceTree(this);
 
             // short-circuit the compilation of any up-to-date modules
@@ -241,7 +251,15 @@ public class Compiler
                     ++cSystemModules;
                     }
                 }
+            else if (verStamp != null && !verStamp.equals(moduleInfo.getModuleVersion()))
+                {
+                // recompile is not required, but the version stamp needs to be added
+                log(Severity.INFO, "Stamping version " + verStamp
+                        + " onto module: " + moduleInfo.getQualifiedModuleName());
+                addVersion(moduleInfo, verStamp);
+                }
             }
+        checkErrors();
 
         if (mapTargets.isEmpty())
             {
@@ -253,8 +271,7 @@ public class Compiler
         flushAndCheckErrors(allNodes);
 
         // repository setup
-        log(Severity.INFO, "Creating and pre-populating library and build repositories");
-        ModuleRepository repoLib = configureLibraryRepo(options().getModulePath());
+        ensureLibraryRepo();
         checkErrors();
 
         if (cSystemModules == 0)
@@ -392,6 +409,21 @@ public class Compiler
         }
 
     /**
+     * Lazily configure the library repository.
+     *
+     * @return the library repository
+     */
+    protected ModuleRepository ensureLibraryRepo()
+        {
+        if (repoLib == null)
+            {
+            log(Severity.INFO, "Creating and pre-populating library and build repositories");
+            repoLib = configureLibraryRepo(options().getModulePath());
+            }
+        return repoLib;
+        }
+
+    /**
      * Link the modules together based on their declared dependencies.
      *
      * @param compilers  a module compiler for each module
@@ -521,6 +553,23 @@ public class Compiler
         for (var compiler : compilers)
             {
             compiler.logRemainingDeferredAsErrors();
+            }
+        }
+
+    protected boolean addVersion(ModuleInfo info, Version ver)
+        {
+        File fileBin = info.getBinaryFile();
+        try
+            {
+            FileStructure struct = new FileStructure(fileBin);
+            struct.getModule().setVersion(ver);
+            struct.writeTo(fileBin);
+            return true;
+            }
+        catch (IOException e)
+            {
+            log(Severity.ERROR, "Failed to stamp version " + ver + " onto file " + fileBin);
+            return false;
             }
         }
 
@@ -699,7 +748,7 @@ public class Compiler
             addOption("r",       Form.File,   true,  "Files and/or directories to read resources from");
             addOption("o",       Form.File,   false, "File or directory to write output to");
             addOption("qualify", Form.Name,   false, "Use full module name for the output file name");
-            addOption("version", Form.String, false, "Specify the version to stamp onto the compiled module(s)");
+            addOption("stamp",   Form.String, false, "Specify the version to stamp onto the compiled module(s)");
             addOption(Trailing,  Form.File,   true , "Source file name(s) and/or module location(s) to"
                                                  + " compile");
             }
@@ -748,11 +797,11 @@ public class Compiler
             }
 
         /**
-         * @return the version, or null if none specified
+         * @return the specified version for the compiler to stamp on the compiled module, or null
          */
         public Version getVersion()
             {
-            String sVersion = (String) values().get("version");
+            String sVersion = (String) values().get("stamp");
             return sVersion == null ? null : new Version(sVersion);
             }
 
@@ -845,6 +894,7 @@ public class Compiler
 
     protected Strictness strictLevel = Strictness.Normal;
 
+    protected ModuleRepository repoLib;
     protected ModuleInfo[]     prevModules;
     protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;

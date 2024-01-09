@@ -12,11 +12,11 @@ import java.util.Set;
 import org.xvm.api.Connector;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -83,16 +83,19 @@ public class Runner
         ModuleRepository repo = configureLibraryRepo(options().getModulePath());
         checkErrors();
 
-        if (options().isShowVersion())
+        boolean fShowVer = options().isShowVersion();
+        if (fShowVer)
             {
-            ModuleStructure core = repo.loadModule(Constants.ECSTASY_MODULE);
-            out("Ecstasy Runtime Environment " + core.getVersion().getVersion()
-                    + " (" + Constants.VERSION_MAJOR_CUR + "." + Constants.VERSION_MINOR_CUR + ")");
+            showSystemVersion(repo);
             }
 
         final File fileSpec = options().getTarget();
         if (fileSpec == null)
             {
+            if (!fShowVer)
+                {
+                displayHelp();
+                }
             return;
             }
 
@@ -105,7 +108,7 @@ public class Runner
             {
             log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
             }
-        checkErrors();;
+        checkErrors();
 
         File            fileBin   = info.getBinaryFile();
         boolean         binExists = fileBin != null && fileBin.exists();
@@ -254,6 +257,16 @@ public class Runner
                 abort(true);
                 }
             checkErrors();
+            }
+
+        if (fShowVer)
+            {
+            Version ver   = info.getModuleVersion();
+            String  sVer  = ver == null ? "<none>" : ver.toString();
+            String  sName = info.isModuleNameQualified()
+                    ? info.getQualifiedModuleName()
+                    : quotedString(info.getSimpleModuleName());
+            out(sName + " version " + sVer);
             }
 
         log(Severity.INFO, "Executing " + info.getQualifiedModuleName() + " from " + info.getBinaryFile());
@@ -408,20 +421,11 @@ public class Runner
             {
             super();
 
-            addOption("version", Form.Name  , false, "Displays the Ecstasy runtime version");
             addOption("L",       Form.Repo  , true , "Module path; a \"" + File.pathSeparator
                                                   + "\"-delimited list of file and/or directory names");
             addOption("M",       Form.String, false, "Method name; defaults to \"run\"");
             addOption(Trailing,  Form.File  , false, "Module file name (.xtc) to execute");
             addOption(ArgV,      Form.AsIs  , true , "Arguments to pass to the method");
-            }
-
-        /**
-         * @return true if a "show version" option has been specified
-         */
-        boolean isShowVersion()
-            {
-            return specified("version");
             }
 
         /**
@@ -466,16 +470,6 @@ public class Runner
 
             // validate the -L path of file(s)/dir(s)
             validateModulePath(getModulePath());
-
-            // validate the trailing file (to execute)
-            // note: the logic for validating the file is quite complex (it must intuit whether the
-            // name is a module name or file name, and must potentially find the real module name
-            // in the source code, and so on), so the logic is performed by the process() method
-            File fileModule = getTarget();
-            if (fileModule == null && !isShowVersion())
-                {
-                log(Severity.ERROR, "Module name or module file name must be specified");
-                }
             }
         }
     }

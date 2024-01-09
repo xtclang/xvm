@@ -25,18 +25,16 @@ For example:
    
 Will generate an execution of the program "java" with the arguments:
 
-    [ 0] = "java"
-    [ 1] = "-Xms256m"
-    [ 2] = "-Xmx1024m"
-    [ 3] = "-ea"
-    [ 4] = "-jar"
-    [ 5] = "../javatools/javatools.jar"
-    [ 6] = "xcc"
-    [ 7] = "-L"
-    [ 8] = "../lib/"
-    [ 9] = "-L"
-    [10] = "../javatools/javatools_bridge.xtc"
-    [11] = "HelloWorld.x"
+    [0] = "java"
+    [1] = "-ea"
+    [2] = "-jar"
+    [3] = "../javatools/javatools.jar"
+    [4] = "xcc"
+    [5] = "-L"
+    [6] = "../lib/"
+    [7] = "-L"
+    [8] = "../javatools/javatools_bridge.xtc"
+    [9] = "HelloWorld.x"
 
 Which in turn results in an execution of that "main class" in the specified JAR with the arguments:
 
@@ -122,7 +120,7 @@ which will allow you to debug from IDEA:
 * Create a config file for the new executable. Continuing the above example, that would be a file
   named `debug_xec.cfg`. Place the necessary JVM options into the configuration file, such as:
   
-      opts=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005 -Xms256m -Xmx1G -ea   
+      opts=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005 -ea   
   
 * In IDEA, go to the "Run" menu, and select the "Edit configurations..." option. Press the `+`
   button on the dialog to create a new configuration from an existing template, and choose the

@@ -670,7 +670,7 @@ public class ModuleInfo
                     moduleName = struct.getModuleName();
                     if (moduleName != null)
                         {
-                        binaryVersion = struct.getModule().getVersion().getVersion();
+                        binaryVersion = struct.getModule().getVersion();
                         binaryContent = Content.Module;
                         return true;
                         }
@@ -1826,7 +1826,7 @@ public class ModuleInfo
 
         try
             {
-            return new FileStructure(moduleFile).getModule().getVersion().getVersion();
+            return new FileStructure(moduleFile).getModule().getVersion();
             }
         catch (Exception ignore)
             {

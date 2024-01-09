@@ -166,12 +166,21 @@ public class ModuleStructure
         }
 
     /**
-     * @return a version of this module
+     * @return the VersionConstant that holds the version of this module, or null
      */
-    public VersionConstant getVersion()
+    public VersionConstant getVersionConstant()
         {
         assert !isFingerprint();
         return version;
+        }
+
+    /**
+     * @return the Version of this module, or null
+     */
+    public Version getVersion()
+        {
+        VersionConstant constant = getVersionConstant();
+        return constant == null ? null : constant.getVersion();
         }
 
     /**
@@ -184,6 +193,15 @@ public class ModuleStructure
         assert !isFingerprint();
         markModified();
         this.version = getConstantPool().ensureVersionConstant(version);
+        }
+
+    /**
+     * @return the version of this module formatted as a String, or null
+     */
+    public String getVersionString()
+        {
+        Version ver = getVersion();
+        return ver == null ? null : ver.toString();
         }
 
     /**
