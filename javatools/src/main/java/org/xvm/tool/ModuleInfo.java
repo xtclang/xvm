@@ -580,7 +580,8 @@ public class ModuleInfo
         {
         if (resourceDir == null)
             {
-            resourceDir = ResourceDir.forSource(getSourceFile());
+            File sourceFile = getSourceFile();
+            resourceDir = sourceFile.exists() ? ResourceDir.forSource(sourceFile) : NoResources;
             }
 
         return resourceDir;

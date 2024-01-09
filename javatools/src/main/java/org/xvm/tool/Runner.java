@@ -170,15 +170,23 @@ public class Runner
                     }
                 }
             }
-        else if (!info.isUpToDate())
+        else if (info.getSourceFile() != null && info.getSourceFile().exists() && !info.isUpToDate())
             {
             log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
                     + "\" is out-of-date; recompiling ....");
-            if (!info.getBinaryFile().delete())
+            File fileBak = new File(fileBin.getParentFile(), fileBin.getName() + ".old");
+            if (fileBak.exists() && !fileBak.delete())
                 {
-                log(Severity.ERROR, "Failed to delete the out-of-date module: " + info.getBinaryFile());
+                log(Severity.ERROR, "Failed to delete the previously-backed-up module: " + fileBak);
                 }
-            fCompile = true;
+            else if (!fileBin.renameTo(fileBak))
+                {
+                log(Severity.ERROR, "Failed to back up the out-of-date module file: " + fileBin);
+                }
+            else
+                {
+                fCompile = true;
+                }
             }
         checkErrors();
 
