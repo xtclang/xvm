@@ -30,7 +30,7 @@ public interface XtcLauncherTaskExtension {
 
     Property<OutputStream> getStderr();
 
-    void jvmArgs(Object... args);
+    void jvmArgs(String... args);
 
     void jvmArgs(Iterable<? extends String> args);
 

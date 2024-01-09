@@ -48,6 +48,7 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
 import static org.xtclang.plugin.XtcPluginConstants.NONE;
 import static org.xtclang.plugin.XtcPluginConstants.UNSPECIFIED;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
@@ -305,10 +306,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.setGroup(APPLICATION_GROUP);
             task.setDescription("Run an XTC program with a configuration supplying the module path(s).");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
-            task.dependsOn(compileTaskName);
+            task.dependsOn(compileTaskName); // It's important to remember to depend on compile.
             info("{} Configured, dependency to tasks: {} -> {}", prefix, XDK_EXTRACT_TASK_NAME, sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME));
         });
-
         info("{} Created task: '{}'", prefix, runTask.getName());
         return runTask;
     }
@@ -377,7 +377,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     private void addJavaToolsContentsAttributes(final Configuration config) {
         config.attributes(it -> {
             it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
-            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, "javatools-fatjar")); //LibraryElements.JAR));
+            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
         });
     }
 

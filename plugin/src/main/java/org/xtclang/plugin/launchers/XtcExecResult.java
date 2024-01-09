@@ -16,6 +16,7 @@ public final class XtcExecResult implements ExecResult {
     XtcExecResult(final int exitValue, final Throwable failure, final String out, final String err) {
         this.exitValue = exitValue;
         this.failure = failure;
+        // TODO: Remember to use the ExecResult.stdoutContents variables instead of the horrible stuff we do with byte arrays.
         this.out = out == null ? "" : out;
         this.err = err == null ? "" : err;
     }

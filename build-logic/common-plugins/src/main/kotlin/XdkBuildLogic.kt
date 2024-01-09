@@ -28,59 +28,15 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
-    private val xdkProperties = XdkProperties(project)
-
-    private val xdkGitHub: GitHubPackages by lazy {
-        GitHubPackages(project)
-    }
-
-    private val xdkVersions: XdkVersionHandler by lazy {
-        XdkVersionHandler(project)
-    }
-
-    private val xdkDistributions: XdkDistribution by lazy {
-        XdkDistribution(project)
-    }
-
-    fun versions(): XdkVersionHandler {
-        return xdkVersions
-    }
-
-    fun distro(): XdkDistribution {
-        return xdkDistributions
-    }
-
-    fun github(): GitHubPackages {
-        return xdkGitHub
-    }
-
-    fun resolveLocalXdkInstallation(): File {
-        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
-    }
-
-    fun rebuildUnicode(): Boolean {
-        return xdkPropBool("org.xtclang.unicode.rebuild", false)
-    }
-
-    internal fun xdkPropIsSet(key: String): Boolean {
-        return xdkProperties.has(key)
-    }
-
-    internal fun xdkPropBool(key: String, defaultValue: Boolean? = null): Boolean {
-        return xdkProperties.get(key, defaultValue?.toString() ?: "false").toBoolean()
-    }
-
-    internal fun xdkPropLong(key: String, defaultValue: Long? = null): Long {
-        return xdkProperties.get(key, defaultValue?.toString() ?: "0").toLong()
-    }
-
-    internal fun xdkProp(key: String, defaultValue: String? = null): String {
-        return xdkProperties.get(key, defaultValue)
-    }
-
     companion object {
         const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
         const val XDK_TASK_GROUP_DEBUG = "debug"
+
+        // Artifact names for configuration artifacts. Gradle uses these during the build to identify various
+        // non-default style artifacts, that we use as part of resolvable and consumable configurations.
+        const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
+        const val XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR = "javatools-fatjar"
+        const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
 
         private const val ENV_PATH = "PATH"
         private const val XTC_LAUNCHER = "xec"
@@ -146,6 +102,56 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
             }.trim()
         }
     }
+
+    private val xdkProperties = XdkProperties(project)
+
+    private val xdkGitHub: GitHubPackages by lazy {
+        GitHubPackages(project)
+    }
+
+    private val xdkVersions: XdkVersionHandler by lazy {
+        XdkVersionHandler(project)
+    }
+
+    private val xdkDistributions: XdkDistribution by lazy {
+        XdkDistribution(project)
+    }
+
+    fun versions(): XdkVersionHandler {
+        return xdkVersions
+    }
+
+    fun distro(): XdkDistribution {
+        return xdkDistributions
+    }
+
+    fun github(): GitHubPackages {
+        return xdkGitHub
+    }
+
+    fun resolveLocalXdkInstallation(): File {
+        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
+    }
+
+    fun rebuildUnicode(): Boolean {
+        return xdkPropBool("org.xtclang.unicode.rebuild", false)
+    }
+
+    internal fun xdkPropIsSet(key: String): Boolean {
+        return xdkProperties.has(key)
+    }
+
+    internal fun xdkPropBool(key: String, defaultValue: Boolean? = null): Boolean {
+        return xdkProperties.get(key, defaultValue?.toString() ?: "false").toBoolean()
+    }
+
+    internal fun xdkPropLong(key: String, defaultValue: Long? = null): Long {
+        return xdkProperties.get(key, defaultValue?.toString() ?: "0").toLong()
+    }
+
+    internal fun xdkProp(key: String, defaultValue: String? = null): String {
+        return xdkProperties.get(key, defaultValue)
+    }
 }
 
 // TODO: Can we move these guys to the versions handler?
@@ -179,17 +185,18 @@ val Project.xdkBuild: XdkBuildLogic
 val Project.prefix
     get() = "[$name]"
 
-// TODO: Hacky, use a config, but there is a mutual dependency between the lib_xtc and javatools.
+// TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
+//  Better to add the resource directory as a source set?
+val Project.xdkIconFile: String
+    get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
+
+// TODO: A little bit hacky, for same reason as above.
 //  Better to add the resource directory as a source set?
 val Project.xdkImplicitsPath: String
     get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
 
 val Project.xdkImplicitsFile: File
     get() = File(xdkImplicitsPath)
-
-// TODO: Hacky, for same reason as above.
-val Project.xdkIconFile: String
-    get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
 
 fun Project.isXdkPropertySet(key: String): Boolean {
     return xdkBuild.xdkPropIsSet(key)

@@ -15,9 +15,9 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     private final String commandName;
 
-    NativeBinaryLauncher(final Project project, final String commandName, final T task) {
-        super(project, commandName, task);
-        this.commandName = commandName;
+    public NativeBinaryLauncher(final Project project, final T task) {
+        super(project, task);
+        this.commandName = task.getNativeLauncherCommandName();
     }
 
     @Override
@@ -45,6 +45,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
+        logger.info("{} Launching '{}' task: {}}", prefix, task.getName(), this);
         validateCommandLine(cmd);
         if (hasVerboseLogging()) {
             lifecycle("{} NativeExec command: {}", prefix, cmd.toString());

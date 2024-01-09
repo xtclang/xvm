@@ -2,6 +2,7 @@ package org.xtclang.plugin.launchers;
 
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
+import org.xtclang.plugin.XtcBuildException;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.internal.DefaultXtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
@@ -27,11 +28,9 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     private final Method main;
 
-    BuildThreadLauncher(final Project project, final String mainClassName, final T task) {
-        super(project, "In-process: " + mainClassName, task);
-        this.main = resolveMethod(mainClassName, INVOKE_METHOD_NAME_NO_SYSTEM_EXIT, String[].class);
-        logger.info("{} (Launcher '{}', task='{}') spawns '{}' (fork={}, native={}).",
-                prefix(project), JavaExecLauncher.class.getSimpleName(), task.getName(), mainClassName, isFork(), isNativeLauncher());
+    public BuildThreadLauncher(final Project project, final T task) {
+        super(project, task);
+        this.main = resolveMethod(project, task.getJavaLauncherClassName(), INVOKE_METHOD_NAME_NO_SYSTEM_EXIT, String[].class);
     }
 
     @Override
@@ -39,15 +38,17 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         Objects.requireNonNull(cmd);
         final var mainClassName = cmd.getMainClassName();
         final var jvmArgs = cmd.getJvmArgs();
-        warn("{} WARNING: XTC Plugin will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, mainClassName);
+        warn("{} WARNING: XTC Plugin Task '{}' will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, task.getName(), mainClassName);
         if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
-            warn("{} WARNING: XTC Plugin '{}' has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", prefix, mainClassName, jvmArgs);
+            warn("{} WARNING: XTC Plugin '{}' Task '{}' has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", prefix, task.getName(), mainClassName, jvmArgs);
         }
         return false;
     }
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
+        logger.info("{} Launching '{}' task: {}}", prefix, task.getName(), this);
+
         validateCommandLine(cmd);
 
         final var oldIn = System.in;
@@ -58,22 +59,22 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
             if (hasVerboseLogging()) {
                 lifecycle("{} (equivalent) JavaExec command: {}", prefix, cmd.toString());
             }
-            if (outputStreamsToLog()) {
+            if (shouldRedirectOutputToLogger()) {
                 System.setOut(new PrintStream(builder.getOut()));
                 System.setErr(new PrintStream(builder.getErr()));
-                if (redirectAnyOutput()) {
+                if (task.hasOutputRedirects()) {
                     warn("{} WARNING: Task '{}' is already configured to override stdout and/or stderr. It may cause problems to redirect them to the build log.", prefix, task.getName());
                 }
             }
             // TODO: Rewrite super.redirectIo so we can reuse it here. That is prettier. Push and pop streams to field?
             //   (may be even more readable to implement it as a try-with-resources of some kind)
-            if (redirectStdin()) {
+            if (task.hasStdinRedirect()) {
                 System.setIn(task.getStdin().get());
             }
-            if (redirectStdout()) {
+            if (task.hasStdoutRedirect()) {
                 System.setOut(new PrintStream(task.getStdout().get()));
             }
-            if (redirectStderr()) {
+            if (task.hasStderrRedirect()) {
                 System.setErr(new PrintStream(task.getStderr().get()));
             }
             main.invoke(null, (Object)cmd.toList().toArray(new String[0]));
@@ -104,16 +105,16 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         try (final var classLoader = new URLClassLoader(new URL[]{jar.toURI().toURL()})) {
             return classLoader.loadClass(className);
         } catch (final ClassNotFoundException e) {
-            throw buildException("Failed to load class from jar '{}': {}", jar, e.getMessage());
+            throw buildException(e, "Failed to load class from jar '{}': {}", jar, e.getMessage());
         }
     }
 
     @SuppressWarnings("SameParameterValue")
-    private Method resolveMethod(final String className, final String methodName, final Class<?>... parameterTypes) {
+    private static Method resolveMethod(final Project project, final String className, final String methodName, final Class<?>... parameterTypes) {
         try {
             return Class.forName(className).getMethod(methodName, parameterTypes);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            throw buildException("Failed to resolve method '{}' in class '{}' ({}).", methodName, className, e.getMessage());
+            throw XtcBuildException.buildException(project.getLogger(), e, "Failed to resolve method '{}' in class '{}' ({}).", methodName, className, e.getMessage());
         }
     }
 }

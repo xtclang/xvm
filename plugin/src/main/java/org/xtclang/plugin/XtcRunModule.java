@@ -11,7 +11,7 @@ public interface XtcRunModule {
 
     ListProperty<String> getModuleArgs();
 
-    void moduleArgs(Object... args);
+    void moduleArgs(String... args);
 
     void moduleArgs(Iterable<? extends String> args);
 

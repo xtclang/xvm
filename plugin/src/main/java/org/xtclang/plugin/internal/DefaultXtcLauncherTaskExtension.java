@@ -87,7 +87,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
-    public void jvmArgs(final Object... args) {
+    public void jvmArgs(final String... args) {
         jvmArgs(XtcPluginUtils.argumentArrayToList(args));
     }
 

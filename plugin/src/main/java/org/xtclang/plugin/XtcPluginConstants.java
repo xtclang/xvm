@@ -50,6 +50,9 @@ public final class XtcPluginConstants {
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
     public static final String JAR_MANIFEST_PATH = "META-INF/MANIFEST.MF";
 
+    // Config artifacts from the XDK build:
+    public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR = "javatools-fatjar";
+
     // Debugging (for example, adding significant events to output without increasing the log level)
     public static final String XTC_PLUGIN_VERBOSE_PROPERTY = "XTC_PLUGIN_VERBOSE";
 

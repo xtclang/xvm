@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.emptySet;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
 import static org.xtclang.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 /**
@@ -56,7 +57,7 @@ import static org.xtclang.plugin.XtcProjectDelegate.incomingXtcModuleDependencie
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
 // TODO: @CachableTask in any form?
 // The launcher task should implement all its accessors, not the run task.
-public class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
+public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     private final Map<DefaultXtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
 
     // Inherited from extension convention
@@ -73,16 +74,21 @@ public class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements 
     @Inject
     public XtcRunTask(final XtcProjectDelegate delegate, final SourceSet sourceSet) {
         super(delegate, sourceSet, delegate.xtcRuntimeExtension());
-        var ext = delegate.xtcRuntimeExtension();
         this.executedModules = new LinkedHashMap<>();
-        this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
-        // Currently we just inherit modules from the run spec, we can change then in the run task later.
-        // this.modules = objects.listProperty(XtcRunModule.class).convention(getExtension().getModules());
+        this.showVersion = objects.property(Boolean.class).convention(delegate.xtcRuntimeExtension().getShowVersion());
+        // TODO: Currently we just inherit modules from the run spec, we can change then in the run task later; e.g. // this.modules = objects.listProperty(XtcRunModule.class).convention(getExtension().getModules());
     }
 
+    @Internal
     @Override
-    protected XtcLauncher<XtcRuntimeExtension, XtcRunTask> createLauncher() {
-        return XtcLauncher.create(delegate.getProject(), XTC_RUNNER_CLASS_NAME, this);
+    public final String getNativeLauncherCommandName() {
+        return XTC_RUNNER_LAUNCHER_NAME;
+    }
+
+    @Internal
+    @Override
+    public final String getJavaLauncherClassName() {
+        return XTC_RUNNER_CLASS_NAME;
     }
 
     @Optional
@@ -251,7 +257,7 @@ public class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements 
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private ExecResult runOne(final XtcRunModule runConfig, final XtcLauncher<XtcRuntimeExtension, XtcRunTask> launcher, final CommandLine cmd) {
+    private ExecResult runOne(final XtcRunModule runConfig, final XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher, final CommandLine cmd) {
         delegate.info("{} Executing resolved xtcRuntime module closure: {}", prefix, runConfig);
         final var moduleMethod = runConfig.getMethodName().get();
         if (!runConfig.hasDefaultMethodName()) {
@@ -260,7 +266,6 @@ public class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements 
         final var moduleName = runConfig.getModuleName().get();
         cmd.addRaw(moduleName);
         cmd.addRaw(runConfig.getModuleArgs().get());
-        //cmd.addRaw(runConfig.resolveModuleArgs());
         final ExecResult result = launcher.apply(cmd);
         executedModules.put((DefaultXtcRunModule)runConfig, result);
         delegate.info("{} '{}'    Finished executing: {}", prefix, name, moduleName);

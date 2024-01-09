@@ -1,3 +1,4 @@
+import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_MACK_DIR
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
@@ -19,7 +20,7 @@ val xdkTurtle by configurations.registering {
     isCanBeConsumed = false
     attributes {
         attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("mack-dir"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_MACK_DIR))
     }
 }
 

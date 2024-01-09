@@ -95,7 +95,7 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public XtcBuildException buildException(final Throwable cause, final String msg) {
-        return XtcBuildException.buildException(logger, prefix + ": " + msg, cause);
+        return XtcBuildException.buildException(logger, cause, prefix + ": " + msg);
     }
 
     public XtcBuildException buildException(final String msg, final Object... args) {
@@ -103,21 +103,7 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public XtcBuildException buildException(final Throwable cause, final String msg, final Object... args) {
-        final var template = msg.replace("{}", "#");
-        final var list = Arrays.asList(args);
-        final var sb = new StringBuilder();
-        for (int i = 0, pos = 0; i < template.length(); i++) {
-            final var c = template.charAt(i);
-            if (c == '#') {
-                if (pos >= list.size()) {
-                    throw new IllegalArgumentException("More ellipses than tokens in expansion.");
-                }
-                sb.append(list.get(pos++));
-            } else {
-                sb.append(c);
-            }
-        }
-        return buildException(cause, sb.toString());
+        return XtcBuildException.buildException(logger, cause, msg, args);
     }
 
     /**

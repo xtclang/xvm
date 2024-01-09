@@ -9,6 +9,7 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
@@ -31,6 +32,9 @@ import java.util.Set;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcProjectDelegate.hasFileExtension;
 
@@ -69,6 +73,18 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(ext.getQualifiedOutputName());
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.shouldForceRebuild = objects.property(Boolean.class).convention(ext.getForceRebuild());
+    }
+
+    @Internal
+    @Override
+    public final String getNativeLauncherCommandName() {
+        return XTC_COMPILER_LAUNCHER_NAME;
+    }
+
+    @Internal
+    @Override
+    public final String getJavaLauncherClassName() {
+        return XTC_COMPILER_CLASS_NAME;
     }
 
     @Optional
@@ -285,9 +301,10 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         return from;
     }
 
+    /*
     @Override
     protected XtcLauncher<XtcCompilerExtension, ? extends XtcLauncherTask<XtcCompilerExtension>> createLauncher() {
         return XtcLauncher.create(delegate.getProject(), XTC_COMPILER_CLASS_NAME, this);
-    }
+    }*/
 }
 

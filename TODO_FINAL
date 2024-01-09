@@ -1,4 +1,7 @@
 TODO:
+* Sanity check that inputs and outputs work between compile and run tasks for XTC, and make sure they only rebuild incrementally.
+* TODO: Cache launcher tasks?
+* Command line retrieval prgrammatically/config option for xtclaunch tasks. (dry run?)
 * Use the PluginMaven default publication, don't add a special one for XTC. This is hardcoded and forced to generate docs and source from the gradlePluginPortal logic anyway.
 * Allow configuration based running xtc module from gradlew - now just make the more fine grained results override the outermost ones. We do that in stdin/out but not the others.
 * Unicode dependencies.
@@ -6,7 +9,7 @@ TODO:
 * Create first release from master when merged, and add github release plugin.
 
 Maybe after merge:
-* Speed up build part 2
+* // TODO: Remember to use the ExecResult.stdoutContents variables instead of the horrible stuff we do with byte arrays.* Speed up build part 2
 * Abort if running gradle and not gradlew. We just need a way to detect it.
 * Investigate the Git release plugin
 * Add a timer so we can get task events reported at the end of each action, or XTCTask.

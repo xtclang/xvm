@@ -23,7 +23,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 
 @CacheableTask
 public abstract class XtcExtractXdkTask extends XtcDefaultTask {
-    private static final String ARCHIVE_EXTENSION = "zip";
+    private static final String XDK_ARCHIVE_DEFAULT_EXTENSION = "zip";
 
     @Inject
     public XtcExtractXdkTask(final XtcProjectDelegate project) {
@@ -31,7 +31,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     }
 
     private static boolean isXdkArchive(final File file) {
-        return ARCHIVE_EXTENSION.equals(XtcProjectDelegate.getFileExtension(file));
+        return XDK_ARCHIVE_DEFAULT_EXTENSION.equals(XtcProjectDelegate.getFileExtension(file));
     }
 
     @InputFiles

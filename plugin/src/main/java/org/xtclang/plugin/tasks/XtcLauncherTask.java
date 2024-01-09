@@ -14,6 +14,9 @@ import org.gradle.api.tasks.SourceSet;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
+import org.xtclang.plugin.launchers.BuildThreadLauncher;
+import org.xtclang.plugin.launchers.JavaExecLauncher;
+import org.xtclang.plugin.launchers.NativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 import java.io.InputStream;
@@ -27,7 +30,7 @@ import static org.xtclang.plugin.XtcProjectDelegate.incomingXtcModuleDependencie
  * anything that goes through the XTC Launcher to spawn or call different processes
  */
 
-public abstract class XtcLauncherTask<T extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
+public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
     protected final SourceSet sourceSet;
 
     // All inherited from launcher task extension and turned into input
@@ -40,9 +43,9 @@ public abstract class XtcLauncherTask<T extends XtcLauncherTaskExtension> extend
     protected final Property<Boolean> useNativeLauncher;
     protected final Property<Boolean> logOutputs;
 
-    private final T ext;
+    private final E ext;
 
-    protected XtcLauncherTask(final XtcProjectDelegate delegate, final SourceSet sourceSet, final T ext) {
+    protected XtcLauncherTask(final XtcProjectDelegate delegate, final SourceSet sourceSet, final E ext) {
         super(delegate);
         this.sourceSet = sourceSet;
         this.ext = ext;
@@ -65,10 +68,8 @@ public abstract class XtcLauncherTask<T extends XtcLauncherTaskExtension> extend
         this.logOutputs = objects.property(Boolean.class).convention(ext.getLogOutputs());
     }
 
-    protected abstract XtcLauncher<T, ? extends XtcLauncherTask<T>> createLauncher();
-
     @Internal
-    protected T getExtension() {
+    protected E getExtension() {
         return ext;
     }
 
@@ -85,16 +86,20 @@ public abstract class XtcLauncherTask<T extends XtcLauncherTaskExtension> extend
         return delegate.getProject().files(delegate.getProject().getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 
-    public boolean overridesStdin() {
+    public boolean hasStdinRedirect() {
         return stdin.isPresent();
     }
 
-    public boolean overridesStdout() {
+    public boolean hasStdoutRedirect() {
         return stdout.isPresent();
     }
 
-    public boolean overridesStderr() {
+    public boolean hasStderrRedirect() {
         return stderr.isPresent();
+    }
+
+    public boolean hasOutputRedirects() {
+        return hasStdoutRedirect() || hasStderrRedirect();
     }
 
     @Optional
@@ -116,7 +121,7 @@ public abstract class XtcLauncherTask<T extends XtcLauncherTaskExtension> extend
     }
 
     @Override
-    public void jvmArgs(final Object... args) {
+    public void jvmArgs(final String... args) {
         jvmArgs.addAll(XtcPluginUtils.argumentArrayToList(args));
     }
 
@@ -169,5 +174,24 @@ public abstract class XtcLauncherTask<T extends XtcLauncherTaskExtension> extend
     @Input
     public Property<Boolean> getIsVerbose() {
         return isVerbose;
+    }
+
+    @Internal
+    public abstract String getJavaLauncherClassName();
+
+    @Internal
+    public abstract String getNativeLauncherCommandName();
+
+    protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
+        if (getUseNativeLauncher().get()) {
+            logger.info("{} Task '{}' created XTC launcher: native executable.", prefix, getName());
+            return new NativeBinaryLauncher<>(proj, this);
+        } else if (getFork().get()) {
+            logger.info("{} Task '{}' created XTC launcher: Java process forked from build.", prefix, getName());
+            return new JavaExecLauncher<>(proj, this);
+        } else {
+            logger.warn("{} Task '{}' created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production use.", prefix, getName());
+            return new BuildThreadLauncher<>(proj, this);
+        }
     }
 }

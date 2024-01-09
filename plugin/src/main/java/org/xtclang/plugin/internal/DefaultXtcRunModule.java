@@ -62,7 +62,7 @@ public class DefaultXtcRunModule implements XtcRunModule {
     }
 
     @Override
-    public void moduleArgs(final Object... args) {
+    public void moduleArgs(final String... args) {
         moduleArgs(XtcPluginUtils.argumentArrayToList(args));
     }
 

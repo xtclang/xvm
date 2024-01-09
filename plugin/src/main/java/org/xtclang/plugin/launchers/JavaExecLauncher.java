@@ -1,36 +1,35 @@
 package org.xtclang.plugin.launchers;
 
 import org.gradle.api.Project;
-import org.gradle.api.logging.Logger;
 import org.gradle.process.ExecResult;
 import org.xtclang.plugin.ProjectDelegate;
-import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
+import org.xtclang.plugin.XtcPluginUtils;
+import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 import java.util.zip.ZipFile;
 
 import static java.util.Objects.requireNonNull;
 import static org.xtclang.plugin.XtcPluginConstants.JAR_MANIFEST_PATH;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 
 /**
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
-    JavaExecLauncher(final Project project, final String mainClass, final T ext) {
-        super(project, mainClass, ext);
+    public JavaExecLauncher(final Project project, final T task) {
+        super(project, task);
     }
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
+        logger.info("{} Launching '{}' task: {}}", prefix, task.getName(), this);
+
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
             throw buildException("Failed to resolve 'javatools.jar' in any classpath.");
@@ -52,25 +51,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
     }
 
     private String readXdkVersionFromJar(final File jar) {
-        return readXdkVersionFromJar(logger, prefix, jar);
-    }
-
-    private static String readXdkVersionFromJar(final Logger logger, final String prefix, final File jar) {
-        if (jar == null) {
-            return null;
-        }
-        try (final var jarFile = new JarFile(jar)) {
-            final Manifest m = jarFile.getManifest();
-            final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
-            if (implVersion == null) {
-                throw new IOException("Invalid manifest entries found in " + jar.getAbsolutePath());
-            }
-            logger.info("{} Detected valid 'javatools.jar': {} (XTC Manifest Version: {})", prefix, jar.getAbsolutePath(), implVersion);
-            return implVersion.toString();
-        } catch (final IOException e) {
-            logger.error("{} Expected '{}' to be a jar file, with a readable manifest: {}", prefix, jar.getAbsolutePath(), e.getMessage());
-            return null;
-        }
+        return XtcPluginUtils.readXdkVersionFromJar(logger, prefix, jar);
     }
 
     private boolean isJavaToolsJar(final File file) {

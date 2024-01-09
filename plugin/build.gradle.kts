@@ -1,4 +1,4 @@
-import org.gradle.api.attributes.LibraryElements.JAR
+import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
@@ -19,7 +19,7 @@ val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeConsumed = false
     attributes {
         attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("javatools-fatjar"))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
     }
 }
 

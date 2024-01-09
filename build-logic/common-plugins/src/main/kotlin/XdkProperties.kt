@@ -5,7 +5,7 @@ import java.util.Objects.requireNonNull
 import java.util.Properties
 
 /**
- * Property helper for all projects.
+ * Property helper for all XDK projects.
  *
  * This is specific to the XDK build, and we really don't want it to be part of the plugin.
  * The properties are read from any "*.properties" file, starting in a given project directory.
@@ -21,6 +21,29 @@ import java.util.Properties
  * uses "./gradlew properties" will inadvertently dump secrets to the console.
  */
 class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
+    companion object {
+        const val REDACTED = "[REDACTED]"
+
+        private const val PROPERTIES_EXT = "properties"
+
+        /**
+         * Convert e.g. org.xtclang.something.testWithCamelCase -> ORG_XVM_SOMETHING_TEST_WITH_CAMEL_CASE
+         */
+        private fun toSystemEnvKey(key: String): String {
+            // TODO: Unit test keys and make sure no secrets are kept in memory or printed/logged.
+            return buildString {
+                for (ch in key) {
+                    when {
+                        ch == '.' -> append('_')
+                        ch.isLowerCase() -> append(ch.uppercaseChar())
+                        ch.isUpperCase() -> append('_').append(ch)
+                        else -> append(ch)
+                    }
+                }
+            }
+        }
+    }
+
     private val secrets = mutableSetOf<String>()
     private val properties: Properties
 
@@ -167,28 +190,5 @@ class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
             logger.info("$prefix Loaded ${local.size} properties from ${f.absolutePath}")
         }
         return merge(to, local)
-    }
-
-    companion object {
-        const val REDACTED = "[REDACTED]"
-
-        private const val PROPERTIES_EXT = "properties"
-
-        /**
-         * Convert e.g. org.xtclang.something.testWithCamelCase -> ORG_XVM_SOMETHING_TEST_WITH_CAMEL_CASE
-         */
-        private fun toSystemEnvKey(key: String): String {
-            // TODO: Unit test keys and make sure no secrets are kept in memory or printed/logged.
-            return buildString {
-                for (ch in key) {
-                    when {
-                        ch == '.' -> append('_')
-                        ch.isLowerCase() -> append(ch.uppercaseChar())
-                        ch.isUpperCase() -> append('_').append(ch)
-                        else -> append(ch)
-                    }
-                }
-            }
-        }
     }
 }
