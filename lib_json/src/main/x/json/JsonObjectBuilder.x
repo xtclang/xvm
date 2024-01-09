@@ -17,10 +17,10 @@ class JsonObjectBuilder
      * @param factory   a factory to create a new mutable `JsonArray`
      */
     construct (JsonObject? template = Null, Factory factory = () -> json.newObject()) {
-        this.values  = json.newObject();
         this.factory = factory;
+        values  = json.newObject();
         if (template.is(JsonObject)) {
-            this.values.putAll(template);
+            values.putAll(template);
         }
     }
 
@@ -111,7 +111,7 @@ class JsonObjectBuilder
         switch (existing.is(_)) {
         case JsonObject:
             if (value.is(JsonStruct)) {
-                JsonObject o = new JsonObjectBuilder(existing).merge(value).build();
+                JsonObject o = new JsonObjectBuilder(existing).deepMerge(value).build();
                 add(key, o);
             } else if (value.is(Primitive)) {
                 add(key, value);
@@ -121,7 +121,7 @@ class JsonObjectBuilder
             break;
         case JsonArray:
             if (value.is(JsonStruct)) {
-                JsonArray a = new JsonArrayBuilder(existing).merge(value).build();
+                JsonArray a = new JsonArrayBuilder(existing).deepMerge(value).build();
                 add(key, a);
             } else if (value.is(Primitive)) {
                 add(key, value);

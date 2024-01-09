@@ -1,12 +1,22 @@
 /**
  * A representation of a JSON patch, as defined
  * by https://datatracker.ietf.org/doc/html/rfc6902
+ *
+ * There are various rules that apply to different types of patch operation.
+ * These rules are not validated until the patch operations is actually applied.
+ * This means is it is possible to construct an invalid set of patches but an
+ * exception will be thrown when the patches are applied.
  */
 mixin JsonPatch
         into Array<Operation> {
 
     /**
      * Apply this patch to the specified `Doc`.
+     *
+     * If this patch is empty, the result returned will be the same `target` instance.
+     *
+     * The `options` parameter allows non-standard behaviour to be applied to the patching
+     * process. The behaviour of the default options will match the RFC6902 specification.
      *
      * @param target   the `Doc` to apply the patch to
      * @param options  the options to control patching behaviour
@@ -18,6 +28,10 @@ mixin JsonPatch
      * @throws IllegalState    if applying any of the operations fails
      */
     Doc apply(Doc target, Options? options = Null) {
+        if (empty) {
+            return target;
+        }
+
         Doc     doc  = target;
         Options opts = options ?: Options.Default;
 
@@ -32,7 +46,7 @@ mixin JsonPatch
                 default:      assert;
             };
         }
-        if (target.is(JsonStruct) && target.inPlace) {
+        if (opts.applyInPlace(target)) {
             switch (doc.is(_)) {
                 case JsonObject:
                     doc.makeImmutable();
@@ -234,7 +248,7 @@ mixin JsonPatch
      * @param options  the options to control patching behaviour
      */
     private Doc applyRemoveFromArray(JsonArray array, JsonPointer path, Options options) {
-        assert:arg path.key != JsonPointer.AppendKey as $"Cannot use append key '-' in a remove operation on a JSON array";
+        assert:arg path.key != JsonPointer.AppendKey as "Cannot use append key '-' in a remove operation on a JSON array";
 
         Int? index = path.index;
         Int  size  = array.size;
@@ -346,7 +360,7 @@ mixin JsonPatch
      * @param options  the options to control patching behaviour
      */
     private Doc applyReplaceToArray(JsonArray array, JsonPointer path, Doc value, Options options) {
-        assert:arg path.key != JsonPointer.AppendKey as $"Cannot use append key '-' in a replace operation on a JSON array";
+        assert:arg path.key != JsonPointer.AppendKey as "Cannot use append key '-' in a replace operation on a JSON array";
 
         Int? index = path.index;
         if (index.is(Int)) {
@@ -396,7 +410,7 @@ mixin JsonPatch
      * @param options  the options to control patching behaviour
      */
     private Doc applyMove(Doc target, JsonPointer? from, JsonPointer to, Options options) {
-        assert:arg from.is(JsonPointer) as $"A move operation must have a 'from' JSON pointer";
+        assert:arg from.is(JsonPointer) as "A move operation must have a 'from' JSON pointer";
         assert:arg !from.isParent(to) as $|Invalid move operation, the from location "{from}" \
                                           | cannot be a parent of the destination path "{to}"
                                           ;
@@ -414,7 +428,7 @@ mixin JsonPatch
      * @param options  the options to control patching behaviour
      */
     private Doc applyCopy(Doc target, JsonPointer? from, JsonPointer to, Options options) {
-        assert:arg from.is(JsonPointer) as $"A copy operation must have a 'from' JSON pointer";
+        assert:arg from.is(JsonPointer) as "A copy operation must have a 'from' JSON pointer";
         assert Doc toCopy := from.get(target, options.supportNegativeIndices)
                 as $"Copy operation failed, no value exists at location '{from}'";
         return applyAdd(target, to, toCopy, options);
@@ -434,9 +448,12 @@ mixin JsonPatch
      */
     private Doc applyTest(Doc target, JsonPointer path, Doc expected, Options options) {
         if (Doc existing := path.get(target)) {
-            assert existing == expected as $|Test operation failed, value at location "{path}" is "{existing}" \
-                       | but expected value "{expected}"
+            assert existing == expected as $|Test operation failed, value at location "{path}" is "{existing}"\
+                       | but expected "{expected}"
                        ;
+            return target;
+        }
+        if (expected == Null) {
             return target;
         }
         assert as $|Test operation failed, value at location "{path}" is Null \
@@ -496,44 +513,15 @@ mixin JsonPatch
 
     /**
      * An operation in a JSON patch that takes a value.
+     *
+     * @param op     the action the operation will perform
+     * @param path   the path to the value to apply the action to
+     * @param value  the value the action will apply (ignored for copy, move, or remove operations)
+     * @param from   the path to the "from" value (required for copy or move operations, ignored for other operations)
      */
-    static const Operation {
-        /**
-         * Create an JSON patch `Operation`.
-         *
-         * @param op     the action the operation will perform
-         * @param path   the path to the value to apply the action to
-         * @param value  the value the action will apply (ignored for copy, move, or remove operations)
-         * @param from   the path to the "from" value (required for copy or move operations, ignored for other operations)
-         *
-         * @throws IllegalArgument if the operation is a copy or a move and the from parameter is null
-         */
-        construct (Action op, JsonPointer path, Doc value = Null, JsonPointer? from = Null) {
-            this.op    = op;
-            this.path  = path;
-            this.value = value;
-            this.from  = from;
-        }
+    static const Operation(Action op, JsonPointer path, Doc value = Null, JsonPointer? from = Null) {
 
-        /**
-         * The action this operation performs.
-         */
-        Action op;
-
-        /**
-         * The path to the target element to perform the operation on.
-         */
-        JsonPointer path;
-
-        /**
-         * The value to use (ignored for copy or move operations).
-         */
-        Doc value;
-
-        /**
-         * The source value for a copy or move operation.
-         */
-        JsonPointer? from;
+        // ----- equality support ------------------------------------------------------------------
 
         static <CompileType extends Operation> Boolean equals(CompileType value1, CompileType value2) {
             if (value1.op != value2.op) {
@@ -639,6 +627,9 @@ mixin JsonPatch
 	 * A set of options that can be used to control the patching behaviour. These options typically change the
 	 * behavior from the standard specified by https://datatracker.ietf.org/doc/html/rfc6902
 	 *
+	 * @param inPlace                   a flag that indicates that the applying the patch should directly modify the
+	 *                                  target JSON document. This will obviously be ignored if the target is an
+	 *                                  immutable JSON object, immutable JSON array or primitive. The default is `False`.
      * @param ensurePathExistsOnAdd     a flag to indicate that an add operation should recursively create the missing
      *                                  parts of path. For example adding "/foo/bar" if "foo" does not exist a JSON
      *                                  object will be added at key "foo" and then "bar" will be added to that object.
@@ -648,13 +639,25 @@ mixin JsonPatch
 	 *                                  starting at the end of an array. For example, -1 points to the last element in
 	 *                                  the array. Valid negative indices are -1 ..< -array.size The default is `False`
 	 */
-    static const Options(Boolean ensurePathExistsOnAdd    = False,
+    static const Options(Boolean inPlace                  = False,
+                         Boolean ensurePathExistsOnAdd    = False,
                          Boolean allowMissingPathOnRemove = False,
                          Boolean supportNegativeIndices   = False) {
         /**
          * The default options.
          */
         static Options Default = new Options();
+
+        /**
+         * Determine if a patch can be applied "in place" to the specified JSON `Doc`.
+         *
+         * @return `True` if this option's `applyInPlace` flag is `True` and the `target` is
+         * a mutable `JsonStruct`.
+         *
+         */
+        Boolean applyInPlace(Doc target) {
+            return inPlace && target.is(JsonStruct) && target.inPlace;
+        }
     }
 
     // ----- Builder inner class -------------------------------------------------------------------

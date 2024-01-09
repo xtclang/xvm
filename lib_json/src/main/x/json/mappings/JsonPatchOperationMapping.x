@@ -8,8 +8,8 @@ const JsonPatchOperationMapping
      * Construct the JsonPatchOperationMapping.
      */
     construct() {
-        this.typeName = $"JsonPatch.Operation";
-        this.actionMap = new HashMap();
+        typeName  = "JsonPatch.Operation";
+        actionMap = new HashMap();
         for (JsonPatch.Action action : JsonPatch.Action.values) {
             actionMap.put(action.jsonName, action);
         }

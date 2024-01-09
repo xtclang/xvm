@@ -8,7 +8,7 @@ const JsonPatchMapping
      * Construct the JsonPatchOperationMapping.
      */
     construct() {
-        this.typeName = $"JsonPatch";
+        typeName = "JsonPatch";
     }
 
     /**

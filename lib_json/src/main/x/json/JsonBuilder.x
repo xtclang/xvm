@@ -58,7 +58,7 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      *
      * @return this `Builder`
      */
-    JsonBuilder merge(JsonStruct s) {
+    JsonBuilder deepMerge(JsonStruct s) {
         switch (s.is(_)) {
         case JsonObject:
             mergeObject(s);
@@ -167,5 +167,53 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
         JsonPointer remainder = path.remainder ?: assert;
         JsonObject  updated   = new JsonObjectBuilder().deepMerge(remainder, doc).build();
         update(id, updated);
+    }
+
+    /**
+     * Perform a deep copy of the specified JSON document.
+     *
+     * @param doc  the JSON document to copy
+     *
+     * @return a mutable copy of the JSON document unless the document is
+     *         a primitive, in which case the same primitive is returned
+     */
+    static <JsonDoc extends Doc> JsonDoc deepCopy(JsonDoc doc) {
+        return switch (doc.is(_)) {
+            case JsonObject: deepCopyObject(doc).as(JsonDoc);
+            case JsonArray:  deepCopyArray(doc).as(JsonDoc);
+            case Primitive:  doc;
+            default:
+                assert;
+        };
+    }
+
+    /**
+     * Perform a deep copy of the specified JSON object.
+     *
+     * @param o  the JSON object to copy
+     *
+     * @return a mutable copy of the JSON object
+     */
+    static JsonObject deepCopyObject(JsonObject o) {
+        JsonObject copy = json.newObject();
+        for (Map<String, Doc>.Entry entry : o.entries) {
+            copy.put(entry.key, deepCopy(entry.value));
+        }
+        return copy;
+    }
+
+    /**
+     * Perform a deep copy of the specified JSON array.
+     *
+     * @param o  the JSON array to copy
+     *
+     * @return a mutable copy of the JSON array
+     */
+    static JsonArray deepCopyArray(JsonArray a) {
+        JsonArray copy = json.newArray();
+        for (Doc doc : a) {
+            copy.add(deepCopy(doc));
+        }
+        return copy;
     }
 }

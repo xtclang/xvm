@@ -17,10 +17,10 @@ class JsonArrayBuilder
      * @param factory   a factory to create a new mutable `JsonArray`
      */
     construct (JsonArray? template = Null, Factory factory = () -> json.newArray()) {
-        this.values  = new Array();
         this.factory = factory;
+        values = new Array();
         if (template.is(JsonArray)) {
-            this.values.addAll(template);
+            values.addAll(template);
         }
     }
 
@@ -63,12 +63,12 @@ class JsonArrayBuilder
     /**
      * Add all the values to the `JsonArray`.
      *
-     * @param values  the values to add
+     * @param docs  an array of JSON `Doc` to add
      *
      * @return this `JsonBuilder`
      */
-    JsonArrayBuilder addAll(Doc[] values) {
-        this.values.addAll(values);
+    JsonArrayBuilder addAll(Doc[] docs) {
+        values.addAll(docs);
         return this;
     }
 
@@ -119,7 +119,7 @@ class JsonArrayBuilder
             switch (existing.is(_)) {
             case JsonObject:
                 if (value.is(JsonStruct)) {
-                    JsonObject o = new JsonObjectBuilder(existing).merge(value).build();
+                    JsonObject o = new JsonObjectBuilder(existing).deepMerge(value).build();
                     set(index, o);
                 } else if (value.is(Primitive)) {
                     set(index, value);
@@ -129,7 +129,7 @@ class JsonArrayBuilder
                 break;
             case JsonArray:
                 if (value.is(JsonStruct)) {
-                    JsonArray a = new JsonArrayBuilder(existing).merge(value).build();
+                    JsonArray a = new JsonArrayBuilder(existing).deepMerge(value).build();
                     set(index, a);
                 } else if (value.is(Primitive)) {
                     set(index, value);
@@ -158,7 +158,7 @@ class JsonArrayBuilder
         for (Map<String, Doc>.Entry entry : o.entries) {
             JsonPointer pointer = JsonPointer.from(entry.key);
             Int?        index   = pointer.index;
-            assert index != Null as $"Cannot merge JSON Object with non-Int keys into a JSON array";
+            assert index != Null as "Cannot merge JSON Object with non-Int keys into a JSON array";
             assert index >= 0 && index < values.size as
                     $|Cannot merge JSON Object into JSON array - key\
                      | "{entry.key}" does not match an existing array entry in the range 0..<{values.size}

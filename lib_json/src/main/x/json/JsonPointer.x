@@ -14,7 +14,7 @@ const JsonPointer {
      */
     private construct (String pointer, String key = "", JsonPointer? remainder = Null) {
         if (key == "-") {
-            assert remainder == Null as $|Invalid pointer, "{pointer}" the array append path "-"\
+            assert remainder == Null as $|Invalid pointer "{pointer}", the array append path "-"\
                                          | can only be used as the final pointer element
                                          ;
         }
@@ -176,7 +176,7 @@ const JsonPointer {
         JsonPointer? remainder = this.remainder;
         switch (doc.is(_)) {
             case JsonObject:
-                if (Doc child := doc.get(this.key)) {
+                if (Doc child := doc.get(key)) {
                     if (remainder.is(JsonPointer)) {
                         return remainder.get(child, supportNegativeIndices);
                     }
@@ -184,8 +184,8 @@ const JsonPointer {
                 }
                 break;
             case JsonArray:
-                if (Int index := ensurePositiveIndex(this.index, doc, supportNegativeIndices)) {
-                    Doc child = doc[index];
+                if (Int idx := getValidIndex(doc, supportNegativeIndices)) {
+                    Doc child = doc[idx];
                     if (remainder.is(JsonPointer)) {
                         return remainder.get(child, supportNegativeIndices);
                     }
@@ -204,11 +204,14 @@ const JsonPointer {
     /**
      * Ensure the specified index is a positive index into the array
      *
-     * @return False if the array is empty, or True if the index is zero or positive in the range 0 ..< array.size,
-     *         or True if the index is negative in the range -array.size >.. -1
+     * @param array  the array to check this pointer's index value against
+     *
+     * @return False if the array is empty, or True if this pointer's index is zero or positive in the
+     *         range 0 ..< array.size, or True if the index is negative in the range -array.size >.. -1
      * @return a valid index into the array
      */
-    private conditional Int ensurePositiveIndex(Int? index, JsonArray array, Boolean supportNegativeIndices) {
+    private conditional Int getValidIndex(JsonArray array, Boolean supportNegativeIndices) {
+        Int? index = this.index;
         if (index.is(Int)) {
             if (index >= 0 && index < array.size) {
                 return True, index;
