@@ -563,6 +563,15 @@ public class StatementBlock
                 if (fReachable && !(stmt instanceof ComponentStatement))
                     {
                     BinaryAST bast = holder.getAst(stmt);
+                    if (bast == BinaryAST.POISON)
+                        {
+                        if (!errs.hasSeriousErrors())
+                            {
+                            stmt.log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
+                                "BAST for " + stmt.getClass().getSimpleName());
+                            }
+                        return false;
+                        }
                     if (bast != null)
                         {
                         listAsts.add(bast);

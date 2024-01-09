@@ -289,13 +289,9 @@ public abstract class Statement
 
             BinaryAST ast = this.ast;
             this.ast = null;
-            if (ast != null && stmt == this.stmt)
-                {
-                return ast;
-                }
-
-            throw new UnsupportedOperationException(
-                    "BAST for Statement: " + stmt.getClass().getSimpleName());
+            return ast != null && stmt == this.stmt
+                ? ast
+                : BinaryAST.POISON;
             }
 
         void setAst(Statement stmt, BinaryAST ast)
