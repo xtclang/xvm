@@ -33,8 +33,6 @@ import java.util.Set;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcProjectDelegate.hasFileExtension;
 
@@ -49,6 +47,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     private final Property<Boolean> isStrict;
     private final Property<Boolean> hasQualifiedOutputName;
     private final Property<Boolean> hasVersionedOutputName;
+    private final Property<String> version;
     private final Property<Boolean> shouldForceRebuild;
 
     /**
@@ -73,6 +72,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(ext.getQualifiedOutputName());
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.shouldForceRebuild = objects.property(Boolean.class).convention(ext.getForceRebuild());
+        this.version = objects.property(String.class).convention(ext.getVersion());
     }
 
     @Internal
@@ -147,6 +147,13 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         return hasVersionedOutputName;
     }
 
+    @Optional
+    @Input
+    @Override
+    public Property<String> getVersion() {
+        return version;
+    }
+
     @Input
     @Override
     public Property<Boolean> getStrict() {
@@ -197,17 +204,22 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             }
         });
 
+        args.addBoolean("-rebuild", getForceRebuild().get());
         args.addBoolean("-nowarn", getDisableWarnings().get());
         args.addBoolean("-verbose", getIsVerbose().get());
         args.addBoolean("-strict", getStrict().get());
         args.addBoolean("-qualify", getQualifiedOutputName().get());
-        args.addBoolean("-rebuild", getForceRebuild().get());
-        args.addBoolean("-version", getVersionedOutputName().get());
+        if (getVersion().isPresent()) {
+            delegate.lifecycle("{} Task '{}' stamping version '{}' into XTC modules.", prefix, getName(), version.get());
+            args.add("-version", getVersion().get());
+        } else {
+            delegate.warn("{} WARNING '{}' Task has no version specified for the XTC module we are compiling.", prefix, getName());
+        }
 
         args.addRepeated("-L", resolveXtcModulePath());
         final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).toList();
         if (sourceFiles.isEmpty()) {
-            delegate.warn("{} No source file found for sourceSet: '{}'", prefix, sourceSet.getName());
+            delegate.warn("{} No source file found for source set: '{}'", prefix, sourceSet.getName());
         }
         sourceFiles.forEach(args::addRaw);
 
@@ -225,10 +237,10 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             final File newFile;
             if (oldName.equals(newName)) {
                 newFile = oldFile;
-                delegate.lifecycle("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
+                delegate.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
             } else {
                 newFile = new File(oldFile.getParentFile(), newName);
-                delegate.lifecycle("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
+                delegate.info("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
                 delegate.info("{} File tree scan: {} should be renamed to {}", delegate, oldFile, newFile);
                 if (!oldFile.renameTo(newFile)) {
                     // TODO does this update the output? Seems like it. Write a unit test.
@@ -238,7 +250,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
             if (extraDestDir != null) {
                 try {
-                    delegate.lifecycle("{} Copying {} to accumulative dir: {}", prefix, oldFile, extraDestDir.getAsFile());
+                    delegate.info("{} Copying {} to accumulative dir: {}", prefix, oldFile, extraDestDir.getAsFile());
                     Files.copy(
                         newFile.toPath(),
                         new File(extraDestDir.getAsFile(), newName).toPath(),
@@ -247,7 +259,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
                     throw delegate.buildException(e, "Could not copy '{}' to accumulative output directory: '{}'.", oldFile.getAbsolutePath(), extraDestDir.getAsFile().getAbsolutePath());
                 }
             } else {
-                delegate.lifecycle("{} No extra output required.", prefix);
+                delegate.info("{} No extra output required.", prefix);
             }
         });
     }

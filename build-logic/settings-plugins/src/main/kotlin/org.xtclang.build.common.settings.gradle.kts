@@ -33,7 +33,7 @@ dependencyResolutionManagement {
     val (xdkGroup, xdkVersion) = xdkVersionInfo.toList().map { it.readText().trim() }
     val (xtcPluginGroup, xtcPluginVersion) = xdkPluginVersionInfo.toList().map { it.readText().trim() }
     val prefix = "[${rootProject.name}]"
-    logger.lifecycle("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
+    logger.info("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
     logger.info(
         """
         $prefix XDK VERSION INFO:

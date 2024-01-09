@@ -20,7 +20,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     }
 
     init {
-        logger.lifecycle("""
+        logger.info("""
             $prefix Configuring XVM distribution: '$this'
             $prefix   Name        : '$distributionName'
             $prefix   Version     : '$distributionVersion'

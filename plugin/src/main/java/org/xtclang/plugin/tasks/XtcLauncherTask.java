@@ -185,13 +185,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         if (getUseNativeLauncher().get()) {
             logger.info("{} Task '{}' created XTC launcher: native executable.", prefix, getName());
-            return new NativeBinaryLauncher<>(proj, this);
+            return new NativeBinaryLauncher<>(project, this);
         } else if (getFork().get()) {
             logger.info("{} Task '{}' created XTC launcher: Java process forked from build.", prefix, getName());
-            return new JavaExecLauncher<>(proj, this);
+            return new JavaExecLauncher<>(project, this);
         } else {
             logger.warn("{} Task '{}' created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production use.", prefix, getName());
-            return new BuildThreadLauncher<>(proj, this);
+            return new BuildThreadLauncher<>(project, this);
         }
     }
 }

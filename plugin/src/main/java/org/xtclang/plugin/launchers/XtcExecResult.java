@@ -10,12 +10,14 @@ import java.io.OutputStream;
 public final class XtcExecResult implements ExecResult {
     private final int exitValue;
     private final Throwable failure;
+    private final boolean logOutputs;
     private final String out;
     private final String err;
 
-    XtcExecResult(final int exitValue, final Throwable failure, final String out, final String err) {
+    XtcExecResult(final int exitValue, final Throwable failure, final boolean logOutputs, final String out, final String err) {
         this.exitValue = exitValue;
         this.failure = failure;
+        this.logOutputs = logOutputs;
         // TODO: Remember to use the ExecResult.stdoutContents variables instead of the horrible stuff we do with byte arrays.
         this.out = out == null ? "" : out;
         this.err = err == null ? "" : err;
@@ -57,7 +59,7 @@ public final class XtcExecResult implements ExecResult {
     @Override
     public ExecResult assertNormalExitValue() throws ExecException {
         if (exitValue != 0) {
-            throw new ExecException("XTC exited with non-zero exit code: " + exitValue, failure);
+            throw new ExecException("XTC Launcher exited with non-zero exit code: " + exitValue, failure);
         }
         return this;
     }
@@ -65,24 +67,27 @@ public final class XtcExecResult implements ExecResult {
     @Override
     public ExecResult rethrowFailure() throws ExecException {
         if (failure != null) {
-            throw new ExecException("XTC exited with exception: " + failure.getMessage(), failure);
+            throw new ExecException("XTC Launcher exited with exception: " + failure.getMessage(), failure);
         }
         return this;
     }
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder(getClass().getSimpleName()).append(": [exitValue=").append(exitValue).append(", failure=").append(failure).append(", output.stdout=");
-        if (out.isEmpty()) {
-            sb.append("[empty]");
-        } else {
-            sb.append("[").append(out.lines().count()).append(" lines]");
-        }
-        sb.append(", output.stderr=");
-        if (err.isEmpty()) {
-            sb.append("[empty]");
-        } else {
-            sb.append("[").append(err.lines().count()).append(" lines]");
+        final StringBuilder sb = new StringBuilder(getClass().getSimpleName()).append(": [exitValue=").append(exitValue).append(", failure=").append(failure);
+        if (logOutputs) {
+            sb.append(", output.stdout=");
+            if (out.isEmpty()) {
+                sb.append("[empty]");
+            } else {
+                sb.append("[").append(out.lines().count()).append(" lines]");
+            }
+            sb.append(", output.stderr=");
+            if (err.isEmpty()) {
+                sb.append("[empty]");
+            } else {
+                sb.append("[").append(err.lines().count()).append(" lines]");
+            }
         }
         sb.append(']');
         return sb.toString();
@@ -132,11 +137,13 @@ public final class XtcExecResult implements ExecResult {
         private int exitValue;
         private boolean hasExitValue;
         private Throwable failure;
+        private boolean logOutputs;
 
         private XtcExecResultBuilder(final Class<?> launcherClass, final CommandLine cmd, final boolean logOutputs) {
             this.launcherClass = launcherClass;
             this.cmd = cmd;
             this.hasExitValue = false; // has exit value been set?
+            this.logOutputs = logOutputs;
             this.out = new XtcExecOutputStream(logOutputs);
             this.err = new XtcExecOutputStream(logOutputs);
         }
@@ -188,12 +195,17 @@ public final class XtcExecResult implements ExecResult {
             return this;
         }
 
+        XtcExecResultBuilder logOutputs(final boolean logOutputs) {
+            this.logOutputs = logOutputs;
+            return this;
+        }
+
         private static String outputAsString(final XtcExecOutputStream out) {
             return out.toString();
         }
 
         XtcExecResult build() {
-            return new XtcExecResult(exitValue, failure, outputAsString(out), outputAsString(err));
+            return new XtcExecResult(exitValue, failure, logOutputs, outputAsString(out), outputAsString(err));
         }
     }
 }

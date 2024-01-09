@@ -16,8 +16,8 @@ import org.xtclang.plugin.XtcProjectDelegate;
 //   now that we have a working inheritance hierarchy no longer constrained to multiple inheritance
 //   or various Gradle APIs.
 public abstract class XtcDefaultTask extends DefaultTask {
-    protected final XtcProjectDelegate delegate;
-    protected final Project proj;  // TOOD rename project. Just calling it "not project" do avoid sneaky name collision bugs for delegates that may still be named "project" for legacy reasons.
+    protected final XtcProjectDelegate delegate; // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
+    protected final Project project;
     protected final String prefix;
     protected final String name;
     protected final ObjectFactory objects;
@@ -27,7 +27,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
 
     protected XtcDefaultTask(final XtcProjectDelegate delegate) {
         this.delegate = delegate;
-        this.proj = delegate.getProject();
+        this.project = delegate.getProject();
         this.prefix = delegate.prefix();
         this.name = delegate.getProject().getName();
         this.objects = delegate.getObjects();
