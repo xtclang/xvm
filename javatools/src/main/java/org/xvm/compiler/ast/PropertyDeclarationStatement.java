@@ -39,6 +39,7 @@ import org.xvm.asm.op.P_Var;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.ListMap;
@@ -418,6 +419,13 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
+            if (clz.getFormat() == Format.INTERFACE && prop.getRefAnnotations().length > 0)
+                {
+                log(errs, Severity.ERROR, Constants.VE_INTERFACE_PROPERTY_ANNOTATED,
+                        clz.getIdentityConstant().getValueString(), prop.getName());
+                return;
+                }
+
             TypeConstant typeRef = prop.getIdentityConstant().getValueType(pool(), null);
             if (!validateAnnotations(prop.getPropertyAnnotations(), typeRef, errs))
                 {
@@ -613,7 +621,7 @@ public class PropertyDeclarationStatement
             if (clzAnno.getFormat() != Component.Format.MIXIN)
                 {
                 findAnnotationExpression(anno, annotations).
-                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_NOT_MIXIN,
+                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
                         anno.getValueString());
                 break;
                 }
@@ -666,7 +674,7 @@ public class PropertyDeclarationStatement
             if (!typeProp.isA(typeInto))
                 {
                 findAnnotationExpression(anno, annotations).
-                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_INCOMPATIBLE,
+                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
                         typeProp.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
                 break;
                 }
@@ -678,7 +686,7 @@ public class PropertyDeclarationStatement
                 if (typeMixin2.equals(typeMixin))
                     {
                     findAnnotationExpression(anno, annotations).
-                        log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,
+                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
                             anno.getValueString());
                     break;
                     }
