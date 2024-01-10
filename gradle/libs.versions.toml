@@ -1,0 +1,81 @@
+#
+# The master version catalog for the XDK.
+#
+# The settings plugin makes sure we only need to declare it in one location (here),
+# for all included builds and and the aggregator will make sure all build scripts can use it.
+#
+# To avoid version skew, we also access this version catalog from settings files and settings
+# plugins, using a more explicit hard-coded approach. The code for this lookup is in the
+# "org.xtclang.build.gradle" convention plugin, in the function "resolveVersion".
+#
+# For anything post the settings stage, we can refer to entries in the version catalog
+# in a typesafe way, e.g. alias(libs.tasktree) for a dependency or plugin. Or
+# libs.versions.xdkVersion version number.
+#
+[versions]
+xdk = "unspecified"
+xtc-plugin = "unspecified"
+group-xdk = "unspecified"
+group-xtc-plugin = "unspecified"
+
+download = "5.5.0"
+versions = "0.50.0"
+tasktree = "2.1.1"
+gradle-portal-publish = "1.2.1"
+gradle-nexus-publish = "1.3.0"
+gradle-release = "3.0.2"
+kohttp = "0.12.0"
+jakarta = "2.3.2"
+
+# TODO: There is nothing like "group-ref". Might want to just generate this from a template?
+[plugins]
+xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc-plugin" }
+xdk-build-aggregator = { id = "org.xtclang.build.aggregator", version.ref = "xdk" }
+xdk-build-java = { id = "org.xtclang.build.java", version.ref = "xdk" }
+xdk-build-publish = { id = "org.xtclang.build.publish", version.ref = "xdk" }
+xdk-build-versioning = { id = "org.xtclang.build.xdk.versioning", version.ref = "xdk" }
+
+download = { id = "de.undercouch.download", version.ref = "download" }
+versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
+tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
+gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
+# TODO: Enable mavenCentral publication through this plugin: https://github.com/gradle-nexus/publish-plugin
+gradle-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradle-nexus-publish" }
+# TODO: Enable GitHub releases, and this seems to be both the most popular plugin and the one closest to the right version / process semantics.
+gradle-release = { id = "net.researchgate.gradle-release", version.ref = "gradle-release" }
+
+[libraries]
+xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
+xdk-ecstasy = { group = "org.xtclang", name = "lib-ecstasy", version.ref = "xdk" }
+xdk-aggregate = { group = "org.xtclang", name = "lib-aggregate", version.ref = "xdk" }
+xdk-collections = { group = "org.xtclang", name = "lib-collections", version.ref = "xdk" }
+xdk-crypto = { group = "org.xtclang", name = "lib-crypto", version.ref = "xdk" }
+xdk-json = { group = "org.xtclang", name = "lib-json", version.ref = "xdk" }
+xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb", version.ref = "xdk" }
+xdk-net = { group = "org.xtclang", name = "lib-net", version.ref = "xdk" }
+xdk-oodb = { group = "org.xtclang", name = "lib-oodb", version.ref = "xdk" }
+xdk-web = { group = "org.xtclang", name = "lib-web", version.ref = "xdk" }
+xdk-webauth = { group = "org.xtclang", name = "lib-webauth", version.ref = "xdk" }
+xdk-xenia = { group = "org.xtclang", name = "lib-xenia", version.ref = "xdk" }
+
+javatools = { group = "org.xtclang", name = "javatools", version.ref = "xdk" }
+javatools-unicode = { group = "org.xtclang", name = "javatools-unicode", version.ref = "xdk" }
+javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref = "xdk" }
+javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
+javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
+
+kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
+kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }
+javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
+jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta" }
+jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jakarta" }
+
+[bundles]
+unicode = ["javax-activation", "jakarta-xml-bind-api", "jaxb-runtime"]
+
+# TODO: Future libraries that may make it into the build pipeline, one way or another.
+#spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
+#shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+#nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
+#maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
+#version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version = "0.8.1" }

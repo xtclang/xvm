@@ -55,13 +55,17 @@ public class Runner
         {
         try
             {
-            new Runner(asArg).run();
+            launch(asArg);
             }
         catch (LauncherException e)
             {
             System.exit(e.error ? -1 : 0);
             }
         }
+
+    public static void launch(String[] asArg) throws LauncherException {
+        new Runner(asArg).run();
+    }
 
     /**
      * Runner constructor.
