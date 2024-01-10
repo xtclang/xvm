@@ -184,7 +184,11 @@ const JsonPointer {
                 }
                 break;
             case JsonArray:
+@Inject Console console;
+console.print($"**** In pointer get() {key=} {doc=}");
+
                 if (Int idx := getValidIndex(doc, supportNegativeIndices)) {
+console.print($"**** In pointer get() {idx=}");
                     Doc child = doc[idx];
                     if (remainder.is(JsonPointer)) {
                         return remainder.get(child, supportNegativeIndices);
@@ -210,7 +214,10 @@ const JsonPointer {
      *         range 0 ..< array.size, or True if the index is negative in the range -array.size >.. -1
      * @return a valid index into the array
      */
-    private conditional Int getValidIndex(JsonArray array, Boolean supportNegativeIndices) {
+    conditional Int getValidIndex(JsonArray array, Boolean supportNegativeIndices) {
+@Inject Console console;
+console.print($"**** In getValidIndex() {array=} {supportNegativeIndices=}");
+
         Int? index = this.index;
         if (index.is(Int)) {
             if (index >= 0 && index < array.size) {

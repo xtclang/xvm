@@ -144,7 +144,7 @@ mixin JsonPatch
      * @param options  the options to control patching behaviour
      */
     private Doc applyAddToArray(JsonArray array, JsonPointer path, Doc value, Options options) {
-        JsonArray    mutable;
+        JsonArray mutable;
         if (array.mutability == Mutable) {
             mutable = array;
         } else {
@@ -157,23 +157,21 @@ mixin JsonPatch
             return mutable;
         }
 
-        Int? index = path.index;
-        if (index.is(Int)) {
-            index = validateIndex(Add, index, array, options);
-            JsonPointer? remainder = path.remainder;
-            if (remainder.is(JsonPointer)) {
-                Doc doc = array[index];
-                mutable[index] = applyAdd(doc, remainder, value, options);
+        assert:arg Int index := path.getValidIndex(array, options.supportNegativeIndices)
+                as $"Cannot perform add operation on JSON array, path {path} is not an array index";
+
+        JsonPointer? remainder = path.remainder;
+        if (remainder.is(JsonPointer)) {
+            Doc doc = array[index];
+            mutable[index] = applyAdd(doc, remainder, value, options);
+        } else {
+            if (index == mutable.size) {
+                mutable.add(value);
             } else {
-                if (index == mutable.size) {
-                    mutable.add(value);
-                } else {
-                    mutable.insert(index, value);
-                }
+                mutable.insert(index, value);
             }
-            return mutable;
         }
-        assert:arg as $"Cannot perform remove operation on JSON array, path {path} is not an array index";
+        return mutable;
     }
 
     /**
@@ -249,43 +247,39 @@ mixin JsonPatch
      */
     private Doc applyRemoveFromArray(JsonArray array, JsonPointer path, Options options) {
         assert:arg path.key != JsonPointer.AppendKey as "Cannot use append key '-' in a remove operation on a JSON array";
+        assert:arg Int index := path.getValidIndex(array, options.supportNegativeIndices)
+                as $"Cannot perform remove operation on JSON array, path {path} is not an array index";
 
-        Int? index = path.index;
-        Int  size  = array.size;
-        if (index.is(Int)) {
-            // valid index is 0 ..< array.size || -array.size >.. -1
-            if (index >= size || index <= -size) {
-                if (options.allowMissingPathOnRemove) {
-                    // the index is out of bounds, but the options allow this, so return the original, unmodified array
-                    return array;
-                } else {
-                    // we are not allowing invalid indexes
-                    assert:arg  as $|Cannot perform remove operation on JSON array, \
-                                    | index {index} out of bounds 0 ..< {size}
-                                    ;
-                }
-            }
-
-            index = validateIndex(Remove, index, array, options);
-
-            JsonPointer? remainder = path.remainder;
-            JsonArray    mutable;
-            if (array.mutability == Mutable) {
-                mutable = array;
+        Int size = array.size;
+        // valid index is 0 ..< array.size || -array.size >.. -1
+        if (index >= size || index <= -size) {
+            if (options.allowMissingPathOnRemove) {
+                // the index is out of bounds, but the options allow this, so return the original, unmodified array
+                return array;
             } else {
-                mutable = json.newArray();
-                mutable.addAll(array);
+                // we are not allowing invalid indexes
+                assert:arg  as $|Cannot perform remove operation on JSON array, \
+                                | index {index} out of bounds 0 ..< {size}
+                                ;
             }
-
-            if (remainder.is(JsonPointer)) {
-                Doc doc = array[index];
-                mutable[index] = applyRemove(doc, remainder, options);
-            } else {
-                mutable.delete(index);
-            }
-            return mutable;
         }
-        assert:arg as $"Cannot perform remove operation on JSON array, path {path} is not an array index";
+
+        JsonPointer? remainder = path.remainder;
+        JsonArray    mutable;
+        if (array.mutability == Mutable) {
+            mutable = array;
+        } else {
+            mutable = json.newArray();
+            mutable.addAll(array);
+        }
+
+        if (remainder.is(JsonPointer)) {
+            Doc doc = array[index];
+            mutable[index] = applyRemove(doc, remainder, options);
+        } else {
+            mutable.delete(index);
+        }
+        return mutable;
     }
 
     /**
@@ -362,29 +356,26 @@ mixin JsonPatch
     private Doc applyReplaceToArray(JsonArray array, JsonPointer path, Doc value, Options options) {
         assert:arg path.key != JsonPointer.AppendKey as "Cannot use append key '-' in a replace operation on a JSON array";
 
-        Int? index = path.index;
-        if (index.is(Int)) {
-            index = validateIndex(Replace, index, array, options);
+        assert:arg Int index := path.getValidIndex(array, options.supportNegativeIndices)
+                as $"Cannot perform replace operation on JSON array, path {path} is not an array index";
 
-            JsonPointer? remainder = path.remainder;
-            JsonArray    mutable;
+        JsonPointer? remainder = path.remainder;
+        JsonArray    mutable;
 
-            if (array.mutability == Mutable) {
-                mutable = array;
-            } else {
-                mutable = json.newArray();
-                mutable.addAll(array);
-            }
-
-            if (remainder.is(JsonPointer)) {
-                Doc doc = mutable[index];
-                mutable[index] = applyReplace(doc, remainder, value, options);
-            } else {
-                mutable.replace(index, value);
-            }
-            return mutable;
+        if (array.mutability == Mutable) {
+            mutable = array;
+        } else {
+            mutable = json.newArray();
+            mutable.addAll(array);
         }
-        assert:arg as $"Cannot perform replace operation on JSON array, path {path} is not an array index";
+
+        if (remainder.is(JsonPointer)) {
+            Doc doc = mutable[index];
+            mutable[index] = applyReplace(doc, remainder, value, options);
+        } else {
+            mutable.replace(index, value);
+        }
+        return mutable;
     }
 
     /**
@@ -415,7 +406,8 @@ mixin JsonPatch
                                           | cannot be a parent of the destination path "{to}"
                                           ;
 
-        assert Doc toMove := from.get(target) as $"Move operation failed, no value exists at location '{from}'";
+        assert Doc toMove := from.get(target, options.supportNegativeIndices)
+                as $"Move operation failed, no value exists at location '{from}'";
         return applyAdd(applyRemove(target, from, options), to, toMove, options);
     }
 
