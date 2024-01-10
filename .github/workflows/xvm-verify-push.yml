@@ -1,0 +1,47 @@
+#
+# GitHub runner workflow for building, verifying and testing the XVM repo.
+#
+# It also does some quick sanity check that we can provide release artifacts. This latter part
+# will be implemented in much better detail when we have a marge to master and minimal effort
+# GitHub release plugin integration, so we can automate release generation.
+#
+# TODO: Add a release workflow, and a distribution creation workflow. Reuse parts of the
+#   "xdk-release" repo, that can run the cross product of aarch64, amd64, Linux, Windows and
+#   MacOS, including creating the Windows "exe" installer, on any platform with Nsis.
+#
+# TODO: Add workflow jobs in another GitHub workflow configuration that builds SNAPSHOT releases
+#   when a PR is mergeed into master.
+#
+# TODO: Discuss what other kinds of GitHub workflow actions we need. This can be anything
+#   from cron jobs that run every night, to containerization tests/efforts/creations.
+#
+
+name: XVM Repository build, test and verification runner.
+
+on: push
+
+env:
+  ORG_XTCLANG_PLUGIN_VERBOSE: true
+  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: true
+  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD: true
+
+jobs:
+  gradle:
+    # If we do not specify a version here, the runner will pick up whatever Gradle version
+    # that is defined by our wrapper, which is exactly what we want.
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+      - name: Verify Gradle Build
+        run: ./gradlew build --info
+      - name: Verify Gradle Install
+        run: ./gradlew install --info

@@ -3,40 +3,36 @@
  */
 
 plugins {
-    java
+    alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.tasktree)
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+val semanticVersion: SemanticVersion by extra
+
+val xdkJavaToolsUtilsProvider by configurations.registering {
+    description = "Provider configuration of the XVM java_utils-$version artifacts (classes/jars)."
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    isVisible = false
 }
 
-testing {
-    suites {
-        val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
-        }
+val jar by tasks.existing(Jar::class) {
+    manifest {
+        attributes(
+            "Manifest-Version" to "1.0",
+            "Xdk-Version" to semanticVersion.toString(),
+            "Sealed" to "true",
+            "Name" to "/org/xvm/util",
+            "Specification-Title" to "xvm",
+            "Specification-Version" to "version",
+            "Specification-Vendor" to  "xtclang.org",
+            "Implementation-Title" to  "xvm-javatools-utils",
+            "Implementation-Version" to version,
+            "Implementation-Vendor" to "xtclang.org"
+        )
     }
-}
-
-tasks {
-    jar {
-        val version = rootProject.version
-
-        manifest {
-            attributes["Manifest-Version"] = "1.0"
-            attributes["Sealed"] = "true"
-            attributes["Name"] = "/org/xvm/util"
-            attributes["Specification-Title"] = "xvm"
-            attributes["Specification-Version"] = version
-            attributes["Specification-Vendor"] = "xtclang.org"
-            attributes["Implementation-Title"] = "xvm-javatools_utils"
-            attributes["Implementation-Version"] = version
-            attributes["Implementation-Vendor"] = "xtclang.org"
-        }
-    }
-
-    test {
-        maxHeapSize = "1G"
+    doLast {
+        val path = archiveFile.map { it.asFile.absolutePath }
+        logger.info("$prefix Finished building Java utilities: '$path' as artifact.")
     }
 }

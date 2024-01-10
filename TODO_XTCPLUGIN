@@ -1,0 +1,245 @@
+TODO: REMOVE THIS FILE FROM SOURCE CONTROL BEFORE MERGE.
+
+TODO:
+* Fix the unicode rebuilder.
+* Verify that platform builds and runs with the artifact, and clean it up.
+* Verify that the output, error and input streams can be correctly redirected for all launchers.
+        e.g. do we still get uninformative stuff like this from any failure:
+        System.err.println("TODO: handle exec values and their output streams better than this: [manualTests] 'compileXtc' terminated abnormally (exitValue: -1). Rethrowing exception.");
+* Verify that, or even better, write some kind of test that checks whether fork/not fork for the launchers works, is debuggable, and can handle exceptions without losing data, or performing unnecessarily complex logic.
+* Start filing these TODOs as GitHub issues, elaborating on them a bit + enabling the creation of 10-20 small "simple" starter tasks for enhancements.
+* Check that no tests are disabled, and stuff like that, so that we maintain code coverage. I may have disabled something somewhere a long time ago.
+
+Directly after merge:
+* Disentangle tbe somewhat unintuitive runXtc* task collection. Need more clearly defined semantics and configurability. See the comment in the code about how I suspect
+the run uses may be most easily understood and applied by and XTC developer.
+* Create first release from master when merged, and add GitHub release plugin.
+* Figure out how to automatically create a cool "what's changed" list when performing a release action, like, for example, this one: https://docs.GitHub.com/en/actions/learn-GitHub-actions/variables
+* Publish to gradlePluginPortal and mavenCentral and get rid of the init.d workaround script that tries to hide all the credential juggling required to download Maven packages from a GitHub repo. This sucks, actually, but hoepfully
+we don't remain on GitHub as our primary distribution channel for our artifacts for long after the release is done, tagged, and uploaded to gradlePluginPortal and mavenCentral. We stll probably want the GitHub Maven Repo, because
+we can do snapshot releases and keep them there. All XDK devs should have little issue configuring this once, and once only.
+
+Shortly after merge:
+* Start implementing unit tests and simple integration tests for the plugin as quickly as humanly possible.
+* Add the installation builder logic to a GitHub workflow.
+* Add a GitHub workflow based on my xdk-release repository, which is a dockerized x86 Linux with nsis, that can cross-compile to all our supported platforms.
+* Talk to Andres and figure out a way to do binary launchers from application plugin scripts or something similar. The launchers should be part of the self contained build and we should be able to cross compile on all platforms.
+* Learn all the good stuff that JReleaser should be able to do for us (talk to Andres).
+* Change plugin code to use e.g. BaseExec output stream classes or other existing functionality. There is way too many
+animals in the "streams zoo" right now, when we try to process, log and rethrow build errors.
+
+Maybe after merge:
+* Use the PluginMaven default publication, don't add a special one for XTC. This is hardcoded and forced to generate docs and source from the gradlePluginPortal logic anyway.
+* Allow configuration based running xtc module from gradlew - now just make the more fine grained results override the outermost ones. We do that in stdin/out but not the others.
+* Command line retrieval programmatically/config option for XtcLauncher tasks. (dry run?)
+* TODO: Cache launcher tasks?
+* // TODO: Remember to use the ExecResult.stdoutContents variables instead of the horrible stuff we do with byte arrays.* Speed up build part 2
+* Abort if running gradle and not gradlew. We just need a way to detect it.
+* Investigate the Git release plugin
+* Add a unit test to the test source set of something and just make sure the runXtcTest and compileXtcTest tasks
+work. Source set specific configuration? We don't have that yet, I guess? Or do we? Check what we can derive
+from the source set sent into the compile and run tasks for the test source set set.
+* Make property prefix "org.xtclang." a global constant or something we instantiate the XdkVersionHandler with.
+* Java doc gradlePluginPortal publication batter.
+* UseLogging, prefix?
+* Revisit all file/dir references in Gradle build scripts, or any providers in general, to ensure laziness and
+  to avoid ugly hacks (especially to create paths). Like, there are several places that will look a lot prettier
+  with the "provider {}" DSL sugar.
+* Git Maven plugin to help ease the correct Git flow?
+
+TODO:
+* Unicode dependencies.
+*** Talk to Andres and figure out a way to do binary launchers from application plugin scripts or something similar. The launchers should be part of the self contained build and we should be able to cross compile on all platforms.
+    static {
+        System.err.println("TODO: Fix the unicode builder");
+        System.err.println("TODO: Verify platform and port examples. ");
+    }
+
+./lib_ecstasy/build.gradle.kts:    // TODO: Find out why xdkJavaTools is not an unstable API, while xdkTurtle and xdkUnicode are.
+./lib_ecstasy/build.gradle.kts:        ) // TODO: Use configs for dependencies instead, it's less hard coded.
+./lib_ecstasy/build.gradle.kts:// TODO: Add another task that overwrites the source code with the results? Or do we want to do that manually?
+./plugin/build.gradle.kts:// TODO we could put the loggers in extra.
+./plugin/build.gradle.kts:// TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
+./plugin/build.gradle.kts:    // TODO: Write JavaDocs for plugin.
+./plugin/build.gradle.kts:    // TODO: Reuse the exsting PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
+./xdk/build.gradle.kts:    distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
+./xdk/build.gradle.kts:    // TODO these are added twice to the archive configuration. We probably don't want that.
+./xdk/build.gradle.kts:    // TODO: Can likely remove these.
+./xdk/build.gradle.kts:    // TODO: Use the Nexus publication plugin and
+./xdk/build.gradle.kts:// TODO: Add Nexus snapshot and release repositories here:
+./xdk/build.gradle.kts:            // TODO: decide if "must be online" trumps "install once", as to which script template
+./xdk/build.gradle.kts:    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
+./xdk/build.gradle.kts:        assert(distributionBaseName.get() == "xdk") // TODO: Should really rename the distribution to "xdk" explicitly per convention.
+./xdk/build.gradle.kts:            // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
+./xdk/build.gradle.kts:                    path = path.replace("libexec-", "xdk-") // TODO: Hacky.
+./xdk/build.gradle.kts:    // TODO: Why do we need this dependency? Likely just remove it.
+./xdk/build.gradle.kts: * TODO: This should be the only task that triggers the buildRepo plugin. Can we do that without
+./xdk/build.gradle.kts: * TODO: It is unfortunate that we don't copy the entire XDK distribution over the existing
+./xdk/build.gradle.kts: * TODO: @aalmiray recommends application plugin run script generation, and that makes sense to me.
+./gradle/config/repos/xtc-repo.init.gradle.kts.template:        // TODO: Third alternative may be to grab the local dist from the path to use the "repo" subdirectory in an existing XDK distribution.
+./build-logic/common-plugins/src/main/kotlin/XdkVersionHandler.kt:        // TODO: Do not pass projects to companion object functions. This is usually just a contamination to get the logger, and we
+./build-logic/common-plugins/src/main/kotlin/XdkProperties.kt:            // TODO: Unit test keys and make sure no secrets are kept in memory or printed/logged.
+./build-logic/common-plugins/src/main/kotlin/org.xtclang.build.publish.gradle.kts:    id("maven-publish") // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication. We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or find a better way to add the default maven publication.
+./build-logic/common-plugins/src/main/kotlin/org.xtclang.build.publish.gradle.kts:        xtcGitHubClient.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
+./build-logic/common-plugins/src/main/kotlin/XdkBuildLogic.kt:// TODO: Can we move these guys to the versions handler?
+./build-logic/common-plugins/src/main/kotlin/XdkBuildLogic.kt:// TODO: A little bit hacky, for same reason as above.
+./build-logic/common-plugins/src/main/kotlin/DebugBuild.kt:        var match = false // TODO: Better kotlin.
+./build-logic/common-plugins/src/main/kotlin/DebugBuild.kt:            // TODO: Very hacky sanity check verification. Need to keep this updated or remove it when we are confident artifact creation is race free
+./manualTests/build.gradle.kts:// TODO: Add source set for negative tests.
+./manualTests/build.gradle.kts:     * TODO: Add parallelism, and a simpler way to work with this.
+./manualTests/build.gradle.kts:     * TODO: Add a nicer DSL syntax with a nested modules section.
+./build.gradle.kts:        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately efter plugin branch gets merged to master)
+./lib_ecstasy/build.gradle.kts:    // TODO: Find out why xdkJavaTools is not an unstable API, while xdkTurtle and xdkUnicode are.
+./lib_ecstasy/build.gradle.kts:        ) // TODO: Use configs for dependencies instead, it's less hard coded.
+./lib_ecstasy/build.gradle.kts:// TODO: Add another task that overwrites the source code with the results? Or do we want to do that manually?
+./plugin/build.gradle.kts:// TODO we could put the loggers in extra.
+./plugin/build.gradle.kts:// TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
+./plugin/build.gradle.kts:    // TODO: Write JavaDocs for plugin.
+./plugin/build.gradle.kts:    // TODO: Reuse the exsting PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
+./xdk/build.gradle.kts:    distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
+./xdk/build.gradle.kts:    // TODO these are added twice to the archive configuration. We probably don't want that.
+./xdk/build.gradle.kts:    // TODO: Can likely remove these.
+./xdk/build.gradle.kts:    // TODO: Use the Nexus publication plugin and
+./xdk/build.gradle.kts:// TODO: Add Nexus snapshot and release repositories here:
+./xdk/build.gradle.kts:            // TODO: decide if "must be online" trumps "install once", as to which script template
+./xdk/build.gradle.kts:    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
+./xdk/build.gradle.kts:        assert(distributionBaseName.get() == "xdk") // TODO: Should really rename the distribution to "xdk" explicitly per convention.
+./xdk/build.gradle.kts:            // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
+./xdk/build.gradle.kts:                    path = path.replace("libexec-", "xdk-") // TODO: Hacky.
+./xdk/build.gradle.kts:    // TODO: Why do we need this dependency? Likely just remove it.
+./xdk/build.gradle.kts: * TODO: This should be the only task that triggers the buildRepo plugin. Can we do that without
+./xdk/build.gradle.kts: * TODO: It is unfortunate that we don't copy the entire XDK distribution over the existing
+./xdk/build.gradle.kts: * TODO: @aalmiray recommends application plugin run script generation, and that makes sense to me.
+./gradle/config/repos/xtc-repo.init.gradle.kts.template:        // TODO: Third alternative may be to grab the local dist from the path to use the "repo" subdirectory in an existing XDK distribution.
+./build-logic/common-plugins/src/main/kotlin/org.xtclang.build.publish.gradle.kts:    id("maven-publish") // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication. We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or find a better way to add the default maven publication.
+./build-logic/common-plugins/src/main/kotlin/org.xtclang.build.publish.gradle.kts:        xtcGitHubClient.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
+./manualTests/build.gradle.kts:// TODO: Add source set for negative tests.
+./manualTests/build.gradle.kts:     * TODO: Add parallelism, and a simpler way to work with this.
+./manualTests/build.gradle.kts:     * TODO: Add a nicer DSL syntax with a nested modules section.
+./build.gradle.kts:        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately efter plugin branch gets merged to master)
+./javatools_utils/javatools-utils.properties:# TODO: TEMPORARILY DISABLE JAVAC LINTING / WARNINGS FOR THIS PROJECT, BECAUASE IT *SPEWS* THEM.
+./javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java:        long   lStop  = lStart + 1000;           // TODO move to "slow" tests (and up the seconds)
+./javatools_utils/src/test/java/org/xvm/util/PackedIntegerTest.java:        // TODO move to "slow" tests
+./javatools_utils/src/test/java/org/xvm/util/HandyTest.java:        // TODO: These are in the wrong order. The "actual" value should always be the first parameter for reports to make sense.
+./javatools_utils/src/main/java/org/xvm/util/ShallowSizeOf.java:            // TODO: account for field alignment
+./plugin/build.gradle.kts:            artifact(tasks.jar)  // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the publication (i.e. don't use from(components["java"]) // TODO: Do not publish source or javadoc
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcLauncherTask.java:            stderr.set(ext.getStderr()); // TODO maybe rename the properties to standardOutput, errorOutput etc to conform to Gradle name standard. Right now we clearly want them to be separated from any defaults, though, so we know our launcher tasks pick the correct configured streams.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcSourceTask.java:     * to date during configuration, should be enough to accomplish. TODO: Verify this.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcDefaultTask.java:// TODO: This is intended a common superclass to avoid the messy delegate pattern.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcDefaultTask.java:// TODO: We'd like our tasks to have the same kind of extension pattern as the XtcProjectDelegate
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcDefaultTask.java:    protected final XtcProjectDelegate delegate; // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:     * TODO Why does IntelliJ think these are unused? Check that it doesn't lead to any unknown dependency problems for the Plugin.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:        // TODO We can make this configurable later.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:        // TODO outputFilename default task property?
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:        // TODO: We need to tell the plugin, when we build it, which version it has from the catalog. This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:        // TODO what is correct?
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:                    // TODO does this update the output? Seems like it. Write a unit test.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java:        // TODO: Previously we called a Launcher method to ensure this was a module, but all these files should be in the top
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:// TODO: Add modules {} segment to runtime DSL
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:// TODO: Add a generic xtcPlugin or xtc extension, where we can set stuff like, e.g. log level for the plugin (which does not redirect)
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:// TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:// TODO: @CachableTask in any form?
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:    private final Map<DefaultXtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:        // TODO: Currently we just inherit modules from the run spec, we can change then in the run task later; e.g. // this.modules = objects.listProperty(XtcRunModule.class).convention(getExtension().getModules());
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:        // TODO: Allow parallel execution
+./plugin/src/main/java/org/xtclang/plugin/tasks/XtcRunTask.java:     * Check if there are module { ... } declarations without names. TODO: Can use mandatory flag
+./plugin/src/main/java/org/xtclang/plugin/XtcRuntimeExtension.java:@SuppressWarnings("unused") // TODO Implement and code coverage test all configurations.
+./plugin/src/main/java/org/xtclang/plugin/internal/DefaultXtcLauncherTaskExtension.java:    // TODO: Sort public methods in alphabetical order for all these files, remove where just inheritance that has been added to the superclass already if any are left, and put public methods first.
+./plugin/src/main/java/org/xtclang/plugin/internal/DefaultXtcRuntimeExtension.java:    // TODO: Make it possible to add to the module path, both here and in the XTC compiler with explicit paths.
+./plugin/src/main/java/org/xtclang/plugin/internal/DefaultXtcExtension.java://TODO: We may want to add things extensions like xtcLangGitHub() here.
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:        // TODO: Fix the JavaTools resolution code, which is a bit hacky right now.
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:        // TODO: Later move any non-specific task flags, like "fork = <boolean>" here, and it will be applied to all tasks.
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:    // TODO use a builder pattern instead. Add xtcModule dependencies, XDK modules, and (for a runner), any output from the compile task in the local project.
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:    // TODO: Move to static factory in compile task?
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:    // TODO: Move to static factory in run task?
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:            // TODO: can we keep the unpacked modules added here as well after unpack task has been run?
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:            output.dir(outputResources); // TODO is this really correct? We have the resource dir as a special property in the sourceSetOutput already?
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:    // TODO: Shouldn't be really just look in our xdkJavaTools (consumer) and the XDK? (And add the XDK to the javatools consumer config?)
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:        // TODO: The xdk should be an xdkJavaTools provider. Declare as such in ExtractXdkTask. This should remove a large amount of version handling code.
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:            // find modules with the same name (or TODO: with the same identity)
+./plugin/src/main/java/org/xtclang/plugin/XtcProjectDelegate.java:                // TODO, sanity check directories later. The only cause of concern are identical ones, and that is not fatal, but may merit a warning.
+./plugin/src/main/java/org/xtclang/plugin/launchers/XtcLauncher.java:        // TODO, simplify, just send a stream setter for the various streams or our own class based on the existing ExecResult.contentsOfOutput* or something.
+./plugin/src/main/java/org/xtclang/plugin/launchers/XtcLauncher.java:        // TODO: System.exit callback if we are running in the builder thread, or things get nasty.
+./plugin/src/main/java/org/xtclang/plugin/launchers/BuildThreadLauncher.java:            // TODO: Rewrite super.redirectIo so we can reuse it here. That is prettier. Push and pop streams to field?
+./plugin/src/main/java/org/xtclang/plugin/launchers/BuildThreadLauncher.java:        // TODO: This is a rather hacky way of checking the LauncherException.
+./plugin/src/main/java/org/xtclang/plugin/launchers/CommandLine.java:        return Collections.unmodifiableList(args); // TODO probably do all allocation in the plugin thru Gradle.Project.objectFactories.
+./plugin/src/main/java/org/xtclang/plugin/launchers/XtcExecResult.java:        // TODO: Remember to use the ExecResult.stdoutContents variables instead of the horrible stuff we do with byte arrays.
+./plugin/src/main/java/org/xtclang/plugin/launchers/XtcExecResult.java:     * the cached stream. TODO: Make configurable.
+./plugin/src/main/java/org/xtclang/plugin/launchers/JavaExecLauncher.java:        // TODO: Way too complicated, just making absolutely sure that we don't mix class paths for e.g. XDK development, and something
+./plugin/src/main/java/org/xtclang/plugin/launchers/ChildProcessLauncher.java:    // TODO: Implement me
+./plugin/src/main/java/org/xtclang/plugin/XtcPluginUtils.java: * TODO: Move the state independent/reentrant stuff from the ProjectDelegate and its subclasses to here.
+./plugin/src/main/java/org/xtclang/plugin/XtcModulePath.java: * TODO: Implement me, and sort out the semi-messy logic in XtcProjectDelegate, where the current module
+./plugin/src/main/java/org/xtclang/plugin/XtcPluginConstants.java:    public static final String XTC_COMPILER_LAUNCHER_NAME = "xtc"; // TODO: xcc
+./plugin/src/main/java/org/xtclang/plugin/XtcPluginConstants.java:    @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
+./plugin/src/main/java/org/xtclang/plugin/XtcPluginConstants.java:    @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
+./plugin/src/main/java/org/xtclang/plugin/XtcLauncherTaskExtension.java:    // TODO: Increase granularity for this later, so that we can control individual module execution fork policies from the run tasks?
+./plugin/src/main/java/org/xtclang/plugin/XtcLauncherTaskExtension.java:    // TODO: This may be a current source of confusion - allowing a task property getter, and changing its value, will lead to the entire extension for
+./xdk/build.gradle.kts:                // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
+./build-logic/common-plugins/src/main/kotlin/XdkBuildLogic.kt:// TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
+./javatools/javatools.properties:# TODO: TEMPORARILY DISABLE JAVAC LINTING / WARNINGS FOR THIS PROJECT, BECAUASE IT *SPEWS* THEM.
+./javatools/build.gradle.kts: * TODO: Someone please determine if this is something we should fix or not:
+./javatools/build.gradle.kts:    // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
+./javatools/build.gradle.kts:// TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
+./javatools/src/main/java/org/xvm/tool/Launcher.java:                // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
+
+## PROPERTIES AND CONFIG
+
+Document and discuss the configurable parts of the build, and if there is anything obvious that is missing that should
+be filed as an enhancement issue.
+
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+gradle.version=8.5
+implementation-class=Org_xtclang_build_aggregatorPlugin
+implementation-class=Org_xtclang_build_commonPlugin
+implementation-class=Org_xtclang_build_debugPlugin
+implementation-class=Org_xtclang_build_javaPlugin
+implementation-class=Org_xtclang_build_publishPlugin
+implementation-class=Org_xtclang_build_xdk_versioningPlugin
+implementation-class=org.xtclang.plugin.XtcPlugin
+implementation-classpath=/Users/marcus/src/xtc/master/build-logic/aggregator/build/classes/java/main\:/Users/marcus/src/xtc/master/build-logic/aggregator/build/classes/kotlin/main\:/Users/marcus/src/xtc/master/build-logic/aggregator/build/resources/main
+implementation-classpath=/Users/marcus/src/xtc/master/build-logic/common-plugins/build/classes/java/main\:/Users/marcus/src/xtc/master/build-logic/common-plugins/build/classes/kotlin/main\:/Users/marcus/src/xtc/master/build-logic/common-plugins/build/resources/main\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-gradle-plugin-model/1.9.20/2091f519531ac87226a6a13a7bc8cd77e50a880e/kotlin-gradle-plugin-model-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-gradle-plugin-api/1.9.20/f277b92784489a1d60142cb05537609d4fdd5c91/kotlin-gradle-plugin-api-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-gradle-plugin/1.9.20/d67c5ea81ba3098bf02a3feff06c378740af2bc3/kotlin-gradle-plugin-1.9.20-gradle81.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/io.github.rybalkinsd/kohttp-jackson/0.12.0/8672a4e5eb3e45a689431dfcc6c8c953d81c6167/kohttp-jackson-0.12.0.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/io.github.rybalkinsd/kohttp/0.12.0/75a6c35c569a27e9311d8737ed3a70335d29a5fa/kohttp-0.12.0.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-gradle-plugin-idea-proto/1.9.20/c35d575cec4f2e5759fd63df8a3207653bae9ade/kotlin-gradle-plugin-idea-proto-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-gradle-plugin-idea/1.9.20/83cf5d4acdbf6c1e7b32ca96cb79b96e4cce032e/kotlin-gradle-plugin-idea-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-klib-commonizer-api/1.9.20/7d7c93b8d08058de2d02e604938c3c08117b580c/kotlin-klib-commonizer-api-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-native-utils/1.9.20/6362ed0e22ed64a738215490c1835d5a6264a5ac/kotlin-native-utils-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-util-klib/1.9.20/73daea30b3c18d1ffc1e86f36e242a5bf78e9c85/kotlin-util-klib-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-build-tools-api/1.9.20/7d93e9729dada991126a4699484f275d6bdc2bb6/kotlin-build-tools-api-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-android-extensions/1.9.20/dc8cc72af5e78fc56701ba850d8ca6091e2c3c5e/kotlin-android-extensions-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-runner/1.9.20/1bceefc81bd554fac50828e4f442ff9243cacf33/kotlin-compiler-runner-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/1.9.20/b44d2f7d8c1c67c0ed66d40e57e52623ca753db7/kotlin-compiler-embeddable-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-scripting-compiler-embeddable/1.9.20/c2c32f862094042ee6c84e21df4669b41191af88/kotlin-scripting-compiler-embeddable-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-scripting-compiler-impl-embeddable/1.9.20/ed985bbca9227a8cf97d5b2f81d371f1d7efee61/kotlin-scripting-compiler-impl-embeddable-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core/1.2.1/3839faf625f4197acaeceeb6da000f011a2acb49/kotlinx-coroutines-core-1.2.1.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/com.squareup.okhttp3/okhttp/3.14.2/eaed79ed6bc1e14fad462172b6a09524545b165c/okhttp-3.14.2.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/1.3.50/bf65725d4ae2cf00010d84e945fcbc201f590e11/kotlin-stdlib-jdk8-1.3.50.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.module/jackson-module-kotlin/2.9.9/446b0567b26965cf7db859ba48a73ab30b4016b7/jackson-module-kotlin-2.9.9.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.9.9/d6eb9817d9c7289a91f043ac5ee02a6b3cc86238/jackson-databind-2.9.9.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-gradle-plugin-annotations/1.9.20/f108d325d3118738cd0c263b390ac5d96426764c/kotlin-gradle-plugin-annotations-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-project-model/1.9.20/11532396237b2ead81b82227b81ace798eeb46ba/kotlin-project-model-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-tooling-core/1.9.20/bdc01105250e7ecc8bbcf49a21805685cd557dda/kotlin-tooling-core-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-util-io/1.9.20/13fa0df6f8e5aea3ee927e6299063d4a159766ca/kotlin-util-io-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-daemon-embeddable/1.9.20/a2a6b491bc53049e2f1af33245481db49034ba52/kotlin-daemon-embeddable-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.intellij.deps/trove4j/1.0.20200330/3afb14d5f9ceb459d724e907a21145e8ff394f02/trove4j-1.0.20200330.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-daemon-client/1.9.20/29f5166f4fa1e17b6cbd3af1d7e1fcaa359d9f88/kotlin-daemon-client-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-coroutines-core-jvm/1.5.0/d8cebccdcddd029022aa8646a5a953ff88b13ac8/kotlinx-coroutines-core-jvm-1.5.0.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-scripting-jvm/1.9.20/5277cafe6949e047a271433202f32e8377b00ebb/kotlin-scripting-jvm-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-scripting-common/1.9.20/d2abd0f9c63e61fa54bd43f29458c2606b02abdc/kotlin-scripting-common-1.9.20.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/1.3.50/50ad05ea1c2595fb31b800e76db464d08d599af3/kotlin-stdlib-jdk7-1.3.50.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-reflect/1.3.10/dd02865be0351707554b16a896b766b2396cdafa/kotlin-reflect-1.3.10.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/1.3.50/b529d1738c7e98bbfa36a4134039528f2ce78ebf/kotlin-stdlib-1.3.50.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-common/1.3.50/3d9cd3e1bc7b92e95f43d45be3bfbcf38e36ab87/kotlin-stdlib-common-1.3.50.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/com.squareup.okio/okio/1.17.2/78c7820b205002da4d2d137f6f312bd64b3d6049/okio-1.17.2.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-annotations/2.9.0/7c10d545325e3a6e72e06381afe469fd40eb701/jackson-annotations-2.9.0.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-core/2.9.9/bfff5af9fb8347d26bbb7959cb9b4fe9a2b0ca5e/jackson-core-2.9.9.jar\:/Users/marcus/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar
+implementation-classpath=/Users/marcus/src/xtc/master/build-logic/settings-plugins/build/classes/java/main\:/Users/marcus/src/xtc/master/build-logic/settings-plugins/build/classes/kotlin/main\:/Users/marcus/src/xtc/master/build-logic/settings-plugins/build/resources/main
+implementation-classpath=/Users/marcus/src/xtc/master/plugin/build/classes/java/main\:/Users/marcus/src/xtc/master/plugin/build/resources/main
+networkTimeout=10000
+org.gradle.caching.debug=false
+org.gradle.caching=true
+org.gradle.configuration-cache=false
+org.gradle.console=auto
+org.gradle.debug.port=5005
+org.gradle.debug=false
+org.gradle.jvmargs=-Dfile.encoding=UTF-8 -Xmx4G
+org.gradle.parallel=true
+org.gradle.warning.mode=summary
+org.xtclang.build.allowOverwriteLocalDist=true
+org.xtclang.build.sanityCheckRuntime=false
+org.xtclang.java.enablePreview=false
+org.xtclang.java.jdk=21
+org.xtclang.java.lint=false
+org.xtclang.java.lint=true
+org.xtclang.java.maxErrors=100
+org.xtclang.java.maxHeap=4G
+org.xtclang.java.maxWarnings=100
+org.xtclang.java.test.stdout=false
+org.xtclang.java.warningsAsErrors=true
+org.xtclang.javatools.verifyJar.expectedFileCount=-1
+org.xtclang.javatools.verifyJar=true
+org.xtclang.plugin.bundle.javatools=true
+org.xtclang.plugin.description=A plugin that teaches Gradle the XTC language. First step to language server debugging and IDE support.
+org.xtclang.plugin.display.name=XTC Language Gradle plugin
+org.xtclang.plugin.id=org.xtclang.xtc-plugin
+org.xtclang.plugin.implementation.class=org.xtclang.plugin.XtcPlugin
+org.xtclang.plugin.isAutomatedPublishing=true
+org.xtclang.plugin.vcs.url=https://github.com/xtclang/xvm
+org.xtclang.plugin.website=https://xtclang.org
+org.xtclang.publications.sign=false
+org.xtclang.publish.build.identifiers=false
+org.xtclang.publish.localDist=false
+org.xtclang.repo.github.org=xtclang
+org.xtclang.repo.github.tasks.group=github
+org.xtclang.repo.github.url=https://maven.pkg.github.com/xtclang/xvm
+systemProp.gradle.internal.publish.checksums.insecure=true
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
