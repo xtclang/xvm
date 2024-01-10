@@ -124,11 +124,7 @@ public abstract class Launcher
         boolean fHelp = opts.parse(m_asArgs);
         if (Runtime.version().version().get(0) < 21)
             {
-<<<<<<< HEAD
-            log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
-=======
             log(Severity.INFO, "The required JVM version is 21; this JVM version ("
->>>>>>> 76e28e4be (Implemented a working forceRebuild = true flag for the xtcCompile environment.)
                     + Runtime.version() + ") appears to be older");
             }
         else

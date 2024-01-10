@@ -84,7 +84,7 @@ private val xdkDist = xdkBuild.distro()
 subprojects {
     tasks.withType<XtcCompileTask>().configureEach {
         logger.info("Versioning subproject $name as ${semanticVersion.artifactVersion} from semanticVersion $semanticVersion")
-        version = semanticVersion.artifactVersion
+        stamp = semanticVersion.artifactVersion
     }
 }
 

@@ -12,7 +12,7 @@ public interface XtcCompilerExtension extends XtcLauncherTaskExtension {
 
     Property<Boolean> getVersionedOutputName();
 
-    Property<String> getVersion();
+    Property<String> getStamp();
 
     Property<Boolean> getForceRebuild();
 

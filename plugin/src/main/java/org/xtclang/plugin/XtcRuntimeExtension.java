@@ -28,11 +28,4 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
     void setModuleNames(String... moduleNames);
 
     boolean isEmpty();
-
-    /*
-    ListProperty<String> getModuleNames();
-
-    ListProperty<String> getModuleMethods();
-
-    ListProperty<String> getModuleArgs();*/
 }

@@ -12,7 +12,7 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
     private final Property<Boolean> isStrict;
     private final Property<Boolean> hasQualifiedOutputName;
     private final Property<Boolean> hasVersionedOutputName;
-    private final Property<String> version;
+    private final Property<String> stamp;
     private final Property<Boolean> shouldForceRebuild;
     private final DirectoryProperty additionalOutputDir;
 
@@ -23,7 +23,7 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
         this.isStrict = objects.property(Boolean.class).value(false);
         this.hasQualifiedOutputName = objects.property(Boolean.class).value(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).value(false);
-        this.version = objects.property(String.class);
+        this.stamp = objects.property(String.class);
         this.shouldForceRebuild = objects.property(Boolean.class).value(false);
         this.additionalOutputDir = objects.directoryProperty();
     }
@@ -54,8 +54,8 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
     }
 
     @Override
-    public Property<String> getVersion() {
-        return version;
+    public Property<String> getStamp() {
+        return stamp;
     }
 
     @Override

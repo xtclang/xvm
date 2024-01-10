@@ -19,7 +19,6 @@ import org.gradle.api.tasks.TaskAction;
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.CommandLine;
-import org.xtclang.plugin.launchers.XtcLauncher;
 
 import javax.inject.Inject;
 import java.nio.file.Files;
@@ -47,7 +46,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     private final Property<Boolean> isStrict;
     private final Property<Boolean> hasQualifiedOutputName;
     private final Property<Boolean> hasVersionedOutputName;
-    private final Property<String> version;
+    private final Property<String> stamp;
     private final Property<Boolean> shouldForceRebuild;
 
     /**
@@ -72,7 +71,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(ext.getQualifiedOutputName());
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.shouldForceRebuild = objects.property(Boolean.class).convention(ext.getForceRebuild());
-        this.version = objects.property(String.class).convention(ext.getVersion());
+        this.stamp = objects.property(String.class).convention(ext.getStamp());
     }
 
     @Internal
@@ -150,8 +149,8 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     @Optional
     @Input
     @Override
-    public Property<String> getVersion() {
-        return version;
+    public Property<String> getStamp() {
+        return stamp;
     }
 
     @Input
@@ -209,9 +208,9 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         args.addBoolean("-verbose", getIsVerbose().get());
         args.addBoolean("-strict", getStrict().get());
         args.addBoolean("-qualify", getQualifiedOutputName().get());
-        if (getVersion().isPresent()) {
-            delegate.lifecycle("{} Task '{}' stamping version '{}' into XTC modules.", prefix, getName(), version.get());
-            args.add("-version", getVersion().get());
+        if (getStamp().isPresent()) {
+            delegate.lifecycle("{} Task '{}' stamping version '{}' into XTC modules.", prefix, getName(), stamp.get());
+            args.add("-stamp", getStamp().get());
         } else {
             delegate.warn("{} WARNING '{}' Task has no version specified for the XTC module we are compiling.", prefix, getName());
         }
