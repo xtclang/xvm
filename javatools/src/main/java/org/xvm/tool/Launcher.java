@@ -53,7 +53,7 @@ import static org.xvm.util.Handy.toPathString;
  * </li></ul>
  */
 public abstract class Launcher
-        implements ErrorListener
+        implements ErrorListener, Runnable
     {
     /**
      * Entry point from the OS.
@@ -117,6 +117,7 @@ public abstract class Launcher
     /**
      * Execute the Launcher tool.
      */
+    @Override
     public void run()
         {
         Options opts = options();
@@ -1427,7 +1428,7 @@ public abstract class Launcher
      *
      * @param listPath
      */
-    public void validateModulePath(List<File> listPath)
+    public void validateModulePath(List<File> listPath) throws LauncherException
         {
         for (File file : listPath)
             {
@@ -1736,16 +1737,25 @@ public abstract class Launcher
         /**
          * @param error  true to abort with an error status
          */
-        public LauncherException(boolean error)
+        public LauncherException(final boolean error)
             {
-            super();
+            this(error, null);
+            }
 
+        public LauncherException(final boolean error, final String msg)
+           {
+            super(msg);
             this.error = error;
+            }
+
+        @Override
+        public String toString()
+            {
+            return '[' + getClass().getSimpleName() + ": isError=" + error + ", msg=" + getMessage() + ']';
             }
 
         public final boolean error;
         }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

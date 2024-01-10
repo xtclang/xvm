@@ -1,6 +1,5 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -12,7 +11,6 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import java.util.zip.ZipEntry;
@@ -32,340 +30,316 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.xvm.util.ConstOrdinalList;
 
+import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElseGet;
 
 /**
  * Using the raw information from {@code ./resources/unicode/*.zip}, build the Unicode data tables
  * used by the Char class.
  */
-public class BuildUnicodeTables
-    {
+public class BuildUnicodeTables {
+    public static final boolean TEST = false;
+
+    private static final String UCD_ALL_FLAT_XML = "ucd.all.flat.xml";
+    private static final File OUTPUT_DIR = new File("./build/resources/unicode/");
+
+    private final String[] asArgs;
+
     /**
      * Entry point from the OS.
      *
-     * @param asArg  command line arguments
+     * @param asArgs command line arguments
      */
-    public static void main(String[] asArg)
-        {
-        BuildUnicodeTables tool = new BuildUnicodeTables(asArg);
-        tool.run();
-        }
+    public static void main(final String[] asArgs) throws IOException, JAXBException {
+        new BuildUnicodeTables(asArgs).run();
+    }
 
     /**
-     * @param asArgs  the Launcher's command-line arguments
+     * @param asArgs the Launcher's command-line arguments
      */
-    public BuildUnicodeTables(String[] asArgs)
-        {
-        }
+    public BuildUnicodeTables(final String[] asArgs) {
+        this.asArgs = asArgs;
+    }
 
     /**
      * Execute the Launcher tool.
      */
-    public void run()
-        {
+    public void run() throws IOException, JAXBException {
         out("Locating Unicode raw data ...");
-        List<CharData> listRaw = loadData();
+        final List<CharData> listRaw = loadData();
 
         int nHigh = -1;
-        for (CharData cd : listRaw)
-            {
-            int n = cd.lastIndex();
-            if (n > nHigh)
-                {
+        for (final CharData cd : listRaw) {
+            final int n = cd.lastIndex();
+            if (n > nHigh) {
                 nHigh = n;
-                }
             }
-        int cAll = nHigh + 1;
+        }
+        final int cAll = nHigh + 1;
 
         out("Processing Unicode codepoints 0.." + nHigh);
 
         // various data collections
-        int   [] cats   = new int   [cAll]; Arrays.fill(cats, new CharData().cat());
-     // String[] labels = new String[cAll];
-        int   [] decs   = new int   [cAll]; Arrays.fill(decs, 10); // 10 is illegal; use as "null"
-        String[] nums   = new String[cAll];
-        int   [] cccs   = new int   [cAll]; Arrays.fill(cccs, 255); // 255 is illegal; use as "null"
-        int   [] lowers = new int   [cAll];
-        int   [] uppers = new int   [cAll];
-        int   [] titles = new int   [cAll];
-        String[] blocks = new String[cAll];
+        final int[] cats = new int[cAll];
+        Arrays.fill(cats, new CharData().cat());
+        // String[] labels = new String[cAll];
+        final int[] decs = new int[cAll];
+        Arrays.fill(decs, 10); // 10 is illegal; use as "null"
+        final String[] nums = new String[cAll];
+        final int[] cccs = new int[cAll];
+        Arrays.fill(cccs, 255); // 255 is illegal; use as "null"
+        final int[] lowers = new int[cAll];
+        final int[] uppers = new int[cAll];
+        final int[] titles = new int[cAll];
+        final String[] blocks = new String[cAll];
 
-        for (CharData cd : listRaw)
-            {
-            for (int codepoint = cd.firstIndex(), iLast = cd.lastIndex(); codepoint <= iLast; ++codepoint)
-                {
-                cats  [codepoint] = cd.cat();
-             // labels[codepoint] = cd.label();
-                decs  [codepoint] = cd.dec();
-                nums  [codepoint] = cd.num();
-                cccs  [codepoint] = cd.combo();
+        for (final CharData cd : listRaw) {
+            for (int codepoint = cd.firstIndex(), iLast = cd.lastIndex(); codepoint <= iLast; ++codepoint) {
+                cats[codepoint] = cd.cat();
+                // labels[codepoint] = cd.label();
+                decs[codepoint] = cd.dec();
+                nums[codepoint] = cd.num();
+                cccs[codepoint] = cd.combo();
                 lowers[codepoint] = cd.lower();
                 uppers[codepoint] = cd.upper();
                 titles[codepoint] = cd.title();
                 blocks[codepoint] = cd.block();
-
-                }
             }
+        }
 
-        writeResult("Cats"  , cats);
-     // writeResult("Labels", labels);
-        writeResult("Decs"  , decs);
-        writeResult("Nums"  , nums);
-        writeResult("CCCs"  , cccs);
+        writeResult("Cats", cats);
+        // writeResult("Labels", labels);
+        writeResult("Decs", decs);
+        writeResult("Nums", nums);
+        writeResult("CCCs", cccs);
         writeResult("Lowers", lowers);
         writeResult("Uppers", uppers);
         writeResult("Titles", titles);
         writeResult("Blocks", blocks);
-        }
+    }
 
-    public List<CharData> loadData()
-        {
-        try
-            {
-            String sXML;
-            if (TEST)
-                {
-                ClassLoader loader = BuildUnicodeTables.class.getClassLoader();
-                if (loader == null)
-                    {
-                    loader = ClassLoader.getSystemClassLoader();
-                    }
-                String sFile = loader.getResource("test.xml").getFile();
-                File   file  = new File(sFile);
-                assert file.exists();
-                assert file.isFile();
-                assert file.canRead();
+    public List<CharData> loadData() throws IOException, JAXBException {
+        final String sXML;
+        if (TEST) {
+            sXML = loadDataTest();
+        } else {
+            final var zip = getZipFile();
+            final ZipEntry entryXML = zip.getEntry(UCD_ALL_FLAT_XML);
+            final long lRawLen = entryXML.getSize();
+            assert lRawLen < 2 * 1000 * 1000 * 1000;
 
-                long     lRawLen  = file.length();
-                assert lRawLen < 2 * 1000 * 1000 * 1000;
-
-                int         cbRaw    = (int) lRawLen;
-                byte[]      abRaw    = new byte[cbRaw];
-                InputStream in       = new FileInputStream(file);
-                int         cbActual = in.readNBytes(abRaw, 0, cbRaw);
+            final int cbRaw = (int)lRawLen;
+            final byte[] abRaw = new byte[cbRaw];
+            try (final InputStream in = zip.getInputStream(entryXML)) {
+                final int cbActual = in.readNBytes(abRaw, 0, cbRaw);
                 assert cbActual == cbRaw;
                 sXML = new String(abRaw);
-                }
-            else
-                {
-                String sZip = "ucd.all.flat.zip";
-                File file = new File(sZip);
-                if (!(file.exists() && file.isFile() && file.canRead()))
-                    {
-                    ClassLoader loader = BuildUnicodeTables.class.getClassLoader();
-                    if (loader == null)
-                        {
-                        loader = ClassLoader.getSystemClassLoader();
-                        }
-                    sZip = loader.getResource(sZip).getFile();
-                    }
-
-                ZipFile  zip      = new ZipFile(sZip);
-                ZipEntry entryXML = zip.getEntry("ucd.all.flat.xml");
-                long     lRawLen  = entryXML.getSize();
-                assert lRawLen < 2 * 1000 * 1000 * 1000;
-
-                int         cbRaw    = (int) lRawLen;
-                byte[]      abRaw    = new byte[cbRaw];
-                InputStream in       = zip.getInputStream(entryXML);
-                int         cbActual = in.readNBytes(abRaw, 0, cbRaw);
-                assert cbActual == cbRaw;
-                sXML = new String(abRaw);
-                }
-
-            JAXBContext jaxbContext = JAXBContext.newInstance(UCDData.class);
-            Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
-            UCDData data = (UCDData) jaxbUnmarshaller.unmarshal(new StringReader(sXML));
-            return data.repertoire;
-            }
-        catch (IOException | JAXBException e)
-            {
-            throw new RuntimeException(e);
             }
         }
 
-    void writeResult(String name, String[] array)
-        {
+        final JAXBContext jaxbContext = JAXBContext.newInstance(UCDData.class);
+        final Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+        final UCDData data = (UCDData)jaxbUnmarshaller.unmarshal(new StringReader(sXML));
+        return data.repertoire;
+    }
+
+    private static String loadDataTest() throws IOException {
+        final String sXML;
+        final ClassLoader loader = requireNonNullElseGet(BuildUnicodeTables.class.getClassLoader(), ClassLoader::getSystemClassLoader);
+        final String sFile = requireNonNull(loader.getResource("test.xml")).getFile();
+        final File file = new File(sFile);
+        assert file.exists();
+        assert file.isFile();
+        assert file.canRead();
+
+        final long lRawLen = file.length();
+        assert lRawLen < 2 * 1000 * 1000 * 1000;
+
+        final int cbRaw = (int)lRawLen;
+        final byte[] abRaw = new byte[cbRaw];
+        try (final InputStream in = new FileInputStream(file)) {
+            final int cbActual = in.readNBytes(abRaw, 0, cbRaw);
+            assert cbActual == cbRaw;
+            sXML = new String(abRaw);
+        }
+        return sXML;
+    }
+
+    private File resolveArgumentAsFile() {
+        if (asArgs.length > 0) {
+            final File ucdZip = new File(asArgs[0]);
+            out(getClass().getSimpleName() + " UCD zip file: " + ucdZip.getAbsolutePath());
+            return ucdZip;
+        }
+        return null;
+    }
+
+    private File resolveArgumentAsDestinationDir() {
+        if (asArgs.length > 1) {
+            final File destDir = new File(asArgs[1]);
+            out(getClass().getSimpleName() + " destination directory: " + destDir.getAbsolutePath());
+            return destDir;
+        }
+        return OUTPUT_DIR;
+    }
+
+    private ZipFile getZipFile() throws IOException {
+        final var file = requireNonNullElseGet(resolveArgumentAsFile(), () -> new File(UCD_ALL_FLAT_XML));
+        if (!(file.exists() && file.isFile() && file.canRead())) {
+            final ClassLoader loader = requireNonNullElseGet(BuildUnicodeTables.class.getClassLoader(), ClassLoader::getSystemClassLoader);
+            final var resource = loader.getResource(UCD_ALL_FLAT_XML);
+            if (resource == null) {
+                throw new IOException("Cannot find resources for unicode file: " + UCD_ALL_FLAT_XML);
+            }
+            return new ZipFile(resource.getFile());
+        }
+        out("Reverting to zip file: " + file.getAbsolutePath());
+        return new ZipFile(file);
+    }
+
+    void writeResult(final String name, final String[] array) throws IOException {
         // collect and sort the values
-        TreeMap<String, Integer> map = new TreeMap<>();
-        int c = array.length;
-        for (int i = 0; i < c; ++i)
-            {
-            String s = array[i];
-            if (s != null)
-                {
+        final var map = new TreeMap<String, Integer>();
+        final int c = array.length;
+        for (final var s : array) {
+            if (s != null) {
                 assert !s.isEmpty();
-                map.compute(s, (k, v) -> (v==null?0:v) + 1);
-                }
+                map.compute(s, (k, v) -> (v == null ? 0 : v) + 1);
             }
+        }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(name)
-          .append(": [index] \"str\" (freq) \n--------------------");
+        final var sb = new StringBuilder();
+        sb.append(name).append(": [index] \"str\" (freq) \n--------------------");
         int index = 0;
-        for (Map.Entry<String, Integer> entry : map.entrySet())
-            {
-            sb.append("\n[")
-              .append(index)
-              .append("] \"")
-              .append(entry.getKey())
-              .append("\" (")
-              .append(entry.getValue())
-              .append("x)");
-
+        for (final var entry : map.entrySet()) {
+            sb.append("\n[").append(index).append("] \"").append(entry.getKey()).append("\" (").append(entry.getValue()).append("x)");
             entry.setValue(index++);
-            }
+        }
 
-        int indexNull = index;
-        sb.append("\n\ndefault=")
-          .append(indexNull);
+        final int indexNull = index;
+        sb.append("\n\ndefault=").append(indexNull);
 
         writeDetails(name, sb.toString());
 
         // assign indexes to each
-        int[] an = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
-            String s = array[i];
+        final int[] an = new int[c];
+        for (int i = 0; i < c; ++i) {
+            final String s = array[i];
             an[i] = s == null ? indexNull : map.get(s);
-            }
+        }
 
         writeResult(name, an);
-        }
+    }
 
-    void writeResult(String name, int[] array)
-        {
-//        if (name.equals("Cats"))
-//            {
-//            out("cats:");
-//            for (int i = 0; i < 128; ++i)
-//                {
-//                out("[" + i + "]=" + array[i]);
-//                }
-//            }
+    void writeResult(final String name, final int[] array) throws IOException {
+        //        if (name.equals("Cats"))
+        //            {
+        //            out("cats:");
+        //            for (int i = 0; i < 128; ++i)
+        //                {
+        //                out("[" + i + "]=" + array[i]);
+        //                }
+        //            }
 
         writeResult(name, ConstOrdinalList.compress(array, 256));
-        }
+    }
 
-    void writeResult(String name, byte[] data)
-        {
-        try
-            {
-            String filename = "Char" + name + ".dat";
-            File   dir      = new File("./build/resources/");
-            File   file     = dir.exists() && dir.isDirectory() && dir.canWrite()
-                    ? new File(dir, filename)
-                    : new File(filename);
-            FileOutputStream out = new FileOutputStream(file);
+    private File resolveOutput(final String name, final String extension) throws IOException {
+        final var filename = "Char" + name + '.' + extension;
+        final var dir = resolveArgumentAsDestinationDir();
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new IOException("Could not access or create dir: '" + dir.getAbsolutePath() + '\'');
+        }
+        assert dir.canWrite();
+        return new File(dir, filename);
+    }
+
+    void writeResult(final String name, final byte[] data) throws IOException {
+        try (final var out = new FileOutputStream(resolveOutput(name, "dat"))) {
             out.write(data);
-            out.close();
-            }
-        catch (IOException e)
-            {
-            throw new RuntimeException(e);
-            }
         }
+    }
 
-    void writeDetails(String name, String details)
-        {
-        try
-            {
-            String filename = "Char" + name + ".txt";
-            File   dir      = new File("./build/resources/");
-            File   file     = dir.exists() && dir.isDirectory() && dir.canWrite()
-                ? new File(dir, filename)
-                : new File(filename);
-            FileWriter writer = new FileWriter(file);
-            writer.write(details);
-            writer.close();
-            }
-        catch (IOException e)
-            {
-            throw new RuntimeException(e);
-            }
+    void writeDetails(final String name, final String details) throws IOException {
+        try (final var out = new FileWriter(resolveOutput(name, "txt"))) {
+            out.write(details);
         }
-
+    }
 
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Print the String value of some object to the terminal.
+     * Print a blank line to the terminal.
      */
-    public static void out(Object o)
-        {
-        System.out.println(o);
-        }
+    public static void out() {
+        out("");
+    }
 
     /**
      * Print the String value of some object to the terminal.
      */
-    public static void err(Object o)
-        {
-        System.err.println(o);
-        }
+    public static void out(final Object o) {
+        System.out.println(o);
+    }
 
+    /**
+     * Print a blank line to the terminal.
+     */
+    @SuppressWarnings("unused")
+    public static void err() {
+        err("");
+    }
+
+    /**
+     * Print the String value of some object to the terminal.
+     */
+    public static void err(final Object o) {
+        System.err.println(o);
+    }
 
     // ----- inner classes -------------------------------------------------------------------------
 
     @XmlRootElement(name = "ucd")
     @XmlAccessorType(XmlAccessType.FIELD)
-    public static class UCDData
-        {
+    public static class UCDData {
         @XmlElement
         public String description;
 
-        @XmlElements({
-                @XmlElement(name="char"        ),
-                @XmlElement(name="noncharacter"),
-                @XmlElement(name="surrogate"   ),
-//              @XmlElement(name="group"       ), // note: none present in Unicode 13 data
-                @XmlElement(name="reserved"    )
-        })
+        @XmlElements({@XmlElement(name = "char"), @XmlElement(name = "noncharacter"), @XmlElement(name = "surrogate"),
+                //              @XmlElement(name="group"       ), // note: none present in Unicode 13 data
+                @XmlElement(name = "reserved")})
         @XmlElementWrapper
         public List<CharData> repertoire = new ArrayList<>();
 
         @Override
-        public String toString()
-            {
-            StringBuilder sb = new StringBuilder();
-            sb.append("UCD description=")
-              .append(description)
-              .append(", repertoire=\n");
+        public String toString() {
+            final var sb = new StringBuilder();
+            sb.append("UCD description=").append(description).append(", repertoire=\n");
 
             int c = 0;
-            for (CharData item : repertoire)
-                {
-                if (c > 200)
-                    {
+            for (final var item : repertoire) {
+                if (c > 200) {
                     sb.append(",\n...");
                     break;
-                    }
-                else if (c++ > 0)
-                    {
+                } else if (c++ > 0) {
                     sb.append(",\n");
-                    }
+                }
 
                 sb.append(item);
-                }
-            return sb.toString();
             }
+            return sb.toString();
         }
+    }
 
     @XmlAccessorType(XmlAccessType.FIELD)
-    public static class CharData
-        {
-        int firstIndex()
-            {
-            return codepoint == null || codepoint.isEmpty()
-                    ? Integer.parseInt(codepointStart, 16)
-                    : Integer.parseInt(codepoint, 16);
-            }
+    public static class CharData {
+        int firstIndex() {
+            return codepoint == null || codepoint.isEmpty() ? Integer.parseInt(codepointStart, 16) : Integer.parseInt(codepoint, 16);
+        }
 
-        int lastIndex()
-            {
-            return codepoint == null || codepoint.isEmpty()
-                    ? Integer.parseInt(codepointEnd, 16)
-                    : Integer.parseInt(codepoint, 16);
-            }
+        int lastIndex() {
+            return codepoint == null || codepoint.isEmpty() ? Integer.parseInt(codepointEnd, 16) : Integer.parseInt(codepoint, 16);
+        }
 
         @XmlAttribute(name = "cp")
         String codepoint;
@@ -376,86 +350,74 @@ public class BuildUnicodeTables
         @XmlAttribute(name = "last-cp")
         String codepointEnd;
 
-// note: names in the XML file don't work the way they do in the Unicode .txt data file format
-//        String label()
-//            {
-//            return name != null && name.length() >= 2 && name.charAt(0) == '<'
-//                                                      && name.charAt(name.length()-1) == '>'
-//                    ? name.substring(1, name.length()-1)
-//                    : null;
-//            }
+        // note: names in the XML file don't work the way they do in the Unicode .txt data file format
+        //        String label()
+        //            {
+        //            return name != null && name.length() >= 2 && name.charAt(0) == '<'
+        //                                                      && name.charAt(name.length()-1) == '>'
+        //                    ? name.substring(1, name.length()-1)
+        //                    : null;
+        //            }
 
         @XmlAttribute(name = "na")
         String name;
 
-        int cat()
-            {
-            if (gc == null)
-                {
+        int cat() {
+            if (gc == null) {
                 return 29;
-                }
-
-            switch (gc)
-                {
-                case "Lu":  return 0;
-                case "Ll":  return 1;
-                case "Lt":  return 2;
-                case "Lm":  return 3;
-                case "Lo":  return 4;
-                case "Mn":  return 5;
-                case "Mc":  return 6;
-                case "Me":  return 7;
-                case "Nd":  return 8;
-                case "Nl":  return 9;
-                case "No":  return 10;
-                case "Pc":  return 11;
-                case "Pd":  return 12;
-                case "Ps":  return 13;
-                case "Pe":  return 14;
-                case "Pi":  return 15;
-                case "Pf":  return 16;
-                case "Po":  return 17;
-                case "Sm":  return 18;
-                case "Sc":  return 19;
-                case "Sk":  return 20;
-                case "So":  return 21;
-                case "Zs":  return 22;
-                case "Zl":  return 23;
-                case "Zp":  return 24;
-                case "Cc":  return 25;
-                case "Cf":  return 26;
-                case "Cs":  return 27;
-                case "Co":  return 28;
-
-                case "Cn":
-                case "":
-                default:    return 29;
-                }
             }
+
+            return switch (gc) {
+                case "Lu" -> 0;
+                case "Ll" -> 1;
+                case "Lt" -> 2;
+                case "Lm" -> 3;
+                case "Lo" -> 4;
+                case "Mn" -> 5;
+                case "Mc" -> 6;
+                case "Me" -> 7;
+                case "Nd" -> 8;
+                case "Nl" -> 9;
+                case "No" -> 10;
+                case "Pc" -> 11;
+                case "Pd" -> 12;
+                case "Ps" -> 13;
+                case "Pe" -> 14;
+                case "Pi" -> 15;
+                case "Pf" -> 16;
+                case "Po" -> 17;
+                case "Sm" -> 18;
+                case "Sc" -> 19;
+                case "Sk" -> 20;
+                case "So" -> 21;
+                case "Zs" -> 22;
+                case "Zl" -> 23;
+                case "Zp" -> 24;
+                case "Cc" -> 25;
+                case "Cf" -> 26;
+                case "Cs" -> 27;
+                case "Co" -> 28;
+                default -> 29;
+            };
+        }
 
         @XmlAttribute(name = "gc")
         String gc;
 
-        int dec()
-            {
-            if ("De".equals(nt))
-                {
+        int dec() {
+            if ("De".equals(nt)) {
                 assert nv != null;
                 assert !nv.isEmpty();
                 assert !"NaN".equals(nv);
                 return Integer.parseInt(nv);
-                }
+            }
 
             return 10; // illegal value
-            }
+        }
 
-        String num()
-            {
-            return nt == null || nt.isEmpty() || "None".equals(nt) ||
-                   nv == null || nv.isEmpty() || "NaN".equals(nv)
-                    ? null
-                    : nv;
-            }
+        String num() {
+            return nt == null || nt.isEmpty() || "None".equals(nt) || nv == null || nv.isEmpty() || "NaN".equals(nv) ? null : nv;
+        }
 
         @XmlAttribute(name = "nt")
         String nt;
@@ -463,105 +425,69 @@ public class BuildUnicodeTables
         @XmlAttribute(name = "nv")
         String nv;
 
-        int combo()
-            {
-            return ccc == null || ccc.isEmpty()
-                    ? 255
-                    : Integer.parseInt(ccc);
-            }
+        int combo() {
+            return ccc == null || ccc.isEmpty() ? 255 : Integer.parseInt(ccc);
+        }
 
         @XmlAttribute(name = "ccc")
         String ccc;
 
-        int lower()
-            {
-            return slc == null || slc.isEmpty() || "#".equals(slc)
-                    ? 0
-                    : Integer.parseInt(slc, 16);
-            }
+        int lower() {
+            return slc == null || slc.isEmpty() || "#".equals(slc) ? 0 : Integer.parseInt(slc, 16);
+        }
 
         @XmlAttribute(name = "slc")
         String slc;
 
-        int upper()
-            {
-            return suc == null || suc.isEmpty() || "#".equals(suc)
-                    ? 0
-                    : Integer.parseInt(suc, 16);
-            }
+        int upper() {
+            return suc == null || suc.isEmpty() || "#".equals(suc) ? 0 : Integer.parseInt(suc, 16);
+        }
 
         @XmlAttribute(name = "suc")
         String suc;
 
-        int title()
-            {
-            return stc == null || stc.isEmpty() || "#".equals(stc)
-                    ? 0
-                    : Integer.parseInt(stc, 16);
-            }
+        int title() {
+            return stc == null || stc.isEmpty() || "#".equals(stc) ? 0 : Integer.parseInt(stc, 16);
+        }
 
         @XmlAttribute(name = "stc")
         String stc;
 
-        String block()
-            {
-            return blk == null || blk.isEmpty()
-                    ? null
-                    : blk;
-            }
+        String block() {
+            return blk == null || blk.isEmpty() ? null : blk;
+        }
 
         @XmlAttribute(name = "blk")
         String blk;
 
-//        @XmlAttribute(name = "bc")
-//        String bidiClass;
-//
-//        @XmlAttribute(name = "Bidi_M")
-//        String bidiMirrored;
-//
-//        @XmlAttribute(name = "bmg")
-//        String bidiMirrorImage;
-//
-//        @XmlAttribute(name = "Bidi_C")
-//        String bidiControl;
-//
-//        @XmlAttribute(name = "bpt")
-//        String bidiPairedBracketType;
-//
-//        @XmlAttribute(name = "bpb")
-//        String bidiPairedBracket;
+        //        @XmlAttribute(name = "bc")
+        //        String bidiClass;
+        //
+        //        @XmlAttribute(name = "Bidi_M")
+        //        String bidiMirrored;
+        //
+        //        @XmlAttribute(name = "bmg")
+        //        String bidiMirrorImage;
+        //
+        //        @XmlAttribute(name = "Bidi_C")
+        //        String bidiControl;
+        //
+        //        @XmlAttribute(name = "bpt")
+        //        String bidiPairedBracketType;
+        //
+        //        @XmlAttribute(name = "bpb")
+        //        String bidiPairedBracket;
 
         @Override
-        public String toString()
-            {
-            return getClass().getSimpleName().toLowerCase()
-                    + " codepoint=" + (codepoint == null || codepoint.isEmpty()
-                            ? codepointStart + ".." + codepointEnd
-                            : codepoint)
-                    + (name != null && !name.isEmpty() ? ", name=\"" + name + "\"" : "")
-                    + ", gen-cat=" + gc
-                    + (blk != null && !blk.isEmpty() ? ", block=\"" + blk + "\"" : "")
-                    + (nt != null && !nt.isEmpty() && !"None".equals(nt) ? ", num-type=\"" + nt + "\"" : "")
-                    + (
-                    nv != null && !nv.isEmpty() && !"NaN".equals(nv) ? ", num-val=\"" + nv + "\"" : "")
-                    + (suc == null || suc.isEmpty()
-                            || "#".equals(suc) ? "" : ", suc=" + suc)
-                    + (slc == null || slc.isEmpty()
-                            || "#".equals(slc) ? "" : ", slc=" + slc)
-                    + (stc == null || stc.isEmpty()
-                            || "#".equals(stc) ? "" : ", stc=" + stc)
-//                    + (bidiClass != null && bidiClass.length() > 0 ? ", bidiClass=\"" + bidiClass + "\"" : "")
-//                    + (bidiMirrored != null && bidiMirrored.equals("Y") ? ", bidiMirrored=\"" + bidiMirrored + "\"" : "")
-//                    + (bidiMirrorImage != null && bidiMirrorImage.length() > 0 ? ", bidiMirrorImage=\"" + bidiMirrorImage + "\"" : "")
-//                    + (bidiControl != null && bidiControl.equals("Y") ? ", bidiControl=\"" + bidiControl + "\"" : "")
-//                    + (bidiPairedBracketType != null && bidiPairedBracketType.length() > 0 ? ", bidiPairedBracketType=\"" + bidiPairedBracketType + "\"" : "")
-//                    + (bidiPairedBracket != null && bidiPairedBracket.length() > 0 ? ", bidiPairedBracket=\"" + bidiPairedBracket + "\"" : "")
+        public String toString() {
+            return getClass().getSimpleName().toLowerCase() + " codepoint=" + (codepoint == null || codepoint.isEmpty() ? codepointStart + ".." + codepointEnd : codepoint) + (name != null && !name.isEmpty() ? ", name=\"" + name + "\"" : "") + ", gen-cat=" + gc + (blk != null && !blk.isEmpty() ? ", block=\"" + blk + "\"" : "") + (nt != null && !nt.isEmpty() && !"None".equals(nt) ? ", num-type=\"" + nt + "\"" : "") + (nv != null && !nv.isEmpty() && !"NaN".equals(nv) ? ", num-val=\"" + nv + "\"" : "") + (suc == null || suc.isEmpty() || "#".equals(suc) ? "" : ", suc=" + suc) + (slc == null || slc.isEmpty() || "#".equals(slc) ? "" : ", slc=" + slc) + (stc == null || stc.isEmpty() || "#".equals(stc) ? "" : ", stc=" + stc)
+                    //                    + (bidiClass != null && bidiClass.length() > 0 ? ", bidiClass=\"" + bidiClass + "\"" : "")
+                    //                    + (bidiMirrored != null && bidiMirrored.equals("Y") ? ", bidiMirrored=\"" + bidiMirrored + "\"" : "")
+                    //                    + (bidiMirrorImage != null && bidiMirrorImage.length() > 0 ? ", bidiMirrorImage=\"" + bidiMirrorImage + "\"" : "")
+                    //                    + (bidiControl != null && bidiControl.equals("Y") ? ", bidiControl=\"" + bidiControl + "\"" : "")
+                    //                    + (bidiPairedBracketType != null && bidiPairedBracketType.length() > 0 ? ", bidiPairedBracketType=\"" + bidiPairedBracketType + "\"" : "")
+                    //                    + (bidiPairedBracket != null && bidiPairedBracket.length() > 0 ? ", bidiPairedBracket=\"" + bidiPairedBracket + "\"" : "")
                     ;
-            }
         }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    public static final boolean TEST = false;
     }
+}

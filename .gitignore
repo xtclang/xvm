@@ -2,7 +2,6 @@
 *.com
 *.class
 *.dll
-*.exe
 *.o
 *.so
 *.dSYM
@@ -58,9 +57,21 @@ prj/
 .idea/
 .gradle/
 !gradle-wrapper.jar
+!javatools_launcher/src/main/resources/javatools/javatools.jar
+!javatools_launcher/src/main/resources/exe/*
 
 # File-based project format IDEA (legacy)
 *.iml
 *.ipr
 *.iws
 
+# Eventually, after code reformatting and package renaming, we want an .editorconfig in the root.
+# Right now, to phase that in, we allow an .editorconfig symlink in the root pointing out another
+# not yet 100% project standard .editorconfig personal to the user, symlinked from here. Hence,
+# right now, the root directory .editorconfig should be ignored by Git until after the new code
+# conventions have been decided upon, and have enforcement tools in place as part of the build.
+.editorconfig
+
+# Gradle profiler output
+gradle-user-home/
+profile-out/

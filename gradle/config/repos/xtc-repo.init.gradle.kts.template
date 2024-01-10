@@ -43,7 +43,7 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             name = "xdkRepo"
             url = repoPath.toUri()
         }.also {
-            logger.lifecycle("*** Added orgXtcLangLocalDist() repository: ${it.name} (url ${it.url})")
+            logger.info("[xdk] *** Added orgXtcLangLocalDist() repository: ${it.name} (url ${it.url})")
         }
     }
 
@@ -62,17 +62,16 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
                 }
             }
         }.also {
-            logger.lifecycle("*** Added orgXtcLang() repository: ${it.name} (url ${it.url})")
+            logger.info("[xdk] *** Added orgXtcLang() repository: ${it.name} (url ${it.url})")
         }
     }
 
     companion object {
-        private const val XTC_REPO_INIT_PREFIX = "https://raw.githubusercontent.com/xtclang/xvm/master/gradle/config/repos/"
+        private const val XTC_REPO_INIT_PREFIX = "https://raw.githubusercontent.com/xtclang/xvm/xtc-first-plugin/gradle/config/repos/"
         private const val XTC_REPO_INIT_PROPERTIES_URL = "$XTC_REPO_INIT_PREFIX/xtc-repo.properties.template"
         private const val XTC_REPO_INIT_SCRIPT_URL   = "$XTC_REPO_INIT_PREFIX/xtc-repo.init.gradle.kts.template"
 
         private const val XTC_REPO_PROPERTY_PREFIX = "org.xtclang.repo.github"
-        private const val XTC_REPO_PROPERTY_NAME = "$XTC_REPO_PROPERTY_PREFIX.name"
         private const val XTC_REPO_PROPERTY_USER = "$XTC_REPO_PROPERTY_PREFIX.user"
         private const val XTC_REPO_PROPERTY_TOKEN = "$XTC_REPO_PROPERTY_PREFIX.token"
         private const val XTC_REPO_PROPERTY_URL = "$XTC_REPO_PROPERTY_PREFIX.url"
@@ -94,20 +93,19 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
             }
 
             try {
-                return loadFromFile().also { logger.lifecycle("Loaded XTC Repo properties from local path: ${initDir.absolutePath}") }
+                return loadFromFile().also { logger.info("[xdk] Loaded XTC Repo properties from local path: ${initDir.absolutePath}") }
             } catch (t: Throwable) {
-                logger.lifecycle("XTC Plugin: failed to resolve local properties from: $initDir (will attempt remote URL)", t)
+                logger.info("[xdk] init.d: Failed to resolve local properties from: $initDir (will attempt remote URL)")
             }
             try {
-                return loadFromUrl(XTC_REPO_INIT_PROPERTIES_URL).also { logger.lifecycle("Loaded XTC Repo properties from remote URL: $it") }
+                return loadFromUrl(XTC_REPO_INIT_PROPERTIES_URL).also { logger.info("[xdk] Loaded XTC Repo properties from remote URL: $it") }
             } catch (t: Throwable) {
-                logger.error("XTC Plugin: failed to resolve remote properties from: $XTC_REPO_INIT_PROPERTIES_URL", t)
+                logger.error("[xdk] init.d: Failed to resolve remote properties from: $XTC_REPO_INIT_PROPERTIES_URL (already gave up on local).")
                 throw GradleException(t.message ?: t.javaClass.simpleName, t)
             }
         }
 
-        // TODO: Third alternative may be to grab the local dist from the path to use the "repo" subdirectory in an
-        //   existing XDK distribution.
+        // TODO: Third alternative may be to grab the local dist from the path to use the "repo" subdirectory in an existing XDK distribution.
         private fun findXdkLocalDist(): Path? {
             return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, LAUNCHER) }?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()?.parent?.parent?.parent
         }

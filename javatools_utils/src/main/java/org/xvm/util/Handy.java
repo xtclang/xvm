@@ -306,9 +306,7 @@ public final class Handy
      *
      * @param l   the long value
      * @param ab  the byte array to copy into
-     * @param ab  the byte array offset to write the long value at
-     *
-     * @return the byte array
+     * @param of  the byte array offset to write the long value at
      */
     public static void toByteArray(long l, byte[] ab, int of)
         {
@@ -809,6 +807,7 @@ public final class Handy
      *
      * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format
      */
+    @SuppressWarnings("unused")
     public static String dateString(long cMillis)
         {
         Date date = new Date(cMillis);
@@ -1595,6 +1594,7 @@ public final class Handy
      * @throws IOException  indicates a failure to read the character contents
      *         of the specified file
      */
+    @SuppressWarnings("fallthrough")
     public static char[] readFileChars(File file, String sEncoding)
             throws IOException
         {

@@ -1,0 +1,21 @@
+/**
+ * Smallest possible remote loading shiv for the public repo initialization and bootstrap logic that constributes
+ * the orgXtcLang() repository handler to a build. If you only hae this file under GRADLE_USER_HOME/.init.d,
+ * you should have everything you need.
+ */
+
+import kotlin.io.path.writeText
+
+val initScriptBranch = "xtc-first-plugin"
+val initScriptUrl    = "https://raw.githubusercontent.com/xtclang/xvm/$initScriptBranch/gradle/config/repos/xtc-repo.init.gradle.kts.template"
+
+fun fetch(url: String): String {
+    val ktsPath = kotlin.io.path.createTempDirectory("xtc-init").resolve("xtc-repo.init.gradle.kts")
+    java.net.URI(url).toURL().openStream().use { os -> os.reader().readText() }.also {
+        ktsPath.writeText(it)
+    }
+    return ktsPath.toFile().absolutePath.also { logger.info("[xdk] init.d script placed at $it") }
+}
+
+val initScriptPath = fetch(initScriptUrl)
+apply(from = initScriptPath)
