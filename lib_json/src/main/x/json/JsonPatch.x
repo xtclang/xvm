@@ -15,6 +15,8 @@ mixin JsonPatch
      *
      * If this patch is empty, the result returned will be the same `target` instance.
      *
+     * If the target `Doc` is immutable, the result returned will be immutable.
+     *
      * The `options` parameter allows non-standard behaviour to be applied to the patching
      * process. The behaviour of the default options will match the RFC6902 specification.
      *
@@ -46,15 +48,18 @@ mixin JsonPatch
                 default:      assert;
             };
         }
-        if (opts.applyInPlace(target)) {
-            switch (doc.is(_)) {
-                case JsonObject:
+
+        switch (doc.is(_)) {
+            case JsonObject:
+                if (!doc.inPlace) {
                     doc.makeImmutable();
-                    break;
-                case JsonArray:
+                }
+                break;
+            case JsonArray:
+                if (!doc.inPlace) {
                     doc.makeImmutable();
-                    break;
-            }
+                }
+                break;
         }
         return doc;
     }
@@ -619,9 +624,6 @@ mixin JsonPatch
 	 * A set of options that can be used to control the patching behaviour. These options typically change the
 	 * behavior from the standard specified by https://datatracker.ietf.org/doc/html/rfc6902
 	 *
-	 * @param inPlace                   a flag that indicates that the applying the patch should directly modify the
-	 *                                  target JSON document. This will obviously be ignored if the target is an
-	 *                                  immutable JSON object, immutable JSON array or primitive. The default is `False`.
      * @param ensurePathExistsOnAdd     a flag to indicate that an add operation should recursively create the missing
      *                                  parts of path. For example adding "/foo/bar" if "foo" does not exist a JSON
      *                                  object will be added at key "foo" and then "bar" will be added to that object.
@@ -631,25 +633,13 @@ mixin JsonPatch
 	 *                                  starting at the end of an array. For example, -1 points to the last element in
 	 *                                  the array. Valid negative indices are -1 ..< -array.size The default is `False`
 	 */
-    static const Options(Boolean inPlace                  = False,
-                         Boolean ensurePathExistsOnAdd    = False,
+    static const Options(Boolean ensurePathExistsOnAdd    = False,
                          Boolean allowMissingPathOnRemove = False,
                          Boolean supportNegativeIndices   = False) {
         /**
          * The default options.
          */
         static Options Default = new Options();
-
-        /**
-         * Determine if a patch can be applied "in place" to the specified JSON `Doc`.
-         *
-         * @return `True` if this option's `applyInPlace` flag is `True` and the `target` is
-         * a mutable `JsonStruct`.
-         *
-         */
-        Boolean applyInPlace(Doc target) {
-            return inPlace && target.is(JsonStruct) && target.inPlace;
-        }
     }
 
     // ----- Builder inner class -------------------------------------------------------------------
