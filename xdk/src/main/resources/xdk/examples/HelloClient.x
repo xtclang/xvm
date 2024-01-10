@@ -1,13 +1,9 @@
 /**
  * This is an extremely basic web client example.
  *
- * To compile this example, execute the following command line from within the directory containing
- * this file:
- *
- *     xcc HelloClient
- *
  * Before running this example, follow the instructions in `HelloServer` to compile and run that
- * example. Then, while `HelloServer` is running, run this example from the command line:
+ * example. Then, while `HelloServer` is running, compile and run this example from the command
+ * line:
  *
  *     xec HelloClient
  */

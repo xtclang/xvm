@@ -1,12 +1,8 @@
 /**
  * This is an extremely basic web server example.
  *
- * To compile this example, execute the following command line from within the directory containing
+ * To compile and run this example, execute the following command line from the directory containing
  * this file:
- *
- *     xcc HelloServer
- *
- * Then, to run this example:
  *
  *     xec HelloServer
  *
