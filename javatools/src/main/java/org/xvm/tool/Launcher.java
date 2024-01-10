@@ -85,23 +85,30 @@ public abstract class Launcher
                 }
             }
 
-        switch (cmd)
+        try
             {
-            case "xtc":
-                System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
-                // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
-                // fall through (until the new xtc command is in place)
-            case "xcc":
-                Compiler.main(argv);
-                break;
+            switch (cmd)
+                {
+                case "xtc":
+                    System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
+                    // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
+                    // fall through (until the new xtc command is in place)
+                case "xcc":
+                    Compiler.main(argv);
+                    break;
 
-            case "xec":
-                Runner.main(argv);
-                break;
+                case "xec":
+                    Runner.main(argv);
+                    break;
 
-            default:
-                System.err.println("Command name \"" + cmd + "\" is not supported");
-                break;
+                default:
+                    System.err.println("Command name \"" + cmd + "\" is not supported");
+                    break;
+                }
+            }
+        catch (LauncherException e)
+            {
+            System.exit(e.error ? -1 : 0);
             }
         }
 
@@ -298,7 +305,7 @@ public abstract class Launcher
      */
     protected void abort(boolean fError)
         {
-        m_console.abort(fError);
+        throw new LauncherException(fError);
         }
 
     /**
@@ -1681,16 +1688,25 @@ public abstract class Launcher
             {
             out(sev.desc() + ": " + sMsg);
             }
+        }
 
+    /**
+     * RuntimeException thrown upon a launcher failure.
+     */
+    static public class LauncherException
+            extends RuntimeException
+        {
         /**
-         * Abort the command line with or without an error status.
-         *
-         * @param fError  true to abort with an error status
+         * @param error  true to abort with an error status
          */
-        default void abort(boolean fError)
+        public LauncherException(boolean error)
             {
-            System.exit(fError ? -1 : 0);
+            super();
+
+            this.error = error;
             }
+
+        public final boolean error;
         }
 
 

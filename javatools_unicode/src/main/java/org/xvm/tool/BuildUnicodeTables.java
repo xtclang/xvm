@@ -193,7 +193,7 @@ public class BuildUnicodeTables
             String s = array[i];
             if (s != null)
                 {
-                assert !"".equals(s);
+                assert !s.isEmpty();
                 map.compute(s, (k, v) -> (v==null?0:v) + 1);
                 }
             }
@@ -288,14 +288,6 @@ public class BuildUnicodeTables
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Print a blank line to the terminal.
-     */
-    public static void out()
-        {
-        out("");
-        }
-
-    /**
      * Print the String value of some object to the terminal.
      */
     public static void out(Object o)
@@ -304,29 +296,11 @@ public class BuildUnicodeTables
         }
 
     /**
-     * Print a blank line to the terminal.
-     */
-    public static void err()
-        {
-        err("");
-        }
-
-    /**
      * Print the String value of some object to the terminal.
      */
     public static void err(Object o)
         {
         System.err.println(o);
-        }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status
-     */
-    protected void abort(boolean fError)
-        {
-        System.exit(fError ? -1 : 0);
         }
 
 
@@ -464,7 +438,7 @@ public class BuildUnicodeTables
 
         int dec()
             {
-            if (nt != null && "De".equals(nt))
+            if ("De".equals(nt))
                 {
                 assert nv != null;
                 assert !nv.isEmpty();
