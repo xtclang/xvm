@@ -39,10 +39,13 @@ import maps.EntryValues;
  * arbitrarily large tree of nodes that hash to the same bucket. The existence of these two
  * specialized nodes allow the general case to be optimized to a bare minimum structure.
  *
- * The iterators provided by this map are stable in presence of structural changes to the map and
- * **will not** throw [ConcurrentModification], return duplicate entries, return entries that have
- * been removed, or skip entries which remain present over the course of iteration. The iterator
- * **may** return entries which were inserted _after_ the creation of the iterator.
+ * This Map's iterators:
+ *
+ * * will return entries that are present at iterator creation and not removed during iteration
+ *   exactly once;
+ * * _may_ return entries created during iteration;
+ * * will not return entries removed during iteration;
+ * * will not throw [ConcurrentModification].
  */
 class HasherMap<Key, Value>
         implements HasherReplicable<Key>
