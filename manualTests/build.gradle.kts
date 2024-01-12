@@ -143,7 +143,7 @@ tasks.register<JavaExec>("runOne") {
     classpath(javatoolsJar)
 
     val opts = listOf<String>(
-        "-verbose",
+        "-v",
         "-L", "${xdk.buildDir}/xdk/lib",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",

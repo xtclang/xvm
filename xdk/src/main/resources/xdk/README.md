@@ -71,7 +71,7 @@ For more information, run: `xec -help`
 The command line tools rely on Java to be already installed and available.
 The required version is Java 17 (or later).
 
-Each of the above tools supports the `-help` and `-verbose` options.
+Each of the above tools supports the `--help` and `-v`/`--verbose` options.
 
 ## XDK layout
 

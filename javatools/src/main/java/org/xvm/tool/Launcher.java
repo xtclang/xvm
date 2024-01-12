@@ -317,12 +317,25 @@ public abstract class Launcher
         out(desc());
         out();
 
-        out("Options:");
-        Options options = options();
-
-        String[] asName = options.options().keySet().toArray(Handy.NO_ARGS);
+        Options             options   = options();
+        Map<String, Option> mapOpts   = options.options();
+        String[]            asName    = mapOpts.keySet().toArray(Handy.NO_ARGS);
+        int                 maxSyntax = Arrays.stream(asName).map(n ->
+                                mapOpts.get(n).syntax().length()).max(Integer::compareTo).get();
         Arrays.sort(asName, (s1, s2) ->
             {
+            if (s1.equals(s2))
+                {
+                return 0;
+                }
+            if (s1.equals(ArgV))
+                {
+                return 1;
+                }
+            if (s2.equals(ArgV))
+                {
+                return -1;
+                }
             if (s1.equals(Trailing))
                 {
                 return 1;
@@ -339,21 +352,33 @@ public abstract class Launcher
             return n;
             });
 
+        out("Options:");
+        HashSet<String> alreadyDisplayed = new HashSet<>();
         for (String sName : asName)
             {
-            String sMsg = sName.equals(Trailing) ? sName : '-' + sName;
+            Option opt = mapOpts.get(sName);
+            if (opt.posixName() != null && alreadyDisplayed.contains(opt.posixName()) ||
+                opt.linuxName() != null && alreadyDisplayed.contains(opt.linuxName()))
+                {
+                continue;
+                }
+
+            String sMsg = sName.equals(Trailing) && !mapOpts.containsKey(ArgV)
+                    ? ArgV
+                    : opt.syntax();
 
             StringBuilder sb = new StringBuilder();
             sb.append("  ")
               .append(sMsg);
 
-            for (int i = 0, c = Math.max(2, 12 - sMsg.length()); i < c; ++i)
+            for (int i = 0, c = maxSyntax - sMsg.length() + 4; i < c; ++i)
                 {
                 sb.append(' ');
                 }
 
             sb.append(options.descriptionFor(sName));
             out(sb);
+            alreadyDisplayed.add(sName);
             }
 
         out();
@@ -468,10 +493,9 @@ public abstract class Launcher
          */
         public Options()
             {
-            addOption("help"   , Form.Name, false, "Displays this help message");
-            addOption("v"      , Form.Name, false, "Enables \"verbose\" logging and messages");
-            addOption("verbose", Form.Name, false, "Enables \"verbose\" logging and messages");
-            addOption("version", Form.Name, false, "Displays the Ecstasy runtime version");
+            addOption(null, "help",    Form.Name, false, "Displays this help message");
+            addOption("v",  "verbose", Form.Name, false, "Enables \"verbose\" logging and messages");
+            addOption(null, "version", Form.Name, false, "Displays the Ecstasy runtime version");
             }
 
         /**
@@ -488,20 +512,32 @@ public abstract class Launcher
         /**
          * (Internal) Add meta-data for an option that is supported for this command line tool.
          *
-         * @param sName   the command line switch ("-X" would be passed as "X")
+         * @param sPosix  the POSIX-like command line switch ("-X" would be passed as "X")
+         * @param sLinux  the Linux-like command line switch ("--test" would be passed as "test")
          * @param form    the form of the data for the option (or {@link Form#Name} for a switch)
          * @param fMulti  pass true if the option can appear multiple times on the command line
          * @param sDesc   a human-readable description of the option, for the help display
          */
-        protected void addOption(String sName, Form form, boolean fMulti, String sDesc)
-            {
-            assert sName != null;
+        protected void addOption(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc) {
+            assert sPosix != null || sLinux != null;
+            assert sPosix == null || sPosix.length() == 1 || sPosix.equals(ArgV) || sPosix.equals(Trailing);
+            assert !Trailing.equals(sPosix) || sLinux == null;
+            assert !ArgV    .equals(sPosix) || sLinux == null;
             assert form != null;
 
-            var prev = options().put(sName, new Option(sName, form, fMulti, sDesc));
-            assert prev == null;
+            Option opt = new Option(sPosix, sLinux, form, fMulti, sDesc);
+            if (sPosix != null)
+                {
+                var prev = options().put(sPosix, opt);
+                assert prev == null;
+                }
+            if (sLinux != null && !sLinux.equals(sPosix))
+                {
+                var prev = options().put(sLinux, opt);
+                assert prev == null;
+                }
 
-            assert sName.equals(ArgV) == (form == Form.AsIs);
+            assert ArgV.equals(sPosix) == (form == Form.AsIs);
             if (form == Form.AsIs)
                 {
                 assert !m_fArgV;
@@ -736,62 +772,83 @@ public abstract class Launcher
                     if (sArg.charAt(0) == '-')
                         {
                         // there are several possibilities:
-                        // 1) for any argument:
+                        // 1) for any single "posix" argument:
                         //    -arg                      // no value ("specified" for Name form)
                         //    -arg=value                // '=' delimiter between arg and value
                         //    -arg value                // value is in the next arg
-                        // 2) for single-character arguments (imagine that -A -B -C are all legal)
-                        //    -A -B -C                  // no value ("specified" for Name form)
+                        // 2) for any single "linux" argument:
+                        //    --arg                     // no value ("specified" for Name form)
+                        //    --arg=value               // '=' delimiter between arg and value
+                        //    --arg value               // value is in the next arg
+                        // 3) for multiple "posix" arguments (imagine that -A -B -C are all legal)
                         //    -ABC                      // no value ("specified" for Name form)
-                        //    -Avalue                   // value for Int, File, FilePath forms
-                        int     cch   = sArg.length();
-                        int     ofEq  = sArg.indexOf('=');
-                        boolean fEq   = ofEq >= 0;
-                        String  sName = sArg.substring(1, fEq ? ofEq : cch);
-                        String  sVal  = fEq ? sArg.substring(ofEq+1) : null;
+                        int     cch    = sArg.length();
+                        int     ofEq   = sArg.indexOf('=');
+                        boolean fEq    = ofEq >= 0;
+                        boolean fLinux = cch > 1 && sArg.charAt(1) == '-';
+                        boolean fPosix = !fLinux;
+                        String  sOpts  = sArg.substring(fPosix ? 1 : 2, fEq ? ofEq : cch);
+                        String  sOrig  = sOpts;
+                        String  sVal   = fEq ? sArg.substring(ofEq+1) : null;
 
-                        if (sName.isEmpty())
+                        if (sOpts.isEmpty())
                             {
                             log(Severity.FATAL, "Missing argument name. (Name is \"\".)");
                             }
 
-                        if ("help".equals(sName))
+                        if (fLinux && "help".equals(sOpts))
                             {
                             fHelp = true;
-                            continue;
+                            continue NextArg;
                             }
 
-                        boolean fFirst = true;
-                        while (!sName.isEmpty())
+                        do
                             {
-                            Option opt     = mapNames.get(sName);
-                            String sRemain = "";
-                            if (opt == null)
+                            String sOpt, sRemain;
+                            if (fPosix)
                                 {
-                                opt = mapNames.get(sName.substring(0, 1));
-                                if (opt != null)
+                                sOpt  = sOpts.substring(0,1);
+                                sOpts = sOpts.substring(1);
+                                if ("?".equals(sOpt))
                                     {
-                                    sName   = sName.substring(0, 1);
-                                    sRemain = sName.substring(1);
+                                    fHelp = true;
+                                    continue;
                                     }
                                 }
-
-                            if (opt == null)
+                            else
                                 {
-                                log(Severity.ERROR, "Unknown argument: \"-" +
-                                        (fFirst ? sName : sName.substring(0, 1)) + '\"');
+                                sOpt    = sOpts;
+                                sRemain = "";
+                                }
+
+                            Option opt = mapNames.get(sOpt);
+                            if (opt == null || !sOpt.equals(fPosix ? opt.posixName() : opt.linuxName()))
+                                {
                                 fHelp = true;
+                                if (opt == null && !mapNames.containsKey(sOrig))
+                                    {
+                                    log(Severity.ERROR, "Unknown argument: \"" + (fPosix ? "-" : "--") + sOpt + '\"');
+                                    }
+                                else if (fPosix)
+                                    {
+                                    log(Severity.ERROR, "Option \"-" + sOrig + "\" must use two preceding hyphens: \"--" + sOrig + "\"");
+                                    }
+                                else
+                                    {
+                                    log(Severity.ERROR, "Option \"--" + sOrig + "\" must use only one preceding hyphen: \"-" + sOrig + "\"");
+                                    }
                                 continue NextArg;
                                 }
 
-                            Form form = opt.form();
+                            Form   form  = opt.form();
+                            String sName = opt.simplestName();
                             if (form == Form.Name)
                                 {
                                 // the name is either present or it is not
                                 if (specified(sName) && !allowMultiple(sName))
                                     {
                                     log(Severity.WARNING,
-                                            "Redundant option argument: \"-" + sName + '\"');
+                                            "Redundant option argument: \"-" + sOpt + '\"');
                                     }
                                 else
                                     {
@@ -800,32 +857,20 @@ public abstract class Launcher
                                 }
                             else
                                 {
-                                if (!sRemain.isEmpty())
+                                if (sPrev != null)
                                     {
-                                    if (sVal == null)
-                                        {
-                                        sPrev = sName;
-                                        sArg  = sRemain;
-                                        break;
-                                        }
-                                    else
-                                        {
-                                        // there is both a postpended value and an "=value"
-                                        log(Severity.ERROR, "Illegal value for \"-"
-                                                + sName + "\": \"" + sRemain + '=' + sVal + '\"');
-                                        }
+                                    log(Severity.ERROR, "Options \"-" + sPrev + "\" and \"-" + sOpt
+                                            + "\" cannot appear in the same cluster, since they"
+                                            + " both require a trailing value");
                                     }
                                 else
                                     {
                                     sPrev = sName;
                                     sArg  = sVal;
-                                    break;
                                     }
                                 }
-
-                            sName  = sRemain;
-                            fFirst = false;
                             }
+                        while (fPosix && !sOpts.isEmpty());
                         }
                     else
                         {
@@ -1721,15 +1766,15 @@ public abstract class Launcher
      * The various forms of command-line options can take:
      *
      * <ul><li><tt>Name</tt>      - either the option is specified or it is not;
-     *                              e.g. "{@code -verbose}"
+     *                              e.g. "{@code --verbose}"
      * </li><li><tt>Boolean</tt>  - an explicitly boolean option;
-     *                              e.g. "{@code -suppressBeep=False}"
+     *                              e.g. "{@code --suppressBeep=False}"
      * </li><li><tt>Int</tt>      - an integer valued option;
-     *                              e.g. "{@code -limit=5}" or "{@code -limit 5}"
+     *                              e.g. "{@code --limit=5}" or "{@code --limit 5}"
      * </li><li><tt>String</tt>   - a String valued option (useful when no either form works);
-     *                              e.g. "{@code -name="Bob"}" or "{@code -name "Bob"}"
+     *                              e.g. "{@code --name="Bob"}" or "{@code --name "Bob"}"
      * </li><li><tt>File</tt>     - a File valued option;
-     *                              e.g. "{@code -src=./My.x}" or "{@code -src ./My.x}"
+     *                              e.g. "{@code --src=./My.x}" or "{@code --src ./My.x}"
      * </li><li><tt>FileList</tt> - a colon-delimited search path valued option;
      *                              e.g. "{@code -L ~/lib:./lib:./}" or "{@code -L~/lib:./}"
      * </li><li><tt>AsIs</tt>     - an AsIs valued option is a String that is not modified, useful
@@ -1768,13 +1813,13 @@ public abstract class Launcher
     /**
      * This is the name used for an option that does not have a name. It is called "trailing"
      * because it comes at the end of a sequence of options, such as the sequence of file names
-     * at the end of the command: "{@code xcc -o ../build -verbose MyApp.x MyTest.x}".
+     * at the end of the command: "{@code xcc -o ../build --verbose MyApp.x MyTest.x}".
      * <p/>
      * If a Launcher supports trailing files, for example, then the {@link Options#options()} method
      * should return a map containing an entry whose key is {@code Trailing} and whose value is
      * {@link Form#File}, with {@code allowMultiple(Trailing)} returning {@code true}.
      */
-    protected static final String Trailing = "...";
+    protected static final String Trailing = "<_>";
 
     /**
      * This is the name used for an option that represents "the remainder of the options".
@@ -1782,27 +1827,39 @@ public abstract class Launcher
      * To use this option, the Launcher must support no "Trailing", or a single "Trailing", but not
      * multiple "Trailing" values.
      */
-    protected static final String ArgV = "[]";
+    protected static final String ArgV = "...";
 
     /**
      * Represents a single available command line option.
      */
     public static class Option
         {
-        public Option(String sName, Form form, boolean fMulti, String sDesc)
+        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc)
             {
-            assert sName != null && !sName.isEmpty();
+            assert sPosix != null || sLinux != null;
+            assert (sPosix == null || !sPosix.isEmpty()) && (sLinux == null || !sLinux.isEmpty());
             assert form != null;
 
-            m_sName  = sName;
+            m_sPosix = sPosix;
+            m_sLinux = sLinux;
             m_form   = form;
             m_fMulti = fMulti;
             m_sDesc  = sDesc;
             }
 
-        public String name()
+        public String posixName()
             {
-            return m_sName;
+            return m_sPosix;
+            }
+
+        public String linuxName()
+            {
+            return m_sLinux;
+            }
+
+        public String simplestName()
+            {
+            return m_sPosix == null ? m_sLinux : m_sPosix;
             }
 
         public Form form()
@@ -1820,15 +1877,35 @@ public abstract class Launcher
             return m_sDesc;
             }
 
-        @Override public String toString()
+        public String syntax()
             {
-            return m_sName + ":" + m_form + (m_fMulti ? "*" : "");
+            if (m_sSyntax == null)
+                {
+                if(Trailing.equals(m_sPosix) || ArgV.equals(m_sPosix))
+                    {
+                    m_sSyntax = m_sPosix;
+                    }
+                else
+                    {
+                    m_sSyntax = (m_sPosix == null ? "" : "-" + m_sPosix)
+                            +   (m_sPosix == null || m_sLinux == null ? "" : " | ")
+                            +   (m_sLinux == null ? "" : "--" + m_sLinux);
+                    }
+                }
+            return m_sSyntax;
             }
 
-        private final String  m_sName;
-        private final Form    m_form;
-        private final boolean m_fMulti;
-        private final String  m_sDesc;
+        @Override public String toString()
+            {
+            return syntax() + " : " + m_form + (m_fMulti ? "*" : "");
+            }
+
+        private final     String  m_sPosix;
+        private final     String  m_sLinux;
+        private transient String  m_sSyntax;
+        private final     Form    m_form;
+        private final     boolean m_fMulti;
+        private final     String  m_sDesc;
         }
 
     protected enum Stage {Init, Parsed, Named, Linked}

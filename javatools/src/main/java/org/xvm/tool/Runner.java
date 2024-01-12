@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -80,16 +81,17 @@ public class Runner
     protected void process()
         {
         // repository setup
-        ModuleRepository repo = configureLibraryRepo(options().getModulePath());
+        Options          options = options();
+        ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
         checkErrors();
 
-        boolean fShowVer = options().isShowVersion();
+        boolean fShowVer = options.isShowVersion();
         if (fShowVer)
             {
             showSystemVersion(repo);
             }
 
-        final File fileSpec = options().getTarget();
+        final File fileSpec = options.getTarget();
         if (fileSpec == null)
             {
             if (!fShowVer)
@@ -192,36 +194,25 @@ public class Runner
 
         if (fCompile)
             {
-            String[] asRunnerArgs   = m_asArgs;
-            int      cRunnerArgs    = asRunnerArgs.length;
-            String[] asCompilerArgs = asRunnerArgs;
-            int      cCompilerArgs  = cRunnerArgs;
-            boolean  fTargetFound   = false;
-            do
+            ArrayList<String> compilerArgs = new ArrayList<>();
+            if (options().specified("v"))
                 {
-                try
+                compilerArgs.add("-v");
+                }
+
+
+            ArrayList<File> libpath = (ArrayList<File>) options.values().get("L");
+            if (libpath != null)
+                {
+                for (File lib : libpath)
                     {
-                    if (fileSpec.equals(new File(asCompilerArgs[cCompilerArgs-1])))
-                        {
-                        fTargetFound = true;
-                        }
-                    else
-                        {
-                        --cCompilerArgs;
-                        }
+                    compilerArgs.add("-L");
+                    compilerArgs.add(lib.getPath());
                     }
-                catch (Exception ignore) {}
                 }
-            while (!fTargetFound && cCompilerArgs > 0);
-            assert fTargetFound && cCompilerArgs > 0;
+            compilerArgs.add(fileSpec.getPath());
 
-            if (cCompilerArgs < cRunnerArgs)
-                {
-                asCompilerArgs = new String[cCompilerArgs];
-                System.arraycopy(asRunnerArgs, 0, asCompilerArgs, 0, cCompilerArgs);
-                }
-
-            new Compiler(asCompilerArgs, m_console).run();
+            new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
             info      = new ModuleInfo(fileSpec);
             fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
@@ -429,11 +420,10 @@ public class Runner
             {
             super();
 
-            addOption("L",       Form.Repo  , true , "Module path; a \"" + File.pathSeparator
-                                                  + "\"-delimited list of file and/or directory names");
-            addOption("M",       Form.String, false, "Method name; defaults to \"run\"");
-            addOption(Trailing,  Form.File  , false, "Module file name (.xtc) to execute");
-            addOption(ArgV,      Form.AsIs  , true , "Arguments to pass to the method");
+            addOption("L" ,     null,        Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
+            addOption("M",      "method",    Form.String, false, "Method name; defaults to \"run\"");
+            addOption(Trailing, null,        Form.File,   false, "Module file name (.xtc) to execute");
+            addOption(ArgV,     null,        Form.AsIs,   true,  "Arguments to pass to the method");
             }
 
         /**

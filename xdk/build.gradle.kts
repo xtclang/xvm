@@ -102,7 +102,7 @@ val compileEcstasy = tasks.register<JavaExec>("compileEcstasy") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "$ecstasyMain/x/ecstasy.x",
          "$turtleMain/x/mack.x")
     mainClass.set("org.xvm.tool.Compiler")
@@ -124,7 +124,7 @@ val compileAggregate = tasks.register<JavaExec>("compileAggregate") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$aggregateMain/x/aggregate.x")
@@ -141,7 +141,7 @@ val compileCollections = tasks.register<JavaExec>("compileCollections") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$collectionsMain/x/collections.x")
@@ -158,7 +158,7 @@ val compileCrypto = tasks.register<JavaExec>("compileCrypto") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$cryptoMain/x/crypto.x")
@@ -175,7 +175,7 @@ val compileNet  = tasks.register<JavaExec>("compileNet") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -193,7 +193,7 @@ val compileJson = tasks.register<JavaExec>("compileJson") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$jsonMain/x/json.x")
@@ -210,7 +210,7 @@ val compileOODB = tasks.register<JavaExec>("compileOODB") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "$oodbMain/x/oodb.x")
@@ -227,7 +227,7 @@ val compileJsonDB = tasks.register<JavaExec>("compileJsonDB") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -245,7 +245,7 @@ val compileWeb  = tasks.register<JavaExec>("compileWeb") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -263,7 +263,7 @@ val compileWebauth = tasks.register<JavaExec>("compileWebauth") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -281,7 +281,7 @@ val compileXenia = tasks.register<JavaExec>("compileXenia") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",
@@ -299,7 +299,7 @@ val compileBridge = tasks.register<JavaExec>("compileBridge") {
 
     classpath(javatoolsJar)
     args("-o", "$libDir",
-         "-stamp", "$xdkVersion",
+         "--set-version", "$xdkVersion",
          "-L", "$coreLib",
          "-L", "$turtleLib",
          "-L", "$libDir",

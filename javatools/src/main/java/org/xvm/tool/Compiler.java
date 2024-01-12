@@ -77,7 +77,7 @@ import static org.xvm.util.Handy.resolveFile;
  * <p/>The version of the resulting module can be specified by using the {@code -version} option;
  * for example:
  *
- * <p/>{@code  xcc -version 0.4-alpha}
+ * <p/>{@code  xcc --set-version 0.4-alpha}
  *
  * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search
@@ -87,14 +87,14 @@ import static org.xvm.util.Handy.resolveFile;
  *
  * <p/>Other command line options:
  * <ul>
- * <li>{@code -rebuild} - force rebuild, even if the build appears to be up-to-date</li>
- * <li>{@code -qualify} - use fully qualified module names as the basis for output file names</li>
- * <li>{@code -nosrc} - (not implemented) do not include source code in the compiled module</li>
- * <li>{@code -nodbg} - (not implemented) do not include debugging information in the compiled module</li>
- * <li>{@code -nodoc} - (not implemented) do not include documentation in the compiled module</li>
- * <li>{@code -strict} - convert warnings to errors</li>
- * <li>{@code -nowarn} - suppress warnings</li>
- * <li>{@code -verbose} - provide information about the work being done by the compilation process</li>
+ * <li>{@code --rebuild} - force rebuild, even if the build appears to be up-to-date</li>
+ * <li>{@code --qualify} - use fully qualified module names as the basis for output file names</li>
+ * <li>{@code --nosrc} - (not implemented) do not include source code in the compiled module</li>
+ * <li>{@code --nodbg} - (not implemented) do not include debugging information in the compiled module</li>
+ * <li>{@code --nodoc} - (not implemented) do not include documentation in the compiled module</li>
+ * <li>{@code --strict} - convert warnings to errors</li>
+ * <li>{@code --nowarn} - suppress warnings</li>
+ * <li>{@code -v} / {@code --verbose} - provide information about the work being done by the compilation process</li>
  * </ul>
  */
 public class Compiler
@@ -740,17 +740,15 @@ public class Compiler
             {
             super();
 
-            addOption("rebuild", Form.Name,   false, "Force rebuild");
-            addOption("strict",  Form.Name,   false, "Treat warnings as errors");
-            addOption("nowarn",  Form.Name,   false, "Suppress all warnings");
-            addOption("L",       Form.Repo,   true , "Module path; a \"" + File.pathSeparator
-                                                 + "\"-delimited list of file and/or directory names");
-            addOption("r",       Form.File,   true,  "Files and/or directories to read resources from");
-            addOption("o",       Form.File,   false, "File or directory to write output to");
-            addOption("qualify", Form.Name,   false, "Use full module name for the output file name");
-            addOption("stamp",   Form.String, false, "Specify the version to stamp onto the compiled module(s)");
-            addOption(Trailing,  Form.File,   true , "Source file name(s) and/or module location(s) to"
-                                                 + " compile");
+            addOption(null,     "rebuild",     Form.Name,   false, "Force rebuild");
+            addOption(null,     "strict",      Form.Name,   false, "Treat warnings as errors");
+            addOption(null,     "nowarn",      Form.Name,   false, "Suppress all warnings");
+            addOption("L" ,     null,          Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
+            addOption("r" ,     null,          Form.File,   true,  "Files and/or directories to read resources from");
+            addOption("o" ,     null,          Form.File,   false, "File or directory to write output to");
+            addOption(null,     "qualify",     Form.Name,   false, "Use full module name for the output file name");
+            addOption(null,     "set-version", Form.String, false, "Specify the version to stamp onto the compiled module(s)");
+            addOption(Trailing, null,          Form.File,   true,  "Source file name(s) and/or module location(s) to compile");
             }
 
         /**
@@ -801,7 +799,7 @@ public class Compiler
          */
         public Version getVersion()
             {
-            String sVersion = (String) values().get("stamp");
+            String sVersion = (String) values().get("set-version");
             return sVersion == null ? null : new Version(sVersion);
             }
 
