@@ -207,8 +207,8 @@ public class Runner
                 compilerArgs.add("-v");
                 }
 
-            ArrayList<File> libPath = (ArrayList<File>) options.values().get("L");
-            if (libPath != null)
+            ArrayList<File> libPath = (ArrayList<File>) options.getModulePath();
+            if (!libPath.isEmpty())
                 {
                 for (File libFile : libPath)
                     {
@@ -230,6 +230,8 @@ public class Runner
             info      = new ModuleInfo(fileSpec);
             fileBin   = info.getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
+            repo      = configureLibraryRepo(libPath);
+            module    = repo.loadModule(info.getQualifiedModuleName());
             }
 
         // check if the compiled module file name was specified
