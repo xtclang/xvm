@@ -79,6 +79,9 @@ public class xRTConnector
         if (fInstance)
             {
             INSTANCE = this;
+            s_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
+                       + structure.getFileStructure().getModule().getVersionString()
+                       + ')' ;
             }
         }
 
@@ -198,10 +201,8 @@ public class xRTConnector
         {
         // REVIEW: should we allow them to specify default headers in the injection definition?
 
-        String sAgent = "Mozilla/5.0 (compatible; Ecstasy/0.43)";
-
         ArrayHandle hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
-        ArrayHandle hValues = xString.makeArrayHandle(new String[] {sAgent});
+        ArrayHandle hValues = xString.makeArrayHandle(new String[] {s_sAgent});
 
         return frame.assignValues(aiReturn, hNames, hValues);
         }
@@ -421,6 +422,10 @@ public class xRTConnector
      * Global handler.
      */
     private static GlobalCookieHandler s_handlerGlobal;
+    /**
+     * Cached agent string.
+     */
+    private static String s_sAgent;
     /**
      * Cached canonical type.
      */
