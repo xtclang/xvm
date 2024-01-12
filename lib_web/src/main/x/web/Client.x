@@ -154,6 +154,7 @@ interface Client {
                     throw new IllegalArgument($"Unable to find MediaType for: {&content.actualType}");
                 }
             }
+            request.header.put(Header.ContentType, mediaType.text);
             request.ensureBody(mediaType).from(content?);
         }
         return request;
