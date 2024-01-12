@@ -178,8 +178,13 @@ public class Runner
                         }
                     }
                 }
+            else
+                {
+                binExists = true;
+                }
             }
-        else if (info.getSourceFile() != null && info.getSourceFile().exists() && !info.isUpToDate())
+
+        if (binExists && info.getSourceFile() != null && info.getSourceFile().exists() && !info.isUpToDate())
             {
             log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
                     + "\" is out-of-date; recompiling ....");
@@ -188,7 +193,7 @@ public class Runner
                 {
                 log(Severity.ERROR, "Failed to delete the previously-backed-up module: " + fileBak);
                 }
-            else if (!fileBin.renameTo(fileBak))
+            else if (fileBin.exists() && !fileBin.renameTo(fileBak))
                 {
                 log(Severity.ERROR, "Failed to back up the out-of-date module file: " + fileBin);
                 }
