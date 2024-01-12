@@ -607,6 +607,7 @@ public abstract class Expression
                     {
                     typeActual = constConv.getType().freeze();
                     idConv     = null;
+                    fit        = TypeFit.Conv;
                     }
                 constVal = constConv;
                 }

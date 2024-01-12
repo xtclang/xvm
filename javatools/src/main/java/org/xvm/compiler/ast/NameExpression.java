@@ -1928,9 +1928,11 @@ public class NameExpression
 
         // there is a possibility that the caller never called generateArgument/Assignment, which
         // would be the case if this is an LValue
+
         Argument argRaw = m_arg;
-        if (argRaw instanceof PropertyConstant && m_plan == Plan.PropertyDeref ||
-            argRaw instanceof Register reg && !reg.isStack())
+        if ((argRaw instanceof PropertyConstant && m_plan == Plan.PropertyDeref ||
+             argRaw instanceof Register reg && !reg.isStack())
+                && !getTypeFit().isConverting())
             {
             // for [static] properties we generate a ConstantExprAST based on the property id rather
             // than the property value, leaving an optimization possibility to the BAST compiler
