@@ -195,21 +195,28 @@ public class Runner
         if (fCompile)
             {
             ArrayList<String> compilerArgs = new ArrayList<>();
-            if (options().specified("v"))
+            if (options.specified("v"))
                 {
                 compilerArgs.add("-v");
                 }
 
-
-            ArrayList<File> libpath = (ArrayList<File>) options.values().get("L");
-            if (libpath != null)
+            ArrayList<File> libPath = (ArrayList<File>) options.values().get("L");
+            if (libPath != null)
                 {
-                for (File lib : libpath)
+                for (File libFile : libPath)
                     {
                     compilerArgs.add("-L");
-                    compilerArgs.add(lib.getPath());
+                    compilerArgs.add(libFile.getPath());
                     }
                 }
+
+            File outFile = (File) options.values().get("o");
+            if (outFile != null)
+                {
+                compilerArgs.add("-o");
+                compilerArgs.add(outFile.getPath());
+                }
+
             compilerArgs.add(fileSpec.getPath());
 
             new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
@@ -422,6 +429,7 @@ public class Runner
 
             addOption("L" ,     null,        Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
             addOption("M",      "method",    Form.String, false, "Method name; defaults to \"run\"");
+            addOption("o",      null,        Form.File,   false, "If compilation is necessary, the file or directory to write compiler output to");
             addOption(Trailing, null,        Form.File,   false, "Module file name (.xtc) to execute");
             addOption(ArgV,     null,        Form.AsIs,   true,  "Arguments to pass to the method");
             }
