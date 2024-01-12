@@ -53,7 +53,14 @@ public class Runner
      */
     public static void main(String[] asArg)
         {
-        new Runner(asArg).run();
+        try
+            {
+            new Runner(asArg).run();
+            }
+        catch (LauncherException e)
+            {
+            System.exit(e.error ? -1 : 0);
+            }
         }
 
     /**

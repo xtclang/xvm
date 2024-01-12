@@ -85,30 +85,23 @@ public abstract class Launcher
                 }
             }
 
-        try
+        switch (cmd)
             {
-            switch (cmd)
-                {
-                case "xtc":
-                    System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
-                    // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
-                    // fall through (until the new xtc command is in place)
-                case "xcc":
-                    Compiler.main(argv);
-                    break;
+            case "xtc":
+                System.out.println("Note: Command name \"xtc\" will be renamed to \"xcc\"");
+                // TODO JK this spot is reserved for you to build a do-it-all "go"-style command
+                // fall through (until the new xtc command is in place)
+            case "xcc":
+                Compiler.main(argv);
+                break;
 
-                case "xec":
-                    Runner.main(argv);
-                    break;
+            case "xec":
+                Runner.main(argv);
+                break;
 
-                default:
-                    System.err.println("Command name \"" + cmd + "\" is not supported");
-                    break;
-                }
-            }
-        catch (LauncherException e)
-            {
-            System.exit(e.error ? -1 : 0);
+            default:
+                System.err.println("Command name \"" + cmd + "\" is not supported");
+                break;
             }
         }
 
@@ -799,12 +792,12 @@ public abstract class Launcher
                         if (fLinux && "help".equals(sOpts))
                             {
                             fHelp = true;
-                            continue NextArg;
+                            continue; // NextArg;
                             }
 
                         do
                             {
-                            String sOpt, sRemain;
+                            String sOpt;
                             if (fPosix)
                                 {
                                 sOpt  = sOpts.substring(0,1);
@@ -817,8 +810,7 @@ public abstract class Launcher
                                 }
                             else
                                 {
-                                sOpt    = sOpts;
-                                sRemain = "";
+                                sOpt = sOpts;
                                 }
 
                             Option opt = mapNames.get(sOpt);
@@ -1782,7 +1774,7 @@ public abstract class Launcher
      *                              e.g. "{@code xec MyApp.xtc -o=7 -X="q"} -> {@code -o=7 -X="q"}"
      * </li></ul>
      */
-    protected enum Form
+    public enum Form
         {
         Name("Switch"),
         Boolean,

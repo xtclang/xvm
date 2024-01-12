@@ -107,7 +107,14 @@ public class Compiler
      */
     public static void main(String[] asArg)
         {
-        new Compiler(asArg).run();
+        try
+            {
+            new Compiler(asArg).run();
+            }
+        catch (LauncherException e)
+            {
+            System.exit(e.error ? -1 : 0);
+            }
         }
 
     /**
