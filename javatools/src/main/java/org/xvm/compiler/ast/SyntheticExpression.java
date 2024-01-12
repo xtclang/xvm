@@ -107,7 +107,7 @@ public abstract class SyntheticExpression
         {
         if (isConstant())
             {
-            return new ConstantExprAST(toConstant());
+            return expr.getExprAST(ctx);
             }
 
         Operator op;
