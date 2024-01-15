@@ -42,22 +42,22 @@ module json.xtclang.org
     typedef JsonObject | JsonArray as JsonStruct;
 
     /**
-     * @return a new instance of a mutable `JsonObject`.
+     * @return a new instance of a mutable `JsonObject`
      */
     JsonObject newObject() = new ListMap<String, Doc>();
 
     /**
-     * @return a builder that can produce immutable JSON object instances.
+     * @return a builder that can produce immutable JSON object instances
      */
     JsonObjectBuilder objectBuilder() = new JsonObjectBuilder();
 
     /**
-     * @return a new instance of a mutable `JsonArray`.
+     * @return a new instance of a mutable `JsonArray`
      */
     JsonArray newArray() = new Array<Doc>();
 
     /**
-     * @return a builder that can produce immutable JSON array instances.
+     * @return a builder that can produce immutable JSON array instances
      */
     JsonArrayBuilder arrayBuilder() = new JsonArrayBuilder();
 }

@@ -16,7 +16,7 @@ class JsonArrayBuilder
      *                  the builder with an initial set of values
      * @param factory   a factory to create a new mutable `JsonArray`
      */
-    construct (JsonArray? template = Null, Factory factory = () -> json.newArray()) {
+    construct(JsonArray? template = Null, Factory factory = () -> json.newArray()) {
         this.factory = factory;
         values = new Array();
         if (template.is(JsonArray)) {
@@ -116,32 +116,24 @@ class JsonArrayBuilder
             add(value);
         } else {
             Doc existing = values[index];
-            switch (existing.is(_)) {
-            case JsonObject:
-                if (value.is(JsonStruct)) {
-                    JsonObject o = new JsonObjectBuilder(existing).deepMerge(value).build();
-                    set(index, o);
-                } else if (value.is(Primitive)) {
-                    set(index, value);
-                } else {
-                    assert;
-                }
+            switch (existing.is(_), value.is(_)) {
+            case (JsonObject, JsonStruct):
+                set(index, new JsonObjectBuilder(existing).deepMerge(value).build());
                 break;
-            case JsonArray:
-                if (value.is(JsonStruct)) {
-                    JsonArray a = new JsonArrayBuilder(existing).deepMerge(value).build();
-                    set(index, a);
-                } else if (value.is(Primitive)) {
-                    set(index, value);
-                } else {
-                    assert;
-                }
+            case (JsonObject, Primitive):
+                set(index, value);
                 break;
-            case Primitive:
+            case (JsonArray, JsonStruct):
+                set(index, new JsonArrayBuilder(existing).deepMerge(value).build());
+                break;
+            case (JsonArray, Primitive):
+                set(index, value);
+                break;
+            case (Primitive, Doc):
                 set(index, value);
                 break;
             default:
-                assert;
+                assert as $"Cannot merge a {&value.actualType} into a {&existing.actualType}";
             }
         }
     }
@@ -159,7 +151,7 @@ class JsonArrayBuilder
             JsonPointer pointer = JsonPointer.from(entry.key);
             Int?        index   = pointer.index;
             assert index != Null as "Cannot merge JSON Object with non-Int keys into a JSON array";
-            assert index >= 0 && index < values.size as
+            assert 0 <= index < values.size as
                     $|Cannot merge JSON Object into JSON array - key\
                      | "{entry.key}" does not match an existing array entry in the range 0..<{values.size}
                      ;

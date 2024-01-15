@@ -16,9 +16,9 @@ class JsonObjectBuilder
      *                  the builder with an initial set of values
      * @param factory   a factory to create a new mutable `JsonArray`
      */
-    construct (JsonObject? template = Null, Factory factory = () -> json.newObject()) {
+    construct(JsonObject? template = Null, Factory factory = () -> json.newObject()) {
         this.factory = factory;
-        values  = json.newObject();
+        values = json.newObject();
         if (template.is(JsonObject)) {
             values.putAll(template);
         }

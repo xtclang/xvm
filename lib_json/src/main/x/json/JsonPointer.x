@@ -12,7 +12,7 @@ const JsonPointer {
      * will properly validate the pointer string and create the correct
      * pointer chain.
      */
-    private construct (String pointer, String key = "", JsonPointer? remainder = Null) {
+    private construct(String pointer, String key = "", JsonPointer? remainder = Null) {
         if (key == "-") {
             assert remainder == Null as $|Invalid pointer "{pointer}", the array append path "-"\
                                          | can only be used as the final pointer element
@@ -184,11 +184,7 @@ const JsonPointer {
                 }
                 break;
             case JsonArray:
-@Inject Console console;
-console.print($"**** In pointer get() {key=} {doc=}");
-
                 if (Int idx := getValidIndex(doc, supportNegativeIndices)) {
-console.print($"**** In pointer get() {idx=}");
                     Doc child = doc[idx];
                     if (remainder.is(JsonPointer)) {
                         return remainder.get(child, supportNegativeIndices);
@@ -215,9 +211,6 @@ console.print($"**** In pointer get() {idx=}");
      * @return a valid index into the array
      */
     conditional Int getValidIndex(JsonArray array, Boolean supportNegativeIndices) {
-@Inject Console console;
-console.print($"**** In getValidIndex() {array=} {supportNegativeIndices=}");
-
         Int? index = this.index;
         if (index.is(Int)) {
             if (index >= 0 && index < array.size) {
