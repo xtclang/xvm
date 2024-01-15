@@ -155,10 +155,11 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                         ? method.consumes
                         : serviceConsumes;
 
-            this.restrictSubjects = method.is(Restrict)
+            String|String[] subjects = method.is(Restrict)
                         ? method.subject
                         : serviceSubjects;
 
+            this.restrictSubjects       = subjects.is(String) ? [subjects] : subjects;
             this.allowRequestStreaming  = method.is(StreamingRequest)  || serviceStreamRequest;
             this.allowResponseStreaming = method.is(StreamingResponse) || serviceStreamResponse;
         }
@@ -211,7 +212,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
         /**
          * If not empty, contains users that this endpoint is restricted to.
          */
-        String|String[] restrictSubjects;
+        String[] restrictSubjects;
 
         /**
          * Indicates if this endpoint allows the request content not to be fully buffered.
@@ -222,6 +223,26 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
          * Indicates if this endpoint allows the response content not to be fully buffered.
          */
         Boolean allowResponseStreaming;
+
+        /**
+         * Check if any of the specified roles matches the restrictions of this endpoint.
+         *
+         * @param roles  the set of roles to check against
+         *
+         * @return True iff any of the roles matches this endpoint restrictions
+         */
+        Boolean authorized(Set<String> roles) {
+            if (restrictSubjects.empty) {
+                return True;
+            }
+
+            for (String role : restrictSubjects) {
+                if (roles.contains(role)) {
+                    return True;
+                }
+            }
+            return False;
+        }
     }
 
 

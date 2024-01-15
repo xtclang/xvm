@@ -1,4 +1,7 @@
-- CP: do we need HttpServer.replaceRoute() API
+- CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
+
+- CP: dedicated Realm and/or Authenticator; for OAth and TokenAuth; chaining of Authenticators
+    - consider multiple users for the session
 
 - CP: make DigestAuthenticator.NonceTable into a service
 
@@ -22,7 +25,6 @@
          * @return the list view
          */
         <ElementType> List<ElementType> asList(Type<ElementType> elementType = Object)
-
 
 - CP: BinaryInput:
     - readBytes() methods need to return the number of bytes read

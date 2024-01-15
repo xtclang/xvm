@@ -287,7 +287,7 @@ service Dispatcher {
                 //   that the client must authenticate itself
                 // * with a redirect to a URL that provides the necessary login user interface
                 if (endpoint.requiredTrust > session.trustLevel) {
-                    Boolean|ResponseOut success = authenticator.authenticate(request, session, endpoint.method);
+                    Boolean|ResponseOut success = authenticator.authenticate(request, session);
                     switch (success) {
                     case True:
                         // Authenticator has verified that the user is authenticated (the
@@ -317,6 +317,12 @@ service Dispatcher {
                     }
                 }
 
+                if (!endpoint.authorized(session.roles)) {
+                    // the user doesn't have the necessary security permissions
+                    response = new SimpleResponse(Forbidden);
+                    break ProcessRequest;
+                }
+
                 // this is the "normal" i.e. "actual" request processing
                 bundle = bundlePool.allocateBundle(wsid);
                 Handler handle = bundle.ensureCallChain(endpoint);
@@ -342,6 +348,7 @@ service Dispatcher {
                     httpServer.send(context, status, names, values, body);
                 }
             });
+
 
             return;
         }

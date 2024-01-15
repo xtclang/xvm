@@ -41,12 +41,11 @@ interface Authenticator
      *
      * @param request   a request that requires authentication
      * @param session   the session associated with the request that requires authentication
-     * @param endpoint  the endpoint selected to handle the request
      *
      * @return [True] to indicate the client has been authenticated; [False] to indicate that the
      *         client is not being permitted to authenticate for any reason; or an HTTP
      *         [ResponseOut] to deliver to the client to indicate the next step in the process of
      *         authentication
      */
-    Boolean|ResponseOut authenticate(RequestIn request, Session session, Endpoint endpoint);
+    Boolean|ResponseOut authenticate(RequestIn request, Session session);
 }

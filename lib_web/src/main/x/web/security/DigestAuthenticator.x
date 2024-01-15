@@ -40,7 +40,7 @@ service DigestAuthenticator(Realm realm)
     }
 
     /**
-     * The Realm that contains the user/password information
+     * The Realm that contains the user/password information.
      */
     public/private Realm realm;
 
@@ -48,8 +48,8 @@ service DigestAuthenticator(Realm realm)
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    Boolean|ResponseOut authenticate(RequestIn request, Session session, Endpoint endpoint) {
-        // TLS is a pre-requisite for authentication in the Xenia design
+    Boolean|ResponseOut authenticate(RequestIn request, Session session) {
+        // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
         Boolean stale = False;
@@ -87,15 +87,17 @@ service DigestAuthenticator(Realm realm)
                     Hash[]  hashes  = realm.hashesFor(userId, hasher);
                     String? badUser = Null;
                     for (Hash pwdHash : hashes) {
-                        String user;
+                        String       user;
+                        Set<String>? roles;
                         if (userId.is(String)) {
-                            user      = userId;
-                            badUser ?:= user;
+                            user          = userId;
+                            badUser     ?:= user;
+                            assert roles := realm.validUser(user);
                         // obtain the plain text user name (which we need to reproduce the hash) by
                         // "validating" the password hash that we just got from the realm when we
                         // looked up the hashed user id; in other words,  this is not "validating"
                         // anything; it's just looking up a plain text user name
-                        } else if (!(user := realm.authenticateHash(userId, pwdHash, hasher))) {
+                        } else if (!((user, roles) := realm.authenticateHash(userId, pwdHash, hasher))) {
                             // somehow, when we went to look up the user name for the password hash
                             // that the realm just gave us, the user hash/password hash combination
                             // disappeared; in theory, someone could have just changed the password
@@ -131,7 +133,7 @@ service DigestAuthenticator(Realm realm)
                                                 |:{cnonce}:auth:{toString(hashA2)}
                                                                                       , hasher);
                         if (responseHash == expected) {
-                            session.authenticate(user);
+                            session.authenticate(user, roles=roles);
                             return True;
                         }
                     }

@@ -16,8 +16,8 @@ service BasicAuthenticator(Realm realm)
     public/private Realm realm;
 
     @Override
-    Boolean|ResponseOut authenticate(RequestIn request, Session session, Endpoint endpoint) {
-        // TLS is a pre-requisite for authentication in the Xenia design
+    Boolean|ResponseOut authenticate(RequestIn request, Session session) {
+        // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
         // first, check to see if the incoming request includes the necessary authentication
