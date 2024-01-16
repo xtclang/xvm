@@ -165,9 +165,9 @@ const JsonPointer {
      * pointed to by this `JsonPointer`.
      *
      * @param doc                   the JSON `Doc` to obtain the value from
-	 * @param allowNegativeIndices  support the non-standard use of negative indices for JSON arrays to mean indices
-	 *                              starting at the end of an array. For example, -1 points to the last element in
-	 *                              the array. Valid negative indices are -1 ..< -array.size The default is `False`
+     * @param allowNegativeIndices  support the non-standard use of negative indices for JSON arrays to mean indices
+     *                              starting at the end of an array. For example, -1 points to the last element in
+     *                              the array. Valid negative indices are -1 ..< -array.size The default is `False`
      *
      * @return `True` iff the doc contains a value at the location of this pointer
      * @return the JSON value in the doc at the location of this pointer

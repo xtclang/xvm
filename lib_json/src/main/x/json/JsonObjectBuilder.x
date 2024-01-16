@@ -108,28 +108,20 @@ class JsonObjectBuilder
     @Override
     protected void merge(String key, Doc value) {
         Doc existing = values[key];
-        switch (existing.is(_)) {
-        case JsonObject:
-            if (value.is(JsonStruct)) {
-                JsonObject o = new JsonObjectBuilder(existing).deepMerge(value).build();
-                add(key, o);
-            } else if (value.is(Primitive)) {
-                add(key, value);
-            } else {
-                assert;
-            }
+        switch (existing.is(_), value.is(_)) {
+        case (JsonObject, JsonStruct):
+            add(key, new JsonObjectBuilder(existing).deepMerge(value).build());
             break;
-        case JsonArray:
-            if (value.is(JsonStruct)) {
-                JsonArray a = new JsonArrayBuilder(existing).deepMerge(value).build();
-                add(key, a);
-            } else if (value.is(Primitive)) {
-                add(key, value);
-            } else {
-                assert;
-            }
+        case (JsonObject, Primitive):
+            add(key, value);
             break;
-        case Primitive:
+        case (JsonArray, JsonStruct):
+            add(key, new JsonArrayBuilder(existing).deepMerge(value).build());
+            break;
+        case (JsonArray, Primitive):
+            add(key, value);
+            break;
+        case (Primitive, Doc):
             add(key, value);
             break;
         default:

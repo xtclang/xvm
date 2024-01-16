@@ -620,19 +620,19 @@ mixin JsonPatch
 
     // ----- Options inner class -------------------------------------------------------------------
 
-	/**
-	 * A set of options that can be used to control the patching behaviour. These options typically change the
-	 * behavior from the standard specified by https://datatracker.ietf.org/doc/html/rfc6902
-	 *
+    /**
+     * A set of options that can be used to control the patching behaviour. These options typically change the
+     * behavior from the standard specified by https://datatracker.ietf.org/doc/html/rfc6902
+     *
      * @param ensurePathExistsOnAdd     a flag to indicate that an add operation should recursively create the missing
      *                                  parts of path. For example adding "/foo/bar" if "foo" does not exist a JSON
      *                                  object will be added at key "foo" and then "bar" will be added to that object.
-	 * @param allowMissingPathOnRemove  a flag to indicate that remove operations should not fail if the target path is
-	 *                                  missing. The default is `False`
-	 * @param supportNegativeIndices    support the non-standard use of negative indices for JSON arrays to mean indices
-	 *                                  starting at the end of an array. For example, -1 points to the last element in
-	 *                                  the array. Valid negative indices are -1 ..< -array.size The default is `False`
-	 */
+     * @param allowMissingPathOnRemove  a flag to indicate that remove operations should not fail if the target path is
+     *                                  missing. The default is `False`
+     * @param supportNegativeIndices    support the non-standard use of negative indices for JSON arrays to mean indices
+     *                                  starting at the end of an array. For example, -1 points to the last element in
+     *                                  the array. Valid negative indices are -1 ..< -array.size The default is `False`
+     */
     static const Options(Boolean ensurePathExistsOnAdd    = False,
                          Boolean allowMissingPathOnRemove = False,
                          Boolean supportNegativeIndices   = False) {
