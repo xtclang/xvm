@@ -85,6 +85,7 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
             node.value = value;
             touch(node);
         } else {
+            Node node;
             if (map.size >= maxSize) {
                 // recycle the least recently used node
                 assert node ?= lruHead;

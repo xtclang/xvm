@@ -367,7 +367,7 @@ service DigestAuthenticator(Realm realm)
             if (!(userId := username.unquote())) {
                 return False;
             }
-        } else if (username := props.get("username*")) {
+        } else if (String username := props.get("username*")) {
             // user hashing is not compatible with the use of the "username*" MIME parameter
             if (userHashed) {
                 return False;
@@ -525,7 +525,7 @@ service DigestAuthenticator(Realm realm)
             Char ch = text[offset++];
             if (Byte b := isAttrChar(ch)) {
                 bytes += b;
-            } else if (ch == '%', (b, offset) := decodePctEncoded(text, offset)) {
+            } else if (ch == '%', (Byte b, offset) := decodePctEncoded(text, offset)) {
                 bytes += b;
             } else {
                 return False;

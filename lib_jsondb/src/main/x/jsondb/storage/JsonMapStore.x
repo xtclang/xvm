@@ -466,7 +466,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 // doesn't exist in the history, so the deletion modification has no effect
                 mods.remove(key);
             } else {
-                valueHistory = new SkiplistMap();
+                History valueHistory = new SkiplistMap();
                 valueHistory.put(prepareId, value);
                 history.put(key, valueHistory);
                 changed = True;

@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -1980,9 +1981,36 @@ public class Context
                 }
             else
                 {
+                // we're entering the "else" scope; every variable that was declared at the "if"
+                // context needs to be "forgotten"
+                forgetDeclaredVars(m_ctxWhenTrue);
+
                 m_ctxWhenFalse = ctx;
                 }
             return ctx;
+            }
+
+        /**
+         * Remove all vars that are declared at this scope from this context as well as from the
+         * specified branch.
+         */
+        private void forgetDeclaredVars(Context ctxBranch)
+            {
+            for (Iterator<String> iter = getNameMap().keySet().iterator(); iter.hasNext();)
+                {
+                String sVar = iter.next();
+                if (isVarDeclaredInThisScope(sVar))
+                    {
+                    iter.remove();
+                    getDefiniteAssignments().remove(sVar);
+
+                    if (ctxBranch != null)
+                        {
+                        ctxBranch.getNameMap().remove(sVar);
+                        ctxBranch.getDefiniteAssignments().remove(sVar);
+                        }
+                    }
+                }
             }
 
         @Override

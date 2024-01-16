@@ -605,7 +605,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
                     writeValue();
 
                     (Int length, Boolean escape) = calculatePointerSegmentLength(id);
-                    pointer = appendPointerSegment(buildPointer(length), id, escape).toString();
+                    String pointer = appendPointerSegment(buildPointer(length), id, escape).toString();
                     if (pointer.size > 0) {
                         pointers.putIfAbsent(&value.identity, pointer);
                     }
