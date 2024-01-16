@@ -397,7 +397,6 @@ public class AssignmentStatement
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
-        boolean    fValid       = true;
         AstNode    nodeLeft     = lvalue;
         Expression exprLeftCopy = null;
         boolean    fConditional = isConditional();
@@ -429,26 +428,17 @@ public class AssignmentStatement
             assert stmtLeft instanceof VariableDeclarationStatement ||
                    stmtLeft instanceof MultipleLValueStatement;
 
-            LValueContext ctxLV = new LValueContext(ctx);
+            ErrorListener errsTmp   = errs.branch(this);
+            LValueContext ctxLV     = new LValueContext(ctx);
+            Statement     lvalueNew = stmtLeft.validate(ctxLV, errsTmp);
+            errsTmp.merge();
 
-            errs = errs.branch(this);
-
-            Statement lvalueNew = stmtLeft.validate(ctxLV, errs);
-
-            if (lvalueNew == null)
+            if (lvalueNew == null || errsTmp.hasSeriousErrors())
                 {
-                fValid = false;
-                }
-            else
-                {
-                lvalue = nodeLeft = lvalueNew;
+                return null;
                 }
 
-            if (errs.hasSeriousErrors())
-                {
-                fValid = false;
-                }
-            errs = errs.merge();
+            lvalue = nodeLeft = lvalueNew;
 
             // the validation of the VariableDeclarationStatement or MultipleLValueStatement above
             // only dealt with the "type" portion of the statement; only now we are entering the
@@ -512,17 +502,16 @@ public class AssignmentStatement
             Expression exprNew = exprLeft.validateMulti(ctxLValue, atypeLeft, errs);
             if (exprNew == null)
                 {
-                fValid = false;
+                return null;
                 }
-            else
+
+            if (exprLeft == nodeLeft)
                 {
-                if (exprLeft == nodeLeft)
-                    {
-                    lvalue = nodeLeft = exprNew;
-                    }
-                exprLeft = exprNew;
+                lvalue = nodeLeft = exprNew;
                 }
+            exprLeft = exprNew;
             }
+
         lvalueExpr = exprLeft;
         exprLeft.requireAssignable(ctxLValue, errs);
 
@@ -587,10 +576,7 @@ public class AssignmentStatement
                     exprRightNew = exprRight.validateMulti(ctxRValue, exprLeft.getTypes(), errs);
                     }
 
-                if (fValid)
-                    {
-                    merge(ctxRValue, ctxLValue);
-                    }
+                merge(ctxRValue, ctxLValue);
 
                 // prevent unnecessary errors and mark an unconditional assignment even if the validation failed
                 exprLeft.markAssignment(ctxRValue, exprRightNew != null && exprRightNew.isConditionalResult(), errs);
@@ -619,10 +605,7 @@ public class AssignmentStatement
 
                     exprRightNew = exprRight.validate(ctxRValue, typeReq, errs);
 
-                    if (fValid)
-                        {
-                        merge(ctxRValue, ctxLValue);
-                        }
+                    merge(ctxRValue, ctxLValue);
 
                     exprLeft.markAssignment(ctxRValue, fConditional, errs);
                     if (exprRightNew != null)
@@ -664,16 +647,13 @@ public class AssignmentStatement
 
                     if (exprRightNew == null)
                         {
-                        fValid = false;
+                        return null;
                         }
                     else
                         {
                         // conditional expressions can update the LVal type from the RVal type,
                         // but the initial boolean is discarded
-                        if (fValid)
-                            {
-                            merge(ctxRValue, ctxLValue);
-                            }
+                        merge(ctxRValue, ctxLValue);
 
                         exprLeft.markAssignment(ctxRValue,
                             fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
@@ -732,7 +712,7 @@ public class AssignmentStatement
                     {
                     // this could only happen after an error had been reported
                     assert errs.hasSeriousErrors();
-                    fValid = false;
+                    return null;
                     }
 
                 if (fInfer)
@@ -740,10 +720,7 @@ public class AssignmentStatement
                     ctxRValue = ctxRValue.exit();
                     }
 
-                if (fValid)
-                    {
-                    merge(ctxRValue, ctxLValue);
-                    }
+                merge(ctxRValue, ctxLValue);
 
                 exprLeft.markAssignment(ctxRValue, false, errs);
                 break;
@@ -752,24 +729,22 @@ public class AssignmentStatement
 
         if (exprRightNew == null)
             {
-            fValid = false;
+            return null;
             }
-        else
+
+        rvalue = exprRightNew;
+
+        if (atypeRight != null)
             {
-            rvalue = exprRightNew;
-
-            if (atypeRight != null)
-                {
-                 // AssertStatement handles the assignment inference itself
-                Branch branch = getCategory() == Category.CondRight
-                                && !(getParent() instanceof AssertStatement)
-                    ? Branch.WhenTrue
-                    : Branch.Always;
-                nodeLeft.updateLValueFromRValueTypes(ctxRValue, branch, atypeRight);
-                }
+             // AssertStatement handles the assignment inference itself
+            Branch branch = getCategory() == Category.CondRight
+                            && !(getParent() instanceof AssertStatement)
+                ? Branch.WhenTrue
+                : Branch.Always;
+            nodeLeft.updateLValueFromRValueTypes(ctxRValue, branch, atypeRight);
             }
 
-        return fValid ? this : null;
+        return this;
         }
 
     @Override

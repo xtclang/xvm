@@ -125,8 +125,8 @@ public class IfStatement
                 ctx = ctx.enterAndIf();
                 }
 
-            // the condition is either a boolean expression or an assignment statement whose R-value
-            // is a multi-value with the first value being a boolean
+            // the condition is either a boolean expression or a conditional assignment statement
+            // whose R-value is a multi-value with the first value being a boolean
             if (cond instanceof AssignmentStatement stmtOld)
                 {
                 if (stmtOld.isNegated())
