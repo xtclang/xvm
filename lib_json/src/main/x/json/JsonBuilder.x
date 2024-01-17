@@ -56,7 +56,7 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      *
      * @param  the `JsonStruct` to merge
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
     JsonBuilder deepMerge(JsonStruct s) {
         switch (s.is(_)) {
@@ -78,7 +78,7 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      * @param path  the path to the location to merge the value into
      * @param doc   the JSON value to merge at the specified location
      *
-     * @return this `Builder`
+     * @return this `JsonBuilder`
      */
     JsonBuilder deepMerge(JsonPointer path, Doc doc) {
         Id id = id(path);

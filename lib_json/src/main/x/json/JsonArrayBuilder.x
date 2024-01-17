@@ -56,7 +56,7 @@ class JsonArrayBuilder
      *
      * @param builder  the `JsonBuilder` that will build the `Doc` value to add
      *
-     * @return this `JsonBuilder`
+     * @return this `JsonArrayBuilder`
      */
     JsonArrayBuilder add(JsonBuilder builder) = add(builder.build());
 
@@ -65,7 +65,7 @@ class JsonArrayBuilder
      *
      * @param docs  an array of JSON `Doc` to add
      *
-     * @return this `JsonBuilder`
+     * @return this `JsonArrayBuilder`
      */
     JsonArrayBuilder addAll(Doc[] docs) {
         values.addAll(docs);

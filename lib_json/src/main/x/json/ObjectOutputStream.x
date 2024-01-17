@@ -583,7 +583,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
          * @param writePointer  the function to delegate to in order to write out the pointer only
          * @param writeValue    the function to delegate to in order to write the full object value
          *
-         * @return this
+         * @return this `PointerAwareDocOutput`
          */
         protected <Serializable> PointerAwareDocOutput writePointerOrValue(
                 (String | Int)?       id,
