@@ -120,15 +120,10 @@ class JsonArrayBuilder
             case (JsonObject, JsonStruct):
                 set(index, new JsonObjectBuilder(existing).deepMerge(value).build());
                 break;
-            case (JsonObject, Primitive):
-                set(index, value);
-                break;
             case (JsonArray, JsonStruct):
                 set(index, new JsonArrayBuilder(existing).deepMerge(value).build());
                 break;
-            case (JsonArray, Primitive):
-                set(index, value);
-                break;
+            case (Doc, Primitive):
             case (Primitive, Doc):
                 set(index, value);
                 break;

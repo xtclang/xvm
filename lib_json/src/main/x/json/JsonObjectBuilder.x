@@ -112,15 +112,10 @@ class JsonObjectBuilder
         case (JsonObject, JsonStruct):
             add(key, new JsonObjectBuilder(existing).deepMerge(value).build());
             break;
-        case (JsonObject, Primitive):
-            add(key, value);
-            break;
         case (JsonArray, JsonStruct):
             add(key, new JsonArrayBuilder(existing).deepMerge(value).build());
             break;
-        case (JsonArray, Primitive):
-            add(key, value);
-            break;
+        case (Doc, Primitive):
         case (Primitive, Doc):
             add(key, value);
             break;
