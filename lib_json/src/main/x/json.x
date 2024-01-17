@@ -25,4 +25,39 @@ module json.xtclang.org
      * JSON types include primitive types, array types, and map types.
      */
     typedef (Primitive | Map<String, Doc> | Array<Doc>) as Doc;
+
+    /**
+     * A type representing a JSON Object.
+     */
+    typedef Map<String, Doc> as JsonObject;
+
+    /**
+     * A type representing a JSON Array.
+     */
+    typedef Array<Doc> as JsonArray;
+
+    /**
+     * A type representing a non-primitive JSON structure.
+     */
+    typedef JsonObject | JsonArray as JsonStruct;
+
+    /**
+     * @return a new instance of a mutable `JsonObject`
+     */
+    JsonObject newObject() = new ListMap<String, Doc>();
+
+    /**
+     * @return a builder that can produce immutable JSON object instances
+     */
+    JsonObjectBuilder objectBuilder() = new JsonObjectBuilder();
+
+    /**
+     * @return a new instance of a mutable `JsonArray`
+     */
+    JsonArray newArray() = new Array<Doc>();
+
+    /**
+     * @return a builder that can produce immutable JSON array instances
+     */
+    JsonArrayBuilder arrayBuilder() = new JsonArrayBuilder();
 }

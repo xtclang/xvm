@@ -43,6 +43,9 @@ package mappings {
         new PathMapping(),
         new VersionMapping(),
 
+        new JsonPatchMapping(),
+        new JsonPatchOperationMapping(),
+
         // generic container types
         new @Narrowable RangeMapping(new GenericMapping<Orderable>()),
         // TODO other container types...
