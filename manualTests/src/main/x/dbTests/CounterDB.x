@@ -9,8 +9,17 @@ module CounterDB {
 
     interface CounterSchema
             extends RootSchema {
-        @RO DBMap<String, Int> counters;
-        @RO Cranker cranker;
+        @RO Counters counters;
+        @RO Cranker  cranker;
+    }
+
+    mixin Counters
+            into DBMap<String, Int> {
+        Int update(String name) {
+            Int count = getOrDefault(name, 0);
+            put(name, ++count);
+            return count;
+        }
     }
 
     mixin Cranker
@@ -19,17 +28,14 @@ module CounterDB {
         void process(String name) {
             CounterSchema schema = dbRoot.as(CounterSchema);
 
-            DBMap<String, Int> counters = schema.counters;
-
-            Int count = counters.getOrDefault(name, 0);
-            counters.put(name, ++count);
+            Int count = schema.counters.update(name);
 
             if (count % 20 != 0) {
                 schedule(name);
             }
 
             if (count % 60 == 0) {
-                counters.remove(name);
+                schema.counters.remove(name);
             }
         }
     }
