@@ -55,7 +55,14 @@ public class Disassembler
      */
     public static void main(String[] asArg)
         {
-        new Disassembler(asArg).run();
+        try
+            {
+            new Disassembler(asArg).run();
+            }
+        catch (LauncherException e)
+            {
+            System.exit(e.error ? -1 : 0);
+            }
         }
 
     /**

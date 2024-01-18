@@ -9,10 +9,9 @@ import org.xvm.api.Connector;
 
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
 
 import org.xvm.tool.Compiler;
-import org.xvm.tool.Disassembler;
+import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.ModuleInfo;
 
 import org.xvm.util.Handy;
@@ -61,7 +60,14 @@ public final class TestConnector
         listCompileArgs.addAll(Arrays.asList(asArg));
 
         Compiler compiler = new Compiler(listCompileArgs.toArray(Handy.NO_ARGS));
-        compiler.run();
+        try
+            {
+            compiler.run();
+            }
+        catch (LauncherException e)
+            {
+            System.exit(e.error ? -1 : 0);
+            }
 
         ModuleInfo[]     targets   = compiler.getModuleInfos();
         ModuleRepository repoLibs  = compiler.getLibraryRepo();
