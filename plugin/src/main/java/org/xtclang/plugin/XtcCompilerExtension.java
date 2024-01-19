@@ -1,6 +1,5 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 
 public interface XtcCompilerExtension extends XtcLauncherTaskExtension {

@@ -11,7 +11,7 @@ import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends ProjectDelegate<CommandLine, ExecResult> {
     protected final T task;
-    protected String taskName;
+    protected final String taskName;
 
     protected XtcLauncher(final Project project, final T task) {
         super(project);

@@ -16,7 +16,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.process.ExecResult;
-import org.xtclang.plugin.XtcBuildException;
+import org.xtclang.plugin.XtcBuildRuntimeException;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
@@ -56,7 +56,7 @@ import static org.xtclang.plugin.XtcProjectDelegate.incomingXtcModuleDependencie
 // TODO: Add a generic xtcPlugin or xtc extension, where we can set stuff like, e.g. log level for the plugin (which does not redirect)
 // TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
-// TODO: @CachableTask in any form?
+// TODO: @CacheableTask in any form?
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     private final Map<DefaultXtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
 
@@ -76,6 +76,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // TODO: Currently we just inherit modules from the run spec, we can change then in the run task later; e.g. // this.modules = objects.listProperty(XtcRunModule.class).convention(getExtension().getModules());
     }
 
+    @SuppressWarnings("unused")
     @Internal
     public boolean isRunAllTask() {
         return false;
@@ -119,8 +120,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return getExtension().getModules();
     }
 
-    private XtcBuildException extensionOnly(final String operation) {
-        return delegate.buildException("Operation '{}' only available through xtcRun extension DSL at the moment.", operation);
+    private XtcBuildRuntimeException extensionOnly(final String operation) {
+        return buildException("Operation '{}' only available through xtcRun extension DSL at the moment.", operation);
     }
 
     @Override
@@ -170,7 +171,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, getJvmArgs().get());
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getIsVerbose().get());
-        cmd.addRepeated("-L", delegate.resolveModulePath(taskName, getInputDeclaredDependencyModules()));
+        cmd.addRepeated("-L", resolveModulePath(getInputDeclaredDependencyModules()));
         final var launcher = createLauncher();
         moduleRunQueue().forEach(module -> runOne(module, launcher, cmd.copy()));
         logFinishedRuns();
@@ -179,7 +180,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private void logFinishedRuns() {
         checkResolvable();
         final int count = executedModules.size();
-        logger.info("{} '{}' Task executed {} modules:", prefix, taskName, count);
+        logger.info("{} Task executed {} modules:", prefix, count);
         int i = 0;
         for (final var entry : executedModules.entrySet()) {
             final DefaultXtcRunModule config = entry.getKey();
@@ -187,14 +188,14 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             final String index = String.format("(%2d/%2d)", ++i, count);
             final boolean success = result.getExitValue() == 0;
             final LogLevel level = success ? (delegate.hasVerboseLogging() ? LIFECYCLE : INFO) : ERROR;
-            logger.log(level, "{} '{}' {}   {} {}", prefix, taskName, index, config.getModuleName().get(), config.toString());
-            logger.log(level, "{} '{}' {}       {} {}", prefix, taskName, index, success ? "SUCCESS" : "FAILURE", result);
+            logger.log(level, "{} {}   {} {}", prefix, index, config.getModuleName().get(), config.toString());
+            logger.log(level, "{} {}       {} {}", prefix, index, success ? "SUCCESS" : "FAILURE", result);
         }
     }
 
     protected Stream<XtcRunModule> moduleRunQueue() {
         final var modulesToRun = resolveModulesToRun();
-        logger.info("{} '{}' Queued up {} module(s) to execute:", prefix, taskName, modulesToRun.size());
+        logger.info("{} Queued up {} module(s) to execute:", prefix, modulesToRun.size());
         // TODO: Allow parallel execution
         return modulesToRun.stream();
     }
@@ -206,7 +207,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private List<XtcRunModule> validatedModules() {
         return getModules().get().stream().filter(m -> {
             if (!m.validate()) {
-                throw delegate.buildException("ERROR: '{}' XtcRunModule was declared without a moduleName property: {}", taskName, m);
+                throw buildException("ERROR: XtcRunModule was declared without a valid moduleName property: {}", m);
             }
             return true;
         }).toList();
@@ -216,18 +217,18 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // Given the module definition in the xtcRun closure in the DSL, create their equivalent POJOs.
         if (getExtension().isEmpty()) {
             // 1) No modules were declared
-            logger.warn("{} '{}' Configuration does not contain specified modules to run. Will default to 'xtcRunAll' task.", prefix, taskName);
+            logger.warn("{} Configuration does not contain specified modules to run. Will default to 'xtcRunAll' task.", prefix);
 
             // 2) Examine all compiled modules for this project.
             final var allModules = resolveCompiledModules();
             if (allModules.isEmpty()) {
                 // 3) We have no compiled modules for the project, return an empty execution queue.
-                logger.warn("{} '{}' There is nothing in the module path to run. Aborting.", prefix, taskName);
+                logger.warn("{} 'here is nothing in the module path to run. Aborting.", prefix);
                 return emptySet();
             }
 
             // 4) We do have modules compiled for this project. Add them all to the execution queue.
-            allModules.forEach(m -> logger.info("{} '{}'    Module '{}' added to execution queue.", prefix, taskName, m));
+            allModules.forEach(m -> logger.info("{}     Module '{}' added to execution queue.", prefix, m));
             return allModules;
         }
 
@@ -244,12 +245,12 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private Collection<XtcRunModule> resolveCompiledModules() {
         final var moduleFiles = resolveCompiledModuleFiles();
         final var allModules = moduleFiles.stream().map(File::getAbsolutePath).map(this::createModuleNamed).toList();
-        logger.info("{} '{}' Resolved {} module names or module file paths to run.", prefix, taskName, allModules.size());
+        logger.info("{} Resolved {} module names or module file paths to run.", prefix, allModules.size());
         return allModules;
     }
 
     private XtcRunModule createModuleNamed(final String name) {
-        return DefaultXtcRuntimeExtension.createModule(delegate.getProject(), name);
+        return DefaultXtcRuntimeExtension.createModule(project, name);
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -259,18 +260,20 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         if (!runConfig.hasDefaultMethodName()) {
             cmd.add("--method", moduleMethod);
         }
+
         final var moduleName = runConfig.getModuleName().get();
         cmd.addRaw(moduleName);
         cmd.addRaw(runConfig.getModuleArgs().get());
+
         final ExecResult result = launcher.apply(cmd);
         executedModules.put((DefaultXtcRunModule)runConfig, result);
-        logger.info("{} '{}'    Finished executing: {}", prefix, taskName, moduleName);
+        logger.info("{}    Finished executing: {}", prefix, moduleName);
 
-        return handleExecResult(delegate.getProject(), result);
+        return handleExecResult(result);
     }
 
     @Override
     public String toString() {
-        return taskName + " [class: " + getClass().getSimpleName() + ']';
+        return projectName + ':' + taskName + " [class: " + getClass().getSimpleName() + ']';
     }
 }

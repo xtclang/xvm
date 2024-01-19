@@ -2,9 +2,9 @@ package org.xtclang.plugin.launchers;
 
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
-import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils;
+import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
@@ -14,7 +14,7 @@ import java.util.zip.ZipFile;
 
 import static org.xtclang.plugin.XtcPluginConstants.JAR_MANIFEST_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
 
 /**
  * Launcher logic that runs the XTC launchers from classes on the classpath.
@@ -26,15 +26,16 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("{} Launching '{}' task: {}}", prefix, taskName, this);
+        logger.info("{} Launching task: {}}", prefix, this);
 
         final var javaToolsJar = resolveJavaTools();
         if (javaToolsJar == null) {
             throw buildException("Failed to resolve 'javatools.jar' in any classpath.");
         }
-        logger.info("{} '{}' {}; Using 'javatools.jar' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), javaToolsJar);
+
+        logger.info("{} {} (launcher: {}); Using 'javatools.jar' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), javaToolsJar);
         if (hasVerboseLogging()) {
-            logger.lifecycle("{} '{}' JavaExec command (launcher {}): {}", prefix, taskName, getClass().getSimpleName(), cmd.toString(javaToolsJar));
+            logger.lifecycle("{} JavaExec command (launcher {}): {}", prefix, getClass().getSimpleName(), cmd.toString(javaToolsJar));
         }
 
         final var builder = resultBuilder(cmd);
@@ -46,18 +47,6 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
             spec.jvmArgs(cmd.getJvmArgs());
             spec.setIgnoreExitValue(true);
         })));
-    }
-
-    private String readXdkVersionFromJar(final File jar) {
-        return XtcPluginUtils.readXdkVersionFromJar(logger, prefix, jar);
-    }
-
-    private boolean isJavaToolsJar(final File file) {
-        if (ProjectDelegate.hasFileExtension(file, "jar") && file.getName().startsWith(XDK_JAVATOOLS_ARTIFACT_ID) && readXdkVersionFromJar(file) != null) {
-            logger.info("{} Detected 'javatools.jar' file at: '{}'", prefix, file.getAbsolutePath());
-            return true;
-        }
-        return false;
     }
 
     private File resolveJavaTools() {
@@ -87,8 +76,10 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
-        final var javaToolsFromConfig = filesFrom(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(this::isJavaToolsJar);
-        final var javaToolsFromXdk = project.getProject().fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(this::isJavaToolsJar);
+        final var javaToolsFromConfig = filesFrom(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING)
+            .filter(FileUtils::isValidJavaToolsArtifact);
+        final var javaToolsFromXdk = project.fileTree(XtcProjectDelegate.getXdkContentsDir(project))
+            .filter(FileUtils::isValidJavaToolsArtifact);
 
         logger.info("""            
                 {} javaToolsFromConfig files: {}
@@ -127,7 +118,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
     private boolean areIdenticalFiles(final File f1, final File f2) {
         try {
-            return XtcPluginUtils.areIdenticalFiles(f1, f2);
+            return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
             throw buildException("{} Resolved non-identical multiple 'javatools.jar' ('{}' and '{}')",
                 prefix, f1.getAbsolutePath(), f2.getAbsolutePath());

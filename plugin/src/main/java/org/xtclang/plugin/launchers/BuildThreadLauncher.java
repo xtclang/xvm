@@ -2,7 +2,6 @@ package org.xtclang.plugin.launchers;
 
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
-import org.xtclang.plugin.XtcBuildException;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.internal.DefaultXtcLauncherTaskExtension;
 import org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
@@ -22,13 +21,14 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
      * The launcher invocation method, in a variant that cannot do System.exit(), to safeguard the
      * "fork = false" configuration, which should be used for debugging purposes only.
      */
-    private static final String INVOKE_METHOD_NAME_NO_SYSTEM_EXIT = "launch";
+    private static final String LAUNCH_METHOD_NAME = "launch";
+    private static final Class<?> LAUNCH_METHOD_PARAMS = String[].class;
 
     private final Method main;
 
     public BuildThreadLauncher(final Project project, final T task) {
         super(project, task);
-        this.main = resolveMethod(project, task.getJavaLauncherClassName(), INVOKE_METHOD_NAME_NO_SYSTEM_EXIT, String[].class);
+        this.main = resolveMethod(task);
     }
 
     @Override
@@ -36,9 +36,9 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         Objects.requireNonNull(cmd);
         final var mainClassName = cmd.getMainClassName();
         final var jvmArgs = cmd.getJvmArgs();
-        logger.warn("{} WARNING: Task '{}' will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, taskName, mainClassName);
+        logger.warn("{} WARNING: Task will launch '{}' from its build process. No JavaExec/Exec will be performed.", prefix, mainClassName);
         if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
-            logger.warn("{} WARNING: Task '{}' Task '{}' has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", prefix, taskName, mainClassName, jvmArgs);
+            logger.warn("{} WARNING: Task has non-default JVM args ({}). These will be ignored, as launcher is configured not to fork.", prefix, jvmArgs);
         }
         return false;
     }
@@ -49,7 +49,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("{} Launching '{}' task: {}}", prefix, taskName, this);
+        logger.info("{} Launching task {}}", prefix, this);
 
         validateCommandLine(cmd);
 
@@ -59,7 +59,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         final var builder = resultBuilder(cmd);
         try {
             if (hasVerboseLogging()) {
-                logger.lifecycle("{} WARNING: Task '{}' (equivalent to what we are executing without forking in current thread) JavaExec command: {}", prefix, taskName, cmd.toString());
+                logger.lifecycle("{} WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}", prefix, cmd.toString());
             }
             // TODO: Rewrite super.redirectIo so we can reuse it here. That is prettier. Push and pop streams to field?
             //   (may be even more readable to implement it as a try-with-resources of some kind)
@@ -120,11 +120,11 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
     }
 
     @SuppressWarnings("SameParameterValue")
-    private static Method resolveMethod(final Project project, final String className, final String methodName, final Class<?>... parameterTypes) {
+    private static Method resolveMethod(final XtcLauncherTask<?> task) {
         try {
-            return Class.forName(className).getMethod(methodName, parameterTypes);
+            return Class.forName(task.getJavaLauncherClassName()).getMethod(LAUNCH_METHOD_NAME, LAUNCH_METHOD_PARAMS);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            throw XtcBuildException.buildException(project.getLogger(), e, "Failed to resolve method '{}' in class '{}' ({}).", methodName, className, e.getMessage());
+            throw task.buildException(e, "Failed to resolve method '{}' in class '{}': {}.", LAUNCH_METHOD_NAME, task.getJavaLauncherClassName(), e.getMessage());
         }
     }
 }

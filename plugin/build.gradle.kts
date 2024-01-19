@@ -11,7 +11,6 @@ plugins {
 }
 
 val pprefix = "org.xtclang"
-// TODO we could put the loggers in extra.
 val semanticVersion: SemanticVersion by extra
 
 val xdkJavaToolsJarConsumer by configurations.registering {

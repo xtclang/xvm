@@ -6,11 +6,17 @@ TODO:
 * Verify that the output, error and input streams can be correctly redirected for all launchers.
         e.g. do we still get uninformative stuff like this from any failure:
         System.err.println("TODO: handle exec values and their output streams better than this: [manualTests] 'compileXtc' terminated abnormally (exitValue: -1). Rethrowing exception.");
-* Verify that, or even better, write some kind of test that checks whether fork/not fork for the launchers works, is debuggable, and can handle exceptions without losing data, or performing unnecessarily complex logic.
-* Start filing these TODOs as GitHub issues, elaborating on them a bit + enabling the creation of 10-20 small "simple" starter tasks for enhancements.
+* MAKE IT POSSIBLE TO ACTUALLY ADD STREAMS AND NOT JUST OVERRIDE THEM, WE ALREADY HAVE THE WRAPPER FOR THE XTC LAUNCHER BUILDER. Great for testing, and screen scraping
+  without having to do horrible things like taking over and redirecting a stream manually line by line.
 * Check that no tests are disabled, and stuff like that, so that we maintain code coverage. I may have disabled something somewhere a long time ago.
 
+Done:
+* Verify that, or even better, write some kind of test that checks whether fork/not fork for the launchers works, is debuggable, and can handle exceptions without losing data, or performing unnecessarily complex logic.
+
 Directly after merge:
+* Start filing these TODOs as GitHub issues, elaborating on them a bit + enabling the creation of 10-20 small "simple" starter tasks for enhancements.
+* Port examples.
+* Background process launcher through the process builder.
 * Disentangle tbe somewhat unintuitive runXtc* task collection. Need more clearly defined semantics and configurability. See the comment in the code about how I suspect
 the run uses may be most easily understood and applied by and XTC developer.
 * Create first release from master when merged, and add GitHub release plugin.
@@ -29,6 +35,7 @@ Shortly after merge:
 animals in the "streams zoo" right now, when we try to process, log and rethrow build errors.
 
 Maybe after merge:
+* Implement an XTC logger, put it in extra.
 * Use the PluginMaven default publication, don't add a special one for XTC. This is hardcoded and forced to generate docs and source from the gradlePluginPortal logic anyway.
 * Allow configuration based running xtc module from gradlew - now just make the more fine grained results override the outermost ones. We do that in stdin/out but not the others.
 * Command line retrieval programmatically/config option for XtcLauncher tasks. (dry run?)

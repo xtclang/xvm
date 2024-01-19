@@ -263,14 +263,6 @@ val assembleDist by tasks.existing {
         logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
         dependsOn(distExe)
     }
-    doFirst {
-        logger.info("$prefix $name; Assembling distribution...")
-    }
-    doLast {
-        logger.info("$prefix $name: Assembled distribution.")
-        printTaskInputs(INFO)
-        printTaskOutputs(INFO)
-    }
 }
 
 val distExe by tasks.registering {

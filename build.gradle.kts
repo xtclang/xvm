@@ -4,8 +4,8 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 /*
  * Main build file for the XVM project, producing the XDK.
  */
-group = libs.versions.group.xdk.get()
-version = libs.versions.xdk.get()
+//group = libs.versions.group.xdk.get()
+//version = libs.versions.xdk.get()
 
 plugins {
     alias(libs.plugins.xdk.build.versioning)

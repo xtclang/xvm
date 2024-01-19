@@ -1,3 +1,6 @@
+import org.xtclang.plugin.tasks.XtcCompileTask
+import java.io.ByteArrayOutputStream
+
 /*
  * Test utilities.  This is a standalone XTC project, which should only depend on the XDK.
  * If we want to use it to debug the XDK, that is also fine, as it will do dependency
@@ -51,9 +54,29 @@ sourceSets {
     }
 }
 
-private val forceRecompile = (System.getenv("ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD") ?: "false").toBoolean()
-if (forceRecompile) {
-    logger.warn("$prefix manualTest compile configuration is set to force rebuild (forceRebuild=$forceRecompile)")
+/**
+ * It's important to understand what causes caching problems and unncessary rebuild in Gradle.
+ * One of these things is tasks dependning on System environment variables.
+ * To fix that particular issue, an input of the form inputs.property("langEnvironment") { System.getenv(ENV_VAR) }
+ * needs to be added to the task configuration or any plugin that uses is must be aware of it.
+ * <p>
+ * Also Using doFirst and doLast from a build script on a cacheable task ties you to build script changes since
+ * the implementation of the closure comes from the build script. If possible, you should use separate tasks instead.
+ * <p>
+ * @see https://docs.gradle.org/current/userguide/common_caching_problems.html
+ */
+fun alwaysRebuild(): Boolean {
+    val rebuild = (System.getenv("ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD") ?: "false").toBoolean()
+    if (rebuild) {
+        logger.warn("$prefix manualTest compile configuration is set to force rebuild (forceRebuild: true)")
+    }
+    return rebuild;
+}
+
+tasks.withType<XtcCompileTask>().configureEach {
+    //inputs.property("alwaysRebuild") {
+    //    alwaysRebuild()
+    //}
 }
 
 xtcCompile {
@@ -85,7 +108,20 @@ xtcCompile {
      * should be used only for testing purposes, and never for anything else, in a typical build, distribution
      * generation or execution of an XTC app.
      */
-    forceRebuild = forceRecompile
+    forceRebuild = alwaysRebuild()
+
+    /*
+     * By default, a Gradle task swallows stdin, but it's possible to override standard input and
+     * output for any XTC launcher task.
+     *
+     * To redirect any I/O stream, for example if you want to input data to the XTC debugger or
+     * to the console, such as credentials/interactive prompts, the error, output and input streams
+     * can be redirected to a custom source.
+     *
+     * This should at least enable the "ugly" use case of breaking into the debugger on the
+     * console when an "assert:debug" statement is evaluated.
+     */
+    // stdin = System.`in`
 }
 
 xtcRun {
@@ -100,7 +136,7 @@ xtcRun {
     verbose = true
 
     /*
-     * Run in build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
+     * If fork is "true", the runner will run in the build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
      * in e.g. Javatools classes, but is brittle, and should not be used for production use, for example
      * if the launched app does System.exit, this will kill the build job too.
      *
@@ -116,16 +152,6 @@ xtcRun {
      * The default is "false".
      */
     useNativeLauncher = false
-
-    /*
-     * By default, a Gradle task swallows stdin, but it's possible to override standard input and
-     * output for any XTC launcher task.
-     *
-     * To redirect any I/O stream, for example if you want to input data to the XTC debugger or
-     * to the console, such as credentials/interactive prompts, the error, output and input streams
-     * can be redirected to a custom source.
-     */
-    // stdin = System.`in`
 
     /*
      * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
@@ -158,7 +184,5 @@ xtcRun {
         moduleName = "TestFizzBuzz" // Will add other ways to resolve modules too.
         showVersion = true // Overrides env showVersion flag.
         moduleArgs("Hello, ", "World!")
-        // Just as with all standardized Gradle argument APIs, we can use an argument provider too, of course:
-        // methodName = "run" // Leave this commented out to keep "run" as the default method to call in the module.
     }
 }

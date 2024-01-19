@@ -88,6 +88,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
+    public void jvmArg(final Provider<? extends String> arg) {
+        jvmArgs(XtcPluginUtils.singleArgumentIterableProvider(project, arg));
+    }
+
+    @Override
     public void jvmArgs(final String... args) {
         jvmArgs(XtcPluginUtils.argumentArrayToList(args));
     }
@@ -116,4 +121,3 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         return !DEFAULT_JVM_ARGS.equals(jvmArgs);
     }
 }
-

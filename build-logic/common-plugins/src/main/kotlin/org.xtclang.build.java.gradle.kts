@@ -65,6 +65,7 @@ val assemble by tasks.existing {
 }
 
 tasks.withType<JavaCompile>().configureEach {
+    // TODO: These xdk properties may have to be declared as inputs.
     val lint = getXdkPropertyBoolean(lintProperty, false)
     val maxErrors = getXdkProperty("$pprefix.maxErrors", "0").toInt()
     val maxWarnings = getXdkProperty("$pprefix.maxWarnings", "0").toInt()
