@@ -2,14 +2,26 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        S s = new S();
+        new Tester().testSleep(Duration.ofMillis(50));
     }
 
-    interface I {
-        @Atomic Int ap;
+    service Tester() {
+        Int testSleep(Duration duration) {
+            return sleep(duration); // this used to dead-lock
+        }
     }
 
-    service S implements I {
-        @Override @Atomic Int ap;
+    static Int sleep(Duration duration) {
+        @Inject Timer timer;
+        @Future Int done;
+        console.print("Sleep");
+
+        timer.schedule(duration, () ->
+            {
+            console.print("Wake Up");
+            done = 17;
+            });
+        return done;
     }
 }
+

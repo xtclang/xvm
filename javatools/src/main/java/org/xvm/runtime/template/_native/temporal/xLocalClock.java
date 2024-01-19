@@ -102,7 +102,7 @@ public class xLocalClock
                 long     ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
                 long     cDelay    = Math.max(0, ldtWakeup - ldtNow);
 
-                Alarm alarm = new Alarm(new WeakCallback(frame.f_context, hAlarm));
+                Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm));
                 try
                     {
                     TIMER.schedule(alarm, cDelay);
@@ -229,7 +229,8 @@ public class xLocalClock
             ServiceContext context = f_refCallback.get();
             if (context != null)
                 {
-                context.callLater(f_refCallback.getFunction(), Utils.OBJECTS_NONE);
+                WeakCallback.Callback callback = f_refCallback.getCallback();
+                context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
                 context.unregisterNotification();
                 }
             }
@@ -238,7 +239,7 @@ public class xLocalClock
         public boolean cancel()
             {
             boolean        fCancelled = super.cancel();
-            ServiceContext context = f_refCallback.get();
+            ServiceContext context    = f_refCallback.get();
             if (context != null)
                 {
                 context.unregisterNotification();

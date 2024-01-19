@@ -108,8 +108,7 @@ public class xNanosTimer
                 {
                 GenericHandle  hDuration = (GenericHandle ) ahArg[0];
                 FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
-                FunctionHandle hCancel   = hTimer.schedule(hDuration,
-                                                new WeakCallback(frame.f_context, hAlarm));
+                FunctionHandle hCancel   = hTimer.schedule(hDuration, new WeakCallback(frame, hAlarm));
                 return frame.assignValue(iReturn, hCancel);
                 }
             }
@@ -245,8 +244,8 @@ public class xNanosTimer
             // note: the Java Timer uses millisecond scheduling, but we're given scheduling
             // instructions in picoseconds
             LongLongHandle llPicos = (LongLongHandle) hDuration.getField(null, "picoseconds");
-            long            cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
-            Alarm           alarm   = new Alarm(cNanos, refAlarm);
+            long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
+            Alarm          alarm   = new Alarm(cNanos, refAlarm);
 
             return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
                 {
@@ -337,7 +336,7 @@ public class xNanosTimer
         /**
          * Represents a pending alarm.
          */
-        protected class Alarm
+        public class Alarm
             {
             /**
              * Construct and register an alarm, and start it if the timer is running.
@@ -451,7 +450,8 @@ public class xNanosTimer
                 ServiceContext context = f_refCallback.get();
                 if (context != null)
                     {
-                    context.callLater(f_refCallback.getFunction(), Utils.OBJECTS_NONE);
+                    WeakCallback.Callback callback = f_refCallback.getCallback();
+                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
                     context.unregisterNotification();
                     }
                 TimerHandle.this.removeAlarm(this);

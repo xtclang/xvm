@@ -333,11 +333,16 @@ public class ServiceContext
         }
 
     /**
+     * The idea for the Callback map is that it holds all necessary information to create a
+     * {@link CallLaterRequest} if the service is still running, but does not prevent the service
+     * from being GC'd even if some shared system services hold a reference to the corresponding
+     * {@link WeakCallback} since it refers to the Callback object via a unique long id.
+     *
      * @return the map of callbacks keyed by unique ids
      */
-    protected Map<Long, FunctionHandle> ensureCallbackMap()
+    protected Map<Long, WeakCallback.Callback> ensureCallbackMap()
         {
-        Map<Long, FunctionHandle> map = m_mapCallbacks;
+        Map<Long, WeakCallback.Callback> map = m_mapCallbacks;
         if (map == null)
             {
             map = m_mapCallbacks = new HashMap<>();
@@ -348,7 +353,7 @@ public class ServiceContext
     /**
      * @return the map of callbacks keyed by unique ids
      */
-    protected Map<Long, FunctionHandle> getCallbackMap()
+    protected Map<Long, WeakCallback.Callback> getCallbackMap()
         {
         return m_mapCallbacks;
         }
@@ -1158,6 +1163,33 @@ public class ServiceContext
     public CompletableFuture<ObjectHandle> callLater(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
         CompletableFuture<ObjectHandle> future = postRequest(null, hFunction, ahArg, 0);
+
+        if (future != null)
+            {
+            future.whenComplete((r, x) ->
+                {
+                if (x != null)
+                    {
+                    callUnhandledExceptionHandler(((WrapperException) x).getExceptionHandle());
+                    }
+                });
+            }
+
+        return future;
+        }
+
+    /**
+     * Post an asynchronous "call later" message to this context. Any exception thrown by the
+     * called function will be reported as an "UnhandledExceptionNotification" (see Service.x).
+     *
+     * Unlike the "callLater" methods above, there is an "originating" frame in this case that
+     * belonged to this same service.
+     *
+     * @return a CompletableFuture for the call or null if the service has terminated
+     */
+    public CompletableFuture<ObjectHandle> callLater(Frame frame, FunctionHandle hFunction, ObjectHandle[] ahArg)
+        {
+        CompletableFuture<ObjectHandle> future = postRequest(frame, hFunction, ahArg, 0);
 
         if (future != null)
             {
@@ -2307,7 +2339,7 @@ public class ServiceContext
     /**
      * A "service-local" cache for service callbacks.
      */
-    private Map<Long, FunctionHandle> m_mapCallbacks;
+    private Map<Long, WeakCallback.Callback> m_mapCallbacks;
 
     /**
      * A wake-up scheduler to process registered timeouts.
