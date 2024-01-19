@@ -13,13 +13,16 @@ plugins {
     java
 }
 
-private val enablePreview = enablePreview()
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
+private val jdkVersion = provider {
+    getXdkPropertyInt("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION)
+}
+
 java {
     toolchain {
-        val xdkJavaVersion = JavaLanguageVersion.of(getXdkProperty("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION).toInt())
+        val xdkJavaVersion = JavaLanguageVersion.of(jdkVersion.get())
         val buildProcessJavaVersion = JavaLanguageVersion.of(JavaVersion.current().majorVersion.toInt())
         if (!buildProcessJavaVersion.canCompileOrRun(xdkJavaVersion)) {
             throw buildException("Error in Java Toolchain config. The builder can't compile requested Java version: $xdkJavaVersion")
@@ -38,9 +41,10 @@ testing {
 }
 
 tasks.withType<JavaExec>().configureEach {
+    inputs.property("$pprefix.jdk", jdkVersion)
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
-    if (enablePreview) {
+    if (enablePreview()) {
         jvmArgs("--enable-preview")
     }
     doLast {
@@ -67,8 +71,8 @@ val assemble by tasks.existing {
 tasks.withType<JavaCompile>().configureEach {
     // TODO: These xdk properties may have to be declared as inputs.
     val lint = getXdkPropertyBoolean(lintProperty, false)
-    val maxErrors = getXdkProperty("$pprefix.maxErrors", "0").toInt()
-    val maxWarnings = getXdkProperty("$pprefix.maxWarnings", "0").toInt()
+    val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
+    val maxWarnings = getXdkPropertyInt("$pprefix.maxWarnings", 0)
     val warningsAsErrors = getXdkPropertyBoolean("$pprefix.warningsAsErrors", true)
     if (!warningsAsErrors) {
         logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
@@ -77,7 +81,7 @@ tasks.withType<JavaCompile>().configureEach {
     val args = buildList {
         add("-Xlint:${if (lint) "all" else "none"}")
 
-        if (enablePreview) {
+        if (enablePreview()) {
             add("--enable-preview")
             if (lint) {
                 add("-Xlint:preview")
@@ -113,7 +117,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.withType<Test>().configureEach {
-    if (enablePreview) {
+    if (enablePreview()) {
         jvmArgs("--enable-preview")
     }
     maxHeapSize = getXdkProperty("$pprefix.maxHeap", "4G")

@@ -10,8 +10,23 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-val pprefix = "org.xtclang"
 val semanticVersion: SemanticVersion by extra
+
+private val pprefix = "org.xtclang"
+
+// Property for the Plugin ID (unique to a plugin)
+private val pluginId = getXdkProperty("$pprefix.plugin.id")
+
+// Properties for the artifact
+private val pluginName = project.name
+private val pluginGroup = getXdkProperty("$pprefix.plugin.group", group.toString())
+private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.toString())
+
+logger.info("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
+
+private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
+
+private val javaToolsContents = project.objects.fileCollection()
 
 val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
@@ -22,22 +37,11 @@ val xdkJavaToolsJarConsumer by configurations.registering {
     }
 }
 
-dependencies {
-    @Suppress("UnstableApiUsage")
-    xdkJavaToolsJarConsumer(libs.javatools)
+if (shouldBundleJavaTools) {
+    dependencies {
+        @Suppress("UnstableApiUsage") xdkJavaToolsJarConsumer(libs.javatools)
+    }
 }
-
-// Properties for the ID (unique to a plugin)
-private val pluginId = getXdkProperty("$pprefix.plugin.id")
-
-// Properties for the artifact
-private val pluginName = project.name
-private val pluginGroup = getXdkProperty("$pprefix.plugin.group", group.toString())
-private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.toString())
-
-private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
-
-logger.info("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
 publishing {
     publications {
@@ -86,22 +90,24 @@ tasks.withType<Javadoc>().configureEach {
 
 tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
     enabled = false
-    // TODO: Reuse the exsting PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
-    logger.info("$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent.")
+    // TODO: Reuse the existing PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
+    logger.info("$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
+    )
 }
 
 val jar by tasks.existing(Jar::class) {
-    dependsOn(gradle.includedBuild("javatools").task(":jar"))
     if (shouldBundleJavaTools) {
-        val javatoolsFiles = xdkJavaToolsJarConsumer.get().files
-        assert(javatoolsFiles.count() == 1)
-        javatoolsFiles.forEachIndexed { i, it ->
-            logger.info("$prefix Adding zipTree from $it to plugin jar (artifact ${i + 1} / ${javatoolsFiles.count()}).")
-            from(zipTree(it))
-        }
-        doLast {
-            logger.info("$prefix Creating fat jar bundling the associated XDK version as the plugin version into the plugin.")
-        }
+        /*
+         * It's important that this is a provider/lazy, because xdkJavaToolsJarConsumer kickstarts an
+         * entire javatools fatjar build when you resolve it, and that's what we have to do if we want
+         * it in the plugin, even though we are just configuring here. We will lift out the manualTests
+         * "use the plugin as an external party" test from the build source line to make sure dependencies
+         * are preserved correctly, and also add a dry-run/vs real diff test to see that our build caching
+         * does not break.
+         */
+        inputs.files(xdkJavaToolsJarConsumer)
+        val jarFiles = { zipTree(xdkJavaToolsJarConsumer.get().singleFile) }
+        from(jarFiles)
     }
     manifest {
         attributes(
@@ -117,5 +123,8 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Vendor" to "xtclang.org",
             "Implementation-Version" to pluginVersion,
         )
+    }
+    doLast {
+        from(zipTree(xdkJavaToolsJarConsumer.get().singleFile))
     }
 }

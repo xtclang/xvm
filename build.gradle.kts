@@ -30,7 +30,7 @@ val install by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     doLast {
-        logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
+        logger.info("$prefix Finished $name (overwrote existing XDK distribution).")
     }
 }
 
@@ -50,12 +50,19 @@ val installLocalDist by tasks.registering {
     }
 }
 
+fun getTaskStateDescriptor(state: TaskState): Map<String, Any> {
+    return buildMap {
+        put("didWork", state.didWork)
+        put("executed", state.executed)
+    }
+}
+
 val installInitScripts by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Install bootstrapping scripts for the XTC Organization GitHub Maven package registry."
     dependsOn(xdk.task(":$name"))
     doLast {
-        logger.lifecycle("$prefix Finished '$name' (task state: $state.)")
+        logger.lifecycle("$prefix Finished '$name' [task state: ${getTaskStateDescriptor(state)}]")
     }
 }
 

@@ -3,7 +3,6 @@ package org.xtclang.plugin.launchers;
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
-import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
@@ -15,6 +14,10 @@ import java.util.zip.ZipFile;
 import static org.xtclang.plugin.XtcPluginConstants.JAR_MANIFEST_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
+
+// TODO: Add more info to the LauncherException, and if we can reflect it out for the "javatools bundled with
+//   the plugin" use case, let's do that. One thing I find that I would like very much is if the LauncherException
+//   threw me the failed launcher command line as well.
 
 /**
  * Launcher logic that runs the XTC launchers from classes on the classpath.
@@ -101,7 +104,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         final String versionXdk = readXdkVersionFromJar(resolvedFromXdk);
         if (resolvedFromConfig != null && resolvedFromXdk != null) {
             if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
-                logger.warn("{} Different javatools in resolved files, preferring the non-XDK version: {}", prefix, resolvedFromConfig.getAbsolutePath());
+                logger.warn("{} Different 'javatools.jar' files resolved, preferring the non-XDK version: {}", prefix, resolvedFromConfig.getAbsolutePath());
                 return processJar(resolvedFromConfig);
             }
         }
@@ -130,7 +133,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         try (final ZipFile zip = new ZipFile(file)) {
             return zip.getEntry(JAR_MANIFEST_PATH) != null;
         } catch (final IOException e) {
-            throw buildException("Failed to read jar file: '" + file.getAbsolutePath() + "' (is the format correct?)");
+            throw buildException("Failed to read jar file: '{}' (is the format correct?)", file.getAbsolutePath());
         }
     }
 

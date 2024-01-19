@@ -29,7 +29,7 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 
 class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
-        const val DEFAULT_JAVA_BYTECODE_VERSION = "20"
+        const val DEFAULT_JAVA_BYTECODE_VERSION = 20
         const val XDK_TASK_GROUP_DEBUG = "debug"
 
         // Artifact names for configuration artifacts. Gradle uses these during the build to identify various
@@ -145,8 +145,8 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
         return xdkProperties.get(key, defaultValue?.toString() ?: "false").toBoolean()
     }
 
-    internal fun xdkPropLong(key: String, defaultValue: Long? = null): Long {
-        return xdkProperties.get(key, defaultValue?.toString() ?: "0").toLong()
+    internal fun xdkPropInt(key: String, defaultValue: Int? = null): Int {
+        return xdkProperties.get(key, defaultValue?.toString() ?: "0").toInt()
     }
 
     internal fun xdkProp(key: String, defaultValue: String? = null): String {
@@ -185,6 +185,9 @@ val Project.xdkBuild: XdkBuildLogic
 val Project.prefix
     get() = "[$name]"
 
+val Task.prefix
+    get() = "[${project.name}:$name]"
+
 // TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
 //  Better to add the resource directory as a source set?
 val Project.xdkIconFile: String
@@ -206,35 +209,33 @@ fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): B
     return xdkBuild.xdkPropBool(key, defaultValue)
 }
 
-fun Project.getXdkPropertyLong(key: String, defaultValue: Long? = null): Long {
-    return xdkBuild.xdkPropLong(key, defaultValue)
+fun Project.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
+    return xdkBuild.xdkPropInt(key, defaultValue)
 }
 
 fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
     return xdkBuild.xdkProp(key, defaultValue)
 }
 
+fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
+    logger.info("$prefix Task tunneling property for $key to project")
+    return project.getXdkPropertyBoolean(key, defaultValue)
+}
+
+fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
+    logger.info("$prefix Task tunneling property for $key to project")
+    return project.getXdkPropertyInt(key, defaultValue)
+}
+
+fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
+    logger.info("$prefix Task tunneling property for $key to project")
+    return project.getXdkProperty(key, defaultValue)
+}
+
 fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {
     val prefixed = "$prefix $msg"
     logger.log(level, prefixed)
     return GradleException(prefixed)
-}
-
-fun Configuration.xdkConsumable(project: Project, artifactCategory: String, artifactName: String) {
-    return xdkConfiguration(project, true, artifactCategory, artifactName)
-}
-
-fun Configuration.xdkResolvable(project: Project, artifactCategory: String, artifactName: String) {
-    return xdkConfiguration(project, false, artifactCategory, artifactName)
-}
-
-fun Configuration.xdkConfiguration(project: Project, isConsumable: Boolean,  artifactCategory: String, artifactName: String) {
-    isCanBeConsumed = isConsumable
-    isCanBeResolved = !isConsumable
-    attributes {
-        attribute(CATEGORY_ATTRIBUTE, project.objects.named(artifactCategory))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, project.objects.named(artifactName))
-    }
 }
 
 /**

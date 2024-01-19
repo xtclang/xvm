@@ -1,11 +1,6 @@
 This sub-project is used to create native launchers that can be included in the XDK to execute various
 commands.
 
-***WARNING: DO NOT DELETE THE BUILD DIRECTORY!*** _The project's `./build/` directory is not disposable; it is actually stored in `git`, with
-the executable artifacts also stored in `git`, etc. More details can be found below._ 
-
-***WARNING: THIS PROJECT DOES NOT ADHERE TO NORMAL GRADLE BUILD RULES!*** 
-
 The prototype runtime is implemented in Java, which makes it challenging for developers who are not
 used to Java command line execution. Our goal with the launcher was to simplify the use of the Java
 tools from the command line, by making them as simple to use as normal command-line tools are in any
@@ -136,3 +131,4 @@ which will allow you to debug from IDEA:
 * In IDEA, use the "Select Run/Debug Configuration" drop-down in the toolbar to select the name
   previously configured; for example, `Debug Ecstasy Command`. Then press the "Debug" button
   (usually `Shift-F9`). At this point, IDEA should connect to the command that you wish to debug.
+  

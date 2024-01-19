@@ -1,6 +1,7 @@
 package org.xtclang.plugin;
 
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ModuleVersionSelector;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
@@ -75,10 +76,51 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     public XtcProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         super(project, null, component);
-
         // TODO: Fix the JavaTools resolution code, which is a bit hacky right now.
         //   Enable calling the Launcher from the plugin to e.g. verify if an .x file defines a module
         //     instead of relying on "top .x file level"-layout for module definitions.
+    }
+
+    private void hideTask(final Task task) {
+        switch (task.getName()) {
+            case "jar":
+            case "compileJava":
+            case "compileTestJava":
+                logger.info("{} Hiding internal task: '{}'.", prefix, task.getName());
+                task.setGroup(null);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void applyJavaPlugin() {
+        project.getPluginManager().apply(JavaPlugin.class);
+        // At the moment we piggyback on the extended build LifeCycle provided
+        // by the JavaPlugin, as well as the source sets, and other things that
+        // should really be language independent in Gradle, but arent (yet).
+        // However, tasks like "jar" and similar Java specific tasks, should
+        // be invisible to the user, as possible, in order to create less
+        // confusion. This is by no means a rare pattern in Gradle plugins,
+        // but we still don't have to like it.
+        //
+        // TODO: Given enough spare cycles, we will probably create our own
+        //   our own, fully XTC native, life cycle, with source set, and minimal
+        //   changes to semantics where applicable (for example, Java resources
+        //   are not compiled into the class file, and are taken from the build
+        //   director/processResources task outputs. Changing this little piece
+        //   to semantically conform to what XTC does should not be hard, but we
+        //   haven't had the cycles to figure out why the changed build graph
+        //   from doing that isn't 100% compatible with our builds.
+        tasks.forEach(this::hideTask);
+    }
+
+    /**
+     * Register a SoftwareComponent for XTC projects. We will use this like
+     * components["java"] is currently used for publishing Java artifacts.
+     */
+    private void createXtcComponents() {
+        project.getComponents().add(component);
     }
 
     /**
@@ -86,8 +128,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
      */
     @Override
     public Void apply(final Void args) {
-        project.getPluginManager().apply(JavaPlugin.class);
-        project.getComponents().add(component);
+        applyJavaPlugin();
+        createXtcComponents();
 
         // Add xtc extension.
         // TODO: Later move any non-specific task flags, like "fork = <boolean>" here, and it will be applied to all tasks.

@@ -64,7 +64,7 @@ val rebuildUnicodeTables by tasks.registering {
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 
     val rebuildUnicode = xdkBuild.rebuildUnicode()
-    logger.lifecycle("$prefix Should rebuild unicode: $rebuildUnicode")
+    logger.info("$prefix Should rebuild unicode: $rebuildUnicode")
 
     dependsOn(jar)
     outputs.dir(processedResourcesDir)

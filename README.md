@@ -41,7 +41,7 @@ Find out more about [how you can contribute to Ecstasy](CONTRIBUTING.md).
 
 And please respect our [code of conduct](CODE_OF_CONDUCT.md) and each other.
 
-## Installation
+## Binary Installation
 
 For **macOS** and **Linux**:
 
@@ -83,7 +83,7 @@ Manual local build for **any computer** (for advanced users):
 
 ## Development
 
-### Recommended git workflow
+### Recommended Git workflow
 
 *A note about this section: this workflow is supported by pretty much every
 common GUI in any common IDE, in one way or another. But in the interest of
@@ -469,24 +469,58 @@ For more information about the XTC DSL, please see the README.md file in the "pl
 
 ### Releasing and Publishing
 
-This is mostly relevant to the XDK development team with release management privileges. The workflow
-for adding XTC releases:
+This is mostly relevant to the XDK development team with release management privileges. A version
+of the workflow for adding XTC releases is described [here](https://www.baeldung.com/maven-snapshot-release-repository).
 
-https://www.baeldung.com/maven-snapshot-release-repository
+We plan to move to an automatic release model in the very near future, utilizing JRelease
+(and JPackage to generate our binary launchers). As an XTC/XDK developer, you do not have
+to understand all the details of the release model. The somewhat incomplete and rather 
+manual release mode is current described here for completeness. It will soon be replaced
+with something familiar.
 
-### Releasing
+### XDK Platform Releases
+
 1) Take the current version of master and create a release branch. 
 2) Set the VERSION in the release branch project root to reflect the version of the release.
 Typically an ongoing development branch will be a "-SNAPSHOT" suffixed release, but not
 an official XTC release, which just has a group:name:version number
 3) Build, tag and add the release using the GitHub release plugin.
 
-### Publishing 
+### XDK Platform Publishing 
+
+We have verified credentials for artifacts with the group "org.xtclang" at the best known
+community portals, and will start publishing there, as soon as we have an industrial
+strength release model completed.
+
+The current semi-manual process looks like this:
 
 1) ./gradlew publish to build the artifacts and verify they work. This will publish the artifacts
 to a local repositories and the XTC GitHub org repository. 
 2) To publish the plugin to Gradle Plugin Portal: ./gradlew :plugin:publishPlugins (publish the plugin to gradlePortal)
-3) To publish the XDK distro to Maven Central: TODO
+3) To publish the XDK distro to Maven Central: (... TODO ... )
+
+You can already refer to the XDK and the XTC Plugin as external artifacts for your favourite
+XTC project, either by mnaually setting up a link to the XTC Org GitHub Maven Repository like this:
+
+```
+repositories {
+   maven {
+     url = https://maven.pkg.github.com/xtclang/xvm
+     credentials {
+        username = <your github user name>
+        token = <a personal access token with read:package privileges on GitHub Maven Packages>
+   }
+}
+```
+
+or by simply publishing the XDK and XDK Plugin to your mavenLocal repository, and adding
+that to the configuration of your XTC project, if it's not there already: 
+
+```
+repositories {
+   mavenLocal()
+}
+```
 
 ## Questions?
 
@@ -496,8 +530,8 @@ understand if we cannot respond to every e-mail. Thank you.
 
 ## Appendix: Gradle fundamentals
 
-We have striven hard to create an easy-to-use build system based on industry standards and
-expected behavior. These days, most software is based on the Maven/Gradle model, which 
+We have tried very hard to create an easy-to-use build system based on industry standards 
+and expected behavior. These days, most software is based on the Maven/Gradle model, which 
 provides repositories of semantically versioned artifacts, cached incremental builds and 
 mature support for containerization.
 
@@ -519,43 +553,38 @@ actually industry-wide.
 We believe the following concepts are necessary to understand, in order to work with XDK 
 projects or the XDK. None of them are at all specific to XTC:
 
-(TODO: Add hyperlinks to more information for each bullet point below.)
-
-* The concept of "gradlew" (or "gradlew.bat" on Windows) wrapper, and why it should ALWAYS
-  be used instead of a "gradle" binary on the local system. And why it's actually a bad idea to
-  have a specific "gradle" binary in your PATH at all. (This goes for other dependent binaries
-  as well).
-* The concept of a versioned Maven artifact, and its descriptor "group:artifactId:version"
+* The concept of "gradlew" and "mvnw" (or "gradlew.bat" and "mvnw.bat" on Windows) wrappers, 
+  and why it should ALWAYS be used instead of a "gradle" binary on the local system, for any 
+  repository that ships it with its build.
+* The concept of a versioned Maven artifact, and that its descriptor "group:artifactId:version"
+  is its "global address", no matter how it is resolved on the lower abstraction layer.
 * The concept of release vs snapshot artifact versions in the Maven model.
-* The concept of local and remote artifact repositories, and how they are used by the build.
+* The concept of local (mostly mavenLocal()) and remote artifact repositories, and how they are used 
+  by a maven build.
 * The concept of the Maven/Gradle build lifecycle, its fundamental tasks, and how they depend
-  on each other ("clean", "assemble", "build" and "check"). This includes understanding the Gradle
-  cache, daemons, and why "clean" is not what you think of as "clean" in a C++ Makefile and why  
-  is it often better not to use it, in a cached, incrementally built Gradle project.
-* The concept of Maven/Gradle SourceSets.
-* The concept of a Gradle Build Scan, and understanding how to inspect it and how to use it to 
-spot build issues.
+  on each other ("clean", "assemble", "build" and "check"). 
+* The concept of the Gradle/Maven cache, build daemons, and why "clean" is not what you think  
+  of as "clean" in a C++ Makefile and why is it often better not to use it, in a cached, incrementally
+  built Gradle project.
+* The concept of Maven/Gradle source sets, like "main", "resources" and "test". 
+* The concept of a Gradle build scan, and understanding how to inspect it and how to use it to 
+  spot build issues.
 * The standard flags that can be used to control Gradle debug log levels, --info, -q, --stacktrace
-and so on.
+  and so on.
 * The concept of goal of self-contained software, which specifies its complete dependencies
-as part of its source controlled configuration. 
-  * On the Maven model level, this means semantically versioned Maven artifacts. 
-  * On the software build and execution level, this also means specific versions of external
-  pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
-  always be able to containerize. 
-  
-      *(Not only does this mean that we can build and run bit identical software on any machine
-      with any configuration. It also means that we do not install any additional software
-      on the build machine outside the repository. Why this is absolutely fundamental, can be 
-      understood by imagining an example where developer has three different open source 
-      projects on his/her development machine, each requiring an exact version of NodeJS or
-      Java, but different versions for different projects. Another reason is that large parts
-      of modern software architecture, for example CI/CD pipelines, REQUIRE that it's easy 
-      to build and run software on a virgin system, with "a single command line".)*
+  as part of its source controlled configuration. 
+  1) On the Maven model level, this means semantically versioned Maven artifacts. 
+  2) On the software build and execution level, this also means specific versions of external
+    pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
+    always be able to containerize for development purposes.
 
-Today, it is pretty safe to assume that any open source developer who has worked on any Gradle
-or Maven based project has the above knowledge, and that it's more often the case than not.
-We have spent significant effort on our architectural design to ensure that an adopter who 
-wants to become an XTC or XDK user or developer does not need to acquire *any* knowledge that is
-more domain specific than concepts listed above.
+Today, it is pretty safe to assume that most open source developers who has worked on any Gradle
+or Maven based project has at least the most important parts of the above knowledge.
+We have spent significant architectural effort to ensure that an adopter who wants to become an 
+XTC or XDK user or developer does not need to acquire *any* knowledge that is
+more domain specific than concepts listed above. None of these concepts are specific to the
+XTC platform, but should be familiar to most software developers who have worked on projects
+with Maven style build systems.
 
+We will also work on IDE Language support as soon as we have enough cycles to do so, which
+should make getting up to speed with XTC and even less complicated process.

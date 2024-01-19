@@ -62,6 +62,7 @@ public abstract class ProjectDelegate<T, R> {
         this.startParameter = gradle.getStartParameter();
         this.configs = project.getConfigurations();
         this.logger = project.getLogger();
+        // Even if we add tasks later, this refers to a task container, so it's fine to initialize it here, and it can be final
         this.tasks = project.getTasks();
         this.extensions = project.getExtensions();
         this.buildDir = layout.getBuildDirectory();
@@ -207,16 +208,5 @@ public abstract class ProjectDelegate<T, R> {
             return extensions.create(name, clazz, project);
         }
         return extensions.getByType(clazz);
-    }
-
-    @SuppressWarnings("unused")
-    private static boolean queryProperty(final String envKey, final boolean defaultValue) {
-        final var envValue = System.getenv(envKey);
-        final var propKey = envKey.replace("_", ".").toLowerCase();
-        final var propValue = System.getProperty(propKey);
-        if (envValue == null && propValue == null) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(envKey) || Boolean.parseBoolean(propKey);
     }
 }

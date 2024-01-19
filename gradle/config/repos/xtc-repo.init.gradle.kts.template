@@ -67,14 +67,15 @@ private class XtcRepoProvider(private val repos: RepositoryHandler) {
     }
 
     companion object {
-        private const val XTC_REPO_INIT_PREFIX = "https://raw.githubusercontent.com/xtclang/xvm/xtc-first-plugin/gradle/config/repos/"
-        private const val XTC_REPO_INIT_PROPERTIES_URL = "$XTC_REPO_INIT_PREFIX/xtc-repo.properties.template"
-        private const val XTC_REPO_INIT_SCRIPT_URL   = "$XTC_REPO_INIT_PREFIX/xtc-repo.init.gradle.kts.template"
-
         private const val XTC_REPO_PROPERTY_PREFIX = "org.xtclang.repo.github"
-        private const val XTC_REPO_PROPERTY_USER = "$XTC_REPO_PROPERTY_PREFIX.user"
-        private const val XTC_REPO_PROPERTY_TOKEN = "$XTC_REPO_PROPERTY_PREFIX.token"
-        private const val XTC_REPO_PROPERTY_URL = "$XTC_REPO_PROPERTY_PREFIX.url"
+
+        private val INIT_SCRIPT_BRANCH = "xtc-plugin"
+        private val XTC_REPO_INIT_PREFIX = "https://raw.githubusercontent.com/xtclang/xvm/$INIT_SCRIPT_BRANCH/gradle/config/repos/"
+        private val XTC_REPO_INIT_PROPERTIES_URL = "$XTC_REPO_INIT_PREFIX/xtc-repo.properties.template"
+        private val XTC_REPO_INIT_SCRIPT_URL   = "$XTC_REPO_INIT_PREFIX/xtc-repo.init.gradle.kts.template"
+        private val XTC_REPO_PROPERTY_USER = "$XTC_REPO_PROPERTY_PREFIX.user"
+        private val XTC_REPO_PROPERTY_TOKEN = "$XTC_REPO_PROPERTY_PREFIX.token"
+        private val XTC_REPO_PROPERTY_URL = "$XTC_REPO_PROPERTY_PREFIX.url"
 
         private const val LAUNCHER = "xec"
         private const val ENV_PATH = "PATH"
