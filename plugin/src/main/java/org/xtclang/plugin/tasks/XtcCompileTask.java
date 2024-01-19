@@ -2,7 +2,6 @@ package org.xtclang.plugin.tasks;
 
 import kotlin.Pair;
 import org.gradle.api.file.Directory;
-import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -17,23 +16,19 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 import org.xtclang.plugin.XtcCompilerExtension;
+import org.xtclang.plugin.XtcPluginUtils;
+import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.CommandLine;
 
 import javax.inject.Inject;
-import java.nio.file.Files;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
-import static org.xtclang.plugin.XtcProjectDelegate.hasFileExtension;
 
 @CacheableTask
 public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
@@ -201,19 +196,19 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         final String moduleVersion = resolveModuleVersion();
         if (moduleVersion != null) {
             if (delegate.hasVerboseLogging()) {
-                logger.lifecycle("{} Task '{}' Stamping XTC module with version: '{}'", prefix, getName(), moduleVersion);
+                logger.lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
             }
             args.add("--set-version", moduleVersion);
         }
         args.addRepeated("-L", resolveXtcModulePath());
         final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).toList();
         if (sourceFiles.isEmpty()) {
-            logger.warn("{} Task '{}' No source file found for source set: '{}'", prefix, getName(), sourceSet.getName());
+            logger.warn("{} No source file found for source set: '{}'", prefix, sourceSet.getName());
         }
         sourceFiles.forEach(args::addRaw);
 
         final var launcher = createLauncher();
-        handleExecResult(delegate.getProject(), launcher.apply(args));
+        handleExecResult(launcher.apply(args));
         finalizeOutputs();
         // TODO outputFilename default task property?
     }
@@ -224,27 +219,21 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             return getXtcVersion().get();
         }
         return null;
-        // TODO what is correct?
-        //final String projectVersion = project.getVersion().toString();
-        //logger.warn("{} Task '{}', no xtcVersion property available. Should query XDK dependency for xtcVersion, Defaulting to project version: '{}'", prefix, taskName, projectVersion);
-        //return Project.DEFAULT_VERSION.equals(projectVersion) ? null : projectVersion;
     }
 
     private void finalizeOutputs() {
-        delegate.getProject().fileTree(getOutputXtcModules()).filter(delegate::isXtcBinary).forEach(oldFile -> {
+        project.fileTree(getOutputXtcModules()).filter(FileUtils::isValidXtcModule).forEach(oldFile -> {
             final String oldName = oldFile.getName();
             final String newName = resolveOutputFilename(oldName);
-            final File newFile;
             if (oldName.equals(newName)) {
-                newFile = oldFile;
                 logger.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
             } else {
-                newFile = new File(oldFile.getParentFile(), newName);
+                final File newFile = new File(oldFile.getParentFile(), newName);
                 logger.info("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
                 logger.info("{} File tree scan: {} should be renamed to {}", delegate, oldFile, newFile);
                 if (!oldFile.renameTo(newFile)) {
                     // TODO does this update the output? Seems like it. Write a unit test.
-                    throw delegate.buildException("Failed to rename " + oldFile + " to " + newFile);
+                    throw buildException("Failed to rename '{}' to '{}", oldFile, newFile);
                 }
             }
         });
@@ -257,34 +246,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     }
 
     private Set<File> resolveXtcModulePath() {
-        return delegate.resolveModulePath(getName(), getInputDeclaredDependencyModules());
-    }
-
-    private boolean isXtcSourceFile(final File file) {
-        // TODO: Previously we called a Launcher method to ensure this was a module, but all these files should be in the top
-        //   level directory of a source set, and this means that xtc will assume they are all module definitions, and fail if this
-        //   is not the case. We used to check for this in the plugin, but we really do not want the compile time dependency to
-        //   the javatools.jar in the plugin, as the plugin comes in early. This would have bad side effects, like "clean" would
-        //   need to build the javatools.jar, if it wasn't there, just to immediately delete it again.
-        return file.isFile() && hasFileExtension(file, XTC_SOURCE_FILE_EXTENSION);
-    }
-
-    private boolean isTopLevelXtcSourceFile(final File file) {
-        return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(file);
-    }
-
-    private boolean isTopLevelSource(final File file) {
-        assert file.isFile();
-        final var topLevelSourceDirs = new HashSet<>(sourceSet.getAllSource().getSrcDirs());
-        final var dir = file.getParentFile();
-        assert (dir != null && dir.isDirectory());
-        final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
-        if (isTopLevelSrc || "mack.x".equalsIgnoreCase(file.getName())) {
-            logger.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
-            return true;
-        }
-        return false;
+        return resolveModulePath(getInputDeclaredDependencyModules());
     }
 
     private String resolveOutputFilename(final String from) {

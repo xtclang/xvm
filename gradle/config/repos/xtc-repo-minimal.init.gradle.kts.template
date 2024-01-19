@@ -6,7 +6,7 @@
 
 import kotlin.io.path.writeText
 
-val initScriptBranch = "xtc-first-plugin"
+val initScriptBranch = "xtc-plugin"
 val initScriptUrl    = "https://raw.githubusercontent.com/xtclang/xvm/$initScriptBranch/gradle/config/repos/xtc-repo.init.gradle.kts.template"
 
 fun fetch(url: String): String {

@@ -105,7 +105,7 @@ val sanityCheckJar by tasks.registering {
     onlyIf {
         checkJar
     }
-    val expectedEntryCount = getXdkProperty("org.xtclang.javatools.verifyJar.expectedFileCount", "-1").toInt()
+    val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
     inputs.file(jar.get().archiveFile)
     noOutputs()
 

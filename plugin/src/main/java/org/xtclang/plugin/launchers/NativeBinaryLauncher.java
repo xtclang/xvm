@@ -25,7 +25,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         final var mainClassName = cmd.getMainClassName();
         final var jvmArgs = cmd.getJvmArgs();
         if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
-            logger.warn("{} WARNING: Task '{}' with mainClassName '{}' has non-default JVM args ({}). These will be ignored, as we are running a native launcher.", prefix, taskName, mainClassName, jvmArgs);
+            logger.warn("{} WARNING: Launcher for mainClassName '{}' has non-default JVM args ({}). These will be ignored, as we are running a native launcher.", prefix, mainClassName, jvmArgs);
         }
         return super.validateCommandLine(cmd);
     }
@@ -45,7 +45,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("{} Launching '{}' task: {}}", prefix, taskName, this);
+        logger.info("{} Launching task: {}}", prefix, this);
         validateCommandLine(cmd);
         if (hasVerboseLogging()) {
             logger.lifecycle("{} NativeExec command: {}", prefix, cmd.toString());

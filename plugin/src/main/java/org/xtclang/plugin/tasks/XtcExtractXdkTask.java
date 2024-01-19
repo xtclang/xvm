@@ -15,12 +15,14 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import javax.inject.Inject;
 import java.io.File;
 
-import static org.xtclang.plugin.XtcPluginConstants.XDK_EXTRACT_TASK_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_EXTRACT_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.getFileExtension;
 
 @CacheableTask
 public abstract class XtcExtractXdkTask extends XtcDefaultTask {
@@ -32,7 +34,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     }
 
     private static boolean isXdkArchive(final File file) {
-        return XDK_ARCHIVE_DEFAULT_EXTENSION.equals(XtcProjectDelegate.getFileExtension(file));
+        return XDK_ARCHIVE_DEFAULT_EXTENSION.equals(getFileExtension(file));
     }
 
     @InputFiles
@@ -62,12 +64,12 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
         // If there are no archives, we do not depend on the XDK.
         final var archiveFile = archives.getSingleFile();
-        delegate.getProject().copy(config -> {
+        project.copy(config -> {
             logger.info("{} CopySpec: XDK archive file dependency: {}", prefix, archiveFile);
-            config.from(delegate.getProject().zipTree(archiveFile));
+            config.from(project.zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
-                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + "*jar",
+                    "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX,
                     XDK_VERSION_PATH);
             config.eachFile(fileCopyDetails -> fileCopyDetails.setRelativePath(new RelativePath(true, fileCopyDetails.getName())));
             config.setIncludeEmptyDirs(false);

@@ -75,7 +75,7 @@ val processResources by tasks.existing(ProcessResources::class) {
             printTaskInputs()
             printTaskOutputs()
             printTaskDependencies()
-// TODO: Add another task that overwrites the source code with the results? Or do we want to do that manually?
+            // TODO: Add another task that overwrites the source code with the results? Or do we want to do that manually?
             logger.warn("$prefix *** Rebuilt the unicode tables. New tables are the '$name' outputs.")
             logger.warn("$prefix *** Please copy the files manually to the lib-ecstasy src/main/resources directory and commit, if you want to update the pre-built unicode tables in source control.")
         }

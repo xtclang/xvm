@@ -21,9 +21,16 @@ import org.xtclang.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.HashSet;
 import java.util.Set;
 
+import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.hasFileExtension;
+
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
+    // This is just necessary since we assume some things about module definition source locations. It should not be exported.
+    private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
+
     private final PatternFilterable patternSet;
 
     private ConfigurableFileCollection sourceFiles;
@@ -32,12 +39,12 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     protected XtcSourceTask(final XtcProjectDelegate delegate, final String taskName, final SourceSet sourceSet) {
         super(delegate, taskName, sourceSet, delegate.resolveXtcCompileExtension());
         this.patternSet = getPatternSetFactory().create();
-        this.sourceFiles = delegate.getObjects().fileCollection();
+        this.sourceFiles = objects.fileCollection();
     }
 
     @Inject
     protected Factory<PatternSet> getPatternSetFactory() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("XtcSourceTask.getPatternSetFactory()");
     }
 
     @SuppressWarnings("unused")
@@ -80,7 +87,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
      * @param source The source.
      */
     public void setSource(final Object source) {
-        sourceFiles = delegate.getObjects().fileCollection().from(source);
+        sourceFiles = objects.fileCollection().from(source);
     }
 
     /**
@@ -195,5 +202,32 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         logger.info("{} Touch file: {} (timestamp: {} -> {})", prefix, file.getAbsolutePath(), oldLastModified, now);
         assert(file.lastModified() == now);
         return now;
+    }
+
+    protected boolean isXtcSourceFile(final File file) {
+        // TODO: Previously we called a Launcher method to ensure this was a module, but all these files should be in the top
+        //   level directory of a source set, and this means that xtc will assume they are all module definitions, and fail if this
+        //   is not the case. We used to check for this in the plugin, but we really do not want the compile time dependency to
+        //   the javatools.jar in the plugin, as the plugin comes in early. This would have bad side effects, like "clean" would
+        //   need to build the javatools.jar, if it wasn't there, just to immediately delete it again.
+        return file.isFile() && hasFileExtension(file, XTC_SOURCE_FILE_EXTENSION);
+    }
+
+    protected boolean isTopLevelXtcSourceFile(final File file) {
+        return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(file);
+    }
+
+    protected boolean isTopLevelSource(final File file) {
+        assert file.isFile();
+        final var topLevelSourceDirs = new HashSet<>(sourceSet.getAllSource().getSrcDirs());
+        final var dir = file.getParentFile();
+        assert (dir != null && dir.isDirectory());
+        final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
+        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
+        if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
+            logger.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
+            return true;
+        }
+        return false;
     }
 }

@@ -22,7 +22,7 @@ public final class XtcPluginConstants {
     // XTC Compile time constants
     public static final String XTC_EXTENSION_NAME_COMPILER = "xtcCompile";
     public static final String XTC_COMPILER_CLASS_NAME = "org.xvm.tool.Compiler";
-    public static final String XTC_COMPILER_LAUNCHER_NAME = "xtc"; // TODO: xcc
+    public static final String XTC_COMPILER_LAUNCHER_NAME = "xcc";
     @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
     public static final String XTC_COMPONENT_VARIANT_COMPILE = "compile";
 
@@ -48,9 +48,9 @@ public final class XtcPluginConstants {
 
     // Library (mostly Java tools) constants:
     public static final String XDK_JAVATOOLS_ARTIFACT_ID = "javatools";
+    public static final String XDK_JAVATOOLS_ARTIFACT_SUFFIX = "jar";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
-    public static final String JAR_MANIFEST_PATH = "META-INF/MANIFEST.MF";
 
     // Config artifacts from the XDK build:
     public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR = "javatools-fatjar";
@@ -59,8 +59,12 @@ public final class XtcPluginConstants {
     public static final String XTC_PLUGIN_VERBOSE_PROPERTY = "ORG_XTCLANG_PLUGIN_VERBOSE";
 
     // Default "empty" values for collections and Gradle API classes.
-    public static final Set<File> NONE = Collections.emptySet();
+    public static final Set<File> EMPTY_FILE_COLLECTION = Collections.emptySet();
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
+
+    // JavaTools (launcher native code)
+    public static final String JAR_MANIFEST_PATH = "META-INF/MANIFEST.MF";
+    public static final String JAVATOOLS_JAR_NAME = "javatools.jar";
 
     // XTC Magic Number, for future verification of XTC module binaries, and for parts of language server support.
     @SuppressWarnings("unused")

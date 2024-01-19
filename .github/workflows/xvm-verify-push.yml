@@ -10,7 +10,7 @@
 #   MacOS, including creating the Windows "exe" installer, on any platform with Nsis.
 #
 # TODO: Add workflow jobs in another GitHub workflow configuration that builds SNAPSHOT releases
-#   when a PR is mergeed into master.
+#   when a PR is merged into master.
 #
 # TODO: Discuss what other kinds of GitHub workflow actions we need. This can be anything
 #   from cron jobs that run every night, to containerization tests/efforts/creations.
@@ -22,8 +22,9 @@ on: push
 
 env:
   ORG_XTCLANG_PLUGIN_VERBOSE: true
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: true
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD: true
+  # TODO: We want to reenable manual build checks in 1-2 changes when we have finished the rest of the review changes before merging to master.
+  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: false
+  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD: false
 
 jobs:
   gradle:

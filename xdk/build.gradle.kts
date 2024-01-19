@@ -147,6 +147,7 @@ publishing {
 val installInitScripts by tasks.registering(Copy::class) {
     group = PUBLISH_TASK_GROUP
     description = "Write the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
+    alwaysRerunTask()
     from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
         eachFile {
             // TODO: decide if "must be online" trumps "install once", as to which script template
@@ -159,8 +160,8 @@ val installInitScripts by tasks.registering(Copy::class) {
     }
     into(userInitScriptDirectory)
     doLast {
-        printAllTaskInputs()
-        printAllTaskOutputs()
+        printAllTaskInputs(INFO)
+        printAllTaskOutputs(INFO)
     }
 }
 
@@ -263,14 +264,6 @@ val assembleDist by tasks.existing {
         logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
         dependsOn(distExe)
     }
-    doFirst {
-        logger.info("$prefix $name; Assembling distribution...")
-    }
-    doLast {
-        logger.info("$prefix $name: Assembled distribution.")
-        printTaskInputs(INFO)
-        printTaskOutputs(INFO)
-    }
 }
 
 val distExe by tasks.registering {
@@ -324,6 +317,7 @@ val distExe by tasks.registering {
         stdout.toString().lines().forEach { logger.info("$prefix     $it") }
     }
 }
+
 
 val test by tasks.existing {
     val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
