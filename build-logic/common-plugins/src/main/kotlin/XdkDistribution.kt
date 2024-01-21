@@ -37,7 +37,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
         if (CI_ENABLED) {
             val buildNumber = System.getenv(BUILD_NUMBER) ?: ""
-            val gitCommitHash = XdkBuildLogic.executeCommand(project, "git", "rev-parse", "HEAD")
+            val gitCommitHash = project.executeCommand("git", "rev-parse", "HEAD")
             if (buildNumber.isNotEmpty() || gitCommitHash.isNotEmpty()) {
                 logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$gitCommitHash')")
                 return@buildString
@@ -49,10 +49,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     fun getLocalDistBackupDir(localDistPath: String): Provider<Directory> {
         val path = "$LOCALDIST_BACKUP_DIR/$localDistPath/${getDateTimeStampWithTz().replace(' ', '-')}"
         return project.layout.buildDirectory.dir(path)
-    }
-
-    fun shouldPublishPluginToLocalDist(): Boolean {
-        return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {

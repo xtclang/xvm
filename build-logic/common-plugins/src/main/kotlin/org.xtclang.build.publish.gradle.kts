@@ -5,9 +5,12 @@ plugins {
     id("maven-publish") // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication. We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or find a better way to add the default maven publication.
 }
 
-private val xtcGitHubClient = xdkBuild.github()
-private val publishLocalDist = xdkBuild.distro().shouldPublishPluginToLocalDist()
-private val localPublishTasks = provider { tasks.withType<PublishToMavenRepository>().filter{ it.name.contains("Local") }.toList() }
+/*
+ * Should we publish the plugin to a common build repository and copy it to any localDist?
+ */
+private fun shouldPublishPluginToLocalDist(): Boolean {
+    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
+}
 
 /**
  * Configure repositories for XDK artifact publication. Currently, we publish the XDK zip "xdkArchive", and
@@ -18,7 +21,7 @@ publishing {
         logger.info("$prefix Configuring publications for repository mavenLocal().")
         mavenLocal()
 
-        if (publishLocalDist) {
+        if (shouldPublishPluginToLocalDist()) {
             logger.info("$prefix Configuring publications for repository local flat dir: '$buildRepoDirectory'")
             maven {
                 name = "build"
@@ -28,7 +31,7 @@ publishing {
         }
 
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
-        with (xtcGitHubClient) {
+        with (xdkBuildLogicProvider.get().github()) {
             if (verifyGitHubConfig()) {
                 logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
                 maven {
@@ -76,19 +79,17 @@ val publishLocal by tasks.registering {
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
-    if (publishLocalDist) {
+    if (shouldPublishPluginToLocalDist()) {
         logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
         delete(buildRepoDirectory)
     }
 }
 
-if (publishLocalDist) {
+if (shouldPublishPluginToLocalDist()) {
     logger.warn("$prefix Configuring local distribution plugin publication.")
     val publishAllPublicationsToBuildRepository by tasks.existing {
-        if (publishLocalDist) {
-            dependsOn(pruneBuildRepo)
-            mustRunAfter(pruneBuildRepo)
-        }
+        dependsOn(pruneBuildRepo)
+        mustRunAfter(pruneBuildRepo)
     }
     publishLocal {
         dependsOn(publishAllPublicationsToBuildRepository)
@@ -108,7 +109,8 @@ val listAllLocalPublications by tasks.registering {
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
         logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
-        localPublishTasks.get().forEach {
+        //private val localPublishTasks = provider { tasks.withType<PublishToMavenRepository>().filter{ it.name.contains("Local") }.toList() }
+        tasks.withType<PublishToMavenRepository>().filter { it.name.contains("Local") }.forEach {
             with(it.publication) {
                 logger.lifecycle("$prefix     '${it.name}' (${artifacts.count()} artifacts):")
                 val baseUrl = "${it.repository.url}${groupId.replace('.', '/')}/$artifactId/$version/$artifactId"
@@ -132,15 +134,16 @@ val listAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
+        val github = xdkBuildLogicProvider.get().github()
         logger.lifecycle("$prefix '$name' Listing remote publications for project '${project.group}:${project.name}':")
-        val packageNames = xtcGitHubClient.queryXtcLangPackageNames()
+        val packageNames = github.queryXtcLangPackageNames()
         if (packageNames.isEmpty()) {
             logger.lifecycle("$prefix   No Maven packages found.")
             return@doLast
         }
         packageNames.forEach { pkg ->
             logger.lifecycle("$prefix    Maven package: '$pkg':")
-            val versions = xtcGitHubClient.queryXtcLangPackageVersions(pkg)
+            val versions = github.queryXtcLangPackageVersions(pkg)
             if (versions.isEmpty()) {
                 logger.warn("$prefix        WARNING: No versions found for this package. Corrupted package repo?")
                 return@forEach
@@ -154,7 +157,8 @@ val deleteAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description =  "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
-        xtcGitHubClient.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
+        val github = xdkBuildLogicProvider.get().github()
+        github.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
         logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
     }
 }

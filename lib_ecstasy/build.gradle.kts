@@ -47,23 +47,21 @@ sourceSets {
             // mack.x is in a different project, and does not build on its own, hence we add it to the lib_ecstasy source set instead.
             srcDir(xdkTurtle)
         }
-        resources {
+        //resources {
             // Skip the local unicode files if we are in "rebuild unicode" mode.
-            if (xdkBuild.rebuildUnicode()) {
-                exclude("**/ecstasy/text**")
-            }
-        }
+            //if (xdkBuild.rebuildUnicode()) {
+            //    exclude("**/ecstasy/text**")
+            //}
+        //}
     }
 }
 
 // We need extra resources.
 val processResources by tasks.existing(ProcessResources::class) {
-    val rebuildUnicode = xdkBuild.rebuildUnicode()
-
-// We can't use onlyIf here, since we need processResources to copy the src/main/resources files to the build, from where
-// they are picked up by the compileXtc tasks. CompileXtc respects Gradle semantics and allows for a processResources
-// (default is a plain lifecycle intra-project copy) to modify the resources, if needed.
-    if (rebuildUnicode) {
+    // We can't use onlyIf here, since we need processResources to copy the src/main/resources files to the build, from where
+    // they are picked up by the compileXtc tasks. CompileXtc respects Gradle semantics and allows for a processResources
+    // (default is a plain lifecycle intra-project copy) to modify the resources, if needed.
+    if (getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false)) {
         val javaToolsUnicode = gradle.includedBuild("javatools_unicode")
         val rebuildUnicodeOutput = File(
             javaToolsUnicode.projectDir,
