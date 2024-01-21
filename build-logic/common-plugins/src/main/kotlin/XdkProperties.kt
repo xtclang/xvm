@@ -20,10 +20,16 @@ import java.util.Properties
  * The property helper tries to ensure that no standard or inherited task that derives from, ore
  * uses "./gradlew properties" will inadvertently dump secrets to the console.
  */
-class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
+interface XdkProperties {
+    fun get(key: String, defaultValue: String? = null): String
+    fun get(key: String, defaultValue: Int? = 0): Int
+    fun get(key: String, defaultValue: Boolean? = false): Boolean
+    fun has(key: String): Boolean
+}
+
+class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkProperties {
     companion object {
         const val REDACTED = "[REDACTED]"
-
         private const val PROPERTIES_EXT = "properties"
 
         /**
@@ -63,7 +69,7 @@ class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
      * in a build run, that isn't declared in a property file. Examples could be testing out
      * a new GitHub token, or adding an environment variable that the plugin needs at start
      * time (for example, because the project logger outputs aren't inherited by default in
-     * a plugin, even if it has access to the actual project.logger instance), for the
+     * a plugin, even if it has access to the actual project logger instance), for the
      * project to which the plugin is applied.
      *
      * If the method fails to find the value of a property, both in its resolved property
@@ -71,7 +77,18 @@ class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
      * parameter. If no default value was supplied, an exception will be thrown, and the
      * build breaks.
      */
-    fun get(key: String, defaultValue: String? = null): String {
+    override fun get(key: String, defaultValue: String?): String {
+        logger.info("$prefix get($key) invoked (props: ${System.identityHashCode(this)})")
+        if (!key.startsWith("org.xtclang")) {
+            // TODO: Remove this artificial limitation.
+            throw project.buildException("ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
+        }
+        if (!has(key)) {
+            return defaultValue?.also {
+                logger.info("$prefix XdkProperties; resolved property '$key' to its default value.")
+            } ?: throw project.buildException("ERROR: XdkProperty '$key' has no value, and no default was given.")
+        }
+
         // First check a system env override
         val envKey = toSystemEnvKey(key)
         val envValue = System.getenv(envKey)
@@ -86,18 +103,20 @@ class XdkProperties(project: Project): XdkProjectBuildLogic(project) {
             return sysPropValue.toString()
         }
 
-        // Finally, look up in table or fallback to default value.
-        val value = properties[key] ?: System.getenv(toSystemEnvKey(key)) ?: defaultValue
-        if (value == null && defaultValue == null) {
-            throw project.buildException("ERROR: XdkProperty '$key' has no value, and no default was given.")
-        }
-
-        logger.info("$prefix XdkProperties; resolved property '$key' from properties table (defaultValue: '$defaultValue')")
-        return value.toString()
+        logger.info("$prefix XdkProperties; resolved property '$key' from properties table.")
+        return properties[key]!!.toString()
     }
 
-    fun has(key: String): Boolean {
-        return properties[key] != null
+    override fun get(key: String, defaultValue: Int?): Int {
+        return get(key, defaultValue?.toString()).toInt()
+    }
+
+    override fun get(key: String, defaultValue: Boolean?): Boolean {
+        return get(key, defaultValue.toString()).toBoolean()
+    }
+
+    override fun has(key: String): Boolean {
+        return properties[key] != null || System.getenv(toSystemEnvKey(key)) != null || System.getProperty(key) != null
     }
 
     override fun toString(): String {

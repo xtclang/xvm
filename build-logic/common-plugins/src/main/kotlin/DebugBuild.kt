@@ -138,7 +138,7 @@ fun Project.printTaskDependencies(level: LogLevel = LIFECYCLE, taskName: String)
     val parents = task.taskDependencies.getDependencies(task).toSet()
     logger.log(level, "$prefix     Task '$projectName:$taskName' depends on ${parents.size} other tasks.")
     parents.forEach {
-        logger.log(level, "$prefix             Task '$projectName:$taskName' <- dependsOn: '$projectName:${it.name}'")
+        logger.log(level, "$prefix             Task '$projectName:$taskName' <- dependsOn: '${it.project.name}:${it.name}'")
     }
     val children = project.tasks.filter {
         var match = false // TODO: Better kotlin.

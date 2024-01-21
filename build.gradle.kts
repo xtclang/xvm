@@ -4,8 +4,6 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 /*
  * Main build file for the XVM project, producing the XDK.
  */
-//group = libs.versions.group.xdk.get()
-//version = libs.versions.xdk.get()
 
 plugins {
     alias(libs.plugins.xdk.build.versioning)
@@ -25,16 +23,9 @@ private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
  * of the root build.gradle.kts, we have installed convention plugins, resolved version catalogs
  * and similar things.
  */
-
 val install by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
-    doLast {
-        logger.info("$prefix Finished $name (overwrote existing XDK distribution).")
-    }
-}
-
-install {
     XdkDistribution.distributionTasks.forEach {
         dependsOn(xdk.task(":$it"))
     }
@@ -45,25 +36,6 @@ val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(xdk.task(":$name"))
-    doLast {
-        logger.lifecycle("$prefix Finished $name (overwrote existing XDK distribution).")
-    }
-}
-
-fun getTaskStateDescriptor(state: TaskState): Map<String, Any> {
-    return buildMap {
-        put("didWork", state.didWork)
-        put("executed", state.executed)
-    }
-}
-
-val installInitScripts by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Install bootstrapping scripts for the XTC Organization GitHub Maven package registry."
-    dependsOn(xdk.task(":$name"))
-    doLast {
-        logger.lifecycle("$prefix Finished '$name' [task state: ${getTaskStateDescriptor(state)}]")
-    }
 }
 
 /*
@@ -76,27 +48,24 @@ val installInitScripts by tasks.registering {
  * output directory, which should be the case here. If not, we will have to put back the
  * parallel check/task failure condition.
  */
-
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
-        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately efter plugin branch gets merged to master)
-    }
-    doLast {
-        logger.lifecycle("$prefix Finished '$name'.")
+        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately after plugin branch gets merged to master)
     }
 }
 
+/*
+ * Publish local publications, which are the mavenLocal repositry, and the build repo, as part of
+ * an XTC distribution archive. The former is on by default, the latter is off.
+ */
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":$name"))
-    }
-    doLast {
-        logger.lifecycle("$prefix Finished '$name'.")
     }
 }
 
@@ -104,9 +73,6 @@ val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
-    doLast {
-        logger.lifecycle("$prefix Finished '$name'.")
-    }
 }
 
 GitHubPackages.publishTaskPrefixes.forEach { prefix ->
@@ -120,9 +86,6 @@ GitHubPackages.publishTaskPrefixes.forEach { prefix ->
             description = "Task that aggregates '$taskName' tasks for builds with publications."
             includedBuildsWithPublications.forEach {
                 dependsOn(it.task(":$taskName"))
-            }
-            doLast {
-                logger.lifecycle("$prefix Finished '$name'.")
             }
         }
     }

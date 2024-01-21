@@ -1,14 +1,14 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
-import XdkBuildLogic.Companion.findLocalXdkInstallation
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.logging.LogLevel.INFO
-import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
+import java.nio.file.Files
+import java.nio.file.attribute.FileAttribute
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -73,9 +73,8 @@ dependencies {
 }
 
 private val semanticVersion: SemanticVersion by extra
-logger.lifecycle("$prefix *** Building XDK; semantic version: '$semanticVersion' ***")
 
-private val xdkDist = xdkBuild.distro()
+private val xdkDist = xdkBuildLogic.distro()
 
 /**
  * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
@@ -89,18 +88,6 @@ subprojects {
          */
         assert(version == semanticVersion.artifactVersion)
         xtcVersion = semanticVersion.artifactVersion
-
-        /*
-         * Proof of concept of what was previously an overlapping extra @OutputDirectory,
-         * and the additionalOutputDir property, which led to caching issues and non-parallel
-         * builds. We actually have incremental dependency aware copy tasks in Gradle already, d'uuh.
-         */
-        doLast {
-            copy {
-                from(outputs.files.asFileTree)
-                into(compositeRootBuildDirectory.dir("xdk"))
-            }
-        }
     }
 }
 
@@ -128,47 +115,14 @@ publishing {
     }
 }
 
-// TODO: Add Nexus snapshot and release repositories here:
-
-/**
- * Run once, to create templates in GRADLE_USER_HOME/init.d/ for an XTC Org user with
- * just read:package access (in a safe token). This is a workaround for GitHub requiring
- * authentication for package access, even for public packages in public repos. People
- * have asked about this feature for almost five years now.
- *
- * However, as soon as we have changed artifact groups for our publications to "org.xtclang"
- * instead of "org.xvm", we can prove domain ownership of the former with gradlePluginPortal()
- * and mavenCentral(), and provide packages that are *really* public. In the meantime, in order
- * to get everyone up and running as quickly as possible, this task is the bootstrap mechanism
- * to work with the GitHub Package Repo, but not having to add various tokens and credentials.
- *
- * Security review completed satisfactorily.
- */
-val installInitScripts by tasks.registering(Copy::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Write the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
-    alwaysRerunTask()
-    from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
-        eachFile {
-            // TODO: decide if "must be online" trumps "install once", as to which script template
-            //   should be default. We copy all the files to GRADLE_USER_HOME/init.d, though, but we do
-            //   not rename the non-default version.
-            if (!name.contains("minimal")) {
-                name = name.removeSuffix(".template")
-            }
-        }
-    }
-    into(userInitScriptDirectory)
-    doLast {
-        printAllTaskInputs(INFO)
-        printAllTaskOutputs(INFO)
-    }
+private fun shouldPublishPluginToLocalDist(): Boolean {
+    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
 }
 
 val publishPluginToLocalDist by tasks.registering {
     group = BUILD_GROUP
     // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
-    if (xdkDist.shouldPublishPluginToLocalDist()) {
+    if (shouldPublishPluginToLocalDist()) {
         dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
         outputs.dir(buildRepoDirectory)
         doLast {
@@ -188,8 +142,9 @@ distributions {
         assert(distributionBaseName.get() == "xdk") // TODO: Should really rename the distribution to "xdk" explicitly per convention.
         contents {
             // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
+            // TODO WE should really not do get() here.
             val resources = tasks.processResources.get().outputs.files.asFileTree
-
+            logger.info("$prefix Distribution contents need to use lazy resources.")
             /*
              * 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
              * 2) copy xdk resources/main/xdk to install/xdk/libexec
@@ -225,7 +180,7 @@ distributions {
                 }
                 into("libexec/javatools") // should just be one file with corrected dependencies, assert?
             }
-            if (xdkDist.shouldPublishPluginToLocalDist()) {
+            if (shouldPublishPluginToLocalDist()) {
                 val published = publishPluginToLocalDist.get().outputs.files
                 from(published) {
                     into("repo")
@@ -236,19 +191,17 @@ distributions {
     }
 }
 
-val clean by tasks.existing {
-    doFirst {
-        logger.warn("$prefix Task '$name' is often unnecessary. Are you sure you don't just need to call './gradlew build' again?")
+val cleanXdk by tasks.registering(Delete::class) {
+    subprojects.forEach {
+        delete(it.layout.buildDirectory)
     }
+    delete(compositeRootBuildDirectory)
+}
+
+val clean by tasks.existing {
+    dependsOn(cleanXdk)
     doLast {
-        subprojects.forEach {
-            // Hack to handle subprojects clean, not includedBuilds, where dependencies are auto-resolved by the aggregator.
-            val subProjectBuildDir = it.layout.buildDirectory.get().asFile
-            delete(it.layout.buildDirectory)
-            logger.info("$prefix Task '$name' cleaned subproject ${it.name} build directory (buildDir: '$subProjectBuildDir')")
-        }
-        delete(compositeRootBuildDirectory)
-        logger.info("$prefix Task '$name' cleaned composite build common build directory: ${compositeRootBuildDirectory.get()}")
+        logger.info("$prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.")
     }
 }
 
@@ -339,74 +292,8 @@ val installDist by tasks.existing {
 }
 
 /**
- * Find a locally installed XDK distribution on the build machine.
- */
-val findLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Find and add any local XDK installation from the PATH."
-    val localDistDir = findLocalXdkInstallation() // done during config
-    if (localDistDir == null) {
-        logger.info("$prefix '$name' No local XTC installation found.")
-    } else {
-        outputs.dir(localDistDir)
-    }
-    doLast {
-        logger.lifecycle("$prefix Detected existing local XTC installation at: '$localDistDir'")
-        XdkBuildLogic.listDirWithTimestamps(localDistDir!!).lines().forEach {
-            logger.lifecycle("$prefix   $it")
-        }
-    }
-}
-
-/**
- * Backup any XDK distribution installed on the build machine. Will be run as a precaution
- * before "installLocalDist".
- */
-val backupLocalDist by tasks.registering(Copy::class) {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Backs up a local installation to build dir before starting to overwrite."
-    val localDist = xdkBuild.resolveLocalXdkInstallation()
-    val dest = xdkDist.getLocalDistBackupDir(localDist.name)
-    from(localDist).into(dest)
-    doLast {
-        logger.lifecycle("$prefix Backed up local installation at $localDist to ${dest.get()}")
-    }
-}
-
-val purgeLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Remove any existing local XDK distribution."
-    dependsOn(backupLocalDist)
-    mustRunAfter(backupLocalDist)
-    doLast {
-        val localDistDir = findLocalXdkInstallation()
-        val allowOverwrite = getXdkPropertyBoolean("org.xtclang.build.allowOverwriteLocalDist", true)
-        if (localDistDir != null) {
-            if (!allowOverwrite) {
-                logger.lifecycle("$prefix '$name' will purge and replace existing local installation at: '$localDistDir'.")
-                delete(localDistDir)
-                mkdir(localDistDir)
-            } else {
-                logger.lifecycle("$prefix '$name' will overwrite existing local installation at '$localDistDir'.")
-            }
-        }
-    }
-}
-
-/**
- * Overwrite or install a local distribution of the XDK.
- *
- * TODO: This should be the only task that triggers the buildRepo plugin. Can we do that without
- *   knowing if this should be run or not, avoiding configuration of the extra publication if
- *   task is not set to run?
- *
- * TODO: It is unfortunate that we don't copy the entire XDK distribution over the existing
- *   install, because it creates confusion about dependencies. Ideally, the entire local install
- *   should be overwritten with a complete self-contained new distribution, but this is not the
- *   case in "master", and we first implement it exactly like that, semantically, to make sure
- *   nothing breaks in existing use cases. All in all, it's rather horrible to go in and replace
- *   parts of an existing home brew (or other package manager) based installation, and should
- *   really never be allowed, as it leads to bit skew.
+ * Overwrite or install a local distribution of the XDK under rootProjectDir/build/dist, which
+ * you could add to your path, for example
  *
  * TODO: @aalmiray recommends application plugin run script generation, and that makes sense to me.
  *   It should be possible to hook up JReleaser and/or something like launch4j to cross compile
@@ -415,22 +302,30 @@ val purgeLocalDist by tasks.registering {
  */
 val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
-    description = "Creates an XDK installation, and overwrites any local installation with it."
+    description = "Creates an XDK installation in root/build/dist, for the current platform."
 
-    dependsOn(purgeLocalDist, installDist)
-    mustRunAfter(purgeLocalDist)
+    val localDistDir = compositeRootBuildDirectory.dir("dist")
+
+    dependsOn(installDist)
+    inputs.files(installDist)
+    outputs.dir(localDistDir)
 
     doLast {
-        val localDistDir = xdkBuild.resolveLocalXdkInstallation() // throws exception if file not found.
-        val localDistVersion = localDistDir.name
-        logger.lifecycle("$prefix '$name' Overwriting local installation: $localDistVersion (path: '${localDistDir.absolutePath}')...")
-        copy {
+        // Sync, not copy, so we can do this declaratively, Gradle input/output style, without horrible file system logic.
+        sync {
             from(project.layout.buildDirectory.dir("install/xdk"))
             into(localDistDir)
         }
-        logger.lifecycle("$prefix '$name' Finished.")
-        XdkBuildLogic.listDirWithTimestamps(localDistDir).lines().forEach {
-            logger.lifecycle("$prefix   $it")
+
+        // Create symlinks for launcher.
+        val binDir = mkdir(localDistDir.get().dir("bin"))
+        val launcherExe = xdkDist.resolveLauncherFile(localDistDir)
+
+        // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
+        listOf("xcc", "xec", "xtc").forEach {
+            val symLink = File(binDir, it)
+            logger.info("$prefix Creating symlink for launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
+            Files.createSymbolicLink(symLink.toPath(), launcherExe.asFile.toPath())
         }
     }
 }

@@ -1,16 +1,13 @@
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
-import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.provider.Provider
-import org.gradle.kotlin.dsl.named
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
@@ -27,13 +24,47 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
     }
 }
 
-class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
-    companion object {
-        const val DEFAULT_JAVA_BYTECODE_VERSION = 20
-        const val XDK_TASK_GROUP_DEBUG = "debug"
+class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
+    private val xdkGitHub: GitHubPackages by lazy {
+        GitHubPackages(project)
+    }
 
-        // Artifact names for configuration artifacts. Gradle uses these during the build to identify various
-        // non-default style artifacts, that we use as part of resolvable and consumable configurations.
+    private val xdkVersions: XdkVersionHandler by lazy {
+        XdkVersionHandler(project)
+    }
+
+    private val xdkDistributions: XdkDistribution by lazy {
+        XdkDistribution(project)
+    }
+
+    private val xdkProperties: XdkProperties by lazy {
+        logger.info("$prefix Created lazy XDK Properties for project ${project.name}")
+        XdkPropertiesImpl(project)
+    }
+
+    fun props(): XdkProperties {
+        return xdkProperties
+    }
+
+    fun versions(): XdkVersionHandler {
+        return xdkVersions
+    }
+
+    fun distro(): XdkDistribution {
+        return xdkDistributions
+    }
+
+    fun github(): GitHubPackages {
+        return xdkGitHub
+    }
+
+    fun resolveLocalXdkInstallation(): File {
+        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
+    }
+
+    companion object {
+        const val DEFAULT_JAVA_BYTECODE_VERSION = 20 // TODO: We still have to compile to 20 bytecode, because Kotlin 1.9 does not support 21.
+        const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR = "javatools-fatjar"
         const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
@@ -42,32 +73,22 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
         private const val XTC_LAUNCHER = "xec"
         private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
-        private val cache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
+        private val singletonCache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
 
-        fun resolve(project: Project): XdkBuildLogic {
-            // Companion objects are guaranteed to be singletons by Kotlin, so this cache works as build global cache.
-            return cache[project] ?: XdkBuildLogic(project).also {
-                cache[project] = it
-                val logger = project.logger
-                val size = cache.size
-                val uniqueSize = cache.values.distinct().size
-                logger.info("${it.prefix} XDK build logic initialized (instances: ${size})")
-                assert(size == uniqueSize)
+        fun instanceFor(project: Project): XdkBuildLogic {
+            if (singletonCache.contains(project)) {
+                return singletonCache[project]!!
             }
-        }
 
-        fun executeCommand(project: Project, vararg args: String): String = project.run {
-            val output = ByteArrayOutputStream()
-            val result = project.exec {
-                commandLine(*args)
-                standardOutput = output
-                isIgnoreExitValue = false
-            }
-            if (result.exitValue != 0) {
-                logger.error("$prefix ERROR: Command '${args.joinToString(" ")}' failed with exit code ${result.exitValue}")
-                return ""
-            }
-            return output.toString().trim()
+            val instance = XdkBuildLogic(project)
+            singletonCache[project] = instance
+            project.logger.info(
+                    """
+                    ${project.prefix} Creating new XdkBuildLogic for project '${project.name}'
+                    ${project.prefix} (singletonCache)      ${System.identityHashCode(singletonCache)}
+                    ${project.prefix} (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
+                """.trimIndent())
+            return instance
         }
 
         fun getDateTimeStampWithTz(ms: Long = System.currentTimeMillis()): String {
@@ -102,56 +123,6 @@ class XdkBuildLogic(project: Project) : XdkProjectBuildLogic(project) {
             }.trim()
         }
     }
-
-    private val xdkProperties = XdkProperties(project)
-
-    private val xdkGitHub: GitHubPackages by lazy {
-        GitHubPackages(project)
-    }
-
-    private val xdkVersions: XdkVersionHandler by lazy {
-        XdkVersionHandler(project)
-    }
-
-    private val xdkDistributions: XdkDistribution by lazy {
-        XdkDistribution(project)
-    }
-
-    fun versions(): XdkVersionHandler {
-        return xdkVersions
-    }
-
-    fun distro(): XdkDistribution {
-        return xdkDistributions
-    }
-
-    fun github(): GitHubPackages {
-        return xdkGitHub
-    }
-
-    fun resolveLocalXdkInstallation(): File {
-        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
-    }
-
-    fun rebuildUnicode(): Boolean {
-        return xdkPropBool("org.xtclang.unicode.rebuild", false)
-    }
-
-    internal fun xdkPropIsSet(key: String): Boolean {
-        return xdkProperties.has(key)
-    }
-
-    internal fun xdkPropBool(key: String, defaultValue: Boolean? = null): Boolean {
-        return xdkProperties.get(key, defaultValue?.toString() ?: "false").toBoolean()
-    }
-
-    internal fun xdkPropInt(key: String, defaultValue: Int? = null): Int {
-        return xdkProperties.get(key, defaultValue?.toString() ?: "0").toInt()
-    }
-
-    internal fun xdkProp(key: String, defaultValue: String? = null): String {
-        return xdkProperties.get(key, defaultValue)
-    }
 }
 
 // TODO: Can we move these guys to the versions handler?
@@ -164,72 +135,80 @@ val Gradle.rootGradle: Gradle
         return dir
     }
 
-val Gradle.rootLayout: ProjectLayout
-    get() = rootGradle.rootProject.layout
+val Gradle.rootLayout: ProjectLayout get() = rootGradle.rootProject.layout
 
-val Project.compositeRootProjectDirectory
-    get() = gradle.rootLayout.projectDirectory
+val Project.compositeRootProjectDirectory: Directory get() = gradle.rootLayout.projectDirectory
 
-val Project.compositeRootBuildDirectory
-    get() = gradle.rootLayout.buildDirectory
+val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLayout.buildDirectory
 
-val Project.userInitScriptDirectory
-    get() = File(gradle.gradleUserHomeDir, "init.d")
+val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
 
-val Project.buildRepoDirectory: Provider<Directory>
-    get() = compositeRootBuildDirectory.dir("repo")
+val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
 
-val Project.xdkBuild: XdkBuildLogic
-    get() = XdkBuildLogic.resolve(this)
+val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
 
-val Project.prefix
-    get() = "[$name]"
+val Project.prefix: String get() = "[$name]"
 
-val Task.prefix
-    get() = "[${project.name}:$name]"
+val Task.prefix: String get() = "[${project.name}:$name]"
 
 // TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
 //  Better to add the resource directory as a source set?
-val Project.xdkIconFile: String
-    get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
+val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
 
-// TODO: A little bit hacky, for same reason as above.
-//  Better to add the resource directory as a source set?
-val Project.xdkImplicitsPath: String
-    get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
+// TODO: A little bit hacky, for same reason as above; Better to add the resource directory as a source set?
+val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
 
-val Project.xdkImplicitsFile: File
-    get() = File(xdkImplicitsPath)
+val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
+
+fun Project.executeCommand(vararg args: String): String = project.run {
+    val output = ByteArrayOutputStream()
+    val result = project.exec {
+        commandLine(*args)
+        standardOutput = output
+        isIgnoreExitValue = false
+    }
+    if (result.exitValue != 0) {
+        logger.error("$prefix ERROR: Command '${args.joinToString(" ")}' failed with exit code ${result.exitValue}")
+        return ""
+    }
+    return output.toString().trim()
+}
+
+// TODO these should probably be lazy for input purposes
 
 fun Project.isXdkPropertySet(key: String): Boolean {
-    return xdkBuild.xdkPropIsSet(key)
+    return xdkBuildLogic.props().has(key)
 }
 
 fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    return xdkBuild.xdkPropBool(key, defaultValue)
+    return xdkBuildLogic.props().get(key, defaultValue)
 }
 
 fun Project.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    return xdkBuild.xdkPropInt(key, defaultValue)
+    return xdkBuildLogic.props().get(key, defaultValue)
 }
 
 fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return xdkBuild.xdkProp(key, defaultValue)
+    return xdkBuildLogic.props().get(key, defaultValue)
+}
+
+private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
+    with(task) {
+        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
+    }
+    return value
 }
 
 fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    logger.info("$prefix Task tunneling property for $key to project")
-    return project.getXdkPropertyBoolean(key, defaultValue)
+    return registerXdkPropertyInput(this, key, project.getXdkPropertyBoolean(key, defaultValue))
 }
 
 fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    logger.info("$prefix Task tunneling property for $key to project")
-    return project.getXdkPropertyInt(key, defaultValue)
+    return registerXdkPropertyInput(this, key, project.getXdkPropertyInt(key, defaultValue))
 }
 
 fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
-    logger.info("$prefix Task tunneling property for $key to project")
-    return project.getXdkProperty(key, defaultValue)
+    return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }
 
 fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {
@@ -242,7 +221,7 @@ fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable 
  * Extension method that can be called during the configuration phase, marking its
  * task instance as forever out of date.
  */
-fun Task.alwaysRerunTask() {
+fun Task.considerNeverUpToDate() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
     logger.info("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
@@ -252,6 +231,6 @@ fun Task.alwaysRerunTask() {
  * Extension method to flag a task as always up to date. Declaring no outputs will
  * cause a task to rerun, even an extended task.
  */
-fun Task.noOutputs() {
+fun Task.considerAlwaysUpToDate() {
     outputs.upToDateWhen { true }
 }

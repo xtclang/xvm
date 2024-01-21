@@ -1,7 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
-import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
-import org.gradle.api.attributes.Usage.JAVA_RUNTIME
-import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -32,8 +29,12 @@ val xdkJavaToolsJarConsumer by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
-        attribute(USAGE_ATTRIBUTE, objects.named(JAVA_RUNTIME))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
+        //        attribute(CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        //        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
+        //        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(JAVA_RUNTIME))
+        //        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
     }
 }
 
@@ -95,36 +96,36 @@ tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publis
     )
 }
 
-val jar by tasks.existing(Jar::class) {
-    if (shouldBundleJavaTools) {
-        /*
-         * It's important that this is a provider/lazy, because xdkJavaToolsJarConsumer kickstarts an
-         * entire javatools fatjar build when you resolve it, and that's what we have to do if we want
-         * it in the plugin, even though we are just configuring here. We will lift out the manualTests
-         * "use the plugin as an external party" test from the build source line to make sure dependencies
-         * are preserved correctly, and also add a dry-run/vs real diff test to see that our build caching
-         * does not break.
-         */
-        inputs.files(xdkJavaToolsJarConsumer)
-        val jarFiles = { zipTree(xdkJavaToolsJarConsumer.get().singleFile) }
-        from(jarFiles)
-    }
-    manifest {
-        attributes(
-            "Manifest-Version" to "1.0",
-            "Xdk-Version" to semanticVersion.toString(),
-            "Main-Class" to "$pprefix.plugin.Usage",
-            "Name" to "/org/xtclang/plugin/",
-            "Sealed" to "true",
-            "Specification-Title" to "XTC Gradle and Maven Plugin",
-            "Specification-Vendor" to "xtclang.org",
-            "Specification-Version" to pluginVersion,
-            "Implementation-Title" to "xtc-plugin",
-            "Implementation-Vendor" to "xtclang.org",
-            "Implementation-Version" to pluginVersion,
-        )
-    }
-    doLast {
-        from(zipTree(xdkJavaToolsJarConsumer.get().singleFile))
+tasks.withType<Jar>().configureEach {
+    if (name == "jar") {
+        if (shouldBundleJavaTools) {
+            /*
+             * It's important that this is a provider/lazy, because xdkJavaToolsJarConsumer kickstarts an
+             * entire javatools fatjar build when you resolve it, and that's what we have to do if we want
+             * it in the plugin, even though we are just configuring here. We will lift out the manualTests
+             * "use the plugin as an external party" test from the build source line to make sure dependencies
+             * are preserved correctly, and also add a dry-run/vs real diff test to see that our build caching
+             * does not break.
+             */
+            // TODO with the right categories we could just instead of grabbing the JAR ask for the classes as outgoing config for javatools
+            inputs.files(xdkJavaToolsJarConsumer)
+            val jarFiles = { zipTree(xdkJavaToolsJarConsumer.get().singleFile) }
+            from(jarFiles)
+        }
+        manifest {
+            attributes(
+                "Manifest-Version" to "1.0",
+                "Xdk-Version" to semanticVersion.toString(),
+                "Main-Class" to "$pprefix.plugin.Usage",
+                "Name" to "/org/xtclang/plugin/",
+                "Sealed" to "true",
+                "Specification-Title" to "XTC Gradle and Maven Plugin",
+                "Specification-Vendor" to "xtclang.org",
+                "Specification-Version" to pluginVersion,
+                "Implementation-Title" to "xtc-plugin",
+                "Implementation-Vendor" to "xtclang.org",
+                "Implementation-Version" to pluginVersion,
+            )
+        }
     }
 }

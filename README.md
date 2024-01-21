@@ -391,13 +391,13 @@ XTC follow Gradle best practise, and you can run the build, or any task therein,
 verbosity flags. For example, to run the build with more verbose output, use:
 
 ```
-./gradlew build --info
+./gradlew build --info --stacktrace
 ```
 
 The build also supports Gradle build scans, which can be generated with:
 
 ```
-./gradlew build --scan
+./gradlew build --scan --stacktrace
 ```
 
 Note that build scans are published to the Gradle online build scan repository (as configured

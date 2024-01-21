@@ -11,5 +11,5 @@ plugins {
 }
 
 val semanticVersion by extra {
-    xdkBuild.versions().assignSemanticVersionFromCatalog()
+    xdkBuildLogic.versions().assignSemanticVersionFromCatalog()
 }

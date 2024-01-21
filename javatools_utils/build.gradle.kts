@@ -7,32 +7,12 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-val semanticVersion: SemanticVersion by extra
-
 val xdkJavaToolsUtilsProvider by configurations.registering {
-    description = "Provider configuration of the XVM java_utils-$version artifacts (classes/jars)."
+    description = "Provider configuration of the XVM javatools_utils classes."
     isCanBeResolved = false
     isCanBeConsumed = true
-    isVisible = false
-}
-
-val jar by tasks.existing(Jar::class) {
-    manifest {
-        attributes(
-            "Manifest-Version" to "1.0",
-            "Xdk-Version" to semanticVersion.toString(),
-            "Sealed" to "true",
-            "Name" to "/org/xvm/util",
-            "Specification-Title" to "xvm",
-            "Specification-Version" to "version",
-            "Specification-Vendor" to  "xtclang.org",
-            "Implementation-Title" to  "xvm-javatools-utils",
-            "Implementation-Version" to version,
-            "Implementation-Vendor" to "xtclang.org"
-        )
-    }
-    doLast {
-        val path = archiveFile.map { it.asFile.absolutePath }
-        logger.info("$prefix Finished building Java utilities: '$path' as artifact.")
-    }
+/*    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.CLASSES))
+    }*/
 }

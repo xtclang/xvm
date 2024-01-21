@@ -81,11 +81,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         //     instead of relying on "top .x file level"-layout for module definitions.
     }
 
+    @SuppressWarnings("fallthrough")
     private void hideTask(final Task task) {
         switch (task.getName()) {
             case "jar":
             case "compileJava":
             case "compileTestJava":
+            // TODO: Start showing this when we have figured out their semantics, as not to confuse the user atm
+            case "runAllXtc":
+            case "runAllTestXtc":
                 logger.info("{} Hiding internal task: '{}'.", prefix, task.getName());
                 task.setGroup(null);
                 break;
@@ -263,7 +267,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             // TODO Fix more exact processResources semantics so that we use the build as resource path, and not the src. This works for first merge.
             if (forceRebuild.get()) {
                 logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.", prefix(projectName, compileTaskName), compileTaskName);
-                alwaysRerunTask(task);
+                considerNeverUpToDate(task);
             }
             task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
             task.doLast(t -> {
@@ -377,8 +381,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void addJavaToolsContentsAttributes(final Configuration config) {
         config.attributes(it -> {
-            it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
-            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
+            it.attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
+            it.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
+            //  it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, JAVA_RUNTIME));
+            //  it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
         });
     }
 

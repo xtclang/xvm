@@ -216,13 +216,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         if (getUseNativeLauncher().get()) {
-            logger.info("{} Task '{}' created XTC launcher: native executable.", prefix, taskName);
+            logger.info("{} Created XTC launcher: native executable.", prefix);
             return new NativeBinaryLauncher<>(project, this);
         } else if (getFork().get()) {
-            logger.info("{} Task '{}' created XTC launcher: Java process forked from build.", prefix, taskName);
+            logger.info("{} Created XTC launcher: Java process forked from build.", prefix);
             return new JavaExecLauncher<>(project, this);
         } else {
-            logger.warn("{} WARNING: Task '{}' created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production use.", prefix, taskName);
+            logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production use.", prefix);
             return new BuildThreadLauncher<>(project, this);
         }
     }
@@ -237,6 +237,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         //return modulePathFilesAllSource;
     }
 
+    @SuppressWarnings("SameParameterValue")
     private Set<File> resolveModulePath(final FileCollection inputXtcModules, final boolean includeAllSourceSets) {
         logger.info("{} Adding RESOLVED configurations from: {}", prefix, inputXtcModules.getFiles());
         final var map = new HashMap<String, Set<File>>();

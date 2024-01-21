@@ -177,7 +177,7 @@ public abstract class ProjectDelegate<T, R> {
      *
      * @param task Task to flag as perpetually not up to date.
      */
-    public void alwaysRerunTask(final Task task) {
+    public void considerNeverUpToDate(final Task task) {
         task.getOutputs().cacheIf(t -> false);
         task.getOutputs().upToDateWhen(t -> false);
         logger.warn("{} WARNING: '{}' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle!", prefix, task.getName());

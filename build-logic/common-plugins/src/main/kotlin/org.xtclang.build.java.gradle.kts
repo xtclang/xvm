@@ -16,7 +16,7 @@ plugins {
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
-private val jdkVersion = provider {
+private val jdkVersion: Provider<Int> = provider {
     getXdkPropertyInt("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION)
 }
 
@@ -41,7 +41,7 @@ testing {
 }
 
 tasks.withType<JavaExec>().configureEach {
-    inputs.property("$pprefix.jdk", jdkVersion)
+    inputs.property("jdkVersion", jdkVersion);
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     if (enablePreview()) {
@@ -52,15 +52,10 @@ tasks.withType<JavaExec>().configureEach {
     }
 }
 
-//val assemble by tasks.existing
 val checkWarnings by tasks.registering {
     if (!getXdkPropertyBoolean(lintProperty, false)) {
         val lintPropertyHasValue = isXdkPropertySet(lintProperty)
-        if (lintPropertyHasValue) {
-            logger.warn("$prefix *** WARNING: Project EXPLICITLY disables Java linting/warnings in its properties. DO NOT RELEASE PRODUCTION CODE COMPILED WITH DISABLED WARNINGS!")
-        } else {
-            logger.warn("$prefix *** WARNING: Java linting/warnings disabled for project. This is not best practice!")
-        }
+        logger.warn("$prefix WARNING: Java warnings are ${if (lintPropertyHasValue) "explicitly" else ""} disabled for project.")
     }
 }
 
@@ -108,11 +103,7 @@ tasks.withType<JavaCompile>().configureEach {
         isDeprecation = lint
         isWarnings = lint
         encoding = UTF_8.toString()
-        isFork = false
-    }
-
-    doLast {
-        logger.info("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
+        //isFork = false
     }
 }
 
@@ -126,9 +117,6 @@ tasks.withType<Test>().configureEach {
         if (showStandardStreams) {
             events(STANDARD_OUT, STANDARD_ERROR, SKIPPED, STARTED, PASSED, FAILED)
         }
-    }
-    doLast {
-        logger.info("$prefix Task '$name' configured (Test).")
     }
 }
 

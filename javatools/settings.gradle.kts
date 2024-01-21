@@ -8,5 +8,3 @@ plugins {
 }
 
 rootProject.name = "javatools"
-
-includeBuild("../javatools_utils")

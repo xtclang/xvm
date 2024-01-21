@@ -1,4 +1,4 @@
-import XdkProperties.Companion.REDACTED
+import XdkPropertiesImpl.Companion.REDACTED
 import com.fasterxml.jackson.databind.JsonNode
 import io.github.rybalkinsd.kohttp.dsl.context.Method
 import io.github.rybalkinsd.kohttp.dsl.context.Method.DELETE

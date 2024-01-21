@@ -1,6 +1,7 @@
 import XdkBuildLogic.Companion.getDateTimeStampWithTz
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.internal.os.OperatingSystem
 
@@ -13,8 +14,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private const val CI = "CI"
         private const val LOCALDIST_BACKUP_DIR = "localdist-backup"
 
-        private val CURRENT_OS = OperatingSystem.current()
-        private val CI_ENABLED = System.getenv(CI) == "true"
+        private val currentOs = OperatingSystem.current()
+        private val isCiEnabled = System.getenv(CI) == "true"
 
         val distributionTasks = listOfNotNull("distTar", "distZip", "distExe")
     }
@@ -24,9 +25,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             $prefix Configuring XVM distribution: '$this'
             $prefix   Name        : '$distributionName'
             $prefix   Version     : '$distributionVersion'
-            $prefix   Current OS  : '$CURRENT_OS'
+            $prefix   Current OS  : '$currentOs'
             $prefix   Environment:
-            $prefix       CI             : '$CI_ENABLED' (CI property can be overwritten)
+            $prefix       CI             : '$isCiEnabled' (CI property can be overwritten)
             $prefix       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
         """.trimIndent())
     }
@@ -35,9 +36,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
     val distributionVersion: String get() = buildString {
         append(project.version)
-        if (CI_ENABLED) {
+        if (isCiEnabled) {
             val buildNumber = System.getenv(BUILD_NUMBER) ?: ""
-            val gitCommitHash = XdkBuildLogic.executeCommand(project, "git", "rev-parse", "HEAD")
+            val gitCommitHash = project.executeCommand("git", "rev-parse", "HEAD")
             if (buildNumber.isNotEmpty() || gitCommitHash.isNotEmpty()) {
                 logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$gitCommitHash')")
                 return@buildString
@@ -46,13 +47,17 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    fun getLocalDistBackupDir(localDistPath: String): Provider<Directory> {
-        val path = "$LOCALDIST_BACKUP_DIR/$localDistPath/${getDateTimeStampWithTz().replace(' ', '-')}"
-        return project.layout.buildDirectory.dir(path)
-    }
-
-    fun shouldPublishPluginToLocalDist(): Boolean {
-        return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
+    fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
+        val launcher = if (currentOs.isMacOsX) {
+            "macos_launcher"
+        } else if (currentOs.isLinux) {
+            "linux_launcher"
+        } else if (currentOs.isWindows) {
+            "windows_launcher.exe"
+        } else {
+            throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
+        }
+        return localDistDir.get().file("libexec/bin/$launcher")
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {

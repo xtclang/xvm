@@ -22,8 +22,7 @@ on: push
 
 env:
   ORG_XTCLANG_PLUGIN_VERBOSE: true
-  # TODO: We want to reenable manual build checks in 1-2 changes when we have finished the rest of the review changes before merging to master.
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: false
+  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: true
   ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD: false
 
 jobs:
@@ -45,4 +44,4 @@ jobs:
       - name: Verify Gradle Build
         run: ./gradlew build --info
       - name: Verify Gradle Install
-        run: ./gradlew install --info
+        run: ./gradlew installLocalDist --info

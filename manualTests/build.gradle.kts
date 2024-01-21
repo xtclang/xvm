@@ -14,8 +14,9 @@ import org.xtclang.plugin.tasks.XtcCompileTask
 plugins {
     alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xtc)
-    alias(libs.plugins.tasktree)
 }
+
+val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
 
 dependencies {
     xdk(libs.xdk)
@@ -84,9 +85,9 @@ fun alwaysRebuild(): Boolean {
 }
 
 xtcCompile {
-    /*
-     * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
-     */
+   /*
+    * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
+    */
     showVersion = false
 
     /*
@@ -104,7 +105,7 @@ xtcCompile {
      *
      * Default is true.
      */
-    fork = false
+    fork = true
 
     /*
      * Should all compilations be forced to rerun every time this build is performed? This is NOT recommended,
@@ -135,8 +136,8 @@ xtcRun {
     showVersion = false
 
     /*
-     * Run the XTC command in its built-in verbose mode (default: false).
-     */
+ * Run the XTC command in its built-in verbose mode (default: false).
+ */
     verbose = true
 
     /*
@@ -158,8 +159,8 @@ xtcRun {
     useNativeLauncher = false
 
     /*
-     * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
-     */
+    * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
+    */
     jvmArgs("-showversion")
 
     /*
@@ -192,7 +193,8 @@ xtcRun {
 }
 
 tasks.withType<XtcCompileTask>().configureEach {
+    enabled = sanityCheckRuntime
     doLast {
-        System.err.println("### RECOMPILING: $name")
+        logger.lifecycle("$prefix *** RECOMPILING: $name")
     }
 }
