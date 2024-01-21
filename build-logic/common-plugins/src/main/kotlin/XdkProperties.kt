@@ -78,7 +78,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
      * build breaks.
      */
     override fun get(key: String, defaultValue: String?): String {
-        logger.lifecycle("$prefix get($key) invoked (props: ${System.identityHashCode(this)})")
+        logger.info("$prefix get($key) invoked (props: ${System.identityHashCode(this)})")
         if (!key.startsWith("org.xtclang")) {
             // TODO: Remove this artificial limitation.
             throw project.buildException("ERROR: XdkProperties are currently expected to start with org.xtclang. Remove this artificial limitation.")
@@ -103,7 +103,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
             return sysPropValue.toString()
         }
 
-        logger.info("$prefix XdkProperties; resolved property '$key' from properties table (defaultValue: '$defaultValue')")
+        logger.info("$prefix XdkProperties; resolved property '$key' from properties table.")
         return properties[key]!!.toString()
     }
 

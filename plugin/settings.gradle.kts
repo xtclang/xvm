@@ -7,6 +7,4 @@ plugins {
     id("org.xtclang.build.common")
 }
 
-includeBuild("../javatools")
-
 rootProject.name = "xtc-plugin"

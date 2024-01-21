@@ -73,9 +73,8 @@ dependencies {
 }
 
 private val semanticVersion: SemanticVersion by extra
-logger.lifecycle("$prefix *** Building XDK; semantic version: '$semanticVersion' ***")
 
-private val xdkDist = xdkBuildLogicProvider.get().distro()
+private val xdkDist = xdkBuildLogic.distro()
 
 /**
  * Propagate the "version" part of the semanticVersion to all XTC compilers in all subprojects (the XDK modules
@@ -194,7 +193,7 @@ distributions {
             // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
             // TODO WE should really not do get() here.
             val resources = tasks.processResources.get().outputs.files.asFileTree
-            logger.warn("$prefix Distribution contents need to use lazy resources.")
+            logger.info("$prefix Distribution contents need to use lazy resources.")
             /*
              * 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
              * 2) copy xdk resources/main/xdk to install/xdk/libexec
@@ -246,13 +245,17 @@ val cleanXdk by tasks.registering(Delete::class) {
         delete(it.layout.buildDirectory)
     }
     delete(compositeRootBuildDirectory)
-    doLast {
-        logger.warn("$prefix Task '$name' is often unnecessary. Are you sure you don't just need to call './gradlew build' again?")
-    }
 }
 
 val clean by tasks.existing {
     dependsOn(cleanXdk)
+    doLast {
+        logger.warn("""
+            $prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.
+            $prefix    Also note that 'clean', if started in a virgin environment *will* run some tasks when bootstrapping build tasks.
+            $prefix    This only happens once, and there is no reason to run anything other than './gradlew build' in that situation.
+        """.trimIndent())
+    }
 }
 
 val distTar by tasks.existing(Tar::class) {

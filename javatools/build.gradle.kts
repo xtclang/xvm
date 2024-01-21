@@ -1,9 +1,9 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
+import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.LibraryElements.CLASSES
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME
 import org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE
-import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /**
@@ -62,6 +62,12 @@ sourceSets {
 }
 
 val jar by tasks.existing(Jar::class) {
+    inputs.property("manifestSemanticVersion") {
+        semanticVersion.toString()
+    }
+    inputs.property("manifestVersion") {
+        version
+    }
     archiveBaseName = "javatools"
 
     // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
@@ -83,11 +89,6 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Vendor" to "xtclang.org"
         )
     }
-    doLast {
-        val path = archiveFile.map { it.asFile.absolutePath }
-        logger.info("$prefix Finished building Java tools (fat jar including javatools-utils): '$path' as artifact.")
-        printTaskOutputs(INFO)
-    }
 }
 
 val assemble by tasks.existing {
@@ -101,15 +102,17 @@ val sanityCheckJar by tasks.registering {
 
     dependsOn(jar)
 
-    val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.verifyJar")
+    val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
+    val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
+    inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
+    inputs.file(jar)
+
+    logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
+
     onlyIf {
         checkJar
     }
-    val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
-    inputs.file(jar.get().archiveFile)
-    noOutputs()
-
-    logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
+    //noOutputs() // Always up to date, this is actually cheating. Let's write this property
     doLast {
         logger.info("$prefix Sanity checking integrity of generated jar file.")
 

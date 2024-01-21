@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import static org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE;
 import static org.gradle.api.attributes.Category.LIBRARY;
 import static org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE;
+import static org.gradle.api.attributes.Usage.JAVA_RUNTIME;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
@@ -377,7 +378,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void addJavaToolsContentsAttributes(final Configuration config) {
         config.attributes(it -> {
-            it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
+            it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, JAVA_RUNTIME));
             it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
         });
     }

@@ -16,7 +16,7 @@ plugins {
 private val pprefix = "org.xtclang.java"
 private val lintProperty = "$pprefix.lint"
 
-private val jdkVersion = provider {
+private val jdkVersion: Provider<Int> = provider {
     getXdkPropertyInt("$pprefix.jdk", DEFAULT_JAVA_BYTECODE_VERSION)
 }
 
@@ -41,7 +41,7 @@ testing {
 }
 
 tasks.withType<JavaExec>().configureEach {
-    inputs.property("$pprefix.jdk", jdkVersion)
+    inputs.property("jdkVersion", jdkVersion);
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     if (enablePreview()) {
@@ -108,11 +108,7 @@ tasks.withType<JavaCompile>().configureEach {
         isDeprecation = lint
         isWarnings = lint
         encoding = UTF_8.toString()
-        isFork = false
-    }
-
-    doLast {
-        logger.info("$prefix Task '$name' configured (JavaCompile): [isDeprecation=${options.isDeprecation}, encoding=${options.encoding}, arguments=${options.compilerArgs}]")
+        //isFork = false
     }
 }
 
@@ -126,9 +122,6 @@ tasks.withType<Test>().configureEach {
         if (showStandardStreams) {
             events(STANDARD_OUT, STANDARD_ERROR, SKIPPED, STARTED, PASSED, FAILED)
         }
-    }
-    doLast {
-        logger.info("$prefix Task '$name' configured (Test).")
     }
 }
 

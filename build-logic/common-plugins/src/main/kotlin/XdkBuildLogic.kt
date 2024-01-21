@@ -63,7 +63,7 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
     }
 
     companion object {
-        const val DEFAULT_JAVA_BYTECODE_VERSION = 20
+        const val DEFAULT_JAVA_BYTECODE_VERSION = 20 // TODO: We still have to compile to 20 bytecode, because Kotlin 1.9 does not support 21.
         const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR = "javatools-fatjar"
@@ -85,8 +85,8 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
             project.logger.info(
                     """
                     ${project.prefix} Creating new XdkBuildLogic for project '${project.name}'
-                    (singletonCache)      ${System.identityHashCode(singletonCache)}
-                    (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
+                    ${project.prefix} (singletonCache)      ${System.identityHashCode(singletonCache)}
+                    ${project.prefix} (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
                 """.trimIndent())
             return instance
         }
@@ -196,19 +196,23 @@ fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
     return xdkBuildLogic.props().get(key, defaultValue)
 }
 
+private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
+    with(task) {
+        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
+    }
+    return value
+}
+
 fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    logger.info("$prefix Task tunneling property for $key to project")
-    return project.getXdkPropertyBoolean(key, defaultValue)
+    return registerXdkPropertyInput(this, key, project.getXdkPropertyBoolean(key, defaultValue))
 }
 
 fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    logger.info("$prefix Task tunneling property for $key to project")
-    return project.getXdkPropertyInt(key, defaultValue)
+    return registerXdkPropertyInput(this, key, project.getXdkPropertyInt(key, defaultValue))
 }
 
 fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
-    logger.info("$prefix Task tunneling property for $key to project")
-    return project.getXdkProperty(key, defaultValue)
+    return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }
 
 fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {

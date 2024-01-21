@@ -31,7 +31,7 @@ publishing {
         }
 
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
-        with (xdkBuildLogicProvider.get().github()) {
+        with (xdkBuildLogic.github()) {
             if (verifyGitHubConfig()) {
                 logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
                 maven {
@@ -134,7 +134,7 @@ val listAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
-        val github = xdkBuildLogicProvider.get().github()
+        val github = xdkBuildLogic.github()
         logger.lifecycle("$prefix '$name' Listing remote publications for project '${project.group}:${project.name}':")
         val packageNames = github.queryXtcLangPackageNames()
         if (packageNames.isEmpty()) {
@@ -157,7 +157,7 @@ val deleteAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description =  "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
-        val github = xdkBuildLogicProvider.get().github()
+        val github = xdkBuildLogic.github()
         github.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
         logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
     }

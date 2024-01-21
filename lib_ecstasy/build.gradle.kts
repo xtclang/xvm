@@ -56,31 +56,4 @@ sourceSets {
     }
 }
 
-// We need extra resources.
-val processResources by tasks.existing(ProcessResources::class) {
-    // We can't use onlyIf here, since we need processResources to copy the src/main/resources files to the build, from where
-    // they are picked up by the compileXtc tasks. CompileXtc respects Gradle semantics and allows for a processResources
-    // (default is a plain lifecycle intra-project copy) to modify the resources, if needed.
-    if (getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false)) {
-        val javaToolsUnicode = gradle.includedBuild("javatools_unicode")
-        val rebuildUnicodeOutput = File(
-            javaToolsUnicode.projectDir,
-            "build/resources/"
-        ) // TODO: Use configs for dependencies instead, it's less hard coded.
-        dependsOn(javaToolsUnicode.task(":rebuildUnicodeTables"))
-        from(rebuildUnicodeOutput)
-        doLast {
-            printTaskInputs()
-            printTaskOutputs()
-            printTaskDependencies()
-            // TODO: Add another task that overwrites the source code with the results? Or do we want to do that manually?
-            logger.warn("$prefix *** Rebuilt the unicode tables. New tables are the '$name' outputs.")
-            logger.warn("$prefix *** Please copy the files manually to the lib-ecstasy src/main/resources directory and commit, if you want to update the pre-built unicode tables in source control.")
-        }
-        return@existing
-    }
-
-    doLast {
-        logger.lifecycle("$prefix Using pre-built unicode tables from lib-ecstasy src/main/resources directory.")
-    }
-}
+// TODO Add resource processing for unicode
