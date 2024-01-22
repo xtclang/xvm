@@ -39,18 +39,6 @@ val installLocalDist by tasks.registering {
     dependsOn(xdk.task(":$name"))
 }
 
-val installInitScripts by tasks.registering {
-    fun getTaskStateDescriptor(state: TaskState): Map<String, Any> {
-        return buildMap {
-            put("didWork", state.didWork)
-            put("executed", state.executed)
-        }
-    }
-    group = PUBLISH_TASK_GROUP
-    description = "Install bootstrapping scripts for the XTC Organization GitHub Maven package registry."
-    dependsOn(xdk.task(":$name"))
-}
-
 /*
  * Register aggregated publication tasks to the top level project, to ensure we can publish both
  * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or

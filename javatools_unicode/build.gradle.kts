@@ -33,9 +33,9 @@ val jar by tasks.existing(Jar::class)
  */
 val downloadUcdFlatZip by tasks.registering(Download::class) {
     onlyIf {
-        System.err.println("Check rebuildunicode spec: should be executing: ${state.executing}")
+        System.err.println("Check rebuild unicode spec: should be executing: ${state.executing}")
         assert(state.executing)
-        getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false) // TODO inputproperty
+        getXdkPropertyBool("org.xtclang.unicode.rebuild", false) // TODO inputproperty
     }
     src(unicodeUcdUrl)
     overwrite(false)
@@ -65,7 +65,7 @@ val rebuildUnicodeTables by tasks.registering {
     group = BUILD_GROUP
     description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
 
-    val rebuildUnicode = getXdkPropertyBoolean("org.xtclang.unicode.rebuild", false)
+    val rebuildUnicode = getXdkPropertyBool("org.xtclang.unicode.rebuild", false)
     logger.info("$prefix Should rebuild unicode: $rebuildUnicode")
 
     dependsOn(jar)

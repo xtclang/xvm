@@ -1,7 +1,7 @@
 package org.xtclang.plugin;
 
-public final class Usage {
-    private Usage() {
+public final class ShowUsage {
+    private ShowUsage() {
     }
 
     public static void main(final String[] args) {

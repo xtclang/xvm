@@ -16,7 +16,7 @@ plugins {
     alias(libs.plugins.xtc)
 }
 
-val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
+val sanityCheckRuntime = getXdkPropertyBool("org.xtclang.build.sanityCheckRuntime", false)
 
 dependencies {
     xdk(libs.xdk)

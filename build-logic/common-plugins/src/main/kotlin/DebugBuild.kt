@@ -188,13 +188,36 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
  */
 class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
+        fun resolvableConfig(project: Project, configName: String): Configuration? = project.run {
+            val config = configurations.getByName(configName)
+            if (!config.isCanBeResolved) {
+                logger.warn("$prefix Configuration '$configName' is not resolvable. Skipped.")
+                return null
+            }
+            return config
+        }
+
         fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1) {
-            val jar = project.tasks.getByName("jar").outputs.files.singleFile
-            val contents = jarContents(jar)
+            fun jarContents(jarFile: File): Set<String> {
+                val contents = mutableMapOf<String, Long>()
+                JarFile(jarFile).use { jar ->
+                    val enumEntries: Enumeration<JarEntry> = jar.entries()
+                    while (enumEntries.hasMoreElements()) {
+                        val entry: JarEntry = enumEntries.nextElement() as JarEntry
+                        contents[entry.name] = entry.size
+                    }
+                }
+                return contents.keys
+            }
+
+            val jarFile = project.tasks.named("jar").get().outputs.files.singleFile
+            val contents = jarContents(jarFile)
+
+            project.logger.lifecycle("${project.prefix} Sanity checked jar: $jarFile (entries: ${contents.size})")
 
             // TODO: Very hacky sanity check verification. Need to keep this updated or remove it when we are confident artifact creation is race free
             if (size >= 0 && contents.size != size) {
-                throw project.buildException("ERROR: Expected '$jar' to contain $size entries (was: ${contents.size})")
+                throw project.buildException("ERROR: Expected '$jarFile' to contain $size entries (was: ${contents.size})")
             }
 
             required.forEach {
@@ -206,27 +229,6 @@ class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
                     throw project.buildException("ERROR: Corrupted jar file; needs to contain entry matching '$it'")
                 }
             }
-        }
-
-        private fun jarContents(jarFile: File): Set<String> {
-            val contents = mutableMapOf<String, Long>()
-            JarFile(jarFile).use { jar ->
-                val enumEntries: Enumeration<JarEntry> = jar.entries()
-                while (enumEntries.hasMoreElements()) {
-                    val entry: JarEntry = enumEntries.nextElement() as JarEntry
-                    contents[entry.name] = entry.size
-                }
-            }
-            return contents.keys
-        }
-
-        fun resolvableConfig(project: Project, configName: String): Configuration? {
-            val config = project.configurations.getByName(configName)
-            if (!config.isCanBeResolved) {
-                project.logger.warn("${project.prefix} Configuration '$configName' is not resolvable. Skipped.")
-                return null
-            }
-            return config
         }
     }
 }

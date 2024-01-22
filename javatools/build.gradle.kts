@@ -1,5 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
-import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.LibraryElements.CLASSES
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.attributes.Usage.JAVA_RUNTIME
@@ -14,6 +13,8 @@ plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.tasktree)
 }
+
+private val checkJarProperty = "org.xtclang.javatools.sanityCheckJar"
 
 val semanticVersion: SemanticVersion by extra
 
@@ -92,30 +93,34 @@ val jar by tasks.existing(Jar::class) {
 }
 
 val assemble by tasks.existing {
-    dependsOn(sanityCheckJar) // "assemble" already depends on jar by default in the Java build life cycle
+    if (getXdkPropertyAndTaskInputBool(checkJarProperty)) {
+        dependsOn(sanityCheckJar) // "assemble" already depends on jar by default in the Java build life cycle
+    }
 }
 
 val sanityCheckJar by tasks.registering {
     group = VERIFICATION_GROUP
     description =
-        "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
+        "If the properties are enabled, verify that the javatools.jar file is sane (has all expected packages and files), and optionally, that it has a certain number of entries."
 
-    dependsOn(jar)
-
-    val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
-    val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
-    inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
-    inputs.file(jar)
+    // These getters register the property provider for the keys used as input to this task. Hopefully
+    // that is as lazy and can be, and will also at the same time detect, e.g. that a varibale based
+    // on a system property has changed values, without anyone touching the actual build.
+    val checkJar = getXdkPropertyAndTaskInputBool(checkJarProperty)
+    val expectedEntryCount = getXdkPropertyAndTaskInputInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
 
     logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
+
+    dependsOn(jar)
+    inputs.files(jar)
 
     onlyIf {
         checkJar
     }
-    //noOutputs() // Always up to date, this is actually cheating. Let's write this property
-    doLast {
-        logger.info("$prefix Sanity checking integrity of generated jar file.")
 
+    doLast {
+        logger.lifecycle("$prefix Sanity checking integrity of generated jar file...")
+        // Check for contents from both javatools_utils and javatools + implicit.x
         DebugBuild.verifyJarFileContents(
             project,
             listOfNotNull(
@@ -125,9 +130,9 @@ val sanityCheckJar by tasks.registering {
                 "org/xvm/util/Severity" // verify the
             ),
             expectedEntryCount
-        ) // Check for files in both javatools_utils and javatools + implicit.x
+        )
 
-        logger.info("$prefix Sanity check of javatools.jar completed successfully.")
+        logger.lifecycle("$prefix Sanity check of javatools.jar completed successfully.")
     }
 }
 

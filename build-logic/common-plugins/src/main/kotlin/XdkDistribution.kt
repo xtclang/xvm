@@ -52,7 +52,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {
-        val runDistExe = project.getXdkPropertyBoolean("org.xtclang.install.distExe", false)
+        val runDistExe = project.getXdkPropertyBool("org.xtclang.install.distExe", false)
         if (runDistExe) {
             logger.info("$prefix 'distExe' task is enabled; will attempt to build Windows installer.")
             if (XdkBuildLogic.findExecutableOnPath(MAKENSIS) == null) {

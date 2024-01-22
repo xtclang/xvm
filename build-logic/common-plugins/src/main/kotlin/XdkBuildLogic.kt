@@ -91,6 +91,14 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
             return instance
         }
 
+        fun <T> registerAndGetXdkPropertyTaskInput(task: Task, key: String, valueProvider: Provider<T>): T {
+            with(task) {
+                logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
+                task.inputs.property(key, valueProvider)
+            }
+            return valueProvider.get()
+        }
+
         fun getDateTimeStampWithTz(ms: Long = System.currentTimeMillis()): String {
             return SimpleDateFormat(DATE_TIME_FORMAT, Locale.getDefault()).format(Date(ms))
         }
@@ -184,7 +192,11 @@ fun Project.isXdkPropertySet(key: String): Boolean {
     return xdkBuildLogic.props().has(key)
 }
 
-fun Project.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
+fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
+    return xdkBuildLogic.props().get(key, defaultValue)
+}
+
+fun Project.getXdkPropertyBool(key: String, defaultValue: Boolean? = null): Boolean {
     return xdkBuildLogic.props().get(key, defaultValue)
 }
 
@@ -192,27 +204,16 @@ fun Project.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
     return xdkBuildLogic.props().get(key, defaultValue)
 }
 
-fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return xdkBuildLogic.props().get(key, defaultValue)
+fun Task.getXdkPropertyAndTaskInput(key: String, defaultValue: String? = null): String {
+    return XdkBuildLogic.registerAndGetXdkPropertyTaskInput(this, key, project.provider { project.getXdkProperty(key, defaultValue) })
 }
 
-private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
-    with(task) {
-        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
-    }
-    return value
+fun Task.getXdkPropertyAndTaskInputBool(key: String, defaultValue: Boolean? = null): Boolean {
+    return XdkBuildLogic.registerAndGetXdkPropertyTaskInput(this, key, project.provider { project.getXdkPropertyBool(key, defaultValue) })
 }
 
-fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    return registerXdkPropertyInput(this, key, project.getXdkPropertyBoolean(key, defaultValue))
-}
-
-fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    return registerXdkPropertyInput(this, key, project.getXdkPropertyInt(key, defaultValue))
-}
-
-fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
+fun Task.getXdkPropertyAndTaskInputInt(key: String, defaultValue: Int? = null): Int {
+    return XdkBuildLogic.registerAndGetXdkPropertyTaskInput(this, key, project.provider { project.getXdkPropertyInt(key, defaultValue) })
 }
 
 fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {
@@ -225,10 +226,11 @@ fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable 
  * Extension method that can be called during the configuration phase, marking its
  * task instance as forever out of date.
  */
+@Suppress("unused")
 fun Task.alwaysRerunTask() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
-    logger.info("${project.prefix} WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
+    logger.warn("$prefix WARNING: Task '${project.name}:$name' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle...")
 }
 
 /**

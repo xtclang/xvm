@@ -127,45 +127,8 @@ publishing {
     }
 }
 
-// TODO: Add Nexus snapshot and release repositories here:
-
-/**
- * Run once, to create templates in GRADLE_USER_HOME/init.d/ for an XTC Org user with
- * just read:package access (in a safe token). This is a workaround for GitHub requiring
- * authentication for package access, even for public packages in public repos. People
- * have asked about this feature for almost five years now.
- *
- * However, as soon as we have changed artifact groups for our publications to "org.xtclang"
- * instead of "org.xvm", we can prove domain ownership of the former with gradlePluginPortal()
- * and mavenCentral(), and provide packages that are *really* public. In the meantime, in order
- * to get everyone up and running as quickly as possible, this task is the bootstrap mechanism
- * to work with the GitHub Package Repo, but not having to add various tokens and credentials.
- *
- * Security review completed satisfactorily.
- */
-val installInitScripts by tasks.registering(Copy::class) {
-    group = PUBLISH_TASK_GROUP
-    description = "Write the init script to GRADLE_USER_HOME/init.d, providing GitHub credentials for the package repo."
-    alwaysRerunTask()
-    from(compositeRootProjectDirectory.dir("gradle/config/repos")) {
-        eachFile {
-            // TODO: decide if "must be online" trumps "install once", as to which script template
-            //   should be default. We copy all the files to GRADLE_USER_HOME/init.d, though, but we do
-            //   not rename the non-default version.
-            if (!name.contains("minimal")) {
-                name = name.removeSuffix(".template")
-            }
-        }
-    }
-    into(userInitScriptDirectory)
-    doLast {
-        printAllTaskInputs(INFO)
-        printAllTaskOutputs(INFO)
-    }
-}
-
 private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
+    return project.getXdkPropertyBool("org.xtclang.publish.localDist", false)
 }
 
 val publishPluginToLocalDist by tasks.registering {
@@ -252,8 +215,8 @@ val clean by tasks.existing {
     doLast {
         logger.warn("""
             $prefix WARNING: Note that running 'clean' is often unnecessary with a properly configured build cache.
-            $prefix    Also note that 'clean', if started in a virgin environment *will* run some tasks when bootstrapping build tasks.
-            $prefix    This only happens once, and there is no reason to run anything other than './gradlew build' in that situation.
+            $prefix    Also note that 'clean', if started in a virgin environment, *will* run some tasks when bootstrapping build tasks.
+            $prefix    This only happens once, and there is no reason to run anything other than './gradlew build' to start from zero state.
         """.trimIndent())
     }
 }
@@ -326,7 +289,7 @@ val distExe by tasks.registering {
 
 
 val test by tasks.existing {
-    val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
+    val sanityCheckRuntime = getXdkPropertyBool("org.xtclang.build.sanityCheckRuntime", false)
     if (sanityCheckRuntime) {
         logger.lifecycle("$prefix Sanity check runtimes after build: $sanityCheckRuntime.")
         dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
@@ -389,7 +352,7 @@ val purgeLocalDist by tasks.registering {
     mustRunAfter(backupLocalDist)
     doLast {
         val localDistDir = findLocalXdkInstallation()
-        val allowOverwrite = getXdkPropertyBoolean("org.xtclang.build.allowOverwriteLocalDist", true)
+        val allowOverwrite = getXdkPropertyBool("org.xtclang.build.allowOverwriteLocalDist", true)
         if (localDistDir != null) {
             if (!allowOverwrite) {
                 logger.lifecycle("$prefix '$name' will purge and replace existing local installation at: '$localDistDir'.")

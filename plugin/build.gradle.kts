@@ -14,17 +14,15 @@ val semanticVersion: SemanticVersion by extra
 
 private val pprefix = "org.xtclang"
 
-// Property for the Plugin ID (unique to a plugin)
+// Properties for the Plugin artifact.
 private val pluginId = getXdkProperty("$pprefix.plugin.id")
-
-// Properties for the artifact
 private val pluginName = project.name
 private val pluginGroup = getXdkProperty("$pprefix.plugin.group", group.toString())
 private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.toString())
 
 logger.info("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
-private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
+private val shouldBundleJavaTools = getXdkPropertyBool("$pprefix.plugin.bundle.javatools")
 
 private val javaToolsContents = project.objects.fileCollection()
 
@@ -62,7 +60,7 @@ gradlePlugin {
     // However, this results in the Gradle version (with Gradle specific metadata) of the plugin not
     // being published. To read it from at least a local repo, we need that artifact too, hence we
     // get three artifacts.
-    isAutomatedPublishing = getXdkPropertyBoolean("$pprefix.plugin.isAutomatedPublishing", true)
+    isAutomatedPublishing = getXdkPropertyBool("$pprefix.plugin.isAutomatedPublishing", true)
 
     logger.info("$prefix Configuring Gradle Plugin; isAutomatedPublishing=$isAutomatedPublishing")
 
@@ -114,7 +112,7 @@ tasks.withType<Jar>().configureEach {
             attributes(
                 "Manifest-Version" to "1.0",
                 "Xdk-Version" to semanticVersion.toString(),
-                "Main-Class" to "$pprefix.plugin.Usage",
+                "Main-Class" to "$pprefix.plugin.ShowUsage",
                 "Name" to "/org/xtclang/plugin/",
                 "Sealed" to "true",
                 "Specification-Title" to "XTC Gradle and Maven Plugin",

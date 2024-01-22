@@ -9,7 +9,7 @@ plugins {
  * Should we publish the plugin to a common build repository and copy it to any localDist?
  */
 private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
+    return project.getXdkPropertyBool("org.xtclang.publish.localDist", false)
 }
 
 /**

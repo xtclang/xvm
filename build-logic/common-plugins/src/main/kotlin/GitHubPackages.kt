@@ -49,7 +49,7 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
     init {
         with(project) {
             val user = getXdkProperty(GITHUB_USER, GITHUB_USER_RO_DEFAULT_VALUE)
-            val ro = getXdkPropertyBoolean(GITHUB_READONLY) || user == GITHUB_USER_RO_DEFAULT_VALUE
+            val ro = getXdkPropertyBool(GITHUB_READONLY) || user == GITHUB_USER_RO_DEFAULT_VALUE
             credentials = user to (if (ro) decodeToken(GITHUB_TOKEN_RO_DEFAULT_VALUE) else getXdkProperty(GITHUB_TOKEN, ""))
             packagesUrl = getXdkProperty(GITHUB_URL, GITHUB_URL_DEFAULT_VALUE)
             org = getXdkProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)

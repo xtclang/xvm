@@ -7,6 +7,7 @@ import org.gradle.api.artifacts.ModuleVersionSelector;
 import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
 import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.LibraryElements;
+import org.gradle.api.attributes.Usage;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -36,6 +37,7 @@ import static org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE;
 import static org.gradle.api.attributes.Category.LIBRARY;
 import static org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE;
 import static org.gradle.api.attributes.Usage.JAVA_RUNTIME;
+import static org.gradle.api.attributes.Usage.USAGE_ATTRIBUTE;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
@@ -382,7 +384,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void addJavaToolsContentsAttributes(final Configuration config) {
         config.attributes(it -> {
+            // TODO: Check if this should be Usage, because the XDK build appears to deliver these as such. This still seems to
+            //   work, though, and we do not want to change something fairly well tested just before merging the XTC Plugin.
             it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, JAVA_RUNTIME));
+            it.attribute(USAGE_ATTRIBUTE, objects.named(Usage.class, JAVA_RUNTIME));
             it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
         });
     }
@@ -518,8 +523,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             xtcSourceDirectorySet.srcDir(srcDir);
             // Add all sources from the xtc source directory to the sourceSet during resolution.
             sourceSet.getAllSource().source(xtcSourceDirectorySet);
-            // Add output directories for modules (compile<sourceSetName>Xtc output) and resources
-            // (sourceSet.output.resourcesDir) to the task, so that dependencies will work.
+            // Add output directories for modules (compile<sourceSetName>Xtc output) and resources(sourceSet.output.resourcesDir) to the task, so that dependencies will work.
             final var outputModules = getXtcCompilerOutputModules(sourceSet);
             final var outputResources = getXtcCompilerOutputResourceDir(sourceSet);
             logger.info("{} Configured sourceSets.{}.outputModules  : {}", prefix, sourceSetName, outputModules);

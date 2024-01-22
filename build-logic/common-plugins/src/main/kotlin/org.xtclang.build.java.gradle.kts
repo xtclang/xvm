@@ -41,7 +41,7 @@ testing {
 }
 
 tasks.withType<JavaExec>().configureEach {
-    inputs.property("jdkVersion", jdkVersion);
+    inputs.property("jdkVersion", jdkVersion)
     logger.info("$prefix Configuring JavaExec task $name from toolchain (Java version: ${java.toolchain.languageVersion})")
     javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
     if (enablePreview()) {
@@ -54,7 +54,7 @@ tasks.withType<JavaExec>().configureEach {
 
 //val assemble by tasks.existing
 val checkWarnings by tasks.registering {
-    if (!getXdkPropertyBoolean(lintProperty, false)) {
+    if (!getXdkPropertyAndTaskInputBool(lintProperty, false)) {
         val lintPropertyHasValue = isXdkPropertySet(lintProperty)
         if (lintPropertyHasValue) {
             logger.warn("$prefix *** WARNING: Project EXPLICITLY disables Java linting/warnings in its properties. DO NOT RELEASE PRODUCTION CODE COMPILED WITH DISABLED WARNINGS!")
@@ -70,10 +70,10 @@ val assemble by tasks.existing {
 
 tasks.withType<JavaCompile>().configureEach {
     // TODO: These xdk properties may have to be declared as inputs.
-    val lint = getXdkPropertyBoolean(lintProperty, false)
-    val maxErrors = getXdkPropertyInt("$pprefix.maxErrors", 0)
-    val maxWarnings = getXdkPropertyInt("$pprefix.maxWarnings", 0)
-    val warningsAsErrors = getXdkPropertyBoolean("$pprefix.warningsAsErrors", true)
+    val lint = getXdkPropertyAndTaskInputBool(lintProperty, false)
+    val maxErrors = getXdkPropertyAndTaskInputInt("$pprefix.maxErrors", 0)
+    val maxWarnings = getXdkPropertyAndTaskInputInt("$pprefix.maxWarnings", 0)
+    val warningsAsErrors = getXdkPropertyAndTaskInputBool("$pprefix.warningsAsErrors", true)
     if (!warningsAsErrors) {
         logger.warn("$prefix WARNING: Task '$name' XTC Java convention warnings are not treated as errors, which is best practice (Enable -Werror).")
     }
@@ -118,7 +118,7 @@ tasks.withType<Test>().configureEach {
     }
     maxHeapSize = getXdkProperty("$pprefix.maxHeap", "4G")
     testLogging {
-        showStandardStreams = getXdkPropertyBoolean("$pprefix.test.stdout")
+        showStandardStreams = getXdkPropertyAndTaskInputBool("$pprefix.test.stdout")
         if (showStandardStreams) {
             events(STANDARD_OUT, STANDARD_ERROR, SKIPPED, STARTED, PASSED, FAILED)
         }
@@ -126,7 +126,7 @@ tasks.withType<Test>().configureEach {
 }
 
 private fun enablePreview(): Boolean {
-    val enablePreview = getXdkPropertyBoolean("$pprefix.enablePreview")
+    val enablePreview = getXdkPropertyBool("$pprefix.enablePreview")
     if (enablePreview) {
         logger.warn("$prefix WARNING: Project has Java preview features enabled.")
     }
