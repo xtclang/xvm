@@ -1072,7 +1072,7 @@ public class Context
                     // repeating the same error logging
                     setVarAssignment(sName, Assignment.AssignedOnce);
                     }
-                else if (fDeref) // unassigned non-dereferenced vars are allowed to be read
+                else if (fDeref)
 
                     {
                     tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_UNASSIGNED, sName);
@@ -1080,6 +1080,15 @@ public class Context
                     // record that the variable is definitely assigned so that the error will
                     // not be repeated unnecessarily within this context
                     setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
+                    }
+                else
+                    {
+                    // unassigned non-dereferenced local variables are allowed to be read; moreover,
+                    // obtaining a Var ('&x') for it turns off its "definite assignment" checks
+                    if (getVar(sName) instanceof Register reg)
+                        {
+                        reg.markAllowUnassigned();
+                        }
                     }
                 }
             else
@@ -2864,6 +2873,14 @@ public class Context
         protected Assignment promote(String sName, Assignment asnInner, Assignment asnOuter)
             {
             ensureCaptureMap().put(sName, true);
+
+            if (getOuterContext().getVar(sName) instanceof Register reg && reg.isVar() &&
+                    asnInner.isDefinitelyAssigned())
+                {
+                // an assignment of a Var-annotated local variable within a lambda turns off
+                // the "definite assignment" checks in the outer context
+                reg.markAllowUnassigned();
+                }
             return asnOuter.applyAssignmentFromCapture();
             }
 

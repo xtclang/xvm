@@ -1,27 +1,23 @@
 module TestSimple {
     @Inject Console console;
 
-    void run() {
-        new Tester().testSleep(Duration.ofMillis(50));
-    }
-
-    service Tester() {
-        Int testSleep(Duration duration) {
-            return sleep(duration); // this used to dead-lock
-        }
-    }
-
-    static Int sleep(Duration duration) {
+    void test1() {
         @Inject Timer timer;
-        @Future Int done;
-        console.print("Sleep");
+        @Future Tuple done;
 
-        timer.schedule(duration, () ->
+        timer.schedule(Duration.Millisec, () ->
             {
-            console.print("Wake Up");
-            done = 17;
+            console.print("Done");
+            // this used to compile; now produces a compiler error
+            // done = Tuple:();
             });
         return done;
+    }
+
+    void test2() {
+        Int n;
+        &n.set(1);
+        console.print($"{n=}"); // this used to fail to compile
     }
 }
 

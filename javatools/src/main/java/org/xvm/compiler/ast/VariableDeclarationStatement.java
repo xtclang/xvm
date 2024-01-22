@@ -224,8 +224,7 @@ public class VariableDeclarationStatement
                         }
                     else if (clzAnno.equals(pool.clzFuture()))
                         {
-                        fUnassigned = true;
-                        fInflate    = true;
+                        fInflate = true;
                         }
                     else
                         {
