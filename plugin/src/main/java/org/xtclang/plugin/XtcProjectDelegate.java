@@ -82,11 +82,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         //     instead of relying on "top .x file level"-layout for module definitions.
     }
 
+    @SuppressWarnings("fallthrough")
     private void hideTask(final Task task) {
         switch (task.getName()) {
             case "jar":
             case "compileJava":
             case "compileTestJava":
+            // TODO: Start showing this when we have figured out their semantics, as not to confuse the user atm
+            case "runAllXtc":
+            case "runAllTestXtc":
                 logger.info("{} Hiding internal task: '{}'.", prefix, task.getName());
                 task.setGroup(null);
                 break;
