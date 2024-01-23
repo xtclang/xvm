@@ -179,4 +179,15 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
             ? value.toFPLiteral()
             : value.toFPLiteral();
     }
+
+    /**
+     * Produce an error message for an IllegalJSON exception
+     */
+    protected String reportFailedRead(String requiredType, Doc doc, String? name = Null, Boolean array = False) {
+        return $|{array ? "An array" : "A value"} of "{requiredType}" required\
+                |{{if (name != Null) {$.append(" for ").append(name.quoted());}}}\
+                |{{if (pointer != "") {$.append(" at ").append(pointer.quoted());}}}\
+                |, but {doc == Null ? "no value" : &doc.actualType.toString().quoted()} found
+                ;
+    }
 }

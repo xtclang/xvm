@@ -63,9 +63,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
         }
 
-        throw new IllegalJSON($|Boolean value required at "{pointer}";\
-                               | {doc == Null ? "no value" : &doc.actualType} found
-                             );
+        throw new IllegalJSON(reportFailedRead("Boolean", doc));
     }
 
     /**
@@ -88,9 +86,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
         }
 
-        throw new IllegalJSON($|String value required at "{pointer}";\
-                               | {doc == Null ? "no value" : &doc.actualType} found
-                             );
+        throw new IllegalJSON(reportFailedRead("String", doc));
     }
 
     /**
@@ -113,9 +109,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return ensureIntLiteral(defaultValue?);
         }
 
-        throw new IllegalJSON($|IntLiteral value required at "{pointer}";\
-                               | {doc == Null ? "no value" : &doc.actualType} found
-                             );
+        throw new IllegalJSON(reportFailedRead("IntLiteral", doc));
     }
 
     /**
@@ -142,9 +136,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return ensureFPLiteral(defaultValue?);
         }
 
-        throw new IllegalJSON($|FPLiteral value required at "{pointer}";\
-                               | {doc == Null ? "no value" : &doc.actualType} found
-                             );
+        throw new IllegalJSON(reportFailedRead("FPLiteral", doc));
     }
 
     /**
@@ -167,9 +159,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
         }
 
-        throw new IllegalJSON($|Int value required at "{pointer}";\
-                               | {doc == Null ? "no value" : &doc.actualType} found
-                             );
+        throw new IllegalJSON(reportFailedRead("Int", doc));
     }
 
     /**
@@ -196,9 +186,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
             return defaultValue?;
         }
 
-        throw new IllegalJSON($|Dec value required at "{pointer}";\
-                               | {doc == Null ? "no value" : &doc.actualType} found
-                             );
+        throw new IllegalJSON(reportFailedRead("Dec", doc));
     }
 
     /**
@@ -221,9 +209,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                 return Null;
             }
 
-            throw new IllegalJSON($|Value required at "{pointer}" of type "{Serializable}";\
-                                   | no value found
-                                 );
+            throw new IllegalJSON(reportFailedRead(Serializable.toString(), Null));
         }
 
         return readUsing(schema.ensureMapping(Serializable), defaultValue);
@@ -250,9 +236,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
                 return Null;
             }
 
-            throw new IllegalJSON($|Value required at "{pointer}" of type "{Serializable}";\
-                                   | no value found
-                                 );
+            throw new IllegalJSON(reportFailedRead(Serializable.toString(), Null));
         }
 
         if (schema.enableMetadata,
@@ -286,9 +270,7 @@ interface ElementInput<ParentInput extends (ElementInput | FieldInput)?>
         Doc value = readDoc();
         return value.is(Doc[])
                 ? value
-                : throw new IllegalJSON($|Doc[] value required at "{pointer}";\
-                                         | {&value.actualType} found
-                                       );
+                : throw new IllegalJSON(reportFailedRead("Doc[]", value));
     }
 
     /**
