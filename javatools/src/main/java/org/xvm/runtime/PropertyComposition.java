@@ -320,7 +320,7 @@ public class PropertyComposition
         }
 
     @Override
-    public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
+    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue)
         {
         return Utils.OBJECTS_NONE;
         }

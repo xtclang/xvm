@@ -223,7 +223,7 @@ public interface TypeComposition
     /**
      * @return an array of field value handles to use for native Stringable methods on a const
      */
-    ObjectHandle[] getFieldValueArray(GenericHandle hValue);
+    ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue);
 
     /**
      * @return the ConstantPool for the container this TypeComposition belongs to

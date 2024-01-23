@@ -465,8 +465,8 @@ public class Fiber
                     if (listEx != null && !listEx.isEmpty())
                         {
                         GenericHandle  hAsyncSection = (GenericHandle) hSectionOld;
-                        FunctionHandle hNotify       = (FunctionHandle) hAsyncSection.getField(frame, "notify");
-
+                        FunctionHandle hNotify       = (FunctionHandle) hAsyncSection.
+                                                            getField(frameCaller, "notify");
                         return new CallNotify(listEx, hNotify).proceed(frameCaller);
                         }
                     return Op.R_NEXT;

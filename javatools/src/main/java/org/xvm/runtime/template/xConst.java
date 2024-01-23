@@ -472,7 +472,7 @@ public class xConst
         TypeComposition clz    = hConst.getComposition();
 
         StringHandle[] ahNames  = clz.getFieldNameArray();
-        ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
+        ObjectHandle[] ahFields = clz.getFieldValueArray(frame, hConst);
         if (ahNames.length > 0)
             {
             ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
@@ -507,7 +507,7 @@ public class xConst
         TypeComposition clz    = hConst.getComposition();
 
         StringHandle[] ahNames  = clz.getFieldNameArray();
-        ObjectHandle[] ahFields = clz.getFieldValueArray(hConst);
+        ObjectHandle[] ahFields = clz.getFieldValueArray(frame, hConst);
 
         ObjectHandle hNames  = xArray.makeStringArrayHandle(ahNames);
         ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);

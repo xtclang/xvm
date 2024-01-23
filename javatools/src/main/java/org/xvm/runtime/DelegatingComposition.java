@@ -97,9 +97,9 @@ public abstract class DelegatingComposition
         }
 
     @Override
-    public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
+    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue)
         {
-        return f_clzOrigin.getFieldValueArray(hValue);
+        return f_clzOrigin.getFieldValueArray(frame, hValue);
         }
 
     @Override

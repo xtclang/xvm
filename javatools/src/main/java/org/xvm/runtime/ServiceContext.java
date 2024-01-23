@@ -168,7 +168,7 @@ public class ServiceContext
             }
         else
             {
-            ObjectHandle hCritical = ((GenericHandle) hSection).getField(null, "critical");
+            ObjectHandle hCritical = ((GenericHandle) hSection).getField(frame, "critical");
 
             setSynchronicity(frame.f_fiber, ((BooleanHandle) hCritical).get() ?
                     Synchronicity.Critical : Synchronicity.Synchronized);

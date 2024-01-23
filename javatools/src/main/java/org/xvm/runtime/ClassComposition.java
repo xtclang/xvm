@@ -445,7 +445,7 @@ public class ClassComposition
         }
 
     @Override
-    public ObjectHandle[] getFieldValueArray(GenericHandle hValue)
+    public ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue)
         {
         Map<Object, FieldInfo> mapLayout = getFieldLayout();
         if (mapLayout.isEmpty())
@@ -463,7 +463,7 @@ public class ClassComposition
 
             if (!(enid instanceof NestedIdentity) && field.isRegular())
                 {
-                ahFields[i++] = hValue.getField(null, field.getName());
+                ahFields[i++] = hValue.getField(frame, field);
                 }
             }
         assert i == m_cRegularFields;

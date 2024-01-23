@@ -407,15 +407,16 @@ public abstract class ObjectHandle
 
         public ObjectHandle getField(Frame frame, PropertyConstant idProp)
             {
-            FieldInfo field = getComposition().getFieldInfo(idProp);
-            return field.isTransient()
-                    ? getTransientField(frame, field)
-                    : m_aFields[field.getIndex()];
+            return getField(frame, getComposition().getFieldInfo(idProp));
             }
 
         public ObjectHandle getField(Frame frame, String sProp)
             {
-            FieldInfo field = getComposition().getFieldInfo(sProp);
+            return getField(frame, getComposition().getFieldInfo(sProp));
+            }
+
+        public ObjectHandle getField(Frame frame, FieldInfo field)
+            {
             return field.isTransient()
                     ? getTransientField(frame, field)
                     : m_aFields[field.getIndex()];

@@ -828,9 +828,7 @@ public abstract class ClassTemplate
         if (field != null && field.isInflated())
             {
             GenericHandle hThis = (GenericHandle) hTarget;
-            RefHandle     hRef  = (RefHandle) (field.isTransient()
-                    ? hThis.getTransientField(frame, field)
-                    : hThis.getField(field.getIndex()));
+            RefHandle     hRef  = (RefHandle) hThis.getField(frame, field);
 
             if (hRef.getComposition().isStruct())
                 {
@@ -1074,10 +1072,7 @@ public abstract class ClassTemplate
         FieldInfo field = clzTarget.getFieldInfo(idProp);
         if (field != null && field.isInflated())
             {
-            GenericHandle hThis = (GenericHandle) hTarget;
-            hTarget = field.isTransient()
-                    ? hThis.getTransientField(frame, field)
-                    : hThis.getField(field.getIndex());
+            hTarget = ((GenericHandle) hTarget).getField(frame, field);
             assert hTarget instanceof RefHandle;
             }
 
