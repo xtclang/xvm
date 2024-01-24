@@ -703,7 +703,27 @@ class Parser
             return token;
         }
 
-        throw new IllegalJSON($"JSON format error: {id} expected, but {this.token?.id.toString() : "EOF"} encountered.");
+        private String toString(Id id) {
+            return switch (id) {
+                   case NoVal:       "null";
+                   case BoolVal:     "a boolean value";
+                   case IntVal:      "an integer";
+                   case FPVal:       "a number";
+                   case StrVal:      "a string";
+                   case ArrayEnter:  "an array start ('[')";
+                   case ArrayExit:   "an array end (']')";
+                   case ObjectEnter: "an object start ('{')";
+                   case ObjectExit:  "an object end ('}')";
+                   case Colon:       "a field separator (':')";
+                   case Comma:       "a value delimiter (',')";
+            };
+        }
+
+        String expected    = toString(id);
+        String encountered = toString(this.token?.id) : "EOF";
+        throw new IllegalJSON($|{token?.start : ""} JSON format error: \
+                               |{expected} expected, but {encountered} encountered.
+                               );
     }
 
     /**
