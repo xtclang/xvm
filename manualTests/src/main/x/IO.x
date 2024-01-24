@@ -1,5 +1,4 @@
-module TestIO
-    {
+module TestIO {
     import ecstasy.io.ByteArrayInputStream;
     import ecstasy.io.ByteArrayOutputStream;
     import ecstasy.io.CharArrayReader;
@@ -36,8 +35,7 @@ module TestIO
 
     @Inject Console console;
 
-    void run()
-        {
+    void run() {
         testInputStream();
         testPacked();
         testJavaUTF();
@@ -51,108 +49,90 @@ module TestIO
         testMap();
         testMetadata();
         testPointers();
-        }
+    }
 
-    void testInputStream()
-        {
+    void testInputStream() {
         console.print("\n*** testInputStream()");
 
         File    file   = ./IO.x;
         Byte[]  raw    = file.contents;
         var     in     = new ByteArrayInputStream(raw);
         Boolean dotdot = False;
-        loop: while (!in.eof)
-            {
+        loop: while (!in.eof) {
             Byte b = in.readByte();
-            if (loop.count <= 12 || in.remaining <= 2)
-                {
+            if (loop.count <= 12 || in.remaining <= 2) {
                 console.print($"[{loop.count}] '{b.toChar()}' ({b})");
-                }
-            else if (!dotdot)
-                {
+            } else if (!dotdot) {
                 console.print("...");
                 dotdot = True;
-                }
             }
-        console.print("(eof)");
         }
+        console.print("(eof)");
+    }
 
-    void testPacked()
-        {
+    void testPacked() {
         console.print("\n*** testPacked()");
 
         @PackedDataOutput ByteArrayOutputStream out = new @PackedDataOutput ByteArrayOutputStream();
-        for (Int64 i : -150 .. +150)
-            {
+        for (Int64 i : -150 .. +150) {
             out.writeInt64(i);
-            }
+        }
 
         Int[] others = [Int64.MinValue, Int64.MaxValue, -12341235, -1234151515, +1324153, +1512358723597];
-        for (Int i : others)
-            {
+        for (Int i : others) {
             out.writeInt64(i.toInt64());
-            }
+        }
 
-        for (Int64 i = 1; i > 0; i = i << 1)
-            {
+        for (Int64 i = 1; i > 0; i = i << 1) {
             out.writeInt64(i);
             out.writeInt64(i+1);
             out.writeInt64(i-1);
             out.writeInt64(-i);
             out.writeInt64(-(i+1));
             out.writeInt64(-(i-1));
-            }
+        }
 
         @PackedDataInput ByteArrayInputStream in = new @PackedDataInput ByteArrayInputStream(out.bytes);
-        for (Int64 i : -150 .. +150)
-            {
+        for (Int64 i : -150 .. +150) {
             assert in.readInt64() == i;
-            }
-        for (Int i : others)
-            {
+        }
+        for (Int i : others) {
             assert in.readInt64() == i;
-            }
+        }
 
-        for (Int64 i = 1; i > 0; i = i << 1)
-            {
+        for (Int64 i = 1; i > 0; i = i << 1) {
             assert in.readInt64() == i;
             assert in.readInt64() == i+1;
             assert in.readInt64() == i-1;
             assert in.readInt64() == -i;
             assert in.readInt64() == -(i+1);
             assert in.readInt64() == -(i-1);
-            }
         }
+    }
 
-    void testJavaUTF()
-        {
+    void testJavaUTF() {
         console.print("\n*** testJavaUTF()");
 
         JavaDataInput in = new @JavaDataInput ByteArrayInputStream([0x00, 0x03, 0x43, 0x61, 0x6D]);
         console.print($"string={in.readString()}");
-        }
+    }
 
-    void testUTF8Reader()
-        {
+    void testUTF8Reader() {
         console.print("\n*** testUTF8Reader()");
 
         InputStream  inRaw  = new ByteArrayInputStream(#./IO.x);
         UTF8Reader   in     = new UTF8Reader(inRaw);
         Boolean      dotdot = False;
         TextPosition pos    = in.position;
-        loop: while (Char ch := in.next())
-            {
-            if (loop.count <= 20 || inRaw.remaining <= 10)
-                {
+        loop: while (Char ch := in.next()) {
+            if (loop.count <= 20 || inRaw.remaining <= 10) {
                 console.print($"[{loop.count}] '{ch}' {pos}");
-                }
-            else if (!dotdot)
-                {
+            } else if (!dotdot) {
                 console.print("...");
                 dotdot = True;
-                }
-            pos = in.position;
             }
+            pos = in.position;
+        }
 
         console.print($"(eof) position={pos} line={in.lineNumber}");
         }
@@ -175,45 +155,39 @@ module TestIO
              |}
             ;
 
-    void testJSONLex()
-        {
+    void testJSONLex() {
         console.print("\n*** testJSONLex()");
 
         Reader reader = new CharArrayReader(ExampleJSON);
 
         Lexer lexer = new Lexer(reader);
-        while (Token tok := lexer.next())
-            {
+        while (Token tok := lexer.next()) {
             console.print($"token={tok.toDebugString()}");
             }
 
         console.print($"(eof) position={reader.position}");
-        }
+    }
 
-    void testJSONParse()
-        {
+    void testJSONParse() {
         console.print("\n*** testJSONParse()");
 
         console.print("no dups:");
         Reader reader = new CharArrayReader(ExampleJSON);
         Parser parser = new Parser(reader);
-        while (Doc doc := parser.next())
-            {
-            console.print($"doc={doc}");
-            }
+        while (Doc doc := parser.next()) {
+            console.print($"{doc=}");
+        }
 
         console.print("collate dups:");
         reader = new CharArrayReader(ExampleJSON);
         parser = new Parser(reader);
         parser.collateDups = True;
-        while (Doc doc := parser.next())
-            {
-            console.print($"doc={doc}");
-            }
+        while (Doc doc := parser.next()) {
+            console.print($"{doc=}");
         }
+    }
 
-    void testJSONPrint()
-        {
+    void testJSONPrint() {
         console.print("\n*** testJSONPrint()");
 
         Reader reader = new CharArrayReader(ExampleJSON);
@@ -225,10 +199,9 @@ module TestIO
         console.print($"printing compact={Printer.DEFAULT.render(doc)}");
         console.print($"printing pretty={Printer.PRETTY.render(doc)}");
         console.print($"printing debug={Printer.DEBUG.render(doc)}");
-        }
+    }
 
-    void testJSONBuild()
-        {
+    void testJSONBuild() {
         console.print("\n*** testJSONBuild()");
 
         Schema schema = Schema.DEFAULT;
@@ -262,10 +235,9 @@ module TestIO
 //        DirectPrinter p2 = new DirectPrinter(toConsole);
 //        build(p2);
 //        console.print("\n(done)");
-        }
+    }
 
-    private void build(ElementOutput builder)
-        {
+    private void build(ElementOutput builder) {
         builder.openObject()
                 .add("$schema", "http://json-schema.org/schema#")
                 .add("title", "Product")
@@ -283,90 +255,77 @@ module TestIO
                     .close()
                 .close()
                 .close();
-        }
+    }
 
     const Point(Int x, Int y);
     const Segment(Point p1, Point p2);
 
     const PointMapper
-            implements Mapping<Point>
-        {
+            implements Mapping<Point> {
         @Override
-        String typeName.get()
-            {
+        String typeName.get() {
             return "point";
-            }
+        }
 
         @Override
-        Point read(ElementInput in)
-            {
-            using (FieldInput fields = in.openObject())
-                {
+        Point read(ElementInput in) {
+            using (FieldInput fields = in.openObject()) {
                 return new Point(fields.readInt("x"), fields.readInt("y"));
 //console.print($"reading point");
 //Int x = fields.readInt("x");
-//console.print($"x={x}");
+//console.print($"{x=}");
 //Int y = fields.readInt("y");
-//console.print($"y={y}");
+//console.print($"{y=}");
 //return new Point(x, y);
-                }
+            }
 //                Doc doc = in.readDoc();
 //                Map<String, Doc> map = doc.as(Map<String, Doc>);
 //                return new Point(map["x"].as(IntLiteral).toInt64(), map["y"].as(IntLiteral).toInt64()).as(ObjectType);
-            }
+        }
 
         @Override
-        void write(ElementOutput out, Point value)
-            {
-            using (FieldOutput fields = out.openObject())
-                {
+        void write(ElementOutput out, Point value) {
+            using (FieldOutput fields = out.openObject()) {
                 fields.add("x", value.x)
                       .add("y", value.y);
-                }
+            }
 //                out.openObject()
 //                    .add("x", value.x)
 //                    .add("y", value.y)
 //                    .close();
-            }
         }
+    }
 
     const SegmentMapper
-            implements Mapping<Segment>
-        {
+            implements Mapping<Segment> {
         @Override
-        String typeName.get()
-            {
+        String typeName.get() {
             return "segment";
-            }
+        }
 
         @Override
-        Segment read(ElementInput in)
-            {
-            using (FieldInput fields = in.openObject())
-                {
+        Segment read(ElementInput in) {
+            using (FieldInput fields = in.openObject()) {
                 return new Segment(fields.readObject<Point>("p1"), fields.readObject<Point>("p2"));
 //console.print($"reading segment");
 //Point p1 = fields.read<Point>("p1");
-//console.print($"p1={p1}");
+//console.print($"{p1=}");
 //Point p2 = fields.read<Point>("p2");
-//console.print($"p2={p2}");
+//console.print($"{p2=}");
 //return new Segment(p1, p2);
-                }
-            }
-
-        @Override
-        void write(ElementOutput out, Segment value)
-            {
-            using (FieldOutput fields = out.openObject())
-                {
-                fields.addObject("p1", value.p1)
-                      .addObject("p2", value.p2);
-                }
             }
         }
 
-    private <Ser> void testSer(Schema schema, String name, Ser val)
-        {
+        @Override
+        void write(ElementOutput out, Segment value) {
+            using (FieldOutput fields = out.openObject()) {
+                fields.addObject("p1", value.p1)
+                      .addObject("p2", value.p2);
+            }
+        }
+    }
+
+    private <Ser> void testSer(Schema schema, String name, Ser val) {
         StringBuffer buf = new StringBuffer();
         schema.createObjectOutput(buf).write(val);
 
@@ -375,10 +334,9 @@ module TestIO
 
         Ser val2 = schema.createObjectInput(new CharArrayReader(s)).read<Ser>();
         console.print($"read {name} back in={val2}");
-        }
+    }
 
-    void testPoint()
-        {
+    void testPoint() {
         console.print("\n*** testPoint()");
 
         static String ExamplePoint =
@@ -402,7 +360,7 @@ module TestIO
         ElementInputStream e_in   = o_in.ensureElementInput();
         PointMapper        mapper = new PointMapper();
         Point              point  = mapper.read(e_in);
-        console.print($"point={point}");
+        console.print($"{point=}");
 
         Schema schemaSA = new Schema([new PointMapper(), new SegmentMapper()]);
         testSer(schemaSA, "point", point);
@@ -419,33 +377,25 @@ module TestIO
         testDeser("rnd-seq", schemaRA, ExamplePoint , False);
         testDeser("rnd-rnd", schemaRA, ExampleRandom, False);
 
-        private void testDeser(String test, Schema schema, String json, Boolean failureExpected)
-            {
-            try
-                {
+        private void testDeser(String test, Schema schema, String json, Boolean failureExpected) {
+            try {
                 Point point = schema.createObjectInput(new CharArrayReader(json)).read<Point>();
                 console.print($"read: {point}");
                 if (failureExpected)
                     {
                     console.print($"Test \"{test}\" finished, BUT IT SHOULD HAVE FAILED!!!");
                     }
-                }
-            catch (Exception e)
-                {
-                if (failureExpected)
-                    {
+            } catch (Exception e) {
+                if (failureExpected) {
                     console.print($"Test \"{test}\" correctly failed as expected.");
-                    }
-                else
-                    {
+                } else {
                     console.print($"Test \"{test}\" failed with \"{e}\", BUT IT SHOULD NOT HAVE FAILED!!!");
-                    }
                 }
             }
         }
+    }
 
-    void testTuple()
-        {
+    void testTuple() {
         console.print("\n*** testTuple()");
 
         Schema schema = Schema.DEFAULT;
@@ -455,10 +405,9 @@ module TestIO
         testSer(schema, "tuple", new Test(tuple));
 
         const Test(Tuple<Int, String> tuple);
-        }
+    }
 
-    void testMap()
-        {
+    void testMap() {
         console.print("\n*** testMap()");
 
         Schema schema = Schema.DEFAULT;
@@ -482,10 +431,9 @@ module TestIO
         assert map4 == map2;
 
         const Test<Key, Value>(Map<Key, Value> map);
-        }
+    }
 
-    void testMetadata()
-        {
+    void testMetadata() {
         console.print("\n*** testMetadata()");
 
         Schema schema00 = new Schema(randomAccess = False, enableMetadata = False);
@@ -522,17 +470,15 @@ module TestIO
         assert openObject(schema0M, Example2).metadataFor("$id") == Null;
         assert openObject(schemaRM, Example2).metadataFor("$id") == "whatever";
 
-        private FieldInputStream openObject(Schema schema, String json)
-            {
+        private FieldInputStream openObject(Schema schema, String json) {
             Reader             reader = new CharArrayReader(json);
             ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
             ElementInputStream e_in   = o_in.ensureElementInput();
             return e_in.openObject().as(FieldInputStream);
-            }
         }
+    }
 
-    void testPointers()
-        {
+    void testPointers() {
         console.print("\n*** testPointers()");
 
         Mapping[] mappings = new Mapping[]; mappings.add(new PointMapper()); mappings.add(new SegmentMapper());
@@ -561,15 +507,14 @@ module TestIO
         testSegment(schema, RelativeExample);
         testSegment(schema, AbsoluteExample);
 
-        private void testSegment(Schema schema, String json)
-            {
-            console.print($"json={json}");
+        private void testSegment(Schema schema, String json) {
+            console.print($"{json=}");
             Reader             reader = new CharArrayReader(json);
             ObjectInputStream  o_in   = schema.createObjectInput(reader).as(ObjectInputStream);
             Segment            segment = o_in.read<Segment>();
-            console.print($"segment={segment}");
-            }
+            console.print($"{segment=}");
         }
+    }
 
     static String ReflectionExample =
             \| {
@@ -585,4 +530,4 @@ module TestIO
              |       },
              | }
              ;
-    }
+}

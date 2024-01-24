@@ -55,19 +55,17 @@ module TestMaps {
 //        Int concurrency = 4;
 //        Int keys = 1_000;
 //        Int iterations = 1000_000;
-//        for (Int i : 0..3)
-//            {
+//        for (Int i : 0..3) {
 //            console.print("Concurrent load test of HashMap...");
 //            testConcurrentLoad(new SafeHashMap(), concurrency, iterations, keys);
 //            console.print("Concurrent load test of ConcurrentHashMap...");
 //            testConcurrentLoad(new ConcurrentHashMap(), concurrency, iterations, keys);
-//            }
+//        }
 
-//        for (UInt seed : 1..500)
-//            {
+//        for (UInt seed : 1..500) {
 //            log.add($"iteration #{seed}");
 //            testRandomOps(new ConcurrentHashMap(), seed);
-//            }
+//        }
     }
 
     void testBasic(Map<Int, String> map) {
@@ -524,8 +522,7 @@ module TestMaps {
 
         public Int run(Map<Int, Int> map, Int iterations, Int seed, Int range) {
             for (Int i : 0..iterations) {
-//                map.process(rnd.int(range), e ->
-//                    {
+//                map.process(rnd.int(range), e -> {
 //                    e.value = e.exists ? e.value + 1 : 1;
 //                    });
 //                map.put(rnd.int(range), 42);
