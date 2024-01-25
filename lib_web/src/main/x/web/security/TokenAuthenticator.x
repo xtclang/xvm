@@ -11,13 +11,37 @@ import responses.SimpleResponse;
  *   (https://datatracker.ietf.org/doc/html/rfc6819.html).
  */
 @Concurrent
-service TokenAuthenticator(Realm realm, String apiName)
+service TokenAuthenticator
         implements Authenticator {
+
+    /**
+     * Construct the `TokenAuthenticator` for the specified [Realm]. If the `apiName` is not
+     * specified, the realm name will be used instead to validate the "Authorization" header.
+     */
+    construct(Realm realm, String? apiName = Null) {
+        this.realm   = realm;
+        this.apiName = apiName ?: realm.name;
+    }
+
+    assert() {
+        assert switch (apiName) {
+          case "Bearer",
+               "Basic",
+               "Digest": False;
+          default:       True;
+        } as $"Reserved name {apiName}";
+    }
 
     /**
      * The Realm that contains the user/token information.
      */
     public/private Realm realm;
+
+    /**
+     * The api name used in the "Authorization" header. Cannot be one of the reserved names, such as
+     * "Bearer", "Basic" or "Digest".
+     */
+    String apiName;
 
 
     // ----- Authenticator interface ---------------------------------------------------------------
@@ -34,7 +58,7 @@ service TokenAuthenticator(Realm realm, String apiName)
             // "Authorization" header format: {apiName} {user}:{token}
             Int userOffset = apiName.size;
             if (CaseInsensitive.stringStartsWith(auth, apiName),
-                    auth[userOffset] == ' ',
+                auth[userOffset] == ' ',
                 Int tokenOffset := auth.indexOf(':', userOffset)) {
 
                 String user  = auth[userOffset >..< tokenOffset];

@@ -36,8 +36,31 @@ mixin Users
             return False;
         }
 
-        // hash the user and password data; this is performing the same work as Realm.userHash()
-        // and Realm.passwordHash() for each of the (up to) three supported algorithms
+        (HashInfo userHashes, HashInfo pwdHashes) = createHashes(realm, userName, password);
+
+        // look up the role names and convert them to role IDs
+        Int[]      roleIds;
+        String[]   roleNames = [roleName.is(String)?] : roleName;
+        AuthSchema schema    = dbParent.as(AuthSchema);
+        if (Role[] roleList := schema.roles.findByNames(roleNames)) {
+            roleIds = roleList.map(r -> r.roleId, CollectImmutableArray.of(Int));
+        } else {
+            return False;
+        }
+
+        Int  userId = schema.userId.next();
+        User user   = new User(userId, userName, userHashes, pwdHashes, roleIds);
+        return putIfAbsent(userId, user)
+                ? (True, user)
+                : False;
+    }
+
+    /**
+     * Hash the user and password data; this method is performing the same work as [Realm.userHash()]
+     * and [Realm.passwordHash()] for each of the (up to) three supported algorithms
+     */
+    (HashInfo userHashes, HashInfo pwdHashes)
+            createHashes(Realm realm, String userName, String? password) {
         Hash userBytes  = $"{userName}:{realm.name}".utf8();
         Hash pwdBytes   = $"{userName}:{realm.name}:{password}".utf8();
 
@@ -74,21 +97,7 @@ mixin Users
                 sha512_256?.sign(pwdBytes).bytes : [],
                 );
 
-        // look up the role names and convert them to role IDs
-        Int[]      roleIds;
-        String[]   roleNames = [roleName.is(String)?] : roleName;
-        AuthSchema schema    = dbParent.as(AuthSchema);
-        if (Role[] roleList := schema.roles.findByNames(roleNames)) {
-            roleIds = roleList.map(r -> r.roleId, CollectImmutableArray.of(Int));
-        } else {
-            return False;
-        }
-
-        Int  userId = schema.userId.next();
-        User user   = new User(userId, userName, userHashes, pwdHashes, roleIds);
-        return putIfAbsent(userId, user)
-                ? (True, user)
-                : False;
+        return (userHashes, pwdHashes);
     }
 
     /**
