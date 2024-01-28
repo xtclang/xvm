@@ -3,40 +3,16 @@
  */
 
 plugins {
-    java
+    alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.tasktree)
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-testing {
-    suites {
-        val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
-        }
-    }
-}
-
-tasks {
-    jar {
-        val version = rootProject.version
-
-        manifest {
-            attributes["Manifest-Version"] = "1.0"
-            attributes["Sealed"] = "true"
-            attributes["Name"] = "/org/xvm/util"
-            attributes["Specification-Title"] = "xvm"
-            attributes["Specification-Version"] = version
-            attributes["Specification-Vendor"] = "xtclang.org"
-            attributes["Implementation-Title"] = "xvm-javatools_utils"
-            attributes["Implementation-Version"] = version
-            attributes["Implementation-Vendor"] = "xtclang.org"
-        }
-    }
-
-    test {
-        maxHeapSize = "1G"
-    }
+val xdkJavaToolsUtilsProvider by configurations.registering {
+    description = "Provider configuration of the XVM javatools_utils classes."
+    isCanBeResolved = false
+    isCanBeConsumed = true
+/*    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.CLASSES))
+    }*/
 }

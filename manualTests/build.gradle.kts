@@ -1,154 +1,200 @@
+import org.xtclang.plugin.tasks.XtcCompileTask
+
 /*
- * Test utilities.
+ * Test utilities.  This is a standalone XTC project, which should only depend on the XDK.
+ * If we want to use it to debug the XDK, that is also fine, as it will do dependency
+ * substitution on the XDK and XTC Plugin (and Javatools and other dependencies) correctly,
+ * through included builds, anyway.
+ *
+ * This is compiled as part of the XDK build, in order to ensure that the build DSL work as
+ * expected, and that we can resolve modules only with external dependencies to repository
+ * artifacts for the XTC Gradle plugin and the XDK.
  */
 
-val xdk          = project(":xdk");
-val javatools    = project(":javatools")
-val javatoolsJar = "${javatools.buildDir}/libs/javatools.jar"
-
-val tests = listOf<String>(
-    "src/main/x/annos.x",
-    "src/main/x/array.x",
-    "src/main/x/collections.x",
-    "src/main/x/defasn.x",
-    "src/main/x/exceptions.x",
-    "src/main/x/generics.x",
-    "src/main/x/innerOuter.x",
-    "src/main/x/files.x",
-    "src/main/x/IO.x",
-    "src/main/x/lambda.x",
-    "src/main/x/literals.x",
-    "src/main/x/loop.x",
-    "src/main/x/nesting.x",
-    "src/main/x/numbers.x",
-    "src/main/x/prop.x",
-    "src/main/x/maps.x",
-    "src/main/x/misc.x",
-    "src/main/x/queues.x",
-    "src/main/x/services.x",
-    "src/main/x/reflect.x",
-    "src/main/x/regex.x",
-    "src/main/x/tuple.x")
-
-val testModules = listOf<String>(
-    "TestAnnotations",
-    "TestArray",
-    "TestCollections",
-    "TestDefAsn",
-    "TestTry",
-    "TestGenerics",
-    "TestInnerOuter",
-    "TestFiles",
-    "TestIO",
-    "TestLambda",
-    "TestLiterals",
-    "TestLoops",
-    "TestNesting",
-    "TestNumbers",
-    "TestProps",
-    "TestMaps",
-    "TestMisc",
-    "TestQueues",
-    "TestServices",
-    "TestReflection",
-    "TestRegularExpressions",
-    "TestTuples")
-
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-    delete("$buildDir")
+plugins {
+    alias(libs.plugins.xdk.build.versioning)
+    alias(libs.plugins.xtc)
 }
 
-val compileAll = tasks.register<JavaExec>("compileAll") {
-    group       = "Build"
-    description = "Compile all tests"
+val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
 
-    dependsOn(xdk.tasks["build"])
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-o", "$buildDir",
-        "-L", "${xdk.buildDir}/xdk/lib",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc")
-
-    args(opts + tests + "src/main/x/runner.x")
-    mainClass.set("org.xvm.tool.Compiler")
+dependencies {
+    xdk(libs.xdk)
 }
 
-tasks.register<JavaExec>("runAll") {
-    group       = "Test"
-    description = "Run all tests"
-
-    dependsOn(xdk.tasks["build"])
-
-    // the first two paths contain classes that are present in the javatoolsJar,
-    // but gradle's classpath() doesn't allow combining a jar with a regular path
-    classpath(
-        "${javatools.buildDir}/classes/java/main",
-        "${javatools.buildDir}/resources/main",
-        "${javatools.buildDir}/classes/java/test")
-
-    args(tests)
-    mainClass.set("org.xvm.runtime.TestConnector")
+/**
+ * This configured a source set, which makes the compiler build all of the included modules.
+ * There are several negative "should fail" source files in this subproject as well. but
+ * these are filtered out through the standard Gradle source set mechanism. This repo
+ * is not really meant to be used as a unit test. It merely sits on top of everything to
+ * ensure that we don't accidentally break external dependencies to the XDK artifacts
+ * for the world outside the XDK repo, and that the build lifecycle works as it should,
+ * and we don't push any broken changes to XTC language support, that won't be discovered
+ * until several commits later, or worse, by a third party XTC developer, who has no
+ * interest in building their own XDK internals or modifying the plugin.
+ */
+sourceSets {
+    main {
+        xtc {
+            include(
+                "**/annos.x",
+                "**/array.x",
+                "**/collections.x",
+                "**/defasn.x",
+                "**/exceptions.x",
+                "**/FizzBuzz.x",
+                "**/generics.x",
+                "**/innerOuter.x",
+                "**/files.x",
+                "**/IO.x",
+                "**/lambda.x",
+                "**/literals.x",
+                "**/loop.x",
+                "**/nesting.x",
+                "**/numbers.x",
+                "**/prop.x",
+                "**/maps.x",
+                "**/misc.x",
+                "**/queues.x",
+                "**/services.x",
+                "**/reflect.x",
+                "**/regex.x",
+                "**/tuple.x"
+            )
+        }
+    }
 }
 
-tasks.register<JavaExec>("runAllParallel") {
-    group       = "Test"
-    description = "Run all tests"
-
-    dependsOn(xdk.tasks["build"], compileAll)
-
-    classpath(javatoolsJar)
-
-    val opts = listOf<String>(
-        "-L", "${xdk.buildDir}/xdk/lib",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir",
-        "Runner")
-
-    args(opts + testModules)
-    mainClass.set("org.xvm.tool.Runner")
+/**
+ * It's important to understand what causes caching problems and unncessary rebuild in Gradle.
+ * One of these things is tasks dependning on System environment variables.
+ * To fix that particular issue, an input of the form inputs.property("langEnvironment") { System.getenv(ENV_VAR) }
+ * needs to be added to the task configuration or any plugin that uses is must be aware of it.
+ * <p>
+ * Also Using doFirst and doLast from a build script on a cacheable task ties you to build script changes since
+ * the implementation of the closure comes from the build script. If possible, you should use separate tasks instead.
+ * <p>
+ * @see <a href="https://docs.gradle.org/current/userguide/common_caching_problems.html">Gradle User Guide on caching</a>
+ */
+fun alwaysRebuild(): Boolean {
+    val rebuild = (System.getenv("ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD") ?: "false").toBoolean()
+    if (rebuild) {
+        logger.warn("$prefix manualTest compile configuration is set to force rebuild (forceRebuild: true)")
+    }
+    return rebuild
 }
 
-val compileOne = tasks.register<JavaExec>("compileOne") {
-    description = "Compile a \"testName\" test"
+xtcCompile {
+   /*
+    * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
+    */
+    showVersion = false
 
-    dependsOn(xdk.tasks["build"])
+    /*
+     * Run the XTC command in its built-in verbose mode (default: false).
+     */
+    verbose = false
 
-    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+    /*
+     * Compile in build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
+     * in e.g. Javatools classes, but is brittle, and should not be used for production use, for example
+     * if the launched app does System.exit, this will kill the build job too.
+     *
+     * Javatools launchers should be debuggable through a standard Run/Debug Configuration (for example in IntelliJ)
+     * where the Javatools project is added as a Java Application (and not a Gradle job).
+     *
+     * Default is true.
+     */
+    fork = true
 
-    classpath(javatoolsJar)
+    /*
+     * Should all compilations be forced to rerun every time this build is performed? This is NOT recommended,
+     * as it removes pretty much every advantage that Gradle with dynamic dependency management gives you. It
+     * should be used only for testing purposes, and never for anything else, in a typical build, distribution
+     * generation or execution of an XTC app.
+     */
+    forceRebuild = alwaysRebuild()
 
-    args("-o", "$buildDir",
-         "-L", "${xdk.buildDir}/xdk/lib",
-         "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-         "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-         "-L", "$buildDir",
-         "src/main/x/$name.x")
-    mainClass.set("org.xvm.tool.Compiler")
+    /*
+     * By default, a Gradle task swallows stdin, but it's possible to override standard input and
+     * output for any XTC launcher task.
+     *
+     * To redirect any I/O stream, for example if you want to input data to the XTC debugger or
+     * to the console, such as credentials/interactive prompts, the error, output and input streams
+     * can be redirected to a custom source.
+     *
+     * This should at least enable the "ugly" use case of breaking into the debugger on the
+     * console when an "assert:debug" statement is evaluated.
+     */
+    // stdin = System.`in`
 }
 
-tasks.register<JavaExec>("runOne") {
-    group       = "Test"
-    description = "Run a \"testName\" test"
+xtcRun {
+    /*
+     * Equivalent to the "--version" flag for the launcher (default: false).
+     */
+    showVersion = false
 
-    dependsOn(xdk.tasks["build"], compileOne)
+    /*
+ * Run the XTC command in its built-in verbose mode (default: false).
+ */
+    verbose = true
 
-    val name = if (project.hasProperty("testName")) project.property("testName") else "TestSimple"
+    /*
+     * If fork is "true", the runner will run in the build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
+     * in e.g. Javatools classes, but is brittle, and should not be used for production use, for example
+     * if the launched app does System.exit, this will kill the build job too.
+     *
+     * Javatools lanchers should be debuggable through a standard Run/Debug Configuration (for example in IntelliJ)
+     * where the Javatools project is added as a Java Application (and not a Gradle job).
+     *
+     * Default is true.
+     */
+    fork = true
 
-    classpath(javatoolsJar)
+    /*
+     * Use an XTC native launcher (requires a local XDK installation on the test machine.)
+     * The default is "false".
+     */
+    useNativeLauncher = false
 
-    val opts = listOf<String>(
-        "-v",
-        "-L", "${xdk.buildDir}/xdk/lib",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_turtle.xtc",
-        "-L", "${xdk.buildDir}/xdk/javatools/javatools_bridge.xtc",
-        "-L", "$buildDir")
+    /*
+    * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
+    */
+    jvmArgs("-showversion")
 
-    args(opts + "src/main/x/$name.x")
-    mainClass.set("org.xvm.tool.Runner")
+    /*
+     * Execute TestFizzBuzz with the Hello World arguments. We support providers, as well
+     * as Strings, as per the common Gradle API conventions. For example, you can do
+     * moduleArgs(<collection of string providers>) or moduleArg(<string provider>) for
+     * lazy evaluation, too.
+     *
+     * Currently, all module configurations in the xtcRun DSL will be executed in sequence,
+     * as their order declared.
+     *
+     * We suspect that the pre-generated run tasks from the XTC Plugin are not the most optimal
+     * and intuitive way of running XTC modules. It's probably cleaner for the user to modify
+     * the configuration on task level for any runtime task, and add many simple custom run tasks
+     * for clarity. However, we haven't ahd the cycles to support the standard overrides for
+     * modules to run (all other DSL can be overridden) at task level. It is easy and encouraged
+     * to contribute to the XTC Plugin build DSL, so that we get more functionality, clearer
+     * and shorter syntax, and new features that we feel we require. It's not clear what all
+     * of these are, but working with an XTC project that applies the XTC Plugin will likely
+     * discover most of the shortcomings quickly, so that we can file enhancement requests.
+     *
+     * TODO: Add parallelism, and a simpler way to work with this.
+     * TODO: Add a nicer DSL syntax with a nested modules section.
+     */
+    module {
+        moduleName = "TestFizzBuzz" // Will add other ways to resolve modules too.
+        showVersion = true // Overrides env showVersion flag.
+        moduleArgs("Hello, ", "World!")
+    }
+}
+
+tasks.withType<XtcCompileTask>().configureEach {
+    enabled = sanityCheckRuntime
+    doLast {
+        logger.lifecycle("$prefix *** RECOMPILING: $name")
+    }
 }

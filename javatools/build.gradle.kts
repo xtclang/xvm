@@ -1,77 +1,138 @@
-import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
+import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
-/*
+/**
  * Build file for the Java tools portion of the XDK.
  */
 
 plugins {
-    java
+    alias(libs.plugins.xdk.build.java)
+    alias(libs.plugins.tasktree)
+}
+
+val semanticVersion: SemanticVersion by extra
+
+val xdkJavaToolsUtils by configurations.registering {
+    description = "Consumer configuration of the classes for the XVM Java Tools Utils project (version $version)"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.CLASSES))
+    }
+}
+
+// TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
+val xdkJavaToolsProvider by configurations.registering {
+    description = "Provider configuration of the The XVM Java Tools jar artifact: 'javatools-$version.jar'"
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    outgoing.artifact(tasks.jar)
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
+    }
 }
 
 dependencies {
-    implementation("org.xtclang.xvm:javatools_utils:")
+    @Suppress("UnstableApiUsage")
+    xdkJavaToolsUtils(libs.javatools.utils)
+    // Normal use case: The javatools-utils is included in the Javatools uber-jar, so we need it only as compile only.
+    // compileOnly(libs.javatools.utils)
+    // Debugging use case: If we want IDE debugging, executing the Compiler or Runner manually, we need javatools-utils as an implementation dependency.
+    implementation(libs.javatools.utils)
+    testImplementation(libs.javatools.utils)
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-testing {
-    suites {
-        val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
+/**
+ * TODO: Someone please determine if this is something we should fix or not:
+ *
+ * We add the implicits.x file to the resource set, to both make it part of the javatools.jar + available.
+ * IntelliJ may warn that we have a "duplicate resource folder" if this is executed by a Run/Debug configuration.
+ * This is because lib_ecstasy is the place where these resources are originally placed. I'm not sure if
+ * they need to be there to be compiled into the ecstasy.xtc binary, in order for the launchers to work, or
+ * if they only need to be in the javatools.jar. If the latter is the case, we should move them. If the
+ * former is the case, they should be resolved from the the built ecstasy.xtc module on the module path
+ * anyway.
+ *
+ * We also need to refer to the "mack" module during runtime in the debugger. I suppose we can't access that
+ * due to a similar reason as above - IntelliJ needs a reference to it to be able to invoke it in
+ * the debug session, and it resides in a different module too (javatools_turtle). Seems weird that it
+ * doesn't get that from the ecstasy.xtc file that actually IS on the module path in the debug run.
+ */
+sourceSets {
+    main {
+        resources {
+            srcDir(file(xdkImplicitsFile.parent)) // May trigger a warning in your IDE, since we are referencing someone else's (javatools_turtle) main resource path. IDEs like to have one.
         }
     }
 }
 
-tasks {
-    val copyImplicits by registering(Copy::class) {
-        group = BUILD_GROUP
-        description = "Copy the implicit.x from :lib_ecstasy project into the build directory."
-        from(file(project(":lib_ecstasy").property("implicit.x")!!))
-        into(file("$buildDir/resources/main/"))
-        doLast {
-            logger.info("Finished task: copyImplicits")
-        }
+val jar by tasks.existing(Jar::class) {
+    inputs.property("manifestSemanticVersion") {
+        semanticVersion.toString()
     }
-
-    val copyUtils by registering(Copy::class) {
-        group = BUILD_GROUP
-        description = "Copy the classes from :javatools_utils project into the build directory."
-        dependsOn(project(":javatools_utils").tasks["classes"])
-        from(file("${project(":javatools_utils").buildDir}/classes/java/main"))
-        include("**/*.class")
-        into(file("$buildDir/classes/java/main"))
-        doLast {
-            logger.info("Finished task: copyUtils")
-        }
+    inputs.property("manifestVersion") {
+        version
     }
+    archiveBaseName = "javatools"
 
-    jar {
-        dependsOn(copyImplicits, copyUtils)
-        mustRunAfter(copyImplicits, copyUtils)
+    // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
+    //  apparent how to get that correct for includedBuilds.
+    from(xdkJavaToolsUtils)
 
-        val version = rootProject.version
-        manifest {
-            attributes["Manifest-Version"] = "1.0"
-            attributes["Sealed"] = "true"
-            attributes["Main-Class"] = "org.xvm.tool.Launcher"
-            attributes["Name"] = "/org/xvm/"
-            attributes["Specification-Title"] = "xvm"
-            attributes["Specification-Version"] = version
-            attributes["Specification-Vendor"] = "xtclang.org"
-            attributes["Implementation-Title"] = "xvm-prototype"
-            attributes["Implementation-Version"] = version
-            attributes["Implementation-Vendor"] = "xtclang.org"
-        }
+    manifest {
+        attributes(
+            "Manifest-Version" to "1.0",
+            "Xdk-Version" to semanticVersion.toString(),
+            "Sealed" to "true",
+            "Main-Class" to "org.xvm.tool.Launcher",
+            "Name" to "/org/xvm/",
+            "Specification-Title" to "xvm",
+            "Specification-Version" to version,
+            "Specification-Vendor" to "xtclang.org",
+            "Implementation-Title" to "xvm-prototype",
+            "Implementation-Version" to version,
+            "Implementation-Vendor" to "xtclang.org"
+        )
     }
+}
 
-    compileTestJava {
-        dependsOn(copyImplicits, copyUtils)
+val assemble by tasks.existing {
+    dependsOn(sanityCheckJar) // "assemble" already depends on jar by default in the Java build life cycle
+}
+
+val sanityCheckJar by tasks.registering {
+    group = VERIFICATION_GROUP
+    description =
+        "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
+
+    dependsOn(jar)
+
+    val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
+    val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
+    inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
+    inputs.file(jar)
+
+    logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
+
+    onlyIf {
+        checkJar
     }
+    doLast {
+        logger.info("$prefix Sanity checking integrity of generated jar file.")
 
-    test {
-        maxHeapSize = "1G"
+        DebugBuild.verifyJarFileContents(
+            project,
+            listOfNotNull(
+                "implicit.x", // verify the implicits are in the jar
+                "org/xvm/tool/Compiler", // verify the javatools package is in there, including Compiler and Runner
+                "org/xvm/tool/Runner",
+                "org/xvm/util/Severity" // verify the
+            ),
+            expectedEntryCount
+        ) // Check for files in both javatools_utils and javatools + implicit.x
+
+        logger.info("$prefix Sanity check of javatools.jar completed successfully.")
     }
 }
