@@ -1,6 +1,5 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.xtc.ClassPart;
 import org.xvm.xtc.XType;
 import org.xvm.xtc.XCons;
 import org.xvm.xtc.ClzBuilder;
@@ -39,5 +38,9 @@ class RegAST extends AST {
   }
   @Override String name() { return _name; } // Can be null for 'this'?
   @Override XType _type() { return _type; }
-  @Override void jpre ( SB sb ) { sb.p(_name); }
+  @Override void jpre ( SB sb ) {
+    sb.p(_name);
+    if( _type.isVar() )
+      sb.p(".$get()");
+  }
 }
