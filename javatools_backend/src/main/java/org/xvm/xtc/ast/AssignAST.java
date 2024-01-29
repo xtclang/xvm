@@ -16,6 +16,12 @@ class AssignAST extends AST {
     AsnOp op = asgn ? AsnOp.Asn : AsnOp.OPS[X.u31()];
     kids[1] = ast_term(X);
     MethodCon meth = (MethodCon)X.con();
+    // Expecting Assign { DefRegAST no_name reg#n, from RegAST named }
+    if( op == AsnOp.Deref ) {
+      int idx = ((DefRegAST)kids[0])._reg;
+      X._locals.set(idx, ((RegAST)kids[1])._name);
+    }
+    
     return new AssignAST(op, meth, kids);
   }
   AssignAST( AST... kids ) { this(AsnOp.Asn,null,kids); }
@@ -79,12 +85,13 @@ class AssignAST extends AST {
         _kids[0] = new RegAST(0,tmp,type);
       }
     }
+
     return this;
   }
   
   @Override public SB jcode( SB sb ) {
-    switch( _op ) {
-    case AsnIfNotFalse, AsnIfNotNull: {
+    return switch( _op ) {
+    case AsnIfNotFalse, AsnIfNotNull -> {
       // var := (true,val)  or  var ?= not_null;
       if( _cond_asgn!=null ) sb.ip("if( ");
       // Expression result is the boolean conditional value,
@@ -98,22 +105,31 @@ class AssignAST extends AST {
       // $t(tmp = expr()) && XRuntime.GET$COND() && $t(var = tmp)
       if( _cond_asgn != null )
         sb.p(") ").p(_cond_asgn).p(" = ").p(name);
-      break;
+      yield sb;
     }
       
-    case AsnIfWasFalse: return asnIf(sb,"!",""      ); // if(!var      ) var = e0;      
-    case AsnIfWasTrue : return asnIf(sb,"" ,""      ); // if( var      ) var = e0;      
-    case AsnIfWasNull : return asnIf(sb,"" ,"==null"); // if( var==null) var = e0;
+    case AsnIfWasFalse -> asnIf(sb,"!",""      ); // if(!var      ) var = e0;      
+    case AsnIfWasTrue  -> asnIf(sb,"" ,""      ); // if( var      ) var = e0;      
+    case AsnIfWasNull  -> asnIf(sb,"" ,"==null"); // if( var==null) var = e0;
+    // Converts? a "normal" thing into a "Var" thing.
+    // Nothing, because loads & stores are all $get and $set now
+    case Deref -> sb;
+
+    case Asn -> _kids[0] instanceof RegAST reg && reg._type.isVar()
+      // Assigning a Var uses "$set()"
+      ? _kids[1].jcode(sb.ip(reg._name).p(".$set(")).p(")")
+      : asn(sb);
       
-    default:
-      _kids[0].jcode(sb);
-      sb.p(" ").p(_op.text).p(" ");
-      _kids[1].jcode(sb);
-      break;
-    }
-    return sb;
+    case AddAsn -> asn(sb);
+    default -> throw XEC.TODO();
+    };
   }
 
+  private SB asn(SB sb) {
+    _kids[0].jcode(sb).p(" ").p(_op.text).p(" ");
+    return _kids[1].jcode(sb);
+  }
+  
   private SB asnIf(SB sb, String pre, String post) {
     sb.ip("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
     return _kids[1].jcode(sb);

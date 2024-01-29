@@ -6,9 +6,6 @@ import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.ParamTCon;
 import org.xvm.xtc.cons.TermTCon;
 
-import java.util.HashMap;
-import java.util.Arrays;
-
 // Basically a Java class as a XType.
 //
 // XTC classes have true generics/parameterization, no type erasure.
@@ -117,7 +114,6 @@ public class XClz extends XType {
     clz._jpack = "ecstasy.collections";
     clz._jname = jname;
     clz._jparms = jparms;
-    clz._nTypeParms = 1;
     clz._flds[0] = "Element";
     clz._xts [0] = xelem;
     clz._clz = XCons.ARYXTC._clz;
@@ -125,6 +121,20 @@ public class XClz extends XType {
     return clz._intern();
   }
 
+  static XClz make_tuple( XType... clzs ) {
+    XClz clz = make("ecstasy.collections","Tuple",clzs.length);
+    clz._jpack = "ecstasy.collections";
+    clz._jname = "Tuple";
+    clz._jparms = true;
+    for( int i=0; i<clzs.length; i++ )
+      clz._flds[i] = ""+i;
+    clz._xts = clzs;
+    clz._clz = XXTC._clz;
+    clz._super = XXTC;
+    return clz._intern();
+  }
+
+  
   private static XClz _make_clz( ClassPart clz ) {
     // Extra useful info
     ModPart mod = clz.mod();
@@ -157,6 +167,14 @@ public class XClz extends XType {
     return xclz;
   }
 
+  // Make a specialized FutureVar type
+  public static XClz wrapFuture( XType xt ) {
+    XClz xclz = _make_clz(XCons.FUTUREVAR._clz);
+    xclz._flds = XCons.FUTUREVAR._flds;
+    xclz._xts[0] = xt;
+    return xclz._make(XCons.FUTUREVAR);
+  }
+  
   // Make from a parameterized class; normal class but the type parms from the
   // PTC.
   public static XClz make( ParamTCon ptc ) {
@@ -170,9 +188,13 @@ public class XClz extends XType {
       xclz._flds[i] = clz._tnames[i];
       xclz._xts [i] = xtype(ptc._parms[i],true);
     }
-
+    return xclz._make(plain_clz);
+  }
+  
+  // Intern and fill out a parameterized class from a plain class
+  private XClz _make( XClz plain_clz ) {
     // See if already exists
-    XClz xclz2 = xclz._intern();
+    XClz xclz2 = _intern();
 
     // Very specifically, generic parameterized AryXTC<XTC> means the
     // un-element-typed Array<VOID>, used to make both primitive arrays and
@@ -180,10 +202,10 @@ public class XClz extends XType {
     if( xclz2 == XCons.ARYXTC )
       return XCons.ARRAY;
 
-    if( xclz2 != xclz ) return xclz2; // Already did
+    if( xclz2 != this ) return xclz2; // Already did
 
     // Fill in Super
-    xclz2._super = get_super(clz);
+    xclz2._super = get_super(_clz);
     // Copy Java fields; this could be a parameterized version of a Java
     // implementation
     xclz2._jpack = plain_clz._jpack;
@@ -191,6 +213,7 @@ public class XClz extends XType {
     xclz2._jparms= plain_clz._jparms;
     return xclz2;
   }
+  
   
   // You'd think the clz._super would be it, but not for enums
   static XClz get_super( ClassPart clz ) {
@@ -211,7 +234,7 @@ public class XClz extends XType {
 
   // Generic XTC array; when making XTC array constants have to pass
   // the explicit array element type
-  public boolean generic_ary() { return S.eq(_jname,"AryXTC");  }
+  @Override public boolean generic_ary() { return S.eq(_jname,"AryXTC");  }
   // Some kind of an array
   public boolean is_ary() { return S.eq("ecstasy.collections",_pack) && S.eq("Array",_name); }
   // XTC array element type
@@ -246,6 +269,7 @@ public class XClz extends XType {
     }
     return pack.intern();
   }
+
   
   @Override public boolean needs_import() {
     // Built-ins before being 'set' have no clz, and do not needs_import
@@ -401,6 +425,10 @@ public class XClz extends XType {
     return true;
   }
 
+  @Override public boolean isVar() {
+    // TODO: Really needs to be an ISA on var
+    return isa( XCons.FUTUREVAR );
+  }
 
   
   private static final XClz[] XCLZS = new XClz[] {
