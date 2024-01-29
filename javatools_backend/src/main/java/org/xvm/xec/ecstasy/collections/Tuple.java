@@ -3,8 +3,7 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xtc.XType;
-import org.xvm.xtc.XTuple;
+import org.xvm.xtc.XClz;
 import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
@@ -23,7 +22,7 @@ public abstract class Tuple extends XTC implements Cloneable {
   // Select a range using array syntax.
   // Loses all Java compiler knowledge of the types.
   public Tuple at(Range r) {
-    Object es[] = new Object[(int)(r._hi - r._lo)];
+    Object[] es = new Object[(int)(r._hi - r._lo)];
     for( int i=0; i<es.length; i++ )
       es[i] = at((int)(i+r._lo));
     Tuple t = new TupleN(es);
@@ -59,7 +58,7 @@ public abstract class Tuple extends XTC implements Cloneable {
 
   // Converts the underlying Tuple to a TupleN with the extra field.
   // Loses all Java compiler knowledge of the types.
-  public Tuple add(Class clz, Object x) {
+  public Tuple add( Object x) {
     // TODO: if the underlying class is already a TupleN we can use
     // Arrays.copyOf instead of a manual copy.
     Object[] es = new Object[_len+1];
@@ -111,9 +110,9 @@ public abstract class Tuple extends XTC implements Cloneable {
 
   // Return a tuple class for this set of types.  The class is cached, and can
   // be used many times.
-  public static XTuple make_class( HashMap<String,String> cache, XTuple xtt ) {
+  public static XClz make_class( HashMap<String,String> cache, XClz xtt ) {
     // Lookup cached version
-    int N = xtt.nargs();
+    int N = xtt.nTypeParms();
     if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime
     
     String tclz = xtt.clz();
@@ -136,11 +135,11 @@ public abstract class Tuple extends XTC implements Cloneable {
     sb.fmt("class %0 extends Tuple%1 {\n",tclz,N).ii();
     // N field declares
     for( int i=0; i<N; i++ )
-      sb.ifmt("public %0 _f%1;\n",xtt.arg(i).toString(),i);
+      sb.ifmt("public %0 _f%1;\n",xtt.typeParm(i).toString(),i);
     // Constructor, taking N arguments
     sb.ip(tclz).p("( ");
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xtt.arg(i).toString(),i);
+      sb.fmt("%0 f%1, ",xtt.typeParm(i).toString(),i);
     sb.unchar(2).p(") {\n").ii().i();
     // N arg to  field assigns
     for( int i=0; i<N; i++ )
@@ -151,7 +150,7 @@ public abstract class Tuple extends XTC implements Cloneable {
       sb.ifmt("public Object f%0() { return _f%0; }\n",i);
     // Abstract setters
     for( int i=0; i<N; i++ )
-      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xtt.arg(i).box().toString()).p(")e; }\n");
+      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xtt.typeParm(i).box().toString()).p(")e; }\n");
     // Class end
     sb.di().ip("}\n");
     cache.put(tclz,sb.toString());

@@ -61,7 +61,8 @@ class BindFuncAST extends AST {
       // Check for other exposed names being effectively final
       MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
       for( int i=1; i<_kids.length; i++ )
-        make_effectively_final((RegAST)_kids[i],lam);
+        if( _kids[i] instanceof RegAST reg )
+          make_effectively_final(reg,lam);
       return this;
     }
     
@@ -126,8 +127,9 @@ class BindFuncAST extends AST {
   
   @Override public SB jcode( SB sb ) {
     sb.p("( ");
-    for( String arg : _args )
-      sb.p(arg).p(",");
+    if( _args != null )
+      for( String arg : _args )
+        sb.p(arg).p(",");
     sb.unchar(1).p(") -> ");
     AST body = _kids[0];
     body.jcode(sb);

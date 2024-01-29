@@ -18,21 +18,25 @@ class DefRegAST extends AST {
   }
   private DefRegAST( ClzBuilder X, Const init, Const type, Const name ) {
     super(null);
-    if( init!=null ) {
-      // Destination is read first and is type-aware, so read the destination type.
-      AnnotTCon anno = (AnnotTCon)init;
-      // TODO: Handle other kinds of typed args
-      TermTCon ttc = anno.con().is_generic();
-      if( ttc==null ) throw XEC.TODO();
-      _init = XValue.val(ttc);
+    
+    // Destination is read first and is type-aware, so read the destination type.
+    _type = XType.xtype(type,false);
+    if( _type instanceof XClz clz )
+      ClzBuilder.add_import(clz);
+    _name = name==null ? null : ((StringCon)name)._str;
+    
+    if( init instanceof AnnotTCon anno ) {
+      _init = XValue.val (anno);
+      _type = XType.xtype(anno,true);
+    } else if( init != null ) {
+      throw XEC.TODO();
     } else {
       _init = null;
     }
-    _type = XType.xtype(type,false);
-    _name = name==null ? null : ((StringCon)name)._str;
-    _reg = name==null ? -1 : X.define(_name,_type);
-    if( _type instanceof XClz clz )
-      ClzBuilder.add_import(clz);
+
+    // At least FutureVar redefines the type so save the AST architected type
+    // till after annotation processing
+    _reg = X.define(_name,_type);
   }
   DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
   

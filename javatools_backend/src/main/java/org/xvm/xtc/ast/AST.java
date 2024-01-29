@@ -164,7 +164,8 @@ public abstract class AST {
     case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
-    case InvokeExpr   ->   InvokeAST.make(X);
+    case InvokeExpr   ->   InvokeAST.make(X,false);
+    case InvokeAsyncExpr-> InvokeAST.make(X,true );
     case Less         ->    OrderAST.make(X,"<");
     case MultiExpr    ->    MultiAST.make(X,true);
     case MultiStmt    ->    MultiAST.make(X,false);
@@ -195,6 +196,7 @@ public abstract class AST {
     case TryCatchStmt -> TryCatchAST.make(X);
     case TupleExpr    ->     ListAST.make(X,true);
     case UnaryOpExpr  ->    UniOpAST.make(X);
+    case VarOfExpr    ->    UniOpAST.make(X,"&","");
     case WhileDoStmt  ->    WhileAST.make(X);
     
     default -> throw XEC.TODO();
