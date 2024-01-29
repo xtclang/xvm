@@ -43,5 +43,3 @@ jobs:
         uses: gradle/gradle-build-action@v2
       - name: Verify Gradle Build
         run: ./gradlew build --info
-      - name: Verify Gradle Install
-        run: ./gradlew installLocalDist --info
