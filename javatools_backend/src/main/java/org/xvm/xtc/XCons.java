@@ -1,9 +1,6 @@
 package org.xvm.xtc;
 
-import org.xvm.XEC;
-
 import java.util.HashMap;
-import java.util.HashSet;
 
 import static org.xvm.xtc.XClz.XXTC;
 import static org.xvm.xtc.XClz.CONST;
@@ -34,8 +31,6 @@ public abstract class XCons {
   public static XClz JFALSE= XClz.make_java("ecstasy.Boolean","False",JBOOL);
   public static XBase NULL = XBase.make("null");
   public static XClz JNULL = XClz.make_java("ecstasy","Nullable",null);
-
-  public static XTuple COND_CHAR = XTuple.make(BOOL,CHAR);
   
   // A set of common XTC classes, and their Java replacements...
   // AND these take the default import path from "org.xvm.xec.ecstasy...".
@@ -86,6 +81,8 @@ public abstract class XCons {
   
   public static XClz ROUNDING    = XClz.make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
 
+  // This is a mixin type
+  public static XClz FUTUREVAR   = XClz.make_java("ecstasy.annotations","FutureVar",true,"ecstasy.annotations","FutureVar",null,"Referent",XXTC);
   
   // Convert a Java primitive to the Java object version.
   static final HashMap<XBase, XClz> XBOX = new HashMap<>() {{
@@ -131,5 +128,9 @@ public abstract class XCons {
   // These are always expanded to some Java constant
   public static XClz INTLITERAL = XClz.make_java("ecstasy.numbers","IntLiteral",false,"ecstasy.numbers","IntLiteral",CONST);
   public static XClz  FPLITERAL = XClz.make_java("ecstasy.numbers", "FPLiteral",false,"ecstasy.numbers", "FPLiteral",CONST);
+
+  // Some tuples
+  public static XClz TUPLE0 = XClz.make_tuple();
+  public static XClz COND_CHAR = XClz.make_tuple(BOOL,CHAR);
 
 }

@@ -131,6 +131,10 @@ public abstract class XType {
   
   public final boolean isa( XType xt ) { return this==xt || (getClass() == xt.getClass() && _isa(xt)); }
   abstract boolean _isa( XType xt );
+  public boolean isVar() { return false; }
+
+  public boolean generic_ary() { return false;  }
+  public XType e() { throw XEC.TODO(); }
   
   // --------------------------------------------------------------------------
 
@@ -216,9 +220,13 @@ public abstract class XType {
       if( clz._name.equals("Iterable") && clz._path._str.equals("ecstasy/Iterable.x") )
         yield XClz.make(ptc);
 
-      if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") )
-        //yield org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES, xtype(ptc._parms));
-        throw XEC.TODO();
+      if( clz._name.equals("Tuple") && clz._path._str.equals("ecstasy/collections/Tuple.x") ) {
+        int N = ptc._parms==null ? 0 : ptc._parms.length;
+        XType[] clzs = new XType[N];
+        for( int i=0; i<N; i++ )
+          clzs[i] = XType.xtype(ptc._parms[i],false);
+        yield org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES, XClz.make_tuple(clzs));
+      }
 
       // Attempt to use the Java class name
       if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
@@ -301,17 +309,17 @@ public abstract class XType {
 
     case VirtDepTCon virt ->
       xtype(virt._par,false);
+
+    case AnnotTCon acon ->
+      switch( acon.clz()._name ) {
+      case "InjectedRef" -> xtype(acon.con().is_generic(),true);
+      case "FutureVar" ->
+        XClz.wrapFuture(xtype(((ParamTCon)acon.con())._parms[0],true));
+      default ->  throw XEC.TODO();
+      };
     
     default -> throw XEC.TODO();
     };
   }
 
-  private static XTuple xtype( TCon[] cons ) {
-    int N = cons==null ? 0 : cons.length;
-    XType[] clzs = new XType[N];
-    for( int i=0; i<N; i++ )
-      clzs[i] = XType.xtype(cons[i],false);
-    return XTuple.make(clzs);
-  }
-  
 }

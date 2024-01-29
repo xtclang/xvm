@@ -28,10 +28,10 @@ public class ReturnAST extends AST {
   @Override XType _type() {
     if( _expr !=null )
       return _expr._type;
-    if( _ztype==null )
+    if( _ztype==null && _meth._xrets != null )
       return _kids==null ? XCons.VOID : _meth._xrets[0];
     // Conditional, report the non-boolean type
-    if( _kids[0] instanceof MultiAST cond )
+    if( _kids!=null && _kids[0] instanceof MultiAST cond )
       return cond._kids[1]._type;
     // Conditional, always false, no other returned type
     return XCons.VOID;

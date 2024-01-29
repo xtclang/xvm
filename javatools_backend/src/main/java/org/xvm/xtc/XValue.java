@@ -120,7 +120,7 @@ public abstract class XValue {
     // Array constants
     case AryCon ac -> {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
-      XClz ary = (XClz)XType.xtype(ac.type(),false);
+      XType ary = XType.xtype(ac.type(),false);
       // Cannot make a zero-length instance of ARRAY, since its abstract - but
       // a zero-length version is meaningful.
       if( ary==XCons.ARRAY ) {
@@ -159,6 +159,8 @@ public abstract class XValue {
       ClassPart clz = ttc.clz();
       if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".console()");
+      if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
+        yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".timer()");
       throw XEC.TODO();      
     }
 
@@ -174,6 +176,17 @@ public abstract class XValue {
       yield x.clz(ASB.p("new ")).p("()");
     }
 
+    case AnnotTCon acon ->
+      switch( acon.clz()._name ) {
+        // Gets a special "CONTAINER.inject" call
+      case "InjectedRef" -> _val(acon.con().is_generic());
+      // Wraps the type as "Future<whatever>".
+      case "FutureVar" -> XType.xtype(acon,true).clz(ASB.p("new ")).p("()");
+
+      default -> throw XEC.TODO();
+      };
+
+    
     default -> throw XEC.TODO();
     };
   }

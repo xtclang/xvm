@@ -9,22 +9,24 @@ import org.xvm.util.SB;
 
 class InvokeAST extends AST {
   String _meth;
+  final boolean _async;
   final XType[] _args;
   final XType[] _rets;
 
-  static InvokeAST make( ClzBuilder X ) {
+  static InvokeAST make( ClzBuilder X, boolean async ) {
     Const[] retTypes = X.consts(); // Return types
     AST[] kids = X.kids_bias(1);   // Call arguments
     Const methcon = X.con();       // Method constant, name
     kids[0] = ast_term(X);         // Method expression in kids[0]
-    return new InvokeAST( kids,retTypes,methcon);
+    return new InvokeAST( kids,retTypes,methcon,async);
   }
   
-  private InvokeAST( AST[] kids, Const[] retTypes, Const methcon ) {
+  private InvokeAST( AST[] kids, Const[] retTypes, Const methcon, boolean async ) {
     super(kids);
     // Calling target.method(args)
     MethodPart meth = (MethodPart)((MethodCon)methcon).part();
     _meth = meth.jname();
+    _async = async;
     if( meth._args != null && meth._xargs==null )   meth._xargs = XType.xtypes(meth._args);
     if( meth._rets != null && meth._xrets==null )   meth._xrets = XType.xtypes(retTypes);
     _args = meth._xargs;
@@ -46,6 +48,7 @@ class InvokeAST extends AST {
   InvokeAST( String meth, XType[] rets, AST... kids ) {
     super(kids);
     _meth = meth;
+    _async = false;
     _args = null;
     _rets = rets;
     _type = _type();
@@ -134,6 +137,11 @@ class InvokeAST extends AST {
   }
 
 
+  @Override void jpre ( SB sb ) {
+    if( _async )
+      sb.p("if(true)throw XEC.TODO(\"FUTURE_TASK\");").nl().i();
+  }
+    
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p('.').p(_meth).p("(");
     else sb.p(", ");
