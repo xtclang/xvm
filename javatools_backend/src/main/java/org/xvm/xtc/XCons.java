@@ -22,6 +22,7 @@ public abstract class XCons {
   public static XBase SHORT= XBase.make("short");
   public static XBase INT  = XBase.make("int");
   public static XBase LONG = XBase.make("long");
+  public static XBase DOUBLE = XBase.make("double");
   public static XBase STRING = XBase.make("String");
   
   public static XBase VOID = XBase.make("void");
@@ -71,9 +72,9 @@ public abstract class XCons {
   public static XClz JUINT128= XClz.make_java("ecstasy.numbers","UInt128"  ,UINTNUM);
   public static XClz JUINTN  = XClz.make_java("ecstasy.numbers","UIntN"    ,UINTNUM);
   
-  public static XClz FPNUM       = XClz.make_java("ecstasy.numbers","FPNumber",NUMBER);
-  
+  public static XClz FPNUM       = XClz.make_java("ecstasy.numbers","FPNumber",NUMBER);  
   public static XClz BINARYFP    = XClz.make_java("ecstasy.numbers","BinaryFPNumber",FPNUM);
+  public static XClz JDOUBLE     = XClz.make_java("ecstasy.numbers","Float64" ,BINARYFP);
   public static XClz FLOAT128    = XClz.make_java("ecstasy.numbers","Float128",BINARYFP);
   
   public static XClz DECIMALFP   = XClz.make_java("ecstasy.numbers","DecimalFPNumber",FPNUM);
@@ -87,24 +88,26 @@ public abstract class XCons {
   
   // Convert a Java primitive to the Java object version.
   static final HashMap<XBase, XClz> XBOX = new HashMap<>() {{
+      put(NULL ,JNULL );
       put(BOOL ,JBOOL );
       put(BYTE ,JBYTE );
       put(CHAR ,JCHAR );
-      put(LONG ,JLONG );
-      put(NULL ,JNULL );
       put(SHORT,JINT16);
+      put(LONG ,JLONG );
+      put(DOUBLE,JDOUBLE);
       put(TRUE ,JTRUE );
       put(FALSE,JFALSE);
       put(STRING,JSTRING);
     }};
   // Convert a Java wrapped primitive to the unwrapped primitive
   static final HashMap<XType, XBase> UNBOX = new HashMap<>() {{
+      put(JNULL ,NULL );
       put(JBOOL ,BOOL );
       put(JBYTE ,BYTE );
       put(JCHAR ,CHAR );
-      put(JLONG ,LONG );
-      put(JNULL ,NULL );
       put(JINT16,SHORT);
+      put(JDOUBLE,DOUBLE);
+      put(JLONG ,LONG );
       put(JTRUE ,TRUE );
       put(JFALSE,FALSE);
       put(JSTRING,STRING);

@@ -29,7 +29,7 @@ public class Int64 extends IntNumber {
   public final long _i;
   
   public Int64(String s) { this(Long.valueOf(s)); }
-  public Int64(org.xvm.xec.ecstasy.text.String s) { this(s._s); }
+  public Int64(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
   public Int64( long i ) { _i = i; }
 
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }

@@ -144,7 +144,7 @@ public abstract class PropBuilder {
       } else {
         sb.p(" { ");
         boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
-        sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }\n");
+        sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }").nl();
       }
     }
 
@@ -155,6 +155,7 @@ public abstract class PropBuilder {
       ClzBuilder X2 =  new ClzBuilder(X,X._clz);
       X2.jmethod(meth,pname+"$calc");
     }
+    sb.nl();
 
   }
 

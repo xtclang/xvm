@@ -16,6 +16,9 @@ public class XBase extends XType {
     if( jt==FREE ) FREE = new XBase();
     return jt;
   }
+  // Oddly, String is treated as an "array of Char"
+  @Override public boolean isAry() { return this==XCons.STRING; }
+
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) { return sb.p(_jtype); }
   @Override SB _clz( SB sb, ParamTCon ptc ) { return sb.p(_jtype); }
   @Override boolean eq(XType xt) { return _jtype.equals(((XBase)xt)._jtype);  }
