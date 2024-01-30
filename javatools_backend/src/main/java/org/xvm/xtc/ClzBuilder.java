@@ -367,14 +367,15 @@ public class ClzBuilder {
     
     // Return type
     if( m._xrets==null ) _sb.p("void ");
-    else if( m._xrets.length == 1 ) m._xrets[0].clz(_sb).p(' ');
-    else if( m.is_cond_ret() ) {
-      // Conditional return!  Passes the extra return in XRuntime$COND.
-      // The m._rets[0] is the boolean
-      m._xrets[1].clz(_sb).p(' ');
-    } else {
-      _sb.p("void ");
-      //throw XEC.TODO(); // True multi-returns will need much help
+    else {
+      XType xret = 
+        m._xrets.length == 1 ?  m._xrets[0] :
+        // Conditional return!  Passes the extra return in XRuntime$COND.
+        // The m._rets[0] is the boolean
+        m.is_cond_ret() ? m._xrets[1] :
+        // Tuple multi-return
+        XClz.make_tuple(m._xrets);
+      xret.clz(_sb).p(' ');
     }
     
     jmethod_body(m,mname,false);

@@ -81,6 +81,7 @@ public final class SB {
       switch( s.charAt(i) ) {
       case '\\' -> p("\\");
       case '\n' -> p("\\n");
+      case '"'  -> p("\\\"");
       default   -> p(s.charAt(i));
       }
     }
