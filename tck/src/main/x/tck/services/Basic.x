@@ -2,8 +2,7 @@
  * Basic service tests.
  */
 class Basic {
-    @Inject Console console;
-    
+
     void run() {
         testSlowIO();
         testLongCompute();
@@ -37,9 +36,7 @@ class Basic {
 
         // the scheduling of fibers is a prerogative of the run-time, so the
         // scheduler might not "resume" A until after B is done.
-        var rez = journal.collect();
-        assert rez == ["A0", "A2", "B1"] ||
-               rez == ["A0", "B1", "A2"];
+        assert journal.collect() == ["A0", "A2", "B1"];
     }
 
     @Test

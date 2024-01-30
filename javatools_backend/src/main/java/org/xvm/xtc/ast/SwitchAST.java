@@ -11,7 +11,11 @@ class SwitchAST extends AST {
 
   // Switch is an expression vs statement
   final boolean _expr;
-  
+
+  // Conditional created new vars which need hoisting to a block:
+  // "switch( Char ch = str.charAt(i) ) { ..."
+  boolean _cond_defines;
+
   // 64 bits mask for isa tests.  Beyond 64 requires a different presentation
   final long _isa;
   // Case values; these in turn might be tuples of values with different types
@@ -23,7 +27,7 @@ class SwitchAST extends AST {
   // Result types
   Const[] _rezs;
 
-  // 
+  // How we encode this switch in Java
   enum Flavor { ComplexTern, SimpleTern, IntRange, Pattern };
   final Flavor _flavor;
   
@@ -68,20 +72,22 @@ class SwitchAST extends AST {
     
     // Parse result types
     Const[] rezs = expr ? X.consts() : null;
+    boolean cond_defines = nlocals != X.nlocals();
     X.pop_locals(nlocals);      // Pop scope-locals at end of scope
-    return new SwitchAST(flavor,kids,expr,isa,cases,rezs);
+    return new SwitchAST(flavor,kids,expr,isa,cases,rezs, cond_defines);
   }
   private static boolean valid_range( Const c ) {
     return c == null || c instanceof IntCon || c instanceof CharCon || (c instanceof RangeCon rcon && valid_range(rcon._lo));
   }
   
-  private SwitchAST( Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs ) {
+  private SwitchAST( Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
     super(kids);
     _flavor = flavor;
     _expr = expr;
     _isa = isa;
     _cases = cases;
     _rezs = rezs;
+    _cond_defines = cond_defines;
 
     // Pre-cook the match parts.    
     // Each pattern match has the same count of arms
@@ -158,8 +164,26 @@ class SwitchAST extends AST {
       _tmps = new String[]{blk.add_tmp(_kids[0]._type)};
       break;
     }
+
+    if( _cond_defines )
+      hoist_defs(_kids[0],blk);
+    
     return this;
   }
+
+  // Hoist any DefRegAST into the Block
+  static void hoist_defs(AST ast, BlockAST blk) {
+    if( ast._kids == null ) return;
+    for( int i=0; i<ast._kids.length; i++ ) {
+      AST kid = ast._kids[i];
+      if( kid instanceof DefRegAST def ) {
+        ast._kids[i] = new RegAST(-1,def._name,def._type);
+        blk.add_tmp(def._type,def._name);
+      } else if( kid != null )
+        hoist_defs(kid,blk);
+    }
+  }
+
   
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
@@ -210,7 +234,7 @@ class SwitchAST extends AST {
     return asExpr(_kids[_armss.length],sb).di(); // And the expression continues on the next line
   }
 
-  // Encode kid as expr, it its a statement
+  // Encode kid as expr, otherwise it is a statement
   private static SB asExpr(AST kid, SB sb) {
     if( kid._type != XCons.VOID )
       return kid.jcode(sb);
