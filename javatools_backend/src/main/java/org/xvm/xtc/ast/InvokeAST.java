@@ -59,7 +59,7 @@ class InvokeAST extends AST {
     if( _rets.length == 1 ) return _rets[0];
     if( _rets.length == 2 && (_rets[0]==XCons.BOOL || _rets[0]==XCons.JBOOL) )
       return _rets[1];          // Conditional
-    throw XEC.TODO();
+    return XClz.make_tuple(_rets);
   }
   @Override boolean _cond() {
     if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
@@ -132,14 +132,14 @@ class InvokeAST extends AST {
     if( _args!=null && (k0t==XClz.XXTC || !(k0t instanceof XClz clz) || clz._jname==null) )
       for( int i=0; i<_args.length; i++ )
         autobox(i+1, _args[i]);
-    
+
     return this;
   }
 
 
   @Override void jpre ( SB sb ) {
     if( _async )
-      sb.p("if(true)throw XEC.TODO(\"FUTURE_TASK\");").nl().i();
+      sb.p("if(true)throw org.xvm.XEC.TODO(\"FUTURE_TASK\");").nl().i();
   }
     
   @Override void jmid ( SB sb, int i ) {

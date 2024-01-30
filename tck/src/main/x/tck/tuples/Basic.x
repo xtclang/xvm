@@ -5,6 +5,7 @@ class Basic {
 
     void run() {
         testBasic();
+        testReturn();
     }
 
     @Test
@@ -16,4 +17,23 @@ class Basic {
         assert t[2] == 3.1415;
     }
 
+    @Test
+    void testReturn() {
+        (Int a, String b, Double c) = tupleReturn();
+        assert a == 3;
+        assert b == "abc";
+        assert c == 3.1415;
+    }
+    (Int a, String b, Double) tupleReturn() { return 3, "abc", 3.1415; }
+
+
+    //@Test
+    //void testUnpack() {
+    //    (Int a, String b, Double c) = tupleReturn();
+    //    assert a == 3;
+    //    assert b == "abc";
+    //    assert c == 3.1415;
+    //}
+    //
+    //Tuple<Int, String, Double> tupleReturn() = ( 3, "abc", 3.1415);
 }
