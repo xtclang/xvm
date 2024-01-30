@@ -199,6 +199,7 @@ public abstract class AST {
     case UnaryOpExpr  ->    UniOpAST.make(X);
     case VarOfExpr    ->    UniOpAST.make(X,"&","");
     case WhileDoStmt  ->    WhileAST.make(X);
+    case UnpackExpr   ->    throw XEC.TODO();
     
     default -> throw XEC.TODO();
     };

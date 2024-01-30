@@ -6,6 +6,8 @@ import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.AsnOp;
 import org.xvm.xtc.cons.MethodCon;
 
+import java.util.Arrays;
+
 class AssignAST extends AST {
   final AsnOp _op;
   final MethodCon _meth;
@@ -46,6 +48,23 @@ class AssignAST extends AST {
     // Add/push element to array
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz )
       return new AssignAST(AsnOp.Asn,_meth,_kids[0],new InvokeAST(_meth.name(),clz,_kids));
+
+    // Multi-returns from tuples.
+    //   XTC: (Int a, String b, Double c) = retTuple();
+    //  Java: { ...tmps...;  tmp = retTuple; a = tmp._f0; b = tmp._f1; c = tmp._f2; }
+    if( _kids[0] instanceof MultiAST m ) {
+      BlockAST blk = enclosing_block();
+      MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
+      System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
+      String tmp = blk.add_tmp(_kids[1]._type);
+      mm._kids[0] = new AssignAST(new RegAST(-1,tmp,_kids[1]._type),_kids[1]);
+      for( int i=0; i<m._kids.length; i++ ) {
+        AST kid = m._kids[i];
+        mm._kids[i+1] = new AssignAST(new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type),new ConAST(tmp+"._f"+i));
+      }
+      return mm;
+    }
+
     
     // Autobox into _kids[0] from Base in _kids[1]
     autobox(1,_kids[0]._type);
