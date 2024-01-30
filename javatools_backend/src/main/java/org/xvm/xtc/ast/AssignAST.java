@@ -25,7 +25,12 @@ class AssignAST extends AST {
     return new AssignAST(op, meth, kids);
   }
   AssignAST( AST... kids ) { this(AsnOp.Asn,null,kids); }
-  private AssignAST( AsnOp op, MethodCon meth, AST... kids ) { super(kids); _op=op; _meth=meth; _name = kids[0].name(); }
+  private AssignAST( AsnOp op, MethodCon meth, AST... kids ) {
+    super(kids);
+    _op=op;
+    _meth=meth;
+    _name = kids[0] instanceof MultiAST ? null : kids[0].name();
+  }
 
 
   @Override XType _type() { return _kids[0]._type; }
@@ -121,6 +126,9 @@ class AssignAST extends AST {
       : asn(sb);
       
     case AddAsn -> asn(sb);
+    case SubAsn -> asn(sb);
+    case MulAsn -> asn(sb);
+    case DivAsn -> asn(sb);
     default -> throw XEC.TODO();
     };
   }

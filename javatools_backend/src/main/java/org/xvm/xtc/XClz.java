@@ -121,13 +121,13 @@ public class XClz extends XType {
     return clz._intern();
   }
 
-  static XClz make_tuple( XType... clzs ) {
+  public static XClz make_tuple( XType... clzs ) {
     XClz clz = make("ecstasy.collections","Tuple",clzs.length);
     clz._jpack = "ecstasy.collections";
     clz._jname = "Tuple";
     clz._jparms = true;
     for( int i=0; i<clzs.length; i++ )
-      clz._flds[i] = ""+i;
+      clz._flds[i] = (""+i).intern();
     clz._xts = clzs;
     clz._clz = XXTC._clz;
     clz._super = XXTC;
@@ -379,6 +379,12 @@ public class XClz extends XType {
     return sb.unchar().p(">");
   }
 
+  public SB strTuple( SB sb ) {
+    sb.p("Tuple").p(_xts.length).p("$");
+    for( XType xt : _xts )
+      xt._clz(sb,null).p("$");
+    return sb.unchar();
+  }
   
   // Module: Lib  as  org.xv.xec.X$Lib
   // Class : tck_module.comparison.Compare.AnyValue  as  org.xv.xec.tck_module.comparison.Compare.AnyValue

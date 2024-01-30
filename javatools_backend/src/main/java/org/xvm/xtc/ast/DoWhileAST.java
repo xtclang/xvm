@@ -25,10 +25,15 @@ class DoWhileAST extends AST {
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
-    sb.p("do {").ii().nl();
+    sb.p("DOWHILE{").ii().nl();
     _kids[1].jcode(sb);
-    sb.di().ip("} while(");
+    sb.di().ip("} WHILST(");
     _kids[0].jcode(sb);
-    return sb.p(")");
+    sb.p(")");
+    return sb;
+    //// while( cond ) body;
+    //_kids[0].jcode(sb.p("while( "));
+    //_kids[1].jcode(sb.p(" ) "));
+    //return sb;
   }
 }
