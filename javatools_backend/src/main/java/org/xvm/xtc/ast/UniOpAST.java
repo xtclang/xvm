@@ -115,7 +115,11 @@ class UniOpAST extends AST {
         return sb.p("throw XEC.TODO()");
     }
     
-    if( _pre !=null ) sb.p(" ").p(_pre );
+    if( _pre !=null ) {
+      if( sb.was_nl() ) sb.i();
+      else sb.p(" ");
+      sb.p(_pre );
+    }
     if( _kids[0] instanceof BinOpAST ) sb.p('(');
     _kids[0].jcode(sb);
     if( _kids[0] instanceof BinOpAST ) sb.p(')');

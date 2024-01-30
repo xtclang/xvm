@@ -34,7 +34,7 @@ class BinOpAST extends AST {
 
   @Override XType _type() {
     if( _op0.equals(".at(") )
-      return ((XClz)_kids[0]._type).e();
+      return _kids[0]._type.e();
     return _type;
   }
 

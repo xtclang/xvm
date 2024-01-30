@@ -45,6 +45,7 @@ public abstract class XCons {
   public static XClz ORDERABLE   = XClz.make_java("ecstasy","Orderable",null);
   public static XClz ORDERED     = XClz.make_java("ecstasy","Ordered",ENUM);
   public static XClz RANGE       = XClz.make_java("ecstasy","Range",false,"ecstasy","Range",CONST,"Element",ORDERABLE);
+  public static XClz RANGEEE     = XClz.make_java("ecstasy","RangeEE",RANGE); // No Ecstasy matching class
   public static XClz RANGEIE     = XClz.make_java("ecstasy","RangeIE",RANGE); // No Ecstasy matching class
   public static XClz RANGEII     = XClz.make_java("ecstasy","RangeII",RANGE); // No Ecstasy matching class
   public static XClz SERVICE     = XClz.make_java("ecstasy","Service",null);
