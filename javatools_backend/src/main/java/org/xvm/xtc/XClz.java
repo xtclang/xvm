@@ -235,11 +235,12 @@ public class XClz extends XType {
   // Generic XTC array; when making XTC array constants have to pass
   // the explicit array element type
   @Override public boolean generic_ary() { return S.eq(_jname,"AryXTC");  }
-  // Some kind of an array
-  public boolean is_ary() { return S.eq("ecstasy.collections",_pack) && S.eq("Array",_name); }
+  @Override public boolean isTuple() { return S.eq(_jname,"Tuple");  }
+  // Some kind of array
+  @Override public boolean isAry() { return S.eq("ecstasy.collections",_pack) && S.eq("Array",_name); }
   // XTC array element type
   public XType e() {
-    assert is_ary();
+    assert isAry();
     return _xts[0];
   }
   
@@ -316,11 +317,18 @@ public class XClz extends XType {
     // with java.lang.String.
     if( this==XCons.JSTRING || this==XCons.JOBJECT )
       return sb.p(qualified_name());
+
+    // Alternative class printing for tuples.
+    if( S.eq(_jname,"Tuple") )
+      return strTuple(sb);
+
     sb.p(_ambiguous ? qualified_name() : name());
     // Some Java implementations already specify the XTC generic directly: Arylong
     if( !_jparms || _nTypeParms==0 ) return sb;
+    
     // Print Array<void> as Array
     if( ptc==null && this==XCons.ARRAY ) return sb;
+    
     // Printing generic type parameters
     sb.p("<");
     for( int i=0; i<_nTypeParms; i++ ) {
@@ -379,7 +387,7 @@ public class XClz extends XType {
     return sb.unchar().p(">");
   }
 
-  public SB strTuple( SB sb ) {
+  private SB strTuple( SB sb ) {
     sb.p("Tuple").p(_xts.length).p("$");
     for( XType xt : _xts )
       xt._clz(sb,null).p("$");

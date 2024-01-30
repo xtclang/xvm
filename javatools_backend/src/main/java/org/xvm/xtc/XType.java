@@ -133,7 +133,9 @@ public abstract class XType {
   abstract boolean _isa( XType xt );
   public boolean isVar() { return false; }
 
+  public boolean isAry() { return false; }
   public boolean generic_ary() { return false;  }
+  public boolean isTuple() { return false;  }
   public XType e() { throw XEC.TODO(); }
   
   // --------------------------------------------------------------------------
@@ -258,9 +260,9 @@ public abstract class XType {
     case IntCon itc -> XClz.format_clz(itc._f).box(boxed);
     case CharCon cc -> JCHAR.box(boxed);
     case ByteCon cc -> JBYTE.box(boxed);
+    case Flt64Con fc -> JDOUBLE.box(boxed);
     
-    case StringCon sc ->
-      STRING;
+    case StringCon sc -> STRING;
 
     case EnumCon econ -> {
       // The enum instance as a ClassPart

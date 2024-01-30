@@ -5,6 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xtc.XType;
 import org.xvm.xtc.XClz;
+import org.xvm.xtc.ClzBuilder;
 import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
@@ -20,6 +21,8 @@ public abstract class Tuple extends XTC implements Cloneable {
 
   Tuple(int len) { _len=(short)len; }
 
+  public int size$get() { return _len; }
+  
   // Select a range using array syntax.
   // Loses all Java compiler knowledge of the types.
   public Tuple at(Range r) {
@@ -116,7 +119,7 @@ public abstract class Tuple extends XTC implements Cloneable {
     int N = xtt.nTypeParms();
     if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime
     
-    String tclz = xtt.strTuple(new SB()).toString();
+    String tclz = xtt.clz(new SB()).toString();
     if( cache.containsKey(tclz) ) return xtt;
     /* Gotta build one.  Looks like:
        class Tuple3$long$String$char extends Tuple3 {
@@ -129,11 +132,18 @@ public abstract class Tuple extends XTC implements Cloneable {
          public Object f0() { return _f0; }
          public Object f1() { return _f1; }
          public Object f2() { return _f2; }
+         public void f0(Object e) { _f0= ((Int64)e)._x; }
+         public void f1(Object e) { _f1= ((org.xvm.xec.ecstasy.text.String)e)._x; }
+         public void f2(Object e) { _f2= ((Float64)e)._x; }
+         public long   at80() { return _f0; }
+         public String at81() { return _f1; }
+         public char   at82() { return _f2; }
        }
     */
     // Tuple N class
     SB sb = new SB();
     sb.fmt("class %0 extends Tuple%1 {\n",tclz,N).ii();
+    ClzBuilder.add_import(XEC.XCLZ+".ecstasy.collections.Tuple"+N);
     // N field declares
     for( int i=0; i<N; i++ )
       sb.ifmt("public %0 _f%1;\n",xtt.typeParm(i).toString(),i);
@@ -151,12 +161,9 @@ public abstract class Tuple extends XTC implements Cloneable {
       sb.ifmt("public Object f%0() { return _f%0; }\n",i);
     // Abstract setters
     for( int i=0; i<N; i++ ) {
-      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= ((");
       XType xt = xtt.typeParm(i);
       XType box = xt.box();
-      box.clz(sb).p(")e)");
-      if( xt != box ) sb.p("._i");
-      sb.p("; }\n");
+      sb.ifmt("public void f%0(Object e) { _f%0= ((%1)e)%2; }\n",i,box.clz(),xt==box?"":"._i");
     }
     // Class end
     sb.di().ip("}\n");

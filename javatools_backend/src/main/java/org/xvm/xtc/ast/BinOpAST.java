@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.BinOp;
+import org.xvm.xtc.cons.NumCon;
 import java.util.HashMap;
 
 class BinOpAST extends AST {
@@ -33,17 +34,33 @@ class BinOpAST extends AST {
   }
 
   @Override XType _type() {
-    if( _op0.equals(".at(") )
-      return _kids[0]._type.e();
+    if( _op0.equals(".at(") ) {
+      // Tuple or Array
+      XType tk = _kids[0]._type;
+      if( tk.isAry()  )
+        return tk.e();
+      // Tuple at fixed field offset
+      ConAST con = (ConAST)_kids[1];
+      int idx = (int)((NumCon)con._tcon)._x;
+      return tk._xts[idx];
+    }
     return _type;
   }
 
   @Override AST prewrite() {
+    // Java primitive fetch instead of boxed fetch
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG && !(_par instanceof InvokeAST && _par._kids[0]==this) ) {
-      _op0 = ".at8(";           // Use primitive 'at' instead of generic
       _type = _type.unbox();
+      if( _kids[0]._type.isAry() ) {
+        _op0 = ".at8(";         // Use primitive 'at' instead of generic
+      } else {
+        // Tuple at fixed field offset
+        _op0 = "._f";           // Field load at fixed offset
+        _op1 = "";
+      }
       return this;
     }
+
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
     if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
@@ -127,6 +144,8 @@ class BinOpAST extends AST {
 
   // Java precedence table
   private static final HashMap<String,Integer> PRECS = new HashMap<>(){{
+      put("._f",1); // Primitive tuple field loads
+      
       put("[" , 2);
       
       put("*" , 3);
@@ -155,7 +174,8 @@ class BinOpAST extends AST {
       put("&&" ,11);
       put("||" ,12);
       
-      put("?:",13);
+      put("?:" ,13);
+      
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);

@@ -227,7 +227,7 @@ public class ClzBuilder {
         String mname = jname(mmp._name);
         MethodPart meth = (MethodPart)mmp.child(mname);
         while( meth != null ) {
-          _sb.nl();               // Blank line between methods
+          if( !S.eq(mname,"construct") ) _sb.nl(); // Blank line between methods
           // A bunch of methods that have special dispatch rules.
           switch( mname ) {
           case "construct":
