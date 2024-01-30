@@ -22,7 +22,7 @@ public abstract class XType {
   final int _uid = CNT++;       // Unique id, for cycle printing
   
   // Children, if any
-  XType[] _xts;
+  public XType[] _xts;
 
   // Interning support
   static XType intern( XType free ) {

@@ -169,6 +169,26 @@ public class ClzBuilder {
       _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     }
     
+    // Force native methods to now appear, so signature matching can assume a
+    // method always exists.
+    for( Part part : _clz._name2kid.values() ) {
+      if( part instanceof MMethodPart mmp )
+        // Output java methods.
+        if( mmp._name2kid==null ) {
+          mmp.addNative();
+        } else {
+          MethodPart m = (MethodPart)mmp.child(mmp._name);
+          if( m._cons != null )
+            for( Const con : m._cons )
+              if( con instanceof MethodCon meth ) {
+                MMethodPart mm = (MMethodPart)meth._par.part();
+                if( mm._name2kid==null )
+                  mm.addNative();
+              }
+        }
+    }
+
+    
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
     if( mm != null ) {
@@ -191,6 +211,7 @@ public class ClzBuilder {
             _sb.ifmt("this.%0 = %0;\n",_tclz._flds[i]);
           _sb.di().ip("}\n");
         } else {
+
           keywords(construct,true);
           jmethod_body(construct,java_class_name,true);
         }
@@ -203,8 +224,6 @@ public class ClzBuilder {
       switch( part ) {
       case MMethodPart mmp: 
         // Output java methods.
-        if( mmp._name2kid==null )
-          mmp.addNative();
         String mname = jname(mmp._name);
         MethodPart meth = (MethodPart)mmp.child(mname);
         while( meth != null ) {
@@ -262,6 +281,10 @@ public class ClzBuilder {
         // Nested class.  Becomes a java static inner class
         ClzBuilder X = new ClzBuilder(this,clz_nest);
         X.jclass_body();
+        break;
+
+      case TDefPart typedef:
+        // TypeDef.  Hopefully already swallowed into XType/XClz
         break;
         
       default:
@@ -324,16 +347,6 @@ public class ClzBuilder {
   // Already _sb has the indent set.
   public void jmethod( MethodPart m, String mname ) {
     assert _locals.isEmpty();   // No locals mapped yet
-
-    // Force native methods to now appear, so signature matching can assume a
-    // method always exists.
-    if( m._cons != null )
-      for( Const con : m._cons )
-        if( con instanceof MethodCon meth ) {
-          MMethodPart mm = (MMethodPart)meth._par.part();
-          if( mm._name2kid==null )
-            mm.addNative();
-        }
 
     // Print out the function header keywords
     keywords(m,false);

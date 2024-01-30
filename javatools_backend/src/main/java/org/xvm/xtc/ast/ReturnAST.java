@@ -5,6 +5,7 @@ import org.xvm.XEC;
 import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.MethodPart;
 import org.xvm.xtc.XType;
+import org.xvm.xtc.XClz;
 import org.xvm.xtc.XCons;
 
 public class ReturnAST extends AST {
@@ -26,15 +27,30 @@ public class ReturnAST extends AST {
   }
 
   @Override XType _type() {
+    // Nested statement expression; kids[0] is statement and have to drill to
+    // get the type.  Instead, cached here.
     if( _expr !=null )
       return _expr._type;
-    if( _ztype==null && _meth._xrets != null )
-      return _kids==null ? XCons.VOID : _meth._xrets[0];
-    // Conditional, report the non-boolean type
-    if( _kids!=null && _kids[0] instanceof MultiAST cond )
-      return cond._kids[1]._type;
-    // Conditional, always false, no other returned type
-    return XCons.VOID;
+    // No returns
+    if( _meth._xrets==null )
+      return XCons.VOID;
+    // Conditional returns.  The Java flavor takes the from the 2nd tuple argument.
+    // Note the method might be flagged as having only 1 return type.
+    if( _meth.is_cond_ret() ) {
+      // Conditional return, always false, no other returned type
+      if( _kids.length==1 )
+        return XCons.VOID;
+      // Report the non-boolean type
+      assert _kids.length==2 && _kids[0] instanceof MultiAST;
+      return _kids[0]._kids[1]._type;
+    }
+
+    // Single normal return
+    if( _meth._xrets.length==1 )
+      return _meth._xrets[0];
+
+    // Make a Tuple return
+    return org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES,XClz.make_tuple(_meth._xrets));
   }
 
   @Override AST postwrite() {
@@ -64,8 +80,15 @@ public class ReturnAST extends AST {
       sb.p(")");
       return sb;
     }
+    
+    sb.ip("return ");
     if( _kids.length==1 )
-      return _kids[0].jcode(sb.ip("return "));
-    throw XEC.TODO();
+      return _kids[0].jcode(sb);
+
+    XClz tup = (XClz)_type;
+    tup.strTuple(sb.p("new ")).p("( ");
+    for( AST kid : _kids )
+      kid.jcode(sb).p(",");
+    return sb.unchar().p(")");
   }
 }

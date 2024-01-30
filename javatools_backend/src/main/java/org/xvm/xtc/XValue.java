@@ -28,9 +28,9 @@ public abstract class XValue {
 
     // Character constant
     case CharCon cc -> 
-      ASB.p('\'').p((char)cc._ch).p('\'');
+      ASB.p('\'').p((char)cc._x).p('\'');
     case ByteCon bc ->
-      ASB.p(bc._val);
+      ASB.p(bc._x);
 
     // String constants
     case StringCon sc ->
@@ -60,9 +60,14 @@ public abstract class XValue {
     // Property constant.  Just the base name, and depending on usage
     // will be either console$get() or console$set(value).
     case PropCon prop -> {
-      ClassPart clz = (ClassPart)prop.part()._par;
-      if( clz != ClzBuilder.CCLZ && ((prop.part()._nFlags & Part.STATIC_BIT) != 0) )
-        ASB.p(ClzBuilder.add_import(clz).clz_bare()).p('.');
+      Part par = prop.part()._par;
+      if( par != ClzBuilder.CCLZ && ((prop.part()._nFlags & Part.STATIC_BIT) != 0) ) {
+        if( par instanceof ClassPart clz )
+          ASB.p(ClzBuilder.add_import(clz).clz_bare()).p('.');
+        else if( par instanceof MethodPart ) {
+          ASB.p(prop._name).p('.');
+        } else throw XEC.TODO();
+      }
       yield ASB.p(prop._name);
     }
 
