@@ -20,6 +20,10 @@ public class XBase extends XType {
   @Override SB _clz( SB sb, ParamTCon ptc ) { return sb.p(_jtype); }
   @Override boolean eq(XType xt) { return _jtype.equals(((XBase)xt)._jtype);  }
   @Override int hash() { return _jtype.hashCode(); }
+  @Override public XType e() {
+    assert this==XCons.STRING;
+    return XCons.CHAR;
+  }
 
   @Override boolean _isa( XType xt ) { return false; }
 }

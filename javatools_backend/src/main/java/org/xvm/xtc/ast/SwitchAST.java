@@ -54,18 +54,16 @@ class SwitchAST extends AST {
     // a selection of ints and int ranges
     if( cond instanceof MultiAST ) {
       flavor = Flavor.ComplexTern;  // this is a multi-arm pattern match
-    } else if( cond._type==XCons.LONG ) {
-      flavor = Flavor.IntRange;
-      // This is single-ints, confirm all case arms are ints (or ranges)
-      for( Const c : cases )
-        if( !valid_range( c ) )
-          throw XEC.TODO();
     } else if( cases[0] instanceof EnumCon ) {
       flavor = Flavor.Pattern; // This is a series of singleton matches, e.g. Strings or Enums
     } else if( cases[0] instanceof SingleCon ) {
       flavor = Flavor.SimpleTern;
     } else {
-      throw XEC.TODO();
+      flavor = Flavor.IntRange;
+      // This is single-ints, confirm all case arms are int-like (or ranges)
+      for( Const c : cases )
+        if( !valid_range( c ) )
+          throw XEC.TODO();
     }
     
     // Parse result types
@@ -74,7 +72,7 @@ class SwitchAST extends AST {
     return new SwitchAST(flavor,kids,expr,isa,cases,rezs);
   }
   private static boolean valid_range( Const c ) {
-    return c == null || c instanceof IntCon || (c instanceof RangeCon rcon && rcon._lo instanceof IntCon);
+    return c == null || c instanceof IntCon || c instanceof CharCon || (c instanceof RangeCon rcon && valid_range(rcon._lo));
   }
   
   private SwitchAST( Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs ) {
@@ -111,7 +109,7 @@ class SwitchAST extends AST {
             sb.p(k).p(", ");
           arm = sb.unchar(2).toString();
         } else {
-          arm = ""+((IntCon)_cases[j])._x;
+          arm = ""+((NumCon)_cases[j])._x;
         }
         _armss[i] = new String[]{arm};
       }
@@ -153,6 +151,8 @@ class SwitchAST extends AST {
         _tmps[i] = blk.add_tmp(kids[i]._type);
       break;
     case IntRange:
+      assert _kids[0]._type instanceof XBase && _kids[0]._type != XCons.STRING;
+      _tmps=null; break; // No temps
     case Pattern: _tmps=null; break; // No temps
     case SimpleTern:
       _tmps = new String[]{blk.add_tmp(_kids[0]._type)};

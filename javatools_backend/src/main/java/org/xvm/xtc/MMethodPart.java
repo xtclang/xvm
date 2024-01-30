@@ -31,7 +31,7 @@ public class MMethodPart extends Part {
     MethodPart meth = switch( _name ) {
     case "equals"   -> build(XCons.BOOL,"gold",tcon,"lhs",tcon,"rhs",tcon);
     case "hashCode" -> build(XCons.LONG,"gold",tcon);
-    case "compare"  -> build(XCons.ORDERED,"lhs",tcon,"rhs",tcon);
+    case "compare"  -> build(XCons.ORDERED,"gold",tcon,"lhs",tcon,"rhs",tcon);
     case "appendTo" -> build(XCons.APPENDERCHAR,new Parameter[]{new Parameter("buf",XCons.APPENDERCHAR)});
     default -> throw XEC.TODO();
     };

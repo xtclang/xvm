@@ -3,6 +3,7 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
+import org.xvm.xtc.XType;
 import org.xvm.xtc.XClz;
 import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
@@ -115,7 +116,7 @@ public abstract class Tuple extends XTC implements Cloneable {
     int N = xtt.nTypeParms();
     if( N==0 ) return xtt;     // Tuple0 already exists in the base runtime
     
-    String tclz = xtt.clz();
+    String tclz = xtt.strTuple(new SB()).toString();
     if( cache.containsKey(tclz) ) return xtt;
     /* Gotta build one.  Looks like:
        class Tuple3$long$String$char extends Tuple3 {
@@ -149,8 +150,14 @@ public abstract class Tuple extends XTC implements Cloneable {
     for( int i=0; i<N; i++ )
       sb.ifmt("public Object f%0() { return _f%0; }\n",i);
     // Abstract setters
-    for( int i=0; i<N; i++ )
-      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= (").p(xtt.typeParm(i).box().toString()).p(")e; }\n");
+    for( int i=0; i<N; i++ ) {
+      sb.ip("public void f").p(i).p("(Object e) { _f").p(i).p("= ((");
+      XType xt = xtt.typeParm(i);
+      XType box = xt.box();
+      box.clz(sb).p(")e)");
+      if( xt != box ) sb.p("._i");
+      sb.p("; }\n");
+    }
     // Class end
     sb.di().ip("}\n");
     cache.put(tclz,sb.toString());

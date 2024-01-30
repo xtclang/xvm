@@ -72,12 +72,7 @@ class InvokeAST extends AST {
     if( k0t == XCons.JLONG || k0t == XCons.INTLITERAL || k0t == XCons.LONG ) {
       return switch( _meth ) {
       case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long"),_kids[0]).do_type();
-      case "toInt8"  ->  _kids[0];
-      case "toInt16" ->  _kids[0];
-      case "toInt32" ->  _kids[0];
-      case "toInt64" ->  _kids[0]; // Autoboxing in Java
-      case "valueOf"  -> this;
-      case "equals"   -> this;
+      case "toInt8", "toInt16", "toInt32", "toInt64" ->  _kids[0]; // Autoboxing in Java
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
       case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, new ConAST( "0xFFFFFFFFL" ), _kids[0] );
@@ -94,6 +89,9 @@ class InvokeAST extends AST {
       case "shiftAllRight" -> new BinOpAST( ">>>", "", XCons.LONG, _kids );
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
+      case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
+      case "valueOf", "equals", "toInt128", "estimateStringLength"
+        -> this;
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -102,21 +100,23 @@ class InvokeAST extends AST {
     if( k0t == XCons.JCHAR || k0t == XCons.CHAR ) {
       return switch( _meth ) {
       case "add" -> new BinOpAST( "+", "", XCons.INT, _kids );
-      case "asciiDigit" -> this;
+      case "sub" -> new BinOpAST( "-", "", XCons.INT, _kids );
+      case "asciiDigit", "quoted" -> this;
       default -> throw XEC.TODO(_meth);
       };
     }
 
+    // XTC String calls mapped to Java String calls
     if( k0t == XCons.STRING )
       return switch( _meth ) {
       case "toCharArray" -> new NewAST(_kids,XCons.ARYCHAR);
-      case "equals" -> this;
       case "appendTo" -> {
         // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
         AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
         yield this;
       }
       case "append" -> new BinOpAST("+","", XCons.STRING, _kids);
+      case "quoted", "equals", "split", "indexOf" -> this;
       default -> throw XEC.TODO();
       };
 
