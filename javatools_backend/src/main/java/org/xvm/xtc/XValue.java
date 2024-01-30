@@ -23,8 +23,13 @@ public abstract class XValue {
       // Integer constants in XTC are Java Longs
     case IntCon ic -> {
       if( ic._big != null ) throw XEC.TODO();
-      yield ASB.p(ic._x);
+      ASB.p(ic._x);
+      if( ic._x >= Integer.MAX_VALUE || ic._x <= Integer.MIN_VALUE )
+        ASB.p("L");
+      yield ASB;
     }
+    case Flt64Con fc ->
+      ASB.p(fc._flt);
 
     // Character constant
     case CharCon cc -> 
@@ -34,11 +39,11 @@ public abstract class XValue {
 
     // String constants
     case StringCon sc ->
-      ASB.p('"').escape(sc._str).p('"');
+      ASB.quote(sc._str);
        
     // Literal constants
     case LitCon lit -> 
-      ASB.p(lit._str);
+      ASB.quote(lit._str);
     
     // Method constants
     case MethodCon mcon -> {
@@ -139,7 +144,8 @@ public abstract class XValue {
       ary.clz(ASB.p("new ")).p("(  ");
       if( ary.generic_ary() )
         ary.e().clz(ASB).p(".GOLD, ");
-      else ASB.p(".1, ");
+      else if( !ary.isTuple() )
+        ASB.p(".1, ");
       if( ac.cons()!=null )
         for( Const con : ac.cons() )
           _val( con ).p(", ");

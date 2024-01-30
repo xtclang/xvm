@@ -35,7 +35,7 @@ class WhileAST extends AST {
     if( sb.was_nl() ) sb.i();
     // while( cond ) body;
     _kids[0].jcode(sb.p("while( "));
-    _kids[1].jcode(sb.p(" ) "));
+    _kids[1].jcode(sb.p(" ) ").nl().ii()).di();
     return sb;
   }
 }

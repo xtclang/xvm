@@ -29,7 +29,7 @@ public class Int32 extends IntNumber {
   public final int _i;
   
   public Int32(String s) { this(Integer.valueOf(s)); }
-  public Int32(org.xvm.xec.ecstasy.text.String s) { this(s._s); }
+  public Int32(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
   public Int32( long i ) { _i = (int)i; if( _i != i ) throw XEC.TODO(); }
 
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }

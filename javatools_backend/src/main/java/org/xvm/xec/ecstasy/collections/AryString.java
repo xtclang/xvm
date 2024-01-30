@@ -37,7 +37,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
   
   // Add an element, doubling base array as needed
-  public AryString add( org.xvm.xec.ecstasy.text.String s ) { return add(s._s); }
+  public AryString add( org.xvm.xec.ecstasy.text.String s ) { return add(s._i); }
   // Add an element, doubling base array as needed
   public AryString add( String s ) { 
     if( _len >= _es.length ) _es = Arrays.copyOf(_es,Math.max(1,_es.length<<1));

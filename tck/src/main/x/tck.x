@@ -15,5 +15,7 @@ module tck.xtclang.org {
         new comparison.Hash().run();
         new operations.Basic().run();
         new numbers.Decimals().run();
+        new tuples.Basic().run();
+        //new services.Basic().run();
     }
 }

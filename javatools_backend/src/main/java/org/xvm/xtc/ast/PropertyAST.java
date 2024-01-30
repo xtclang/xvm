@@ -32,12 +32,12 @@ class PropertyAST extends AST {
     if( _prop.equals("size") ) {
       if( _kids[0]._type == XCons.STRING )
         { _prop="length()"; _type=XCons.LONG; return this; }
-      if( ((XClz)_kids[0]._type).is_ary() )
+      if( _kids[0]._type.isAry() )
         { _prop="_len"    ; _type=XCons.LONG; return this; }
-    } else if( !(_par instanceof AssignAST) ) {
-      // Prop READS use prop$get, but assigns keep the plain name
-      _prop = _prop+"$get()";
     }
+    // Prop READS use prop$get, but assigns keep the plain name
+    if( !(_par instanceof AssignAST) )
+      _prop = _prop+"$get()";
     return this;
   }
   

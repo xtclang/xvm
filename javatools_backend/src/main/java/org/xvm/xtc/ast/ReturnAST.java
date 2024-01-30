@@ -86,7 +86,7 @@ public class ReturnAST extends AST {
       return _kids[0].jcode(sb);
 
     XClz tup = (XClz)_type;
-    tup.strTuple(sb.p("new ")).p("( ");
+    tup.clz(sb.p("new ")).p("( ");
     for( AST kid : _kids )
       kid.jcode(sb).p(",");
     return sb.unchar().p(")");

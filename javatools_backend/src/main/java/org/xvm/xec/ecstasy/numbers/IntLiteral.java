@@ -13,7 +13,7 @@ public class IntLiteral extends Const {
   public final String _s;
   
   public IntLiteral(String s) { _s=s; }
-  public IntLiteral(org.xvm.xec.ecstasy.text.String s) { this(s._s); }
+  public IntLiteral(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
   public IntLiteral(long x) { _s=Long.toString(x); }
   @Override public String toString() { return _s; }
 }

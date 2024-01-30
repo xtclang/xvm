@@ -31,6 +31,7 @@ public class BlockAST extends AST {
     return tmps.push(name);
   }
 
+  // Final versions of some register, to pass into lambdas.  Light name mangling.
   Ary<RegAST> _finals;
   String add_final(RegAST reg) {
     if( _finals==null ) _finals = new Ary<>(RegAST.class);
