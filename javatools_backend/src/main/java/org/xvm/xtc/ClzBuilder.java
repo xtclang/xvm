@@ -191,7 +191,10 @@ public class ClzBuilder {
     
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
-    if( mm != null ) {
+    if( mm != null &&
+        // Interfaces in XTC can require a constructor with a particular signature.
+        // Interfaces in Java can NOT - so just do not emit the signature.
+        !is_iface ) {
       // For all constructors
       for( MethodPart construct = (MethodPart)mm.child(mm._name); construct != null; construct = construct._sibling ) {
         _sb.nl();

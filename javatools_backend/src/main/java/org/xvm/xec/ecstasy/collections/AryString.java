@@ -81,7 +81,9 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;
   }
-  
+
+  public AryString freeze( boolean inPlace ) { throw XEC.TODO(); }
+ 
   /** @return an iterator */
   @Override public Iterator<org.xvm.xec.ecstasy.text.String> iterator() { return new IterString(); }
   public class IterString extends Iterator<org.xvm.xec.ecstasy.text.String> {

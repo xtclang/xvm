@@ -51,8 +51,9 @@ public abstract class AST {
          (tbox instanceof XClz xclz && xclz._iface)) ) {
       _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbase.box());
 
-    } else if( tbase.is_jdk() && tbase!=XCons.NULL && tbox == XCons.INTLITERAL ) {
-      _kids[basex] = new NewAST(new AST[]{_kids[basex]},XCons.INTLITERAL);
+    } else if( tbase.is_jdk() && tbase!=XCons.NULL &&
+               (tbox == XCons.INTLITERAL || tbox == XCons.JINT128) ) {
+      _kids[basex] = new NewAST(new AST[]{_kids[basex]},(XClz)tbox);
       
       // Reverse situation: the box is unboxed and boxing it subclasses the base.  Unbox the base.
     } else if( tbox.is_jdk() && tbox.box().isa(tbase) ) {

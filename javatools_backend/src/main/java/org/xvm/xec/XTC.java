@@ -66,6 +66,10 @@ public abstract class XTC {
     if( !cond )
       throw new IllegalState();
   }
+  public static void xassert( boolean cond, String msg ) {
+    if( !cond )
+      throw new IllegalState(msg);
+  }
   public static void xassert( ) { xassert(false); }
 
   /** --------------------------------------------------------------------------
@@ -109,7 +113,10 @@ public abstract class XTC {
       throw e.g. AssertionError instead of IllegalStateException.
   */
   // XTC IllegalState mapped to Java
-  public static class IllegalState extends RuntimeException {}
+  public static class IllegalState extends RuntimeException {
+    IllegalState() { }
+    IllegalState(String msg) {super(msg); }
+  }
 
   // XTC IllegalArgument mapped to Java
   public static class IllegalArgument extends IllegalArgumentException {

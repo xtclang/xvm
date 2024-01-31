@@ -90,8 +90,9 @@ class InvokeAST extends AST {
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
-      case "valueOf", "equals", "toInt128", "estimateStringLength"
-        -> this;
+      case "valueOf", "equals", "toInt128", "estimateStringLength" ->
+        new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber"),_kids[0]);
+      
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -101,7 +102,8 @@ class InvokeAST extends AST {
       return switch( _meth ) {
       case "add" -> new BinOpAST( "+", "", XCons.INT, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.INT, _kids );
-      case "asciiDigit", "quoted" -> this;
+      case "asciiDigit" -> this;
+      case "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char"),_kids[0]);
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -116,7 +118,9 @@ class InvokeAST extends AST {
         yield this;
       }
       case "append" -> new BinOpAST("+","", XCons.STRING, _kids);
-      case "quoted", "equals", "split", "indexOf" -> this;
+      // Change "abc".quoted() to e.text.String.quoted("abc")
+      case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String"),_kids[0]);
+      case "equals", "split", "indexOf" -> this;
       default -> throw XEC.TODO();
       };
 

@@ -39,7 +39,7 @@ class ConvAST extends AST {
   }
   
   @Override public SB jcode( SB sb ) {
-    _type.clz(sb.p("(")).p(")");
-    return _kids[0].jcode(sb);
+    _type.clz(sb.p("(")).p(")(");
+    return _kids[0].jcode(sb).p(")");
   }
 }

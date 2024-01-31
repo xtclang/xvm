@@ -49,6 +49,7 @@ public class XClz extends XType {
       clz._flds= len==0 ? null : new String[len];
     }
     clz._nTypeParms = len;
+    clz._jpack = clz._jname = null;
     return clz;
   }
   private XClz _intern() {
