@@ -2,23 +2,27 @@ package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
+import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.cons.ParamTCon;
 import org.xvm.xtc.cons.TermTCon;
 import org.xvm.util.SB;
 
 class NewAST extends AST {
+  final MethodPart _meth;
   static NewAST make( ClzBuilder X ) {
-    return new NewAST(X, X.con(),X.con(),X.kids());
+    return new NewAST(X, X.con(),(MethodCon)X.con(),X.kids());
   }
-  private NewAST( ClzBuilder X, Const type, Const meth, AST[] kids ) {
-    this(kids,(XClz)XType.xtype(type,true), X, type);
+  private NewAST( ClzBuilder X, Const type, MethodCon meth, AST[] kids ) {
+    this(kids,(XClz)XType.xtype(type,true), X, type, meth);
   }
   NewAST( AST[] kids, XClz xt ) {
-    this(kids,xt,null,null);
+    this(kids,xt,null,null,null);
   }
-  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type  ) {
+  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodCon meth ) {
     super(kids_plus_clz(kids,xt,X,type));
     _type = xt;
+    //_meth = meth==null ? null : (MethodPart)meth.part();
+    _meth=null;
     if( xt.needs_import() )
       ClzBuilder.add_import(xt);
   }

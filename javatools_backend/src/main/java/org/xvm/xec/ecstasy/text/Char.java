@@ -27,4 +27,7 @@ public class Char extends Const {
     return XRuntime.SET$COND(0 <= x && x <= 9,x);
   }
 
+  public static String quoted(char c) {
+    throw XEC.TODO();
+  }
 }

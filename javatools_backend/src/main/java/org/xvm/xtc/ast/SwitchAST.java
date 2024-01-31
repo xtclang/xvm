@@ -284,9 +284,9 @@ class SwitchAST extends AST {
   // }
   private SB do_range( SB sb ) {
     String case_sep = _expr ? " -> " : ": ";
-    sb.p("switch( (int)");
+    sb.p("switch( (int)(");
     _kids[0].jcode(sb);
-    sb.p(" ) {").nl().ii();
+    sb.p(") ) {").nl().ii();
     // for each case label
     for( int i=0; i<_armss.length; ) {
       if( i < _armss.length-1 ) {

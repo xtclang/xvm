@@ -15,6 +15,9 @@ public class ConAST extends AST {
     _tcon = tcon;
     _con  = con ;
     _type = type;
+    if( _tcon instanceof IntCon )
+      _type = XCons.LONG;
+      
     _X = X;
   }
   

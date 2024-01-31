@@ -81,13 +81,13 @@ $(test_classes): $(CLZDIR)/test/%class: $(TST)/%java $(main_classes)
 JARBITS =
 JARBITS += -C $(CLZDIR)/main .    # The java class files
 
-JVM=nice java -Xms1g -Xms1g -ea -cp "$(CLZDIR)/main"
+JVM=java -ea -cp "$(CLZDIR)/main"
 
 # XDK setup
-XDK_DIR = ../xdk/build/xdk
-XDK = $(XDK_DIR)/javatools/javatools.jar
-XTC = java -jar $(XDK) xcc -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools --rebuild
-XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
+XDK_DIR = ../manualTests/build/xtc/xdk/lib
+XDK = $(XDK_DIR)/javatools.jar
+XTC = java -jar $(XDK) xcc -L $(XDK_DIR) --rebuild
+XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)
 
 # General recipe for making an XTC from a X file
 %.xtc:	%.x $(XDK)
@@ -135,8 +135,8 @@ manuals_exe:	$(manuals_x:x=exe) $(classes)
 MULTI = multiModule/Lib.x multiModule/Main.x
 multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
 $(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
-	@echo "compiling " $@ " because " $(filter-out $(XDK),$?)
-	@$(XTC) -L $(XDK_DIR)/lib -L $(XDK_DIR)/javatools $(filter-out $(XDK),$?) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
+	@echo "compiling " $@ " because " $?
+	$(XTC) $(filter-out $(XDK),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 
 
 multi_exe:	$(XDK) $(classes) $(multi_x:x=xtc)
