@@ -70,7 +70,6 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   
   abstract public int hashCode( );
 
-
   // --- Mutability
   public enum Mutability {
     Constant,                   // Deeply immutable

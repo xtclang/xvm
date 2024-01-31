@@ -1,5 +1,7 @@
 package org.xvm.xrun;
 
+import org.xvm.XEC;
+
 public class NativeContainer extends Container {
 
   final NativeConsole _console;

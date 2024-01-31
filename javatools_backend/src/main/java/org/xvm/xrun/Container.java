@@ -1,11 +1,11 @@
 package org.xvm.xrun;
 
-import org.xvm.xtc.ModPart;
-import org.xvm.xtc.ClzBldSet;
 import org.xvm.XEC;
-import org.xvm.xec.XTC;
 import org.xvm.xec.XRunClz;
+import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.collections.AryString;
+import org.xvm.xtc.ClzBldSet;
+import org.xvm.xtc.ModPart;
 
 import java.lang.reflect.Constructor;
 
@@ -17,6 +17,8 @@ public abstract class Container {
   final Container _par;         // Parent container
   final ModPart _mod;           // Main module
   public NativeConsole console() { return _par.console(); }
+  public Object timer() { throw XEC.TODO(); }
+
   
   Container( Container par, ModPart mod ) {
     _par = par;

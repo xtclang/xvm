@@ -1,5 +1,6 @@
 package org.xvm.xec.ecstasy.text;
 
+import org.xvm.XEC;
 import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.collections.Arychar;
 
@@ -7,6 +8,9 @@ public class StringBuffer extends Arychar
   implements Appenderchar, Stringable
 {
 
+  public StringBuffer( ) {}
+  public StringBuffer(long estSize ) { throw XEC.TODO(); }
+  
   public StringBuffer add(char v) {
     return (StringBuffer)super.add(v);
   }
