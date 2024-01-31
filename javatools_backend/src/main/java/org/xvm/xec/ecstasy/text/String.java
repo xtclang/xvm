@@ -16,6 +16,10 @@ public class String extends Const {
   public int length() { return _i.length(); }
   public char charAt(int x) { return _i.charAt(x); }
   @Override public java.lang.String toString() { return _i; }
+
+  public static java.lang.String quoted( java.lang.String s ) {
+    throw XEC.TODO();
+  }
   
   
   public static <E extends String> boolean equals$String( XTC gold, E ord0, E ord1 ) { return ord0._i.equals(ord1._i); }

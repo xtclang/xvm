@@ -55,6 +55,9 @@ public class ReturnAST extends AST {
 
   @Override AST postwrite() {
     autobox(0,_type);
+    // Void return functions execute the return for side effects only
+    if( _meth._xrets==null && _expr==null )
+      return _kids==null ? null : _kids[0];
     return this;
   }
 

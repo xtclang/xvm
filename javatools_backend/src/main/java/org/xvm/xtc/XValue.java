@@ -24,8 +24,7 @@ public abstract class XValue {
     case IntCon ic -> {
       if( ic._big != null ) throw XEC.TODO();
       ASB.p(ic._x);
-      if( ic._x >= Integer.MAX_VALUE || ic._x <= Integer.MIN_VALUE )
-        ASB.p("L");
+      if( ic._x >= Integer.MAX_VALUE || ic._x <= Integer.MIN_VALUE )  ASB.p("L");
       yield ASB;
     }
     case Flt64Con fc ->
@@ -69,8 +68,8 @@ public abstract class XValue {
       if( par != ClzBuilder.CCLZ && ((prop.part()._nFlags & Part.STATIC_BIT) != 0) ) {
         if( par instanceof ClassPart clz )
           ASB.p(ClzBuilder.add_import(clz).clz_bare()).p('.');
-        else if( par instanceof MethodPart ) {
-          ASB.p(prop._name).p('.');
+        else if( par instanceof MethodPart meth ) {
+          ASB.p(meth._name).p('$');
         } else throw XEC.TODO();
       }
       yield ASB.p(prop._name);

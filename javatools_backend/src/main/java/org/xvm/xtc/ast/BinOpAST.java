@@ -51,7 +51,9 @@ class BinOpAST extends AST {
     // Java primitive fetch instead of boxed fetch
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG && !(_par instanceof InvokeAST && _par._kids[0]==this) ) {
       _type = _type.unbox();
-      if( _kids[0]._type.isAry() ) {
+      if( _kids[0]._type == XCons.STRING ) {
+        _op0 = ".charAt((int)";
+      } else if( _kids[0]._type.isAry() ) {
         _op0 = ".at8(";         // Use primitive 'at' instead of generic
       } else {
         // Tuple at fixed field offset
