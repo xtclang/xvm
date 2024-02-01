@@ -1,4 +1,3 @@
-import XdkBuildLogic.Companion.getDateTimeStampWithTz
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
@@ -12,7 +11,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
-        private const val LOCALDIST_BACKUP_DIR = "localdist-backup"
 
         private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
@@ -32,6 +30,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         """.trimIndent())
     }
 
+    val installDirProvider: Provider<Directory> get() = project.layout.buildDirectory.dir("install/xdk")
+
+    val localDistDirProvider = project.compositeRootBuildDirectory.dir("dist")
+
     val distributionName: String get() = project.name // Default: "xdk"
 
     val distributionVersion: String get() = buildString {
@@ -47,7 +49,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
+    fun resolveLauncherFile(localDistDir: Provider<Directory> = localDistDirProvider): RegularFile {
         val launcher = if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {

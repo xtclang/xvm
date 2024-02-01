@@ -332,7 +332,7 @@ const char* buildPath(const char* dir, const char* file)
     return result;
     }
 
-const char* removeExtension(const char* file)
+const char* removeExtension(const char* file)or te
     {
     char* dot = strchr(file, '.');
     if (dot == NULL)

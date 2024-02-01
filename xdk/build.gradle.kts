@@ -5,10 +5,10 @@ import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
-import java.nio.file.attribute.FileAttribute
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -236,7 +236,7 @@ val distExe by tasks.registering {
         makensis != null
     }
 
-    val inputDir = layout.buildDirectory.dir("install/xdk")
+    val inputDir = xdkDist.installDirProvider
     val outputFile = layout.buildDirectory.file("distributions/xdk-$version.exe")
     inputs.dir(inputDir)
     outputs.file(outputFile)
@@ -304,28 +304,41 @@ val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Creates an XDK installation in root/build/dist, for the current platform."
 
-    val localDistDir = compositeRootBuildDirectory.dir("dist")
-
     dependsOn(installDist)
     inputs.files(installDist)
-    outputs.dir(localDistDir)
+    outputs.dir(xdkDist.localDistDirProvider)
 
     doLast {
         // Sync, not copy, so we can do this declaratively, Gradle input/output style, without horrible file system logic.
         sync {
-            from(project.layout.buildDirectory.dir("install/xdk"))
-            into(localDistDir)
+            from(xdkDist.installDirProvider)
+            into(xdkDist.localDistDirProvider)
         }
 
         // Create symlinks for launcher.
-        val binDir = mkdir(localDistDir.get().dir("bin"))
-        val launcherExe = xdkDist.resolveLauncherFile(localDistDir)
+        val binDir = mkdir(xdkDist.localDistDirProvider.get().dir("bin"))
+        val launcherExe = xdkDist.resolveLauncherFile()
 
         // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
         listOf("xcc", "xec", "xtc").forEach {
             val symLink = File(binDir, it)
             logger.info("$prefix Creating symlink for launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
             Files.createSymbolicLink(symLink.toPath(), launcherExe.asFile.toPath())
+        }
+    }
+}
+
+val verifyInstallLocalDist by tasks.registering {
+    group = VERIFICATION_GROUP
+    description = "Verifies that the launcher can be executed from installLocalDist path"
+    dependsOn(installLocalDist)
+    doLast {
+        exec {
+            workingDir = xdkDist.localDistDirProvider.get().dir("bin").asFile
+            System.err.println(File(workingDir, "xcc").exists())
+            System.err.println(workingDir.absolutePath)
+            commandLine("ls")
+            commandLine("xcc", "--version")
         }
     }
 }
