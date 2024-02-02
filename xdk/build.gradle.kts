@@ -20,6 +20,7 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
+    application
     distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
 }
 
@@ -236,7 +237,8 @@ val distExe by tasks.registering {
         makensis != null
     }
 
-    val inputDir = xdkDist.installDirProvider
+    //TODO: val inputDir = xdkDist.installDirProvider
+    val inputDir = layout.buildDirectory.dir("install/xdk")
     val outputFile = layout.buildDirectory.file("distributions/xdk-$version.exe")
     inputs.dir(inputDir)
     outputs.file(outputFile)
@@ -304,20 +306,27 @@ val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Creates an XDK installation in root/build/dist, for the current platform."
 
+    val localDistDir = compositeRootBuildDirectory.dir("dist")
+
     dependsOn(installDist)
     inputs.files(installDist)
-    outputs.dir(xdkDist.localDistDirProvider)
+    //outputs.dir(xdkDist.localDistDirProvider)
+    outputs.dir(localDistDir)
 
     doLast {
         // Sync, not copy, so we can do this declaratively, Gradle input/output style, without horrible file system logic.
         sync {
-            from(xdkDist.installDirProvider)
-            into(xdkDist.localDistDirProvider)
+            //from(xdkDist.installDirProvider)
+            //into(xdkDist.localDistDirProvider)
+            from(project.layout.buildDirectory.dir("install/xdk"))
+            into(localDistDir)
         }
 
         // Create symlinks for launcher.
-        val binDir = mkdir(xdkDist.localDistDirProvider.get().dir("bin"))
-        val launcherExe = xdkDist.resolveLauncherFile()
+        //val binDir = mkdir(xdkDist.localDistDirProvider.get().dir("bin"))
+        //val launcherExe = xdkDist.resolveLauncherFile()
+        val binDir = mkdir(localDistDir.get().dir("bin"))
+        val launcherExe = xdkDist.resolveLauncherFile(localDistDir)
 
         // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
         listOf("xcc", "xec", "xtc").forEach {
@@ -333,12 +342,14 @@ val verifyInstallLocalDist by tasks.registering {
     description = "Verifies that the launcher can be executed from installLocalDist path"
     dependsOn(installLocalDist)
     doLast {
-        exec {
+        val result = exec {
             workingDir = xdkDist.localDistDirProvider.get().dir("bin").asFile
             System.err.println(File(workingDir, "xcc").exists())
             System.err.println(workingDir.absolutePath)
             commandLine("ls")
             commandLine("xcc", "--version")
         }
+        System.err.println("Rethrow: " + result);
+        result.rethrowFailure()
     }
 }
