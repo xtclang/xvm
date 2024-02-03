@@ -48,8 +48,8 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             $prefix Start parameter init scripts: $allInitScripts
         """.trimIndent())
 
-            if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
-                val msg = "$prefix Multiple start parameter tasks are not guaranteed to in order/in parallel. Please run each task individually."
+            if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") && !it.contains("help")} > 1) {
+                val msg = "$prefix Multiple start parameter tasks are not guaranteed to work or run in order in parallel builds. Please run each task individually."
                 logger.error(msg)
                 throw GradleException(msg)
             }

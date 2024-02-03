@@ -15,6 +15,10 @@ private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
 
+tasks.wrapper {
+    distributionType = Wrapper.DistributionType.ALL
+}
+
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
  * build projects. The aggregator proper should be as small as possible, and only contains
