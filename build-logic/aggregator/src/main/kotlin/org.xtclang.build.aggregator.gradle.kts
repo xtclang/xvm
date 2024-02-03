@@ -52,6 +52,11 @@ private class XdkBuildAggregator(project: Project) : Runnable {
                 logger.error(msg)
                 throw GradleException(msg)
             }
+
+            if (isBuildScan) {
+                logger.lifecycle("$prefix Build scans are enabled.")
+            }
+            this.isBuildScan = true
         }
 
         logger.info("$prefix Start Parameter(s): $startParameter")

@@ -9,6 +9,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val MAKENSIS = "makensis"
 
+        const val XDK_COMPILER_BINARY_NAME_LEGACY = "xtc"
+        const val XDK_COMPILER_BINARY_NAME = "xcc"
+        const val XDK_RUNNER_BINARY_NAME = "xec"
+
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
 
@@ -16,6 +20,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private val isCiEnabled = System.getenv(CI) == "true"
 
         val distributionTasks = listOfNotNull("distTar", "distZip", "distExe")
+        val launcherNames = listOfNotNull(XDK_COMPILER_BINARY_NAME_LEGACY, XDK_COMPILER_BINARY_NAME, XDK_RUNNER_BINARY_NAME)
     }
 
     init {
@@ -49,7 +54,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    fun resolveLauncherFile(localDistDir: Provider<Directory> = localDistDirProvider): RegularFile {
+    fun resolvePlatformSpecificLauncherFile(localDistDir: Provider<Directory> = localDistDirProvider): RegularFile {
         val launcher = if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {

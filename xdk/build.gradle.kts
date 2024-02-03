@@ -1,10 +1,12 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
+import XdkBuildLogic.Companion.findExecutableOnPath
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
+import XdkDistribution.Companion.XDK_RUNNER_BINARY_NAME
+import XdkDistribution.Companion.launcherNames
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.logging.LogLevel.INFO
-import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
@@ -20,7 +22,7 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
-    application
+    //application
     distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
 }
 
@@ -116,12 +118,13 @@ publishing {
     }
 }
 
+/*
 private fun shouldPublishPluginToLocalDist(): Boolean {
     return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
 }
 
 val publishPluginToLocalDist by tasks.registering {
-    group = BUILD_GROUP
+    group = PUBLISH_TASK_GROUP
     // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
     if (shouldPublishPluginToLocalDist()) {
         dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
@@ -130,7 +133,7 @@ val publishPluginToLocalDist by tasks.registering {
             logger.info("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
         }
     }
-}
+}*/
 
 /**
  * Set up the distribution layout. This is executed during the config phase, which means that we can't
@@ -181,12 +184,13 @@ distributions {
                 }
                 into("libexec/javatools") // should just be one file with corrected dependencies, assert?
             }
+            /*
             if (shouldPublishPluginToLocalDist()) {
                 val published = publishPluginToLocalDist.get().outputs.files
                 from(published) {
                     into("repo")
                 }
-            }
+            }*/
             from(tasks.xtcVersionFile)
         }
     }
@@ -211,8 +215,6 @@ val distTar by tasks.existing(Tar::class) {
     archiveExtension = "tar.gz"
 }
 
-val distZip by tasks.existing(Zip::class)
-
 val assembleDist by tasks.existing {
     if (xdkDist.shouldCreateWindowsDistribution()) {
         logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
@@ -232,7 +234,7 @@ val distExe by tasks.registering {
     dependsOn(installDist)
 
     val nsi = file("src/main/nsi/xdkinstall.nsi")
-    val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
+    val makensis = findExecutableOnPath(XdkDistribution.MAKENSIS)
     onlyIf {
         makensis != null
     }
@@ -264,10 +266,10 @@ val distExe by tasks.registering {
                 "NSIS_OUT" to outputFile.get(),
                 "NSIS_VER" to xdkDist.distributionVersion
             )
-            commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
+            commandLine(makensis.absolutePath, nsi.absolutePath, "-NOCD")
             standardOutput = stdout
         }
-        makensis.toFile().setExecutable(true)
+        makensis.setExecutable(true)
         logger.info("$prefix Finished building distribution: '$name'")
         stdout.toString().lines().forEach { logger.info("$prefix     $it") }
     }
@@ -306,50 +308,98 @@ val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Creates an XDK installation in root/build/dist, for the current platform."
 
-    val localDistDir = compositeRootBuildDirectory.dir("dist")
-
     dependsOn(installDist)
     inputs.files(installDist)
-    //outputs.dir(xdkDist.localDistDirProvider)
-    outputs.dir(localDistDir)
+    outputs.dir(xdkDist.localDistDirProvider)
 
     doLast {
         // Sync, not copy, so we can do this declaratively, Gradle input/output style, without horrible file system logic.
         sync {
-            //from(xdkDist.installDirProvider)
-            //into(xdkDist.localDistDirProvider)
-            from(project.layout.buildDirectory.dir("install/xdk"))
-            into(localDistDir)
+            from(xdkDist.installDirProvider)
+            into(xdkDist.localDistDirProvider)
         }
 
-        // Create symlinks for launcher.
-        //val binDir = mkdir(xdkDist.localDistDirProvider.get().dir("bin"))
-        //val launcherExe = xdkDist.resolveLauncherFile()
-        val binDir = mkdir(localDistDir.get().dir("bin"))
-        val launcherExe = xdkDist.resolveLauncherFile(localDistDir)
+        // TODO: Right now we create symlinks for launchers, but that is incompatible with really old Windows 10 versions,
+        //   unless developer privileges are escalated. We will replace these with application plugin start scripts, and
+        //   use the XdkResolvingLauncher Java shiv, that is pretty much the ported logic of all the binary launchers. The
+        //   nice part is that we can choose to build executables with jlink or something similar later, but we still have
+        //   platform independence at this level.
+        val localDistDir = xdkDist.localDistDirProvider.get()
+        val launcherExe = xdkDist.resolvePlatformSpecificLauncherFile()
+        val binDir = mkdir(localDistDir.dir("bin"))
+        if (!binDir.exists() || !binDir.isDirectory) {
+            throw buildException("Cannot create 'bin' directory in local distribution: $binDir")
+        }
 
-        // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
-        listOf("xcc", "xec", "xtc").forEach {
-            val symLink = File(binDir, it)
-            logger.info("$prefix Creating symlink for launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
+        launcherNames.forEach { launcher ->
+            val symLink = File(binDir, launcher)
+            logger.lifecycle("$prefix Creating symlink for launcher '$launcher' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
             Files.createSymbolicLink(symLink.toPath(), launcherExe.asFile.toPath())
         }
+        localDistPostInstallCheck()
     }
 }
 
+private fun localDistPostInstallCheck(): Boolean {
+    val existingLauncher: File? = findExecutableOnPath(XDK_RUNNER_BINARY_NAME)
+    val existingLauncherDir = existingLauncher?.parentFile
+    val newLauncherDir = xdkDist.localDistDirProvider.get().dir("bin").asFile
+    if (newLauncherDir == existingLauncherDir) {
+        return true
+    }
+
+    if (existingLauncher == null) {
+        logger.warn("$prefix WARNING: No XDK launcher binaries found on the system path.")
+    } else if (existingLauncherDir != newLauncherDir) {
+        logger.warn("$prefix WARNING: Another XDK installation is earlier on the system path: '${existingLauncherDir!!.absolutePath}'")
+    }
+
+    val exportCommand = "export PATH=${xdkDist.localDistDirProvider.get().asFile.absolutePath}/bin:\$PATH"
+    logger.warn("""
+        $prefix To use this local distribution as a 'bleeding-edge' XDK installation, e.g., to test code changes to
+        $prefix the XVM repository, and have it replace any existing package manager based XDK installation, you need
+        $prefix to add '${xdkDist.localDistDirProvider.get().asFile}/bin' to your system path, for example like this: 
+        $prefix    '$exportCommand'
+    """.trimIndent())
+
+    return false
+}
+
+/**
+ * Task that checks an installLocalDist destination for the presence of the launchers, and verifies
+ * that they indeed work, and resolve what they should.
+ * <p>
+ * TODO: Maybe add a small HelloWorld.x test compilation and run to this task.
+ */
 val verifyInstallLocalDist by tasks.registering {
     group = VERIFICATION_GROUP
     description = "Verifies that the launcher can be executed from installLocalDist path"
     dependsOn(installLocalDist)
     doLast {
-        val result = exec {
-            workingDir = xdkDist.localDistDirProvider.get().dir("bin").asFile
-            System.err.println(File(workingDir, "xcc").exists())
-            System.err.println(workingDir.absolutePath)
-            commandLine("ls")
-            commandLine("xcc", "--version")
+        val localDistDir = xdkDist.localDistDirProvider.get()
+        val localDistDirPath = localDistDir.asFile.absolutePath
+
+        val binDir = localDistDir.dir("bin").asFile
+        if (!binDir.exists()) {
+            logger.warn("$prefix WARNING: There is no local distribution installed under '$localDistDirPath'")
+            return@doLast
         }
-        System.err.println("Rethrow: " + result);
-        result.rethrowFailure()
+
+        launcherNames.forEach { launcher ->
+            val result = exec {
+                workingDir = binDir
+                val launcherFile = File(binDir, launcher)
+                if (!launcherFile.exists() || !launcherFile.isFile) {
+                    throw buildException("Cannot find regular executable launcher file '$launcher' in '$binDir'")
+                }
+                logger.lifecycle("$prefix Verified that '${launcherFile.absolutePath}' exists: ${launcherFile.exists()} (from cwd: '${workingDir.absolutePath}')")
+                commandLine("./$launcher", "--version", "--verbose")
+            }
+            logger.lifecycle("$prefix Finished verifying launcher $launcher (result: $result)")
+            logger.lifecycle("$prefix Exit value: ${result.exitValue}")
+            result.rethrowFailure()
+        }
+
+        logger.lifecycle("$prefix Finished verification of the locally installed distribution under '${xdkDist.localDistDirProvider.get().asFile.absolutePath}'")
     }
 }

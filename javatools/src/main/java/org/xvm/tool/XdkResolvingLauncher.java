@@ -115,7 +115,6 @@ public class XdkResolvingLauncher {
 
     private static File isValidXdkInstallationFile(final File file, final boolean shouldBeDir) {
         final boolean isValid = file != null && file.exists() && file.canRead() && file.isFile() != shouldBeDir;
-        System.err.println(file + " " + file.exists() + " " + file.canRead() + " " + (file.isFile() != shouldBeDir));
         return isValid ? file : null;
     }
 

@@ -58,10 +58,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         return xdkGitHub
     }
 
-    fun resolveLocalXdkInstallation(): File {
-        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
-    }
-
     companion object {
         const val DEFAULT_JAVA_BYTECODE_VERSION = 20 // TODO: We still have to compile to 20 bytecode, because Kotlin 1.9 does not support 21.
         const val XDK_TASK_GROUP_DEBUG = "debug"
@@ -70,7 +66,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
 
         private const val ENV_PATH = "PATH"
-        private const val XTC_LAUNCHER = "xec"
         private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
         private val singletonCache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
@@ -95,13 +90,14 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
             return SimpleDateFormat(DATE_TIME_FORMAT, Locale.getDefault()).format(Date(ms))
         }
 
-        fun findExecutableOnPath(executable: String): Path? {
-            return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }
-                ?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
-        }
-
-        fun findLocalXdkInstallation(): File? {
-            return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile?.parentFile // xec -> bin -> libexec -> "x.y.z.ppp"
+        fun findExecutableOnPath(executable: String, followSymLinks: Boolean = true): File? {
+            return System.getenv(ENV_PATH)
+                ?.split(File.pathSeparator)
+                ?.map { File(it, executable) }
+                ?.find { it.exists() && it.canExecute() }
+                ?.toPath()
+                ?.let { if (followSymLinks) it.toRealPath() else it }
+                ?.toFile()
         }
 
         /**
@@ -121,6 +117,18 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
                     appendLine("    [$timestamp] '${dir.name}$path'")
                 }
             }.trim()
+        }
+
+        val executeCommandAsProcess = { args: String ->
+            ProcessBuilder(args.split(" ")).start().apply { waitFor() }.inputStream.bufferedReader().use { it.readText().trim() }
+        }
+
+        val gitCommitId = {
+            executeCommandAsProcess("git rev-parse --verify HEAD")
+        }
+
+        val gitBranchName = {
+            executeCommandAsProcess("git rev-parse --abbrev-ref HEAD")
         }
     }
 }
