@@ -1,3 +1,4 @@
+import org.gradle.api.logging.configuration.ShowStacktrace.ALWAYS
 import org.gradle.language.base.plugins.LifecycleBasePlugin.ASSEMBLE_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_TASK_NAME
@@ -54,9 +55,19 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             }
 
             if (isBuildScan) {
-                logger.lifecycle("$prefix Build scans are enabled.")
+                // Make sure we always put stack traces if a build scan is enabled.
+                logger.lifecycle("$prefix Build scans are enabled, current stack trace setting: $showStacktrace")
+                val scanShowStacktrace = if (showStacktrace.ordinal < ALWAYS.ordinal) ALWAYS else showStacktrace
+                if (showStacktrace != scanShowStacktrace) {
+                    logger.lifecycle("$prefix     Enabling more verbose stack traces for build scan forensics: $showStacktrace -> $scanShowStacktrace")
+                    showStacktrace = scanShowStacktrace
+                }
             }
-            this.isBuildScan = true
+
+            if ((isBuildScan || System.getenv("CI") != null) && logLevel == LogLevel.DEBUG) {
+                logger.lifecycle("$prefix CI environment detected, reducing DEBUG log level to INFO to be less susceptible to security leaks.")
+                logLevel = LogLevel.INFO
+            }
         }
 
         logger.info("$prefix Start Parameter(s): $startParameter")

@@ -20,4 +20,4 @@ repositories {
     gradlePluginPortal()
 }
 
-logger.info("[${project.name}] Gradle version: v${gradle.gradleVersion} (embedded Kotlin: v$embeddedKotlinVersion).")
+logger.lifecycle("[${project.name}] Gradle version: v${gradle.gradleVersion} (embedded Kotlin: v$embeddedKotlinVersion).")
