@@ -22,7 +22,6 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
-    //application
     distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
 }
 

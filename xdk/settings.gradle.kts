@@ -17,7 +17,7 @@ val xdkProjectPath = rootDir
 /**
  * The explicit XDK subprojects that are built for each library included in the XDK.
  */
-listOfNotNull(
+listOf(
     "lib_ecstasy",
     "lib_collections",
     "lib_aggregate",

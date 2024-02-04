@@ -124,7 +124,7 @@ val sanityCheckJar by tasks.registering {
 
         DebugBuild.verifyJarFileContents(
             project,
-            listOfNotNull(
+            listOf(
                 "implicit.x", // verify the implicits are in the jar
                 "org/xvm/tool/Compiler", // verify the javatools package is in there, including Compiler and Runner
                 "org/xvm/tool/Runner",

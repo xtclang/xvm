@@ -11,7 +11,7 @@ plugins {
 
 private class XdkBuildAggregator(project: Project) : Runnable {
     companion object {
-        private val lifeCycleTasks = listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
+        private val lifeCycleTasks = listOf(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
     }
 
     private val prefix = "[${project.name}]"

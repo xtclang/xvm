@@ -27,11 +27,11 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
         private const val GITHUB_URL_DEFAULT_VALUE = "https://maven.pkg.github.com/xtclang"
         private const val GITHUB_ORG_DEFAULT_VALUE = "xtclang"
 
-        val publishTaskPrefixes = listOfNotNull("list", "delete")
-        val publishTaskSuffixesRemote = listOfNotNull("AllRemotePublications")
-        val publishTaskSuffixesLocal = listOfNotNull("AllLocalPublications")
+        val publishTaskPrefixes = listOf("list", "delete")
+        val publishTaskSuffixesRemote = listOf("AllRemotePublications")
+        val publishTaskSuffixesLocal = listOf("AllLocalPublications")
 
-        fun restHeaders(token: String): List<Pair<String, String>> = listOfNotNull(
+        fun restHeaders(token: String): List<Pair<String, String>> = listOf(
             "Accept" to "application/vnd.github+json",
             "X-GitHub-Api-Version" to "2022-11-28",
             "Authorization" to "Bearer $token")

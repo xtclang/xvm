@@ -19,8 +19,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
 
-        val distributionTasks = listOfNotNull("distTar", "distZip", "distExe")
-        val launcherNames = listOfNotNull(XDK_COMPILER_BINARY_NAME_LEGACY, XDK_COMPILER_BINARY_NAME, XDK_RUNNER_BINARY_NAME)
+        val distributionTasks = listOf("distTar", "distZip", "distExe")
+        val launcherNames = listOf(XDK_COMPILER_BINARY_NAME_LEGACY, XDK_COMPILER_BINARY_NAME, XDK_RUNNER_BINARY_NAME)
     }
 
     init {
