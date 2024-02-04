@@ -149,8 +149,6 @@ val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLa
 
 val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
 
-val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
-
 val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
 
 val Project.prefix: String get() = "[$name]"

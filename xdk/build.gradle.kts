@@ -117,23 +117,6 @@ publishing {
     }
 }
 
-/*
-private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
-}
-
-val publishPluginToLocalDist by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
-    if (shouldPublishPluginToLocalDist()) {
-        dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
-        outputs.dir(buildRepoDirectory)
-        doLast {
-            logger.info("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
-        }
-    }
-}*/
-
 /**
  * Set up the distribution layout. This is executed during the config phase, which means that we can't
  * resolve outputs to other tasks to their explicit destination files yet, unless they have run.

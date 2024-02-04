@@ -5,13 +5,6 @@ plugins {
     id("maven-publish") // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication. We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or find a better way to add the default maven publication.
 }
 
-/*
- * Should we publish the plugin to a common build repository and copy it to any localDist?
- */
-private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
-}
-
 /**
  * Configure repositories for XDK artifact publication. Currently, we publish the XDK zip "xdkArchive", and
  * the XTC plugin, "xtcPlugin".
@@ -20,15 +13,6 @@ publishing {
     repositories {
         logger.info("$prefix Configuring publications for repository mavenLocal().")
         mavenLocal()
-
-        if (shouldPublishPluginToLocalDist()) {
-            logger.info("$prefix Configuring publications for repository local flat dir: '$buildRepoDirectory'")
-            maven {
-                name = "build"
-                description = "Publish all publications to the local build directory repository."
-                url = uri(buildRepoDirectory)
-            }
-        }
 
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
         with (xdkBuildLogic.github()) {
@@ -76,26 +60,6 @@ val publishLocal by tasks.registering {
     dependsOn(publishAllPublicationsToMavenLocalRepository)
 }
 
-val pruneBuildRepo by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
-    if (shouldPublishPluginToLocalDist()) {
-        logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
-        delete(buildRepoDirectory)
-    }
-}
-
-if (shouldPublishPluginToLocalDist()) {
-    logger.warn("$prefix Configuring local distribution plugin publication.")
-    val publishAllPublicationsToBuildRepository by tasks.existing {
-        dependsOn(pruneBuildRepo)
-        mustRunAfter(pruneBuildRepo)
-    }
-    publishLocal {
-        dependsOn(publishAllPublicationsToBuildRepository)
-    }
-}
-
 val publishAllPublicationsToMavenLocalRepository by tasks.existing
 
 val deleteAllLocalPublications by tasks.registering {
@@ -109,7 +73,6 @@ val listAllLocalPublications by tasks.registering {
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
         logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
-        //private val localPublishTasks = provider { tasks.withType<PublishToMavenRepository>().filter{ it.name.contains("Local") }.toList() }
         tasks.withType<PublishToMavenRepository>().filter { it.name.contains("Local") }.forEach {
             with(it.publication) {
                 logger.lifecycle("$prefix     '${it.name}' (${artifacts.count()} artifacts):")
