@@ -3,8 +3,9 @@ import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.internal.os.OperatingSystem
+import java.io.File
 
-class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
+class XdkDistribution(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val MAKENSIS = "makensis"
@@ -23,19 +24,11 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         val launcherNames = listOf(XDK_COMPILER_BINARY_NAME_LEGACY, XDK_COMPILER_BINARY_NAME, XDK_RUNNER_BINARY_NAME)
     }
 
-    init {
-        logger.info("""
-            $prefix Configuring XVM distribution: '$this'
-            $prefix   Name        : '$distributionName'
-            $prefix   Version     : '$distributionVersion'
-            $prefix   Current OS  : '$currentOs'
-            $prefix   Environment:
-            $prefix       CI             : '$isCiEnabled' (CI property can be overwritten)
-            $prefix       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
-        """.trimIndent())
-    }
+    private val buildDir = project.layout.buildDirectory
 
-    val installDirProvider: Provider<Directory> get() = project.layout.buildDirectory.dir("install/xdk")
+    val installDirProvider: Provider<Directory> = buildDir.dir("install/xdk")
+
+    val aggregatedBuildDir: Provider<Directory> = buildDir.dir("aggregated-modules")
 
     val localDistDirProvider = project.compositeRootBuildDirectory.dir("dist")
 
@@ -52,6 +45,19 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             }
             append("-ci-$buildNumber+$gitCommitHash")
         }
+    }
+
+    init {
+        logger.info("""
+            $prefix Configuring XVM distribution: '$this'
+            $prefix   Name        : '$distributionName'
+            $prefix   Version     : '$distributionVersion'
+            $prefix   Current OS  : '$currentOs'
+            $prefix   Environment:
+            $prefix       CI             : '$isCiEnabled' (CI property can be overwritten)
+          $prefix       GITHUB_ACTIONS : '${System.getenv("GITHUB_ACTIONS") ?: "[not set]"}'
+        """.trimIndent()
+        )
     }
 
     fun resolvePlatformSpecificLauncherFile(localDistDir: Provider<Directory> = localDistDirProvider): RegularFile {

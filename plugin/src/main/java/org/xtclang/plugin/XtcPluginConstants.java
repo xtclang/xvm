@@ -34,15 +34,18 @@ public final class XtcPluginConstants {
     @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
     public static final String XTC_COMPONENT_VARIANT_RUNTIME = "runtime";
 
+    // XDK/XTC tasks:
+    public static final String XDK_TASK_EXTRACT_XDK_NAME = "extractXdk";
+    public static final String XDK_TASK_PROCESS_COMPILED_MODULES_NAME = "processCompiledXtcModules";
+    public static final String XDK_TASK_VERSION_FILE_NAME = "xtcVersionFile";
+    public static final String XDK_TASK_VERSION_NAME = "xtcVersion";
+
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";
     public static final String XDK_CONFIG_NAME_INCOMING_ZIP = "xdkDistribution";
     public static final String XDK_CONFIG_NAME_CONTENTS = "xdkContents";
     public static final String XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS = "xdk-contents";
     public static final String XDK_LIBRARY_ELEMENT_TYPE = "xdk-distribution-archive";
-    public static final String XDK_EXTRACT_TASK_NAME = "extractXdk";
-    public static final String XDK_VERSION_FILE_TASK_NAME = "xtcVersionFile";
-    public static final String XDK_VERSION_TASK_NAME = "xtcVersion";
     public static final String XDK_VERSION_GROUP_NAME = "version";
     public static final String XDK_VERSION_PATH = "VERSION";
 
@@ -63,8 +66,9 @@ public final class XtcPluginConstants {
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
 
     // JavaTools (launcher native code)
+    public static final String XDK_JAVATOOLS_JAR_NAME = XDK_JAVATOOLS_ARTIFACT_ID + '.' + XDK_JAVATOOLS_ARTIFACT_SUFFIX;
+
     public static final String JAR_MANIFEST_PATH = "META-INF/MANIFEST.MF";
-    public static final String JAVATOOLS_JAR_NAME = "javatools.jar";
 
     // XTC Magic Number, for future verification of XTC module binaries, and for parts of language server support.
     @SuppressWarnings("unused")

@@ -17,7 +17,7 @@ import java.io.File;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_EXTRACT_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_TASK_EXTRACT_XDK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
@@ -30,7 +30,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
     @Inject
     public XtcExtractXdkTask(final XtcProjectDelegate project) {
-        super(project, XDK_EXTRACT_TASK_NAME);
+        super(project, XDK_TASK_EXTRACT_XDK_NAME);
     }
 
     private static boolean isXdkArchive(final File file) {

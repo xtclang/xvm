@@ -25,6 +25,7 @@ import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
+import org.xtclang.plugin.tasks.XtcProcessCompiledModulesTask;
 import org.xtclang.plugin.tasks.XtcRunAllTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 
@@ -45,13 +46,14 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_OUTGOING;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_EXTRACT_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_TASK_EXTRACT_XDK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_JAR_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_FILE_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_TASK_VERSION_FILE_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_GROUP_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_TASK_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_TASK_VERSION_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING_TEST;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_OUTGOING;
@@ -183,7 +185,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return ensureExtension(XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
     }
 
-    private String getXtcSourceDirectoryRootPath(final SourceSet sourceSet) {
+    private static String getXtcSourceDirectoryRootPath(final SourceSet sourceSet) {
         return "src/" + sourceSet.getName() + '/' + XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
     }
 
@@ -253,6 +255,21 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return MAIN_SOURCE_SET_NAME.equals(sourceSet.getName());
     }
 
+    private TaskProvider<XtcProcessCompiledModulesTask> createCompilePostProcessTask(final SourceSet sourceSet) {
+        final var compileTaskName = getCompileTaskName(sourceSet);
+        final var processTask = tasks.register(compileTaskName, XtcProcessCompiledModulesTask.class, this, sourceSet);
+        final var compileTask = tasks.getByName(compileTaskName);
+
+        processTask.configure(task -> {
+            task.setGroup(BUILD_GROUP);
+            task.setDescription("Post process the compiled XTC modules for source set: " + sourceSet.getName());
+            task.dependsOn(compileTaskName);
+            task.getInputs().files(compileTask.getOutputs());
+        });
+
+        return processTask;
+    }
+
     // TODO: Move to static factory in compile task?
     private TaskProvider<XtcCompileTask> createCompileTask(final SourceSet sourceSet) {
         final var compileTaskName = getCompileTaskName(sourceSet);
@@ -263,7 +280,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         compileTask.configure(task -> {
             task.setGroup(BUILD_GROUP);
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
-            task.dependsOn(XDK_EXTRACT_TASK_NAME);
+            task.dependsOn(XDK_TASK_EXTRACT_XDK_NAME);
             // TODO Fix more exact processResources semantics so that we use the build as resource path, and not the src. This works for first merge.
             if (forceRebuild.get()) {
                 logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.", prefix(projectName, compileTaskName), compileTaskName);
@@ -305,9 +322,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         runTask.configure(task -> {
             task.setGroup(APPLICATION_GROUP);
             task.setDescription("Run an XTC program with a configuration supplying the module path(s).");
-            task.dependsOn(XDK_EXTRACT_TASK_NAME);
+            task.dependsOn(XDK_TASK_EXTRACT_XDK_NAME);
             task.dependsOn(compileTaskName); // It's important to remember to depend on compile.
-            logger.info("{} Configured, dependency to tasks: {} -> {}", prefix, XDK_EXTRACT_TASK_NAME, sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME));
+            logger.info("{} Configured, dependency to tasks: {} -> {}", prefix, XDK_TASK_EXTRACT_XDK_NAME, sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME));
         });
         logger.info("{} Created task: '{}'", prefix, runTask.getName());
         return runTask;
@@ -327,14 +344,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     private void createVersioningTasks() {
-        tasks.register(XDK_VERSION_TASK_NAME, task -> {
+        tasks.register(XDK_TASK_VERSION_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Display XTC version for project, and sanity check its application.");
             task.doLast(t -> logger.info("{} XTC (version '{}'); Semantic Version: '{}'",
-                prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
+                prefix(projectName, XDK_TASK_VERSION_NAME), project.getVersion(), getSemanticVersion()));
         });
 
-        tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
+        tasks.register(XDK_TASK_VERSION_FILE_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Generate a file containing the XDK/XTC version under the build tree.");
             final var version = buildDir.file(XDK_VERSION_PATH);
@@ -342,7 +359,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.doLast(t -> {
                 final var semanticVersion = getSemanticVersion();
                 final var file = version.get().getAsFile();
-                logger.info("{} Writing version information: '{}' to '{}'", prefix(projectName, XDK_VERSION_FILE_TASK_NAME), semanticVersion, file.getAbsolutePath());
+                logger.info("{} Writing version information: '{}' to '{}'", prefix(projectName, XDK_TASK_VERSION_FILE_NAME), semanticVersion, file.getAbsolutePath());
                 try {
                     Files.writeString(file.toPath(), semanticVersion + System.lineSeparator());
                 } catch (final IOException e) {
@@ -383,6 +400,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         config.attributes(it -> {
             it.attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
             it.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
+            // TODO: Before deleting these two lines of code permanently, research adn document the exact difference for attribute variants change.
             //  it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, JAVA_RUNTIME));
             //  it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
         });
@@ -436,7 +454,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     private void createXdkDependencyConfigs() {
-        final var extractTask = tasks.register(XDK_EXTRACT_TASK_NAME, XtcExtractXdkTask.class, this);
+        final var extractTask = tasks.register(XDK_TASK_EXTRACT_XDK_NAME, XtcExtractXdkTask.class, this);
 
         configs.register(XDK_CONFIG_NAME_JAVATOOLS_OUTGOING, it -> {
             it.setCanBeConsumed(false);
@@ -474,7 +492,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         //
         // "xdkContents" config (resolvable, someone else has created the consumable, likely the XDK build.)
         configs.register(XDK_CONFIG_NAME_CONTENTS, config -> {
-            config.setDescription("Configuration that consumes the contents of an XDK, i.e. .xtc module files and javatools.jar");
+            config.setDescription("Configuration that consumes the contents of an XDK, i.e. .xtc module files and '" + XDK_JAVATOOLS_JAR_NAME + "'.");
             config.setCanBeResolved(false); // resolution forces someone to find and unzip an XDK for us.
             config.setCanBeConsumed(true);
             addXdkContentsAttributes(config);

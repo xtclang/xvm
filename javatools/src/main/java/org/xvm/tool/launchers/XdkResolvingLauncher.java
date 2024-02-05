@@ -1,6 +1,4 @@
-package org.xvm.tool;
-
-import org.xvm.tool.Launcher.LauncherException;
+package org.xvm.tool.launchers;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,39 +21,12 @@ import java.util.List;
  * legacy binary launchers for identifying and resolving if we are executing
  * from and XTC installation, and the locations of its core libraries required
  * to run are present.
- * <p>
- * The application plugin launch config will look something like this:
- *   + applicationDefaultJvmArgs = "-ea" (as in the current native launchers)
- *   + applicationDistribution = the xdk/build/install directory, or rather, the outputs of installDist
- *   + applicationName = "xcc" or "xec", we create two of them.
- *   + mainClass = XdkCompilerLauncher or XdkRunnerLauncher
- *   + mainModule = N/A
  */
 public class XdkResolvingLauncher {
     private static final String PROTO_JAR = "javatools.jar";
     private static final String PROTO_LIB = "javatools_bridge.xtc";
     private static final String MACK_LIB = "javatools_turtle.xtc";
     private static final String XDK_MODULE_DIR = "lib";
-
-    public static class XdkResolvingLauncherCompiler extends XdkResolvingLauncher {
-        protected XdkResolvingLauncherCompiler(final String[] args) {
-            super(args);
-        }
-
-        public static void main(final String[] args) throws LauncherException, IOException {
-            Compiler.launch(new XdkResolvingLauncher(args).resolveXdkBootstrapArgs());
-        }
-    }
-
-    public static class XdkResolvingLauncherRunner extends XdkResolvingLauncher {
-        protected XdkResolvingLauncherRunner(final String[] args) {
-            super(args);
-        }
-
-        public static void main(final String[] args) throws LauncherException, IOException {
-            Runner.launch(new XdkResolvingLauncher(args).resolveXdkBootstrapArgs());
-        }
-    }
 
     private final List<String> args;
 

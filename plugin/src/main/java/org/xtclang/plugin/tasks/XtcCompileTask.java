@@ -170,7 +170,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             touchAllSource(); // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
         }
 
-        File outputDir = delegate.getXtcCompilerOutputDirModules(sourceSet).get().getAsFile();
+        final File outputDir = delegate.getXtcCompilerOutputDirModules(sourceSet).get().getAsFile();
         args.add("-o", outputDir.getAbsolutePath());
 
         logger.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);

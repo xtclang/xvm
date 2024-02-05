@@ -117,6 +117,25 @@ publishing {
     }
 }
 
+/*
+val copyToBuildAggregationDir by tasks.registering {
+    dependsOn(tasks.compileXtc)
+    dependsOn(tasks.compileTestXtc)
+}
+
+val copyToBuildAggregationDir = tasks.registering {
+    group = BUILD_GROUP
+    description = "Copy all XTC compiler outputs to the build directory for aggregation."
+    //val buildAggregationDir = compositeRootBuildDirectory.dir("modules")
+    //inputs.files(subprojects.map { it.layout.buildDirectory.dir("xtc-modules") })
+    dependsOn(tasks.compileXtc)
+    copy {
+        from(tasks.compileXtc)
+        into(xdkDist.resolveAggregatedBuildDir())
+    }
+}*/
+
+
 /**
  * Set up the distribution layout. This is executed during the config phase, which means that we can't
  * resolve outputs to other tasks to their explicit destination files yet, unless they have run.
@@ -152,6 +171,7 @@ distributions {
                 // This copies everything not a javatools jar into libexec/javatools, which is where XTC wants the
                 // javatools_turtle.xtc and javatools_bridge.xtc modules.
                 // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
+                // TODO: Or at least fuse these two froms, and have a relative / rename configuration or something.
                 into("libexec/lib")
                 exclude("**/javatools*")
             }
@@ -160,19 +180,14 @@ distributions {
                 include("**/javatools*")
             }
             from(configurations.xdkJavaTools) {
+                // Strip the extension and version number from the javatools jar.
                 rename {
                     assert(it.endsWith(".jar"))
                     it.replace(Regex("-.*.jar"), ".jar")
                 }
+                // TODO: Doesn't a single file destination work here so we can ignore the rename? Figure out how.
                 into("libexec/javatools") // should just be one file with corrected dependencies, assert?
             }
-            /*
-            if (shouldPublishPluginToLocalDist()) {
-                val published = publishPluginToLocalDist.get().outputs.files
-                from(published) {
-                    into("repo")
-                }
-            }*/
             from(tasks.xtcVersionFile)
         }
     }
@@ -197,10 +212,34 @@ val distTar by tasks.existing(Tar::class) {
     archiveExtension = "tar.gz"
 }
 
+val createXccScript by tasks.registering(CreateStartScripts::class) {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Create start scripts for the XDK runner ('xec')."
+    mainClass = "org.xtclang.xvm.launchers.XdkResolvingLauncherCompiler"
+    applicationName = "xcc"
+    //outputDir = layout.buildDirectory.dir("bin")
+    classpath = files(configurations.xdkJavaTools)
+}
+
+val createXecScript by tasks.registering(CreateStartScripts::class) {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Create start scripts for the XDK runner ('xec')."
+    mainClass = "org.xtclang.xvm.launchers.XdkResolvingLauncherRunner"
+    applicationName = "xec"
+    //outputDir = layout.buildDirectory.dir("bin")
+    classpath = files(configurations.xdkJavaTools)
+}
+
 val assembleDist by tasks.existing {
+    dependsOn(createXccScript, createXccScript)
     if (xdkDist.shouldCreateWindowsDistribution()) {
         logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
         dependsOn(distExe)
+    }
+    doLast {
+        printTaskInputs()
+        printTaskOutputs()
+        printTaskDependencies()
     }
 }
 
@@ -213,7 +252,7 @@ val distExe by tasks.registering {
     }
 
     // TODO: Why do we need this dependency? Likely just remove it.
-    dependsOn(installDist)
+    // dependsOn(installDist)
 
     val nsi = file("src/main/nsi/xdkinstall.nsi")
     val makensis = findExecutableOnPath(XdkDistribution.MAKENSIS)

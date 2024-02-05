@@ -91,14 +91,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Optional
     @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.ABSOLUTE) // TODO: Change path sensitivities to "relative" or something to provide better relocatability, and test the different configs with valid path sensitive inputs defined.
     FileCollection getInputDeclaredDependencyModules() {
         return delegate.filesFrom(incomingXtcModuleDependencies(sourceSet)); // xtcModule and xtcModuleTest dependencies declared in the project dependency { scope section
     }
 
     @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
-    FileCollection getInputXtcJavaToolsConfig() {
+    FileCollection getInputXdkJavaToolsConfig() {
         return project.files(project.getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
 

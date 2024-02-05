@@ -7,6 +7,7 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
+import org.gradle.api.provider.Provider
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
@@ -163,6 +164,10 @@ val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatool
 val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
 
 val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
+
+fun Project.buildSubDir(vararg path: String): Provider<Directory> {
+    return layout.buildDirectory.dir(path.joinToString(File.separator))
+}
 
 fun Project.executeCommand(vararg args: String): String = project.run {
     val output = ByteArrayOutputStream()
