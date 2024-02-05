@@ -48,7 +48,7 @@ service DigestAuthenticator(Realm realm)
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    Boolean|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
@@ -134,12 +134,12 @@ service DigestAuthenticator(Realm realm)
                                                                                       , hasher);
                         if (responseHash == expected) {
                             session.authenticate(user, roles=roles);
-                            return True;
+                            return Allowed;
                         }
                     }
 
                     if (session.authenticationFailed(badUser)) {
-                        return False;
+                        return Forbidden;
                     }
                 } else {
                     return new SimpleResponse(BadRequest);

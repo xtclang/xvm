@@ -47,7 +47,7 @@ service TokenAuthenticator
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    Boolean|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
@@ -57,23 +57,25 @@ service TokenAuthenticator
             auth = auth.trim();
             // "Authorization" header format: {apiName} {user}:{token}
             Int userOffset = apiName.size;
-            if (CaseInsensitive.stringStartsWith(auth, apiName),
-                auth[userOffset] == ' ',
-                Int tokenOffset := auth.indexOf(':', userOffset)) {
+            if (CaseInsensitive.stringStartsWith(auth, apiName)) {
+                if (auth[userOffset] == ' ',
+                    Int tokenOffset := auth.indexOf(':', userOffset)) {
 
-                String user  = auth[userOffset >..< tokenOffset];
-                String token = auth.substring(tokenOffset + 1);
+                    String user  = auth[userOffset >..< tokenOffset];
+                    String token = auth.substring(tokenOffset + 1);
 
-                // the token serves as a password
-                if (Set<String> roles := realm.authenticate(user, token)) {
-                    session.authenticate(user, roles=roles);
-                    return True;
+                    // the token serves as a password
+                    if (Set<String> roles := realm.authenticate(user, token)) {
+                        session.authenticate(user, roles=roles);
+                        return Allowed;
+                    } else {
+                        return Forbidden;
+                    }
+                } else {
+                    return new SimpleResponse(BadRequest);
                 }
-            } else {
-                return new SimpleResponse(BadRequest);
             }
-
         }
-        return new SimpleResponse(Unauthorized);
+        return Unknown;
     }
 }

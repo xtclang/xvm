@@ -42,10 +42,13 @@ interface Authenticator
      * @param request   a request that requires authentication
      * @param session   the session associated with the request that requires authentication
      *
-     * @return [True] to indicate the client has been authenticated; [False] to indicate that the
-     *         client is not being permitted to authenticate for any reason; or an HTTP
-     *         [ResponseOut] to deliver to the client to indicate the next step in the process of
-     *         authentication
+     * @return [Allowed] to indicate the client has been authenticated; [Unknown] to indicate that
+     *         this Authenticator does not know how to process the specified request;
+     *         [Forbidden] to indicate that the response has bee recognized, but client is not being
+     *         permitted to authenticate for any reason; or an HTTP [ResponseOut] to deliver to the
+     *         client to indicate the next step in the process of authentication
      */
-    Boolean|ResponseOut authenticate(RequestIn request, Session session);
+    AuthStatus|ResponseOut authenticate(RequestIn request, Session session);
+
+    enum AuthStatus {Allowed, Unknown, Forbidden}
 }

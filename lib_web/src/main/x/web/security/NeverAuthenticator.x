@@ -5,7 +5,7 @@ service NeverAuthenticator
         implements Authenticator {
 
     @Override
-    Boolean|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
         private Boolean logged = False;
         if (!logged) {
             // log a message the first time this Authenticator has to reject a user, so the
@@ -18,6 +18,6 @@ service NeverAuthenticator
             logged = True;
         }
 
-        return False;
+        return Forbidden;
     }
 }

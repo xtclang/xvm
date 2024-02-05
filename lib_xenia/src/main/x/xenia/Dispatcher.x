@@ -287,14 +287,15 @@ service Dispatcher {
                 //   that the client must authenticate itself
                 // * with a redirect to a URL that provides the necessary login user interface
                 if (endpoint.requiredTrust > session.trustLevel) {
-                    Boolean|ResponseOut success = authenticator.authenticate(request, session);
+                    import Authenticator.AuthStatus;
+                    AuthStatus|ResponseOut success = authenticator.authenticate(request, session);
                     switch (success) {
-                    case True:
+                    case Allowed:
                         // Authenticator has verified that the user is authenticated (the
                         // Authenticator should have already updated the session accordingly)
                         if (endpoint.requiredTrust > session.trustLevel) {
-                            // the user is authenticated, but the user doesn't have the
-                            // necessary security access
+                            // the user is authenticated, but the user doesn't have the necessary
+                            // security access
                             response = new SimpleResponse(Forbidden);
                             break ProcessRequest;
                         }
@@ -303,7 +304,13 @@ service Dispatcher {
                         // continue processing the request
                         break;
 
-                    case False:
+                    case Unknown:
+                        // the request didn't have any authorization information or the authorizer
+                        // didn't know how to process it
+                        response = new SimpleResponse(Unauthorized);
+                        break ProcessRequest;
+
+                    case Forbidden:
                         // authentication didn't just fail, but it has been disallowed; respond
                         // with an HTTP "Forbidden"
                         response = new SimpleResponse(Forbidden);
@@ -348,8 +355,6 @@ service Dispatcher {
                     httpServer.send(context, status, names, values, body);
                 }
             });
-
-
             return;
         }
     }
