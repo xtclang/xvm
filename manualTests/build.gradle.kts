@@ -44,7 +44,7 @@ sourceSets {
                 "**/exceptions.x",
                 "**/FizzBuzz.x",
                 "**/generics.x",
-                "**/innerOuter.x",
+                "**/innerouter.x", // TODO @lagergren case sensitivity issue; this does not work: "**/innerOuter.x",
                 "**/files.x",
                 "**/IO.x",
                 "**/lambda.x",
@@ -194,7 +194,7 @@ xtcRun {
 }
 
 tasks.withType<XtcCompileTask>().configureEach {
-    enabled = sanityCheckRuntime
+    enabled = true // TODO @lagergren sanityCheckRuntime
     doLast {
         logger.lifecycle("$prefix *** RECOMPILING: $name")
     }
