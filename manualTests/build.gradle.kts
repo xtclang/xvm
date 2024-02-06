@@ -30,8 +30,8 @@ dependencies {
  * ensure that we don't accidentally break external dependencies to the XDK artifacts
  * for the world outside the XDK repo, and that the build lifecycle works as it should,
  * and we don't push any broken changes to XTC language support, that won't be discovered
- * until several commits later, or worse, by a third party XTC developer, who has no
- * interest in building their own XDK internals or modifying the plugin.
+ * until several commits later, or worse, by some developer not working on the XDK itself
+ * who has no interest in building their own XDK internals or modifying the plugin.
  */
 sourceSets {
     main {
@@ -66,8 +66,8 @@ sourceSets {
 }
 
 /**
- * It's important to understand what causes caching problems and unncessary rebuild in Gradle.
- * One of these things is tasks dependning on System environment variables.
+ * It's important to understand what causes caching problems and unnecessary rebuilds in Gradle.
+ * One of these things is tasks depending on System environment variables.
  * To fix that particular issue, an input of the form inputs.property("langEnvironment") { System.getenv(ENV_VAR) }
  * needs to be added to the task configuration or any plugin that uses is must be aware of it.
  * <p>
@@ -136,25 +136,26 @@ xtcRun {
     showVersion = false
 
     /*
- * Run the XTC command in its built-in verbose mode (default: false).
- */
+     * Run the XTC command in its built-in verbose mode (default: false).
+     */
     verbose = true
 
     /*
-     * If fork is "true", the runner will run in the build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
-     * in e.g. Javatools classes, but is brittle, and should not be used for production use, for example
-     * if the launched app does System.exit, this will kill the build job too.
+     * If fork is "true", the runner will run in the build process thread. This enables seamless IDE debugging of the
+     * Gradle build, with breakpoints in Java classes (e.g. Javatools). Unfortunately, running in the build process
+     * thread is brittle (e.g. a System.exit will kill the build job), so is only used when debugging the build.
      *
-     * Javatools lanchers should be debuggable through a standard Run/Debug Configuration (for example in IntelliJ)
-     * where the Javatools project is added as a Java Application (and not a Gradle job).
+     * The Javatools command line tools should be debuggable through a standard Run/Debug Configuration (e.g. in
+     * IntelliJ IDEA) by adding the Javatools project as a Java Application (not as a Gradle job).
      *
-     * Default is true.
+     * The default is true.
      */
     fork = true
 
     /*
      * Use an XTC native launcher (requires a local XDK installation on the test machine.)
-     * The default is "false".
+     *
+     * The default is false.
      */
     useNativeLauncher = false
 

@@ -223,7 +223,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             final var allModules = resolveCompiledModules();
             if (allModules.isEmpty()) {
                 // 3) We have no compiled modules for the project, return an empty execution queue.
-                logger.warn("{} 'here is nothing in the module path to run. Aborting.", prefix);
+                logger.warn("{} There is nothing in the module path to run. Aborting.", prefix);
                 return emptySet();
             }
 
