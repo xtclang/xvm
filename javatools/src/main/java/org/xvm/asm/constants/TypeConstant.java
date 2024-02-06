@@ -2548,19 +2548,19 @@ public abstract class TypeConstant
 
                 if (typeExtends.isVirtualChild())
                     {
-                    assert this.isVirtualChild();
-                    if (getParentType().isA(typeExtends.getOriginParentType()))
+                    if (this.isVirtualChild() &&
+                            getParentType().isA(typeExtends.getOriginParentType()))
                         {
                         typeExtends = typeExtends.ensureVirtualParent(this.getOriginParentType(),
                             !struct.getName().equals(structExtends.getName()));
                         }
                     else
                         {
-                        // TODO: need a better error indicating that the parent is not parameterized
-                        //       or parameterized incorrectly
+                        // TODO: need a better error indicating that the parent is not parameterized,
+                        //       parameterized incorrectly or a non-virtual extension of a virtual child
                         log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
                                 this.removeAccess().getValueString(), struct.getFormat(),
-                                typeExtends.getValueString(), structExtends.getFormat());
+                                typeExtends.getValueString(), "virtual " + structExtends.getFormat());
                         typeExtends = null;
                         }
                     }

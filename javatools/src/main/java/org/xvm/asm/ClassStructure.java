@@ -2495,6 +2495,11 @@ public class ClassStructure
                     ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
                     if (typeContrib.isVirtualChild())
                         {
+                        if (!typeRight.isVirtualChild())
+                            {
+                            // something is amiss, but it's not our responsibility to report an error
+                            return Relation.INCOMPATIBLE;
+                            }
                         TypeConstant typeParent = typeRight.getOriginParentType();
                         if (typeParent.isA(typeContrib.getParentType()))
                             {
