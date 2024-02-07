@@ -136,10 +136,11 @@ git checkout -B decriptive-branch-name
 git push --set-upstream origin descriptive-branch-name
 ```
 
-Note that you can automate the second command above, and have all branches you create on your 
-machine immediately get attached to the upstream, so the rest of the world can see them. You do this 
-with the "git config" command, writing it to the scope you want it just like we described
-setting up "pull.rebase" in the section above. For example:
+Note that you can automate the second step, and have all branches you create on your 
+machine immediately get attached to the upstream on creation. This means that the rest
+of the world can see tem immediately. You can make this the default behavior 
+with the "git config" command, writing it to the scope you want it just like we 
+described setting up "pull.rebase" config in the section above. For example:
 
 ```
 git config --global push.autoSetupRemote true
