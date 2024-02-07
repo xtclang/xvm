@@ -338,8 +338,13 @@ interface TypeTemplate
             break;
 
         case Child:
+            assert TypeTemplate parent := contained();
+            parent.appendTo(buf);
+            buf.add('.')
+               .addAll(name ?: assert);
             fParams = True;
-            continue;
+            break;
+
         case Property:
         case FormalProperty:
         case FormalParameter:

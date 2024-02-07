@@ -3,4 +3,4 @@
                 extends DBSchemaImpl(info_)
                 implements %schemaTypeName% {
 %PropertyGetters% %SchemaMethods% %ChildSchemas%
-         }
+        }

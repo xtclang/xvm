@@ -115,7 +115,7 @@ class ModuleGenerator(String moduleName) {
             String rootSchemaSource
             ) :=
             createSchema(appName, moduleTemplate, appSchemaTemplate,
-                         rootSchemaSourceTemplate, "", 0, errors)) {
+                         rootSchemaSourceTemplate, "", "", 0, errors)) {
             String appSchema    = appSchemaTemplate.name;
             String moduleSource = moduleSourceTemplate
                                     .replace("%appName%"             , appName)
@@ -156,6 +156,7 @@ class ModuleGenerator(String moduleName) {
                      ModuleTemplate moduleTemplate,
                      ClassTemplate  schemaTemplate,
                      String         schemaSourceTemplate,
+                     String         parentSchemaName,
                      String         parentPath,
                      Int            pid,
                      Log            errors) {
@@ -164,7 +165,11 @@ class ModuleGenerator(String moduleName) {
             return False;
         }
 
-        String schemaName           = schemaTemplate.name;
+        String schemaName = schemaTemplate.name;
+        if (parentSchemaName.size > 0) {
+            schemaName = $"{parentSchemaName}${schemaName}" ;
+        }
+
         String schemaParentId       = pid.toString();
         String propertyInfos        = "";
         String propertyTypes        = "";
@@ -194,6 +199,9 @@ class ModuleGenerator(String moduleName) {
             String options       = "";
 
             String propertyTypeName = classTemplate.name.replace(".", "_");
+            if (parentSchemaName.size > 0) {
+                propertyTypeName = $"{parentSchemaName}${propertyTypeName}";
+            }
             String propertyStoreType;
             String propertyBaseType;
             String propertyTypeParams;
@@ -212,7 +220,7 @@ class ModuleGenerator(String moduleName) {
                     String schemaChildrenNames,
                     String schemaSource
                     ) := createSchema(appName, moduleTemplate, classTemplate,
-                                      childSchemaSourceTemplate, propertyPath, pid, errors)) {
+                              childSchemaSourceTemplate, schemaName, propertyPath, pid, errors)) {
                     propertyInfos += schemaInfoTemplate
                             .replace("%schemaPath%"    , propertyPath)
                             .replace("%schemaId%"      , propertyId)
@@ -228,9 +236,10 @@ class ModuleGenerator(String moduleName) {
                             .replace("%propertyType%", propertyType)
                             ;
 
+                    String schemaTypeName = $"{schemaName}${propertyTypeName}";
                     customInstantiations += schemaInstantiationTemplate
                             .replace("%appName%"   , appName)
-                            .replace("%schemaName%", propertyTypeName)
+                            .replace("%schemaName%", schemaTypeName)
                             .replace("%schemaId%"  , propertyId)
                             ;
 
@@ -247,7 +256,8 @@ class ModuleGenerator(String moduleName) {
                 TypeTemplate keyType;
                 TypeTemplate valueType;
                 if (keyType   := resolveFormalType(typeTemplate, "Key",   propertyName, errors),
-                    valueType := resolveFormalType(typeTemplate, "Value", propertyName, errors)) {} else {
+                    valueType := resolveFormalType(typeTemplate, "Value", propertyName, errors))
+                {} else {
                     return False;
                 }
 
@@ -260,7 +270,7 @@ class ModuleGenerator(String moduleName) {
                 break;
 
             case DBCounter:
-                propertyStoreType  = "{implName}_.storage.CounterStore";
+                propertyStoreType  = $"{implName}_.storage.CounterStore";
                 propertyBaseType   = "DBCounterImpl";
                 propertyTypeParams = "";
 
@@ -610,6 +620,11 @@ class ModuleGenerator(String moduleName) {
             assert val access := type.accessSpecified();
             assert TypeTemplate t1 := type.modifying();
             return $"{displayName(t1, appName)}:{access.keyword}";
+
+        case Child:
+            assert TypeTemplate parent := type.contained();
+            assert String       name   ?= type.name;
+            return $"{displayName(parent, appName)}.{name}";
 
         default:
             assert as $"Not implemented {type=} {type.form=}";

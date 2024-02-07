@@ -282,13 +282,12 @@ public class xRTTypeTemplate
         {
         String       sName = null;
         TypeConstant type  = hType.getDataType();
-        if (type.isSingleDefiningConstant())
+        if (type.isSingleDefiningConstant() &&
+                type.getDefiningConstant() instanceof ClassConstant idClz)
             {
-            Constant id = type.getDefiningConstant();
-            if (id.getFormat() == Constant.Format.Class)
-                {
-                sName = ((ClassConstant) id).getPathString();
-                }
+            sName = type.isVirtualChild()
+                    ? idClz.getName()
+                    : idClz.getPathString();
             }
 
         return frame.assignValue(iReturn, sName == null ? xNullable.NULL : xString.makeHandle(sName));
