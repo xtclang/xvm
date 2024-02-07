@@ -1,29 +1,102 @@
-import org.xtclang.plugin.tasks.XtcCompileTask
+import org.xtclang.plugin.tasks.XtcRunTask
 
-/*
- * Test utilities.  This is a standalone XTC project, which should only depend on the XDK.
+/**
+ * This is the manualTests project.
+ *
+ * PLEASE NOTE: Stop tormenting this branch, if there is new functionality that does not immedately
+ * have to do with running XDK unit/integration tests. This is not your "Hello world" app playground.
+ * Please use another project directory and/or GitHub repository for that, with the XDK as either
+ * an includedBuild, or as published artifacts, if you are doing whatever it is you are doing outside
+ * the XDK, and just depending on it. This is NOT the best place to start adding more run configs.
+ *
+ * ManualTests is a standalone XTC project, which should only depend on the XDK.
  * If we want to use it to debug the XDK, that is also fine, as it will do dependency
  * substitution on the XDK and XTC Plugin (and Javatools and other dependencies) correctly,
  * through included builds, anyway.
  *
- * This is compiled as part of the XDK build, in order to ensure that the build DSL work as
- * expected, and that we can resolve modules only with external dependencies to repository
- * artifacts for the XTC Gradle plugin and the XDK.
+ * Depending on the "manualTests" propertie set in ../gradle.propeties, this project
+ * will either be an includedBuild in the XDK build, but will only configure, not resolve or
+ * compile anything. The overhead using the Gradle cache should be minimal. If you set the
+ * manualTests flag to false, you can still run and test this project from the command line
+ * by specifying its path from the prompt, just like any external gradle project.
+ *
+ * Either way, you can always run these tasks from the CLI (or if you have the build included
+ * from inside IntelliJ, and actually debug and test these tasks and the XDK implementation code
+ * in the IDE).
+ *
+ * Commands to test (where <SourceSet> is empty for 'main', and 'test' for test (not used yet)):
+ *
+ *   ./gradlew :manualTests:run<SourceSet>Xtc (will execute the modules along with arguments etc, from the xtcRun extension config)
+ *   ./gradlew :manualTests:run<SourceSet>Xtc -PmoduleName=TestArray (will override the xtcRun configuration and run the source set output module named TestArray)
+ *   ./gradlew :manualTests:run<SourceSet>AllXtc (will execute every module created in the source set output)
+ *   ./gradlew :manualTests:compile<SourceSet>Xtc (will compile the source set)
+ *
+ *   (or their corresponding IntelliJ actions, i.e. right click in the Gradle hierarchy, and set up the
+ *    appropriate run and debug configuration for Gradle jobs).
  */
 
+/**
+ * PLUGIN SECTION.
+ *
+ * These are resolved through the Gradle version catalog mechanism. A version catalog
+ * is a single source of truth for dependent artifacts for a Gradle oroject. For the XVM repo,
+ * there is a "global" version catalog under $compositeBuildRootDirectory/gradle/libs/libs.versions.html.
+ * This makes it possible to alias artifacts to type safe (compile time knowable) hierarchical names.
+ * For example, "libs.plugins.xtc" will resolve to "org.xtclang:xtc-plugin:<xvm version>".
+ * This, in turn, means that the build should install that artifact with that version. It will look
+ * in any repositories you have specified. For example, if you have a section like
+ *
+ * repositories {
+ *    mavenCentral()
+ * }
+ *
+ * in your project settings, or defined in the build file (if you can, it is recommended to keep it in
+ * settings (for a best-practise example, please see the xtc-template-app project), the build will look
+ * for the artifact in any local caches, and if not found, then ask the mavenCentral artifact repo
+ * to if it knows about it and downloads/caches it. Basically, for any artifact on which you depend,
+ * you need to know group, id and version, to fully resolve it. Sometimes you are only interested in
+ * resolving any version, or latest version, or a version range, or a version with a specific Git tag, etc.
+ * To see how that works, please refer to the Maven or Gradle user guides.
+ *
+ * Gradle also supports "included builds". This means that any artifact identifier can be substituted
+ * with source control tree for a project that builds that artifact. This makes it possible for the XVM
+ * to partially build and verify itself, and it decouples paths, project modes and other things from
+ * configuration. Any change you will do in the XVM will "pretend" to be an artifact to its dependencies,
+ * if their settings contain that particular project as an includedBuild. Hence, building the manualTests
+ * module, will ensure that the plugin and the XDK are versioned, built and resolved from their code trees
+ * in the XVM repo. But the build doesn't have to know about that. For all it knows, it just resolves
+ * a named and versioned artifact. This build could be torn out and turn into a separate project and
+ * still resolve the artifacts for any configured repository, without changing a line of code.
+ *
+ */
 plugins {
     alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xtc)
 }
 
-val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
-
+/**
+ * DEPENDENCIES SECTION
+ *
+ * The xdk cam be retrieved with the "xdk" consumer configuration, which will look for a file/dir
+ * hierarchy that contains the modules from the javatools and lib directories of an XTC installation.
+ * We currently publish XDK releases as zipped artifacts in our GitHub Maven
+ * repositoru (and soon also on mavenCentral after the next official release). If you want to use
+ * a zipped XDK artifact, use the "xdkDistribution" depeendency instead. Again, we recommend you
+ * look at the XTC platform repository, or the XTC template app, that is a simple Hello World, to
+ * understand how to build a project with XTC and Gradle.
+ */
 dependencies {
     xdk(libs.xdk)
 }
 
 /**
- * This configured a source set, which makes the compiler build all of the included modules.
+ * SOURCE SETS SECTION
+ *
+ * This configures source sets, which makes the compiler build all of the included modules.
+ * in that source set, in tasks containing that source set name (except for Main which is
+ * a blank string in its tasks), e.g. compileXtc compiles the main source set, compileTestXtc
+ * compiles the test source set and so on.
+ * <p>
  * There are several negative "should fail" source files in this subproject as well. but
  * these are filtered out through the standard Gradle source set mechanism. This repo
  * is not really meant to be used as a unit test. It merely sits on top of everything to
@@ -36,16 +109,18 @@ dependencies {
 sourceSets {
     main {
         xtc {
+            // TODO this is weird. We should flter OUT the negative tests instead. Now, for example, we can still
+            // resolve and run TestSimple even though it isn't in the source set?
             include(
                 "**/annos.x",
                 "**/array.x",
                 "**/collections.x",
                 "**/defasn.x",
-                "**/EchoTest.x",
                 "**/exceptions.x",
+                "**/files.x",
                 "**/FizzBuzz.x",
                 "**/generics.x",
-                "**/innerouter.x", // TODO @lagergren case sensitivity issue; this does not work: "**/innerOuter.x",
+                "**/innerouter.x",
                 "**/files.x",
                 "**/IO.x",
                 "**/lambda.x",
@@ -58,6 +133,7 @@ sourceSets {
                 "**/misc.x",
                 "**/queues.x",
                 "**/services.x",
+                "**/TestSimple.x",
                 "**/reflect.x",
                 "**/regex.x",
                 "**/tuple.x"
@@ -67,28 +143,60 @@ sourceSets {
 }
 
 /**
- * It's important to understand what causes caching problems and unnecessary rebuilds in Gradle.
- * One of these things is tasks depending on System environment variables.
- * To fix that particular issue, an input of the form inputs.property("langEnvironment") { System.getenv(ENV_VAR) }
- * needs to be added to the task configuration or any plugin that uses is must be aware of it.
- * <p>
- * Also Using doFirst and doLast from a build script on a cacheable task ties you to build script changes since
- * the implementation of the closure comes from the build script. If possible, you should use separate tasks instead.
- * <p>
- * @see <a href="https://docs.gradle.org/current/userguide/common_caching_problems.html">Gradle User Guide on caching</a>
+ * Applying the XTC plugin, adds a couple of default extensions to the project: xtcCompile and xtcRun
+ * are the only ones that may be necessary to care about, if you are working an XTC project build.
+ * The "xtcCompile" extension contains common configuration for all XTC compilation tasks in
+ * the current project. The "xtcRun" extensions contains common configuration for all XTC runner tasks
+ * in a project. Every XtcCompleTask and XtcRunTask will inherit these configurations, but it's possible
+ * to override any value in the extension on a per-task basis in the task configuration.
+ *
+ * Applying the XTC plugin to a Gradle project creates a few tasks by default. This is the pattern used
+ * by most Gradle language plugins for compiled languages. These are the once that the XTC programmer
+ * may be interested in:
+ *
+ * 1) The compile tasks for each source set
+ * 2) The run tasks for all known modules.
+ *
+ * A compile task is added for each source set. Just like for other language plugins that use source sets,
+ * we have a default source set for xtc code called "main" and one called "test" (currently not
+ * used for much). The name of a compile task is derived from the name of the source set it will
+ * compile, and upon detecting changes, recompile. Hence, if you have a "test" source set, you
+ * will be given a "compileTestXtc" task, just as it would work with Java, Scala, Clojure etc.
+ * For the default source set (by convention always renamed "main"), the task will just be called
+ * "compileXtc", just like the default Java plugin compile task for the main source set is called
+ * "compileJava".  Since the plugin currently creates XTC main and test source sets by default, you
+ * will get compile tasks for both of these, even if they are empty. If you declare your own
+ * source sets above, e.g. "negativeTests", you will get a compile task and run tasks for that too.
+ *
+ * Compile and run tasks can be created as you wish, like the examples below. The xtcCompile tasks
+ * and xtcRun tasks can override any property from the extensions.
+ *
+ * NOTE: In Gradle, properly set up, any task and configuration in a build relies on implicitly
+ * or explicitly defined inputs and outputs. Should they no longer hash to the same values, the task
+ * cannot be cached. Otherwise, a task may be skipped and use its cached values. This also means
+ * that you should never have to call any cleanup tasks, or any tasks that create dependencies of
+ * another task in a correctly implemented Gradle build. This may confuse some users that come from
+ * other languages. For example, in C/C++, a "clean" task in a Makefile will delete everything that
+ * has be built, and a following build will start from scratch. The "clean" task in the Gradle build
+ * lifecycle does the same, i.e. by default deletes everything a project has built, but AS LONG AS
+ * YOU HAVE THE BUILD CACHE ENABLED YOUR NEXT BUILD WILL STILL REUSE CACHED ARTIFACTS, IF THEIR
+ * INPUTS AND OUTPUTS ARE UNCHANGED. This is the whole point of the Gradle build cache, and XTC
+ * respects those semantics, as a Gradle citizen should. So, for example, to create a distribution
+ * of the XDK (./gradlew installDist), this is the only task you should need to code. If any
+ * of its dependencies are gone, or have changed so that their inputs and outputs now differ,
+ * it will be re-run, but otherwise, its build data will just be retrieved from the build cache.
+ * "./gradlew clean" amd then "./gradlew build" is an anti-pattern, and if your build requires
+ * these to work properly, that is a bug that should be reporoted to the build script author.
+ *
+ * To see more information on why a task is re-run, skipped or retrieved from the build cache,
+ * you can run Gradle with the --info flag.
  */
-fun alwaysRebuild(): Boolean {
-    val rebuild = (System.getenv("ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD") ?: "false").toBoolean()
-    if (rebuild) {
-        logger.warn("$prefix manualTest compile configuration is set to force rebuild (forceRebuild: true)")
-    }
-    return rebuild
-}
 
+// Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
-   /*
-    * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
-    */
+    /*
+     * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
+     */
     showVersion = false
 
     /*
@@ -112,9 +220,10 @@ xtcCompile {
      * Should all compilations be forced to rerun every time this build is performed? This is NOT recommended,
      * as it removes pretty much every advantage that Gradle with dynamic dependency management gives you. It
      * should be used only for testing purposes, and never for anything else, in a typical build, distribution
-     * generation or execution of an XTC app.
+     * generation or execution of an XTC app. You should never have to enable forceRebuild unless you are doing
+     * something like functionality testing during XVM compiler development.
      */
-    forceRebuild = alwaysRebuild()
+    forceRebuild = false
 
     /*
      * By default, a Gradle task swallows stdin, but it's possible to override standard input and
@@ -130,6 +239,8 @@ xtcCompile {
     // stdin = System.`in`
 }
 
+// Defaults inherited and overridable by all runXtc tasks you chose to create. The default xtcRun task
+// will execute any modules defined in xtcRun.
 xtcRun {
     /*
      * Equivalent to the "--version" flag for the launcher (default: false).
@@ -165,38 +276,110 @@ xtcRun {
     */
     jvmArgs("-showversion")
 
-    /*
-     * Execute EchoTest with the Hello World arguments. We support providers, as well
-     * as Strings, as per the common Gradle API conventions. For example, you can do
-     * moduleArgs(<collection of string providers>) or moduleArg(<string provider>) for
-     * lazy evaluation, too.
+    /**
+     * The default runXtc task is configured to run what is here in the xtcRun configuration.
+     * If you do not define any modules here, the default runXtc task will do nothing.
      *
-     * Currently, all module configurations in the xtcRun DSL will be executed in sequence,
-     * as their order declared.
-     *
-     * We suspect that the pre-generated run tasks from the XTC Plugin are not the most optimal
-     * and intuitive way of running XTC modules. It's probably cleaner for the user to modify
-     * the configuration on task level for any runtime task, and add many simple custom run tasks
-     * for clarity. However, we haven't ahd the cycles to support the standard overrides for
-     * modules to run (all other DSL can be overridden) at task level. It is easy and encouraged
-     * to contribute to the XTC Plugin build DSL, so that we get more functionality, clearer
-     * and shorter syntax, and new features that we feel we require. It's not clear what all
-     * of these are, but working with an XTC project that applies the XTC Plugin will likely
-     * discover most of the shortcomings quickly, so that we can file enhancement requests.
-     *
-     * TODO: Add parallelism, and a simpler way to work with this.
-     * TODO: Add a nicer DSL syntax with a nested modules section.
+     * The runXtc task uses all source set outputs in the module path, so even though
+     * you can compile tests as a separate source set, they will know about the main modules
      */
     module {
-        moduleName = "EchoTest" // Will add other ways to resolve modules too.
-        showVersion = true // Overrides env showVersion flag.
-        moduleArgs("Hello", "World")
+        moduleName = "TestFizzBuzz"
+        moduleName = "run" // default
+        moduleArgs("Hello", "World") // default is no args.
+    }
+    module {
+        moduleName = "TestSimple"
     }
 }
 
-tasks.withType<XtcCompileTask>().configureEach {
-    enabled = true // TODO @lagergren sanityCheckRuntime
-    doLast {
-        logger.lifecycle("$prefix *** RECOMPILING: $name")
+// This shows how to add a custom run task that overrides the global xtcRun config
+// or xtcRun configs.
+val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
+    moduleName("TestSimple")
+    moduleName("TestArray")
+    verbose = true // override the default from xtcRun
+}
+
+val runOne by tasks.registering(XtcRunTask::class) {
+    module {
+        moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
     }
+}
+
+/**
+ * The default behavior right now, is to run muliple tests in a sequence, one after each other. This mostly has to do
+ * with Gradle assuming single threadedness unless we add a worker API. However, we can easily extend an XtcRunTask
+ * and have it use the XTC Runner module, and pass in the modules from the global extension as arguments. We do this lazily
+ * and if they don't exist they will compile at the latest possible moment.
+ *
+ * TODO: We need to ensure that the source set here contains every module that exists, and Runner is one of them.
+ * However, we should not attempt to run it as a test in the default configuration.
+ */
+val runParallel by tasks.registering(XtcRunTask::class) {
+    module {
+        moduleName = "Runner"
+
+        // If the runner took xtc files, and not module names, we could just pass in exactly the outgoing source sets, and we wouldn't have to
+        // know their names, and either send in any names for stuff that isn't built, violating the build cycle abstraction, having them secretly
+        // build by xec, and we would know we always ran exactly what is available.
+        //moduleArgs(provideTestModules)
+
+        // Now instead we have to do this, which may or may not have any relation to the source set output.
+
+        // You can use any logic to add arguments, if you find it easier, e.g. a for loop:
+        //  for (module in provideTestModules.get()) {
+        //   moduleArgs(getModuleNameForModuleXtc(module))
+        // }
+        moduleArgs(
+            "TestAnnotations",
+            "TestArray",
+            "TestCollections",
+            "TestDefAsn",
+            "TestTry",
+            "TestGenerics",
+            "TestInnerOuter",
+            "TestFiles",
+            "TestIO",
+            "TestLambda",
+            "TestLiterals",
+            "TestLoops",
+            "TestNesting",
+            "TestNumbers",
+            "TestProps",
+            "TestMaps",
+            "TestMisc",
+            "TestQueues",
+            "TestServices",
+            "TestReflection",
+            "TestRegularExpressions",
+            "TestTuples"
+        )
+    }
+}
+
+fun resolveTestNameProperty(defaultTestName: String = "TestSimple"): String {
+    return if (hasProperty("testName")) (properties["testName"] as String) else defaultTestName
+}
+
+/**
+ * Lazy way of getting the filenames of all the modules we want to send in as arguments to the parallel Runner
+ * module, demonstrating how to resolve these things lazy-only, i.e. when the Runner is about to start.
+ * Since these modules depend on compiling the entire project, and resolving actual file locations (that don't
+ * exist at configuration time), not implementing this as a provider, would trigger a full compile immediately
+ * when someone wants to access source set output that doesn't exist yet. It would also likely not work, because
+ * the configuration don't know everything about the world yet.
+ */
+val provideTestModules: Provider<List<String>> = provider {
+    // TODO: If we put JavaTools on the compile classpath for this project, as a one-line dependency, we could directly
+    //   call the XTC FileRepresentation logic that determines both if an XTC binary is a valid such file, and the
+    //   actual module name of this binary. This is potentially very powerful, the build use parts of its target.
+    //   Try that out yourself, if you want!
+    fun isValidXtcModule(file: File): Boolean {
+        return file.extension == "xtc"
+    }
+    logger.lifecycle("[manualTests] Resolving source set output, to use as arguments for the runParallel task. If you see this message at config time, something is wrong.")
+    val list: List<String> = sourceSets.main.get().output.asFileTree.filter { isValidXtcModule(it) }.map { it.absolutePath }.toList()
+    list.forEach { logger.lifecycle("[manualTests]     Resolved test module: $it") }
+    list
 }

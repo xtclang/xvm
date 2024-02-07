@@ -38,4 +38,6 @@ includeBuild("plugin")
 includeBuild("xdk")
 includeBuild("manualTests")
 
+// The manualTests project is part of this repository, but will only be included if the user asks for it.
+
 rootProject.name = "xvm"

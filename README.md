@@ -88,8 +88,8 @@ Manual local build for **any computer** (for advanced users):
 *A note about this section: this workflow is supported by pretty much every
 common GUI in any common IDE, in one way or another. But in the interest of
 not having to document several instances with slightly different naming convention,
-or deliver a confusing tutorial, this section only describes the exact bare
-bones command line git commands that can be used to implement our workflow,
+or deliver a confusing tutorial, this section only describes the exact bare-bones 
+command line git commands that can be used to implement our workflow,
 which is also a common developer preference. All known IDEs just wrap these
 commands in one way or another.*
 
@@ -124,7 +124,7 @@ the config may or may not be rewritten by future updates.
 #### Always work in a branch. Do not work directly in master
 
 XTC will very soon switch to only allowing putting code onto the master branch through
-a pull request in a sub branch.
+a pull request in a sub-branch.
 
 In order to minimize git merges, and to keep master clean, with a minimum of complexity,
 the recommended workflow for submitting a pull request is as follows:
@@ -132,16 +132,36 @@ the recommended workflow for submitting a pull request is as follows:
 ##### 1) Create a new branch for your change, and connect it to the upstream:
 
 ```
-git checkout -B decriptive-branch-name
-git push --set-upstream origin descriptive-branch-name
+git checkout -B <decriptive-branch-name>
+git push --set-upstream origin <descriptive-branch-name>
 ```
 
-##### 2) Perform your changes, and commit them. We currently do not have any syntax requirements
-
-on commit descriptions, but it's a good idea to describe the purpose of the commit.
+Note that you can automate the second step, and have all branches you create on your 
+machine immediately get attached to the upstream on creation. This means that the rest
+of the world can see tem immediately. You can make this the default behavior 
+with the "git config" command, writing it to the scope you want it just like we 
+described setting up "pull.rebase" config in the section above. For example:
 
 ```
-git commit -m "Descriptive commit message, including a github issue reference, if one exists"
+git config --global push.autoSetupRemote true
+```
+
+This saves some time, if you create a lot of branches, but it also removes the use case 
+that you actually can just hack something locally, without necessarily making it
+immediately available to the rest of the world. Typically, an author would e.g. add some 
+alias in their shell to make it easy and frictionless to create new local branches, 
+and automatically or manually attach them to the remote, whichever
+is preferred. Also, all modern IDEs also have simple, ergonomic "one click attach"
+support to attach a local branch to its remote upstream branch. Most developers choose
+to keep the remote attach operation as a separate step, for these reasons.
+
+##### 2) Perform your changes, and commit them. 
+
+We currently do not have any syntax requirements on commit descriptions, but it's a good idea to describe 
+the purpose of the commit.
+
+```
+git commit -m "Descriptive commit message, including a GitHub issue reference, if one exists"
 ```
 
 ##### 3) Push your changes to the upstream and create a pull request, when you are ready for review
@@ -500,7 +520,7 @@ to a local repositories and the XTC GitHub org repository.
 3) To publish the XDK distro to Maven Central: (... TODO ... )
 
 You can already refer to the XDK and the XTC Plugin as external artifacts for your favourite
-XTC project, either by mnaually setting up a link to the XTC Org GitHub Maven Repository like this:
+XTC project, either by manually setting up a link to the XTC Org GitHub Maven Repository like this:
 
 ```
 repositories {
@@ -575,10 +595,10 @@ projects or the XDK. None of them are at all specific to XTC:
   as part of its source controlled configuration. 
   1) On the Maven model level, this means semantically versioned Maven artifacts. 
   2) On the software build and execution level, this also means specific versions of external
-    pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
+    pieces of software, for example Java, Node.js or Yarn. This also means that we CAN and SHOULD
     always be able to containerize for development purposes.
 
-Today, it is pretty safe to assume that most open source developers who has worked on any Gradle
+Today, it is pretty safe to assume that most open source developers who have worked on any Gradle
 or Maven based project has at least the most important parts of the above knowledge.
 We have spent significant architectural effort to ensure that an adopter who wants to become an 
 XTC or XDK user or developer does not need to acquire *any* knowledge that is
