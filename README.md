@@ -88,8 +88,8 @@ Manual local build for **any computer** (for advanced users):
 *A note about this section: this workflow is supported by pretty much every
 common GUI in any common IDE, in one way or another. But in the interest of
 not having to document several instances with slightly different naming convention,
-or deliver a confusing tutorial, this section only describes the exact bare
-bones command line git commands that can be used to implement our workflow,
+or deliver a confusing tutorial, this section only describes the exact bare-bones 
+command line git commands that can be used to implement our workflow,
 which is also a common developer preference. All known IDEs just wrap these
 commands in one way or another.*
 
@@ -124,7 +124,7 @@ the config may or may not be rewritten by future updates.
 #### Always work in a branch. Do not work directly in master
 
 XTC will very soon switch to only allowing putting code onto the master branch through
-a pull request in a sub branch.
+a pull request in a sub-branch.
 
 In order to minimize git merges, and to keep master clean, with a minimum of complexity,
 the recommended workflow for submitting a pull request is as follows:
@@ -520,7 +520,7 @@ to a local repositories and the XTC GitHub org repository.
 3) To publish the XDK distro to Maven Central: (... TODO ... )
 
 You can already refer to the XDK and the XTC Plugin as external artifacts for your favourite
-XTC project, either by mnaually setting up a link to the XTC Org GitHub Maven Repository like this:
+XTC project, either by manually setting up a link to the XTC Org GitHub Maven Repository like this:
 
 ```
 repositories {
@@ -595,10 +595,10 @@ projects or the XDK. None of them are at all specific to XTC:
   as part of its source controlled configuration. 
   1) On the Maven model level, this means semantically versioned Maven artifacts. 
   2) On the software build and execution level, this also means specific versions of external
-    pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
+    pieces of software, for example Java, Node.js or Yarn. This also means that we CAN and SHOULD
     always be able to containerize for development purposes.
 
-Today, it is pretty safe to assume that most open source developers who has worked on any Gradle
+Today, it is pretty safe to assume that most open source developers who have worked on any Gradle
 or Maven based project has at least the most important parts of the above knowledge.
 We have spent significant architectural effort to ensure that an adopter who wants to become an 
 XTC or XDK user or developer does not need to acquire *any* knowledge that is

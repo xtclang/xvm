@@ -1,5 +1,6 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -23,7 +24,7 @@ private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
  * of the root build.gradle.kts, we have installed convention plugins, resolved version catalogs
  * and similar things.
  */
-val install by tasks.registering {
+val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     XdkDistribution.distributionTasks.forEach {
@@ -73,6 +74,12 @@ val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
+}
+
+val manualTests by tasks.registering {
+    group = VERIFICATION_GROUP
+    description = "Run the manual tests for the XDK."
+    dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
 }
 
 GitHubPackages.publishTaskPrefixes.forEach { prefix ->
