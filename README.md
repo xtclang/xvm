@@ -136,12 +136,31 @@ git checkout -B decriptive-branch-name
 git push --set-upstream origin descriptive-branch-name
 ```
 
-##### 2) Perform your changes, and commit them. We currently do not have any syntax requirements
-
-on commit descriptions, but it's a good idea to describe the purpose of the commit.
+Note that you can automate the second command above, and have all branches you create on your 
+machine immediately get attached to the upstream, so the rest of the world can see them. You do this 
+with the "git config" command, writing it to the scope you want it just like we described
+setting up "pull.rebase" in the section above. For example:
 
 ```
-git commit -m "Descriptive commit message, including a github issue reference, if one exists"
+git config --global push.autoSetupRemote true
+```
+
+This saves some time, if you create a lot of branches, but it also removes the use case 
+that you actually can just hack something locally, without necessarily making it
+immediately available to the rest of the world. Typically, an author would e.g. add some 
+alias in their shell to make it easy and frictionless to create new local branches, 
+and automatically or manually attach them to the remote, whichever
+is preferred. Also, all modern IDEs also have simple, ergonomic "one click attach"
+support to attach a local branch to its remote upstream branch. Most developers choose
+to keep the remote attach operation as a separate step, for these reasons.
+
+##### 2) Perform your changes, and commit them. 
+
+We currently do not have any syntax requirements on commit descriptions, but it's a good idea to describe 
+the purpose of the commit.
+
+```
+git commit -m "Descriptive commit message, including a GitHub issue reference, if one exists"
 ```
 
 ##### 3) Push your changes to the upstream and create a pull request, when you are ready for review
