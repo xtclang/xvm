@@ -807,41 +807,27 @@ public class PackedInteger
     public static void writeLong(DataOutput out, long l)
             throws IOException
         {
-        // test for Tiny
-        if (l <= 63 && l >= -64)
+        // test for small (1-byte format)
+        if (l <= 127 && l >= -64)
             {
-            out.writeByte(((int) l) << 1 | 0x01);
+            out.writeByte((int) l);
             return;
             }
 
+        // test for medium (2-byte format)
+        final int i = (int) l;
         final int cBits = 65 - Long.numberOfLeadingZeros(Math.max(l, ~l));
-
-        // test for Small and Medium
-        int i = (int) l;
-        if (((1L << cBits) & 0x3E3E00L) != 0)           // test against bits 9-13 and 17-21
+        if (cBits <= 13)
             {
-            if (cBits <= 13)
-                {
-                out.writeShort(0b010_00000000           // 0x2 marker at 0..2 in byte #1
-                        | (i & 0x1F00) << 3             // bits 8..12 at 3..7 in byte #1
-                        | (i & 0x00FF));                // bits 0..7  at 0..7 in byte #2
-                }
-            else
-                {
-                out.writeByte(0b110                     // 0x6 marker  at 0..2 in byte #1
-                        | (i & 0x1F0000) >>> 13);       // bits 16..20 at 3..7 in byte #1
-                out.writeShort(i);                      // bits 8..15  at 0..7 in byte #2
-                }                                       // bits 0..7   at 0..7 in byte #3
+            // 0x100xxxxx marker in first byte, followed by 13 bit number
+            out.writeShort(0x8000 | (i & 0x1FFF));
             return;
             }
 
-        int cBytes = (cBits + 7) >>> 3;
-        out.writeByte((cBytes - 1) << 2);
+        final int cBytes = (cBits + 7) >>> 3;   // in the range of 2..8 bytes
+        out.writeByte(0xA0 | (cBytes - 1));
         switch (cBytes)
             {
-            case 1:
-                out.writeByte(i);
-                break;
             case 2:
                 out.writeShort(i);
                 break;
@@ -902,27 +888,27 @@ public class PackedInteger
     public static int packedLength(byte[] ab, int of)
         {
         int b = ab[of];
-        if ((b & 0x01) != 0)
+        if ((b & 0xC0) != 0x80)
             {
-            // Tiny format
+            // small format
             return 1;
             }
 
-        if ((b & 0x02) != 0)
+        if ((b & 0x20) != 0)
             {
-            // Small or Medium format
-            return ((b & 0x04) == 0) ? 2 : 3;
+            // medium format
+            return 2;
             }
 
-        if ((b & 0xFF) == 0b111111_00)
+        int cb = 1 + (b & 0x1F);
+        if (cb > 1)
             {
-            // Huge format
-            long lVals = unpackInt(ab, of+1);
-            return 1 + (int) (lVals >>> 32) + (int) lVals;
+            // large format
+            return 1 + cb;
             }
 
-        // Large format
-        return 2 + ((b & 0xFC) >>> 2);
+        // huge format
+        return 2 + (ab[of+1] & 0xFF);
         }
 
     /**
@@ -934,21 +920,20 @@ public class PackedInteger
      */
     public static int packedLength(long n)
         {
-        // test for Tiny
-        if (n <= 63 && n >= -64)
+        // test for small (1-byte format)
+        if (n <= 127 && n >= -64)
             {
             return 1;
             }
 
-        // test for Small and Medium
+        // test for medium (2-byte format)
         final int cBits = 65 - Long.numberOfLeadingZeros(Math.max(n, ~n));
-        if (((1L << cBits) & 0x3E3E00L) != 0)           // test against bits 9-13 and 17-21
+        if (cBits <= 13)
             {
-            return cBits <= 13 ? 2 : 3;
+            return 2;
             }
 
-        // Large format
-        int cBytes = (cBits + 7) >>> 3;
+        final int cBytes = (cBits + 7) >>> 3;   // in the range of 2..8 bytes
         return 1 + cBytes;
         }
 
