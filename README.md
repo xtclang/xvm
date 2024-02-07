@@ -132,8 +132,8 @@ the recommended workflow for submitting a pull request is as follows:
 ##### 1) Create a new branch for your change, and connect it to the upstream:
 
 ```
-git checkout -B decriptive-branch-name
-git push --set-upstream-to origin descriptive-branch-name
+git checkout -B <decriptive-branch-name>
+git push --set-upstream origin <descriptive-branch-name>
 ```
 
 Note that you can automate the second step, and have all branches you create on your 
