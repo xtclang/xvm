@@ -549,6 +549,31 @@ class ModuleGenerator(String moduleName) {
                             classTemplate.is(ClassTemplate)) {
                 for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES) {
                     if (typeTemplate.isA(dbType)) {
+                        // the property base class can only be a base dbo interface, a schema
+                        // extenstion or a mixin into it; also, it cannot be a virtual child
+                        assert Composition dbClass := dbType.fromClass(), dbClass.is(ClassTemplate);
+                        if (classTemplate != dbClass) {
+                            if (classTemplate.virtualChild) {
+                                errors.add($|Error: Property "{prop.name}" type "{prop.type}" cannot \
+                                            |be a virtual child
+                                          );
+                                return False;
+                            }
+
+                            if (category == DBSchema) {
+                                if (classTemplate.format != Interface) {
+                                    errors.add($|Error: Property "{prop.name}" type must be an interface
+                                            );
+                                    return False;
+                                }
+                            } else {
+                                if (classTemplate.format != Mixin) {
+                                    errors.add($|Error: Property "{prop.name}" type must be a mixin
+                                              );
+                                    return False;
+                                }
+                            }
+                        }
                         properties += Tuple:(prop, category);
                         continue NextProperty;
                     }
@@ -668,6 +693,8 @@ class ModuleGenerator(String moduleName) {
         (Boolean success, String[] compilationErrors) = compiler.compile([sourceFile]);
 
         if (compilationErrors.size > 0) {
+            errors.add($|Error: Failed to compile an auto-generated class "{sourceFile}"
+                      );
             errors.addAll(compilationErrors);
         }
         return success;

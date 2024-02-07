@@ -279,7 +279,7 @@ public interface Constants
      */
     String VE_INCORPORATES_NOT_MIXIN              = "VERIFY-17";
     /**
-     * {0} incorporates {1}, but {2} is not compatible with the "into" specifier: {3}.
+     * {0} incorporates {1}, but is not compatible with the "into" specifier: {2}.
      */
     String VE_INCORPORATES_INCOMPATIBLE           = "VERIFY-18";
     /**
@@ -573,6 +573,11 @@ public interface Constants
      * The parameter {2} for the method {1} on {0} must specify a default value.
      */
     String VE_DEFAULT_VALUE_MISSING              = "VERIFY-89";
+    /**
+     * {0} incorporates {1}, which is a virtual child of {2}, but {0} is not a virtual child of that class.
+     */
+    String VE_INCORPORATES_INCOMPATIBLE_PARENT   = "VERIFY-90";
+
 
     // ----- miscellaneous -------------------------------------------------------------------------
 

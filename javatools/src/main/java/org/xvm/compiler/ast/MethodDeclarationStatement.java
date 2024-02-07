@@ -904,10 +904,11 @@ public class MethodDeclarationStatement
         MethodInfo    infoMethod = clzParent.getFormalType().ensureAccess(Access.PRIVATE).
                                     ensureTypeInfo(errsTemp).
                                     getMethodById(method.getIdentityConstant());
-        if (infoMethod == null)
+        if (infoMethod == null || errsTemp.hasSeriousErrors())
             {
             // something is seriously wrong with this method; the "@Override" is the least of the
             // issues; ignore it and the problem will be reported in due time
+            errsTemp.merge();
             return true;
             }
 
@@ -916,7 +917,6 @@ public class MethodDeclarationStatement
             log(errs, Severity.ERROR, Compiler.SUPER_MISSING);
             return false;
             }
-        errsTemp.merge();
         return true;
         }
 

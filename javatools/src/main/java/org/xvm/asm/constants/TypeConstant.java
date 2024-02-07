@@ -2930,15 +2930,23 @@ public abstract class TypeConstant
         // exception is Enumeration, which needs to be processed naturally
         if (!typeInto.isIntoClassType() || typeInto.isA(pool.typeEnumeration()))
             {
+            if (typeContrib.isVirtualChild()
+                && (!this.isVirtualChild() ||
+                    !this.getParentType().isA(typeContrib.getParentType())))
+                {
+                log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE_PARENT,
+                    constId.getPathString(), typeContrib.getValueString(),
+                    typeContrib.getParentType().getValueString());
+                return;
+                }
+
             // the mixin must be compatible with this type, as specified by its "into"
             // clause; note: not 100% correct because the presence of this mixin may affect
             // the answer, so this requires an eventual fix
             if (!this.isA(typeInto))
                 {
                 log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
-                    constId.getPathString(),
-                    typeContrib.getValueString(),
-                    this.removeAccess().getValueString(),
+                    constId.getPathString(), typeContrib.getValueString(),
                     typeInto.getValueString());
                 return;
                 }
