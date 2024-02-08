@@ -442,17 +442,27 @@ class ModuleGenerator(String moduleName) {
                     if (retCount == 0) {
                         retType = "void";
                     } else {
-                        StringBuffer buf = new StringBuffer();
-                        loop:
-                        for (Int i : 0 ..< retCount) {
-                            ParameterTemplate ret = returns[i];
-                            if (ret.category == ConditionalReturn) {
-                                "conditional ".appendTo(buf);
-                            } else {
+                        StringBuffer buf   = new StringBuffer();
+                        Boolean      cond  = returns[0].category == ConditionalReturn;
+                        Boolean      multi = retCount > (cond ? 2 : 1);
+
+                        if (cond) {
+                            "conditional ".appendTo(buf);
+                        }
+                        if (multi) {
+                            buf.append('(');
+                        }
+
+                        loop: for (ParameterTemplate ret : returns) {
+                            if (!loop.first || !cond) {
                                 displayName(ret.type, appName).appendTo(buf);
                             }
-                            if (!loop.last) {
-                                ", ".append(buf);
+                            if (multi) {
+                                if (loop.last) {
+                                    buf.append(')');
+                                } else {
+                                    ", ".appendTo(buf);
+                                }
                             }
                         }
                         retType = buf.toString();
