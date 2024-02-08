@@ -37,7 +37,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         }
 
         logger.info("{} {} (launcher: {}); Using 'javatools.jar' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), javaToolsJar);
-        if (hasVerboseLogging()) {
+        if (task.hasVerboseLogging()) {
             logger.lifecycle("{} JavaExec command (launcher {}): {}", prefix, getClass().getSimpleName(), cmd.toString(javaToolsJar));
         }
 
@@ -79,10 +79,8 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
          * we keep this code here for now. It will very likely go away in the future, and assume and assert that
          * there is only one configuration available to consume, containing the javatools.jar.
          */
-        final var javaToolsFromConfig = filesFrom(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING)
-            .filter(FileUtils::isValidJavaToolsArtifact);
-        final var javaToolsFromXdk = project.fileTree(XtcProjectDelegate.getXdkContentsDir(project))
-            .filter(FileUtils::isValidJavaToolsArtifact);
+        final var javaToolsFromConfig = task.filesFromConfigs(true, XDK_CONFIG_NAME_JAVATOOLS_INCOMING).filter(FileUtils::isValidJavaToolsArtifact);
+        final var javaToolsFromXdk = project.fileTree(XtcProjectDelegate.getXdkContentsDir(project)).filter(FileUtils::isValidJavaToolsArtifact);
 
         logger.info("""            
                 {} javaToolsFromConfig files: {}

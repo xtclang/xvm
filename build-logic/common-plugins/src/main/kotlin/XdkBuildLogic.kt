@@ -8,6 +8,7 @@ import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.compile.JavaCompile
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path

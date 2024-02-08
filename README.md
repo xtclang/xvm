@@ -548,7 +548,7 @@ To submit a contributor agreement, sign up for very hard work, fork over a giant
 pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please
 understand if we cannot respond to every e-mail. Thank you.
 
-## Appendix: Gradle fundamentals
+## Appendix: Gradle / Maven fundamentals
 
 We have tried very hard to create an easy-to-use build system based on industry standards 
 and expected behavior. These days, most software is based on the Maven/Gradle model, which 
@@ -566,27 +566,32 @@ command like to build or execute the system or anything built on top of it.
 Implementing language support for an alien language on top of Gradle, however, is a fairly
 complex undertaking, and requires deeper knowledge of the Gradle architecture. It is 
 our firm belief, though, that the user should not have to drill down to these levels, unless he/she 
-specifically wants to. As it is, any open source developer today still needs to grasp some basic 
-fundamentals about artifacts and the Gradle build system. This is not just our assumption; it is 
+specifically wants to. However, any open source developer today still needs to grasp some basic 
+fundamentals about artifacts and a standard build life cycle. This is not just our assumption; it is 
 actually industry-wide. 
 
 We believe the following concepts are necessary to understand, in order to work with XDK 
 projects or the XDK. None of them are at all specific to XTC:
 
-* The concept of "gradlew" and "mvnw" (or "gradlew.bat" and "mvnw.bat" on Windows) wrappers, 
-  and why it should ALWAYS be used instead of a "gradle" binary on the local system, for any 
-  repository that ships it with its build.
 * The concept of a versioned Maven artifact, and that its descriptor "group:artifactId:version"
   is its "global address", no matter how it is resolved on the lower abstraction layer.
 * The concept of release vs snapshot artifact versions in the Maven model.
+* The concept of an artifact repository.
 * The concept of local (mostly mavenLocal()) and remote artifact repositories, and how they are used 
   by a maven build.
 * The concept of the Maven/Gradle build lifecycle, its fundamental tasks, and how they depend
   on each other ("clean", "assemble", "build" and "check"). 
-* The concept of the Gradle/Maven cache, build daemons, and why "clean" is not what you think  
+* The concepts of the Gradle build life cycle phases, configuration and execution phase, and what
+must be declared in configuration, before we know what it will resolve to.
+* The concept of the Gradle/Maven build cache, build daemons, and why "clean" is not what you think  
   of as "clean" in a C++ Makefile and why is it often better not to use it, in a cached, incrementally
-  built Gradle project.
-* The concept of Maven/Gradle source sets, like "main", "resources" and "test". 
+  built Gradle project. The ways that exist to actually do the semantic equivalent of what usually
+  "clean" means, and why you probably should not need it. 
+* The concept of Maven/Gradle source sets, like "main", "resources" and "test".
+* The concept of "gradlew" and "mvnw" (or "gradlew.bat" and "mvnw.bat" on Windows) wrappers,
+  and why it should ALWAYS be used instead of a "gradle" binary on the local system, for any
+  repository that ships it with its build. Also, why you don't edit these files manually, no matter
+  how strange you think their contents are, and why they are often checked into source control.
 * The concept of a Gradle build scan, and understanding how to inspect it and how to use it to 
   spot build issues.
 * The standard flags that can be used to control Gradle debug log levels, --info, -q, --stacktrace

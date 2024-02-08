@@ -1,14 +1,16 @@
 package org.xtclang.plugin;
 
+import org.gradle.api.Named;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.InputStream;
 import java.io.OutputStream;
 
 @SuppressWarnings("unused")
-public interface XtcLauncherTaskExtension {
+public interface XtcLauncherTaskExtension extends Named {
     Property<Boolean> getFork();
 
     Property<Boolean> getShowVersion();
@@ -40,4 +42,9 @@ public interface XtcLauncherTaskExtension {
     void setJvmArgs(Iterable<? extends String> elements);
 
     void setJvmArgs(Provider<? extends Iterable<? extends String>> provider);
+
+    @Override
+    default @NotNull String getName() {
+        return getClass().getSimpleName();
+    }
 }

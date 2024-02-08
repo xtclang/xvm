@@ -271,14 +271,6 @@ val distExe by tasks.registering {
     }
 }
 
-val test by tasks.existing {
-    System.err.println("gradle.includedBUilds: " + gradle.includedBuilds.map { it.name } )
-    if (gradle.includedBuilds.map { it.name }.contains("manualTests")) {
-        System.err.println("Here I am!")
-//        dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
-    }
-}
-
 /**
  * Take the output of assembleDist and put it in an installation directory.
  */

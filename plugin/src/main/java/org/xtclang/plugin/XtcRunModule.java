@@ -4,7 +4,7 @@ import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 
-public interface XtcRunModule {
+public interface XtcRunModule extends Comparable<XtcRunModule> {
     Property<String> getModuleName();
 
     Property<String> getMethodName();
@@ -29,7 +29,7 @@ public interface XtcRunModule {
 
     boolean hasDefaultMethodName();
 
-    String getDefaultMethodName();
-
     boolean validate();
+
+    String toString(boolean mayResolveProviders);
 }
