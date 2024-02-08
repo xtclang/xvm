@@ -89,7 +89,7 @@ const String
      *
      * @return the concatenation of the String form of the passed object onto this String
      */
-    @Op("+") String! append(Object o) {
+    @Op("+") String! add(Object o) {
         Int          add = o.is(Stringable) ? o.estimateStringLength() : 0x0F;
         StringBuffer buf = new StringBuffer(size + add);
         return (buf + this + o).toString();
