@@ -9,66 +9,36 @@ import java.math.BigInteger;
 
 
 /**
- * A PackedInteger represents a signed, 2's-complement integer of 1-8192 bits (1-1024 bytes) in
- * size. (The size limit is arbitrary, and temporary.)
+ * A PackedInteger represents a signed, 2's-complement integer of 1 byte to 64KB (512Kb) in size.
  * <p/>
- * Values up to 8 bytes can be accessed as a <tt>long</tt> value, while values of any size can be
- * accessed as a BigInteger.
+ * Signed values up to 8 bytes can be written and read as a Java <tt>long</tt> value; values up to the maximum size can
+ * written and red as a Java BigInteger.
  * <p/>
- * The storage format is compressed as much as possible. There are five storage formats:
+ * The storage format (XVM Integer Packing, or "XIP") uses a variable length compression scheme. It defines four
+ * internal formats for XIP'd integers:
  * <ul><li>
- * <b>Tiny</b>: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
- * The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set to 1.
- * When reading in a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
+ * <b>Small</b>: For a value in the range {@code -64..127}, the value is encoded as the least significant byte of the
+ * integer, as is. When reading in a packed integer, if the leftmost bits of the first byte are <b>not</b> {@code 10},
+ * then the XIP'd integer is in small format, and simply requires sign extension of the first byte to the desired
+ * integer size in order to form the integer value.
  * </li><li>
- * <b>Small</b>: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
- * bytes. The first byte contains the value 0x2 (010) in the least significant 3 bits, and bits 8-12
- * of the integer in bits 3-7; the second byte contains bits 0-7 of the integer.
+ * <b>Medium</b>: For a value in the range {@code -4096..4095} (13 bits), the value is encoded in two bytes. The first
+ * byte contains the binary value {@code 100} in the most significant 3 bits, indicating the medium format. The 2's
+ * complement integer value is formed from the least significant 5 bits of the first byte, sign extended to the desired
+ * integer size and then left-shifted 8 bits, or'd with the bits of the second byte.
  * </li><li>
- * <b>Medium</b>: For a value in the range -1048576..1048575 (21 bits), the value can be encoded in
- * three bytes. The first byte contains the value 0x6 (110) in the least significant 3 bits, and
- * bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the integer; the
- * third byte contains bits 0-7 of the integer.
+ * <b>Large</b>: For any 2's complement integer value from {@code 2..32} bytes (in the range {@code -(2^255)..2^255-1}),
+ * let {@code b} be that number of bytes, with the XIP'd value encoded in {@code 1+b} bytes. The first byte contains the
+ * binary value {@code 101} in the most significant 3 bits, and the remaining 5 bits are the unsigned value {@code b-1},
+ * indicating the large format. (Note: Since {@code b} is at least {@code 2}, the value {@code b-1} is always non-zero.)
+ * The following {@code b} bytes form the 2's complement integer value.
  * </li><li>
- * <b>Large</b>: For a value in the range -(2^503)..2^503-1 (63 bytes), a value with `{@code s}`
- * significant bits can be encoded in no less than {@code 1+max(1,(s+7)/8)} bytes; let `{@code b}`
- * be the selected encoding length, in bytes. The first byte contains the value 0x0 (00) in the
- * least significant 2 bits, and the least 6 significant bits of {@code (b-2)} in bits 2-7. The
- * following {@code (b-1)} bytes contain the least significant {@code (b-1)*8} bits of the integer.
- * </li><li>
- * <b>Huge</b>: For any larger value (arbitrarily limited to the range -(2^8191)..2^8191-1 (1KB)),
- * the first byte is 0b111111_00, followed by an embedded packed integer specifying the number of
- * significant bytes of the enclosing packed integer, followed by that number of bytes of data.
+ * <b>Huge</b>: For any integer value {@code n} larger than 32 bytes, let {@code b} be that number of bytes. The first
+ * byte of the XIP'd integer is {@code 0xA0}, which indicates the huge format. The following bytes contain the value
+ * {@code b}, encoded as a XIP'd integer. The following {@code b} bytes form the 2's complement integer value {@code n}.
  * </li></ul>
  * <p/>
- * To maximize density and minimize pipeline stalls, the algorithms in this file use the smallest
- * possible encoding for each value. Since an 8 significant-bit value can be encoded in two bytes
- * using either a small or large encoding, we choose large to eliminate the potential for a
- * (conditional-induced) pipeline stall. Since a 14..16 significant-bit value can be encoded in
- * three bytes using either a medium or large encoding, we choose large for the same reason.
- * <pre><code>
- *     significant bits  encoding  bytes
- *     ----------------  --------  -----
- *           <= 7        Tiny      1
- *            8          Large     2
- *           9-13        Small     2
- *          14-16        Large     3
- *          17-21        Medium    3
- *          >= 22        Large     4 or more
- *          >= 512       Huge      *
- * </code></pre>
- * <p/>
- * Similarly, by examining the least significant 3 bits of the first byte of an encoded value, the
- * encoding can be determined as follows:
- * <pre><code>
- *     first byte  encoding  bytes
- *     ----------  --------  -----
- *      ???????1   Tiny      1
- *      ?????010   Small     2
- *      ?????110   Medium    3
- *      ??????00   Large     2-65
- *      11111100   Huge      *
- * </code></pre>
+ * To maximize density, the algorithms in this file use the smallest possible encoding for each value.
  */
 public class PackedInteger
         implements Comparable<PackedInteger>
@@ -159,7 +129,7 @@ public class PackedInteger
                 ? calculateSignedByteCount(m_bigint)
                 : Math.max(1, (((64 - Long.numberOfLeadingZeros(Math.max(m_lValue, ~m_lValue))) & 0x3F) + 7) / 8);
 
-        assert nBytes >= 1 && nBytes <= 1024; // arbitrary limit
+        assert nBytes >= 1 && nBytes <= 8192; // arbitrary limit
         return nBytes;
         }
 
@@ -235,7 +205,8 @@ public class PackedInteger
         long n = getLong();
         if (n < Integer.MIN_VALUE || n > Integer.MAX_VALUE)
             {
-            throw new IllegalStateException("too big!");
+            throw new IllegalStateException(n + " exceeds the 32-bit integer range ("
+                    + Integer.MIN_VALUE + ".." + Integer.MAX_VALUE + ")");
             }
 
         return (int) n;
@@ -316,17 +287,14 @@ public class PackedInteger
             {
             m_lValue = bigint.longValue();
             }
+        else if (calculateUnsignedByteCount(bigint) <= 8)
+            {
+            // the unsigned value still fits the long
+            m_lValue = bigint.longValue();
+            }
         else
             {
-            if (calculateUnsignedByteCount(bigint) <= 8)
-                {
-                // the unsigned value still fits the long
-                m_lValue = bigint.longValue();
-                }
-            else
-                {
-                m_lValue = 0;
-                }
+            m_lValue = 0;
             }
 
         m_bigint       = bigint;
@@ -636,37 +604,38 @@ public class PackedInteger
         {
         verifyUninitialized();
 
-        final int b = in.readByte();
         // check for large or huge format with more than 8 trailing bytes (needs BigInteger)
-        if ((b & 0b11) == 0b00 && (b & 0b111000_00) != 0)
+        final int b = in.readByte();
+        if ((b & 0xE0) == 0xA0)
             {
-            final int cBytes;
-            if ((b & 0xFF) == 0b111111_00)
+            int cBytes = 1 + (b & 0x1F);
+            if (cBytes == 1)
                 {
                 // huge format
-                long len = readLong(in);
-                if (len > 1024)
+                long len = readLong(in, in.readByte(), true);
+                if (len < 33)
                     {
-                    throw new IOException("integer size of " + len + " bytes; maximum is 1024");
+                    throw new IOException("huge integer size of " + len + " bytes; minimum is 33");
+                    }
+                if (len > 8192)
+                    {
+                    throw new IOException("huge integer size of " + len + " bytes; maximum is 8192");
                     }
                 cBytes = (int) len;
                 }
-            else
-                {
-                // large format
-                cBytes = 1 + ((b & 0xFC) >>> 2);
-                }
 
-            final byte[] ab = new byte[cBytes];
-            in.readFully(ab);
-            setBigInteger(new BigInteger(ab));
+            if (cBytes > 8)
+                {
+                final byte[] ab = new byte[cBytes];
+                in.readFully(ab);
+                setBigInteger(new BigInteger(ab));
+                return;
+                }
             }
-        else
-            {
-            // tiny, small, medium, and large (up to 8 trailing bytes) format values fit into
-            // a Java long
-            setLong(readLong(in, b));
-            }
+
+        // small, medium, and large (up to 8 trailing bytes) format values fit into
+        // a Java long
+        setLong(readLong(in, b, false));
         }
 
     /**
@@ -697,17 +666,17 @@ public class PackedInteger
                 ++of;
                 }
             cb -= of;
-            assert cb > 8 && cb <= 1024;
+            assert cb > 8 && cb <= 8192;
 
-            if (cb < 64)
+            if (cb <= 32)
                 {
                 // large format: length encoded in 6 MSBs of first byte, then the bytes of the int
-                out.writeByte((cb-1) << 2);
+                out.writeByte(0xA0 | cb-1);
                 }
             else
                 {
                 // huge format: first byte is 0, then the length as a packed int, then the bytes
-                out.writeByte(0b111111_00);
+                out.writeByte(0xA0);
                 writeLong(out, cb);
                 }
             out.write(ab, of, cb);
@@ -825,7 +794,7 @@ public class PackedInteger
             }
 
         final int cBytes = (cBits + 7) >>> 3;   // in the range of 2..8 bytes
-        out.writeByte(0xA0 | (cBytes - 1));
+        out.writeByte(0xA0 | cBytes-1);
         switch (cBytes)
             {
             case 2:
@@ -873,7 +842,7 @@ public class PackedInteger
     public static long readLong(DataInput in)
             throws IOException
         {
-        return readLong(in, in.readByte());
+        return readLong(in, in.readByte(), false);
         }
 
     /**
@@ -894,7 +863,7 @@ public class PackedInteger
             return 1;
             }
 
-        if ((b & 0x20) != 0)
+        if ((b & 0x20) == 0)
             {
             // medium format
             return 2;
@@ -908,7 +877,8 @@ public class PackedInteger
             }
 
         // huge format
-        return 2 + (ab[of+1] & 0xFF);
+        long sizeAndValue = unpackInt(ab, of+1);
+        return 1 + (int) (sizeAndValue >>> 32) + (int) sizeAndValue;
         }
 
     /**
@@ -953,61 +923,27 @@ public class PackedInteger
         int cb;
 
         int b = ab[of];
-        if ((b & 0x01) != 0)
+        if ((b & 0xC0) != 0x80)
             {
-            // Tiny format: the first bit of the first byte is used to indicate a single byte
-            // format, in which the entire value is contained in the 7 MSBs
-            n  = b >> 1;
+            // small format: 1 byte value -64..127
+            n  = b;
             cb = 1;
             }
-        else if ((b & 0x02) != 0)
+        else if ((b & 0x20) == 0)
             {
-            // the third bit is used to indicate 0: 1 trailing byte, or 1: 2 trailing bytes
-            if ((b & 0x04) == 0)
-                {
-                // Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
-                // next byte provides bits 0..7 of the result (note: and then also sign-extend)
-                n  = (b & 0xFFFFFFF8) << 5 | ab[of+1] & 0xFF;
-                cb = 2;
-                }
-            else
-                {
-                // Medium format: bits 3..7 of the first byte are bits 16..20 of the result, and the
-                // next byte provides bits 8..15 of the result, and the next byte provides bits 0..7
-                // of the result (note: and then also sign-extend)
-                n  = (b & 0xFFFFFFF8) << 13 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
-                cb = 3;
-                }
+            // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
+            n = b << 27 >> 19 | ab[of+1] & 0xFF;
+            cb = 2;
             }
         else
             {
-            // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
-            // first byte are the trailing number of bytes minus 1
-            // Huge format: the first byte is 0b111111_00, so it is followed by a packed integer
-            // that specifies the length of this packed integer
-            final int cBytes;
-            if ((b & 0xFF) == 0b111111_00)
-                {
-                // Huge format
-                long lVals = unpackInt(ab, of+1);
-                int  cbcb  = (int) (lVals >>> 32);
-                cBytes = (int) lVals;
-                cb     = 1 + cbcb + cBytes;
-                of    += 1 + cbcb;
-                }
-            else
-                {
-                // Large format
-                cBytes = 1 + ((b & 0xFC) >>> 2);
-                cb     = 1 + cBytes;
-                ++of;
-                }
+            // large format: trail mode: next x+1 (2-32) bytes
+            final int cBytes = 1 + (b & 0x1F);
+            cb = 1 + cBytes;
+            ++of;
 
             switch (cBytes)
                 {
-                case 1:
-                    n  = ab[of];
-                    break;
                 case 2:
                     n  = ab[of] << 8 | ab[of+1] & 0xFF;
                     break;
@@ -1028,40 +964,44 @@ public class PackedInteger
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static long readLong(DataInput in, int b)
+    private static long readLong(DataInput in, int b, boolean recursion)
             throws IOException
         {
-        if ((b & 0x01) != 0)
+        // small format: 1 byte value -64..127
+        if ((b & 0xC0) != 0x80)
             {
-            // Tiny format: the first bit of the first byte is used to indicate a single byte
-            // format, in which the entire value is contained in the 7 MSBs
-            return b >> 1;
+            return b;
             }
 
-        if ((b & 0x02) != 0)
+        // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
+        if ((b & 0x20) == 0)
             {
-            // the third bit is used to indicate 0: 1 trailing byte, or 1: 2 trailing bytes
-            if ((b & 0x04) == 0)
-                {
-                // Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
-                // next byte provides bits 0..7 of the result (note: and then also sign-extend)
-                return (long) (b & 0xFFFFFFF8) << 5 | in.readUnsignedByte();
-                }
-            else
-                {
-                // Medium format: bits 3..7 of the first byte are bits 16..20 of the result, and the
-                // next byte provides bits 8..15 of the result, and the next byte provides bits 0..7
-                // of the result (note: and then also sign-extend)
-                return (long) (b & 0xFFFFFFF8) << 13 | in.readUnsignedShort();
-                }
+            b = b << 27 >> 19 | in.readUnsignedByte();
+            return b;
             }
 
-        // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
-        // first byte are the trailing number of bytes minus 1
-        // Huge format: the first byte is 0, so it is followed by a packed integer that
-        // specifies the length of this packed integer
-        int cBytes = (b & 0xFF) == 0b111111_00 ? (int) readLong(in) : 1 + ((b & 0xFC) >>> 2);
-        switch (cBytes)
+        // large format: trail mode: next x+1 (2-32) bytes
+        int size = 1 + (b & 0x1F);
+        if (size == 1)
+            {
+            // huge format: the actual byte length comes next in the stream
+            if (recursion)
+                {
+                throw new IOException("illegal recursive format");
+                }
+            long nestedSize = readLong(in, in.readUnsignedByte(), true);
+            if (nestedSize < 1)
+                {
+                throw new IOException("huge integer length (" + nestedSize + " bytes) below minimum (1 bytes)");
+                }
+            if (nestedSize > 8)
+                {
+                throw new IOException("huge integer length (" + nestedSize + " bytes) exceeds maximum (8 bytes)");
+                }
+            size = (int) nestedSize;
+            }
+
+        switch (size)
             {
             case 1:
                 return in.readByte();
@@ -1082,7 +1022,7 @@ public class PackedInteger
             case 8:
                 return in.readLong();
             default:
-                throw new IllegalStateException("# trailing bytes=" + cBytes);
+                throw new IllegalStateException("# trailing bytes=" + size);
             }
         }
 
