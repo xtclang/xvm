@@ -271,12 +271,11 @@ val distExe by tasks.registering {
     }
 }
 
-
 val test by tasks.existing {
-    val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
-    if (sanityCheckRuntime) {
-        logger.lifecycle("$prefix Sanity check runtimes after build: $sanityCheckRuntime.")
-        dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
+    System.err.println("gradle.includedBUilds: " + gradle.includedBuilds.map { it.name } )
+    if (gradle.includedBuilds.map { it.name }.contains("manualTests")) {
+        System.err.println("Here I am!")
+//        dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
     }
 }
 

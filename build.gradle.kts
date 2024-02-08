@@ -76,12 +76,6 @@ val publish by tasks.registering {
     dependsOn(publishLocal, publishRemote)
 }
 
-val manualTests by tasks.registering {
-    group = VERIFICATION_GROUP
-    description = "Run the manual tests for the XDK."
-    dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
-}
-
 GitHubPackages.publishTaskPrefixes.forEach { prefix ->
     buildList {
         addAll(GitHubPackages.publishTaskSuffixesLocal)

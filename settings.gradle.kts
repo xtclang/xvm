@@ -31,13 +31,24 @@ gradleEnterprise {
     }
 }
 
-includeBuild("javatools_utils")
 includeBuild("javatools")
+includeBuild("javatools_utils")
 includeBuild("javatools_unicode")
 includeBuild("plugin")
 includeBuild("xdk")
-includeBuild("manualTests")
 
-// The manualTests project is part of this repository, but will only be included if the user asks for it.
+fun includeManualTests(): Boolean {
+    val shouldIncludeManualTests: String? by settings
+    return (shouldIncludeManualTests?.toBoolean() == true).also {
+        logger.lifecycle("[xvm] Build aggregator shouldIncludeManualTests: $shouldIncludeManualTests")
+    }
+}
+
+if (includeManualTests()) {
+    logger.warn("[xvm] Including 'manualTests' project in the build. This may cause additional overhead with an empty build cache, or after running a 'gradlew clean', but should not be otherwise significant.")
+    System.err.println("Including manual tests.")
+    includeBuild("manualTests")
+}
 
 rootProject.name = "xvm"
+

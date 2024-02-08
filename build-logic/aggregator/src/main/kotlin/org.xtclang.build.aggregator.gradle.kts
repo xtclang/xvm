@@ -10,7 +10,8 @@ plugins {
 
 private class XdkBuildAggregator(project: Project) : Runnable {
     companion object {
-        private val lifeCycleTasks = listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
+        private val lifeCycleTasks =
+            listOfNotNull(ASSEMBLE_TASK_NAME, BUILD_TASK_NAME, CHECK_TASK_NAME, CLEAN_TASK_NAME)
     }
 
     private val prefix = "[${project.name}]"
@@ -41,14 +42,17 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
     private fun checkStartParameterState() {
         val startParameter = gradle.startParameter
-        with (startParameter) {
-            logger.info("""
+        with(startParameter) {
+            logger.info(
+                """
             $prefix Start parameter tasks: $taskNames
             $prefix Start parameter init scripts: $allInitScripts
-        """.trimIndent())
+        """.trimIndent()
+            )
 
             if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
-                val msg = "$prefix Multiple start parameter tasks are not guaranteed to in order/in parallel. Please run each task individually."
+                val msg =
+                    "$prefix Multiple start parameter tasks are not guaranteed to in order/in parallel. Please run each task individually."
                 logger.error(msg)
                 throw GradleException(msg)
             }
