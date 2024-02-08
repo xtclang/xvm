@@ -109,9 +109,9 @@ interface Directory
     Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "") {
         Boolean root = indent == "";
 
-//        created.append(buf);
+//        created.appendTo(buf);
 //        buf.addAll("  ");
-//        modified.append(buf);
+//        modified.appendTo(buf);
 //        buf.addAll("  ");
 //        String bytes = size.toString()
 
