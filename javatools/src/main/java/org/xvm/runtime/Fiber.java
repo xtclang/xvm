@@ -50,10 +50,10 @@ public class Fiber
         f_fnCaller  = msgCall.f_fnCaller;
         m_status    = FiberStatus.Initial;
 
-        if (fiberCaller == null)
+        if (fiberCaller == null || fiberCaller.getStatus() == FiberStatus.Terminating)
             {
-            // an independent fiber is only limited by the timeout of the parent service
-            // and in general has no timeout
+            // an independent or asynchronous (e.g. created by "callLater") fiber is only limited
+            // by the timeout of the parent service and in general has no timeout
             f_nDepth = 0;
             }
         else
