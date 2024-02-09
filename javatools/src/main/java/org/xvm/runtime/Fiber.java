@@ -140,6 +140,12 @@ public class Fiber
             return fiberCaller != null && this.isAssociated(fiberCaller);
             }
 
+        if (fiberCaller.getStatus() == FiberStatus.Terminating)
+            {
+            // the caller is terminating; no reason to associate it
+            return false;
+            }
+
         // by switching the target to "that" we alternate the descending checks:
         // (f1 ~ f2) --> (f2.prev ~ f1) --> (f1.prev ~ f2.prev) --> ...
         return that.isAssociated(fiberCaller);
