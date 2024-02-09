@@ -228,34 +228,29 @@ interface DataInput
     static Int8 Huge = Byte:0b111111_00.toInt8();
 
     /**
-     * Read an integer from the passed stream, which is encoded in the packed integer format.
+     * Read an integer from the passed stream, which is encoded in the packed integer format. The format (XVM Integer
+     * Packing, or "XIP") uses a variable length compression scheme. It defines four internal formats for XIP'd
+     * integers:
      *
-     * The packed integer format represents a signed, 2's-complement integer of 1-8192 bits (1-1024
-     * bytes) in size. There are four storage formats:
+     * * **Small**: For a value in the range `-64..127`, the value is encoded as the least significant byte of the
+     *   integer, as is. When reading in a packed integer, if the leftmost bits of the first byte are **not** `10`,
+     *   then the XIP'd integer is in small format, and simply requires sign extension of the first byte to the desired
+     *   integer size in order to form the integer value.
      *
-     * * **Tiny**: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
-     *   The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set
-     *   to 1. When reading a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
+     * * **Medium**: For a value in the range `-4096..4095` (13 bits), the value is encoded in two bytes. The first
+     *   byte contains the binary value `100` in the most significant 3 bits, indicating the medium format. The 2's
+     *   complement integer value is formed from the least significant 5 bits of the first byte, sign extended to the
+     *   desired integer size and then left-shifted 8 bits, or'd with the bits of the second byte.
      *
-     * * **Small**: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
-     *   bytes. The first byte contains the value 0x2 (010) in the least significant 3 bits, and
-     *   bits 8-12 of the integer in bits 3-7; the second byte contains bits 0-7 of the integer.
+     * * **Large**: For any 2's complement integer value from `2..32` bytes (in the range `-(2^255)..2^255-1`),
+     *   let `b` be that number of bytes, with the XIP'd value encoded in `1+b` bytes. The first byte contains the
+     *   binary value `101` in the most significant 3 bits, and the remaining 5 bits are the unsigned value `b-1`,
+     *   indicating the large format. (Note: Since `b` is at least `2`, the value `b-1` is always non-zero.)
+     *   The following `b` bytes hold the 2's complement integer value.
      *
-     * * **Medium**: For a value in the range -1048576..1048575 (21 bits), the value can be encoded
-     *   in three bytes. The first byte contains the value 0x6 (110) in the least significant 3
-     *   bits, and bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the
-     *   integer; the third byte contains bits 0-7 of the integer.
-     *
-     * * **Large**: For a value in the range -(2^503)..2^503-1 (up to 63 bytes), a value with `s`
-     *   significant bits can be encoded in no less than `1+max(1,(s+7)/8)` bytes; let `b` be
-     *   the selected encoding length, in bytes. The first byte contains the value 0x0 in the least
-     *   significant 2 bits (00), and the least 6 significant bits of `(b-2)` in bits 2-7. The
-     *   following `(b-1)` bytes contain the least significant `(b-1)*8` bits of the integer.
-     *
-     * * **Huge**: For any larger value (arbitrarily limited to the range -(2^8191)..2^8191-1
-     *   (1KB)), the first byte is 0b111111_00, followed by an embedded packed integer specifying
-     *   the number of significant bytes of the enclosing packed integer, followed by that number of
-     *   bytes of data.
+     * * **Huge**: For any integer value `n` larger than 32 bytes, let `b` be that number of bytes. The first
+     *   byte of the XIP'd integer is `0xA0`, which indicates the huge format. The following bytes contain the value
+     *   `b`, encoded as a XIP'd integer. The following `b` bytes hold the 2's complement integer value `n`.
      *
      * @param in  the stream to read from
      *
@@ -264,37 +259,24 @@ interface DataInput
      * @throws OutOfBounds  if the packed integer value can not fit into an Int
      */
     static Int readPackedInt(DataInput in) {
-        // use a signed byte to get auto sign-extension when converting to an int
-        Int8 b = in.readInt8();
-
-        // Tiny format: the first bit of the first byte is used to indicate a single byte format,
-        // in which the entire value is contained in the 7 MSBs
-        if (b & 0x01 != 0) {
-            return b >> 1;
+        // small format: 1 byte value -64..127
+        Byte b = in.readByte();
+        if (b & 0xC0 != 0x80) {
+            // convert the Byte to a signed Int8 to obtain automatic sign extension to the Int64
+            return b.toInt8();
         }
 
-        // Small and Medium formats are indicated by the second bit (and differentiated by the third
-        // bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
-        // next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the first byte
-        // are bits 16..20 of the result, and the next byte provides bits 8..15 of the result, and
-        // the next byte provides bits 0..7 of the result
-        if (b & 0x02 != 0) {
-            Int n = (b >> 3).toInt64() << 8 | in.readByte();
-
-            // the third bit is used to indicate Medium format (a second trailing byte)
-            if (b & 0x04 != 0) {
-                n = n << 8 | in.readByte();
-            }
-            return n;
+        if (b & 0x20 == 0) {
+            // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
+            return b.toInt64() << 8 | in.readByte() << 51 >> 51;
         }
 
-        // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
-        // first byte are the trailing number of bytes minus 1
-        Int size = b == Huge ? readPackedInt(in) : 1 + (b >>> 2);
-        assert:bounds size <= 8;    // an Int is an 8-byte value
+        // large format: trail mode: next x+1 (2-32) bytes
+        Int byteCount = 1 + (b & 0x1F);
+        assert:bounds 2 <= byteCount <= 8;   // note: no huge format support for an Int result (avoids recursion)
 
-        Int n = in.readInt8();
-        while (--size > 0) {
+        Int n = in.readByte().toInt8();
+        while (--byteCount > 0) {
             n = n << 8 | in.readByte();
         }
         return n;
@@ -304,51 +286,32 @@ interface DataInput
      * Read an integer value that is formatted using the packed integer format, and return it as
      * a `IntN`.
      *
+     * @see readPackedInt
+     *
      * @param in  the DataInput stream containing the packed integer
      *
      * @return the resulting IntN value
      */
     static IntN readPackedIntN(DataInput in) {
-        // use a signed byte to get auto sign-extension when converting to an int
-        Int8 b = in.readInt8();
-
-        // Tiny format: the first bit of the first byte is used to indicate a single byte format,
-        // in which the entire value is contained in the 7 MSBs
-        if (b & 0x01 != 0) {
-            return b >> 1;
+        // small format: 1 byte value -64..127
+        Byte b = in.readByte();
+        if (b & 0xC0 != 0x80) {
+            // convert the Byte to a signed Int8 to obtain automatic sign extension to the Int64
+            return b.toInt8();
         }
 
-        // Small and Medium formats are indicated by the second bit (and differentiated by the third
-        // bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result, and the
-        // next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the first byte
-        // are bits 16..20 of the result, and the next byte provides bits 8..15 of the result, and
-        // the next byte provides bits 0..7 of the result
-        if (b & 0x02 != 0) {
-            Int64 n = (b >> 3).toInt64() << 8 | in.readByte();
-
-            // the third bit is used to indicate Medium format (a second trailing byte)
-            if (b & 0x04 != 0) {
-                n = n << 8 | in.readByte();
-            }
-            return n;
+        if (b & 0x20 == 0) {
+            // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
+            return b.toInt64() << 8 | in.readByte() << 51 >> 51;
         }
 
-        // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
-        // first byte are the trailing number of bytes minus 1
-        // Huge format: the first byte is 0, and is followed by a packed integer that specifes the
-        // size of the packed integer that we are already in the process of reading
-        Int size = b == Huge ? readPackedInt(in) : 1 + (b >>> 2);
-        if (size <= 16) {
-            Int128 n = in.readInt8();                   // use sign extension on the first byte
-            while (--size > 0) {
-                n = n << 8 | in.readByte();             // additional bytes remain bitwise intact
-            }
-            return n;
+        // large format: trail mode: next x+1 (2-32) bytes
+        Int byteCount = 1 + (b & 0x1F);
+        if (byteCount == 1) {
+            // huge format: the actual byte length comes next in the stream
+            byteCount = readPackedInt(in);
         }
-
-        assert:bounds size <= 1K;                       // arbitrary limit
-        Byte[] bytes = new Byte[size];
-        in.readBytes(bytes, 0, size);
-        return new IntN(bytes);
+        assert:bounds byteCount >= 2;
+        return new IntN(in.readBytes(byteCount));
     }
 }

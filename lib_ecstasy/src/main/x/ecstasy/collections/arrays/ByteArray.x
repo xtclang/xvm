@@ -163,41 +163,33 @@ mixin ByteArray<Element extends Byte>
      * @return the index immediately following the packed integer value
      */
     (Int value, Int newIndex) unpackInt(Int index) {
-        // use a signed byte to get auto sign-extension when converting to an int
-        Int8 b = this[index].toInt8();
-
-        // Tiny format: the first bit of the first byte is used to indicate a single byte format,
-        // in which the entire value is contained in the 7 MSBs
-        if (b & 0x01 != 0) {
-            return b >> 1, index + 1;
+        Byte b = this[index];
+        if (b & 0xC0 != 0x80) {
+            // small format: 1 byte value -64..127
+            // (first convert the UInt8 to a signed Int8 to obtain automatic sign extension to an Int64)
+            return b.toInt8(), index + 1;
         }
 
-        // Small and Medium formats are indicated by the second bit (and differentiated by the
-        // third bit). Small format: bits 3..7 of the first byte are bits 8..12 of the result,
-        // and the next byte provides bits 0..7 of the result. Medium format: bits 3..7 of the
-        // first byte are bits 16..20 of the result, and the next byte provides bits 8..15 of
-        // the result, and the next byte provides bits 0..7 of the result
-        if (b & 0x02 != 0) {
-            Int n = (b >> 3).toInt() << 8 | this[index+1];
-
-            // the third bit is used to indicate Medium format (a second trailing byte)
-            return b & 0x04 != 0
-                    ? (n << 8 | this[index+2], index + 3)
-                    : (n, index + 2);
+        if (b & 0x20 == 0) {
+            // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
+            return b.toInt64() << 8 | this[index+1] << 51 >> 51, index + 2;
         }
 
-        // Large format: the first two bits of the first byte are 0, so bits 2..7 of the
-        // first byte are the trailing number of bytes minus 1
-        Int byteCount = 1 + (b >>> 2);
-        assert:bounds byteCount <= 16;
-
-        Int curOffset  = index + 1;
-        Int nextOffset = curOffset + byteCount;
-        Int n          = this[curOffset++].toInt8();   // Int8 will sign-extend
-        while (curOffset < nextOffset) {
-            n = n << 8 | this[curOffset++];
+        // large format: trail mode: next x+1 (2-32) bytes
+        Int byteCount = 1 + (b & 0x1F);
+        ++index;
+        if (byteCount == 1) {
+            // huge format: the actual byte length comes next in the stream
+            (byteCount, index) = unpackInt(index);
         }
-        return n, nextOffset;
+        assert:bounds 0 < byteCount <= 8;
+
+        Int nextIndex = index + byteCount;
+        Int n         = this[index++].toInt8();   // signed Int8 will automatically sign-extend
+        while (index < nextIndex) {
+            n = n << 8 | this[index++];
+        }
+        return n, nextIndex;
     }
 
 

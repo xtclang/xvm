@@ -31,7 +31,7 @@ import java.math.BigInteger;
  * let {@code b} be that number of bytes, with the XIP'd value encoded in {@code 1+b} bytes. The first byte contains the
  * binary value {@code 101} in the most significant 3 bits, and the remaining 5 bits are the unsigned value {@code b-1},
  * indicating the large format. (Note: Since {@code b} is at least {@code 2}, the value {@code b-1} is always non-zero.)
- * The following {@code b} bytes form the 2's complement integer value.
+ * The following {@code b} bytes hold the 2's complement integer value.
  * </li><li>
  * <b>Huge</b>: For any integer value {@code n} larger than 32 bytes, let {@code b} be that number of bytes. The first
  * byte of the XIP'd integer is {@code 0xA0}, which indicates the huge format. The following bytes contain the value
