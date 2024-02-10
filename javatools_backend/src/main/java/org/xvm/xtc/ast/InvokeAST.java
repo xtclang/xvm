@@ -117,7 +117,7 @@ public class InvokeAST extends AST {
         AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
         yield this;
       }
-      case "append" -> new BinOpAST("+","", XCons.STRING, _kids);
+      case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
       case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String"),_kids[0]);
       case "equals", "split", "indexOf" -> this;
