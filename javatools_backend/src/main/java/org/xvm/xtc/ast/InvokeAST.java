@@ -7,7 +7,7 @@ import org.xvm.xtc.cons.MethodCon;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 
-class InvokeAST extends AST {
+public class InvokeAST extends AST {
   String _meth;
   final boolean _async;
   final XType[] _args;
@@ -45,7 +45,7 @@ class InvokeAST extends AST {
   InvokeAST( String meth, XType ret, AST... kids ) {
     this(meth, ret==null ? null : new XType[]{ret}, kids);
   }
-  InvokeAST( String meth, XType[] rets, AST... kids ) {
+  public InvokeAST( String meth, XType[] rets, AST... kids ) {
     super(kids);
     _meth = meth;
     _async = false;

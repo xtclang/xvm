@@ -28,13 +28,14 @@ public class Arylong extends Array<Int64> {
   public  Arylong(double x, long... es) { this(Constant, es); }
   public  Arylong(Mutability mut, Arylong as) { this(mut,as._es.clone()); }
   public  Arylong(Arylong as) { this(as._mut,as); }
-  
+
   public Arylong( long len, LongUnaryOperator fcn ) {
     this((int)len);
     if( _len != len ) throw XEC.TODO(); // Too Big
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.applyAsLong(i);
   }
+  public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
   
   
   // Fetch element
