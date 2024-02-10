@@ -8,10 +8,10 @@ import org.xvm.util.SB;
 // Always replaced before writing out.
 // E.g. XTC encoded a default arg (-4) for a call.
 // Since Java has no defaults, explicitly replace.
-class RegAST extends AST {
+public class RegAST extends AST {
   final int _reg;
   final String _name;
-  RegAST( int reg, String name, XType type ) {
+  public RegAST( int reg, String name, XType type ) {
     super(null);
     _reg  = reg ;
     _name = name;

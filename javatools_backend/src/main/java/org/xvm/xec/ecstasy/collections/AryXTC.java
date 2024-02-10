@@ -31,6 +31,9 @@ public class AryXTC<E extends XTC> extends Array<E> {
   public  AryXTC(E... es        ) { this(es[0], Constant, Arrays.copyOfRange(es,1,es.length)); }
   public  AryXTC(E gold, Mutability mut, AryXTC<E> as) { this(gold,mut,as._es.clone()); }
   public  AryXTC(AryXTC<E> as) { this(as._gold,as._mut,as._es.clone()); }
+
+  public static <E extends XTC> AryXTC<E> construct(E gold) { return new AryXTC<>(gold); }
+
   
   public AryXTC(E gold, long len, LongFunction<E> fcn ) {
     this(gold,(int)len);
