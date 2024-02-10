@@ -22,6 +22,7 @@ public class Int128 extends IntNumber {
   public Int128(long l0, long l1) { _i0=l0; _i1=l1; }
   public Int128(long lo) { _i0=lo; _i1=0; }
 
+  public static Int128 construct(long lo) { return new Int128(lo); }
 
   public Int128 add( long x ) { throw XEC.TODO(); }
   public Int128 mul( long x ) { throw XEC.TODO(); }

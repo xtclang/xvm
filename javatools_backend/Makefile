@@ -136,7 +136,7 @@ MULTI = multiModule/Lib.x multiModule/Main.x
 multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
 $(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
 	@echo "compiling " $@ " because " $?
-	$(XTC) $(filter-out $(XDK),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
+	@$(XTC) $(filter-out $(XDK),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 
 
 multi_exe:	$(XDK) $(classes) $(multi_x:x=xtc)

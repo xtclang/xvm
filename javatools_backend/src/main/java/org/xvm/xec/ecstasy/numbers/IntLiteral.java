@@ -15,5 +15,7 @@ public class IntLiteral extends Const {
   public IntLiteral(String s) { _s=s; }
   public IntLiteral(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
   public IntLiteral(long x) { _s=Long.toString(x); }
+
+  public static IntLiteral construct(String s) { return new IntLiteral(s); }
   @Override public String toString() { return _s; }
 }

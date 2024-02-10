@@ -351,11 +351,12 @@ public class XClz extends XType {
     if( _ambiguous ) throw XEC.TODO();
     return this==XCons.JSTRING || this==XCons.JOBJECT ? qualified_name() : name();
   }
-  
+
   // "Foo<Value extends Hashable>"
-  public SB clz_def( SB sb ) {
+  public SB clz_generic( SB sb, boolean do_name, boolean generic_def ) {
     if( _ambiguous ) throw XEC.TODO();
-    sb.p(_jname==null ? _name : _jname);
+    if( do_name )
+      sb.p(_jname==null ? _name : _jname);
     // Some Java implementations already specify the XTC generic directly: Arylong
     if( !_jparms || _nTypeParms==0 ) return sb;
     // Print Array<void> as Array
@@ -364,29 +365,31 @@ public class XClz extends XType {
     sb.p("<");
     for( int i=0; i<_nTypeParms; i++ ) {
       sb.p("$").p(_flds[i]);
-      XClz xclz = (XClz)_xts[i];
-      sb.p(" extends XTC" );
-      if( xclz._iface )
-        xclz.clz_def(sb.p(" & "));
+      if( generic_def ) {
+        XClz xclz = (XClz)_xts[i];
+        sb.p(" extends XTC" );
+        if( xclz._iface )
+          xclz.clz_generic(sb.p(" & "),true, true);
+      }
       sb.p(",");
     }
-    return sb.unchar().p(">");
+    return sb.unchar().p("> ");
   }
   
-  // "Foo<Value>"
-  public SB clz_val( SB sb ) {
-    if( _ambiguous ) throw XEC.TODO();
-    sb.p(_jname==null ? _name : _jname);
-    // Some Java implementations already specify the XTC generic directly: Arylong
-    if( !_jparms || _nTypeParms==0 ) return sb;
-    // Print Array<void> as Array
-    if( this==XCons.ARRAY ) return sb;
-    // Printing generic type parameters
-    sb.p("<");
-    for( int i=0; i<_nTypeParms; i++ )
-      sb.p("$").p(_flds[i]).p(",");
-    return sb.unchar().p(">");
-  }
+  //// "Foo<Value>"
+  //public SB clz_val( SB sb ) {
+  //  if( _ambiguous ) throw XEC.TODO();
+  //  sb.p(_jname==null ? _name : _jname);
+  //  // Some Java implementations already specify the XTC generic directly: Arylong
+  //  if( !_jparms || _nTypeParms==0 ) return sb;
+  //  // Print Array<void> as Array
+  //  if( this==XCons.ARRAY ) return sb;
+  //  // Printing generic type parameters
+  //  sb.p("<");
+  //  for( int i=0; i<_nTypeParms; i++ )
+  //    sb.p("$").p(_flds[i]).p(",");
+  //  return sb.unchar().p(">");
+  //}
 
   private SB strTuple( SB sb ) {
     sb.p("Tuple").p(_xts.length).p("$");

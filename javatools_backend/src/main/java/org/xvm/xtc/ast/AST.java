@@ -18,6 +18,7 @@ public abstract class AST {
 
   @Override public String toString() { return jcode(new SB() ).toString(); }
 
+
   // Use the _par parent to find nearest enclosing Block for tmps
   BlockAST enclosing_block() {
     AST ast = this;
@@ -38,7 +39,7 @@ public abstract class AST {
 
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
-
+  
   // Auto-box/unblock Int64 (vs Long)
   void autobox( int basex, XType tbox) {
     if( tbox==XCons.VOID ) return;

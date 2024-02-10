@@ -64,7 +64,7 @@ public abstract class XTC {
   // Assert is always-on runtime test
   public static void xassert( boolean cond ) {
     if( !cond )
-      throw new IllegalState();
+      throw new IllegalState("");
   }
   public static void xassert( boolean cond, String msg ) {
     if( !cond )
@@ -112,15 +112,23 @@ public abstract class XTC {
       So I am Once Again, asking for a language change: make the XTC assert
       throw e.g. AssertionError instead of IllegalStateException.
   */
+
+  public static class Exception extends RuntimeException {
+    Exception(String msg) {super(msg); }
+    public static Exception construct(String s) { return new Exception(s); }
+  }
+  
+
   // XTC IllegalState mapped to Java
-  public static class IllegalState extends RuntimeException {
-    IllegalState() { }
+  public static class IllegalState extends Exception {
     IllegalState(String msg) {super(msg); }
+    public static IllegalState construct(String s) { return new IllegalState(s); }
   }
 
   // XTC IllegalArgument mapped to Java
-  public static class IllegalArgument extends IllegalArgumentException {
+  public static class IllegalArgument extends Exception {
     public IllegalArgument(String s) { super(s); }
+    public static IllegalArgument construct(String s) { return new IllegalArgument(s); }
   }
 
   // XTC ReadOnlyException mapped to Java
