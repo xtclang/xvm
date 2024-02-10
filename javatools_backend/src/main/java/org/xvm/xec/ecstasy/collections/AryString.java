@@ -35,6 +35,8 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.apply(i);
   }
+
+  public static AryString construct() { return new AryString(); }
   
   // Add an element, doubling base array as needed
   public AryString add( org.xvm.xec.ecstasy.text.String s ) { return add(s._i); }

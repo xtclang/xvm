@@ -136,7 +136,7 @@ public class ClzBuilder {
 
     _sb.ip("public ");
     if( !_is_top ) _sb.p("static ");
-    _tclz.clz_def(_sb.p(jpart)).p(" ");
+    _tclz.clz_generic(_sb.p(jpart),true,true).p(" ");
 
     // ... extends Const/XTC/etc
     if( _clz._super != null ) _sb.p("extends ").p(_clz._super._name);
@@ -154,7 +154,7 @@ public class ClzBuilder {
       for( Contrib c : _clz._contribs )
         if( c._comp==Part.Composition.Implements ) {
           XClz iclz = c._tContrib instanceof ParamTCon ptc ? XClz.make(ptc) : XClz.make(((TermTCon)c._tContrib).clz());
-          iclz.clz_val(_sb.p((once++ == 0) ? (_clz._tclz._iface ? " extends " : " implements ") : ", "));
+          iclz.clz_generic(_sb.p((once++ == 0) ? (_clz._tclz._iface ? " extends " : " implements ") : ", "),true,false);
           add_import(iclz);
         }
     }
@@ -195,28 +195,50 @@ public class ClzBuilder {
         // Interfaces in XTC can require a constructor with a particular signature.
         // Interfaces in Java can NOT - so just do not emit the signature.
         !is_iface ) {
-      // For all constructors
-      for( MethodPart construct = (MethodPart)mm.child(mm._name); construct != null; construct = construct._sibling ) {
+      // Empty constructor is specified, must be added now - BECAUSE I already
+      // added another constructor, so I do not get the default Java empty
+      // constructor "for free"
+
+      // This is an "empty" constructor: it takes required explicit type
+      // parameters but does no other work.
+      _sb.ifmt("public %0( ",java_class_name);
+      for( int i=0; i<_tclz.nTypeParms(); i++ )
+        _sb.fmt("$%0 %0,",_tclz._flds[i]);
+      _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
+      _sb.ip("super((Never)null);").nl();
+      for( int i=0; i<_tclz.nTypeParms(); i++ )
+        _sb.ifmt("this.%0 = %0;\n",_tclz._flds[i]);
+      _sb.di().ip("}\n");
+      
+      // For all other constructors
+      for( MethodPart meth = (MethodPart)mm.child(mm._name); meth != null; meth = meth._sibling ) {
+        // To support XTC 'construct' I need a layer of indirection.  The Java
+        // moral equivalent is calling 'this' in a constructor, but XTC allows
+        // calling 'this' anywhere.
+        
+        // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args); }"
         _sb.nl();
-        // Skip common empty constructor
-        if( construct.is_empty_function() ) {
-          // Empty constructor is specified, must be added now - BECAUSE I
-          // already added another constructor, so I do not get the default
-          // Java empty constructor "for free"
+        keywords(meth,false);
+        _tclz.clz_generic(_sb,false,true);
+        _sb.fmt("%0 construct( ",java_class_name); // Return type
+        for( int i=0; i<_tclz.nTypeParms(); i++ )
+          _sb.fmt("$%0 %0,",_tclz._flds[i]);
+        _sb.unchar();
+        args(meth,false);
+        _sb.p(") { return new ").p(java_class_name).p("( ");
+        for( int i=0; i<_tclz.nTypeParms(); i++ )
+          _sb.fmt("%0,",_tclz._flds[i]);
+        _sb.unchar().p(").$construct(");
+        arg_names(meth);
+        _sb.p("); }").nl();
 
-          // If the class has type parameters, we need to pass them in now.
-          _sb.ifmt("public %0( ",java_class_name);
-          for( int i=0; i<_tclz.nTypeParms(); i++ )
-            _sb.fmt("$%0 %0,",_tclz._flds[i]);
-          _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
-          _sb.ip("super((Never)null);").nl();
-          for( int i=0; i<_tclz.nTypeParms(); i++ )
-            _sb.ifmt("this.%0 = %0;\n",_tclz._flds[i]);
-          _sb.di().ip("}\n");
+        // "private Foo $construct(args) { ..."
+        _sb.ip("private ").p(java_class_name).p(" ");
+        // Common empty constructor
+        if( meth.is_empty_function() ) {
+          _sb.p("$construct(){ return this; }").nl();
         } else {
-
-          keywords(construct,true);
-          jmethod_body(construct,java_class_name,true);
+          jmethod_body(meth,"$construct",true);
         }
       }
     }
@@ -345,9 +367,44 @@ public class ClzBuilder {
     m._xrets = XType.xtypes(m._rets);
   }
 
+  // Argument with types "( int arg0, String arg1, ... )"
+  private void args(MethodPart m, boolean define_args) {
+    // Argument list
+    if( m._xargs!=null ) {
+      for( int i = 0; i < m._xargs.length; i++ ) {
+        // Unbox boxed args
+        m._xargs[i] = m._xargs[i].unbox();
+        // Parameter class, using local generic parameters
+        Parameter p = m._args[i];
+        if( p.tcon() instanceof TermTCon ttc && ttc.id() instanceof FormalCon )
+          _sb.p("$").p(ttc.name());
+        else if( p._special )
+          _sb.p("$").p(p._name);
+        else 
+          m._xargs[i].clz(_sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
+
+        // Parameter name, and define it in scope
+        _sb.p(' ').p(p._name).p(", ");
+        if( define_args )
+          define(p._name,m._xargs[i]);
+      }
+      _sb.unchar(2);
+    }
+  }
+  
+  // Argument names "arg0, arg1, ..."
+  private void arg_names(MethodPart m) {
+    if( m._args!=null ) {
+      for( Parameter p : m._args )
+        _sb.p(p._name).p(", ");
+      _sb.unchar(2);
+    }
+  }
+
   
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
+  // "public static <G extends Generic> Ary<G> " ... jmethod_body()
   public void jmethod( MethodPart m, String mname ) {
     assert _locals.isEmpty();   // No locals mapped yet
 
@@ -388,29 +445,12 @@ public class ClzBuilder {
   //
   // ...method_name( int arg0, String arg1, ...) {
   //   ...indented_body
-  //   }
+  // }
   public void jmethod_body( MethodPart m, String mname, boolean constructor ) {
-    // Argument list
+    // Argument list:
+    // ... method_name( int arg0, String, arg1, ... ) {
     _sb.p(mname).p("( ");
-    if( m._xargs!=null ) {
-      for( int i = 0; i < m._xargs.length; i++ ) {
-        // Unbox boxed args
-        m._xargs[i] = m._xargs[i].unbox();
-        // Parameter class, using local generic parameters
-        Parameter p = m._args[i];
-        if( p.tcon() instanceof TermTCon ttc && ttc.id() instanceof FormalCon )
-          _sb.p("$").p(ttc.name());
-        else if( p._special )
-          _sb.p("$").p(p._name);
-        else 
-          m._xargs[i].clz(_sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
-
-        // Parameter name, and define it in scope
-        _sb.p(' ').p(p._name).p(", ");
-        define(p._name,m._xargs[i]);
-      }
-      _sb.unchar(2);
-    }
+    args(m,true);
     _sb.p(" ) ");
 
     // Abstract method, no body
@@ -423,10 +463,14 @@ public class ClzBuilder {
       // If a constructor, move the super-call up front
       if( constructor && _clz._super!=null && ast instanceof MultiAST multi )
         do_super(multi);
-      // Wrap in required "{}"
-      if( !(ast instanceof BlockAST) )
-        ast = new BlockAST(ast);
-      ast.jcode(_sb);
+      // Wrap in required "{}" block
+      BlockAST blk = ast instanceof BlockAST blk0 ? blk0 : new BlockAST(ast);
+      // This is a XTC constructor, which in Java is implemented as a factory
+      // method - which has the normal no-arg Java constructor already called -
+      // but now the XTC constructor method needs to end in a Java return.
+      if( constructor )
+        blk = blk.add(new ReturnAST(null,m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
+      blk.jcode(_sb);
       _sb.nl();
     }
 
@@ -454,16 +498,16 @@ public class ClzBuilder {
       }
   }
 
+  // Constructors call other constructors via factory method $constructor,
+  // skipping the allocation step.
   private void do_super( MultiAST ast ) {
     for( int i=0; i<ast._kids.length; i++ ) {
       AST kid = ast._kids[i];
       if( kid instanceof CallAST call &&
           call._kids[0] instanceof ConAST con &&
           ((MethodCon)con._tcon).name().equals("construct") ) {
-        // Move ith kid to the front; rename as "super"
-        System.arraycopy(ast._kids,0,ast._kids,1,i);
-        ast._kids[0] = kid;
-        con._con = "super";
+        kid._kids[0] = new RegAST(-13,"super",_tclz._super);
+        ast._kids[i] = new InvokeAST("$construct",new XType[]{XCons.VOID},kid._kids);
         return;
       }
     }

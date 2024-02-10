@@ -32,6 +32,9 @@ public class Int64 extends IntNumber {
   public Int64(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
   public Int64( long i ) { _i = i; }
 
+  public static Int64 construct( String s ) { return new Int64(s); }
+  public static Int64 construct( long i ) { return new Int64(i); }
+  
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
 
   // All the XTC types here are guaranteed to be Int64

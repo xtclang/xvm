@@ -77,7 +77,7 @@ class NewAST extends AST {
   }
   
   
-  @Override void jpre ( SB sb ) { _type.clz(sb.p("new ")).p("("); }
+  @Override void jpre ( SB sb ) { sb.p(((XClz)_type).clz_bare()).p(".construct("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) {    
     if( _kids!=null )  sb.unchar(2);

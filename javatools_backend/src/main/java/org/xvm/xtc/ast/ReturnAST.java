@@ -17,9 +17,9 @@ public class ReturnAST extends AST {
     String ztype=null;
     if( X._expr==null && X._meth.is_cond_ret() )
       ztype = X._meth._xrets[1].ztype();
-    return new ReturnAST(X.kids(n), ztype, X._meth, X._expr);
+    return new ReturnAST(ztype, X._meth, X._expr, X.kids(n) );
   }
-  ReturnAST( AST[] kids, String ztype, MethodPart meth, ExprAST expr) {
+  public ReturnAST( String ztype, MethodPart meth, ExprAST expr, AST... kids) {
     super(kids);
     _ztype= ztype;
     _meth = meth;
