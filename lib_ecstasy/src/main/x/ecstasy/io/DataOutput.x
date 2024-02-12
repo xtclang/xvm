@@ -51,7 +51,7 @@ interface DataOutput
      * @param value  a value of type Int8 to write to the stream
      */
     void writeInt8(Int8 value) {
-        writeByte(value.toByteArray()[0]);  // TODO CP sliceByte
+        writeByte(value.toByte());
     }
 
     /**
@@ -289,7 +289,7 @@ interface DataOutput
             writeByte(3);
         } else if (value.rules.size > 0) {
             writeByte(2);
-            writeString(value.name ?: assert);      // TODO
+            writeString(value.name ?: throw new IllegalState("missing TimeZone name"));
         } else {
             writeByte(1);
             writeInt64(value.picos);
@@ -331,17 +331,18 @@ interface DataOutput
      */
     static Int packedIntLength(Int n) {
         // test for Tiny
-        if (-64 <= n <= 63) {
+        if (-64 <= n <= 127) {
             return 1;
         }
 
-        // test for Small and Medium
-        Int128 m        = n.toInt128();
-        UInt16 bitCount = 129 - UInt16.maxOf(m, ~m).leadingZeroCount.toUInt16();
-        if (1 << bitCount & 0x3E3E00 != 0) {            // test against bits 9-13 and 17-21
-            return bitCount <= 13 ? 2 : 3;
-        }
+        // test for medium (2-byte format)
+        Int bitCount = 65 - Int.maxOf(n, ~n).leadingZeroCount;
+        if (bitCount <= 13)
+            {
+            return 2;
+            }
 
+        // calculate the large format size
         return 1 + (bitCount + 7 >>> 3);
     }
 
@@ -354,111 +355,98 @@ interface DataOutput
      * @return the number of bytes required to write the value as a packed value
      */
     static Int packedIntNLength(IntN n) {
-        return Int.MinValue <= n <= Int.MaxValue
-                ? packedIntLength(n.toInt64())
-                : 1 + n.toByteArray().size;
+        if (Int.MinValue <= n <= Int.MaxValue) {
+            return packedIntLength(n.toInt64());
+        }
+
+        Int byteCount = n.toByteArray().size;
+        return byteCount <= 32
+                ? 1 + byteCount
+                : 1 + packedIntLength(byteCount) + byteCount;
     }
 
     /**
-     * Write an integer to the passed stream, encoding it using the packed integer format.
+     * Write an integer to the passed stream, encoding it using the packed integer format. The format (XVM Integer
+     * Packing, or "XIP") uses a variable length compression scheme. It defines four internal formats for XIP'd
+     * integers:
      *
-     * The packed integer format represents a signed, 2's-complement integer of 1-512 bits (1-64
-     * bytes) in size. There are four storage formats:
+     * * **Small**: For a value in the range `-64..127`, the value is encoded as the least significant byte of the
+     *   integer, as is. When reading in a packed integer, if the leftmost bits of the first byte are **not** `10`,
+     *   then the XIP'd integer is in small format, and simply requires sign extension of the first byte to the desired
+     *   integer size in order to form the integer value.
      *
-     * * **Tiny**: For a value in the range -64..63 (7 bits), the value can be encoded in one byte.
-     *   The least significant 7 bits of the value are shifted left by 1 bit, and the 0x1 bit is set
-     *   to 1. When reading a packed integer, if bit 0x1 of the first byte is 1, then it's Tiny.
+     * * **Medium**: For a value in the range `-4096..4095` (13 bits), the value is encoded in two bytes. The first
+     *   byte contains the binary value `100` in the most significant 3 bits, indicating the medium format. The 2's
+     *   complement integer value is formed from the least significant 5 bits of the first byte, sign extended to the
+     *   desired integer size and then left-shifted 8 bits, or'd with the bits of the second byte.
      *
-     * * **Small**: For a value in the range -4096..4095 (13 bits), the value can be encoded in two
-     *   bytes. The first byte contains the value 0x2 (010) in the least significant 3 bits, and
-     *   bits 8-12 of the integer in bits 3-7; the second byte contains bits 0-7 of the integer.
+     * * **Large**: For any 2's complement integer value from `2..32` bytes (in the range `-(2^255)..2^255-1`),
+     *   let `b` be that number of bytes, with the XIP'd value encoded in `1+b` bytes. The first byte contains the
+     *   binary value `101` in the most significant 3 bits, and the remaining 5 bits are the unsigned value `b-1`,
+     *   indicating the large format. (Note: Since `b` is at least `2`, the value `b-1` is always non-zero.)
+     *   The following `b` bytes hold the 2's complement integer value.
      *
-     * * **Medium**: For a value in the range -1048576..1048575 (21 bits), the value can be encoded
-     *   in three bytes. The first byte contains the value 0x6 (110) in the least significant 3
-     *   bits, and bits 16-20 of the integer in bits 3-7; the second byte contains bits 8-15 of the
-     *   integer; the third byte contains bits 0-7 of the integer.
+     * * **Huge**: For any integer value `n` larger than 32 bytes, let `b` be that number of bytes. The first
+     *   byte of the XIP'd integer is `0xA0`, which indicates the huge format. The following bytes contain the value
+     *   `b`, encoded as a XIP'd integer. The following `b` bytes hold the 2's complement integer value `n`.
      *
-     * * **Large**: For a value in the range -(2^511)..2^511-1 (up to 512 bits), a value with `s`
-     *   significant bits can be encoded in no less than `1+max(1,(s+7)/8)` bytes; let `b` be
-     *   the selected encoding length, in bytes. The first byte contains the value 0x0 in the least
-     *   significant 2 bits (00), and the least 6 significant bits of `(b-2)` in bits 2-7. The
-     *   following `(b-1)` bytes contain the least significant `(b-1)*8` bits of the integer.
-     *
-     * To maximize density and minimize pipeline stalls, this implementation uses the smallest
-     * possible encoding for each value. Since an 8 significant-bit value can be encoded in two
-     * bytes using either a Small or Large encoding, we choose Large to eliminate the potential for
-     * a (conditional-induced) pipeline stall. Since a 14..16 significant-bit value can be encoded
-     * in three bytes using either a Medium or Large encoding, we choose Large for the same reason.
-     *
-     *     significant bits  encoding
-     *     ----------------  --------
-     *           <= 7        Tiny
-     *            8          Large
-     *           9-13        Small
-     *          14-16        Large
-     *          17-21        Medium
-     *          >= 22        Large
+     * The algorithm here uses the smallest possible encoding for each value.
      *
      * @param out  the DataOutput stream to write to
      * @param n    the Int value to write to the stream
      */
-    static void writePackedInt(DataOutput out, Int n) {
-        // test for Tiny
-        if (-64 <= n <= 63) {
-            out.writeByte((n << 1 | 0x01).toByte());
+    static void writePackedInt(BinaryOutput out, Int n) {
+        // test for small format
+        if (-64 <= n <= 127) {
+            out.writeByte(n.toByte());
             return;
         }
 
-        // test for Small and Medium
-        Int128 n128     = n.toInt128();
-        Int    bitCount = 129 - Int128.maxOf(n128, ~n128).leadingZeroCount;
-        if (1 << bitCount & 0x3E3E00 != 0) {              // test against bits 9-13 and 17-21
-            Int32 n32 = n128.toInt32();
-            if (bitCount <= 13) {
-                n32 = 0b010_00000000                      // 0x2 marker at 0..2 in byte #1
-                        | (n32 & 0x1F00 << 3)             // bits 8..12 at 3..7 in byte #1
-                        | (n32 & 0x00FF);                 // bits 0..7  at 0..7 in byte #2
-                out.writeBytes(n32.toByteArray(), 2, 2);
-            } else {
-                n32 = 0b110_00000000_00000000             // 0x6 marker  at 0..2 in byte #1
-                        | (n32 & 0x1F0000 << 3)           // bits 16..20 at 3..7 in byte #1
-                        | (n32 & 0x00FFFF);               // bits 8..15  at 0..7 in byte #2
-                                                          // bits 0..7   at 0..7 in byte #3
-                out.writeBytes(n32.toByteArray(), 1, 3);
-            }
+        // test for medium format
+        Int bitCount = 65 - Int.maxOf(n, ~n).leadingZeroCount;
+        if (bitCount <= 13) {
+            out.writeByte((n >>> 8 & 0x1F | 0x80).toByte());
+            out.writeByte(n.toByte());
             return;
         }
 
+        // large format
         Int byteCount = bitCount + 7 >> 3;
-        out.writeByte((byteCount - 1 << 2).toByte());
-        out.writeBytes(n128.toByteArray(), 16 - byteCount, byteCount);
+        assert 2 <= byteCount <= 8;
+        out.writeByte((0xA0 | byteCount - 1).toByte());
+        out.writeBytes(n.toByteArray(), 8-byteCount, byteCount);
     }
 
     /**
      * Write an integer to the passed stream, encoding it using the packed integer format.
      *
-     * The packed integer format represents a signed, 2's-complement integer of 1-512 bytes in size.
-     * See the notes on `writePackedInt()`.
+     * The packed integer format represents a signed, 2's-complement integer of any size.
+     *
+     * @see writePackedInt
      *
      * @param out  the DataOutput stream to write to
      * @param n    the IntN value to write to the stream
      */
-    static void writePackedIntN(DataOutput out, IntN n) {
+    static void writePackedIntN(BinaryOutput out, IntN n) {
         if (Int.MinValue <= n <= Int.MaxValue) {
+            // small/medium/large formats (up to 64-bit values)
             writePackedInt(out, n.toInt64());
+            return;
         }
 
         Byte[] bytes     = n.toByteArray();
-        Int    byteCount = bytes.size;
-        if (byteCount >= 64) {
-            // huge format
-            out.writeByte(0b111111_00);
-            writePackedInt(out, byteCount);
-        } else {
+        Int    byteSize  = bytes.size;
+        Int    bitCount  = byteSize * 8 + 1 - IntN.maxOf(n, ~n).leadingZeroCount;
+        Int    byteCount = bitCount + 7 >> 3;
+        if (byteCount <= 32) {
             // large format
-            out.writeByte((byteCount-1).toByte() << 2);
+            out.writeByte((0xA0 | byteCount - 1).toByte());
+        } else {
+            // huge format
+            out.writeByte(0xA0);
+            writePackedInt(out, byteCount);
         }
-        out.writeBytes(bytes);
+        out.writeBytes(bytes, byteSize-byteCount, byteCount);
     }
 
     /**

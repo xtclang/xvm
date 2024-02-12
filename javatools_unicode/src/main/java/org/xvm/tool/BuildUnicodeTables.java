@@ -40,6 +40,7 @@ import static java.util.Objects.requireNonNullElseGet;
 public class BuildUnicodeTables {
     public static final boolean TEST = false;
 
+    private static final String UCD_ALL_FLAT_ZIP = "ucd.all.flat.zip";
     private static final String UCD_ALL_FLAT_XML = "ucd.all.flat.xml";
     private static final File OUTPUT_DIR = new File("./build/resources/unicode/");
 
@@ -184,12 +185,12 @@ public class BuildUnicodeTables {
     }
 
     private ZipFile getZipFile() throws IOException {
-        final var file = requireNonNullElseGet(resolveArgumentAsFile(), () -> new File(UCD_ALL_FLAT_XML));
+        final var file = requireNonNullElseGet(resolveArgumentAsFile(), () -> new File(UCD_ALL_FLAT_ZIP));
         if (!(file.exists() && file.isFile() && file.canRead())) {
             final ClassLoader loader = requireNonNullElseGet(BuildUnicodeTables.class.getClassLoader(), ClassLoader::getSystemClassLoader);
-            final var resource = loader.getResource(UCD_ALL_FLAT_XML);
+            final var resource = loader.getResource(UCD_ALL_FLAT_ZIP);
             if (resource == null) {
-                throw new IOException("Cannot find resources for unicode file: " + UCD_ALL_FLAT_XML);
+                throw new IOException("Cannot find resources for unicode file: " + UCD_ALL_FLAT_ZIP);
             }
             return new ZipFile(resource.getFile());
         }

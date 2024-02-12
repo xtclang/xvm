@@ -61,7 +61,7 @@ module TestIO {
         loop: while (!in.eof) {
             Byte b = in.readByte();
             if (loop.count <= 12 || in.remaining <= 2) {
-                console.print($"[{loop.count}] '{b.toChar()}' ({b})");
+                console.print($"[{loop.count}] {b.toChar().quoted()} ({b})");
             } else if (!dotdot) {
                 console.print("...");
                 dotdot = True;
@@ -126,7 +126,7 @@ module TestIO {
         TextPosition pos    = in.position;
         loop: while (Char ch := in.next()) {
             if (loop.count <= 20 || inRaw.remaining <= 10) {
-                console.print($"[{loop.count}] '{ch}' {pos}");
+                console.print($"[{loop.count}] {ch.quoted()} {pos}");
             } else if (!dotdot) {
                 console.print("...");
                 dotdot = True;

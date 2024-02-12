@@ -557,10 +557,10 @@ public class Disassembler
             {
             super();
 
-            addOption("L" ,     null,        Form.Repo, true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption(null,     "files",     Form.Name, false, "List all files embedded in the module");
+            addOption("L" ,     null,      Form.Repo, true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
+            addOption(null,     "files",    Form.Name, false, "List all files embedded in the module");
             addOption(null,     "findfile",  Form.File, false, "File to search for in the module");
-            addOption(Trailing, null,        Form.File, false, "Module file name (.xtc) to disassemble");
+            addOption(Trailing, null,      Form.File, false, "Module file name (.xtc) to disassemble");
             }
 
         /**

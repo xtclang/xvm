@@ -35,18 +35,18 @@ public class PackedIntegerTest
     public void testWritePackedLong()
             throws IOException
         {
-        // tiny
-        for (int i = -64; i <= 63; ++i)
+        // small
+        for (int i = -64; i <= 127; ++i)
             {
             StringBuilder sb = new StringBuilder();
             writeLong(dos(sb), i);
             assertEquals(2, sb.length(), "i=" + i);
             }
 
-        // small (or large+1)
+        // medium
         for (int i = -4096; i <= 4095; ++i)
             {
-            if (i < -64 || i > 63)
+            if (i < -64 || i > 127)
                 {
                 StringBuilder sb = new StringBuilder();
                 writeLong(dos(sb), i);
@@ -54,14 +54,25 @@ public class PackedIntegerTest
                 }
             }
 
-        // medium (or large+2)
-        for (int i = -1048576; i <= 1048575; ++i)
+        // large 2-byte
+        for (int i = -32768; i <= 32767; ++i)
             {
             if (i < -4096 || i > 4095)
                 {
                 StringBuilder sb = new StringBuilder();
                 writeLong(dos(sb), i);
                 assertEquals(6, sb.length(), "i=" + i);
+                }
+            }
+
+        // large 3-byte
+        for (int i = -1048576; i <= 1048575; ++i)
+            {
+            if (i < -32768 || i > 32767)
+                {
+                StringBuilder sb = new StringBuilder();
+                writeLong(dos(sb), i);
+                assertEquals(8, sb.length(), "i=" + i);
                 }
             }
         }
