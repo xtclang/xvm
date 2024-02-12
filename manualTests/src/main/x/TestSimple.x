@@ -1,10 +1,14 @@
 module TestSimple {
     @Inject Console console;
-
-    package json import json.xtclang.org;
+    @Inject Timer timer;
 
     void run() {
-        console.print(json.Schema.DEFAULT); // this used to NPE at runtime
+        doMaintenance();
+    }
+
+    protected void doMaintenance() {
+        // that used to "stack overflow" and leak a Fiber object per cycle
+        timer.schedule(Duration.Millisec, &doMaintenance);
     }
 }
 

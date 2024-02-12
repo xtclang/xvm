@@ -450,7 +450,7 @@ public class xNanosTimer
                 ServiceContext context = f_refCallback.get();
                 if (context != null)
                     {
-                    WeakCallback.Callback callback = f_refCallback.getCallback();
+                    WeakCallback.Callback callback = f_refCallback.extractCallback();
                     context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
                     context.unregisterNotification();
                     }

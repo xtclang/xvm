@@ -2167,7 +2167,7 @@ public final class DebugConsole
                     if (frame == null)
                         {
                         // fiber is in the "initial" state; show the caller's frame
-                        Fiber fiberCaller = fiber.f_fiberCaller;
+                        Fiber fiberCaller = fiber.getCaller();
                         if (fiberCaller != null)
                             {
                             frame = fiberCaller.getFrame();

@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.lang.ref.WeakReference;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +24,7 @@ import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
-import org.xvm.runtime.template._native.temporal.xNanosTimer;
+import static org.xvm.runtime.template._native.temporal.xNanosTimer.millisFromTimeout;
 
 
 /**
@@ -40,21 +42,19 @@ public class Fiber
     {
     public Fiber(ServiceContext context, Message msgCall)
         {
-        f_lId = s_counter.getAndIncrement();
-
-        f_context = context;
-
-        Fiber fiberCaller = f_fiberCaller = msgCall.f_fiberCaller;
-
+        f_lId       = s_counter.getAndIncrement();
+        f_context   = context;
         f_iCallerId = msgCall.f_iCallerId;
         f_fnCaller  = msgCall.f_fnCaller;
         m_status    = FiberStatus.Initial;
 
-        if (fiberCaller == null || fiberCaller.getStatus() == FiberStatus.Terminating)
+        Fiber fiberCaller = msgCall.f_fiberCaller;
+        if (fiberCaller == null)
             {
             // an independent or asynchronous (e.g. created by "callLater") fiber is only limited
             // by the timeout of the parent service and in general has no timeout
-            f_nDepth = 0;
+            f_nDepth    = 0;
+            f_refCaller = null;
             }
         else
             {
@@ -69,14 +69,23 @@ public class Fiber
             else
                 {
                 // inherit the caller's service timeout
-                long cTimeoutMillis = xNanosTimer.millisFromTimeout(context.getTimeoutHandle());
+                long cTimeoutMillis = millisFromTimeout(context.getTimeoutHandle());
                 if (cTimeoutMillis > 0)
                     {
                     m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
                     }
                 }
-            f_nDepth = fiberCaller.f_nDepth + 1;
+            f_nDepth    = msgCall.getCallDepth() + 1;
+            f_refCaller = new WeakReference<>(fiberCaller);
             }
+        }
+
+    /**
+     * @retutn the caller's fiber
+     */
+    protected Fiber getCaller()
+        {
+        return f_refCaller == null ? null : f_refCaller.get();
         }
 
     /**
@@ -94,7 +103,7 @@ public class Fiber
         {
         assert hTimeout != null;
 
-        long cDelayMillis = xNanosTimer.millisFromTimeout(hTimeout);
+        long cDelayMillis = millisFromTimeout(hTimeout);
 
         m_hTimeout   = hTimeout;
         m_ldtTimeout = cDelayMillis <= 0 ? 0 : System.currentTimeMillis() + cDelayMillis;
@@ -119,8 +128,9 @@ public class Fiber
             return false;
             }
 
+        Fiber fiberCaller = getCaller();
         return f_context == fiberOrig.f_context ||
-               f_fiberCaller != null && f_fiberCaller.isContinuationOf(fiberOrig);
+               fiberCaller != null && fiberCaller.isContinuationOf(fiberOrig);
         }
 
     /**
@@ -133,10 +143,10 @@ public class Fiber
             return this == that;
             }
 
-        Fiber fiberCaller = this.f_fiberCaller;
+        Fiber fiberCaller = this.getCaller();
         if (fiberCaller == null)
             {
-            fiberCaller = that.f_fiberCaller;
+            fiberCaller = that.getCaller();
             return fiberCaller != null && this.isAssociated(fiberCaller);
             }
 
@@ -244,7 +254,7 @@ public class Fiber
      */
     public Fiber traceCaller()
         {
-        Fiber fiberCaller = f_fiberCaller;
+        Fiber fiberCaller = getCaller();
 
         if (fiberCaller != null &&
             fiberCaller.f_context.f_container != f_context.f_container)
@@ -260,14 +270,8 @@ public class Fiber
      */
     public Container getCallingContainer()
         {
-        try
-            {
-            return f_fiberCaller.f_context.f_container;
-            }
-        catch (NullPointerException e)
-            {
-            return null;
-            }
+        Fiber fiberCaller = getCaller();
+        return fiberCaller == null ? null : fiberCaller.f_context.f_container;
         }
     /**
      * Check whether we can proceed with the frame execution.
@@ -639,9 +643,9 @@ public class Fiber
     final ServiceContext f_context;
 
     /**
-     * The caller's fiber (null for original).
+     * A weak reference to the  caller's fiber (null for "inception" fibers).
      */
-    final Fiber f_fiberCaller;
+    final WeakReference<Fiber> f_refCaller;
 
     /*
      * The caller's frame id (used for stack trace only).
