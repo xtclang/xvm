@@ -51,7 +51,7 @@ interface DataOutput
      * @param value  a value of type Int8 to write to the stream
      */
     void writeInt8(Int8 value) {
-        writeByte(value.toByteArray()[0]);  // TODO CP sliceByte
+        writeByte(value.toByte());
     }
 
     /**
@@ -289,7 +289,7 @@ interface DataOutput
             writeByte(3);
         } else if (value.rules.size > 0) {
             writeByte(2);
-            writeString(value.name ?: assert);      // TODO
+            writeString(value.name ?: throw new IllegalState("missing TimeZone name"));
         } else {
             writeByte(1);
             writeInt64(value.picos);
@@ -343,10 +343,7 @@ interface DataOutput
             }
 
         // calculate the large format size
-        // TODO return 1 + (cBits + 7 >>> 3);
-        Int byteCount = bitCount + 7 >>> 3;
-        assert 2 <= byteCount <= 8;
-        return 1 + byteCount;
+        return 1 + (bitCount + 7 >>> 3);
     }
 
     /**
@@ -398,7 +395,7 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param n    the Int value to write to the stream
      */
-    static void writePackedInt(DataOutput out, Int n) {     // TODO CP why not BinaryOutput?!?!?!?!?!?!?!??!
+    static void writePackedInt(BinaryOutput out, Int n) {
         // test for small format
         if (-64 <= n <= 127) {
             out.writeByte(n.toByte());
@@ -430,7 +427,7 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param n    the IntN value to write to the stream
      */
-    static void writePackedIntN(DataOutput out, IntN n) {
+    static void writePackedIntN(BinaryOutput out, IntN n) {
         if (Int.MinValue <= n <= Int.MaxValue) {
             // small/medium/large formats (up to 64-bit values)
             writePackedInt(out, n.toInt64());
