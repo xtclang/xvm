@@ -28,12 +28,12 @@ public class WeakCallback
     /**
      * @return the underlying function; never null
      */
-    public Callback getCallback()
+    public Callback extractCallback()
         {
         ServiceContext context = get();
         if (context != null)
             {
-            Callback callback = context.getCallbackMap().get(f_lCallbackId);
+            Callback callback = context.getCallbackMap().remove(f_lCallbackId);
             if (callback != null)
                 {
                 return callback;

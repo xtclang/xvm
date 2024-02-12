@@ -1762,6 +1762,14 @@ public class ServiceContext
                 }
             }
 
+        /**
+         * @return the caller's stack depth
+         */
+        abstract public int getCallDepth();
+
+        /**
+         * Create a new frame based on this message at the specified service
+         */
         abstract Frame createFrame(ServiceContext context);
         }
 
@@ -1782,8 +1790,9 @@ public class ServiceContext
          * The CompletableFuture associates with this request.
          */
         public final CompletableFuture f_future;
+
         /**
-         * The Fiber this request runs on.
+         * The Fiber this request runs on (assigned by {@link #createFrame}).
          */
         public Fiber m_fiber;
 
@@ -1869,6 +1878,13 @@ public class ServiceContext
             f_op          = op;
             f_cReturns    = cReturns;
             f_supplierRet = supplierRet;
+            f_nDepth      = frameCaller.f_nDepth;
+            }
+
+        @Override
+        public int getCallDepth()
+            {
+            return f_nDepth;
             }
 
         @Override
@@ -2020,6 +2036,7 @@ public class ServiceContext
         private final Op                       f_op;
         private final int                      f_cReturns;
         private final Supplier<TypeConstant[]> f_supplierRet;
+        private final int                      f_nDepth;
         }
 
     /**
@@ -2042,6 +2059,12 @@ public class ServiceContext
             f_hFunction = hFunction;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
+            }
+
+        @Override
+        public int getCallDepth()
+            {
+            return 0;
             }
 
         @Override

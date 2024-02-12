@@ -230,7 +230,7 @@ public class FiberQueue
                 return false;
 
             case Synchronized:
-                Fiber fiberCaller = fiber.f_fiberCaller;
+                Fiber fiberCaller = fiber.getCaller();
                 return fiberCaller != null &&
                         fiberCaller.isContinuationOf(f_context.getSynchronizationOwner());
 
@@ -258,7 +258,7 @@ public class FiberQueue
         {
         Frame[] aFrame      = m_aFrame;
         int     cFrames     = aFrame.length;
-        Fiber   fiberCaller = fiberCandidate.f_fiberCaller;
+        Fiber   fiberCaller = fiberCandidate.getCaller();
 
         for (int i = 0; i < cFrames; i++)
             {
