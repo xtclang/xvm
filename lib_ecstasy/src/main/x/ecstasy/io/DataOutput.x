@@ -398,7 +398,7 @@ interface DataOutput
      * @param out  the DataOutput stream to write to
      * @param n    the Int value to write to the stream
      */
-    static void writePackedInt(DataOutput out, Int n) {
+    static void writePackedInt(DataOutput out, Int n) {     // TODO CP why not BinaryOutput?!?!?!?!?!?!?!??!
         // test for small format
         if (-64 <= n <= 127) {
             out.writeByte(n.toByte());
@@ -434,6 +434,7 @@ interface DataOutput
         if (Int.MinValue <= n <= Int.MaxValue) {
             // small/medium/large formats (up to 64-bit values)
             writePackedInt(out, n.toInt64());
+            return;
         }
 
         Byte[] bytes     = n.toByteArray();
@@ -442,7 +443,7 @@ interface DataOutput
         Int    byteCount = bitCount + 7 >> 3;
         if (byteCount <= 32) {
             // large format
-            Int header = 0xA0 | byteCount - 1;
+            out.writeByte((0xA0 | byteCount - 1).toByte());
         } else {
             // huge format
             out.writeByte(0xA0);
