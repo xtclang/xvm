@@ -61,7 +61,7 @@ module TestCrypto {
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
 
         assert CryptoPassword pwd := keystore.getPassword(pwdName);
-        console.print($"{pwd}; type={&password.actualType}");
+        console.print($"{pwd}; type={&pwd.actualType}");
 
         store.delete();
     }
