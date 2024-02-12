@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintStream;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -19,6 +18,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -209,11 +209,23 @@ public class xRTCertificateManager
                 out.close();
                 }
             process.waitFor();
-//            if (frame != null)
-//                {
-//                log(process.getInputStream(), System.out);
-//                log(process.getErrorStream(), System.err);
-//                }
+
+            if (frame != null)
+                {
+                // it's completely bonkers, but keytool issues errors to system out and
+                // info messages to system err
+                String sError = checkError(process.getInputStream(), "");
+                if (sError == null)
+                    {
+                    sError = checkError(process.getErrorStream(), "keytool error:");
+                    }
+
+                if (sError != null)
+                    {
+                    return frame.raiseException(xException.ioException(frame, sError));
+                    }
+                }
+
             return Op.R_NEXT;
             }
         catch (Exception e)
@@ -224,7 +236,12 @@ public class xRTCertificateManager
             }
         }
 
-    private void log(InputStream streamIn, PrintStream streamOut)
+    /**
+     * Check the specified input stream for an error message.
+     *
+     * @return an error message; null if there are none
+     */
+    private String checkError(InputStream streamIn, String sPrefix)
             throws IOException
         {
         BufferedReader reader = new BufferedReader(new InputStreamReader(streamIn));
@@ -232,8 +249,13 @@ public class xRTCertificateManager
         String sLine;
         while ((sLine = reader.readLine()) != null)
             {
-            streamOut.println(sLine);
+            int ofErr = sLine.indexOf(sPrefix);
+            if (ofErr >= 0)
+                {
+                return sLine.substring(ofErr + sPrefix.length());
+                }
             }
+        return null;
         }
 
 
