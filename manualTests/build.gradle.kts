@@ -187,7 +187,7 @@ xtcRun {
      * TODO: Add a nicer DSL syntax with a nested modules section.
      */
     module {
-        moduleName = "TestFizzBuzz" // Will add other ways to resolve modules too.
+        moduleName = "FizzBuzz" // Will add other ways to resolve modules too.
         showVersion = true // Overrides env showVersion flag.
         moduleArgs("Hello, ", "World!")
     }
