@@ -41,6 +41,7 @@ sourceSets {
                 "**/array.x",
                 "**/collections.x",
                 "**/defasn.x",
+                "**/EchoTest.x",
                 "**/exceptions.x",
                 "**/FizzBuzz.x",
                 "**/generics.x",
@@ -165,7 +166,7 @@ xtcRun {
     jvmArgs("-showversion")
 
     /*
-     * Execute TestFizzBuzz with the Hello World arguments. We support providers, as well
+     * Execute EchoTest with the Hello World arguments. We support providers, as well
      * as Strings, as per the common Gradle API conventions. For example, you can do
      * moduleArgs(<collection of string providers>) or moduleArg(<string provider>) for
      * lazy evaluation, too.
@@ -187,9 +188,9 @@ xtcRun {
      * TODO: Add a nicer DSL syntax with a nested modules section.
      */
     module {
-        moduleName = "FizzBuzz" // Will add other ways to resolve modules too.
+        moduleName = "EchoTest" // Will add other ways to resolve modules too.
         showVersion = true // Overrides env showVersion flag.
-        moduleArgs("Hello, ", "World!")
+        moduleArgs("Hello", "World")
     }
 }
 
