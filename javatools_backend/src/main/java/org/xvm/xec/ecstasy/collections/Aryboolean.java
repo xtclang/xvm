@@ -33,6 +33,8 @@ public class Aryboolean extends Array<Boolean> {
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.apply(i);
   }
+
+  public static Aryboolean construct(Mutability mut, Aryboolean as) { return new Aryboolean(mut,as); }
   
   // Fetch element
   public boolean at8(long idx) {

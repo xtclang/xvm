@@ -26,6 +26,6 @@ module tck.xtclang.org {
         new operations.Basic().run();
         new numbers.Decimals().run();
         new tuples.Basic().run();
-        //new services.Basic().run();
+        new services.Basic().run();
     }
 }
