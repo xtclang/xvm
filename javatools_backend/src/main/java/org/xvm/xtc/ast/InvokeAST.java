@@ -141,17 +141,17 @@ public class InvokeAST extends AST {
   }
 
 
-  @Override void jpre ( SB sb ) {
-    if( _async )
-      sb.p("if(true)throw org.xvm.XEC.TODO(\"FUTURE_TASK\");").nl().i();
-  }
-    
-  @Override void jmid ( SB sb, int i ) {
-    if( i==0 ) sb.p('.').p(_meth).p("(");
-    else sb.p(", ");
-  }
-  @Override void jpost( SB sb ) {
-    if( _kids.length>1 && _kids[1]!=null ) sb.unchar(2);
-    sb.p(")");
+  @Override public SB jcode( SB sb ) {
+    if( sb.was_nl() ) sb.i();
+    if( _async ) {
+      sb.p("/*TODO: Call should be async*/").nl().i();
+    }
+    _kids[0].jcode(sb).p(".").p(_meth).p("(");
+    boolean once=false;
+    for( int i=1; i<_kids.length; i++ )
+      if( _kids[i] != null )
+        { once=true; _kids[i].jcode(sb).p(", "); }
+    if( once ) sb.unchar(2);
+    return sb.p(")");
   }
 }
