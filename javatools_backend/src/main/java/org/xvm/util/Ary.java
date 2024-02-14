@@ -43,10 +43,9 @@ public class Ary<E> implements Iterable<E> {
     _es[_len-1] = tmp;
   }
 
-  /** @return remove and return last element */
+  /** @return remove and return last element or null */
   public E pop( ) {
-    range_check(0);
-    return _es[--_len];
+    return _len==0 ? null : _es[--_len];
   }
 
   /** Add element in amortized constant time

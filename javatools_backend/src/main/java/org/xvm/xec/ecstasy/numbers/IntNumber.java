@@ -11,6 +11,6 @@ public abstract class IntNumber extends Number {
   public IntNumber(Never n ) {}
   public IntNumber() {}
 
-  public static Int128 toInt128(long x) { throw XEC.TODO(); }
+  public static Int128 toInt128(long x) { return new Int128(x); }
   public static long estimateStringLength(long x) { throw XEC.TODO(); }
 }
