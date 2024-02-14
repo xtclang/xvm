@@ -34,7 +34,7 @@ public class CallAST extends AST {
   @Override XType _type() {
     if( _rets==null ) return XCons.VOID;
     if( _rets.length == 1 ) return _rets[0];
-    return org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES,XClz.make_tuple(_rets));
+    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XClz.make_tuple(_rets));
   }
 
   @Override AST prewrite() {

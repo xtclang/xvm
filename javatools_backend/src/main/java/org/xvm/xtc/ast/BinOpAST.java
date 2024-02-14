@@ -1,10 +1,12 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
-import org.xvm.xtc.*;
 import org.xvm.util.SB;
+import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const.BinOp;
 import org.xvm.xtc.cons.NumCon;
+import org.xvm.xtc.XCons;
+
 import java.util.HashMap;
 
 class BinOpAST extends AST {
@@ -63,6 +65,16 @@ class BinOpAST extends AST {
       return this;
     }
 
+    if( _kids[0]._type == XCons.JINT128 ||_kids[0]._type == XCons.JUINT128 ) {
+      String op = switch( _op0 ) {
+      case "==" -> "eq";
+      case ">=" -> "gt";
+      default -> throw XEC.TODO();
+      };
+      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
+    }
+
+    
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
     if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
