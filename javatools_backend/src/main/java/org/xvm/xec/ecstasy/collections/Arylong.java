@@ -35,7 +35,10 @@ public class Arylong extends Array<Int64> {
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.applyAsLong(i);
   }
+  public static Arylong construct(Mutability mut, Arylong as) { return new Arylong(mut,as); }
+  public static Arylong construct() { return new Arylong(); }
   public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
+  public static Arylong construct(int len) { return new Arylong(len); }
   
   
   // Fetch element

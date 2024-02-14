@@ -352,8 +352,7 @@ public class XClz extends XType {
   public String name( ) { return _jname==null ? _name : _jname; }
   // Bare name
   public String clz_bare( ) {
-    if( _ambiguous ) throw XEC.TODO();
-    return this==XCons.JSTRING || this==XCons.JOBJECT ? qualified_name() : name();
+    return this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ? qualified_name() : name();
   }
 
   // "Foo<Value extends Hashable>"

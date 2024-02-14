@@ -39,7 +39,12 @@ public class Arychar extends Array<Char> {
   public Arychar(String s) {
     this(s.length(), i -> s.charAt((int)i));
   }
+  
+  public static Arychar construct(Arychar as) { return new Arychar(as); }
+  public static Arychar construct() { return new Arychar(); }
   public static Arychar construct( String s ) { return new Arychar(s); }
+  public static Arychar construct( long len, LongUnaryOperator fcn ) { return new Arychar(len,fcn); }
+
   
   // Fetch element
   public char at8(long idx) {
