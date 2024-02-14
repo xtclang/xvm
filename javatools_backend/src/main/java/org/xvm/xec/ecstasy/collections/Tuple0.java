@@ -1,11 +1,12 @@
 package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
+import org.xvm.xec.XTC;
 import org.xvm.util.SB;
 import org.xvm.xec.ecstasy.Range;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
-public class Tuple0 implements Tuple {
+public class Tuple0 extends XTC implements Tuple {
   public static final Tuple0 GOLD = new Tuple0();
   byte _mut = -1;
   final short _len; // 0-32767 length limit

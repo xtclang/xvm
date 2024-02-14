@@ -277,7 +277,7 @@ module TestMisc {
     // Requires nested inner Point class, which is missing the BAST constructor
     void testSwitchNatural() {
         console.print("\n** testSwitchNatural()");
-    
+
         assert test(new Point(0, 0)) == "min";
         assert test(new Point(2, 2)) == "between";
         assert test(new Point(4, 4)) == "max";

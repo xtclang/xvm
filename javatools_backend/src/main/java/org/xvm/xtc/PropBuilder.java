@@ -38,7 +38,7 @@ public abstract class PropBuilder {
     boolean do_def=false, do_get=false, do_set=false;
     String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     boolean lazy = "LazyVar".equals(ano); // TODO: Need a proper flag
-    boolean stat = (pp._nFlags & Part.STATIC_BIT)!=0;
+    boolean stat = pp.isStatic();
     boolean tfld = (S.find(X._tclz._flds,pname)&0xFFFF) < X._tclz.nTypeParms(); // Is a type field
     boolean pub = pp._access == Const.Access.PUBLIC;
     boolean iface = X._tclz._iface;
@@ -103,7 +103,7 @@ public abstract class PropBuilder {
       }
       // Explicit init via constant
       if( pp._init != null )
-        xtype.clz(sb.p(" = new ")).fmt("(%0)",XValue.val(pp._init));
+        sb.p(" = ").p(XValue.val(X,pp._init));
       sb.p(";\n");
       
       // private boolean prop$init;

@@ -50,7 +50,7 @@ public class ReturnAST extends AST {
       return _meth._xrets[0];
 
     // Make a Tuple return
-    return org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES,XClz.make_tuple(_meth._xrets));
+    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XClz.make_tuple(_meth._xrets));
   }
 
   @Override AST postwrite() {

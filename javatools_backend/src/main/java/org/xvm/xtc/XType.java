@@ -227,7 +227,7 @@ public abstract class XType {
         XType[] clzs = new XType[N];
         for( int i=0; i<N; i++ )
           clzs[i] = XType.xtype(ptc._parms[i],false);
-        yield org.xvm.xec.ecstasy.collections.Tuple.make_class(ClzBuilder.XCLASSES, XClz.make_tuple(clzs));
+        yield org.xvm.xec.ecstasy.collections.Tuple.make_class(XClz.make_tuple(clzs));
       }
 
       // Attempt to use the Java class name
@@ -317,6 +317,8 @@ public abstract class XType {
       case "InjectedRef" -> xtype(acon.con().is_generic(),true);
       case "FutureVar" ->
         XClz.wrapFuture(xtype(((ParamTCon)acon.con())._parms[0],true));
+      case "VolatileVar" ->
+        xtype(acon.con(),false);
       default ->  throw XEC.TODO();
       };
     
