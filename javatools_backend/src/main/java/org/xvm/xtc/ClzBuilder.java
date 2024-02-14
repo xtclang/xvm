@@ -46,14 +46,9 @@ public class ClzBuilder {
   public ExprAST _expr;         // True if AST is parse inside an ExprAST, similar to a nested method
   private CPool _pool;          // Parser for code buffer
   
-  final HashMap<String,String> _names; // Java namification
   public final Ary<String> _locals; // Virtual register numbers to java names
   public final Ary<XType>  _ltypes; // Virtual register numbers to java types
   public final int nlocals() { return _locals._len; }
-
-  // A collection of extra class source strings, generated all along and dumped
-  // after the normal methods are dumped.
-  public static HashMap<String,String> XCLASSES;
 
   // A collection of extra imports, generated all along
   static HashSet<String> IMPORTS;
@@ -71,7 +66,6 @@ public class ClzBuilder {
       IMPORTS = new HashSet<>();  // Top-level imports
       BASE_IMPORTS = new HashMap<>();// Top-level import base names
       AMBIGUOUS_IMPORTS = new HashSet<>();
-      XCLASSES = new HashMap<>(); // Top-level extra classes
       CMOD = mod;                 // Top-level compile unit
     }
     _is_module = mod==clz;
@@ -83,7 +77,6 @@ public class ClzBuilder {
     assert clz==null || clz._tclz == _tclz;
     _sbhead = sbhead;
     _sb = sb;
-    _names = new HashMap<>();
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
   }
@@ -102,9 +95,6 @@ public class ClzBuilder {
     _sbhead.p("import " ).p(XEC.ROOT).p(".xrun.*;").nl();
     _sbhead.p("import static ").p(XEC.ROOT).p(".xrun.XRuntime.$t;").nl();
     jclass_body( );
-    // Output extra helper classes, if any
-    for( String source : XCLASSES.values() )
-      _sb.nl().p(source);
     _sb.p("// ---------------------------------------------------------------").nl();
     // Output imports in the header
     for( String imp : IMPORTS )
@@ -118,7 +108,6 @@ public class ClzBuilder {
     for( XClz clz : AMBIGUOUS_IMPORTS )
       clz._ambiguous = false;
     AMBIGUOUS_IMPORTS = null;
-    XCLASSES = null;
     CMOD = null;
     CCLZ = null;
   }
@@ -319,10 +308,9 @@ public class ClzBuilder {
 
     // Const classes get a specific {toString, appendTo}, although they are not
     // mentioned if default
-    if( _clz._f == Part.Format.CONST ) {
-      if( _clz.child("toString")==null )
-        org.xvm.xec.ecstasy.Const.make_toString(_clz,_sb);
-    }
+    if( _clz._f == Part.Format.CONST &&
+        _clz.child("toString")==null )
+      org.xvm.xec.ecstasy.Const.make_toString(_clz,_sb);
     
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
@@ -358,7 +346,7 @@ public class ClzBuilder {
     if( access==Part.ACCESS_PRIVATE   ) _sb.p("private "  );
     if( access==Part.ACCESS_PROTECTED ) _sb.p("protected ");
     if( access==Part.ACCESS_PUBLIC && !_tclz._iface ) _sb.p("public "   );
-    if( (m._nFlags & Part.STATIC_BIT) != 0 && !is_constructor ) _sb.p("static ");
+    if( m.isStatic() && !is_constructor ) _sb.p("static ");
     if( m._ast.length==0 ) _sb.p("abstract ");
     else if( _tclz._iface ) _sb.p("default ");
 

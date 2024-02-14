@@ -36,7 +36,7 @@ public interface Hashable extends org.xvm.xec.ecstasy.Comparable {
     boolean any=false;
     for( Part p : clz._name2kid.values() )
       // TODO: Probably static not synthetic
-      if( p instanceof PropPart prop && (p._nFlags & Part.SYNTHETIC_BIT)!=0 && (p._nFlags & Part.STATIC_BIT)==0 && (any=true) ) {
+      if( p instanceof PropPart prop && p.isSynthetic() && !p.isStatic() && (any=true) ) {
         sb.p("x.").p(prop._name);
         XType xt = XType.xtype(prop._con,false);
         if( !xt.zero() )        // Numbers as themselves for hash

@@ -26,8 +26,9 @@ class DefRegAST extends AST {
     _name = name==null ? null : ((StringCon)name)._str;
     
     if( init instanceof AnnotTCon anno ) {
-      _init = XValue.val (anno);
+      _init = XValue.val (X,anno);
       _type = XType.xtype(anno,true);
+      
     } else if( init != null ) {
       throw XEC.TODO();
     } else {

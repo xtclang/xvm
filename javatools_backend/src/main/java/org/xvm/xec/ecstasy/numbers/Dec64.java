@@ -60,6 +60,7 @@ public class Dec64 extends DecimalFPNumber {
     return new Dec64(_bd.setScale(0,DecimalFPNumber.ROUNDINGMODE[rnd.ordinal()]));
   }
 
+  public Dec128 toDec128() { throw XEC.TODO(); }
   public AryXTC<Bit> toBitArray(Array.Mutability mut) {
     Bit[] bits = new Bit[64];
     for( int i=0; i<64; i++ )

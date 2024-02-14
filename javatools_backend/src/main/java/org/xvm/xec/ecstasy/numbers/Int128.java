@@ -17,19 +17,24 @@ public class Int128 extends IntNumber {
   public static final Int128 GOLD = new Int128(null);
   public Int128(Never n ) { this(0,0); } // No-arg constructor
 
+  static final Int128 ZERO = new Int128(0,0);
   public final long _i0, _i1; // low, high
 
   public Int128(long l0, long l1) { _i0=l0; _i1=l1; }
   public Int128(long lo) { _i0=lo; _i1=0; }
 
-  public static Int128 construct(long lo) { return new Int128(lo); }
+  public static Int128 construct(long lo) { return lo==0 ? ZERO : new Int128(lo); }
 
   public Int128 add( long x ) { throw XEC.TODO(); }
+  public Int128 sub( long x ) { throw XEC.TODO(); }
   public Int128 mul( long x ) { throw XEC.TODO(); }
   public Int128 div( long x ) { throw XEC.TODO(); }
   public Int128 add( Int128 x ) { throw XEC.TODO(); }
   public Int128 sub( Int128 x ) { throw XEC.TODO(); }
   public Int128 mul( Int128 x ) { throw XEC.TODO(); }
+  public Int128 div( Int128 x ) { throw XEC.TODO(); }
+  public boolean eq( Int128 x ) { throw XEC.TODO(); }
+  public boolean gt( Int128 x ) { throw XEC.TODO(); }
   
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
   public Dec128 toDec128() { throw XEC.TODO(); }

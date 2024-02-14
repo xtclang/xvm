@@ -26,7 +26,7 @@ class ConvAST extends AST {
       assert convs.length==2 && convs[0]==null;
     }
     _type = XType.xtype(types[idx],false);
-    _meth = (MethodPart)((MethodCon)convs[idx]).part();
+    _meth = (MethodPart)convs[idx].part();
   }
 
   @Override XType _type() { return _type; }
@@ -35,6 +35,11 @@ class ConvAST extends AST {
     // Converting from a Java primitive will always need some kind of conversion call
     if( _kids[0]._type.is_jdk() )
       return new NewAST(_kids,(XClz)_type);
+    if( !_kids[0]._cond && _type==XCons.LONG &&
+        // TODO: this needs to handle all flavors
+        (_kids[0]._type==XCons.JUINT8 ||
+         _kids[0]._type==XCons.JUINT32 ) )
+      return new UniOpAST(new AST[]{_kids[0]},null,"._i",_type);
     return this;
   }
   
