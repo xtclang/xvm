@@ -39,6 +39,7 @@ public class Dec64 extends DecimalFPNumber {
   }    
   public Dec64(String s) { this(new BigDecimal(s,MathContext.DECIMAL64)); }
   public Dec64(double d) { this(new BigDecimal(d)); }
+  public static Dec64 construct( AryXTC<Bit> bits ) { return new Dec64(bits); }
   public Dec64(AryXTC<Bit> bits) {
     long dec = 0;
     for( int i=0; i<64; i++ )
@@ -46,6 +47,7 @@ public class Dec64 extends DecimalFPNumber {
     _dec64 = dec;
     _bd = Dec64Con.toBigDecimal64(dec);
   }
+  public static Dec64 construct( AryUInt8 ary ) { return new Dec64(ary); }
   public Dec64(AryUInt8 ary) {
     long dec = 0;
     for( int i=0; i<8; i++ )
@@ -53,6 +55,8 @@ public class Dec64 extends DecimalFPNumber {
     _dec64 = dec;
     _bd = Dec64Con.toBigDecimal64(dec);
   }
+
+  public static Dec64 construct( long d ) { return new Dec64((double)d); }
   
   public Dec64 ceil()  { return new Dec64(_bd.setScale(0,RoundingMode.CEILING)); }
   public Dec64 floor() { return new Dec64(_bd.setScale(0,RoundingMode.FLOOR  )); }

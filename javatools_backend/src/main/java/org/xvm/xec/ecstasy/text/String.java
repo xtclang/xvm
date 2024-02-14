@@ -12,7 +12,9 @@ public class String extends Const {
   public String(Never n) { _i=null; }
   public final java.lang.String _i;
   public String(java.lang.String s) { _i = s; }
-  public static String make(java.lang.String s) { return new String(s); } // TODO: Intern
+  
+  public static String construct(java.lang.String s) { return new String(s); } // TODO: Intern
+  
   public int length() { return _i.length(); }
   public char charAt(int x) { return _i.charAt(x); }
   @Override public java.lang.String toString() { return _i; }
