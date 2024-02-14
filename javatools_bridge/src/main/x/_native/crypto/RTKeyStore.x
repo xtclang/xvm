@@ -74,7 +74,8 @@ service RTKeyStore
     @Override
     conditional CryptoPassword getPassword(String name) {
         if (String pwdString := getPasswordInfo(name)) {
-            return True, new NamedPassword(name, pwdString);
+            CryptoPassword pwd = new NamedPassword(name, pwdString);
+            return True, &pwd.maskAs(CryptoPassword);
         }
         return False;
     }
