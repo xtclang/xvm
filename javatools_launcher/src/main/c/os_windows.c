@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <windows.h>
@@ -6,34 +7,41 @@
 #include "os_specific.h"
 
 
-const char* findLauncherPath()
-    {
+const char* findLauncherPath() {
     char* result = NULL;
 
     const DWORD size = 260;
     char localBuf[size];
     DWORD len = GetModuleFileName(NULL, localBuf, size);
-    if (len <= 0 || len >= size)
-        {
+    if (len <= 0 || len >= size) {
         abortLaunch("failure in GetModuleFileName()");
-        }
+    }
 
     result = allocBuffer(len);
     strncpy(result, localBuf, len);
     return result;
+}
+
+const char* getXdkHome() {
+    char*  buf = NULL;
+    size_t len = 0;
+    getenv_s(&len, buf, len, XDK_HOME);         // get the length
+    if (len > 0) {
+        buf = allocBuffer(len);
+        getenv_s(&len, buf, len, XDK_HOME);     // get the string
     }
 
-const char* resolveLinks(const char* path)
-    {
+    return (const char*) buf;
+}
+
+const char* resolveLinks(const char* path) {
     return path;
-    }
+}
 
-const char* escapePath(const char* path)
-    {
-    if (*path == '\0' || *path == '\"' || !strchr(path, ' '))
-        {
+const char* escapePath(const char* path) {
+    if (*path == '\0' || *path == '\"' || !strchr(path, ' ')) {
         return path;
-        }	      
+    }	      
 
     int   len    = strlen(path);
     char* result = allocBuffer(len+3);
@@ -41,42 +49,38 @@ const char* escapePath(const char* path)
     strcpy(result+1, path);
 
     // disallow path ending in slash
-    while (len >= 0 && result[len] == '\\')
-        {
+    while (len >= 0 && result[len] == '\\') {
         --len;
-        }
+    }
 
     result[len+1] = '\"';
     result[len+2] = '\0';
     return result;
-    }
+}
 
 void execJava(const char* javaPath,
               const char* javaOpts,
               const char* jarPath,
               const char* libPath,
               int         argc,
-              const char* argv[])
-    {
+              const char* argv[]) {
     // this implementation does not fork()/setsid() because we're not attempting to detach
     // from the terminal that executed the command
 
     #ifdef DEBUG
     printf("javaPath=%s, javaOpts=%s, jarPath=%s, libPath=%s, argc=%d, argv=\n",
             javaPath,    javaOpts,    jarPath,    libPath,    argc);
-    for (int i = 0; i < argc; ++i)
-        {
+    for (int i = 0; i < argc; ++i) {
         printf("[%d] = \"%s\"\n", i, argv[i]);
-        }
+    }
     #endif // DEBUG
 
     assert(javaPath != NULL && *javaPath != '\0');
     assert(jarPath  != NULL && *jarPath  != '\0');
     assert(libPath  != NULL && *libPath  != '\0');
-    if (javaOpts == NULL)
-        {
+    if (javaOpts == NULL) {
         javaOpts = "";
-        }
+    }
 
     // the native ecstasy library is located in the same location as the prototype JAR
     const char* jarFile  = buildPath(jarPath, PROTO_JAR);
@@ -99,10 +103,9 @@ void execJava(const char* javaPath,
     #ifdef DEBUG
     printf("after escape: javaPath=%s, jarFile=%s, tool=%s, libPath=%s, mackFile=%s, libFile=%s\n",
                           javaPath,    jarFile,    tool,    libPath,    mackFile,    libFile);
-    for (int i = 0; i < argc; ++i)
-        {
+    for (int i = 0; i < argc; ++i) {
         printf("[%d] = \"%s\"\n", i, argv[i]);
-        }
+    }
     #endif // DEBUG
 
     // collect all arguments into one giant string, starting with the call to java
@@ -119,10 +122,9 @@ void execJava(const char* javaPath,
             + strlen(mackFile)
             + strlen(" -L ")
             + strlen(libFile);
-    for (int i = 0; i < argc; ++i)
-        {
+    for (int i = 0; i < argc; ++i) {
         len += 1 + strlen(argv[i]);
-        }
+    }
 
     char* cmd = malloc(len);
     registerGarbage(cmd);
@@ -140,11 +142,10 @@ void execJava(const char* javaPath,
     strcat(cmd, mackFile);
     strcat(cmd, " -L ");
     strcat(cmd, libFile);
-    for (int i = 0; i < argc; ++i)
-        {
+    for (int i = 0; i < argc; ++i) {
         strcat(cmd, " ");
         strcat(cmd, argv[i]);
-        }
+    }
 
     #ifdef DEBUG
     printf("resulting command: %s\n", cmd);
@@ -159,14 +160,13 @@ void execJava(const char* javaPath,
     memset(&pi, 0, sizeof(PROCESS_INFORMATION));
 
     // execute the command line
-    if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
-        {
+    if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
         abortLaunch(cmd);
-        }
+    }
 
     WaitForSingleObject(pi.hProcess, INFINITE);
 
     // the handles need to be released; this isn't killing the process
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    }
+}
