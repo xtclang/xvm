@@ -10,6 +10,8 @@ public class StringBuffer extends Arychar
 
   public StringBuffer( ) {}
   public StringBuffer(long estSize ) { throw XEC.TODO(); }
+
+  public static StringBuffer construct(long estSize) { return new StringBuffer(estSize); }
   
   public StringBuffer add(char v) {
     return (StringBuffer)super.add(v);

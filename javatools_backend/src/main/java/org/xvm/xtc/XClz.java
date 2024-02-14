@@ -170,6 +170,8 @@ public class XClz extends XType {
 
   // Make a specialized FutureVar type
   public static XClz wrapFuture( XType xt ) {
+    ClzBuilder.add_import(XCons.FUTUREVAR);
+    if( xt instanceof XClz clz ) ClzBuilder.add_import(clz);
     XClz xclz = _make_clz(XCons.FUTUREVAR._clz);
     xclz._flds = XCons.FUTUREVAR._flds;
     xclz._xts[0] = xt;
@@ -237,11 +239,13 @@ public class XClz extends XType {
   // the explicit array element type
   @Override public boolean generic_ary() { return S.eq(_jname,"AryXTC");  }
   @Override public boolean isTuple() { return S.eq(_jname,"Tuple");  }
+  // TODO: Really needs to be an ISA on XTC Var
+  @Override public boolean isVar() { return S.eq(_name,"Var") || S.eq(_jname,"FutureVar"); }
   // Some kind of array
   @Override public boolean isAry() { return S.eq("ecstasy.collections",_pack) && S.eq("Array",_name); }
   // XTC array element type
   public XType e() {
-    assert isAry();
+    assert isAry() || isVar();
     return _xts[0];
   }
   
@@ -376,21 +380,6 @@ public class XClz extends XType {
     return sb.unchar().p("> ");
   }
   
-  //// "Foo<Value>"
-  //public SB clz_val( SB sb ) {
-  //  if( _ambiguous ) throw XEC.TODO();
-  //  sb.p(_jname==null ? _name : _jname);
-  //  // Some Java implementations already specify the XTC generic directly: Arylong
-  //  if( !_jparms || _nTypeParms==0 ) return sb;
-  //  // Print Array<void> as Array
-  //  if( this==XCons.ARRAY ) return sb;
-  //  // Printing generic type parameters
-  //  sb.p("<");
-  //  for( int i=0; i<_nTypeParms; i++ )
-  //    sb.p("$").p(_flds[i]).p(",");
-  //  return sb.unchar().p(">");
-  //}
-
   private SB strTuple( SB sb ) {
     sb.p("Tuple").p(_xts.length).p("$");
     for( XType xt : _xts )
@@ -404,7 +393,9 @@ public class XClz extends XType {
     if( S.eq(_jpack,"java.lang") )
       return "java.lang."+_jname;
     String pack = _jpack==null ? _pack : _jpack;
-    String name = _jname==null ? _name : _jname;    
+    String name = _jname==null ? _name : _jname;
+    if( this==XCons.TUPLE0 )
+      name = "Tuple0";
     return (XEC.XCLZ + "." + pack + "." + name).intern();
   }
   
@@ -443,12 +434,6 @@ public class XClz extends XType {
     return true;
   }
 
-  @Override public boolean isVar() {
-    // TODO: Really needs to be an ISA on var
-    return isa( XCons.FUTUREVAR );
-  }
-
-  
   private static final XClz[] XCLZS = new XClz[] {
     null,                     // IntLiteral
     null,                     // Bit

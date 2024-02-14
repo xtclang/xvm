@@ -46,7 +46,7 @@ public interface Comparable {
     sb.ip(  "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && S.find(clz._tnames,prop._name) == -1 && (p._nFlags & Part.STATIC_BIT)==0 && (any=true) ) {
+      if( p instanceof PropPart prop && S.find(clz._tnames,prop._name) == -1 && !p.isStatic() && (any=true) ) {
         XType xt = XType.xtype(prop._con,false);
         xt.do_eq(sb.p("x0.").p(prop._name),"x1."+prop._name).p(" && ");
       }

@@ -8,7 +8,7 @@ public class ConAST extends AST {
   public final TCon _tcon;
   public String _con;
   private final ClzBuilder _X;
-  ConAST( ClzBuilder X, Const con ) { this(X,(TCon)con, XValue.val(con), XType.xtype(con,false)); }
+  ConAST( ClzBuilder X, Const con ) { this(X,(TCon)con, XValue.val(X,con), XType.xtype(con,false)); }
   ConAST( String con ) { this(null,null,con, XBase.make(con)); }
   ConAST( ClzBuilder X, TCon tcon, String con, XType type ) {
     super(null);

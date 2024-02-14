@@ -74,13 +74,13 @@ class SwitchAST extends AST {
     Const[] rezs = expr ? X.consts() : null;
     boolean cond_defines = nlocals != X.nlocals();
     X.pop_locals(nlocals);      // Pop scope-locals at end of scope
-    return new SwitchAST(flavor,kids,expr,isa,cases,rezs, cond_defines);
+    return new SwitchAST(X,flavor,kids,expr,isa,cases,rezs, cond_defines);
   }
   private static boolean valid_range( Const c ) {
     return c == null || c instanceof IntCon || c instanceof CharCon || (c instanceof RangeCon rcon && valid_range(rcon._lo));
   }
   
-  private SwitchAST( Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
+  private SwitchAST( ClzBuilder X, Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
     super(kids);
     _flavor = flavor;
     _expr = expr;
@@ -100,7 +100,7 @@ class SwitchAST extends AST {
         String[] arms = _armss[i] = new String[alen];
         Const[] cons = ((AryCon)cases[i]).cons();
         for( int j=0; j<alen; j++ )
-          arms[j] = cons[j] !=null ? XValue.val(cons[j]) : null;
+          arms[j] = cons[j] !=null ? XValue.val(X,cons[j]) : null;
       }
       break;
 
@@ -125,7 +125,7 @@ class SwitchAST extends AST {
       for( int i=0; i<clen; i++ )
         // This might be an exact check, or might have a default.
         if( _cases[i] != null ) {
-          String arm = XValue.val(_cases[i]);
+          String arm = XValue.val(X,_cases[i]);
           // Enum arms must be the unqualified enum name.
           int idx = arm.lastIndexOf(".");
           if( idx >=0 ) arm = arm.substring(idx + 1);
@@ -136,7 +136,7 @@ class SwitchAST extends AST {
     case SimpleTern:
       // A list of singleton constants
       for( int i=0; i<clen-1; i++ )
-        _armss[i] = new String[]{XValue.val(cases[i])};
+        _armss[i] = new String[]{XValue.val(X,cases[i])};
       break;
       
     }
