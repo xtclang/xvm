@@ -1,31 +1,32 @@
 import libcrypto.CertificateManager;
+import libcrypto.Password;
 
 service RTCertificateManager
         implements CertificateManager{
 
     @Override
-    void createCertificate(File keystore, String password, String name, String dName) {
-        createCertificateImpl(getPath(keystore), password, name, dName);
+    void createCertificate(File keystore, Password pwd, String name, String dName) {
+        createCertificateImpl(getPath(keystore), pwd, name, dName);
     }
 
     @Override
-    void revokeCertificate(File keystore, String password, String name) {
-        revokeCertificateImpl(getPath(keystore), password, name);
+    void revokeCertificate(File keystore, Password pwd, String name) {
+        revokeCertificateImpl(getPath(keystore), pwd, name);
     }
 
     @Override
-    void createSymmetricKey(File keystore, String password, String name) {
-        createSymmetricKeyImpl(getPath(keystore), password, name);
+    void createSymmetricKey(File keystore, Password pwd, String name) {
+        createSymmetricKeyImpl(getPath(keystore), pwd, name);
     }
 
     @Override
-    void createPassword(File keystore, String storePassword, String name, String passwordValue) {
-        createPasswordImpl(getPath(keystore), storePassword, name, passwordValue);
+    void createPassword(File keystore, Password pwd, String name, String pwdValue) {
+        createPasswordImpl(getPath(keystore), pwd, name, pwdValue);
     }
 
     @Override
-    void changeStorePassword(File keystore, String password, String newPassword) {
-        changeStorePasswordImpl(getPath(keystore), password, newPassword);
+    void changeStorePassword(File keystore, Password pwd, Password newPassword) {
+        changeStorePasswordImpl(getPath(keystore), pwd, newPassword);
     }
 
     private String getPath(File keystore) {
@@ -34,18 +35,18 @@ service RTCertificateManager
         return file.pathString;
     }
 
-    private void createCertificateImpl(String path, String password, String name, String dName)
+    private void createCertificateImpl(String path, Password pwd, String name, String dName)
         {TODO("Native");}
 
-    private void revokeCertificateImpl(String path, String password, String name)
+    private void revokeCertificateImpl(String path, Password pwd, String name)
         {TODO("Native");}
 
-    private void createSymmetricKeyImpl(String path, String password, String name)
+    private void createSymmetricKeyImpl(String path, Password pwd, String name)
         {TODO("Native");}
 
-    private void createPasswordImpl(String path, String storePassword, String name, String passwordValue)
+    private void createPasswordImpl(String path, Password pwd, String name, String pwdValue)
         {TODO("Native");}
 
-    private void changeStorePasswordImpl(String path, String password, String newPassword)
+    private void changeStorePasswordImpl(String path, Password pwd, Password newPwd)
         {TODO("Native");}
 }

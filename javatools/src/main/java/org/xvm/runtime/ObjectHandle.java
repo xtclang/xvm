@@ -615,7 +615,8 @@ public abstract class ObjectHandle
             if (!isService())
                 {
                 TypeConstant type = getType();
-                assert type.isImmutable() && type.isSingleUnderlyingClass(true);
+                assert (type.isImmutable() || type.isInterfaceType())
+                    && type.isSingleUnderlyingClass(true);
 
                 ModuleConstant idModule = type.getSingleUnderlyingClass(true).getModuleConstant();
                 if (!idModule.isCoreModule())
