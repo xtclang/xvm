@@ -10,7 +10,5 @@ const NamedPassword(String name, String password)
     }
 
     @Override
-    String toString() {
-        return $"{name=}; password {isVisible() ? "" : "not "}visible";
-    }
+    String toString() = $"{name=}";
 }

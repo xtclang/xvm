@@ -20,15 +20,15 @@ interface CertificateManager {
      *  - receive the certificate from the SA
      *  - save the private key and the certificate in the specified file using the provided password
      *
-     * @param file      the file object representing the store ('PKCS12' type)
-     * @param password  the password for the keystore
-     * @param name      the name the certificate is known by the KeyStore
-     * @param dName     the distinguished name string, which is comma-delimited string of X.509
-     *                  certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=www.xqiz.it)
+     * @param file   the file object representing the store ('PKCS12' type)
+     * @param pwd    the password for the keystore
+     * @param name   the name the certificate is known by the KeyStore
+     * @param dName  the distinguished name string, which is comma-delimited string of X.509
+     *               certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=www.xqiz.it)
      *
      * @throws IOException if anything goes wrong
      */
-    void createCertificate(File keystore, String password, String name, String dName);
+    void createCertificate(File keystore, Password pwd, String name, String dName);
 
     /**
      * Revoke a certificate.
@@ -41,46 +41,46 @@ interface CertificateManager {
      *  - remove the private key and the certificate from the specified keystore
      *
      * @param keystore  the file object representing the store ('PKCS12' type)
-     * @param password  the password for the keystore
+     * @param pwd       the password for the keystore
      * @param name      the name the certificate is known by the KeyStore
      *
      * @throws IOException if anything goes wrong
      */
-    void revokeCertificate(File keystore, String password, String name);
+    void revokeCertificate(File keystore, Password pwd, String name);
 
     /**
      * Create a secret (symmetric) key.
      *
      * @param keystore  the file object representing the store ('PKCS12' type)
-     * @param password  the password for the keystore
+     * @param pwd       the password for the keystore
      * @param name      the name the symmetric key is known by the KeyStore
      *
      * @throws IOException if anything goes wrong
      */
-    void createSymmetricKey(File keystore, String password, String name);
+    void createSymmetricKey(File keystore, String pwd, String name);
 
     /**
      * Create a password entry.
      *
-     * @param keystore       the file object representing the store ('PKCS12' type)
-     * @param storePassword  the password for the keystore
-     * @param name           the name the password entry is known by the KeyStore
-     * @param passwordValue  the value of the password entry
+     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param pwd       the password for the keystore
+     * @param name      the name the password entry is known by the KeyStore
+     * @param pwdValue  the value of the password entry
      *
      * @throws IOException if anything goes wrong
      */
-    void createPassword(File keystore, String storePassword, String name, String passwordValue);
+    void createPassword(File keystore, Password pwd, String name, String pwdValue);
 
     /**
      * Change the keystore password.
      *
-     * @param keystore     the file object representing the store ('PKCS12' type)
-     * @param password     the password for the keystore
-     * @param newPassword  the new password for the keystore
+     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param pwd       the password for the keystore
+     * @param newPwd    the new password for the keystore
      *
      * @throws IOException if anything goes wrong
      */
-    void changeStorePassword(File keystore, String password, String newPassword);
+    void changeStorePassword(File keystore, Password pwd, Password newPwd);
 
     /**
      * Helper function to create a distinguished name in the format prescribed by the (X.509
