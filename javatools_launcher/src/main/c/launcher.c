@@ -38,8 +38,6 @@ int main(int argc, const char* argv[]) {
         if (testExists(xdkBin)) {
             execDir = xdkBin;
         } else {
-            int   len = 256;
-            char* buf = allocBuffer(len);
             printf("Could not find the bin directory indicated by the \"%s\" environment variable: %s\n", XDK_HOME, xdkBin);
         }
     }
