@@ -36,7 +36,9 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
       _es[i] = fcn.apply(i);
   }
 
+  public static AryString construct(long len, LongFunction<String> fcn) { return new AryString(len,fcn); }
   public static AryString construct() { return new AryString(); }
+  public static AryString construct(Mutability mut, AryString as) { return new AryString(mut,as); }
   
   // Add an element, doubling base array as needed
   public AryString add( org.xvm.xec.ecstasy.text.String s ) { return add(s._i); }
@@ -55,7 +57,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
   
   @Override public org.xvm.xec.ecstasy.text.String at(long idx) {
-    return org.xvm.xec.ecstasy.text.String.make(at8(idx));
+    return org.xvm.xec.ecstasy.text.String.construct(at8(idx));
   }
 
   /** Slice */
@@ -90,7 +92,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   @Override public Iterator<org.xvm.xec.ecstasy.text.String> iterator() { return new IterString(); }
   public class IterString extends Iterator<org.xvm.xec.ecstasy.text.String> {
     private int _i;
-    @Override public org.xvm.xec.ecstasy.text.String next() { return org.xvm.xec.ecstasy.text.String.make(next8()); }
+    @Override public org.xvm.xec.ecstasy.text.String next() { return org.xvm.xec.ecstasy.text.String.construct(next8()); }
     public String next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
     @Override public boolean hasNext() { return _i<_len; }  
     @Override public final String toString() { return ""+_i+".."+_len; }
