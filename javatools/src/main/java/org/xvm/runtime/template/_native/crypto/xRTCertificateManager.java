@@ -102,20 +102,20 @@ public class xRTCertificateManager
 
     /**
      * Native implementation of
-     *     "createCertificateImpl(String path, String password, String name, String dName)"
+     *     "createCertificateImpl(String path, Password pwd, String name, String dName)"
      */
     private int invokeCreateCertificate(Frame frame, ObjectHandle[] ahArg)
         {
-        StringHandle hPath     = (StringHandle) ahArg[0];
-        StringHandle hPassword = (StringHandle) ahArg[1];
-        StringHandle hName     = (StringHandle) ahArg[2];
-        StringHandle hDName    = (StringHandle) ahArg[3];
+        StringHandle hPath  = (StringHandle) ahArg[0];
+        StringHandle hPwd   = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hName  = (StringHandle) ahArg[2];
+        StringHandle hDName = (StringHandle) ahArg[3];
 
         runCommand(null, null,
                 "keytool", "-delete",
                 "-alias", hName.getStringValue(),
                 "-keystore", hPath.getStringValue(),
-                "-storepass", hPassword.getStringValue()
+                "-storepass", hPwd.getStringValue()
                 );
         return runCommand(frame, null,
                 "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "365",
@@ -123,43 +123,43 @@ public class xRTCertificateManager
                 "-dname", hDName.getStringValue(),
                 "-storetype", "PKCS12",
                 "-keystore", hPath.getStringValue(),
-                "-storepass", hPassword.getStringValue()
+                "-storepass", hPwd.getStringValue()
                 );
         }
 
     /**
      * Native implementation of
-     *     "invokeCreateSymmetricKeyImpl(String path, String password, String name)"
+     *     "invokeCreateSymmetricKeyImpl(String path, Password pwd, String name)"
      */
     private int invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg)
         {
-        StringHandle hPath     = (StringHandle) ahArg[0];
-        StringHandle hPassword = (StringHandle) ahArg[1];
-        StringHandle hName     = (StringHandle) ahArg[2];
+        StringHandle hPath = (StringHandle) ahArg[0];
+        StringHandle hPwd  = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hName = (StringHandle) ahArg[2];
 
         runCommand(null, null,
                 "keytool", "-delete",
                 "-alias", hName.getStringValue(),
                 "-keystore", hPath.getStringValue(),
-                "-storepass", hPassword.getStringValue()
+                "-storepass", hPwd.getStringValue()
                 );
         return runCommand(frame, null,
                 "keytool", "-genseckey", "-keyalg", "AES", "-keysize", "256",
                 "-alias", hName.getStringValue(),
                 "-storetype", "PKCS12",
                 "-keystore", hPath.getStringValue(),
-                "-storepass", hPassword.getStringValue()
+                "-storepass", hPwd.getStringValue()
                 );
         }
 
     /**
      * Native implementation of
-     *     "invokeCreatePasswordImpl(String path, String storePassword, String name, String passwordValue)"
+     *     "invokeCreatePasswordImpl(String path, Password pwd, String name, String pwdValue)"
      */
     private int invokeCreatePassword(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath     = (StringHandle) ahArg[0];
-        StringHandle hStorePwd = (StringHandle) ahArg[1];
+        StringHandle hPwd      = xRTKeyStore.getPassword(ahArg[1]);
         StringHandle hName     = (StringHandle) ahArg[2];
         StringHandle hPwdValue = (StringHandle) ahArg[3];
 
@@ -167,32 +167,32 @@ public class xRTCertificateManager
                 "keytool", "-delete",
                 "-alias", hName.getStringValue(),
                 "-keystore", hPath.getStringValue(),
-                "-storepass", hStorePwd.getStringValue()
+                "-storepass", hPwd.getStringValue()
                 );
         return runCommand(frame, hPwdValue.getStringValue(),
                 "keytool", "-importpass",
                 "-alias", hName.getStringValue(),
                 "-storetype", "PKCS12",
                 "-keystore", hPath.getStringValue(),
-                "-storepass", hStorePwd.getStringValue()
+                "-storepass", hPwd.getStringValue()
                 );
         }
 
     /**
      * Native implementation of
-     *     "invokeChangeStorePasswordImpl(String path, String password, String newPassword)"
+     *     "invokeChangeStorePasswordImpl(String path, Password pwd, String newPwd)"
      */
     private int invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg)
         {
-        StringHandle hPath     = (StringHandle) ahArg[0];
-        StringHandle hPassword = (StringHandle) ahArg[1];
-        StringHandle hPassNew  = (StringHandle) ahArg[2];
+        StringHandle hPath   = (StringHandle) ahArg[0];
+        StringHandle hPwd    = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hPwdNew = (StringHandle) ahArg[2];
 
         return runCommand(frame, null,
                 "keytool", "-storepasswd",
                 " -keystore " + hPath.getStringValue(),
-                " -storepass " + hPassword.getStringValue() +
-                " -new " + hPassNew.getStringValue()
+                " -storepass " + hPwd.getStringValue() +
+                " -new " + hPwdNew.getStringValue()
             );
         }
 

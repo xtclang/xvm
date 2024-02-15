@@ -34,9 +34,9 @@ public abstract class LongDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
         return frame.assignValue(iReturn,
@@ -48,9 +48,9 @@ public abstract class LongDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
         return frame.assignValue(iReturn,
@@ -62,9 +62,9 @@ public abstract class LongDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
         return frame.assignValue(iReturn,
@@ -76,9 +76,9 @@ public abstract class LongDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
         return frame.assignValue(iReturn,
