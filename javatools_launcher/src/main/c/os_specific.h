@@ -1,5 +1,6 @@
 #pragma once
 
+#define XDK_HOME     "XDK_HOME"
 #define DEFAULT_EXEC "java"
 #define DEFAULT_OPTS "-ea"
 #define PROTO_JAR    "javatools.jar"
@@ -22,6 +23,13 @@
  * @return the path of the launcher
  */
 extern const char* findLauncherPath();
+
+/**
+ * Determine the value of the XDK_HOME env variable.
+ *
+ * @return the value of XDK_HOME, or NULL
+ */
+extern const char* getXdkHome();
 
 /**
  * If the file is a link, follow the link until a real file is found.
