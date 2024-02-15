@@ -69,6 +69,15 @@ extern const char* buildPath(const char* dir, const char* file);
 extern const char* removeExtension(const char* file);
 
 /**
+ * Test for the existence of the file or directory at the specified location.
+ *
+ * @param path  the path of the file or directory
+ *
+ * @return true iff a file or directory at the specified path exists
+ */
+int testExists(const char* path);
+
+/**
  * Read the file at the specified location.
  *
  * @param path  the path of the file to read

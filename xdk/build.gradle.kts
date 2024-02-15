@@ -147,30 +147,28 @@ distributions {
             logger.info("$prefix Distribution contents need to use lazy resources.")
             /*
              * 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
-             * 2) copy xdk resources/main/xdk to install/xdk/libexec
-             * 3) copy javatools_launcher/bin/\* to install/xdk/libexec/bin/
-             * 4) copy XDK modules to install/xdk/libexec/lib
-             * 5) copy javatools.jar, turtle and bridge to install/xdk/libexec/javatools
+             * 2) copy xdk resources/main/xdk to install/xdk/
+             * 3) copy javatools_launcher/bin/\* to install/xdk/bin/
+             * 4) copy XDK modules to install/xdk/lib
+             * 5) copy javatools.jar, turtle and bridge to install/xdk/javatools
              */
             from(resources) {
                 eachFile {
-                    path = path.replace("xdk", "libexec")
-                    path = path.replace("libexec-", "xdk-") // TODO: Hacky.
                     includeEmptyDirs = false
                 }
             }
             from(xtcLauncherBinaries) {
-                into("libexec/bin")
+                into("bin")
             }
             from(configurations.xtcModule) {
-                // This copies everything not a javatools jar into libexec/javatools, which is where XTC wants the
+                // This copies everything not a javatools jar into javatools, which is where XTC wants the
                 // javatools_turtle.xtc and javatools_bridge.xtc modules.
                 // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
-                into("libexec/lib")
+                into("lib")
                 exclude("**/javatools*")
             }
             from(configurations.xtcModule) {
-                into("libexec/javatools")
+                into("javatools")
                 include("**/javatools*")
             }
             from(configurations.xdkJavaTools) {
@@ -178,7 +176,7 @@ distributions {
                     assert(it.endsWith(".jar"))
                     it.replace(Regex("-.*.jar"), ".jar")
                 }
-                into("libexec/javatools") // should just be one file with corrected dependencies, assert?
+                into("javatools") // should just be one file with corrected dependencies, assert?
             }
             if (shouldPublishPluginToLocalDist()) {
                 val published = publishPluginToLocalDist.get().outputs.files
