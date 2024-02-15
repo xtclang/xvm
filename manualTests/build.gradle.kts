@@ -116,9 +116,9 @@ sourceSets {
             exclude("**/multiModule/**")
             exclude("**/webTests/**")
             exclude(
+                "**/TestSimple.x", // TODO: TestSimple is never meant to be run. Maybe it should live somewhere else, as that's not even a negative test.
                 "**/ConstOrdinalListTest.x",
                 "**/NumericConversions.x",
-                "**/TestSimple.x",
                 "**/contained.x",
                 "**/container.x",
                 "**/Dec28.x",
