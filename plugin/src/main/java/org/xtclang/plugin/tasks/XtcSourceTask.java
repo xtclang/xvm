@@ -1,6 +1,7 @@
 package org.xtclang.plugin.tasks;
 
 import groovy.lang.Closure;
+import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.file.FileTreeElement;
@@ -21,7 +22,6 @@ import org.xtclang.plugin.XtcProjectDelegate;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.util.HashSet;
 import java.util.Set;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
@@ -36,8 +36,8 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     private ConfigurableFileCollection sourceFiles;
 
     @SuppressWarnings("this-escape")
-    protected XtcSourceTask(final XtcProjectDelegate delegate, final String taskName, final SourceSet sourceSet) {
-        super(delegate, taskName, sourceSet, delegate.resolveXtcCompileExtension());
+    protected XtcSourceTask(final Project project) {
+        super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
         this.patternSet = getPatternSetFactory().create();
         this.sourceFiles = objects.fileCollection();
     }
@@ -71,14 +71,15 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return sourceFiles.getAsFileTree().matching(patternSet);
     }
 
+    // Get the source
+
     /**
      * Sets the source for this task.
      *
      * @param source The source.
-     * @since 4.0
      */
     public void setSource(final FileTree source) {
-        setSource((Object) source);
+        setSource((Object)source);
     }
 
     /**
@@ -185,9 +186,9 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         getSource().forEach(src -> {
             final var before = src.lastModified();
             final var after = touch(src);
-            logger.info("{} *** File: {} (before: {}, after: {})", prefix, src.getAbsolutePath(), before, after);
+            logger.info("{} *** File: {} (before: {}, after: {})", prefix(), src.getAbsolutePath(), before, after);
         });
-        logger.info("{} Updated lastModified of {}.getSource() and resources to 'now' in the epoch.", prefix, taskName);
+        logger.info("{} Updated lastModified of {}.getSource() and resources to 'now' in the epoch.", prefix(), getName());
     }
 
     private long touch(final File file) {
@@ -197,14 +198,14 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     private long touch(final File file, final long now) {
         final var oldLastModified = file.lastModified();
         if (!file.setLastModified(now)) {
-            logger.warn("{} Failed to update modification time stamp for file: {}", prefix, file.getAbsolutePath());
+            logger.warn("{} Failed to update modification time stamp for file: {}", prefix(), file.getAbsolutePath());
         }
-        logger.info("{} Touch file: {} (timestamp: {} -> {})", prefix, file.getAbsolutePath(), oldLastModified, now);
+        logger.info("{} Touch file: {} (timestamp: {} -> {})", prefix(), file.getAbsolutePath(), oldLastModified, now);
         assert(file.lastModified() == now);
         return now;
     }
 
-    protected boolean isXtcSourceFile(final File file) {
+    protected static boolean isXtcSourceFile(final File file) {
         // TODO: Previously we called a Launcher method to ensure this was a module, but all these files should be in the top
         //   level directory of a source set, and this means that xtc will assume they are all module definitions, and fail if this
         //   is not the case. We used to check for this in the plugin, but we really do not want the compile time dependency to
@@ -213,19 +214,19 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return file.isFile() && hasFileExtension(file, XTC_SOURCE_FILE_EXTENSION);
     }
 
-    protected boolean isTopLevelXtcSourceFile(final File file) {
-        return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(file);
+    protected boolean isTopLevelXtcSourceFile(final SourceSet sourceSet, final File file) {
+        return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(sourceSet, file);
     }
 
-    protected boolean isTopLevelSource(final File file) {
+    protected boolean isTopLevelSource(final SourceSet sourceSet, final File file) {
         assert file.isFile();
-        final var topLevelSourceDirs = new HashSet<>(sourceSet.getAllSource().getSrcDirs());
+        final var topLevelSourceDirs = new java.util.HashSet<>(sourceSet.getAllSource().getSrcDirs());
         final var dir = file.getParentFile();
         assert (dir != null && dir.isDirectory());
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix, file.getAbsolutePath(), isTopLevelSrc);
+        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix(), file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
-            logger.info("{} Found module definition: {}", prefix, file.getAbsolutePath());
+            logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
             return true;
         }
         return false;

@@ -23,7 +23,7 @@ private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
  * of the root build.gradle.kts, we have installed convention plugins, resolved version catalogs
  * and similar things.
  */
-val install by tasks.registering {
+val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     XdkDistribution.distributionTasks.forEach {
@@ -36,6 +36,12 @@ val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(xdk.task(":$name"))
+}
+
+val install by tasks.registering {
+    doLast {
+        TODO("The 'install' task has now changes names to 'installDist', as per the common standard.")
+    }
 }
 
 /*

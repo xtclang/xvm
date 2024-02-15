@@ -1,11 +1,13 @@
 package org.xtclang.plugin.tasks;
 
+import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
@@ -38,16 +40,13 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPEN
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModule;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
-import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 import static org.xtclang.plugin.XtcPluginUtils.singleArgumentIterableProvider;
-import static org.xtclang.plugin.XtcProjectDelegate.incomingXtcModuleDependencies;
 
 /**
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
  * anything that goes through the XTC Launcher to spawn or call different processes
  */
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
-    protected final SourceSet sourceSet;
 
     // All inherited from launcher task extension and turned into input
     protected final Property<InputStream> stdin;
@@ -61,9 +60,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected final E ext;
 
-    protected XtcLauncherTask(final XtcProjectDelegate delegate, final String taskName, final SourceSet sourceSet, final E ext) {
-        super(delegate, taskName);
-        this.sourceSet = sourceSet;
+    protected XtcLauncherTask(final Project project, final E ext) {
+        super(project);
         this.ext = ext;
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
@@ -84,16 +82,19 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
     }
 
+    @Override
+    public void executeTask() {
+        super.executeTask();
+    }
+
+    @Override
+    public boolean hasVerboseLogging() {
+        return super.hasVerboseLogging() || isVerbose.get();
+    }
+
     @Internal
     protected E getExtension() {
         return ext;
-    }
-
-    @Optional
-    @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
-    FileCollection getInputDeclaredDependencyModules() {
-        return delegate.filesFrom(incomingXtcModuleDependencies(sourceSet)); // xtcModule and xtcModuleTest dependencies declared in the project dependency { scope section
     }
 
     @InputFiles
@@ -204,10 +205,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public abstract String getNativeLauncherCommandName();
 
-    protected ExecResult handleExecResult(final ExecResult result) {
+    protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
-            getLogger().error("{} terminated abnormally (exitValue: {}). Rethrowing exception.", prefix, exitValue);
+            getLogger().error("{} terminated abnormally (exitValue: {}). Rethrowing exception.", prefix(), exitValue);
         }
         result.rethrowFailure();
         result.assertNormalExitValue();
@@ -215,6 +216,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
+        final var prefix = prefix();
         if (getUseNativeLauncher().get()) {
             logger.info("{} Created XTC launcher: native executable.", prefix);
             return new NativeBinaryLauncher<>(project, this);
@@ -227,46 +229,49 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         }
     }
 
-    protected Set<File> resolveModulePath(final FileCollection inputXtcModules) {
-        return resolveModulePath(inputXtcModules, false);
-        //final var modulePathFiles = resolveModulePath(inputXtcModules, false);
-        //final var modulePathFilesAllSource = resolveModulePath(inputXtcModules, true);
-        //System.err.println(" ** " + modulePathFiles);
-        //System.err.println(" ** " + modulePathFilesAllSource);
-        //assert modulePathFiles.equals(modulePathFilesAllSource) : "An XTC Task should never resolve all project source sets differently than its own source set.";
-        //return modulePathFilesAllSource;
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private Set<File> resolveModulePath(final FileCollection inputXtcModules, final boolean includeAllSourceSets) {
-        logger.info("{} Adding RESOLVED configurations from: {}", prefix, inputXtcModules.getFiles());
+    protected List<File> resolveFullModulePath() {
         final var map = new HashMap<String, Set<File>>();
 
-        // All xtc modules and resources from our xtcModule dependencies declared in the project
-        map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, resolveFiles(inputXtcModules));
+        final Set<File> xdkContents = resolveDirectories(XtcProjectDelegate.getXdkContentsDir(project));
+        map.put(XDK_CONFIG_NAME_CONTENTS, xdkContents);
 
-        // All contents of the XDK. We can reduce that to a directory, since we know the structure, and that it's one directory
-        map.put(XDK_CONFIG_NAME_CONTENTS, resolveDirectories(delegate.getXdkContentsDir()));
+        final Set<File> xtcModuleDeclarations = resolveFiles(getXtcModuleDependencies());
+        map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
 
-        // TODO: It's probably always enough to traverse the per-task sourceSet, and will save time.
-        //   The option to iterate over all source sets is still there for completeness, but will most
-        //   likely go away. ATM we just want to merge a working Gradle XTC Plugin that handles dependencies
-        //   in a well-tested manner, though.
-        final List<SourceSet> sourceSets = includeAllSourceSets ? List.copyOf(delegate.getSourceSets()) : List.of(sourceSet);
-        for (final var sourceSet : sourceSets) {
-            final var name = capitalize(sourceSet.getName());
-            final var modules = delegate.getXtcCompilerOutputDirModules(sourceSet);
-            // xtcMain - Normally the only one we need to use
-            // xtcMainFiles - This is used to generate runAll task contents.
-            map.put(XTC_LANGUAGE_NAME + name, resolveDirectories(modules));
+        for (final var sourceSet : getDependentSourceSets()) {
+            final Set<File> sourceSetOutput = resolveDirectories(XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet));
+            map.put(XTC_LANGUAGE_NAME + sourceSet.getName(), sourceSetOutput);
         }
 
-        map.forEach((k, v) -> logger.info("{} Resolved files: {} -> {}", prefix, k, v));
-        logger.info("{} Resolving module path:", prefix);
-        return verifyModulePath(map);
+        logger.info("{} Compilation/runtime full module path resolved as: ", prefix());
+        map.forEach((k, v) -> logger.info("{}     Resolved files: {} -> {}", prefix(), k, v));
+        return verifiedModulePath(map);
     }
 
-    private Set<File> verifyModulePath(final Map<String, Set<File>> map) {
+    @InputDirectory
+    @PathSensitive(PathSensitivity.ABSOLUTE)
+    Provider<Directory> getInputXdkContents() {
+        return XtcProjectDelegate.getXdkContentsDir(project);
+    }
+
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.ABSOLUTE)
+    FileCollection getXtcModuleDependencies() {
+        final List<SourceSet> sourceSets = getDependentSourceSets();
+        final List<String> xtcDependencyConfigNames = sourceSets.stream().map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
+        final FileCollection xtcDependencyConfigs = filesFromConfigs(xtcDependencyConfigNames);
+        logger.info("{} Incoming XTC module dependencies for source sets (execution phase: {}): {} -> {}", prefix(), isBeingExecuted(), sourceSets, xtcDependencyConfigNames);
+        return xtcDependencyConfigs;
+    }
+
+    @Internal
+    protected List<SourceSet> getDependentSourceSets() {
+        return XtcProjectDelegate.getSourceSets(project).stream().toList();
+    }
+
+    protected List<File> verifiedModulePath(final Map<String, Set<File>> map) {
+        final var prefix = prefix();
         logger.info("{} ModulePathMap: [{} keys and {} values]", prefix, map.keySet().size(), map.values().stream().mapToInt(Set::size).sum());
 
         final var modulePathList = new ArrayList<File>();
@@ -301,7 +306,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         // Check that all modules on path are XTC files.
         logger.info("{} Final module path: {}", prefix, modulePathSet);
-        return modulePathSet;
+        // We sort the module path on File.compareTo, to make it deterministic between configurations.
+        return modulePathSet.stream().sorted().toList();
     }
 
     private void checkDuplicatesInModulePaths(final Set<File> modulePathSet) {
