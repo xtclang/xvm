@@ -74,6 +74,84 @@ public class xRTCharDelegate
     // ----- RTDelegate API ------------------------------------------------------------------------
 
     @Override
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        // we post increment to get the old value and check the range
+        char chValue = hDelegate.m_achValue[(int) lIndex]++;
+        if (chValue == Character.MAX_VALUE)
+            {
+            --hDelegate.m_achValue[(int) lIndex];
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue+1));
+        }
+
+    @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        // we post decrement to get the old value and check the range
+        char chValue = hDelegate.m_achValue[(int) lIndex]--;
+        if (chValue == Character.MIN_VALUE)
+            {
+            ++hDelegate.m_achValue[(int) lIndex];
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue-1));
+        }
+
+    @Override
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        char chValue = hDelegate.m_achValue[(int) lIndex]++;
+        if (chValue == Character.MAX_VALUE)
+            {
+            --hDelegate.m_achValue[(int) lIndex];
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        char chValue = hDelegate.m_achValue[(int) lIndex]--;
+        if (chValue == Character.MIN_VALUE)
+            {
+            ++hDelegate.m_achValue[(int) lIndex];
+            return overflow(frame);
+            }
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue));
+        }
+
+    @Override
     public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
         {
         CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
@@ -114,19 +192,6 @@ public class xRTCharDelegate
             hDelegate.m_achValue = achNew;
             }
         return Op.R_NEXT;
-        }
-
-    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
-        {
-        CharArrayHandle hDelegate = (CharArrayHandle) hTarget;
-
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
-            {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
-            }
-
-        return frame.assignValue(iReturn,
-                xChar.makeHandle(++hDelegate.m_achValue[(int) lIndex]));
         }
 
     @Override
@@ -331,12 +396,6 @@ public class xRTCharDelegate
                 System.arraycopy(ach, 0, achNew, 0, c);
                 m_achValue = achNew;
                 }
-            }
-
-        @Override
-        public boolean isNativeEqual()
-            {
-            return true;
             }
 
         @Override

@@ -27,7 +27,7 @@ public abstract class BitBasedDelegate
     {
     protected BitBasedDelegate(Container container, ClassStructure structure)
         {
-        super(container, structure);
+        super(container, structure, (byte) 0, (byte) 1);
         }
 
     @Override
@@ -48,6 +48,78 @@ public abstract class BitBasedDelegate
 
 
     // ----- RTDelegate API ------------------------------------------------------------------------
+
+    @Override
+    public int invokePreInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        if (getBit(hDelegate.m_abValue, lIndex))
+            {
+            return overflow(frame);
+            }
+        setBit(hDelegate.m_abValue, lIndex, true);
+        return frame.assignValue(iReturn, makeBitHandle(true));
+        }
+
+    @Override
+    public int invokePreDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        if (!getBit(hDelegate.m_abValue, lIndex))
+            {
+            return overflow(frame);
+            }
+        setBit(hDelegate.m_abValue, lIndex, false);
+        return frame.assignValue(iReturn, makeBitHandle(false));
+        }
+
+    @Override
+    public int invokePostInc(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        if (getBit(hDelegate.m_abValue, lIndex))
+            {
+            return overflow(frame);
+            }
+        setBit(hDelegate.m_abValue, lIndex, true);
+        return frame.assignValue(iReturn, makeBitHandle(false));
+        }
+
+    @Override
+    public int invokePostDec(Frame frame, ObjectHandle hTarget, long lIndex, int iReturn)
+        {
+        BitArrayHandle hDelegate = (BitArrayHandle) hTarget;
+
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        if (!getBit(hDelegate.m_abValue, lIndex))
+            {
+            return overflow(frame);
+            }
+        setBit(hDelegate.m_abValue, lIndex, false);
+        return frame.assignValue(iReturn, makeBitHandle(true));
+        }
 
     @Override
     public DelegateHandle fill(DelegateHandle hTarget, int cSize, ObjectHandle hValue)
@@ -301,7 +373,7 @@ public abstract class BitBasedDelegate
             }
         else
             {
-            abValue[index(iIndex)] &= ~bitMask(iIndex);
+            abValue[index(iIndex)] &= (byte) ~bitMask(iIndex);
             }
         }
 
@@ -355,9 +427,9 @@ public abstract class BitBasedDelegate
      *
      * @return the mask
      */
-    private static int bitMask(long iBit)
+    private static byte bitMask(long iBit)
         {
-        return 0x80 >>> (iBit & 0x7);
+        return (byte) (0x80 >>> (iBit & 0x7));
         }
 
     /**
