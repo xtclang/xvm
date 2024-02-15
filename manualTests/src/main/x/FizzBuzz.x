@@ -1,6 +1,6 @@
 // TODO: Add unit tests for both broken and working code/runtime modules.
 // TODO: Add a "test debugger" task to manualTests with the assert:debug enabled, or something.
-module FizzBuzz {
+module TestFizzBuzz {
     void run(String[] args = []) {
         @Inject Console console;
 

@@ -231,7 +231,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             args.add("--set-version", moduleVersion);
         }
         args.addRepeated("-L", resolveFullModulePath());
-        final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).toList();
+        final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).sorted().toList();
         if (sourceFiles.isEmpty()) {
             logger.warn("{} No source file found for source set: '{}'", prefix, sourceSet.getName());
         }

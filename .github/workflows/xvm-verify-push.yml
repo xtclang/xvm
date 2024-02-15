@@ -47,11 +47,8 @@ env:
   # The following flags were intended to be used to finish the build run with a simple sanity check, compiling
   # and running a text program, making sure that both the build DSL and the mechanism for consuming the
   # XDK being worked on as an artifact have not been broken.
-  #
-  # TODO: These will go away. We will add a separate job to do this to this workflow.
-  #
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: true
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD: false
+  ORG_GRADLE_PROJECT_includeBuildManualTests: true
+  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
 
   # Provide debug information of all build cache actions:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
@@ -109,18 +106,19 @@ jobs:
         run: ./gradlew installDist --info --stacktrace
 
       # 6. Run the Gradle installLocalDist task, and verify that its output works as expected.
-      # TODO
+      - name: Verify Gradle Install and Local Distribution Layout
+        run: ./gradlew installLocalDist --info --stacktrace
+
+      # 7. Sanity check test run. XUnit will give us real successes or failures.
+      - name: ManualTests Run Default
+        run: ./gradlew manualTests:runXtc
+      - name: ManualTests Run One By Property
+        run: ./gradlew manualTests:runOne -PtestName=TestMisc
+      - name: ManualTests Run Two In Sequence
+        run: ./gradlew manualTests:runTwoTestsInSequence
+      - name: ManualTests parallel tests
+        run: ./gradlew manualTests:runParallel
 
       # TODO: We need to figure out how to communicate success or failure as long as the manual tests are
       #   not integrated into test source sets / unit tests for XTC / XUnit, or whatever test harnesses
       #   we may want to use.
-      #
-      # TODO: A good shortcut to have, would be if tasks or extensions could grab configuration from properties
-      # too, even though this should really not matter for a properly setup IDE. For exmaple, force rebuild
-      # of a particular task in a particular project could maybe be -PmanualTests_tasks_runXtc_forceRebuild=true
-      #- name: includeBuild manualTests; make sure its default is to run as if -PtestName=TestSimple were set.
-      #  run: ./gradlew manualTests:runXtc -PmanualTests=true --info --stacktrace
-      #- name: includeBuild manualTests; make sure we can a single test, pointed out by the property testName
-      #  run: ./gradlew manualTests:runXtc -PmanualTests=true -PtestName=TestFizzBuzz -PtestArgs="Hello","World" --info --stacktrace
-      #- name: includeBuild manualTests; run all tests through the parallel XTC Runner
-      #  run: ./gradlew manualTests:runXtc -PmanualTests=true -PtestName=all --info --stacktrace

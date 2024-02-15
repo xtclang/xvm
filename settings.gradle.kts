@@ -55,7 +55,6 @@ includeBuild("xdk")
 private fun includeManualTests(): Boolean {
     val includeBuildManualTests: String? by settings
     val shouldInclude = includeBuildManualTests?.toBoolean() ?: false
-    System.err.println("includeManualTests: $shouldInclude")
     return shouldInclude.also {
         logger.info("[xvm] Build aggregator includeBuild(\"manualTests\"): $shouldInclude")
     }

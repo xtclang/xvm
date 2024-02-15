@@ -14,22 +14,21 @@ import org.xtclang.plugin.tasks.XtcRunTask
  * substitution on the XDK and XTC Plugin (and Javatools and other dependencies) correctly,
  * through included builds, anyway.
  *
- * Depending on the "manualTests" propertie set in ../gradle.propeties, this project
+ * Depending on the "manualTests" properties set in ../gradle.properties, this project
  * will either be an includedBuild in the XDK build, but will only configure, not resolve or
- * compile anything. The overhead using the Gradle cache should be minimal. If you set the
- * manualTests flag to false, you can still run and test this project from the command line
- * by specifying its path from the prompt, just like any external gradle project.
+ * compile anything, if not connected to the lifecycle, which cached is pretty much zero overhead.
+ * Excluding manual tests completely from the composite build will make it invisible in an IDE,
+ * (not just for the build lifecycle)
  *
  * Either way, you can always run these tasks from the CLI (or if you have the build included
  * from inside IntelliJ, and actually debug and test these tasks and the XDK implementation code
  * in the IDE).
  *
- * Commands to test (where <SourceSet> is empty for 'main', and 'test' for test (not used yet)):
+ *   ./gradlew build should be used to compile this project, not the explicit compile task.
  *
- *   ./gradlew :manualTests:run<SourceSet>Xtc (will execute the modules along with arguments etc, from the xtcRun extension config)
- *   ./gradlew :manualTests:run<SourceSet>Xtc -PmoduleName=TestArray (will override the xtcRun configuration and run the source set output module named TestArray)
- *   ./gradlew :manualTests:run<SourceSet>AllXtc (will execute every module created in the source set output)
- *   ./gradlew :manualTests:compile<SourceSet>Xtc (will compile the source set)
+ *   ./gradlew :manualTests:compile<SourceSet>Xtc (will compile the source set "SourceSet", for main, compileXtc is the task by convention)
+ *   ./gradlew :manualTests:runXtc (runs any modules in the global xtcRun extension, no-op if none)
+ *   ./gradlew :manualTests:<other run tasks> (show you how to override configuration in xtcRun with your own modules to run>
  *
  *   (or their corresponding IntelliJ actions, i.e. right click in the Gradle hierarchy, and set up the
  *    appropriate run and debug configuration for Gradle jobs).
@@ -111,33 +110,20 @@ sourceSets {
         xtc {
             // TODO this is weird. We should flter OUT the negative tests instead. Now, for example, we can still
             // resolve and run TestSimple even though it isn't in the source set?
-            include(
-                "**/annos.x",
-                "**/array.x",
-                "**/collections.x",
-                "**/defasn.x",
-                "**/exceptions.x",
-                "**/files.x",
-                "**/FizzBuzz.x",
-                "**/generics.x",
-                "**/innerouter.x",
-                "**/files.x",
-                "**/IO.x",
-                "**/lambda.x",
-                "**/literals.x",
-                "**/loop.x",
-                "**/nesting.x",
-                "**/numbers.x",
-                "**/prop.x",
-                "**/maps.x",
-                "**/misc.x",
-                "**/queues.x",
-                "**/services.x",
+            exclude("**/archive/**")
+            exclude("**/dbTests/**")
+            exclude("**/json/**")
+            exclude("**/multiModule/**")
+            exclude("**/webTests/**")
+            exclude(
+                "**/ConstOrdinalListTest.x",
+                "**/NumericConversions.x",
                 "**/TestSimple.x",
-                "**/reflect.x",
-                "**/regex.x",
-                "**/tuple.x"
-            )
+                "**/contained.x",
+                "**/container.x",
+                "**/Dec28.x",
+                "**/errors.x",
+                "**/innerouter.x")
         }
     }
 }
@@ -284,23 +270,25 @@ xtcRun {
      * you can compile tests as a separate source set, they will know about the main modules
      */
     module {
-        moduleName = "TestFizzBuzz"
-        moduleName = "run" // default
-        moduleArgs("Hello", "World") // default is no args.
-    }
-    module {
-        moduleName = "TestSimple"
+        moduleName = "EchoTest"
+        methodName = "run" // default
+        moduleArgs("Hello", "World")
     }
 }
 
 // This shows how to add a custom run task that overrides the global xtcRun config
 // or xtcRun configs.
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
-    moduleName("TestSimple")
+    verbose = true // override a default from xtcRun
+    module {
+        moduleName = "EchoTest"
+        moduleArg("Hello")
+        moduleArg(provider { System.getProperty("user.name") ?: "unknown user" })
+    }
     moduleName("TestArray")
-    verbose = true // override the default from xtcRun
 }
 
+// You can run ./gradlew manualTests:runOne -PtestName="TestArray" to run a single test, for example
 val runOne by tasks.registering(XtcRunTask::class) {
     module {
         moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
@@ -317,12 +305,14 @@ val runOne by tasks.registering(XtcRunTask::class) {
  * However, we should not attempt to run it as a test in the default configuration.
  */
 val runParallel by tasks.registering(XtcRunTask::class) {
+    group = "application"
     module {
-        moduleName = "Runner"
+        moduleName = "runner.xtc"
 
-        // If the runner took xtc files, and not module names, we could just pass in exactly the outgoing source sets, and we wouldn't have to
-        // know their names, and either send in any names for stuff that isn't built, violating the build cycle abstraction, having them secretly
-        // build by xec, and we would know we always ran exactly what is available.
+        // TODO: If the runner took xtc files, and not module names, we could just pass in exactly the outgoing source sets, and we wouldn't have to
+        //   know their names, and either send in any names for stuff that isn't built, violating the build cycle abstraction, having them secretly
+        //   build by xec, and we would know we always ran exactly what is available.
+        //
         //moduleArgs(provideTestModules)
 
         // Now instead we have to do this, which may or may not have any relation to the source set output.
@@ -340,6 +330,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
             "TestGenerics",
             "TestInnerOuter",
             "TestFiles",
+            "TestFizzBuzz",
             "TestIO",
             "TestLambda",
             "TestLiterals",
@@ -358,7 +349,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
     }
 }
 
-fun resolveTestNameProperty(defaultTestName: String = "TestSimple"): String {
+fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
     return if (hasProperty("testName")) (properties["testName"] as String) else defaultTestName
 }
 
@@ -369,6 +360,18 @@ fun resolveTestNameProperty(defaultTestName: String = "TestSimple"): String {
  * exist at configuration time), not implementing this as a provider, would trigger a full compile immediately
  * when someone wants to access source set output that doesn't exist yet. It would also likely not work, because
  * the configuration don't know everything about the world yet.
+ *
+ * This shows the power of Gradle/Maven; anyone asking for the contents of this provider, i.e. anyone who
+ * asks what's in the source set, will trigger the source set being built to return its outputs, and it will
+ * happen iff those data are really required (such as during the execution phase of the testParallel task).
+ * At configuration time, the testParallel task will validate the DSL, but all it sees is a provider in the
+ * modules definition. It's first when that task is executed (if every) that we trigger a build. You can
+ * see this if you exclude manual tests from the composite build lifecycle (see root/gradle.properties) and
+ * just execute ./gradlew manualTests:runParallel. Only when we are ready to launch the runner, is the
+ * cascade of operations leading the source set output occur. We also know exactly which source sets
+ * we have, so we don't have to maintain a list of module names, which we don't now if they exist or not.
+ * This is also brittle, because the runner may in turn trigger the compiler, after searching through
+ * the directory space for something corresponding to the module name.
  */
 val provideTestModules: Provider<List<String>> = provider {
     // TODO: If we put JavaTools on the compile classpath for this project, as a one-line dependency, we could directly
