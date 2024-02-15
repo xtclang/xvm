@@ -279,6 +279,7 @@ xtcRun {
 // This shows how to add a custom run task that overrides the global xtcRun config
 // or xtcRun configs.
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
+    group = "application"
     verbose = true // override a default from xtcRun
     module {
         moduleName = "EchoTest"
@@ -290,6 +291,8 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
 
 // You can run ./gradlew manualTests:runOne -PtestName="TestArray" to run a single test, for example
 val runOne by tasks.registering(XtcRunTask::class) {
+    group = "application"
+    description = "Runs one test as given by the property 'testName', or a default test if not set."
     module {
         moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
     }
@@ -306,6 +309,7 @@ val runOne by tasks.registering(XtcRunTask::class) {
  */
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
+    description = "Run all known tests in parallel through the parallel test runner."
     module {
         moduleName = "runner.xtc"
 
