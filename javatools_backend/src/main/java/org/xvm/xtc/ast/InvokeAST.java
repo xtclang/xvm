@@ -75,7 +75,9 @@ public class InvokeAST extends AST {
       case "toInt8", "toInt16", "toInt32", "toInt64" ->  _kids[0]; // Autoboxing in Java
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
-      case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, new ConAST( "0xFFFFFFFFL" ), _kids[0] );
+      case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL" ));
+      case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL" ));
+      case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL" ));
       case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "mul" -> new BinOpAST( "*", "", XCons.LONG, _kids );

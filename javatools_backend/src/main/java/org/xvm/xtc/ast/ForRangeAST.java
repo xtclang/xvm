@@ -27,8 +27,11 @@ class ForRangeAST extends AST {
   @Override AST prewrite() {
     // Primitive iterator?
     // Get a tmp
-    if( _kids[0]._type.primeq() )
+    if( _kids[0]._type.primeq() ) {
+      if( _kids[1]._type instanceof XClz xclz )
+        ClzBuilder.add_import(xclz);
       _tmp = enclosing_block().add_tmp(_kids[1]._type);
+    }
     return this;
   }
 
