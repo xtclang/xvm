@@ -3,6 +3,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.CHECK_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.CLEAN_TASK_NAME
+import java.util.Locale
 
 plugins {
     base
@@ -17,22 +18,30 @@ private class XdkBuildAggregator(project: Project) : Runnable {
     private val prefix = "[${project.name}]"
 
     override fun run() {
-        logger.info("$prefix Aggregating included build tasks:")
         gradle.includedBuilds.forEachIndexed { i, includedBuild ->
             logger.info("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
         }
 
+        val ingoredIncludedBuilds = gradle.includedBuilds.map { it.name }.filter {
+            val attachkKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
+            val attach = (properties[attachkKey]?.toString() ?: "true").toBoolean()
+            if (!attach) {
+                logger.warn("$prefix   WARNING: '$it' is explicitly configured to be outside the root lifecycle ($attachkKey: $attach).")
+            }
+            !attach
+        }.toSet()
+
         checkStartParameterState()
-        aggregateLifeCycleTasks()
+        aggregateLifeCycleTasks(ingoredIncludedBuilds)
     }
 
-    private fun aggregateLifeCycleTasks() {
+    private fun aggregateLifeCycleTasks(ignored: Set<String>) {
         lifeCycleTasks.forEach { taskName ->
             logger.info("$prefix Creating aggregated lifecycle task: ':$taskName' in project '${project.name}'")
             tasks.named(taskName) {
                 group = BUILD_GROUP
                 description = "Aggregates and executes the '$taskName' task for all included builds."
-                gradle.includedBuilds.forEach { includedBuild ->
+                gradle.includedBuilds.filterNot { ignored.contains(it.name) }.forEach { includedBuild ->
                     dependsOn(includedBuild.task(":$taskName"))
                     logger.info("$prefix     Attaching: dependsOn(':$name' <- ':${includedBuild.name}:$name')")
                 }

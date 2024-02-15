@@ -1,6 +1,5 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
-import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -37,6 +36,12 @@ val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(xdk.task(":$name"))
+}
+
+val install by tasks.registering {
+    doLast {
+        TODO("The 'install' task has now changes names to 'installDist', as per the common standard.")
+    }
 }
 
 /*

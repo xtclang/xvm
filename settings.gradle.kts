@@ -41,7 +41,8 @@ includeBuild("xdk")
  * Checks if the property "shouldIncludeManualTests" is present, which can be set in the gradle.properties
  * file, or passed on the command line with -P (or set in an environment variable with the user guide defined
  * name). The default is false, which means that the XVM build won't even try to look for the manualTests
- * project.
+ * project. In Gradle, this should also be equivalent to having the environment variable
+ * ORG_GRADLE_PROJECT_shouldIncludeManualTests set to true.
  *
  * TODO: This is a bad idea, since if you want to work with, or debug the manual tests inside IntelliJ,
  * the manualTests project will be completely invisible and not loaded. I would still strongly recommend
@@ -52,10 +53,11 @@ includeBuild("xdk")
  * Regardless of configuration, the manual tests can be run with ./gradlew manualTests:
  */
 private fun includeManualTests(): Boolean {
-    val manualTests: String? by settings
-    val manualTestsFlag = manualTests?.toBoolean() ?: false
-    return manualTestsFlag.also {
-        logger.info("[xvm] Build aggregator includeBuild(\"manualTests\"): $manualTestsFlag")
+    val includeBuildManualTests: String? by settings
+    val shouldInclude = includeBuildManualTests?.toBoolean() ?: false
+    System.err.println("includeManualTests: $shouldInclude")
+    return shouldInclude.also {
+        logger.info("[xvm] Build aggregator includeBuild(\"manualTests\"): $shouldInclude")
     }
 }
 
