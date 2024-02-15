@@ -101,7 +101,7 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         }
 
         fun findLocalXdkInstallation(): File? {
-            return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile?.parentFile // xec -> bin -> libexec -> "x.y.z.ppp"
+            return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile // xec -> bin -> xdk
         }
 
         /**
