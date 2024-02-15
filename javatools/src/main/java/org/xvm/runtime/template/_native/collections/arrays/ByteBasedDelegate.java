@@ -29,9 +29,13 @@ public abstract class ByteBasedDelegate
         extends xRTDelegate
         implements ByteView
     {
-    public ByteBasedDelegate(Container container, ClassStructure structure)
+    public ByteBasedDelegate(Container container, ClassStructure structure,
+                             byte bMinValue, byte bMaxValue)
         {
         super(container, structure, false);
+
+        f_bMinValue = bMinValue;
+        f_bMaxValue = bMaxValue;
         }
 
     @Override
@@ -239,18 +243,19 @@ public abstract class ByteBasedDelegate
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
-        byte bValue = ++hDelegate.m_abValue[(int) lIndex];
-        if (bValue == Byte.MIN_VALUE)
+        // we post increment to get the old value and check the range
+        byte bValue = hDelegate.m_abValue[(int) lIndex]++;
+        if (bValue == f_bMaxValue)
             {
             --hDelegate.m_abValue[(int) lIndex];
             return overflow(frame);
             }
-        return frame.assignValue(iReturn, makeElementHandle(bValue));
+        return frame.assignValue(iReturn, makeElementHandle(bValue+1));
         }
 
     @Override
@@ -258,18 +263,19 @@ public abstract class ByteBasedDelegate
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
-        byte bValue = --hDelegate.m_abValue[(int) lIndex];
-        if (bValue == Byte.MAX_VALUE)
+        // we post decrement to get the old value and check the range
+        byte bValue = hDelegate.m_abValue[(int) lIndex]--;
+        if (bValue == f_bMinValue)
             {
             ++hDelegate.m_abValue[(int) lIndex];
             return overflow(frame);
             }
-        return frame.assignValue(iReturn, makeElementHandle(bValue));
+        return frame.assignValue(iReturn, makeElementHandle(bValue-1));
         }
 
     @Override
@@ -277,15 +283,15 @@ public abstract class ByteBasedDelegate
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
-        byte bValue = hDelegate.m_abValue[(int) lIndex]--;
-        if (bValue == Byte.MAX_VALUE)
+        byte bValue = hDelegate.m_abValue[(int) lIndex]++;
+        if (bValue == f_bMaxValue)
             {
-            hDelegate.m_abValue[(int) lIndex]++;
+            hDelegate.m_abValue[(int) lIndex]--;
             return overflow(frame);
             }
         return frame.assignValue(iReturn, makeElementHandle(bValue));
@@ -296,15 +302,15 @@ public abstract class ByteBasedDelegate
         {
         ByteArrayHandle hDelegate = (ByteArrayHandle) hTarget;
 
-        if (lIndex < 0 || lIndex >= hDelegate.m_cSize)
+        if (checkWriteInPlace(frame, hDelegate, lIndex, hDelegate.m_cSize) == Op.R_EXCEPTION)
             {
-            return frame.raiseException(xException.outOfBounds(frame, lIndex, hDelegate.m_cSize));
+            return Op.R_EXCEPTION;
             }
 
         byte bValue = hDelegate.m_abValue[(int) lIndex]--;
-        if (bValue == Byte.MIN_VALUE)
+        if (bValue == f_bMinValue)
             {
-            hDelegate.m_abValue[(int) lIndex]--;
+            hDelegate.m_abValue[(int) lIndex]++;
             return overflow(frame);
             }
         return frame.assignValue(iReturn, makeElementHandle(bValue));
@@ -426,12 +432,6 @@ public abstract class ByteBasedDelegate
             }
 
         @Override
-        public boolean isNativeEqual()
-            {
-            return true;
-            }
-
-        @Override
         public int compareTo(ObjectHandle that)
             {
             byte[] abThis = m_abValue;
@@ -468,4 +468,7 @@ public abstract class ByteBasedDelegate
                 && Arrays.equals(this.m_abValue, that.m_abValue);
             }
         }
+
+    private final byte f_bMinValue;
+    private final byte f_bMaxValue;
     }
