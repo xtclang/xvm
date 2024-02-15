@@ -24,7 +24,7 @@ public interface Comparable {
   
   /** Each implementation will define the above abstract equals as:
    *  {@code public boolean equals(XTC x0, XTC x1) { return equals$CLZ((CLZ)x0,(CLZ)x1) } }
-   * Each implemention will also define (commonly with a default gen'd code):
+   * Each implementation will also define (commonly with a default gen'd code):
    *  {@code public boolean equals$CLZ(CLZ x0, CLZ x1) { ... field-by-field or user-speced... } }
    *
    *  The default implementation never uses the gold argument, but user-defined
@@ -46,7 +46,14 @@ public interface Comparable {
     sb.ip(  "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop && S.find(clz._tnames,prop._name) == -1 && !p.isStatic() && (any=true) ) {
+      if( p instanceof PropPart prop &&
+          // No equals on type parameters
+          S.find(clz._tnames,prop._name) == -1 &&
+          // No equals on static props
+          !p.isStatic() &&
+          // No equals on get-only properties
+          !(p._name2kid != null && p._name2kid.containsKey("get")) ) {
+        any = true;
         XType xt = XType.xtype(prop._con,false);
         xt.do_eq(sb.p("x0.").p(prop._name),"x1."+prop._name).p(" && ");
       }

@@ -68,7 +68,7 @@ class BinOpAST extends AST {
     if( _kids[0]._type == XCons.JINT128 ||_kids[0]._type == XCons.JUINT128 ) {
       String op = switch( _op0 ) {
       case "==" -> "eq";
-      case ">=" -> "gt";
+      case ">=" -> "ge";
       default -> throw XEC.TODO();
       };
       return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
@@ -158,37 +158,39 @@ class BinOpAST extends AST {
 
   // Java precedence table
   private static final HashMap<String,Integer> PRECS = new HashMap<>(){{
-      put("._f",1); // Primitive tuple field loads
+      put("._f",17); // Primitive tuple field loads
       
-      put("[" , 2);
-      
-      put("*" , 3);
-      put("/" , 3);
-      put("%" , 3);
-      
-      put("+" , 4);
-      put("-" , 4);
+      put("[" ,16);
 
-      put("<<", 5);
-      put(">>", 5);
-      put(">>>", 5);
+      // java unary ops go here
+      
+      put("*" ,12);
+      put("/" ,12);
+      put("%" ,12);
+      
+      put("+" ,11);
+      put("-" ,11);
 
-      put("<" , 6);
-      put(">" , 6);
-      put("<=", 6);
-      put(">=", 6);
-      
-      put("==", 7);
-      put("!=", 7);
-      
-      put("&" , 8);
-      put("^" , 9);
-      put("|" ,10);
+      put("<<",10);
+      put(">>",10);
+      put(">>>",10);
 
-      put("&&" ,11);
-      put("||" ,12);
+      put("<" , 9);
+      put(">" , 9);
+      put("<=", 9);
+      put(">=", 9);
       
-      put("?:" ,13);
+      put("==", 8);
+      put("!=", 8);
+      
+      put("&" , 7);
+      put("^" , 6);
+      put("|" , 5);
+
+      put("&&" ,4);
+      put("||" ,3);
+      
+      put("?:" ,2);
       
     }};
   private boolean prec(String op, String ex) {

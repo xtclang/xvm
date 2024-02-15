@@ -37,16 +37,26 @@ public class Int128 extends IntNumber {
     return new Int128(lo,hi);
   }
   public Int128 div( Int128 x ) { throw XEC.TODO(); }
+  public Int128 mod( Int128 x ) { throw XEC.TODO(); }
   public boolean eq( Int128 x ) { throw XEC.TODO(); }
   public boolean gt( Int128 x ) { return _hi != x._hi ? (_hi >  x._hi) : (_lo >  x._lo); }
   public boolean ge( Int128 x ) { return _hi != x._hi ? (_hi >= x._hi) : (_lo >= x._lo); }
   
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
   public Dec128 toDec128() { throw XEC.TODO(); }
+  public long toInt(boolean check) {
+    if( check ) throw XEC.TODO();
+    return _lo;
+  }
+  public long toUInt32(boolean check) {
+    if( check ) throw XEC.TODO();
+    return _lo;
+  }
   
   @Override public long hashCode( XTC x ) { throw XEC.TODO(); }
   @Override public boolean equals ( XTC x0, XTC x1 ) { throw XEC.TODO(); }
   @Override public Ordered compare( XTC x0, XTC x1 ) { throw XEC.TODO(); }
+  public Ordered compare( Int128 x ) { throw XEC.TODO(); }
 
   @Override public final String toString() {
     if( _hi != (_lo>>63) )

@@ -15,11 +15,29 @@ import javax.tools.*;
 import static javax.tools.JavaFileObject.Kind;
 
 public abstract class JavaC {
-  static JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
-  static final XFileManager XFILE = new XFileManager(COMPILER.getStandardFileManager(null, null, null));
+  // Standard Tool JavaC
+  static final JavaCompiler COMPILER;
+  // File Manager Wrapper to fake byte buffers as class files to JavaC
+  static final XFileManager XFILE;
+  // XTC loader, using XFILE to find files
+  static final XClzLoader LOADER;
+  
+  // A map from qualified Java class names e.g. "org.xvm.xec.XEC" to a
+  // JCodes, which is just a wrapper around the class file contents as bytes.
+  public static final XFileSys XFM;
 
+  static {
+    COMPILER = ToolProvider.getSystemJavaCompiler();
+    XFILE = new XFileManager(COMPILER.getStandardFileManager(null, null, null));
+    LOADER = new XClzLoader();
+    // Preload all the hand-made Java classes under XTC.XCLZ
+    URL xecurl = JavaC.class.getClassLoader().getResource("org/xvm/xec/");
+    XFM = new XFileSys("org.xvm.xec",new File(xecurl.getFile()));
+  }
+
+  
   // Compile a whole set of classes together
-  static void compile( ArrayList<JavaSrc> srcs, Ary<ClassPart> clzs ) {
+  static void compile( ArrayList<JavaSrc> srcs ) {
 
     DiagnosticCollector<JavaFileObject> errs = new DiagnosticCollector<>();
 
@@ -33,10 +51,9 @@ public abstract class JavaC {
     }
 
     try {
-      for( int i=0; i<srcs.size(); i++ ) {
-        Class<XTC> klass = (Class<XTC>)XFILE._loader.loadClass(srcs.get(i)._name);
-        if( clzs != null )
-          clzs.at(i)._jclz = klass;
+      for( JavaSrc src : srcs ) {
+        JCodes jc = XFM.get( src._name );
+        jc._klass = (Class<XTC>) LOADER.loadClass( src._name );
       }
     } catch( ClassNotFoundException cnfe ) {
       throw new RuntimeException(cnfe);
@@ -53,7 +70,7 @@ public abstract class JavaC {
   }
   
   public static class JavaSrc extends SJFOWrap {
-    public final String _src;
+    public String _src;
     public JavaSrc(String name, String src) {
       super(name,  Kind.SOURCE);
       _src = src;
@@ -66,6 +83,7 @@ public abstract class JavaC {
     private static final class BAOS extends ByteArrayOutputStream { byte[] buf() { return buf; } }
     final byte[] _buf;
     final BAOS _bos;
+    public Class<XTC> _klass;
     public JCodes(String name, Kind kind) {
       super(name, kind);
       _bos = new BAOS(); // Initial small buffer, will change during compilation
@@ -90,29 +108,30 @@ public abstract class JavaC {
   }
   
   private static class XClzLoader extends ClassLoader {
-    final XFileManager _xfm;
-    XClzLoader( ClassLoader par, XFileManager xfm ) { super(par); _xfm = xfm; }
+    XClzLoader() { super(JavaC.class.getClassLoader()); }
     @Override protected Class<XTC> findClass( String clzname) throws ClassNotFoundException {
-      JCodes jc = _xfm._xfm.get(clzname);
-      return (Class<XTC>)defineClass(clzname, jc._bos.buf(), 0, jc._bos.size());
+      JCodes jc = XFM.get(clzname);
+      return (Class<XTC>)(jc._buf==null
+                          ? defineClass(clzname, jc._bos.buf(), 0, jc._bos.size())
+                          : defineClass(clzname, jc.    _buf  , 0, jc._buf.length));
     }
     @Override public String getName() { return "XEC_ClassLoader"; }
   }
 
   // A tree-structured set of hashmaps, mirroring the actual org.xvm.xec directory structure
-  private static class XFM {
+  public static class XFileSys {
     public final HashMap<String,JCodes> _jcodes; // Local class files
-    public final HashMap<String,XFM> _dirs;      // Sub-directories of the same
+    public final HashMap<String,XFileSys> _dirs;      // Sub-directories of the same
     
     // Walk and recursively install all existing hand-made Java classes
-    XFM( String prefix, File dir ) {
+    XFileSys( String prefix, File dir ) {
       _jcodes = new HashMap<>();
       _dirs = new HashMap<>();
       if( dir != null )
         for( File file : dir.listFiles() ) {
           String fname = file.getName();
           if( file.isDirectory() ) {
-            _dirs.put(fname,new XFM(prefix+"."+fname,file));
+            _dirs.put(fname,new XFileSys(prefix+"."+fname,file));
           } else {
             if( fname.endsWith(".class") ) {
               // e.g. "org.xvm.xec.XRunClz"
@@ -124,7 +143,7 @@ public abstract class JavaC {
       }
     }
 
-    XFM pack(String clzname, boolean hasBase ) {
+    XFileSys pack(String clzname, boolean hasBase ) {
       // org.xvm.xec.PACK0.PACK1.PACKN.BASECLASSNAME
       assert clzname.startsWith(XEC.XCLZ);
       // .PACK0.PACK1.PACKN.BASECLASSNAME
@@ -135,16 +154,16 @@ public abstract class JavaC {
     }
 
     // .PACK0.PACK1.PACKN or null if it does not exist
-    XFM _pack( String pack, boolean create ) {
+    XFileSys _pack( String pack, boolean create ) {
       if( pack.isEmpty() ) return this;
       int idx = pack.indexOf('.',1);
       String spack = idx == -1 ? pack.substring(1) : pack.substring(1,idx);
-      XFM dir = _dirs.get(spack);
+      XFileSys dir = _dirs.get(spack);
       if( dir!=null )
         return idx == -1 ? dir : dir._pack(pack.substring(idx),create);
       if( !create )
         return null;
-      dir = new XFM(null,null);
+      dir = new XFileSys(null,null);
       _dirs.put(spack,dir);
       return dir;
     }
@@ -153,33 +172,31 @@ public abstract class JavaC {
     JCodes get(String clzname) {
       return pack(clzname,true)._jcodes.get(clzname);
     }
+    public Class<XTC> klass(String clz) {
+      JCodes jc = get(clz);
+      return jc == null ? null : jc._klass;
+    }
+    public Class<XTC> klass(ClassPart clz) {
+      return clz._tclz==null ? null : klass(clz._tclz.qualified_name());
+    }
     
     JCodes put( String clzname, JCodes jc ) {
       pack(clzname,true)._jcodes.put(clzname,jc);
       return jc;
     }
+
   }
 
   
   // Locally compiled java class files "file system".
   private static class XFileManager extends ForwardingJavaFileManager<JavaFileManager> {
-    // A map from qualified Java class names e.g. "org.xvm.xec.XEC" to a
-    // JCodes, which is just a wrapper around the class file contents as bytes.
-    public final XFM _xfm;
-    public final XClzLoader _loader;
-    public XFileManager(StandardJavaFileManager man) {
-      super(man);
-      _loader = new XClzLoader(getClass().getClassLoader(),this);
-      // Preload all the hand-made Java classes under XTC.XCLZ
-      URL xecurl = JavaC.class.getClassLoader().getResource("org/xvm/xec/");
-      _xfm = new XFM("org.xvm.xec",new File(xecurl.getFile()));
-    }
+    public XFileManager(StandardJavaFileManager man) { super(man); }
     
-    @Override public XClzLoader getClassLoader(Location location) { return _loader; }
+    @Override public XClzLoader getClassLoader(Location location) { return LOADER; }
     // javac will get this JCodes and fill it; we map it before it gets filled
     @Override public JavaFileObject getJavaFileForOutput(Location ignore, String name, Kind kind, FileObject sibling) {
       JCodes jc = new JCodes(name, kind);
-      return _xfm.put(name,jc);
+      return XFM.put(name,jc);
     }
 
     // Intercept my JCodes looking for the fully qualified Java name.
@@ -209,7 +226,7 @@ public abstract class JavaC {
         Iterator<JCodes> _iter;
         Iter() {
           String pack = _pack;
-          XFM xfm = _xfm.pack(_pack,false);
+          XFileSys xfm = XFM.pack(_pack,false);
           _iter = xfm==null ? null : xfm._jcodes.values().iterator();
         }
         @Override public boolean hasNext() { return _iter != null && _iter.hasNext(); }

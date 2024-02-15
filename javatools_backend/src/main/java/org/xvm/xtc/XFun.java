@@ -65,7 +65,7 @@ public class XFun extends XType {
     String tclz = clz();
     String qual = (XEC.XCLZ+"."+tclz).intern();
     ClzBuilder.add_import(qual);
-    if( ClzBldSet.XCLASSES.containsKey(qual) )
+    if( ClzBldSet.find(qual) )
       return this;
     // The no-arg-no-ret version already exists, essentially a Java "Callable"
     if( _xts.length==0 ) return this;
@@ -96,7 +96,7 @@ public class XFun extends XType {
     // Class end
     sb.di().ip("}").nl();
     sb.p("// ---------------------------------------------------------------").nl();
-    ClzBldSet.do_compile(qual,sb.toString());
+    ClzBldSet.add(qual,sb.toString());
     return this;
   }
   

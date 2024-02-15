@@ -362,6 +362,8 @@ public class ClzBuilder {
       for( int i = 0; i < m._xargs.length; i++ ) {
         // Unbox boxed args
         m._xargs[i] = m._xargs[i].unbox();
+        if( m._xargs[i] instanceof XClz xclz )
+          add_import(xclz);
         // Parameter class, using local generic parameters
         Parameter p = m._args[i];
         if( p.tcon() instanceof TermTCon ttc && ttc.id() instanceof FormalCon )
@@ -547,7 +549,7 @@ public class ClzBuilder {
       }
       // Needs a build also
       if( tclz.needs_build() )
-        ClzBldSet.add(tclz._mod,tclz._clz);
+        ClzBldSet.add(tclz._clz);
     }
     return tclz;
   }

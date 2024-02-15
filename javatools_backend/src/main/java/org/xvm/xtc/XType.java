@@ -169,9 +169,7 @@ public abstract class XType {
         if( S.eq("Null",clz._name) )
           yield XCons.NULL;     // Primitive null
         XClz xclz = XClz.make(clz);
-        XType xt = boxed ? xclz.box() : xclz.unbox();
-        if( xt instanceof XClz xclz2 ) ClzBuilder.add_import(xclz2);
-        yield xt;
+        yield boxed ? xclz.box() : xclz.unbox();
       }
       
       if( ttc.part() instanceof ParmPart parm ) {
@@ -199,7 +197,7 @@ public abstract class XType {
 
       // These XTC classes are all intercepted and directly implemented in Java
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
-        yield ClzBuilder.add_import(XClz.make(ptc));
+        yield XClz.make(ptc);
 
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
         XType[] args = xtypes(((ParamTCon)ptc._parms[0])._parms);
@@ -213,7 +211,7 @@ public abstract class XType {
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
         if( telem== LONG || telem== JLONG )
-          yield ClzBuilder.add_import(RANGE); // Shortcut class
+          yield RANGE;          // Shortcut class
         throw XEC.TODO();
       }
 
@@ -236,7 +234,7 @@ public abstract class XType {
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
         if( telem == CHAR || telem== JCHAR )
-          yield ClzBuilder.add_import(APPENDERCHAR);
+          yield APPENDERCHAR;
         yield XClz.make(ptc);
       }
 
@@ -268,7 +266,7 @@ public abstract class XType {
       // The enum instance as a ClassPart
       ClassPart eclz = (ClassPart)econ.part();
       // The Enum class itself, not the enum
-      XClz xclz = ClzBuilder.add_import(XClz.make(eclz._super));
+      XClz xclz = XClz.make(eclz._super);
       // The enum
       yield xclz.unbox();
     }
@@ -297,20 +295,15 @@ public abstract class XType {
       throw XEC.TODO();
     }
 
-    case Dec64Con dcon ->
-      ClzBuilder.add_import(DEC64);
+    case Dec64Con dcon -> DEC64;
 
-    case Dec128Con dcon ->
-      ClzBuilder.add_import(DEC128);
+    case Dec128Con dcon -> DEC128;
 
-    case ClassCon ccon ->
-      XClz.make(ccon.clz());
+    case ClassCon ccon ->  XClz.make(ccon.clz());
 
-    case ServiceTCon service ->
-      SERVICE;
+    case ServiceTCon service -> SERVICE;
 
-    case VirtDepTCon virt ->
-      xtype(virt._par,false);
+    case VirtDepTCon virt -> xtype(virt._par,false);
 
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
