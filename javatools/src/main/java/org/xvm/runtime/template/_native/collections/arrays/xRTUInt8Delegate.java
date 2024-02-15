@@ -23,7 +23,7 @@ public class xRTUInt8Delegate
 
     public xRTUInt8Delegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure);
+        super(container, structure, (byte) 0, (byte) 0xFF);
 
         if (fInstance)
             {

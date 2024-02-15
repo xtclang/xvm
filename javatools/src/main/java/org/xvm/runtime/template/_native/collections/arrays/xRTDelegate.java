@@ -547,16 +547,9 @@ public class xRTDelegate
         DelegateHandle hDelegate = (DelegateHandle) hTarget;
         long           cSize     = hDelegate.m_cSize;
 
-        switch (hDelegate.getMutability())
+        if (checkWrite(frame, hDelegate, lIndex, cSize) == Op.R_EXCEPTION)
             {
-            case Fixed:
-                if (lIndex < cSize)
-                    {
-                    break;
-                    }
-                // fall through
-            case Constant:
-                return frame.raiseException(xException.readOnly(frame, hDelegate.getMutability()));
+            return Op.R_EXCEPTION;
             }
 
         if (lIndex < 0)
@@ -587,6 +580,44 @@ public class xRTDelegate
 
 
     // ----- RTDelegate subclassing support --------------------------------------------------------
+
+    /**
+     * Check if an element write is allowed.
+     */
+    protected int checkWrite(Frame frame, DelegateHandle hDelegate, long lIndex, long cSize)
+        {
+        switch (hDelegate.getMutability())
+            {
+            case Fixed:
+                if (lIndex < cSize)
+                    {
+                    break;
+                    }
+                // fall through
+            case Constant:
+                return frame.raiseException(xException.readOnly(frame, hDelegate.getMutability()));
+            }
+
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Check if an element over-write is allowed.
+     */
+    protected int checkWriteInPlace(Frame frame, DelegateHandle hDelegate, long lIndex, long cSize)
+        {
+        if (checkWrite(frame, hDelegate, lIndex, cSize) == Op.R_EXCEPTION)
+            {
+            return Op.R_EXCEPTION;
+            }
+
+        if (lIndex < 0 || lIndex >= cSize)
+            {
+            return frame.raiseException(xException.outOfBounds(frame, lIndex, cSize));
+            }
+
+        return Op.R_NEXT;
+        }
 
     /**
      * Create a copy of the specified array delegate for the specified mutability.
