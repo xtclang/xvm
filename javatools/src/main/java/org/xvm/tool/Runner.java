@@ -32,7 +32,10 @@ import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
 
+import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
 import static org.xvm.util.Handy.checkReadable;
+import static org.xvm.util.Handy.isPathed;
 import static org.xvm.util.Handy.quotedString;
 
 
@@ -112,135 +115,162 @@ public class Runner
             return;
             }
 
-        ModuleInfo info = null;
-        try
+        String          filePath   = fileSpec.getPath();
+        File            fileBin    = null;
+        boolean         binExists  = false;
+        ModuleStructure module     = null;
+        String          binLocDesc = null;
+        if (isExplicitCompiledFile(filePath) && fileSpec.exists()
+                && (options().isCompileDisabled() || isPathed(filePath)))
             {
-            info = new ModuleInfo(fileSpec);
+            // the caller has explicitly specified the exact .xtc file and/or
+            fileBin    = fileSpec;
+            binExists  = true;
+            binLocDesc = "the specified target " + filePath;
             }
-        catch (RuntimeException e)
+        else if (!isPathed(filePath) && !isExplicitEcstasyFile(filePath)
+                && (module = repo.loadModule(filePath)) != null)
             {
-            log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
+            // use the module we found in the repo
+            binLocDesc = "the repository";
             }
-        checkErrors();
-
-        File            fileBin   = info.getBinaryFile();
-        boolean         binExists = fileBin != null && fileBin.exists();
-        ModuleStructure module    = null;
-        boolean         fCompile  = false;
-        if (!binExists)
+        else
             {
-            String qualName = info.getQualifiedModuleName();
-            module = repo.loadModule(qualName);
-            if (module == null)
+            ModuleInfo info    = null;
+            File       outFile = (File) options.values().get("o");
+            try
                 {
-                File fileSrc = info.getSourceFile();
-                if (fileSrc != null && fileSrc.exists())
+                info = new ModuleInfo(fileSpec, null, outFile);
+                }
+            catch (RuntimeException e)
+                {
+                log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
+                }
+            checkErrors();
+
+            fileBin   = info.getBinaryFile();
+            binExists = fileBin != null && fileBin.exists();
+
+            boolean fCompile = false;
+            if (!binExists)
+                {
+                String qualName = info.getQualifiedModuleName();
+                module = repo.loadModule(qualName);
+                if (module == null)
                     {
-                    log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
-                            + "\" is missing; attempting to compile it from " + info.getSourceFile() + " ....");
-                    fCompile = true;
-                    }
-                else
-                    {
-                    Set<String> possibles = null;
-                    if (qualName.indexOf('.') < 0)
+                    File fileSrc = info.getSourceFile();
+                    if (fileSrc != null && fileSrc.exists() && !options.isCompileDisabled())
                         {
-                        // the qualified name wasn't qualified; that may have been user input error;
-                        // find all of the names that they may have meant to type
-                        for (String name : repo.getModuleNames())
-                            {
-                            int ofDot = name.indexOf('.');
-                            if (ofDot > 0 && name.substring(0, ofDot).equals(qualName))
-                                {
-                                if (possibles == null)
-                                    {
-                                    possibles = new ListSet<>();
-                                    }
-                                possibles.add(name);
-                                }
-                            }
-                        }
-                    if (possibles == null)
-                        {
-                        log(Severity.ERROR, "Failed to locate the module for: " + fileSpec);
-                        }
-                    else if (possibles.size() == 1)
-                        {
-                        log(Severity.ERROR, "Unable to locate the module for " + fileSpec
-                                + "; did you mean " + quotedString(possibles.iterator().next()) + '?');
+                        log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
+                                + "\" is missing; attempting to compile it from "
+                                + info.getSourceFile() + " ....");
+                        fCompile = true;
                         }
                     else
                         {
-                        StringBuilder buf = new StringBuilder();
-                        for (String name : possibles)
+                        Set<String> possibles = null;
+                        if (qualName.indexOf('.') < 0)
                             {
-                            buf.append(", ")
-                               .append(quotedString(name));
+                            // the qualified name wasn't qualified; that may have been user input
+                            // error; find all of the names that they may have meant to type
+                            for (String name : repo.getModuleNames())
+                                {
+                                int ofDot = name.indexOf('.');
+                                if (ofDot > 0 && name.substring(0, ofDot).equals(qualName))
+                                    {
+                                    if (possibles == null)
+                                        {
+                                        possibles = new ListSet<>();
+                                        }
+                                    possibles.add(name);
+                                    }
+                                }
                             }
-                        log(Severity.ERROR, "Unable to locate the module for " + fileSpec
-                                + "; did you mean one of: " + buf.substring(2) + '?');
+                        if (possibles == null)
+                            {
+                            log(Severity.ERROR, "Failed to locate the module for: " + fileSpec);
+                            }
+                        else if (possibles.size() == 1)
+                            {
+                            log(Severity.ERROR, "Unable to locate the module for " + fileSpec
+                                    + "; did you mean " + quotedString(possibles.iterator().next())
+                                    + '?');
+                            }
+                        else
+                            {
+                            StringBuilder buf = new StringBuilder();
+                            for (String name : possibles)
+                                {
+                                buf.append(", ")
+                                   .append(quotedString(name));
+                                }
+                            log(Severity.ERROR, "Unable to locate the module for " + fileSpec
+                                    + "; did you mean one of: " + buf.substring(2) + '?');
+                            }
                         }
                     }
-                }
-            else
-                {
-                binExists = true;
-                }
-            }
-
-        if (binExists && info.getSourceFile() != null && info.getSourceFile().exists() && !info.isUpToDate())
-            {
-            log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
-                    + "\" is out-of-date; recompiling ....");
-            File fileBak = new File(fileBin.getParentFile(), fileBin.getName() + ".old");
-            if (fileBak.exists() && !fileBak.delete())
-                {
-                log(Severity.ERROR, "Failed to delete the previously-backed-up module: " + fileBak);
-                }
-            else if (fileBin.exists() && !fileBin.renameTo(fileBak))
-                {
-                log(Severity.ERROR, "Failed to back up the out-of-date module file: " + fileBin);
-                }
-            else
-                {
-                fCompile = true;
-                }
-            }
-        checkErrors();
-
-        if (fCompile)
-            {
-            ArrayList<String> compilerArgs = new ArrayList<>();
-            if (options.specified("v"))
-                {
-                compilerArgs.add("-v");
-                }
-
-            ArrayList<File> libPath = (ArrayList<File>) options.getModulePath();
-            if (!libPath.isEmpty())
-                {
-                for (File libFile : libPath)
+                else
                     {
-                    compilerArgs.add("-L");
-                    compilerArgs.add(libFile.getPath());
+                    binExists = true;
                     }
                 }
 
-            File outFile = (File) options.values().get("o");
-            if (outFile != null)
+            if (binExists && !options().isCompileDisabled() && info.getSourceFile() != null
+                    && info.getSourceFile().exists() && !info.isUpToDate())
                 {
-                compilerArgs.add("-o");
-                compilerArgs.add(outFile.getPath());
+                log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
+                        + "\" is out-of-date; recompiling ....");
+                File fileBak = new File(fileBin.getParentFile(), fileBin.getName() + ".old");
+                if (fileBak.exists() && !fileBak.delete())
+                    {
+                    log(Severity.ERROR, "Failed to delete the previously-backed-up module: " + fileBak);
+                    }
+                else if (fileBin.exists() && !fileBin.renameTo(fileBak))
+                    {
+                    log(Severity.ERROR, "Failed to back up the out-of-date module file: " + fileBin);
+                    }
+                else
+                    {
+                    fCompile = true;
+                    }
+                }
+            checkErrors();
+
+            if (fCompile)
+                {
+                ArrayList<String> compilerArgs = new ArrayList<>();
+                if (options.specified("v"))
+                    {
+                    compilerArgs.add("-v");
+                    }
+
+                ArrayList<File> libPath = (ArrayList<File>) options.getModulePath();
+                if (!libPath.isEmpty())
+                    {
+                    for (File libFile : libPath)
+                        {
+                        compilerArgs.add("-L");
+                        compilerArgs.add(libFile.getPath());
+                        }
+                    }
+
+                if (outFile != null)
+                    {
+                    compilerArgs.add("-o");
+                    compilerArgs.add(outFile.getPath());
+                    }
+
+                compilerArgs.add(fileSpec.getPath());
+
+                new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
+                info      = new ModuleInfo(fileSpec, null, outFile);
+                fileBin   = info.getBinaryFile();
+                binExists = fileBin != null && fileBin.exists();
+                repo      = configureLibraryRepo(libPath);
+                module    = repo.loadModule(info.getQualifiedModuleName());
                 }
 
-            compilerArgs.add(fileSpec.getPath());
-
-            new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
-            info      = new ModuleInfo(fileSpec);
-            fileBin   = info.getBinaryFile();
-            binExists = fileBin != null && fileBin.exists();
-            repo      = configureLibraryRepo(libPath);
-            module    = repo.loadModule(info.getQualifiedModuleName());
+            binLocDesc = info.getBinaryFile().getPath();
             }
 
         // check if the compiled module file name was specified
@@ -266,7 +296,7 @@ public class Runner
 
         if (module == null)
             {
-            log(Severity.ERROR, "Missing module  for " + fileSpec);
+            log(Severity.ERROR, "Missing module for " + fileSpec);
             abort(true);
             }
         else
@@ -283,17 +313,21 @@ public class Runner
             checkErrors();
             }
 
+        String sName = module.getName();
+        if (sName.equals(module.getSimpleName()))
+            {
+            // quote the "simpleName" to visually differentiate it (there is no qualified name)
+            sName = quotedString(sName);
+            }
+
         if (fShowVer)
             {
-            Version ver   = info.getModuleVersion();
+            Version ver   = module.getVersion();
             String  sVer  = ver == null ? "<none>" : ver.toString();
-            String  sName = info.isModuleNameQualified()
-                    ? info.getQualifiedModuleName()
-                    : quotedString(info.getSimpleModuleName());
             out(sName + " version " + sVer);
             }
 
-        log(Severity.INFO, "Executing " + info.getQualifiedModuleName() + " from " + info.getBinaryFile());
+        log(Severity.INFO, "Executing " + sName + " from " + binLocDesc);
         try
             {
             Connector connector = new Connector(repo);
@@ -310,13 +344,11 @@ public class Runner
                     {
                     if (setMethods.isEmpty())
                         {
-                        log(Severity.ERROR, "Missing method \"" + sMethod + "\" in module " +
-                                info.getQualifiedModuleName());
+                        log(Severity.ERROR, "Missing method \"" + sMethod + "\" in module " + sName);
                         }
                     else
                         {
-                        log(Severity.ERROR, "Ambiguous method \"" + sMethod + "\" in module " +
-                                info.getQualifiedModuleName());
+                        log(Severity.ERROR, "Ambiguous method \"" + sMethod + "\" in module " + sName);
                         }
                     abort(true);
                     }
@@ -445,11 +477,12 @@ public class Runner
             {
             super();
 
-            addOption("L" ,     null,        Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption("M",      "method",    Form.String, false, "Method name; defaults to \"run\"");
-            addOption("o",      null,        Form.File,   false, "If compilation is necessary, the file or directory to write compiler output to");
-            addOption(Trailing, null,        Form.File,   false, "Module file name (.xtc) to execute");
-            addOption(ArgV,     null,        Form.AsIs,   true,  "Arguments to pass to the method");
+            addOption("L" ,     null,           Form.Repo,    true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
+            addOption("M",      "method",       Form.String,  false, "Method name; defaults to \"run\"");
+            addOption(null,     "no-recompile", Form.Boolean, false, "Disable automatic compilation");
+            addOption("o",      null,           Form.File,    false, "If compilation is necessary, the file or directory to write compiler output to");
+            addOption(Trailing, null,           Form.File,    false, "Module file name (.xtc) to execute");
+            addOption(ArgV,     null,           Form.AsIs,    true,  "Arguments to pass to the method");
             }
 
         /**
@@ -466,6 +499,14 @@ public class Runner
         public String getMethodName()
             {
             return (String) values().getOrDefault("M", "run");
+            }
+
+        /**
+         * @return true iff "--no-recompile" is specified
+         */
+        public boolean isCompileDisabled()
+            {
+            return specified("no-recompile");
             }
 
         /**
