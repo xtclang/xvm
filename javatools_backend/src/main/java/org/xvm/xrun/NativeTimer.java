@@ -11,8 +11,9 @@ import org.xvm.xtc.XClz;
    Java native implementation of the XTC Timer class
 */
 public class NativeTimer {
+  // Time is in 128bit picoseconds
   public Fun schedule( long lo, long hi, Fun alarm ) {
-    throw XEC.TODO();
+    return alarm;
   }
 
 
