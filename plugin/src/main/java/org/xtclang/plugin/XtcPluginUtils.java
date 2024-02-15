@@ -90,6 +90,18 @@ public final class XtcPluginUtils {
             }
         }
 
+        public static File checkXtcModule(final File file) {
+            return checkXtcModule(file, true);
+        }
+
+        @SuppressWarnings("SameParameterValue")
+        private static File checkXtcModule(final File file, final boolean checkMagic) {
+            if (!isValidXtcModule(file, checkMagic)) {
+                throw new XtcBuildRuntimeException("Processed '{}' as an XTC module, but it is not.", file.getAbsolutePath());
+            }
+            return file;
+        }
+
         /**
          * Reads the XDK version from a jar manifest.
          *

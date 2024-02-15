@@ -50,17 +50,23 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     public DefaultXtcRuntimeExtension(final Project project) {
         super(project);
         this.modules = objects.listProperty(XtcRunModule.class).value(emptyList());
+        // Check for a command line module as
     }
 
-    public static XtcRunModule createModule(final Project project, final String name) {
-        return new DefaultXtcRunModule(project, name);
+    public static XtcRunModule createModule(final Project project, final String moduleName) {
+        return new DefaultXtcRunModule(project, moduleName);
     }
 
-    private XtcRunModule createModule(final String name) {
-        return createModule(project, name);
+    public static XtcRunModule createModule(final Project project, final String moduleName, final String moduleMethod, final List<String> moduleArgs) {
+        return new DefaultXtcRunModule(project, moduleName, moduleMethod, moduleArgs);
+    }
+
+    private XtcRunModule createModule(final String moduleName) {
+        return createModule(project, moduleName);
     }
 
     private XtcRunModule addModule(final XtcRunModule runModule) {
+        logger.info("{} Adding module {}", prefix, runModule);
         modules.add(runModule);
         return runModule;
     }
@@ -75,6 +81,13 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
 
     @Override
     public void moduleName(final String name) {
+        // TODO:
+        // This is actually potential for a bug due to confusing syntax.. The module action also adds the runmodule, if it contains a moduleName(...) then it's not a setter'
+        // We should do:
+        //   moduleName("a")
+        //   moduleName("b")
+        // outside a closure. If we do it inside a closure, that means add extra modules names!
+        // and so on. If we combine module {
         addModule(createModule(name));
     }
 
@@ -111,7 +124,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     }
 
     @Override
-    public boolean isEmpty() {
-        return modules.get().isEmpty();
+    public int size() {
+        return modules.get().size();
     }
 }

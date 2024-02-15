@@ -100,17 +100,31 @@ public class DefaultXtcRunModule implements XtcRunModule {
     }
 
     @Override
-    public String getDefaultMethodName() {
-        return DEFAULT_METHOD_NAME;
-    }
-
-    @Override
     public boolean validate() {
         return moduleName.isPresent() && methodName.isPresent();
     }
 
+    public static String getDefaultMethodName() {
+        return DEFAULT_METHOD_NAME;
+    }
+
+    @Override
+    public int compareTo(final XtcRunModule other) {
+        return getModuleName().get().compareTo(other.getModuleName().get());
+    }
+
     @Override
     public String toString() {
-        return '[' + getClass().getSimpleName() + ": moduleName='" + (moduleName.isPresent() ? moduleName.get() : "NONE") + "', methodName='" + (methodName.isPresent() ? methodName.get() : "NONE") + "', moduleArgs='" + getModuleArgs() + "']";
+        return toString(false);
+    }
+
+    @Override
+    public String toString(final boolean mayResolveProviders) {
+        return '['
+            + getClass().getSimpleName()
+            + ": moduleName='" + (moduleName.isPresent() ? moduleName.get() : "NONE")
+            + "', methodName='" + (methodName.isPresent() ? methodName.get() : "NONE")
+            + "', moduleArgs='" + (mayResolveProviders ? getModuleArgs().get() : getModuleArgs())
+            + "']";
     }
 }

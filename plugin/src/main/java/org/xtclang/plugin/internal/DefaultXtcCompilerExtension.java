@@ -1,7 +1,6 @@
 package org.xtclang.plugin.internal;
 
 import org.gradle.api.Project;
-import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.xtclang.plugin.XtcCompilerExtension;
 

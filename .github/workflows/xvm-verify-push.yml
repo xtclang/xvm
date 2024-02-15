@@ -15,15 +15,43 @@
 # TODO: Discuss what other kinds of GitHub workflow actions we need. This can be anything
 #   from cron jobs that run every night, to containerization tests/efforts/creations.
 #
+# TODO: Retain more build information than the defaults (log output and build scan links). I.e.
+#   configure any build output files that we may want to inspect to be retained as well.
+#   @see https://github.com/gradle/actions/blob/main/setup-gradle/README.md#github-dependency-graph-support
+#
+# TODO: Set up Discord channel chat messages, when an action is started, successful or fails.
+#
+# TODO: Verify that the build jobs run both with and without the build cache. Since it takes
+#   time to rebuild the cache, the clean cache run should be a separate workflow, and it may be
+#   a good idea to run it only on pull requests, not on every push, or something like that.
+#   Another option is to have a GitHub cron job action, that nukes the caches every night, so that
+#   at least the first GitHub workflow of the day is known to build with a clean cache.
+#
+# TODO: File these TODOs as issues in the GitHub repository.
+#
 
 name: XVM Repository build, test and verification runner.
 
-on: push
+# Check if "pull-request" makes it possbile to add a branch protection status check requirement on master.
+on:
+  push
 
 env:
+  #
+  # This turns into a project property that outputs some important lines of the XTC plugin logic to the console.
+  # The flag is intended to provide enough information to do a reproducible run for any action performed by the Plugin.
+  #
   ORG_XTCLANG_PLUGIN_VERBOSE: true
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME: true
-  ORG_XTCLANG_BUILD_SANITY_CHECK_RUNTIME_FORCE_REBUILD: false
+
+  #
+  # The following flags were intended to be used to finish the build run with a simple sanity check, compiling
+  # and running a text program, making sure that both the build DSL and the mechanism for consuming the
+  # XDK being worked on as an artifact have not been broken.
+  ORG_GRADLE_PROJECT_includeBuildManualTests: true
+  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+
+  # Provide debug information of all build cache actions:
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 jobs:
   gradle:
@@ -32,14 +60,65 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
+
+    # The verification actions are run on Linux and on Windows. There are MacOS runners available from GitHub,
+    # but they are rarer, which may lead to increased test times. Of course we should always make sure that
+    # the project builds and runs on all our target platforms, but for time being, we just verify Linux and Windows
+    # builds. Also note that the MacOS runners available for free are all x86 machines, whereas cycles on aarch64
+    # MacOS machines are charged for by GitHub.
     runs-on: ${{ matrix.os }}
+
     steps:
+      # 1. Checkout the repository under test.
       - uses: actions/checkout@v4
+
+      # 2. Set up the Java JDK. The JDK vendor should not matter, but we require Java 21.
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
+
+      #
+      # 3. Configure a Gradle build action.
+      #
+      # The current version of this GitHub action is v2.4.2, is at the time of writing still considered
+      # secure, and has fixed previous issues with leaking secrets to the build cache in the GitHub runner
+      # container. Dependabot will alert us to any newly discovered security problems.
+      #
+      # @see: https://github.com/gradle/gradle-build-action#readme
+      # @see: https://github.com/gradle/gradle-build-action?tab=readme-ov-file#select-which-branches-should-write-to-the-cache
+      #
+      # By default, the Gradle action will only write to the cache from jobs on the 'master' branch.
+      # it is also possible exclude certain parts of the build from the cache, with:
+      #
+      # @see: https://github.com/gradle/actions/blob/main/setup-gradle/README.md#exclude-content-from-gradle-user-home-cache
+      #
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2.4.2
+
+      # 4. Run the Gradle build, with verbose logs, and stack traces enabled to verify it works.
       - name: Verify Gradle Build
-        run: ./gradlew build --info
+        run: ./gradlew build --info --stacktrace
+
+      # 5. Run the Gradle installation tasks to verify that we can create distributions, and that their
+      # layouts are correct.
+      - name: Verify Gradle Install and Distribution Layout
+        run: ./gradlew installDist --info --stacktrace
+
+      # 6. Run the Gradle installLocalDist task, and verify that its output works as expected.
+      - name: Verify Gradle Install and Local Distribution Layout
+        run: ./gradlew installLocalDist --info --stacktrace
+
+      # 7. Sanity check test run. XUnit will give us real successes or failures.
+      - name: ManualTests Run Default
+        run: ./gradlew manualTests:runXtc
+      - name: ManualTests Run One By Property
+        run: ./gradlew manualTests:runOne -PtestName=TestMisc
+      - name: ManualTests Run Two In Sequence
+        run: ./gradlew manualTests:runTwoTestsInSequence
+      - name: ManualTests parallel tests
+        run: ./gradlew manualTests:runParallel
+
+      # TODO: We need to figure out how to communicate success or failure as long as the manual tests are
+      #   not integrated into test source sets / unit tests for XTC / XUnit, or whatever test harnesses
+      #   we may want to use.

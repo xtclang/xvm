@@ -3,12 +3,10 @@ package org.xtclang.plugin;
 import org.gradle.StartParameter;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
-import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.VersionCatalogsExtension;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.invocation.Gradle;
 import org.gradle.api.logging.LogLevel;
@@ -18,11 +16,11 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
+import org.xtclang.plugin.internal.DefaultXtcRunModule;
+import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 
 import java.net.URL;
-import java.util.Arrays;
-
-import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
+import java.util.List;
 
 public abstract class ProjectDelegate<T, R> {
     protected final Project project;
@@ -32,7 +30,6 @@ public abstract class ProjectDelegate<T, R> {
     protected final Logger logger;
     protected final Gradle gradle;
     protected final StartParameter startParameter;
-    protected final boolean overrideVerboseLogging;
     protected final ConfigurationContainer configs;
     protected final AdhocComponentWithVariants component;
     protected final URL pluginUrl;
@@ -73,14 +70,6 @@ public abstract class ProjectDelegate<T, R> {
 
         // add a property to the existing environment, project.setProperty assumes the property exists already
         extra.set("logPrefix", prefix);
-
-        // Used to print only key messages with an "always" semantic. Used to quickly switch on and off,
-        // or persist in the shell, a setting that is used for stuff like always printing launcher command
-        // lines, regardless of log level, but not doing it if the override is turned off (default).
-        this.overrideVerboseLogging = "true".equalsIgnoreCase(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
-        if (overrideVerboseLogging) {
-            logger.info("{} ORG_XTCLANG_PLUGIN_VERBOSE=true; the XTC Plugin may log important 'info' level events at 'lifecycle' level instead.", prefix);
-        }
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -94,21 +83,17 @@ public abstract class ProjectDelegate<T, R> {
         return buildException(null, msg, args);
     }
 
-    public final XtcBuildRuntimeException buildException(final Throwable t, final String msg, final Object... args) {
-        logger.error(msg, t);
-        return new XtcBuildRuntimeException(t, prefix + ": " + msg, args);
+    public static XtcBuildRuntimeException buildException(final Logger logger, final String prefix, final String msg, final Object... args) {
+        return buildException(logger, prefix, null, msg, args);
     }
 
-    /**
-     * We count everything with the log level "info" or finer as verbose logging.
-     *
-     * @return True of we are running with verbose logging enabled, false otherwise.
-     */
-    public boolean hasVerboseLogging() {
-        return switch (getLogLevel()) {
-            case DEBUG, INFO -> true;
-            default -> overrideVerboseLogging;
-        };
+    public final XtcBuildRuntimeException buildException(final Throwable t, final String msg, final Object... args) {
+        return buildException(logger, prefix, t, msg, args);
+    }
+
+    public static XtcBuildRuntimeException buildException(final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
+        logger.error(msg, t);
+        return new XtcBuildRuntimeException(t, prefix + ": " + msg, args);
     }
 
     @SuppressWarnings("unused")
@@ -149,10 +134,6 @@ public abstract class ProjectDelegate<T, R> {
         return project;
     }
 
-    public String getProjectName() {
-        return projectName;
-    }
-
     public ObjectFactory getObjects() {
         return objects;
     }
@@ -164,6 +145,10 @@ public abstract class ProjectDelegate<T, R> {
     @SuppressWarnings("unused")
     public LogLevel getLogLevel() {
         return startParameter.getLogLevel();
+    }
+
+    public static LogLevel getLogLevel(final Project project) {
+        return project.getGradle().getStartParameter().getLogLevel();
     }
 
     /**
@@ -183,30 +168,11 @@ public abstract class ProjectDelegate<T, R> {
         logger.warn("{} WARNING: '{}' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle!", prefix, task.getName());
     }
 
-    public FileCollection filesFrom(final String... configNames) {
-        return filesFrom(false, configNames);
-    }
-
-    public FileCollection filesFrom(final boolean shouldBeResolved, final String... configNames) {
-        logger.info("{} Resolving filesFrom config: {}", prefix, Arrays.asList(configNames));
-        FileCollection fc = objects.fileCollection();
-        for (final var name : configNames) {
-            final Configuration config = configs.getByName(name);
-            if (shouldBeResolved && config.getState() != Configuration.State.RESOLVED) {
-                throw buildException("Configuration '{}' is not resolved, which is a requirement from the task execution phase.", name);
-            }
-            final var files = project.files(config);
-            logger.info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
-            fc = fc.plus(files);
+    protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {
+        final var exts = project.getExtensions();
+        if (exts.findByType(clazz) == null) { // WARNING TODO TODO There can be several run and compile extensions (one per source set), if I understand conventions correctly. Or we cold just add the configuration inline to our source sets or have sections in the xtcXXX extensions or something.
+            return exts.create(name, clazz, project);
         }
-        fc.getAsFileTree().forEach(it -> logger.info("{}    Resolved fileTree '{}'", prefix, it.getAbsolutePath()));
-        return fc;
-    }
-
-    protected <E> E ensureExtension(final String name, final Class<E> clazz) {
-        if (extensions.findByType(clazz) == null) {
-            return extensions.create(name, clazz, project);
-        }
-        return extensions.getByType(clazz);
+        return exts.getByType(clazz);
     }
 }

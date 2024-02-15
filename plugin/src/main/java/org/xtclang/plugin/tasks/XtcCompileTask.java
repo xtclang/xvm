@@ -1,13 +1,15 @@
 package org.xtclang.plugin.tasks;
 
 import kotlin.Pair;
+import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
@@ -16,7 +18,6 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 import org.xtclang.plugin.XtcCompilerExtension;
-import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.CommandLine;
@@ -54,8 +55,10 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
      * when you instantiate it from the ObjectFactory in a project):
      */
     @Inject
-    public XtcCompileTask(final XtcProjectDelegate delegate, final String taskName, final SourceSet sourceSet) {
-        super(delegate, taskName, sourceSet);
+    public XtcCompileTask(final Project project) {
+        // the compile task name should be determined by its source set
+        // a runtime task can by default depend on all source sets, it's fine. even a test task.
+        super(project);
 
         // The outputFilenames property only exists in the compile task, not in the compile configuration.
         this.outputFilenames = objects.listProperty(String.class).value(new ArrayList<>());
@@ -68,6 +71,34 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         this.shouldForceRebuild = objects.property(Boolean.class).convention(ext.getForceRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
     }
+
+    private String getCompileSourceSetName() {
+        final String taskName = getName();
+        if (taskName.equals("compileXtc")) {
+            return SourceSet.MAIN_SOURCE_SET_NAME;
+        }
+        final int compileIndex = taskName.indexOf("compile");
+        final int xtcIndex = taskName.indexOf("Xtc");
+        if (compileIndex == -1 || xtcIndex == -1) {
+            throw buildException("Failed to resolve source set name from compile task '{}'", taskName);
+        }
+        final String sourceSetName = taskName.substring(compileIndex + "compile".length(), xtcIndex);
+        return sourceSetName.toLowerCase();
+    }
+
+    private SourceSet getCompileSourceSet() {
+        return XtcProjectDelegate.resolveSourceSet(project, getCompileSourceSetName());
+    }
+
+    private boolean isMainSourceSetCompileTask() {
+        return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
+    }
+
+    // There is one source set to compile, but there other may be needed for the module path.
+    // The compileXXXXtc task should only use XXX as sources, but the module path for compilation
+    // should point out the other source sets as well, for example for a test task, but not for the
+    // main task. I suppose the most generic way to do this is to be able to add a source set to the
+    // module path in the task, but let's try to work incrementally.
 
     @Internal
     @Override
@@ -103,17 +134,6 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     @Input
     ListProperty<String> getOutputFilenames() {
         return outputFilenames;
-    }
-
-    @InputDirectory
-    @PathSensitive(PathSensitivity.ABSOLUTE)
-    Provider<Directory> getInputXdkContents() {
-        return delegate.getXdkContentsDir();
-    }
-
-    @OutputDirectory
-    Provider<Directory> getOutputXtcModules() {
-        return delegate.getXtcCompilerOutputDirModules(sourceSet);
     }
 
     @Input
@@ -153,16 +173,27 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         return disableWarnings;
     }
 
+    @InputFiles
+    @PathSensitive(PathSensitivity.ABSOLUTE)
+    FileCollection getResourceDirectory() {
+        // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
+        //   But that is java behavior, so make sure at least we get the resource input dependency.
+        return getCompileSourceSet().getResources().getSourceDirectories();
+    }
+
     @OutputDirectory
     Provider<Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
-        return delegate.getXtcCompilerOutputDirModules(sourceSet);
+        return XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, getCompileSourceSet());
     }
 
     @TaskAction
-    public void compile() {
-        start();
+    @Override
+    public void executeTask() {
+        super.executeTask();
 
+        final var prefix = prefix();
+        final var sourceSet = getCompileSourceSet();
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, getJvmArgs().get());
 
         if (getForceRebuild().get()) {
@@ -170,7 +201,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             touchAllSource(); // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
         }
 
-        File outputDir = delegate.getXtcCompilerOutputDirModules(sourceSet).get().getAsFile();
+        final File outputDir = getOutputDirectory().get().getAsFile();
         args.add("-o", outputDir.getAbsolutePath());
 
         logger.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
@@ -191,17 +222,16 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         args.addBoolean("--verbose", getIsVerbose().get());
         args.addBoolean("--strict", getStrict().get());
         args.addBoolean("--qualify", getQualifiedOutputName().get());
-        // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp it
-        // as the xcc version used to compile if no flag is given?
+        // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp it as the xcc version used to compile if no flag is given?
         final String moduleVersion = resolveModuleVersion();
         if (moduleVersion != null) {
-            if (delegate.hasVerboseLogging()) {
+            if (hasVerboseLogging()) {
                 logger.lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
             }
             args.add("--set-version", moduleVersion);
         }
-        args.addRepeated("-L", resolveXtcModulePath());
-        final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).toList();
+        args.addRepeated("-L", resolveFullModulePath());
+        final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).sorted().toList();
         if (sourceFiles.isEmpty()) {
             logger.warn("{} No source file found for source set: '{}'", prefix, sourceSet.getName());
         }
@@ -222,31 +252,32 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     }
 
     private void finalizeOutputs() {
-        project.fileTree(getOutputXtcModules()).filter(FileUtils::isValidXtcModule).forEach(oldFile -> {
+        // If any of the outputs aren't valid XTC modules, they are ignored. We should probably warn, or break the build instead?
+        final var prefix = prefix();
+
+        // Do not keep iterating through the connection, updated life. Finalize it first.
+        final var xtcModuleFiles = project.fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles();
+        for (final var oldFile : xtcModuleFiles) {
             final String oldName = oldFile.getName();
             final String newName = resolveOutputFilename(oldName);
             if (oldName.equals(newName)) {
                 logger.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
             } else {
                 final File newFile = new File(oldFile.getParentFile(), newName);
-                logger.info("{} Changing and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
-                logger.info("{} File tree scan: {} should be renamed to {}", delegate, oldFile, newFile);
+                logger.info("{} Renaming and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
+                logger.info("{} File tree scan: {} should be renamed to {}", prefix, oldFile, newFile);
                 if (!oldFile.renameTo(newFile)) {
                     // TODO does this update the output? Seems like it. Write a unit test.
                     throw buildException("Failed to rename '{}' to '{}", oldFile, newFile);
                 }
             }
-        });
+        }
     }
 
     private Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
-        logger.info("{} Resolved top level sources (should be module definitions, or XTC will fail later): {}", prefix, resolvedSources);
+        final var resolvedSources = getSource().filter(file -> isTopLevelXtcSourceFile(getCompileSourceSet(), file)).getFiles();
+        logger.info("{} Resolved top level sources (should be module definitions, or XTC will fail later): {}", prefix(), resolvedSources);
         return resolvedSources;
-    }
-
-    private Set<File> resolveXtcModulePath() {
-        return resolveModulePath(getInputDeclaredDependencyModules());
     }
 
     private String resolveOutputFilename(final String from) {
@@ -260,5 +291,12 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         }
         return from;
     }
-}
 
+    @Override
+    protected List<SourceSet> getDependentSourceSets() {
+        if (isMainSourceSetCompileTask()) {
+            return List.of(getCompileSourceSet());
+        }
+        return super.getDependentSourceSets();
+    }
+}

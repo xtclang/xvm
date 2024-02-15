@@ -58,7 +58,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         final var oldErr = System.err;
         final var builder = resultBuilder(cmd);
         try {
-            if (hasVerboseLogging()) {
+            if (task.hasVerboseLogging()) {
                 logger.lifecycle("{} WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}", prefix, cmd.toString());
             }
             // TODO: Rewrite super.redirectIo so we can reuse it here. That is prettier. Push and pop streams to field?
