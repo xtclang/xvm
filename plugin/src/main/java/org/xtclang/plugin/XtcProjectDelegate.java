@@ -361,6 +361,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         });
     }
 
+    public static SourceSet getMainSourceSet(final Project project) {
+        return getSourceSets(project).getByName(MAIN_SOURCE_SET_NAME);
+    }
+
     public static SourceSetContainer getSourceSets(final Project project) {
         return getJavaExtensionContainer(project).getSourceSets();
     }

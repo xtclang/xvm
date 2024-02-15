@@ -45,10 +45,11 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
  * We add a default run task to an XTC project. It's default is either run nothing, or run everything.
  * First it looks in xtcRun and tries to run the modules from there.
  *    If no modules are there, we just say "nothing to run"
+ *    Later - support command line modules, if we don't want to just keep that logic in build scripts, which is fine and can be lazy too.
  *    If there is a module command line, we replace the xtcRun modules with these, and we leave the tasks alone.
  *    They still override, but if you haven't touched the default xtcRun task that does what you want, i.e. runXtc -PmoduleName=foo
  * If there is a module config in the task, it overrides/replaces those totally.
- * <p></p>
+ * <p>
  * We should easily be able to create XTC run tasks of our own
  * If the 'runXtc' task is called without any module specifications, it will try to run every module compiled
  * from the source set in undefined order. That would be the exact equivalent of calling 'runAllXtc'
@@ -196,6 +197,19 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // Create module path from xtcModule dependenciex, XDK contents and output of our source set.
         final var modulePath = resolveFullModulePath();
         cmd.addRepeated("-L", modulePath);
+
+        // TODO:
+        // This is ambiguous. For some reason, the Runner, when given library paths to the source set output,
+        // declared dependencies, and the xdk, and then we run a module by name, even if it is on the module
+        // path, it gets rebuilt, and placed in the output directory. The auto build tries to build the module
+        // by finding its source in some sub set of the directories and it ends up directly under build, even
+        // though it's refereshed. This also happens if touch and rebuild any x source file, and the compile
+        // tasks works fine, but the runner somehow still decides that it's stale. It's really important that
+        // the XTC runtimes do not create "invisible" dependency behavior that the plugin does not know about.
+
+        final var sourceSetOutput = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, XtcProjectDelegate.getMainSourceSet(project)).get().getAsFile();
+        logger.warn("{} WARNING: We hope the modules about to run are in '{}', because otherwise xec will assume they are stale and rebuild them in the wrong place.", prefix(), sourceSetOutput.getAbsolutePath());
+        //cmd.add("-o", sourceSetOutput);
 
         // Now we filter out only modules we have been specifically told to run.
         //
