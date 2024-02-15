@@ -23,7 +23,7 @@ public class xRTInt8Delegate
 
     public xRTInt8Delegate(Container container, ClassStructure structure, boolean fInstance)
         {
-        super(container, structure);
+        super(container, structure, Byte.MIN_VALUE, Byte.MAX_VALUE);
 
         if (fInstance)
             {
