@@ -86,8 +86,6 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
     return this;
   }
 
-  public AryString freeze( boolean inPlace ) { throw XEC.TODO(); }
- 
   /** @return an iterator */
   @Override public Iterator<org.xvm.xec.ecstasy.text.String> iterator() { return new IterString(); }
   public class IterString extends Iterator<org.xvm.xec.ecstasy.text.String> {
@@ -132,6 +130,11 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
 
   AryString clear() { _len=0; return this; }
 
+  // --- Freezable
+  public AryString freeze(boolean inPlace) {
+    return _mut==Mutability.Constant ? this : construct(Mutability.Constant,this);
+  }
+  
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
   @Override public Appenderchar appendTo(Appenderchar ary) {
