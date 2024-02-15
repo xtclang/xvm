@@ -109,7 +109,7 @@ sourceSets {
     main {
         xtc {
             // TODO this is weird. We should flter OUT the negative tests instead. Now, for example, we can still
-            // resolve and run TestSimple even though it isn't in the source set?
+            //   resolve and run TestSimple even though it isn't in the source set?
             exclude("**/archive/**")
             exclude("**/dbTests/**")
             exclude("**/json/**")
