@@ -13,12 +13,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "xtclang.org"
             VALUE "FileDescription", "XDK Tool Launcher"
-            VALUE "FileVersion", "1.0"
+            VALUE "FileVersion", "0.4.4"
             VALUE "InternalName", "launcher"
-            VALUE "LegalCopyright", "(c) xtclang.org 2020"
+            VALUE "LegalCopyright", "(c) xtclang.org 2020-2024"
             VALUE "OriginalFilename", "windows_launcher.exe"
             VALUE "ProductName", "XDK"
-            VALUE "ProductVersion", "1.0"
+            VALUE "ProductVersion", "0.4.4"
         END
     END
     BLOCK "VarFileInfo"

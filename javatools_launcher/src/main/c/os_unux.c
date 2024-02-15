@@ -10,50 +10,48 @@
 
 // shared code for Linux and macos implementations
 
-const char* resolveLinks(const char* path)
-    {
-    char ach[PATH_MAX];
-    if (!realpath(path, ach))
-        {
-        abortLaunch("Unresolvable link");
-        }
+const char* getXdkHome() {
+    return (const char*) getenv(XDK_HOME);
+}
 
-    if (strcmp(path, ach) == 0)
-        {
+const char* resolveLinks(const char* path) {
+    char ach[PATH_MAX];
+    if (!realpath(path, ach)) {
+        abortLaunch("Unresolvable link");
+    }
+
+    if (strcmp(path, ach) == 0) {
         return path;
-        }
+    }
 
     char* result = allocBuffer(strlen(ach)+1);
     strcpy(result, ach);
     return result;
-    }
+}
 
 void execJava(const char* javaPath,
               const char* javaOpts,
               const char* jarPath,
               const char* libPath,
               int         argc,
-              const char* argv[])
-    {
+              const char* argv[]) {
     // this implementation does not fork()/setsid() because we're not attempting to detach
     // from the terminal that executed the command
 
     #ifdef DEBUG
     printf("javaPath=%s, javaOpts=%s, jarPath=%s, libPath=%s, argc=%d, argv=\n",
             javaPath,    javaOpts,    jarPath,    libPath,    argc);
-    for (int i = 0; i < argc; ++i)
-        {
+    for (int i = 0; i < argc; ++i) {
         printf("[%d] = \"%s\"\n", i, argv[i]);
-        }
+    }
     #endif // DEBUG
 
     assert(javaPath != NULL && *javaPath != '\0');
     assert(jarPath  != NULL && *jarPath  != '\0');
     assert(libPath  != NULL && *libPath  != '\0');
-    if (javaOpts == NULL)
-        {
+    if (javaOpts == NULL) {
         javaOpts = "";
-        }
+    }
 
     // the native ecstasy library is located in the same location as the prototype JAR
     const char* jarFile  = buildPath(jarPath, PROTO_JAR);
@@ -97,11 +95,10 @@ void execJava(const char* javaPath,
 
     #ifdef DEBUG
     printf("resulting %d args:\n", allCount);
-    for (i = 0; i < allCount; ++i)
-        {
+    for (i = 0; i < allCount; ++i) {
         printf("[%d] = \"%s\"\n", i, allArgs[i]);
-        }
+    }
     #endif // DEBUG
 
     execvp(javaPath, (char* const*) allArgs);
-    }
+}

@@ -17,7 +17,7 @@ ifneq ($(OS_NAME),windows)
 endif
 
 # result executable name
-EXE_DIR  ?= ../../../build/exe/
+EXE_DIR  ?= ../../../build/bin/
 EXE_NAME ?= $(EXE_DIR)$(OS_NAME)_launcher
 EXE_X86   = $(EXE_DIR)$(OS_NAME)_x86
 EXE_ARM   = $(EXE_DIR)$(OS_NAME)_arm

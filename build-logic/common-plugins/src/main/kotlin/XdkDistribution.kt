@@ -57,7 +57,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         } else {
             throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
         }
-        return localDistDir.get().file("libexec/bin/$launcher")
+        return localDistDir.get().file("bin/$launcher")
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {
