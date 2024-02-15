@@ -47,7 +47,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
     public ExecResult apply(final CommandLine cmd) {
         logger.info("{} Launching task: {}}", prefix, this);
         validateCommandLine(cmd);
-        if (hasVerboseLogging()) {
+        if (task.hasVerboseLogging()) {
             logger.lifecycle("{} NativeExec command: {}", prefix, cmd.toString());
         }
         final var builder = resultBuilder(cmd);

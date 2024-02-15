@@ -16,8 +16,6 @@ public final class XtcPluginConstants {
     public static final String XTC_CONFIG_NAME_INCOMING = "xtcModule";
     public static final String XTC_CONFIG_NAME_OUTGOING = XTC_CONFIG_NAME_INCOMING + "Provider";
     public static final String XTC_CONFIG_NAME_MODULE_DEPENDENCY = "xtcModuleDeps";
-    public static final String XTC_CONFIG_NAME_INCOMING_TEST = XTC_CONFIG_NAME_INCOMING + "Test";
-    public static final String XTC_CONFIG_NAME_OUTGOING_TEST = XTC_CONFIG_NAME_OUTGOING + "Test";
 
     // XTC Compile time constants
     public static final String XTC_EXTENSION_NAME_COMPILER = "xtcCompile";

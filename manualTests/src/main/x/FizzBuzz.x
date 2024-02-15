@@ -1,15 +1,9 @@
 // TODO: Add unit tests for both broken and working code/runtime modules.
 // TODO: Add a "test debugger" task to manualTests with the assert:debug enabled, or something.
-module FizzBuzz {
+module TestFizzBuzz {
     void run(String[] args = []) {
         @Inject Console console;
-
-        loop: for (String arg : args) {
-            console.print($"FizzBuzzArgument: (args[{loop.count}] = {arg})");
-        }
-
         //assert:debug;
-
         for (Int x : 1..100) {
             console.print(
                 switch (x % 3, x % 5) {
