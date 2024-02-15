@@ -107,6 +107,9 @@ public abstract class XCons {
       put(JBYTE ,BYTE );
       put(JCHAR ,CHAR );
       put(JINT16,SHORT);
+      put(JUINT8 ,LONG);
+      put(JUINT16,LONG);
+      put(JUINT32,LONG);
       put(JINT32,INT  );
       put(JDOUBLE,DOUBLE);
       put(JLONG ,LONG );

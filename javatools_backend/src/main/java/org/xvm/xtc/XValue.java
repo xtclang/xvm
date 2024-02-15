@@ -1,6 +1,7 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
+import org.xvm.xrun.NativeTimer;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.S;
 import org.xvm.util.SB;
@@ -78,7 +79,7 @@ public abstract class XValue {
       }
       if( X._locals.find(prop._name)!= -1 )
         ASB.p("this.");         // Name collision between this and a local
-      yield ASB.p(prop._name);
+      yield ASB.p(prop._name).p("$get()");
     }
 
     // A class Type as a value
@@ -109,6 +110,7 @@ public abstract class XValue {
       if( sup_clz.equals("Boolean") ) 
         yield ASB.p(clz._name.equals("False") ? "false" : "true");
       // Use the enum name directly
+      ClzBuilder.add_import(clz._super);
       yield ASB.p(sup_clz).p(".").p(clz._name);
     }
 
@@ -175,10 +177,8 @@ public abstract class XValue {
       ClassPart clz = ttc.clz();
       if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".console()");
-      if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") ) {
-        ClzBuilder.add_import(clz);
-        yield ASB.p("(Timer)(").p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".timer())");
-      }
+      if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
+        yield ASB.p(NativeTimer.make_timer(XClz.make(clz)));
       throw XEC.TODO();      
     }
 

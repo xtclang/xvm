@@ -42,7 +42,7 @@ public interface Tuple extends Cloneable {
     String pack = (XEC.XCLZ+"."+xtt._pack).intern();
     String qual = (pack+"."+tclz).intern();
     ClzBuilder.add_import(qual);
-    if( ClzBldSet.XCLASSES.containsKey(qual) ) return xtt;
+    if( ClzBldSet.find(qual) ) return xtt;
     /* Gotta build one.  Looks like:
        class Tuple3$long$String$char extends Tuple3 {
          public long _f0;
@@ -106,7 +106,7 @@ public interface Tuple extends Cloneable {
     // Class end
     sb.di().ip("}\n");
     sb.p("// ---------------------------------------------------------------").nl();
-    ClzBldSet.do_compile(qual,sb.toString());
+    ClzBldSet.add(qual,sb.toString());
 
     return xtt;
   }

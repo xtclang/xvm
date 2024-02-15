@@ -32,6 +32,8 @@ class ConvAST extends AST {
   @Override XType _type() { return _type; }
 
   @Override AST postwrite() {
+    if( _type==_kids[0]._type ) // No change
+      return _kids[0];
     // Converting from a Java primitive will always need some kind of conversion call
     if( _kids[0]._type.is_jdk() )
       return new NewAST(_kids,(XClz)_type);

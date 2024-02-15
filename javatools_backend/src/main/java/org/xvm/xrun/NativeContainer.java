@@ -12,6 +12,7 @@ public class NativeContainer extends Container {
   }
 
   @Override public NativeConsole console() { return _console; }
+  @Override public NativeTimer   timer  () { return new NativeTimer(); }
   
   // Initialize default things into the container?
   void init() {
