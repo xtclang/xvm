@@ -32,15 +32,17 @@ class PropertyAST extends AST {
   
   @Override AST prewrite() {
     // Java strings do not have any properties, just rewrite to the java name
-    if( _prop.equals("size") ) {
+    if( _prop.equals("size") || _prop.equals("size$get()")) {
       if( _kids[0]._type == XCons.STRING )
         { _prop="length()"; _type=XCons.LONG; return this; }
       if( _kids[0]._type.isAry() )
         { _prop="_len"    ; _type=XCons.LONG; return this; }
     }
     // Prop READS use prop$get, but assigns keep the plain name
-    if( !(_par instanceof AssignAST) )
-      _prop = _prop+"$get()";
+    if( _par instanceof AssignAST && _par._kids[0]==this ) {
+      assert _prop.endsWith("$get()");
+      _prop = _prop.substring(0,_prop.length()-6);
+    }
     return this;
   }
   
