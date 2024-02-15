@@ -95,7 +95,7 @@ jobs:
       #
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2.4.2
-
+git st
       # 4. Run the Gradle build, with verbose logs, and stack traces enabled to verify it works.
       - name: Verify Gradle Build
         run: ./gradlew build --info --stacktrace
