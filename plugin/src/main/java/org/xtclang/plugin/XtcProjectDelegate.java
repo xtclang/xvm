@@ -158,7 +158,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             final TaskCollection<XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
             runTask.dependsOn(XDK_EXTRACT_TASK_NAME);
             runTask.dependsOn(compileTasks);
-            logger.lifecycle("{} XtcRunTask named '{}': added dependency on: '{}' and '{}'", prefix, runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
+            logger.info("{} XtcRunTask named '{}': added dependency on: '{}' and '{}'", prefix, runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
         });
 
         createJavaToolsConfig();

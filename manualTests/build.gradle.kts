@@ -300,8 +300,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
     module {
-        moduleName = "runner.xtc"
-        verbose    = false
+        moduleName = "Runner"
 
         // TODO: If the runner took the file names instead of module names, we could just pass in
         //   exactly the outgoing source sets, and we wouldn't have to know their names, and could
@@ -332,6 +331,12 @@ val runParallel by tasks.registering(XtcRunTask::class) {
             "TestTuples"
         )
     }
+}
+
+val runAllTestTasks by tasks.registering {
+    group = "application"
+    description = "Run all test tasks."
+    dependsOn(runTwoTestsInSequence, runParallel, runOne, tasks.runXtc)
 }
 
 fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {

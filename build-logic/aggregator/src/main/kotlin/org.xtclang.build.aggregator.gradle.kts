@@ -21,17 +21,17 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             logger.info("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
         }
 
-        val ingoredIncludedBuilds = gradle.includedBuilds.map { it.name }.filter {
-            val attachkKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
-            val attach = (properties[attachkKey]?.toString() ?: "true").toBoolean()
+        val ignoredIncludedBuilds = gradle.includedBuilds.map { it.name }.filter {
+            val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
+            val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
             if (!attach) {
-                logger.warn("$prefix WARNING: Included build '$it' is explicitly configured to be outside the root lifecycle ($attachkKey: $attach).")
+                logger.lifecycle("$prefix WARNING: Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: $attach).")
             }
             !attach
         }.toSet()
 
         checkStartParameterState()
-        aggregateLifeCycleTasks(ingoredIncludedBuilds)
+        aggregateLifeCycleTasks(ignoredIncludedBuilds)
     }
 
     private fun aggregateLifeCycleTasks(ignored: Set<String>) {
