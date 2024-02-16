@@ -3,16 +3,12 @@ import org.xtclang.plugin.tasks.XtcRunTask
 /**
  * This is the manualTests project.
  *
- * PLEASE NOTE: Stop tormenting this branch, if there is new functionality that does not immedately
- * have to do with running XDK unit/integration tests. This is not your "Hello world" app playground.
+ * PLEASE NOTE: This is not your "Hello world" app playground.
+ *
  * Please use another project directory and/or GitHub repository for that, with the XDK as either
- * an includedBuild, or as published artifacts, if you are doing whatever it is you are doing outside
- * the XDK, and just depending on it. This is NOT the best place to start adding more run configs.
+ * an included build, or as published artifacts.
  *
  * ManualTests is a standalone XTC project, which should only depend on the XDK.
- * If we want to use it to debug the XDK, that is also fine, as it will do dependency
- * substitution on the XDK and XTC Plugin (and Javatools and other dependencies) correctly,
- * through included builds, anyway.
  *
  * Depending on the "manualTests" properties set in ../gradle.properties, this project
  * will either be an includedBuild in the XDK build, but will only configure, not resolve or
@@ -26,12 +22,11 @@ import org.xtclang.plugin.tasks.XtcRunTask
  *
  *   ./gradlew build should be used to compile this project, not the explicit compile task.
  *
- *   ./gradlew :manualTests:compile<SourceSet>Xtc (will compile the source set "SourceSet", for main, compileXtc is the task by convention)
+ *   ./gradlew :manualTests:compile<SourceSet>Xtc (will compile the source set "SourceSet",
+ *              for main, compileXtc is the task by convention)
  *   ./gradlew :manualTests:runXtc (runs any modules in the global xtcRun extension, no-op if none)
- *   ./gradlew :manualTests:<other run tasks> (show you how to override configuration in xtcRun with your own modules to run>
- *
- *   (or their corresponding IntelliJ actions, i.e. right click in the Gradle hierarchy, and set up the
- *    appropriate run and debug configuration for Gradle jobs).
+ *   ./gradlew :manualTests:<other run tasks> (shows how to override configuration in xtcRun with
+ *              your own modules to run)
  */
 
 /**
@@ -108,22 +103,21 @@ dependencies {
 sourceSets {
     main {
         xtc {
-            // TODO this is weird. We should flter OUT the negative tests instead. Now, for example, we can still
-            //   resolve and run TestSimple even though it isn't in the source set?
+             // TODO: tests below are meant to be compiled and run manually; consider moving them
+             //       somewhere else and filter out the negative tests
             exclude("**/archive/**")
             exclude("**/dbTests/**")
             exclude("**/json/**")
             exclude("**/multiModule/**")
             exclude("**/webTests/**")
             exclude(
-                "**/TestSimple.x", // TODO: TestSimple is never meant to be run. Maybe it should live somewhere else, as that's not even a negative test.
+                "**/TestSimple.x",
                 "**/ConstOrdinalListTest.x",
                 "**/NumericConversions.x",
                 "**/contained.x",
                 "**/container.x",
                 "**/Dec28.x",
-                "**/errors.x",
-                "**/innerouter.x")
+                "**/errors.x")
         }
     }
 }
@@ -276,8 +270,7 @@ xtcRun {
     }
 }
 
-// This shows how to add a custom run task that overrides the global xtcRun config
-// or xtcRun configs.
+// This shows how to add a custom run task that overrides the global xtcRun config.
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
     verbose = true // override a default from xtcRun
@@ -289,7 +282,7 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     moduleName("TestArray")
 }
 
-// You can run ./gradlew manualTests:runOne -PtestName="TestArray" to run a single test, for example
+// This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Runs one test as given by the property 'testName', or a default test if not set."
@@ -299,32 +292,21 @@ val runOne by tasks.registering(XtcRunTask::class) {
 }
 
 /**
- * The default behavior right now, is to run muliple tests in a sequence, one after each other. This mostly has to do
- * with Gradle assuming single threadedness unless we add a worker API. However, we can easily extend an XtcRunTask
- * and have it use the XTC Runner module, and pass in the modules from the global extension as arguments. We do this lazily
- * and if they don't exist they will compile at the latest possible moment.
- *
- * TODO: We need to ensure that the source set here contains every module that exists, and Runner is one of them.
- * However, we should not attempt to run it as a test in the default configuration.
+ * The default behavior right now, is to run multiple tests in a sequence, one after each other.
+ * This mostly has to do with Gradle assuming single thread-ness unless we add a worker API.
+ * This task uses the Ecstasy Runner module, taking the module names as arguments.
  */
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
     module {
         moduleName = "runner.xtc"
+        verbose    = false
 
-        // TODO: If the runner took xtc files, and not module names, we could just pass in exactly the outgoing source sets, and we wouldn't have to
-        //   know their names, and either send in any names for stuff that isn't built, violating the build cycle abstraction, having them secretly
-        //   build by xec, and we would know we always ran exactly what is available.
-        //
-        //moduleArgs(provideTestModules)
-
-        // Now instead we have to do this, which may or may not have any relation to the source set output.
-
-        // You can use any logic to add arguments, if you find it easier, e.g. a for loop:
-        //  for (module in provideTestModules.get()) {
-        //   moduleArgs(getModuleNameForModuleXtc(module))
-        // }
+        // TODO: If the runner took the file names instead of module names, we could just pass in
+        //   exactly the outgoing source sets, and we wouldn't have to know their names, and could
+        //   have them compiled by xcc (for example calling moduleArgs(provideTestModules))
+        //   Now instead we have to explicitly specify the module names.
         moduleArgs(
             "TestAnnotations",
             "TestArray",
@@ -334,7 +316,6 @@ val runParallel by tasks.registering(XtcRunTask::class) {
             "TestGenerics",
             "TestInnerOuter",
             "TestFiles",
-            "TestFizzBuzz",
             "TestIO",
             "TestLambda",
             "TestLiterals",
@@ -369,7 +350,7 @@ fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
  * asks what's in the source set, will trigger the source set being built to return its outputs, and it will
  * happen iff those data are really required (such as during the execution phase of the testParallel task).
  * At configuration time, the testParallel task will validate the DSL, but all it sees is a provider in the
- * modules definition. It's first when that task is executed (if every) that we trigger a build. You can
+ * module's definition. It's first when that task is executed (if every) that we trigger a build. You can
  * see this if you exclude manual tests from the composite build lifecycle (see root/gradle.properties) and
  * just execute ./gradlew manualTests:runParallel. Only when we are ready to launch the runner, is the
  * cascade of operations leading the source set output occur. We also know exactly which source sets
