@@ -31,9 +31,9 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
+
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
-
 import static org.xvm.util.Handy.checkReadable;
 import static org.xvm.util.Handy.isPathed;
 import static org.xvm.util.Handy.quotedString;
@@ -477,12 +477,12 @@ public class Runner
             {
             super();
 
-            addOption("L" ,     null,           Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption("M",      "method",       Form.String, false, "Method name; defaults to \"run\"");
-            addOption(null,     "no-recompile", Form.Name,   false, "Disable automatic compilation");
-            addOption("o",      null,           Form.File,   false, "If compilation is necessary, the file or directory to write compiler output to");
-            addOption(Trailing, null,           Form.File,   false, "Module file name (.xtc) to execute");
-            addOption(ArgV,     null,           Form.AsIs,   true,  "Arguments to pass to the method");
+            addOption("L" ,     null,           Form.Repo,    true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
+            addOption("M",      "method",       Form.String,  false, "Method name; defaults to \"run\"");
+            addOption(null,     "no-recompile", Form.Name,    false, "Disable automatic compilation");
+            addOption("o",      null,           Form.File,    false, "If compilation is necessary, the file or directory to write compiler output to");
+            addOption(Trailing, null,           Form.File,    false, "Module file name (.xtc) to execute");
+            addOption(ArgV,     null,           Form.AsIs,    true,  "Arguments to pass to the method");
             }
 
         /**
