@@ -31,7 +31,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
-
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
 
