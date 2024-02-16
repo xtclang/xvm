@@ -205,7 +205,9 @@ public class ConstHeap
 
         return f_mapConstants.computeIfAbsent(constant, c ->
             {
-            ObjectHandle hNew = hConst.cloneAs(
+            ObjectHandle hNew = hConst.getComposition().getContainer() == f_container
+                ? hConst
+                : hConst.cloneAs(
                     hConst.getTemplate().ensureClass(f_container, hConst.getType()));
 
             if (c instanceof SingletonConstant constSingleton)
