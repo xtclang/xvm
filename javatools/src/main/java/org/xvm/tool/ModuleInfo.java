@@ -342,6 +342,8 @@ public class ModuleInfo
 
                         break;
                         }
+
+                    fileParent = fileParent.getParentFile();
                     }
 
                 String sExt = getExtension(binarySpec.getName());

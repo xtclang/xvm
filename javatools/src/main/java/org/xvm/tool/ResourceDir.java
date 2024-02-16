@@ -309,6 +309,21 @@ public class ResourceDir
         return timestamp;
         }
 
+    @Override
+    public String toString()
+        {
+        StringBuilder buf = new StringBuilder().append("ResourceDir(");
+        for (int i = 0, c = resourcePath.length; i < c; ++i)
+            {
+            if (i > 0)
+                {
+                buf.append(", ");
+                }
+            buf.append(resourcePath[i]);
+            }
+        return buf.append(')').toString();
+        }
+
     /**
      * A ResourceDir that represents an empty set of resources.
      */
