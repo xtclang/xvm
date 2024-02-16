@@ -510,15 +510,14 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] atypeParams)
         {
-        int cParamsCurr = m_atypeParams.length;
-        if (atypeParams == null || cParamsCurr == 0)
+        if (atypeParams == null)
             {
             atypeParams = m_atypeParams;
             }
         else
             {
             // make sure we don't adopt wider types over current narrower ones
-            for (int i = 0, c = Math.min(atypeParams.length, cParamsCurr); i < c; i++)
+            for (int i = 0, c = Math.min(atypeParams.length, m_atypeParams.length); i < c; i++)
                 {
                 TypeConstant typeAdopt = atypeParams[i];
                 TypeConstant typeCurr  = m_atypeParams[i];
