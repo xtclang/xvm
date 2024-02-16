@@ -185,6 +185,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return taskLocalModules.get().size();
     }
 
+    // TODO: Have the task depend on actual output of all source sets.
     @TaskAction
     @Override
     public void executeTask() {
@@ -207,8 +208,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // tasks works fine, but the runner somehow still decides that it's stale. It's really important that
         // the XTC runtimes do not create "invisible" dependency behavior that the plugin does not know about.
 
-        final var sourceSetOutput = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, XtcProjectDelegate.getMainSourceSet(project)).get().getAsFile();
-        logger.warn("{} WARNING: We hope the modules about to run are in '{}', because otherwise xec will assume they are stale and rebuild them in the wrong place.", prefix(), sourceSetOutput.getAbsolutePath());
+        //final var sourceSetOutput = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, XtcProjectDelegate.getMainSourceSet(project)).get().getAsFile();
+        //logger.warn("{} WARNING: We hope the modules about to run are in '{}', because otherwise xec will assume they are stale and rebuild them in the wrong place.", prefix(), sourceSetOutput.getAbsolutePath());
         //cmd.add("-o", sourceSetOutput);
 
         // Now we filter out only modules we have been specifically told to run.

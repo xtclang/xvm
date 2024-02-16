@@ -18,6 +18,7 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.SourceSetOutput;
+import org.gradle.api.tasks.TaskCollection;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.xtclang.plugin.internal.DefaultXtcCompilerExtension;
@@ -150,7 +151,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         checkProjectIsVersioned();
         createDefaultSourceSets();
         createXtcDependencyConfigs();
-        createRunTask();
+        createDefaultRunTask();
+
+        // The plugin should look for custom run tasks, and ensure that they depend on all compile tasks in the project.
+        tasks.withType(XtcRunTask.class).configureEach(runTask -> {
+            final TaskCollection<XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
+            runTask.dependsOn(XDK_EXTRACT_TASK_NAME);
+            runTask.dependsOn(compileTasks);
+            logger.info("{} XtcRunTask named '{}': added dependency on: '{}' and '{}'", prefix, runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
+        });
 
         createJavaToolsConfig();
         createResolutionStrategy();
@@ -271,30 +280,13 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.", prefix(projectName, compileTaskName), compileTaskName);
                 considerNeverUpToDate(task);
             }
-
             task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
-            //task.doLast(t -> {
-            //    // This happens during task execution, after the config phase.
-            //    logger.info("{} Finished. Outputs in: {}", prefix(projectName, compileTaskName), t.getOutputs().getFiles().getAsFileTree());
-            //    sourceSet.getOutput().getAsFileTree().forEach(it -> logger.info("{} compileXtc sourceSet output: {}", prefix, it));
-            //});
         });
-
-        /*
-        final var processResourcesTask = tasks.register(getProcessResourcesTaskName(sourceSet), task -> {
-            task.setDescription("Process resources for an XTC source set, similar to the processResources task for Java but before compile")
-            if (forceRebuild.get()) {
-                considerNeverUpToDate(task);
-            }
-
-            //task.doLast(t -> logger.info("{} Finished. Outputs in: {}", prefix(projectName, task.getName()), t.getOutputs().getFiles().getAsFileTree()));
-        });*/
 
         // Find the "classes" task in the Java build life cycle that we reuse, and set the dependency correctly. This should
         // wire in process resources too, but for some reason it seems to work differently. Basically this goes to the
         // "assemble" task, but we want to reuse some of the Java life cycle internally.
         tasks.getByName(getClassesTaskName(sourceSet)).dependsOn(compileTask);
-
 
         logger.info("{} Mapping source set to compile task: {} -> {}", prefix, sourceSet.getName(), compileTaskName);
         logger.info("{} Registered and configured compile task for sourceSet: {}", prefix, sourceSet.getName());
@@ -306,11 +298,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
      * Create the XTC run task. If there are no explicit modules in the xtcRun config, we don't create it,
      * or we log an error or something. The run task will depend on the compile task, and make sure an XTC
      * module in the source set is compiled.
-     *
-     * @return the task provider of the rn task.
      */
     // TODO: Move to static factory in run task?
-    private TaskProvider<XtcRunTask> createRunTask() {
+    private void createDefaultRunTask() {
         final var runTaskName = getRunTaskName();
         // The run task depends on all compile tasks, for all source sets these days.
         final var compileTaskNames = getSourceSets(project).stream().map(sourceSet -> sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME));
@@ -318,12 +308,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         runTask.configure(task -> {
             task.setGroup(APPLICATION_GROUP);
             task.setDescription("Run an XTC program with a configuration supplying the module path(s).");
-            task.dependsOn(XDK_EXTRACT_TASK_NAME);
-            compileTaskNames.forEach(task::dependsOn); // It's important to remember to depend on compile.
             logger.info("{} Configured, dependency to tasks: {} -> {}", prefix, XDK_EXTRACT_TASK_NAME, compileTaskNames);
         });
         logger.info("{} Created task: '{}'", prefix, runTask.getName());
-        return runTask;
     }
 
     private String getSemanticVersion() {

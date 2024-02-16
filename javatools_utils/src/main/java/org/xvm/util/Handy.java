@@ -1379,6 +1379,18 @@ public final class Handy
         }
 
     /**
+     * Determine if the passed file name is pathed, instead of just being a simple file name.
+     *
+     * @param sFile  the file name, possibly with path indicators (e.g. "/") inside it
+     *
+     * @return true iff the passed file name contains any path indicators
+     */
+    public static boolean isPathed(String sFile)
+        {
+        return sFile.indexOf('/') >= 0 || sFile.indexOf(File.pathSeparatorChar) >= 0;
+        }
+
+    /**
      * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
      * extension, such as "x" or "xtc"
      *
@@ -1413,7 +1425,7 @@ public final class Handy
             }
 
         String sExt = sFile.substring(ofDot + 1);
-        return sExt.indexOf('/') >= 0 || sExt.indexOf(File.pathSeparatorChar) >= 0 ? null : sExt;
+        return isPathed(sExt) ? null : sExt;
         }
 
     /**
@@ -1432,7 +1444,7 @@ public final class Handy
             return sFile;
             }
 
-        return sFile.lastIndexOf('/') < ofDot && sFile.indexOf(File.pathSeparatorChar) < ofDot
+        return sFile.lastIndexOf('/') < ofDot && sFile.lastIndexOf(File.pathSeparatorChar) < ofDot
                 ? sFile.substring(0, ofDot)
                 : sFile;
         }
