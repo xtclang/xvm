@@ -185,6 +185,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return taskLocalModules.get().size();
     }
 
+    // TODO: Have the task depend on actual output of all source sets.
     @TaskAction
     @Override
     public void executeTask() {
