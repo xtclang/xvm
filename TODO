@@ -1,0 +1,5 @@
+* Fix unicode
+* Enforce code standard
+* Release building through github workflow, better place to start from? 
+* IntelliJ plugin for syntax highlighting as initial task? 
+* Configuration cache
