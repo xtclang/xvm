@@ -106,11 +106,21 @@ public class Var_S
 
     protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
         {
+        boolean fImmutable = true;
+        for (ObjectHandle hValue : ahArg)
+            {
+            if (hValue.isMutable())
+                {
+                fImmutable = false;
+                break;
+                }
+            }
+
         TypeConstant    typeList = frame.resolveType(m_nType);
         TypeComposition clzArray = getArrayClass(frame, typeList);
 
         ArrayHandle hArray = xArray.makeArrayHandle(clzArray, ahArg.length, ahArg,
-                typeList.isImmutable() ? Mutability.Constant : Mutability.Persistent);
+                fImmutable ? Mutability.Constant : Mutability.Persistent);
 
         if (typeList.isA(frame.poolContext().typeSet()))
             {
