@@ -44,6 +44,11 @@ interface FileTemplate
     @RO Time? created;
 
     /**
+     * The contents of the file template as a Byte array.
+     */
+    @RO Byte[] contents;
+
+    /**
      * An array of qualified module names contained within this FileTemplate.
      */
     @RO String[] moduleNames.get() {

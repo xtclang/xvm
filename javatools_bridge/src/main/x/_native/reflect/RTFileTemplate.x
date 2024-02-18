@@ -13,13 +13,13 @@ class RTFileTemplate
     ModuleTemplate mainModule.get()                     {TODO("native");}
 
     @Override
-    Boolean resolved.get()                              {TODO("native");}
-
-    @Override
     RTFileTemplate resolve(ModuleRepository repository) {TODO("native");}
 
     @Override
     conditional ModuleTemplate getModule(String name)   {TODO("native");}
+
+    @Override
+    Byte[] contents.get()                               {TODO("native");}
 
     @Override
     Time? created.get() {

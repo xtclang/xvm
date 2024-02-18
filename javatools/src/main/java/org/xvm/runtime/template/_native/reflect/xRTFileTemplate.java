@@ -1,6 +1,7 @@
 package org.xvm.runtime.template._native.reflect;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
@@ -26,6 +27,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
@@ -66,6 +68,7 @@ public class xRTFileTemplate
 
         markNativeProperty("mainModule");
         markNativeProperty("resolved");
+        markNativeProperty("contents");
         markNativeProperty("createdMillis");
 
         markNativeMethod("getModule", STRING, null);
@@ -78,28 +81,31 @@ public class xRTFileTemplate
     @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
         {
-        ComponentTemplateHandle hFile = (ComponentTemplateHandle) hTarget;
-        FileStructure           file  = (FileStructure) hFile.getComponent();
+        ComponentTemplateHandle hFile      = (ComponentTemplateHandle) hTarget;
+        FileStructure           fileStruct = (FileStructure) hFile.getComponent();
         switch (sPropName)
             {
             case "mainModule":
-                {
                 return frame.assignValue(iReturn,
-                    xRTModuleTemplate.makeHandle(frame.f_context.f_container, file.getModule()));
-                }
+                    xRTModuleTemplate.makeHandle(frame.f_context.f_container, fileStruct.getModule()));
 
             case "resolved":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(file.isLinked()));
+                return frame.assignValue(iReturn, xBoolean.makeHandle(fileStruct.isLinked()));
+
+            case "contents":
+                return getPropertyContents(frame, fileStruct, iReturn);
 
             case "createdMillis":
                 {
-                File fileOS = file.getOSFile();
+                File fileOS = fileStruct.getOSFile();
                 if (fileOS != null)
                     {
                     try
                         {
-                        BasicFileAttributes attr = Files.readAttributes(fileOS.toPath(), BasicFileAttributes.class);
-                        return frame.assignValue(iReturn, xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
+                        BasicFileAttributes attr =
+                                Files.readAttributes(fileOS.toPath(), BasicFileAttributes.class);
+                        return frame.assignValue(iReturn,
+                                xInt64.makeHandle(attr.lastModifiedTime().toMillis()));
                         }
                     catch (IOException ignore) {}
                     }
@@ -122,7 +128,7 @@ public class xRTFileTemplate
                 return invokeResolve(frame, file, hArg, iReturn);
 
             case "replace":
-                return invokeReplace(frame, file, (ArrayHandle) hArg, iReturn);
+                return invokeReplace(frame, file, (ArrayHandle) hArg);
             }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
         }
@@ -150,6 +156,28 @@ public class xRTFileTemplate
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
+    /**
+     * Implementation of "Byte[] contents.get()".
+     */
+    private int getPropertyContents(Frame frame, FileStructure fileStruct, int iReturn)
+        {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        try
+            {
+            fileStruct.writeTo(stream);
+            }
+        catch (IOException e)
+            {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+
+        return frame.assignValue(iReturn,
+            xArray.makeByteArrayHandle(stream.toByteArray(), xArray.Mutability.Constant));
+        }
+
+    /**
+     * Native implementation of "void resolve(ModuleRepository repository)" method.
+     */
     public int invokeResolve(Frame frame, FileStructure file, ObjectHandle hRepo, int iReturn)
         {
         Container container = frame.f_context.f_container;
@@ -198,7 +226,7 @@ public class xRTFileTemplate
     /**
      * Native implementation of "void replace(ModuleTemplate[] unresolved)" method.
      */
-    public int invokeReplace(Frame frame, FileStructure file, ArrayHandle hArray, int iReturn)
+    private int invokeReplace(Frame frame, FileStructure file, ArrayHandle hArray)
         {
         List<ModuleStructure> listUnlinked = new ArrayList<>();
 
@@ -278,6 +306,6 @@ public class xRTFileTemplate
 
     // ----- constants -----------------------------------------------------------------------------
 
-    private static TypeConstant    FILE_TEMPLATE_TYPE;
+    public static TypeConstant     FILE_TEMPLATE_TYPE;
     private static MethodStructure LINK_MODULES_METHOD;
     }

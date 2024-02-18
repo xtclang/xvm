@@ -2,7 +2,6 @@ package org.xvm.runtime.template._native.lang.src;
 
 
 import java.io.File;
-import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
@@ -38,15 +38,19 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.fs.xOSFileNode.NodeHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
+import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 
 import org.xvm.tool.Compiler;
 import org.xvm.tool.ModuleInfo;
@@ -80,7 +84,7 @@ public class xRTCompiler
         ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
         GET_MODULE_ID = structRepo.findMethod("getModule", 1).getIdentityConstant();
 
-        markNativeMethod("compile", null, null);
+        markNativeMethod("compileImpl", null, null);
 
         invalidateTypeInfo();
         }
@@ -108,13 +112,14 @@ public class xRTCompiler
         CompilerHandle hCompiler = (CompilerHandle) hTarget;
         switch (method.getName())
             {
-            case "compile":
+            case "compileImpl":
                 {
                 try
                     {
-                    ArrayHandle    haSources = (ArrayHandle) ahArg[0];
+                    ObjectHandle   hRepo     = ahArg[0];
+                    ArrayHandle    haSources = (ArrayHandle) ahArg[1];
                     ObjectHandle[] ahSource  = haSources.getTemplate().toArray(frame, haSources);
-                    return invokeCompile(frame, hCompiler, ahSource, aiReturn);
+                    return invokeCompileImpl(frame, hCompiler, hRepo, ahSource, aiReturn);
                     }
                 catch (ExceptionHandle.WrapperException e)
                     {
@@ -127,19 +132,14 @@ public class xRTCompiler
         }
 
     /**
-     * Implementation for: {@code (Boolean success, String errors) compile((File|Directory)[])}.
+     * Native implementation of:
+     *      "(FileTemplate[] modules, String[] errors)
+     *          compileImpl(ModuleRepository repo, (Directory|File)[] sources)"
      */
-    protected int invokeCompile(Frame frame, CompilerHandle hCompiler,
-                                ObjectHandle[] ahSources, int[] aiReturn)
+    protected int invokeCompileImpl(Frame frame, CompilerHandle hCompiler, ObjectHandle hRepo,
+                                    ObjectHandle[] ahSources, int[] aiReturn)
         {
-        CompilerAdapter compiler  = hCompiler.fAdapter;
-        ObjectHandle    hLibRepo  = hCompiler.getField(frame, "libRepo");
-        NodeHandle      hDirOut   = (NodeHandle) hCompiler.getField(frame, "outputDir");
-
-        if (hDirOut == null)
-            {
-            return frame.raiseException("Destination is not specified");
-            }
+        CompilerAdapter compiler = hCompiler.fAdapter;
 
         List<File> listSources = new ArrayList<>();
         for (int i = 0, c = ahSources.length; i < c; i++)
@@ -167,10 +167,10 @@ public class xRTCompiler
 
         compiler.setLibraryRepos(listNew);
 
-        return doCompile(frame, compiler, hDirOut, hLibRepo, null, aiReturn);
+        return doCompile(frame, compiler, hRepo, null, aiReturn);
         }
 
-    private int doCompile(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut,
+    private int doCompile(Frame frame, CompilerAdapter compiler,
                           ObjectHandle hRepo, String sMissingPrev, int[] aiReturn)
         {
         try
@@ -178,7 +178,7 @@ public class xRTCompiler
             String sMissing = compiler.partialCompile(sMissingPrev != null);
             if (sMissing != null)
                 {
-                if (sMissing.equals(sMissingPrev) || hRepo == null)
+                if (sMissing.equals(sMissingPrev) || hRepo == xNullable.NULL)
                     {
                     return completeWithError(frame, compiler, sMissing, aiReturn);
                     }
@@ -187,13 +187,13 @@ public class xRTCompiler
                     {
                     case Op.R_NEXT:
                         return popModuleStructure(frame, compiler)
-                            ? doCompile(frame, compiler, hDirOut, hRepo, sMissing, aiReturn)
+                            ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)
                             : completeWithError(frame, compiler, sMissing, aiReturn);
 
                     case Op.R_CALL:
                         Frame.Continuation nextStep = frameCaller ->
                             popModuleStructure(frameCaller, compiler)
-                                ? doCompile(frameCaller, compiler, hDirOut, hRepo, sMissing, aiReturn)
+                                ? doCompile(frameCaller, compiler, hRepo, sMissing, aiReturn)
                                 : completeWithError(frameCaller, compiler, sMissing, aiReturn);
                         frame.m_frameNext.addContinuation(nextStep);
                         return Op.R_CALL;
@@ -205,11 +205,11 @@ public class xRTCompiler
                         throw new IllegalStateException();
                     }
                 }
-            return completeCompilation(frame, compiler, hDirOut, null, aiReturn);
+            return completeCompilation(frame, compiler, null, aiReturn);
             }
         catch (Exception e)
             {
-            return completeCompilation(frame, compiler, hDirOut, e, aiReturn);
+            return completeCompilation(frame, compiler, e, aiReturn);
             }
         }
 
@@ -255,38 +255,26 @@ public class xRTCompiler
         {
         // org.xvm.compiler.Compiler.MODULE_MISSING
         compiler.log(Severity.FATAL, "Module missing: \"" + sMissing + '"');
-        return completeCompilation(frame, compiler, null, null, aiReturn);
+        return completeCompilation(frame, compiler, null, aiReturn);
         }
 
-    private int completeCompilation(Frame frame, CompilerAdapter compiler, NodeHandle hDirOut,
+    private int completeCompilation(Frame frame, CompilerAdapter compiler,
                                     Exception exception, int[] aiReturn)
         {
-        List<String> listErrors = compiler.getErrors();
+        List<ComponentTemplateHandle> listFiles = new ArrayList<>();
+        List<String>                  listErrors = compiler.getErrors();
         boolean      fSuccess;
         if (exception == null)
             {
             fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
             if (fSuccess)
                 {
-                // TODO: eventually, we should be returning an in-memory build repository,
-                //       leaving the persistence aspects up to the caller
-                File             fileOut   = hDirOut.getPath().toFile();
+                Container        container = frame.f_context.f_container;
                 ModuleRepository repoBuild = compiler.getBuildRepository();
-                ModuleRepository repoOut   = fileOut.isDirectory()
-                        ? new DirRepository(fileOut, false)
-                        : new FileRepository(fileOut, false);
                 for (String sModule : repoBuild.getModuleNames())
                     {
-                    try
-                        {
-                        repoOut.storeModule(repoBuild.loadModule(sModule));
-                        }
-                    catch (IOException e)
-                        {
-                        fSuccess   = false;
-                        listErrors = addError(e, listErrors);
-                        break;
-                        }
+                    listFiles.add(xRTFileTemplate.makeHandle(container,
+                            repoBuild.loadModule(sModule).getFileStructure()));
                     }
                 }
             }
@@ -298,11 +286,26 @@ public class xRTCompiler
 
         assert fSuccess || !listErrors.isEmpty(); // a compilation failure must report reasons
 
-        ArrayHandle haErrors = listErrors.isEmpty()
-                ? xString.ensureEmptyArray()
-                : xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));
+        ConstantPool    pool      = frame.poolContext();
+        TypeConstant    typeArray = pool.ensureArrayType(xRTFileTemplate.FILE_TEMPLATE_TYPE);
+        TypeComposition clzArray  = f_container.resolveClass(typeArray);
+
+        ArrayHandle haTemplates;
+        ArrayHandle haErrors;
+        if (fSuccess)
+            {
+            haTemplates = xArray.makeArrayHandle(clzArray, listFiles.size(),
+                            listFiles.toArray(Utils.OBJECTS_NONE), Mutability.Constant);
+            haErrors    = xString.ensureEmptyArray();
+            }
+        else
+            {
+            haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
+            haErrors    = xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));
+            }
+
         compiler.reset();
-        return frame.assignValues(aiReturn, xBoolean.makeHandle(fSuccess), haErrors);
+        return frame.assignValues(aiReturn, haTemplates, haErrors);
         }
 
     private List<String> addError(Exception exception, List<String> listErrors)
