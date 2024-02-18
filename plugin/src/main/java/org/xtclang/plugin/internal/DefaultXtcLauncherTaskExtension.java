@@ -23,6 +23,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Logger logger;
 
     protected final ListProperty<String> jvmArgs;
+    protected final Property<Boolean> debug;
     protected final Property<Boolean> isVerbose;
     protected final Property<Boolean> isFork;
     protected final Property<Boolean> showVersion;
@@ -36,6 +37,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.prefix = ProjectDelegate.prefix(project);
         this.objects = project.getObjects();
         this.logger = project.getLogger();
+        this.debug = objects.property(Boolean.class).convention(false);
         this.jvmArgs = objects.listProperty(String.class).convention(DEFAULT_JVM_ARGS);
         this.isVerbose = objects.property(Boolean.class).convention(false);
         this.isFork = objects.property(Boolean.class).convention(true);
@@ -80,6 +82,11 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @Override
     public Property<Boolean> getVerbose() {
         return isVerbose;
+    }
+
+    @Override
+    public Property<Boolean> getDebug() {
+        return debug;
     }
 
     @Override

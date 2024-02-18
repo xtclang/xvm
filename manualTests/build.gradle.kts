@@ -185,12 +185,20 @@ xtcCompile {
     verbose = false
 
     /*
+     * Use the debug = true flag, either here, or on a per-task level, to suspend and allow you to attach a debugger
+     * after launcher has been spawned in a child process. You can also use the system variable XTC_DEBUG=true
+     * (and optionally, XTC_DEBUG_PORT=<int>"
+     */
+    debug = false
+
+    /*
      * Compile in build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
      * in e.g. Javatools classes, but is brittle, and should not be used for production use, for example
      * if the launched app does System.exit, this will kill the build job too.
      *
      * Javatools launchers should be debuggable through a standard Run/Debug Configuration (for example in IntelliJ)
-     * where the Javatools project is added as a Java Application (and not a Gradle job).
+     * where the Javatools project is added as a Java Application (and not a Gradle job). So just set the debug
+     * flag instead, for most common cases.
      *
      * Default is true.
      */
@@ -231,18 +239,6 @@ xtcRun {
      * Run the XTC command in its built-in verbose mode (default: false).
      */
     verbose = true
-
-    /*
-     * If fork is "true", the runner will run in the build process thread. This enables seamless IDE debugging of the
-     * Gradle build, with breakpoints in Java classes (e.g. Javatools). Unfortunately, running in the build process
-     * thread is brittle (e.g. a System.exit will kill the build job), so is only used when debugging the build.
-     *
-     * The Javatools command line tools should be debuggable through a standard Run/Debug Configuration (e.g. in
-     * IntelliJ IDEA) by adding the Javatools project as a Java Application (not as a Gradle job).
-     *
-     * The default is true.
-     */
-    fork = true
 
     /*
      * Use an XTC native launcher (requires a local XDK installation on the test machine.)
@@ -286,6 +282,8 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Runs one test as given by the property 'testName', or a default test if not set."
+    // Override debug flag from xtcRun extension here to suspend the process launched for this task, and allow attach.
+    //debug = true
     module {
         moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
     }

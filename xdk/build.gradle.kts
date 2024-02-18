@@ -8,7 +8,6 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
-import java.nio.file.attribute.FileAttribute
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -271,10 +270,8 @@ val distExe by tasks.registering {
 
 
 val test by tasks.existing {
-    val sanityCheckRuntime = getXdkPropertyBoolean("org.xtclang.build.sanityCheckRuntime", false)
-    if (sanityCheckRuntime) {
-        logger.lifecycle("$prefix Sanity check runtimes after build: $sanityCheckRuntime.")
-        dependsOn(gradle.includedBuild("manualTests").task(":runXtc"))
+    doLast {
+        TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
     }
 }
 
