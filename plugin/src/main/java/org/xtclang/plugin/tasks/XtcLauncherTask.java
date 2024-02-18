@@ -15,6 +15,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.ExecResult;
+import org.jetbrains.annotations.MustBeInvokedByOverriders;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.BuildThreadLauncher;
@@ -53,6 +54,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Property<OutputStream> stdout;
     protected final Property<OutputStream> stderr;
     protected final ListProperty<String> jvmArgs;
+    protected final Property<Boolean> debug;
     protected final Property<Boolean> isVerbose;
     protected final Property<Boolean> isFork;
     protected final Property<Boolean> showVersion;
@@ -63,6 +65,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected XtcLauncherTask(final Project project, final E ext) {
         super(project);
         this.ext = ext;
+        this.debug = objects.property(Boolean.class).value(ext.getDebug());
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
         this.stderr = objects.property(OutputStream.class);
@@ -118,6 +121,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @SuppressWarnings("unused")
     public boolean hasOutputRedirects() {
         return hasStdoutRedirect() || hasStderrRedirect();
+    }
+
+    @Input
+    @Override
+    public Property<Boolean> getDebug() {
+        return debug;
     }
 
     @Optional

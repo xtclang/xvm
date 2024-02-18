@@ -9,6 +9,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.zip.ZipFile;
 
 import static org.xtclang.plugin.XtcPluginConstants.JAR_MANIFEST_PATH;
@@ -23,8 +24,14 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
  * Launcher logic that runs the XTC launchers from classes on the classpath.
  */
 public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
+    private final boolean debug;
+    private final int debugPort;
+
     public JavaExecLauncher(final Project project, final T task) {
         super(project, task);
+        final Map<String, String> env = System.getenv();
+        this.debug = Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG", "false"));
+        this.debugPort = Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", "4711"));
     }
 
     @Override
@@ -48,6 +55,10 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
             spec.getMainClass().set(cmd.getMainClassName());
             spec.args(cmd.toList());
             spec.jvmArgs(cmd.getJvmArgs());
+            if (debug || task.getDebug().get()) {
+                logger.lifecycle("{} Adding debug arguments, debug port is: {}", prefix, debugPort);
+                spec.jvmArgs("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=4711");
+            }
             spec.setIgnoreExitValue(true);
         })));
     }

@@ -27,6 +27,8 @@ public interface XtcLauncherTaskExtension extends Named {
 
     Property<OutputStream> getStderr();
 
+    Property<Boolean> getDebug();
+
     default void jvmArg(String arg) {
         jvmArgs(arg);
     }
