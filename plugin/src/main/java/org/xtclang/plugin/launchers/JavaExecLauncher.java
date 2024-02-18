@@ -57,7 +57,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
             spec.jvmArgs(cmd.getJvmArgs());
             if (debug || task.getDebug().get()) {
                 logger.lifecycle("{} Adding debug arguments, debug port is: {}", prefix, debugPort);
-                spec.jvmArgs("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=4711");
+                spec.jvmArgs("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=" + debugPort);
             }
             spec.setIgnoreExitValue(true);
         })));
