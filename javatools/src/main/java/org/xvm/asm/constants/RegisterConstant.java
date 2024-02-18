@@ -145,9 +145,16 @@ public class RegisterConstant
         {
         super.assemble(out);
 
-        assert !m_reg.isUnknown();
+        if (m_reg == null)
+            {
+            writePackedLong(out, f_nReg);
+            }
+        else
+            {
+            assert !m_reg.isUnknown();
 
-        writePackedLong(out, m_reg.getIndex());
+            writePackedLong(out, m_reg.getIndex());
+            }
         }
 
     @Override

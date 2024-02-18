@@ -25,6 +25,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
+import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
 
@@ -53,7 +54,8 @@ public class DynamicFormalConstant
 
         assert reg.getType().removeAccess().isA(constFormal.getNamespace().getType());
 
-        m_reg         = reg;
+        // if the register is a shadow, take the original register, but the shadow's type
+        m_reg         = reg.getOriginalRegister();
         m_typeReg     = reg.getType();
         m_constFormal = constFormal;
         f_nReg        = reg.getIndex();
@@ -72,8 +74,8 @@ public class DynamicFormalConstant
         {
         super(pool, format, in);
 
-        f_nReg    = in.readUnsignedShort();
-        m_nRegId  = in.readUnsignedShort();
+        f_nReg    = readPackedInt(in);
+        m_nRegId  = readPackedInt(in);
         m_iType   = readMagnitude(in);
         m_iFormal = readMagnitude(in);
         }
@@ -272,10 +274,18 @@ public class DynamicFormalConstant
         {
         super.assemble(out);
 
-        assert !m_reg.isUnknown();
+        if (m_reg == null)
+            {
+            writePackedLong(out, f_nReg);
+            writePackedLong(out, m_nRegId);
+            }
+        else
+            {
+            assert !m_reg.isUnknown();
 
-        out.writeShort(m_reg.getIndex());
-        out.writeShort(m_reg.getId());
+            writePackedLong(out, m_reg.getIndex());
+            writePackedLong(out, m_reg.getId());
+            }
         writePackedLong(out, m_typeReg.getPosition());
         writePackedLong(out, m_constFormal.getPosition());
         }
