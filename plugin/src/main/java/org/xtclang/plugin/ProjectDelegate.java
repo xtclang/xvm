@@ -16,13 +16,14 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
-import org.xtclang.plugin.internal.DefaultXtcRunModule;
-import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 
 import java.net.URL;
-import java.util.List;
+
+import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
 
 public abstract class ProjectDelegate<T, R> {
+    public static final boolean OVERRIDE_VERBOSE_LOGGING = "true".equalsIgnoreCase(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
+
     protected final Project project;
     protected final String projectName;
     protected final String prefix;
@@ -78,6 +79,17 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public abstract R apply(T arg);
+
+    public boolean hasVerboseLogging() {
+        return hasVerboseLogging(project);
+    }
+
+    public static boolean hasVerboseLogging(final Project project) {
+        return switch (getLogLevel(project)) {
+            case DEBUG, INFO -> true;
+            default -> OVERRIDE_VERBOSE_LOGGING;
+        };
+    }
 
     public final XtcBuildRuntimeException buildException(final String msg, final Object... args) {
         return buildException(null, msg, args);

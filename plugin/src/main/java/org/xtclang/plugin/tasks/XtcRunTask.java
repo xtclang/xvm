@@ -125,13 +125,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return taskLocalModules.get().getModules();
     }
 
-    // XTC Module override from command line, replacing the getModules, i.e. explicitly declare run configurations for a subset of the source set.
-    /*@Input
-    @Optional
-    public Provider<XtcRunModule> getCommandLineModule() {
-        return commandLineModuleProvider;
-    }*/
-
     private XtcBuildRuntimeException extensionOnly(final String operation) {
         return buildException("Operation '{}' only available through xtcRun extension DSL at the moment.", operation);
     }
@@ -194,6 +187,10 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, getJvmArgs().get());
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getIsVerbose().get());
+        // When using the Gradle XTC plugin, having the 'xec' runtime decide to recompile stuff, is not supposed to be a thing.
+        // The whole point about the plugin is that we guarantee source->module up to date relationships, as long as you follow
+        // the standard build lifecycle model.
+        cmd.addBoolean("--no-recompile", true);
 
         // Create module path from xtcModule dependenciex, XDK contents and output of our source set.
         final var modulePath = resolveFullModulePath();

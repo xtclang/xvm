@@ -75,3 +75,6 @@ prj/
 # Gradle profiler output
 gradle-user-home/
 profile-out/
+
+# Any file named TODO
+TODO

@@ -205,15 +205,11 @@ val clean by tasks.existing {
 val distTar by tasks.existing(Tar::class) {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
+    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
-val distZip by tasks.existing(Zip::class)
-
-val assembleDist by tasks.existing {
-    if (xdkDist.shouldCreateWindowsDistribution()) {
-        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
-        dependsOn(distExe)
-    }
+val distZip by tasks.existing {
+    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
 val distExe by tasks.registering {
@@ -268,6 +264,12 @@ val distExe by tasks.registering {
     }
 }
 
+val assembleDist by tasks.existing {
+    if (xdkDist.shouldCreateWindowsDistribution()) {
+        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
+        dependsOn(distExe)
+    }
+}
 
 val test by tasks.existing {
     doLast {
