@@ -784,8 +784,8 @@ service JsonProcessorStore<Message extends immutable Const>
             if (rebuild) {
                 buf[0] = '[';
 
-                String jsonNew  = buf.add('\n').add(']').toString();
-                Byte[] bytesNew = jsonNew.utf8();
+                String           jsonNew  = buf.add('\n').add(']').toString();
+                immutable Byte[] bytesNew = jsonNew.utf8();
 
                 file.contents = bytesNew;
 

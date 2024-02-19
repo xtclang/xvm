@@ -686,7 +686,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     // replace the opening "," with an array begin "["
                     buf[0] = '[';
 
-                    Byte[] bytes = buf.toString().utf8();
+                    immutable Byte[] bytes = buf.toString().utf8();
                     file.contents = bytes;
 
                     bytesUsed += bytes.size;
@@ -967,8 +967,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             sizeByTx.process(desired, incrementCount(valueLoc.size));
 
             if (rebuild) {
-                String jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
-                Byte[] newBytes = jsonNew.utf8();
+                String           jsonNew  = buf.truncate(-1).add('\n').add(']').toString();
+                immutable Byte[] newBytes = jsonNew.utf8();
 
                 file.contents = newBytes;
 
@@ -1118,7 +1118,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         buf[0] = '[';
         buf.add('\n').add(']');
 
-        Byte[] newBytes = buf.toString().utf8();
+        immutable Byte[] newBytes = buf.toString().utf8();
         file.contents = newBytes;
 
         bytesUsed   += newBytes.size - oldBytes.size;
