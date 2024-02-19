@@ -19,7 +19,7 @@ class RTFileTemplate
     conditional ModuleTemplate getModule(String name)   {TODO("native");}
 
     @Override
-    Byte[] contents.get()                               {TODO("native");}
+    immutable Byte[] contents.get()                     {TODO("native");}
 
     @Override
     Time? created.get() {

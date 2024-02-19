@@ -353,21 +353,21 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         }
 
         @Override
-        Byte[] contents {
+        immutable Byte[] contents {
             @Override
-            Byte[] get() {
+            immutable Byte[] get() {
                 return origFile.contents;
             }
 
             @Override
-            void set(Byte[] bytes) {
+            void set(immutable Byte[] bytes) {
                 checkWritable();
                 origFile.contents = bytes;
             }
         }
 
         @Override
-        Byte[] read(Range<Int> range) {
+        immutable Byte[] read(Range<Int> range) {
             return origFile.read(range);
         }
 

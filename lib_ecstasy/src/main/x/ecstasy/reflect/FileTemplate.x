@@ -46,7 +46,7 @@ interface FileTemplate
     /**
      * The contents of the file template as a Byte array.
      */
-    @RO Byte[] contents;
+    @RO immutable Byte[] contents;
 
     /**
      * An array of qualified module names contained within this FileTemplate.

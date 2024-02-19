@@ -25,7 +25,7 @@ const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time 
     }
 
     @Override
-    Byte[] read(Range<Int> range) {
+    immutable Byte[] read(Range<Int> range) {
         return contents.slice(range);
     }
 

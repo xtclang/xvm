@@ -16,7 +16,7 @@ interface File
      * @throws AccessDenied  if the necessary file permissions to get or set the property have not
      *                       been granted
      */
-    Byte[] contents;
+    immutable Byte[] contents;
 
     /**
      * Read a portion of the file contents as an Array of Byte.
@@ -28,7 +28,7 @@ interface File
      *                       been granted
      * @throws OutOfBounds   if the range is not within `0 ..< size`
      */
-    Byte[] read(Range<Int> range);
+    immutable Byte[] read(Range<Int> range);
 
     /**
      * Modify the contents of the file so that it has the specified size.

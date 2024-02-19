@@ -21,7 +21,7 @@ const OSFile
     }
 
     @Override
-    Byte[] read(Range<Int> range) {
+    immutable Byte[] read(Range<Int> range) {
         if (!exists) {
             throw new FileNotFound(path);
         }
@@ -78,7 +78,7 @@ const OSFile
 
     // ----- native --------------------------------------------------------------------------------
 
-    Byte[] readImpl(Range<Int> range) {TODO("native");}
-    void truncateImpl(Int newSize)    {TODO("native");}
-    void appendImpl(Byte[] contents)  {TODO("native");}
+    immutable Byte[] readImpl(Range<Int> range) {TODO("native");}
+    void truncateImpl(Int newSize)              {TODO("native");}
+    void appendImpl(Byte[] contents)            {TODO("native");}
 }
