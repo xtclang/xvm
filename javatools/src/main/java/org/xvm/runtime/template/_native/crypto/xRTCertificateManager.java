@@ -107,7 +107,7 @@ public class xRTCertificateManager
     private int invokeCreateCertificate(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath  = (StringHandle) ahArg[0];
-        StringHandle hPwd   = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hPwd   = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hName  = (StringHandle) ahArg[2];
         StringHandle hDName = (StringHandle) ahArg[3];
 
@@ -134,7 +134,7 @@ public class xRTCertificateManager
     private int invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath = (StringHandle) ahArg[0];
-        StringHandle hPwd  = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hName = (StringHandle) ahArg[2];
 
         runCommand(null, null,
@@ -159,7 +159,7 @@ public class xRTCertificateManager
     private int invokeCreatePassword(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath     = (StringHandle) ahArg[0];
-        StringHandle hPwd      = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hName     = (StringHandle) ahArg[2];
         StringHandle hPwdValue = (StringHandle) ahArg[3];
 
@@ -185,7 +185,7 @@ public class xRTCertificateManager
     private int invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath   = (StringHandle) ahArg[0];
-        StringHandle hPwd    = xRTKeyStore.getPassword(ahArg[1]);
+        StringHandle hPwd    = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hPwdNew = (StringHandle) ahArg[2];
 
         return runCommand(frame, null,

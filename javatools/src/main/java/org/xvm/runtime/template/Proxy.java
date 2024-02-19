@@ -68,12 +68,6 @@ public class Proxy
         }
 
     @Override
-    protected boolean makeImmutable(ObjectHandle hTarget)
-        {
-        return false;
-        }
-
-    @Override
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
                                  TypeConstant typeProxy)
         {
@@ -477,7 +471,7 @@ public class Proxy
         @Override
         public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
             {
-            return false;
+            return true;
             }
 
         @Override

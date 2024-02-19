@@ -104,6 +104,10 @@ public class xRTKeyStore
         markNativeMethod("getCertificateInfo", STRING, null);
         markNativeMethod("getPasswordInfo"   , STRING, null);
 
+        ConstantPool pool = pool();
+        s_typeNamedPasssord = pool.ensureClassConstant(
+                pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();
+
         invalidateTypeInfo();
         }
 
@@ -130,7 +134,7 @@ public class xRTKeyStore
             {
             GenericHandle hInfo    = (GenericHandle) hOpts;
             ArrayHandle   hContent = (ArrayHandle) hInfo.getField(frame, "content");
-            StringHandle  hPwd     = getPassword(hInfo.getField(frame, "password"));
+            StringHandle  hPwd     = getPassword(frame, hInfo.getField(frame, "password"));
 
             byte[] abStore = xByteArray.getBytes(hContent);
             char[] achPwd  = hPwd.getValue();
@@ -555,16 +559,17 @@ public class xRTKeyStore
      *
      * Note: this method currently does not support any custom "CryptoPassword" implementations.
      */
-    public static StringHandle getPassword(ObjectHandle hPwd)
+    public static StringHandle getPassword(Frame frame, ObjectHandle hPwd)
         {
         if (hPwd instanceof StringHandle hString)
             {
             return hString;
             }
-        if (hPwd instanceof GenericHandle hNamed &&
-                hNamed.getField(null, "password") instanceof StringHandle hString)
+
+        hPwd = hPwd.revealAs(frame, s_typeNamedPasssord);
+        if (hPwd instanceof GenericHandle hNamed)
             {
-            return hString;
+            return (StringHandle) hNamed.getField(null, "password");
             }
         // this is basically an assertion; the result is clearly unusable
         return xString.EMPTY_STRING;
@@ -624,4 +629,9 @@ public class xRTKeyStore
      * Cached canonical type.
      */
     private TypeConstant m_typeCanonical;
+
+    /**
+     * Cached NamedPassword type.
+     */
+    private static TypeConstant s_typeNamedPasssord;
     }

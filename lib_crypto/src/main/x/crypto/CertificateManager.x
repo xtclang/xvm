@@ -57,7 +57,7 @@ interface CertificateManager {
      *
      * @throws IOException if anything goes wrong
      */
-    void createSymmetricKey(File keystore, String pwd, String name);
+    void createSymmetricKey(File keystore, Password pwd, String name);
 
     /**
      * Create a password entry.
