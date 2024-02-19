@@ -119,11 +119,18 @@ module ecstasy.xtclang.org {
             extends IllegalState(text, cause);
 
     /**
-     * An `UnsupportedOperation` exception is raised when an attempt is made to invoke functionality
-     * that is not present or has not yet been implemented.
+     * An `Unsupported` exception is raised when an attempt is made to invoke functionality that is
+     * not present, has not yet been implemented, or is otherwise not available.
      */
-    const UnsupportedOperation(String? text = Null, Exception? cause = Null)
+    const Unsupported(String? text = Null, Exception? cause = Null)
             extends Exception(text, cause);
+
+    /**
+     * A `NotImplemented` exception is raised when a `TODO` is encountered or an `assert:TODO`
+     * assertion fails.
+     */
+    const NotImplemented(String? text = Null, Exception? cause = Null)
+            extends Unsupported(text, cause);
 
     /**
      * A `Closed` exception is raised when an attempt is made to use an object that has transitioned

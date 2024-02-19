@@ -217,7 +217,7 @@ interface Map<Key, Value>
      *
      * @return a sorted Map
      *
-     * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Key] is not [Orderable]
+     * @throws Unsupported  if no [Type.Orderer] is provided and [Key] is not [Orderable]
      */
     @Concurrent
     Map! sorted(Orderer? order = Null) {

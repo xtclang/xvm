@@ -1409,7 +1409,7 @@ public class Parser
      *     "assert"                           # runtime, IllegalState
      *     "assert:arg"                       # runtime, IllegalArgument
      *     "assert:bounds"                    # runtime, OutOfBounds
-     *     "assert:T0D0"                      # runtime, UnsupportedOperation
+     *     "assert:T0D0"                      # runtime, NotImplemented
      *     "assert:once"                      # runtime, Assertion (only tested "the first time")
      *     "assert:rnd(" Expression ")"       # runtime (sampling), IllegalState
      *     "assert:test"                      # test mode (e.g. CI/QC), Assertion
@@ -1547,7 +1547,7 @@ public class Parser
      *     "assert"                           # runtime, IllegalState
      *     "assert:arg"                       # runtime, IllegalArgument
      *     "assert:bounds"                    # runtime, OutOfBounds
-     *     "assert:T0D0"                      # runtime, UnsupportedOperation
+     *     "assert:T0D0"                      # runtime, NotImplemented
      *     "assert:once"                      # runtime, Assertion (only tested "the first time")
      *     "assert:rnd(" Expression ")"       # runtime (sampling), IllegalState
      *     "assert:test"                      # test mode (e.g. CI/QC), Assertion

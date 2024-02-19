@@ -370,7 +370,7 @@ public class AssertStatement
             default                                   -> "IllegalState"; // ASSERT
             case ASSERT_ARG                           -> "IllegalArgument";
             case ASSERT_BOUNDS                        -> "OutOfBounds";
-            case ASSERT_TODO                          -> "UnsupportedOperation";
+            case ASSERT_TODO                          -> "NotImplemented";
             case ASSERT_ONCE, ASSERT_RND, ASSERT_TEST -> "Assertion";
             case ASSERT_DBG                           -> null;
             };

@@ -227,7 +227,7 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     @Override
     immutable RTBuffer makeImmutable() {
         // it is illegal to attempt to make a native buffers into an immutable object
-        throw new UnsupportedOperation();
+        throw new Unsupported();
     }
 
 

@@ -496,7 +496,7 @@ public class xRTType
     public TypeConstant getElementType(Frame frame, ObjectHandle hTarget, long lIndex)
             throws ExceptionHandle.WrapperException
         {
-        throw xException.unsupportedOperation(frame).getException();
+        throw xException.unsupported(frame).getException();
         }
 
 

@@ -891,10 +891,10 @@ service Client<Schema extends RootSchema> {
                 }
 
                 @Override
-                Set<DBObject> values.get() = throw new UnsupportedOperation();
+                Set<DBObject> values.get() = TODO("dbChildren.values.get()");
 
                 @Override
-                Set<Map<String, DBObject>.Entry> entries.get() = throw new UnsupportedOperation();
+                Set<Map<String, DBObject>.Entry> entries.get() = TODO("dbChildren.entries.get()");
 
                 @Lazy Map<String, DboInfo> infos.calc() {
                     Int[] childIds = info_.childIds;

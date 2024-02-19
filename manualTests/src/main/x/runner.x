@@ -61,7 +61,7 @@ module Runner {
 
         @Override
         String readLine(Boolean suppressEcho = False) {
-            throw new UnsupportedOperation();
+            throw new Unsupported();
         }
     }
 

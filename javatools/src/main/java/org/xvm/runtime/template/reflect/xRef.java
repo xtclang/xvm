@@ -703,7 +703,7 @@ public class xRef
             }
         else
             {
-            return frame.raiseException(xException.unsupportedOperation(frame, "maskAs"));
+            return frame.raiseException(xException.unsupported(frame, "maskAs"));
             }
         }
 
@@ -737,7 +737,7 @@ public class xRef
             }
         else
             {
-            return frame.raiseException(xException.unsupportedOperation(frame, "revealAs"));
+            return frame.raiseException(xException.unsupported(frame, "revealAs"));
             }
         }
 
