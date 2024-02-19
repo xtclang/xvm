@@ -3418,7 +3418,7 @@ public class NameExpression
         TypeConstant typeTarget = switch (calculatePropertyAccess(true))
             {
             // "p += k" -> "&p.addAssign(k)"
-            case This -> ctx.getThisType();
+            case This -> ctx.getThisType().ensureAccess(Access.PRIVATE);
 
             // "c.p += k"    -> "c.&p.addAssign(k)"
             // "f().p += k"  -> "f().&p.addAssign(k)"
