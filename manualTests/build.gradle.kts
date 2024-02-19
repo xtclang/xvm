@@ -299,6 +299,7 @@ val runParallel by tasks.registering(XtcRunTask::class) {
     description = "Run all known tests in parallel through the parallel test runner."
     module {
         moduleName = "Runner"
+        verbose = false
 
         // TODO: If the runner took the file names instead of module names, we could just pass in
         //   exactly the outgoing source sets, and we wouldn't have to know their names, and could
