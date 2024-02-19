@@ -1324,9 +1324,9 @@ public final class Handy
 
         file = resolveFile(file);
 
-        if (File.pathSeparatorChar != '/')
+        if (File.separatorChar != '/')
             {
-            sPath = sPath.replace(File.pathSeparatorChar, '/');
+            sPath = sPath.replace(File.separatorChar, '/');
             }
 
         for (String sPart : parseDelimitedString(sPath, '/'))
@@ -1387,7 +1387,7 @@ public final class Handy
      */
     public static boolean isPathed(String sFile)
         {
-        return sFile.indexOf('/') >= 0 || sFile.indexOf(File.pathSeparatorChar) >= 0;
+        return sFile.indexOf('/') >= 0 || sFile.indexOf(File.separatorChar) >= 0;
         }
 
     /**
@@ -1444,7 +1444,7 @@ public final class Handy
             return sFile;
             }
 
-        return sFile.lastIndexOf('/') < ofDot && sFile.lastIndexOf(File.pathSeparatorChar) < ofDot
+        return sFile.lastIndexOf('/') < ofDot && sFile.lastIndexOf(File.separatorChar) < ofDot
                 ? sFile.substring(0, ofDot)
                 : sFile;
         }
