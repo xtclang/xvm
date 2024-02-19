@@ -601,7 +601,7 @@ public abstract class ClassTemplate
                         return makeImmutable(hTarget)
                             ? frame.assignValue(iReturn, hTarget)
                             : frame.raiseException(
-                                xException.unsupportedOperation(frame, "makeImmutable"));
+                                xException.unsupported(frame, "makeImmutable"));
                     }
                 break;
 

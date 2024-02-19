@@ -1085,7 +1085,7 @@ public class xArray
         ObjectHandle hTarget = ahVar[0];
         if (!(hTarget instanceof DelegateHandle hDelegate))
             {
-            return frame.raiseException(xException.unsupportedOperation(frame));
+            return frame.raiseException(xException.unsupported(frame));
             }
 
         ObjectHandle hMutability = ahVar[1];

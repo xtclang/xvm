@@ -436,7 +436,7 @@ module TestMaps {
             map.process(1, e -> {
                 TODO;
             });
-        } catch (UnsupportedOperation e) {
+        } catch (Unsupported e) {
             // expected
         }
     }
@@ -480,7 +480,7 @@ module TestMaps {
             });
 
             assert;
-        } catch (UnsupportedOperation e) {
+        } catch (Unsupported e) {
             // expected
         }
 

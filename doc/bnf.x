@@ -441,7 +441,7 @@ AssertInstruction                               # (when active, what gets thrown
     "assert"                                    # runtime, IllegalState
     "assert:arg"                                # runtime, IllegalArgument
     "assert:bounds"                             # runtime, OutOfBounds
-    "assert:TODO"                               # runtime, UnsupportedOperation
+    "assert:TODO"                               # runtime, NotImplemented
     "assert:once"                               # runtime, Assertion (only tested "the first time")
     "assert:rnd(" Expression ")"                # runtime (sampling), IllegalState
     "assert:test"                               # test mode (e.g. CI/QC), Assertion

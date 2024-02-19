@@ -89,7 +89,7 @@ public class xByteArray
 
                 // TODO GG: we need a reifiable view (see the comments in ByteArray.x)
                 return frame.raiseException(
-                        xException.unsupportedOperation(frame, "Not implemented"));
+                        xException.notImplemented(frame, "Not implemented"));
                 }
             case "asInt8Array":
                 {

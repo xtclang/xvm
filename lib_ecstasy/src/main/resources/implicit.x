@@ -17,6 +17,7 @@ import ecstasy.IllegalState;
 import ecstasy.Interval;
 import ecstasy.Iterable;
 import ecstasy.Iterator;
+import ecstasy.NotImplemented;
 import ecstasy.NotShareable;
 import ecstasy.Nullable;
 import ecstasy.Nullable.Null;
@@ -37,7 +38,7 @@ import ecstasy.Service;
 import ecstasy.Sliceable;
 import ecstasy.Timeout;
 import ecstasy.TimedOut;
-import ecstasy.UnsupportedOperation;
+import ecstasy.Unsupported;
 
 import ecstasy.annotations.Abstract;
 import ecstasy.annotations.AtomicVar        as Atomic;

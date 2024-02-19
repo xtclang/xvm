@@ -502,8 +502,8 @@ interface ClassTemplate
          * @param actualTypes  the specific types to use for each of the formal type parameters of
          *        the class
          *
-         * @throws UnsupportedOperation iff the Composition implementation is not able to create a
-         *         Class because the necessary components have not been loaded, verified, and linked
+         * @throws Unsupported iff the Composition implementation is not able to create a Class
+         *         because the necessary components have not been loaded, verified, and linked
          * @throws TypeRequired iff a formal type parameter of the resulting class is missing a type
          * @throws InvalidClass iff the result of the composition and/or formal types would produce
          *         a class that violates the verifier rules

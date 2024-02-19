@@ -98,7 +98,7 @@ class SimpleResponse
 
     @Override
     Body from(Object content) {
-        throw new UnsupportedOperation();
+        throw new Unsupported();
     }
 
 

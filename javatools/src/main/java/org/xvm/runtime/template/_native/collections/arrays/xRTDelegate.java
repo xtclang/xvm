@@ -560,7 +560,7 @@ public class xRTDelegate
         if (lIndex > cSize && hTarget.getType().getParamType(0).getDefaultValue() == null)
             {
             // an array without a default value can only grow without any "holes"
-            return frame.raiseException(xException.unsupportedOperation(frame, "No default value"));
+            return frame.raiseException(xException.unsupported(frame, "No default value"));
             }
 
         return assignArrayValueImpl(frame, hDelegate, lIndex, hValue);
@@ -686,7 +686,7 @@ public class xRTDelegate
 
             if (constDefault == null)
                 {
-                return frame.raiseException(xException.unsupportedOperation(
+                return frame.raiseException(xException.unsupported(
                         frame, "No default value for " + typeElement.getValueString()));
                 }
 

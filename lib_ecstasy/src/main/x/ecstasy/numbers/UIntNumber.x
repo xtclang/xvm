@@ -51,7 +51,7 @@
     @Override
     @Op("-#")
     UIntNumber neg() {
-        throw new UnsupportedOperation();
+        throw new Unsupported();
     }
 
 

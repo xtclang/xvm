@@ -61,7 +61,7 @@ service DirRepository
 
     @Override
     void storeModule(ModuleTemplate template) {
-        throw new UnsupportedOperation();
+        throw new Unsupported();
     }
 
     @Override

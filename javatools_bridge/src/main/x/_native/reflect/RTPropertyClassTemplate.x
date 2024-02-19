@@ -36,7 +36,7 @@ class RTPropertyClassTemplate
     @Override conditional (AnnotationTemplate, Composition) deannotate();
 
     @Override Class<> ensureClass(Type[] actualTypes = []) {
-        throw new UnsupportedOperation();
+        throw new Unsupported();
     }
 
     // natural code (these *could* be optimized if they were made native)

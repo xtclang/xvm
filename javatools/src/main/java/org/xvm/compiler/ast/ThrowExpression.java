@@ -431,7 +431,7 @@ public class ThrowExpression
 
             case ASSERT_TODO:
             case TODO:
-                sThrow = "UnsupportedOperation";
+                sThrow = "NotImplemented";
                 break;
 
             default:

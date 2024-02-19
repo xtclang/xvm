@@ -120,7 +120,7 @@ module AddressBookDB_imdb
 
                     return addPhone(args[0], args[1]);
                     }
-                throw new UnsupportedOperation(fn.toString());
+                throw new Unsupported(fn.toString());
                 }
             }
         }
