@@ -789,8 +789,7 @@ interface Collection<Element>
      *
      * @return a sorted list, further reduced by the collector (if specified)
      *
-     * @throws UnsupportedOperation  if no [Type.Orderer] is provided and [Element] is not
-     *                               [Orderable]
+     * @throws Unsupported  if no [Type.Orderer] is provided and [Element] is not [Orderable]
      */
     @Concurrent
     <Result extends List<Element>> Result sorted(Orderer?                     order     = Null,

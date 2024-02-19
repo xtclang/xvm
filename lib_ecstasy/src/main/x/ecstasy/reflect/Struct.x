@@ -31,8 +31,8 @@ interface Struct {
      *
      * @return this Struct, but in an immutable form
      *
-     * @throws UnsupportedOperation  if the Struct is the structure of a Service; a Service cannot
-     *         be made immutable
+     * @throws Unsupported  if the Struct is the structure of a Service; a Service cannot be made
+     *         immutable
      */
     immutable Struct freeze();
 

@@ -99,7 +99,7 @@ public abstract class xNumber
                 return constructFromBits(frame, abBits, cBits, iReturn);
                 }
             }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+        return frame.raiseException(xException.unsupported(frame));
         }
 
     /**

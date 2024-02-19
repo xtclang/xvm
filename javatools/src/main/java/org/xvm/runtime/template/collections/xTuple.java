@@ -595,7 +595,7 @@ public class xTuple
     @Override
     public int assignArrayValue(Frame frame, ObjectHandle hTarget, long lIndex, ObjectHandle hValue)
         {
-        return frame.raiseException(xException.unsupportedOperation(frame));
+        return frame.raiseException(xException.unsupported(frame));
         }
 
     @Override

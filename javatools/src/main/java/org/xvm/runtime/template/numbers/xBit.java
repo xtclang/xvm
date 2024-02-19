@@ -94,7 +94,7 @@ public class xBit
             return frame.raiseException(xException.illegalArgument(frame,
                 hIntN.getValue().toString()));
             }
-        return frame.raiseException(xException.unsupportedOperation(frame));
+        return frame.raiseException(xException.unsupported(frame));
         }
 
     @Override

@@ -48,13 +48,14 @@ public class xException
             s_clzDeadlock                   = f_container.getTemplate("Deadlock"                     ).getCanonicalClass();
             s_clzIllegalArgument            = f_container.getTemplate("IllegalArgument"              ).getCanonicalClass();
             s_clzIllegalState               = f_container.getTemplate("IllegalState"                 ).getCanonicalClass();
-            s_clzInvalidType                = f_container.getTemplate("reflect.InvalidType"          ).getCanonicalClass();
+            s_clzInvalidType                = f_container.getTemplate("reflect.InvalidType"           ).getCanonicalClass();
+            s_clzNotImplemented             = f_container.getTemplate("NotImplemented"               ).getCanonicalClass();
             s_clzOutOfBounds                = f_container.getTemplate("OutOfBounds"                  ).getCanonicalClass();
             s_clzReadOnly                   = f_container.getTemplate("ReadOnly"                     ).getCanonicalClass();
             s_clzSizeLimited                = f_container.getTemplate("collections.SizeLimited"      ).getCanonicalClass();
             s_clzTimedOut                   = f_container.getTemplate("TimedOut"                     ).getCanonicalClass();
             s_clzTypeMismatch               = f_container.getTemplate("TypeMismatch"                 ).getCanonicalClass();
-            s_clzUnsupportedOperation       = f_container.getTemplate("UnsupportedOperation"         ).getCanonicalClass();
+            s_clzUnsupported                = f_container.getTemplate("Unsupported"                  ).getCanonicalClass();
             s_clzDivisionByZero             = f_container.getTemplate("numbers.Number.DivisionByZero").getCanonicalClass();
             s_clzPathException              = f_container.getTemplate("fs.PathException"             ).getCanonicalClass();
             s_clzFileNotFoundException      = f_container.getTemplate("fs.FileNotFound"              ).getCanonicalClass();
@@ -157,6 +158,11 @@ public class xException
                 + "\" cannot be used for a service call");
         }
 
+    public static ExceptionHandle notImplemented(Frame frame, String sMsg)
+        {
+        return makeHandle(frame, s_clzNotImplemented, sMsg);
+        }
+
     public static ExceptionHandle outOfBounds(Frame frame, long lIndex, long cSize)
         {
         return outOfBounds(frame, lIndex < 0 ?
@@ -211,14 +217,14 @@ public class xException
         return illegalState(frame, "Unassigned reference");
         }
 
-    public static ExceptionHandle unsupportedOperation(Frame frame)
+    public static ExceptionHandle unsupported(Frame frame)
         {
-        return unsupportedOperation(frame, null);
+        return unsupported(frame, null);
         }
 
-    public static ExceptionHandle unsupportedOperation(Frame frame, String sMsg)
+    public static ExceptionHandle unsupported(Frame frame, String sMsg)
         {
-        return makeHandle(frame, s_clzUnsupportedOperation, sMsg);
+        return makeHandle(frame, s_clzUnsupported, sMsg);
         }
 
     public static ExceptionHandle divisionByZero(Frame frame)
@@ -313,12 +319,13 @@ public class xException
     private static ClassComposition s_clzIllegalArgument;
     private static ClassComposition s_clzIllegalState;
     private static ClassComposition s_clzInvalidType;
+    private static ClassComposition s_clzNotImplemented;
     private static ClassComposition s_clzOutOfBounds;
     private static ClassComposition s_clzReadOnly;
     private static ClassComposition s_clzSizeLimited;
     private static ClassComposition s_clzTimedOut;
     private static ClassComposition s_clzTypeMismatch;
-    private static ClassComposition s_clzUnsupportedOperation;
+    private static ClassComposition s_clzUnsupported;
     private static ClassComposition s_clzDivisionByZero;
     private static ClassComposition s_clzPathException;
     private static ClassComposition s_clzFileNotFoundException;

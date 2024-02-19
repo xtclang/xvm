@@ -433,6 +433,6 @@ interface Service {
     immutable Service makeImmutable() {
         // services are, by their nature, mutable; it is illegal to attempt to make a service into
         // an immutable object
-        throw new UnsupportedOperation();
+        throw new Unsupported();
     }
 }

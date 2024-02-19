@@ -357,7 +357,7 @@ class ModuleGenerator(String moduleName) {
                 break;
 
             default:
-                throw new UnsupportedOperation($"property={propertyName}, category={category}");
+                throw new Unsupported($"property={propertyName}, category={category}");
             }
 
             propertyInfos += propertyInfoTemplate
