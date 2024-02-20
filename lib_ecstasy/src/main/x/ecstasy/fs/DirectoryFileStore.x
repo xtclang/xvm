@@ -17,13 +17,12 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
     }
 
     @Lazy Path origPath.calc() {
-        return origDir.path.normalize().resolve(Path.ROOT);
+        return Path.ROOT.resolve(origDir.path.normalize());
     }
 
     @Override
-    @Lazy Directory root.calc() {
-        return wrap(origDir);
-    }
+    @Lazy Directory root.calc() =
+        wrap(origDir);
 
     @Override
     conditional Directory|File find(Path path) {
@@ -63,19 +62,13 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
     }
 
     @Override
-    @RO Int capacity.get() {
-        return origStore.capacity;
-    }
+    @RO Int capacity.get() = origStore.capacity;
 
     @Override
-    @RO Int bytesUsed.get() {
-        return origDir.size;
-    }
+    @RO Int bytesUsed.get() = origDir.size;
 
     @Override
-    @RO Int bytesFree.get() {
-        return origStore.bytesFree;
-    }
+    @RO Int bytesFree.get() = origStore.bytesFree;
 
 
     // ----- relative path conversion and file node wrapping ---------------------------------------
@@ -110,13 +103,13 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
      */
     protected conditional Path fromOrig(Path path) {
         Path basePath = origPath;
-        Path fullPath = path.normalize().resolve(Path.ROOT);
+        Path fullPath = Path.ROOT.resolve(path.normalize());
         if (fullPath.startsWith(basePath)) {
             Int baseSize = basePath.size;
             Int fullSize = fullPath.size;
             return True, fullSize == baseSize
                     ? Path.ROOT
-                    : fullPath[baseSize ..< fullSize].resolve(Path.ROOT);
+                    : Path.ROOT.resolve(fullPath[baseSize ..< fullSize]);
         }
 
         return False;
@@ -150,6 +143,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
      * original FileStore.
      */
     const FileNodeWrapper(FileNode origNode)
+            delegates Stringable(path)
             delegates FileNode(origNode) {
         /**
          * True iff this file node is the root directory of the DirectoryFileStore.
@@ -170,9 +164,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         }
 
         @Override
-        @RO FileStore store.get() {
-            return this.DirectoryFileStore;
-        }
+        @RO FileStore store.get() = this.DirectoryFileStore;
 
         @Override
         @RO Directory? parent.get() {
@@ -250,14 +242,10 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             construct FileNodeWrapper(origDir);
         }
 
-        protected Directory origDir.get() {
-            return origNode.as(Directory);
-        }
+        protected Directory origDir.get() = origNode.as(Directory);
 
         @Override
-        Iterator<String> names() {
-            return origDir.names();
-        }
+        Iterator<String> names() = origDir.names();
 
         @Override
         Iterator<Directory> dirs() {
@@ -348,9 +336,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
             construct FileNodeWrapper(origFile);
         }
 
-        protected File origFile.get() {
-            return origNode.as(File);
-        }
+        protected File origFile.get() = origNode.as(File);
 
         @Override
         immutable Byte[] contents {
@@ -367,9 +353,7 @@ const DirectoryFileStore(Directory origDir, Boolean readOnly = False)
         }
 
         @Override
-        immutable Byte[] read(Range<Int> range) {
-            return origFile.read(range);
-        }
+        immutable Byte[] read(Range<Int> range) = origFile.read(range);
 
         @Override
         File truncate(Int newSize = 0) {
