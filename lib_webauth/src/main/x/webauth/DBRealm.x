@@ -4,6 +4,7 @@ import oodb.Connection;
 import oodb.DBSchema;
 import oodb.DBObject;
 import oodb.DBObjectInfo;
+import oodb.RootSchema;
 
 import User.HashInfo;
 
@@ -18,17 +19,23 @@ const DBRealm
      * of [hashing algorithms](Signer).
      *
      * @param realmName       the human readable name of the realm
+     * @param rootSchema      (optional) the database to look for the AuthSchema at
+     * @param initConfig      (optional) the initial configuration
      * @param connectionName  (optional) the name of the injected database (in case there are more
      *                        than one) to look for the AuthSchema
      */
-    construct(String realmName, String? connectionName=Null) {
+    construct(String realmName, RootSchema? rootSchema = Null, Configuration? initConfig = Null,
+              String? connectionName = Null) {
+        if (rootSchema == Null) {
+            @Inject(resourceName=connectionName) Connection dbc;
+            rootSchema = dbc;
+        }
         // obtain a connection to the database, and find the AuthSchema inside the database
-        @Inject(resourceName=connectionName) Connection dbc;
         String?     path       = Null;
         AuthSchema? authSchema = Null;
-        for ((String pathStr, DBObjectInfo info) : dbc.sys.schemas) {
+        for ((String pathStr, DBObjectInfo info) : rootSchema.sys.schemas) {
             // find the AuthSchema; it must occur exactly-once
-            assert DBObject schema ?= info.lookupUsing(dbc);
+            assert DBObject schema ?= info.lookupUsing(rootSchema);
             if (schema.is(AuthSchema)) {
                 assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
                                         | locations within the database:\
@@ -43,11 +50,15 @@ const DBRealm
         Configuration cfg = authSchema.config.get();
         if (!cfg.configured) {
             // the database has not yet been configured, so we need an initial configuration to be
-            // injected, and we'll configure the database in the constructor's finally block
+            // provided or injected, and we'll configure the database in the finally block
             // (because we need the realm to exist in order to configure the database)
-            @Inject Configuration startingCfg;
-            this.createCfg = startingCfg;
-            cfg            = startingCfg;
+            if (initConfig == Null) {
+                @Inject Configuration startingCfg;
+                cfg = startingCfg;
+            } else {
+                cfg = initConfig;
+            }
+            this.createCfg = cfg;
         }
 
         @Inject crypto.Algorithms algorithms;
@@ -85,35 +96,45 @@ const DBRealm
         this.weakestHasher    = weakestHasher;
     } finally {
         if (Configuration cfg ?= this.createCfg) {
-            using (authSchema.dbConnection.createTransaction()) {
-                // create the user roles
-                Roles                 roles         = authSchema.roles;
-                Map<String, String[]> initUserRoles = new HashMap();
-                for ((String roleName, String[] userNames) : cfg.initRoleUsers) {
-                    assert roles.createRole(roleName);
-                    for (String userName : userNames) {
-                        if (!initUserRoles.putIfAbsent(userName, [roleName])) {
-                            initUserRoles[userName] = initUserRoles.getOrDefault(userName, []) + roleName;
-                        }
-                    }
+            if (authSchema.dbConnection.transaction == Null) {
+                using (authSchema.dbConnection.createTransaction()) {
+                    applyConfig(cfg);
                 }
-
-                // create the user records
-                Users users = authSchema.users;
-                ListMap<String, String> initUserNoPass = new ListMap(cfg.initUserPass.size);
-                for ((String userName, String password) : cfg.initUserPass) {
-                    assert users.createUser(this, userName, password,
-                            initUserRoles.getOrDefault(userName, []));
-                }
-
-                // store the configuration (but remove the passwords), and specify that the database
-                // has now been configured (so we don't repeat the db configuration the next time)
-                initUserNoPass.entries.forEach(e -> {e.value = "???";});
-                authSchema.config.set(cfg.with(initUserPass = initUserNoPass,
-                                               configured   = True));
+            } else {
+                applyConfig(cfg);
             }
         }
     }
+
+    // we need this helper method since atm there is no Connection.ensureTransaction() API
+    private void applyConfig(Configuration cfg) {
+        // create the user roles
+        Roles                 roles         = authSchema.roles;
+        Map<String, String[]> initUserRoles = new HashMap();
+        for ((String roleName, String[] userNames) : cfg.initRoleUsers) {
+            assert roles.createRole(roleName);
+            for (String userName : userNames) {
+                if (!initUserRoles.putIfAbsent(userName, [roleName])) {
+                    initUserRoles[userName] = initUserRoles.getOrDefault(userName, []) + roleName;
+                }
+            }
+        }
+
+        // create the user records
+        Users users = authSchema.users;
+        ListMap<String, String> initUserNoPass = new ListMap(cfg.initUserPass.size);
+        for ((String userName, String password) : cfg.initUserPass) {
+            assert users.createUser(this, userName, password,
+                    initUserRoles.getOrDefault(userName, []));
+        }
+
+        // store the configuration (but remove the passwords), and specify that the database
+        // has now been configured (so we don't repeat the db configuration the next time)
+        initUserNoPass.entries.forEach(e -> {e.value = "???";});
+        authSchema.config.set(cfg.with(initUserPass = initUserNoPass,
+                                       configured   = True));
+    }
+
 
     /**
      * The configuration to write to the database the first time the database and realm are created.
