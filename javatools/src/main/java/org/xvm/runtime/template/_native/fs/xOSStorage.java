@@ -24,6 +24,7 @@ import org.xvm.asm.constants.PropertyConstant;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
@@ -67,14 +68,9 @@ public class xOSStorage
         markNativeMethod("delete", STRING, BOOLEAN);
         markNativeMethod("watch", STRING, VOID);
         markNativeMethod("unwatch", STRING, VOID);
+        markNativeMethod("instance", VOID, THIS);
 
         invalidateTypeInfo();
-        }
-
-    @Override
-    protected int postValidate(Frame frame, ObjectHandle hStruct)
-        {
-        return Op.R_NEXT;
         }
 
     @Override
@@ -215,7 +211,7 @@ public class xOSStorage
         {
         ServiceHandle hStorage = (ServiceHandle) hTarget;
 
-        if (frame.f_context != hStorage.f_context)
+        if (hStorage != null && frame.f_context != hStorage.f_context)
             {
             // for now let's make sure all the calls are processed on the service fibers
             return xRTFunction.makeAsyncNativeHandle(method).call1(frame, hTarget, ahArg, iReturn);
@@ -223,6 +219,9 @@ public class xOSStorage
 
         switch (method.getName())
             {
+            case "instance":
+                return frame.assignValue(iReturn,
+                        ((NativeContainer) f_container).ensureOSStorage(frame, null));
             }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
@@ -311,7 +310,7 @@ public class xOSStorage
         public void register(Path pathDir, ServiceHandle hStorage)
                 throws IOException
             {
-            // on Mac OS the WatchService implementation simply polls every 10 seconds;
+            // on macOS the WatchService implementation simply polls every 10 seconds;
             // for Java 9 and above there is no way to configure that
             WatchKey key = pathDir.register(
                 f_service,
@@ -402,16 +401,7 @@ public class xOSStorage
 
         // ----- WatchContext class --------------------------------------------------------------
 
-        private static class WatchContext
-            {
-            public WatchContext(Path pathDir, ServiceHandle hStorage)
-                {
-                this.pathDir  = pathDir;
-                this.hStorage = hStorage;
-                }
-            public final Path          pathDir;
-            public final ServiceHandle hStorage;
-            }
+        private record WatchContext(Path pathDir, ServiceHandle hStorage) {}
 
         private final ConstantPool                f_pool;
         private final Map<WatchKey, WatchContext> f_mapWatches;

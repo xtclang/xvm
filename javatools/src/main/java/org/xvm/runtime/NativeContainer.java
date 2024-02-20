@@ -433,7 +433,7 @@ public class NativeContainer
         f_mapResourceNames.put(key.f_sName, key);
         }
 
-    protected ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts)
+    public ObjectHandle ensureOSStorage(Frame frame, ObjectHandle hOpts)
         {
         ObjectHandle hStorage = m_hOSStorage;
         if (hStorage == null)
@@ -478,15 +478,12 @@ public class NativeContainer
         ObjectHandle hStore = m_hFileStore;
         if (hStore == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
-            if (hOSStorage != null)
-                {
-                ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-                PropertyConstant idProp   = template.getCanonicalType().
-                        ensureTypeInfo().findProperty("store").getIdentity();
+            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+            PropertyConstant idProp   = template.getCanonicalType().
+                    ensureTypeInfo().findProperty("store").getIdentity();
 
-                return getProperty(frame, hOSStorage, idProp, h -> m_hFileStore = h);
-                }
+            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
+                    h -> m_hFileStore = h);
             }
 
         return hStore;
@@ -497,15 +494,12 @@ public class NativeContainer
         ObjectHandle hDir = m_hRootDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
-            if (hOSStorage != null)
-                {
-                ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-                PropertyConstant idProp   = template.getCanonicalType().
-                        ensureTypeInfo().findProperty("rootDir").getIdentity();
+            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+            PropertyConstant idProp   = template.getCanonicalType().
+                    ensureTypeInfo().findProperty("rootDir").getIdentity();
 
-                return getProperty(frame, hOSStorage, idProp, h -> m_hRootDir = h);
-                }
+            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
+                    h -> m_hRootDir = h);
             }
 
         return hDir;
@@ -516,15 +510,12 @@ public class NativeContainer
         ObjectHandle hDir = m_hHomeDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
-            if (hOSStorage != null)
-                {
-                ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-                PropertyConstant idProp   = template.getCanonicalType().
-                        ensureTypeInfo().findProperty("homeDir").getIdentity();
+            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+            PropertyConstant idProp   = template.getCanonicalType().
+                    ensureTypeInfo().findProperty("homeDir").getIdentity();
 
-                return getProperty(frame, hOSStorage, idProp, h -> m_hHomeDir = h);
-                }
+            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
+                    h -> m_hHomeDir = h);
             }
 
         return hDir;
@@ -535,15 +526,12 @@ public class NativeContainer
         ObjectHandle hDir = m_hCurDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
-            if (hOSStorage != null)
-                {
-                ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-                PropertyConstant idProp   = template.getCanonicalType().
-                        ensureTypeInfo().findProperty("curDir").getIdentity();
+            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+            PropertyConstant idProp   = template.getCanonicalType().
+                    ensureTypeInfo().findProperty("curDir").getIdentity();
 
-                return getProperty(frame, hOSStorage, idProp, h -> m_hCurDir = h);
-                }
+            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
+                    h -> m_hCurDir = h);
             }
 
         return hDir;
@@ -554,15 +542,12 @@ public class NativeContainer
         ObjectHandle hDir = m_hTmpDir;
         if (hDir == null)
             {
-            ObjectHandle hOSStorage = ensureOSStorage(frame, hOpts);
-            if (hOSStorage != null)
-                {
-                ClassTemplate    template = getTemplate("_native.fs.OSStorage");
-                PropertyConstant idProp   = template.getCanonicalType().
-                        ensureTypeInfo().findProperty("tmpDir").getIdentity();
+            ClassTemplate    template = getTemplate("_native.fs.OSStorage");
+            PropertyConstant idProp   = template.getCanonicalType().
+                    ensureTypeInfo().findProperty("tmpDir").getIdentity();
 
-                return getProperty(frame, hOSStorage, idProp, h -> m_hTmpDir = h);
-                }
+            return getProperty(frame, ensureOSStorage(frame, hOpts), idProp,
+                    h -> m_hTmpDir = h);
             }
 
         return hDir;

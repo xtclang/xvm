@@ -134,16 +134,14 @@ service OSStorage {
     @Abstract @RO Directory curDir;
     @Abstract @RO Directory tmpDir;
 
-    conditional Directory|File find(OSFileStore store, String pathString);
+    conditional Directory|File find(OSFileStore store, String pathString) {TODO("Native");}
 
-    String[] names(String pathString);
+    String[] names(String pathString)      {TODO("Native");}
+    Boolean  createDir(String pathString)  {TODO("Native");}
+    Boolean  createFile(String pathString) {TODO("Native");}
+    Boolean  delete(String pathString)     {TODO("Native");}
+    void     watch(String pathStringDir)   {TODO("Native");}
+    void     unwatch(String pathStringDir) {TODO("Native");}
 
-    Boolean createDir(String pathString);
-
-    Boolean createFile(String pathString);
-
-    Boolean delete(String pathString);
-
-    void watch(String pathStringDir);
-    void unwatch(String pathStringDir);
+    static OSStorage instance() {TODO("Native");}
 }

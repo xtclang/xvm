@@ -134,7 +134,7 @@ public class xRTCompiler
     /**
      * Native implementation of:
      *      "(FileTemplate[] modules, String[] errors)
-     *          compileImpl(ModuleRepository repo, (Directory|File)[] sources)"
+     *          compileImpl(ModuleRepository repo, OSFileNode[] sources)"
      */
     protected int invokeCompileImpl(Frame frame, CompilerHandle hCompiler, ObjectHandle hRepo,
                                     ObjectHandle[] ahSources, int[] aiReturn)
