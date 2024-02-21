@@ -7,14 +7,33 @@ import org.xvm.xtc.ClzBldSet;
 import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.XClz;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 /**
    Java native implementation of the XTC Timer class
 */
 public class NativeTimer {
   // Time is in 128bit picoseconds
   public Fun schedule( long lo, long hi, Fun alarm ) {
-    // Ignore time and run
-    alarm.call();
+    // shift lo/hi by 1e9 as binary, then correct with double.
+    long T = 1L<<30;
+    long loHalf = lo + (T>>1);   // Round up pico to milli
+    long kmsec = (hi<<(64-30))|(loHalf>>30);
+    double dmsec = ((double)kmsec)*((double)T)/1e9;
+    long msec = (long)dmsec;
+
+    // Make a timer object; it will self-cancel after running this one task
+    Timer timer = new Timer();
+    var task = new TimerTask() {
+        Timer _timer = timer;
+        public void run() {
+          alarm.call();
+          _timer.cancel();
+        }
+      };
+    timer.schedule(task, msec);
+    
     return alarm;
   }
 
