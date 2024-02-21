@@ -93,9 +93,6 @@ service Client<Schema extends RootSchema> {
         this.readOnly      = readOnly || catalog.readOnly;
         this.notifyOnClose = notifyOnClose;
     } finally {
-        // exclusive reentrancy is critically important: it eliminates race conditions while any
-        // operation (including a commit or rollback) is in flight, while still allowing reentrancy
-        // that is required to carry out that operation
         conn   = new Connection(infoFor(0)).as(Connection + Schema);
         worker = new Worker(jsonSchema);
     }
