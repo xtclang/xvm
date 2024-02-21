@@ -12,7 +12,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
-        private const val LOCALDIST_BACKUP_DIR = "localdist-backup"
 
         private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
@@ -47,7 +46,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
+    fun resolveLauncherFile(xdkDir: Provider<Directory>): RegularFile {
         val launcher = if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {
@@ -55,9 +54,9 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         } else if (currentOs.isWindows) {
             "windows_launcher.exe"
         } else {
-            throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
+            throw UnsupportedOperationException("No launcher available for currentOs: $currentOs")
         }
-        return localDistDir.get().file("bin/$launcher")
+        return xdkDir.get().file("bin/$launcher")
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {

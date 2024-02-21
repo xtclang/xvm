@@ -449,23 +449,21 @@ both by incrementing the micro version, and by adding a SNAPSHOT suffix. You  wi
 working in branches that use SNAPSHOT versions until they have made it into a release train. The CI/CD 
 pipeline can very likely handle this automatically.
 
+For more information about the XTC DSL, please see the README.md file in the "plugin" project.
+
 ## Bleeding Edge for Developers
 
-If you would like to contribute to the Ecstasy Project, it might be an idea to use the
-very latest version by invoking:
+If you would like to contribute to the Ecstasy Project, it is helpful to build and use your own local XDK version:
 
 ```
-./gradlew installLocalDist
+./gradlew installDist
 ```
 
-This copies the build from the xvm directory into the brew cellar, or other local installation,
-that is deduced from the location of the `xec` launcher on the system PATH.
+This generates an XDK layout in `./xdk/build/install/xdk` within the project directory. Set the `XDK_HOME` env variable
+to that directory (e.g. something like `export XDK_HOME=/Users/jamesg/projects/xvm/xdk/build/install/xdk/` on macOS).
 
-*Note*: this would be done after installing the XDK via `brew`, or through any other installation
-utility, depending on your platform. This will overwrite several libraries and files in any
-local installation.
-
-For more information about the XTC DSL, please see the README.md file in the "plugin" project.
+This does assumes that you already have `xec`, `xtc`, and `xcc` in your path, which is the case if you already brew
+installed `xdk-latest` from the `xtclang/xvm` tap, for example.
 
 ### Releasing and Publishing
 

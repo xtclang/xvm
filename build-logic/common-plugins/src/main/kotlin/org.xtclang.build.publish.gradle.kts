@@ -78,7 +78,7 @@ val publishLocal by tasks.registering {
 
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
+    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by remote publishing only."
     if (shouldPublishPluginToLocalDist()) {
         logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
         delete(buildRepoDirectory)

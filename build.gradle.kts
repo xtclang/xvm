@@ -32,15 +32,9 @@ val installDist by tasks.registering {
     dependsOn(xdk.task(":installDist"))
 }
 
-val installLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Build and overwrite any local distribution with the new distribution produced by the build."
-    dependsOn(xdk.task(":$name"))
-}
-
 val install by tasks.registering {
     doLast {
-        TODO("The 'install' task has now changes names to 'installDist', as per the common standard.")
+        TODO("The 'install' task has been renamed to 'installDist'")
     }
 }
 
