@@ -36,8 +36,8 @@ public abstract class ClzBldSet {
       // Generate Java source.  This might trigger more things to compile.
       new ClzBuilder((ModPart)mod,clz,new SB(),new SB(),true).jclass();
       assert clz._header!=null;
-      System.out.print(clz._header);
-      System.out.print(clz._body);
+      //System.out.print(clz._header);
+      //System.out.print(clz._body);
       jsrc._src = clz._header.toString() + clz._body.toString();
     }
     // Compile and load the Java classes as a complete set
@@ -60,7 +60,7 @@ public abstract class ClzBldSet {
   // Filters for dups globally.
   public static void add( String name, String body ) {
     if( find(name) ) return;    // Already done or in-progress
-    System.out.print(body);
+    //System.out.print(body);
     SRCS.add(new JavaC.JavaSrc(name,body));
   }
 

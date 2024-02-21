@@ -81,7 +81,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   }
 
   // --- text/Stringable
-  @Override public long estimateStringLength() { return _len*10; }
+  @Override public long estimateStringLength() { return _len*10L; }
   @Override public Appenderchar appendTo(Appenderchar buf) {
     return buf.appendTo(toString());
   }
@@ -89,7 +89,14 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   // --- Comparable
   public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }
   
-  public static boolean equals$Array(Array gold, Array a1, Array a2) {
-    throw XEC.TODO();
+  public static <E extends XTC> boolean equals$Array(Array<E> gold, Array<E> a0, Array<E> a1) {
+    if( a0 == a1 ) return true;
+    if( a0._len != a1._len ) return false;
+    for( int i=0; i<a0._len; i++ )
+      // The element test is based on the gold array element, not either input
+      // array elements - which can differ.
+      if( !gold._gold.equals(a0.at(i),a1.at(i)) )
+        return false;
+    return true;
   }
 }

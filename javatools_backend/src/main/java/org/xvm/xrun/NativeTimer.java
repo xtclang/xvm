@@ -13,6 +13,8 @@ import org.xvm.xtc.XClz;
 public class NativeTimer {
   // Time is in 128bit picoseconds
   public Fun schedule( long lo, long hi, Fun alarm ) {
+    // Ignore time and run
+    alarm.call();
     return alarm;
   }
 

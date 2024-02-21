@@ -36,7 +36,9 @@ class Basic {
 
         // the scheduling of fibers is a prerogative of the run-time, so the
         // scheduler might not "resume" A until after B is done.
-        assert journal.collect() == ["A0", "A2", "B1"];
+        var rez = journal.collect();
+        assert rez == ["A0", "A2", "B1"] ||
+               rez == ["A0", "B1", "A2"];
     }
 
     @Test

@@ -285,5 +285,6 @@ abstract public class Part {
 
   public boolean isStatic   () { return (_nFlags &    STATIC_BIT) != 0; }
   public boolean isSynthetic() { return (_nFlags & SYNTHETIC_BIT) != 0; }
+  public boolean isAuxiliary() { return (_nFlags & AUXILIARY_BIT) != 0; }
 
 }
