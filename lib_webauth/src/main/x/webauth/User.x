@@ -76,7 +76,7 @@ const User
      * @param addRoleIds      (optional) the roles identities to add to the user
      * @param removeRoleIds   (optional) the role identities to remove from the user
      * @param enabled         (optional) True indicates that the User is active (can log in); False
-     *                                   disables the account
+     *                        disables the account
      */
     User with(
             Int?       userId         = Null,
