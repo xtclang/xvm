@@ -25,7 +25,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
             val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
             if (!attach) {
-                logger.lifecycle("$prefix WARNING: Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: $attach).")
+                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: $attach).")
             }
             !attach
         }.toSet()
