@@ -135,7 +135,7 @@ public class InvokeAST extends AST {
     }
 
     // Auto-box arguments for non-internal calls
-    if( _args!=null && (k0t==XClz.XXTC || !(k0t instanceof XClz clz) || clz._jname==null) )
+    if( _args!=null && (k0t==XClz.XXTC || !(k0t instanceof XClz clz) || clz._jname.isEmpty()) )
       for( int i=0; i<_args.length; i++ )
         autobox(i+1, _args[i]);
 

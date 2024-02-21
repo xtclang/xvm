@@ -50,7 +50,9 @@ class BinOpAST extends AST {
   }
 
   @Override AST prewrite() {
-    // Java primitive fetch instead of boxed fetch
+    // Java primitive fetch instead of boxed fetch.
+    // ary_expr ".at(" idx ")"
+    // ary_expr.at8(idx) -- and the expression is primitive, not boxed
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG && !(_par instanceof InvokeAST && _par._kids[0]==this) ) {
       _type = _type.unbox();
       if( _kids[0]._type == XCons.STRING ) {

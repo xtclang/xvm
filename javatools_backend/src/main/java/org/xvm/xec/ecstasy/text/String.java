@@ -31,7 +31,7 @@ public class String extends Const {
     return equals(((String)s0)._i,((String)s1)._i);
   }
   
-  public boolean equals( java.lang.String s0, java.lang.String s1 ) { return Objects.equals(s0,s1); }
+  public boolean equals( java.lang.String s0, java.lang.String s1 ) { return s0.equals(s1); }
 
   @Override public Ordered compare( XTC s0, XTC s1 ) {
     return compare(((String)s0)._i,((String)s1)._i);

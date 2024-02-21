@@ -10,5 +10,6 @@ service Journal {
         }
         return report;
     }
+    @Override String toString() { return messages.toString(); }
 }
 
