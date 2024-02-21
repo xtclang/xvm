@@ -55,7 +55,7 @@ tasks.withType<JavaExec>().configureEach {
 val checkWarnings by tasks.registering {
     if (!getXdkPropertyBoolean(lintProperty, false)) {
         val lintPropertyHasValue = isXdkPropertySet(lintProperty)
-        logger.warn("$prefix WARNING: Java warnings are ${if (lintPropertyHasValue) "explicitly" else ""} disabled for project.")
+        logger.info("$prefix Java warnings are ${if (lintPropertyHasValue) "explicitly" else ""} disabled for project.")
     }
 }
 
