@@ -29,19 +29,13 @@ val installDist by tasks.registering {
     XdkDistribution.distributionTasks.forEach {
         dependsOn(xdk.task(":$it"))
     }
-    dependsOn(xdk.task(":installDist"))
+    dependsOn(xdk.task(":$name"))
 }
 
 val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(xdk.task(":$name"))
-}
-
-val install by tasks.registering {
-    doLast {
-        TODO("The 'install' task has now changes names to 'installDist', as per the common standard.")
-    }
 }
 
 /*

@@ -288,16 +288,14 @@ public class Runner
                     }
                 catch (IOException e)
                     {
-                    log(Severity.FATAL, "I/O exception (" + e + ") reading module file: " + fileBin);
-                    abort(true);
+                    logAndAbort(true, Severity.FATAL, "I/O exception (" + e + ") reading module file: " + fileBin);
                     }
                 }
             }
 
         if (module == null)
             {
-            log(Severity.ERROR, "Missing module for " + fileSpec);
-            abort(true);
+            logAndAbort(true, Severity.ERROR, "Missing module for " + fileSpec);
             }
         else
             {
@@ -307,8 +305,7 @@ public class Runner
                 }
             catch (IOException e)
                 {
-                log(Severity.FATAL, "I/O exception (" + e + ") storing module file: " + fileSpec);
-                abort(true);
+                logAndAbort(true, Severity.FATAL, "I/O exception (" + e + ") storing module file: " + fileSpec);
                 }
             checkErrors();
             }
@@ -344,13 +341,12 @@ public class Runner
                     {
                     if (setMethods.isEmpty())
                         {
-                        log(Severity.ERROR, "Missing method \"" + sMethod + "\" in module " + sName);
+                        logAndAbort(true, Severity.ERROR, "Missing method \"" + sMethod + "\" in module " + sName);
                         }
                     else
                         {
-                        log(Severity.ERROR, "Ambiguous method \"" + sMethod + "\" in module " + sName);
+                        logAndAbort(true, Severity.ERROR, "Ambiguous method \"" + sMethod + "\" in module " + sName);
                         }
-                    abort(true);
                     }
 
                 String[]        asArg       = options().getMethodArgs();
@@ -373,9 +369,8 @@ public class Runner
                                     }
                                 else
                                     {
-                                    log(Severity.ERROR, "Unsupported argument type \"" +
+                                    logAndAbort(true, Severity.ERROR, "Unsupported argument type \"" +
                                         typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
-                                    abort(true);
                                     }
                                 }
                             else
@@ -399,17 +394,15 @@ public class Runner
                             }
                         else
                             {
-                            log(Severity.ERROR, "Unsupported argument type \"" +
+                            logAndAbort(true, Severity.ERROR, "Unsupported argument type \"" +
                                 typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
-                            abort(true);
                             }
                         break;
                         }
 
                     default:
-                        log(Severity.ERROR, "Unsupported method arguments \"" +
+                        logAndAbort(true, Severity.ERROR, "Unsupported method arguments \"" +
                             method.getIdentityConstant().getSignature().getValueString());
-                        abort(true);
                     }
 
                 connector.invoke0(sMethod, ahArg);

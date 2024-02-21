@@ -1,5 +1,6 @@
 package org.xvm.compiler;
 
+import org.xvm.tool.Launcher.LauncherException;
 
 /**
  * A non-fatal exception that can be emitted during any stage of the compilation
@@ -7,22 +8,16 @@ package org.xvm.compiler;
  * source material being compiled.
  */
 public class CompilerException
-        extends RuntimeException
+        extends LauncherException
     {
     public CompilerException(String message)
         {
-        super(message);
+        this(message, null);
         }
 
     public CompilerException(String message, Throwable cause)
         {
-        super(message, cause);
-        }
-
-    public CompilerException(Throwable cause)
-        {
-        super(cause);
+        super(true, message, cause);
         }
     }
-
 

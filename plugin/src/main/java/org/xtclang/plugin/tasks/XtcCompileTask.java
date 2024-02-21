@@ -207,21 +207,11 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
         logger.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
         final var processedResourcesDir = getResourceDirectory().get().getAsFile();
-        logger.lifecycle("{} Resolving resource dir (build): '{}'.", prefix, processedResourcesDir);
+        logger.info("{} Resolving resource dir (build): '{}'.", prefix, processedResourcesDir);
         if (processedResourcesDir.exists()) {
-            logger.lifecycle("{} Added as resource directory for '{}'.", prefix, processedResourcesDir.getAbsolutePath(), getName());
+            logger.info("{} '{}' Added as resource directory for '{}'.", prefix, processedResourcesDir.getAbsolutePath(), getName());
             args.add("-r", processedResourcesDir.getAbsolutePath());
         }
-
-        /*
-        sourceSet.getResources().getSrcDirs().forEach(dir -> {
-            if (!dir.exists()) {
-                logger.info("{} Resource does not exist: '{}' (ignoring passing as input to compiler)", prefix, dir);
-            } else {
-                logger.info("{} Adding resource: {}", prefix, dir);
-                args.add("-r", dir.getAbsolutePath());
-            }
-        });*/
 
         args.addBoolean("--version", getShowVersion().get());
         args.addBoolean("--rebuild", getForceRebuild().get());

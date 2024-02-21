@@ -156,6 +156,14 @@ public abstract class Launcher
 
 
     // ----- text output and error handling --------------------------------------------------------
+    protected final void logAndAbort(boolean abort, Severity sev, String msg)
+       {
+       log(sev, msg);
+       if (abort)
+           {
+           abort(true, msg);
+           }
+       }
 
     /**
      * Log a message of a specified severity.
@@ -183,7 +191,7 @@ public abstract class Launcher
 
         if (sev == Severity.FATAL)
             {
-            abort(true);
+            abort(true, sMsg);
             }
         }
 
@@ -270,7 +278,7 @@ public abstract class Launcher
         {
         if (options().isBadEnoughToAbort(m_sevWorst))
             {
-            abort(true);
+            abort(true, "Incomplete options.");
             }
         }
 
@@ -288,7 +296,7 @@ public abstract class Launcher
 
         if (fHelp || options().isBadEnoughToAbort(m_sevWorst))
             {
-            abort(options().isBadEnoughToAbort(m_sevWorst));
+            abort(options().isBadEnoughToAbort(m_sevWorst), "Incomplete options.");
             }
         }
 
@@ -297,9 +305,9 @@ public abstract class Launcher
      *
      * @param fError  true to abort with an error status
      */
-    protected void abort(boolean fError)
+    protected void abort(boolean fError, final String msg)
         {
-        throw new LauncherException(fError);
+        throw new LauncherException(fError, msg);
         }
 
     /**
@@ -1744,8 +1752,14 @@ public abstract class Launcher
 
         public LauncherException(final boolean error, final String msg)
            {
-            super(msg);
+           this(error, msg, null);
+           }
+
+        public LauncherException(final boolean error, final String msg, final Throwable cause)
+            {
+            super(msg, cause);
             this.error = error;
+            assert error : "LauncherException without error status set to true. Strange state.";
             }
 
         @Override

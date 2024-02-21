@@ -578,9 +578,9 @@ public class xRTCompiler
             }
 
         @Override
-        protected void abort(boolean fError)
+        protected void abort(boolean fError, final String msg)
             {
-            throw new CompilerException("");
+            throw new CompilerException(msg);
             }
 
         // ----- Options adapter -------------------------------------------------------------------
