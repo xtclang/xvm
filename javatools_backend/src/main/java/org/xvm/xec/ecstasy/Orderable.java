@@ -65,13 +65,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
 
     Ary<PropPart> pps = new Ary<>(PropPart.class);
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop &&
-          // No equals on type parameters
-          S.find(clz._tnames,prop._name) == -1 &&
-          // No equals on static props
-          !p.isStatic() && 
-          // No equals on get-only properties
-          !(p._name2kid != null && p._name2kid.containsKey("get")) )
+      if( p instanceof PropPart prop && prop.isField() )
         pps.setX(prop._order,prop);
     for( PropPart prop : pps ) {
       String fld = prop._name;

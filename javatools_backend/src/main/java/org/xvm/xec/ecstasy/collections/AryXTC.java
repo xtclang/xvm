@@ -85,18 +85,20 @@ public class AryXTC<E extends XTC> extends Array<E> {
     return str;
   }
 
-  public static boolean equals$AryXTC( XTC gold, Array a0, Array a1 ) {
-    throw XEC.TODO();
+  public static <E extends XTC> boolean equals$AryXTC( AryXTC gold, Array<E> a0, Array<E> a1 ) {
+    if( a0 == a1 ) return true;
+    if( a0._len != a1._len ) return false;
+    for( int i=0; i<a0._len; i++ )
+      if( !gold._gold.equals(a0.at(i),a1.at(i)) )
+        return false;
+    return true;
   }
   
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.
   @Override public boolean equals( Object o ) {
-    if( this==o ) return true;
-    return o instanceof AryXTC ary
-      && _len != ary._len
-      && Arrays.equals(_es,ary._es);
+    return o instanceof AryXTC ary && equals$AryXTC(null,this,ary);
   }
   
   @Override public int hashCode( ) {

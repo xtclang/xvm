@@ -2,9 +2,9 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.util.*;
-import org.xvm.xtc.cons.Const;
-import org.xvm.xtc.cons.ParamTCon;
-import org.xvm.xtc.cons.TermTCon;
+import org.xvm.xtc.cons.*;
+
+import java.util.Arrays;
 
 // Basically a Java class as a XType.
 //
@@ -34,7 +34,7 @@ public class XClz extends XType {
   public XClz _super;           // Super xtype or null
   public String[] _flds;        // Field names, matching _xts
   // Private no-arg constructor, always use "make" for interning
-  private XClz() {}
+  private XClz() { _nTypeParms = -99; }
 
   private static XClz make( String pack, String name, int len ) {
     XClz clz = FREE==null ? new XClz() : FREE;
@@ -48,8 +48,9 @@ public class XClz extends XType {
       clz._xts = len==0 ? null : new XType [len];
       clz._flds= len==0 ? null : new String[len];
     }
+    assert clz._nTypeParms == -99; // Was from FREE list
     clz._nTypeParms = len;
-    clz._jpack = clz._jname = null;
+    clz._jpack = clz._jname = null; // Need these to be filled in
     return clz;
   }
   private XClz _intern() {
@@ -117,7 +118,7 @@ public class XClz extends XType {
     clz._jparms = jparms;
     clz._flds[0] = "Element";
     clz._xts [0] = xelem;
-    clz._clz = XCons.ARYXTC._clz;
+    clz._clz = XCons.ARRAY._clz;
     clz._super = null;
     return clz._intern();
   }
@@ -135,7 +136,7 @@ public class XClz extends XType {
     return clz._intern();
   }
 
-  
+  // Fill in common fields.  Not interned yet.
   private static XClz _make_clz( ClassPart clz ) {
     // Extra useful info
     ModPart mod = clz.mod();
@@ -146,6 +147,7 @@ public class XClz extends XType {
     xclz._mod = mod;  // Self module
     xclz._clz = clz;
     xclz._iface = clz._f==Part.Format.INTERFACE;
+    assert xclz._jname==null && xclz._jpack==null;
     xclz._jparms = true;        // Honor any parameters
     return xclz;
   }
@@ -156,6 +158,7 @@ public class XClz extends XType {
     if( clz._tclz != null )
       return clz._tclz;
     XClz xclz = _make_clz(clz);
+    xclz._jname = xclz._jpack = ""; // No corresponding java name
     // Load the type parameters, part of the uniqueness
     for( int i=0; i<clz._tnames.length; i++ ) {
       xclz._flds[i] = clz._tnames[i];
@@ -163,7 +166,7 @@ public class XClz extends XType {
     }
     xclz._super = get_super(clz);
     XClz xclz2 = xclz._intern();
-    assert xclz2 == xclz;
+    assert xclz2 == xclz;       // Only intern XTC ClassPart once
     clz._tclz = xclz;
     return xclz;
   }
@@ -182,15 +185,25 @@ public class XClz extends XType {
   // PTC.
   public static XClz make( ParamTCon ptc ) {
     ClassPart clz = ptc.clz();
-    // Get the UNparameterized class, for the jpack/jname
-    XClz plain_clz = make(clz);
-    
     XClz xclz = _make_clz(clz);
     // Override parameterized type fields
     for( int i=0; i<ptc._parms.length; i++ ) {
       xclz._flds[i] = clz._tnames[i];
       xclz._xts [i] = xtype(ptc._parms[i],true);
     }
+    
+    // Get the UNparameterized class, for the jpack/jname
+    XClz plain_clz = make(clz);
+    // Very specifically, generic parameterized AryXTC<XTC> means the
+    // un-element-typed Array<VOID>, used to make both primitive arrays and
+    // Object arrays.
+    if( plain_clz == XCons.ARRAY ) {
+      // A generified array needs to remain un-element-typed
+      if( ptc._parms[0] instanceof TermTCon ttc && ttc.id() instanceof TParmCon )
+        return XCons.ARRAY;
+      plain_clz = XCons.ARYXTC;
+    }
+
     return xclz._make(plain_clz);
   }
   
@@ -199,21 +212,18 @@ public class XClz extends XType {
     // See if already exists
     XClz xclz2 = _intern();
 
-    // Very specifically, generic parameterized AryXTC<XTC> means the
-    // un-element-typed Array<VOID>, used to make both primitive arrays and
-    // Object arrays.
-    if( xclz2 == XCons.ARYXTC )
-      return XCons.ARRAY;
-
     if( xclz2 != this ) return xclz2; // Already did
 
-    // Fill in Super
-    xclz2._super = get_super(_clz);
     // Copy Java fields; this could be a parameterized version of a Java
     // implementation
-    xclz2._jpack = plain_clz._jpack;
-    xclz2._jname = plain_clz._jname;
-    xclz2._jparms= plain_clz._jparms;
+    assert           _jname==null &&           _jpack==null;
+    assert plain_clz._jname!=null && plain_clz._jpack!=null;
+    _jpack = plain_clz._jpack;
+    _jname = plain_clz._jname;
+    //_jparms= plain_clz._jparms; // Turned off for ARRAY vs ARYXTC
+    
+    // Fill in Super
+    xclz2._super = get_super(_clz);
     return xclz2;
   }
   
@@ -288,7 +298,7 @@ public class XClz extends XType {
     return !S.eq("java.lang",_jpack) && _clz != ClzBuilder.CCLZ;
   }
   // No java name means needs a build
-  public boolean needs_build() { return _jname==null; }
+  public boolean needs_build() { return _jname.isEmpty(); }
   
   // Find a field in the superclass chain
   XType find(String fld) {
@@ -349,7 +359,8 @@ public class XClz extends XType {
     return sb.unchar().p(">");
   }
 
-  public String name( ) { return _jname==null ? _name : _jname; }
+  public String name( ) { return _jname.isEmpty() ? _name : _jname; }
+  public String pack( ) { return _jpack.isEmpty() ? _pack : _jpack; }
   // Bare name
   public String clz_bare( ) {
     return this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ? qualified_name() : name();
@@ -358,8 +369,7 @@ public class XClz extends XType {
   // "Foo<Value extends Hashable>"
   public SB clz_generic( SB sb, boolean do_name, boolean generic_def ) {
     if( _ambiguous ) throw XEC.TODO();
-    if( do_name )
-      sb.p(_jname==null ? _name : _jname);
+    if( do_name )  sb.p(name());
     // Some Java implementations already specify the XTC generic directly: Arylong
     if( !_jparms || _nTypeParms==0 ) return sb;
     // Print Array<void> as Array
@@ -391,28 +401,21 @@ public class XClz extends XType {
   public String qualified_name() {
     if( S.eq(_jpack,"java.lang") )
       return "java.lang."+_jname;
-    String pack = _jpack==null ? _pack : _jpack;
-    String name = _jname==null ? _name : _jname;
-    if( this==XCons.TUPLE0 )
-      name = "Tuple0";
-    return (XEC.XCLZ + "." + pack + "." + name).intern();
+    String name = this==XCons.TUPLE0 ? "Tuple0" : name();
+    return (XEC.XCLZ + "." + pack() + "." + name).intern();
   }
   
   // Using shallow equals, hashCode, not deep, because the parts are already interned
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;
-    if( _flds != clz._flds ) {
-      if( _flds==null || clz._flds==null ) return false;
-      for( int i=0; i<_flds.length; i++ )
-        if( !S.eq(_flds[i],clz._flds[i]) )
-          return false;
-    }    
-    return S.eq(_name,clz._name) && S.eq(_pack,clz._pack);
+    return Arrays.equals(_flds,clz._flds) &&
+      S.eq( _name,clz. _name) && S.eq( _pack,clz. _pack);
   }
   @Override int hash() {
-    int hash = _name.hashCode() ^ (_pack==null ? -1 : _pack.hashCode() );
+    int hash = _name.hashCode() ^  _pack.hashCode();
     if( _flds != null )
-      for( String fld : _flds ) hash ^= fld.hashCode();
+      for( String fld : _flds )
+        hash ^= fld.hashCode();
     return hash;
   }
 
