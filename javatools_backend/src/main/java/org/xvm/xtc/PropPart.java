@@ -2,6 +2,7 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
+import org.xvm.util.S;
 
 /**
    Property part
@@ -46,5 +47,17 @@ public class PropPart extends Part {
   }
 
   @Override void link_innards( XEC.ModRepo repo ) { }
-  
+
+  // Terrible name.  Means "this property is a Real(tm) Field", and it
+  // shows up in the default hashCode, equals, and compare.
+  public boolean isField() {
+    // No type fields
+    if( isAuxiliary() ) return false;
+    // No equals on static props
+    if( isStatic() ) return false;
+    // No equals on get-only properties
+    if( _name2kid != null && (_name2kid.containsKey("get") || _name2kid.containsKey("->")) )
+      return false;
+    return true;
+  }
 }

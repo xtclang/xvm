@@ -2,10 +2,12 @@ package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
 import org.xvm.util.SB;
+import org.xvm.xec.Fun;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xrun.XRuntime;
@@ -22,12 +24,12 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   public static final AryString EMPTY= new AryString();
   
   public String[] _es;
-  private AryString(Mutability mut, String[] es) { super(org.xvm.xec.ecstasy.text.String.GOLD,mut,es.length); _es = es; }
-  public  AryString(                      ) { this(Mutable , new String[ 0 ]); }
-  private AryString(int len               ) { this(Fixed   , new String[len]); }
-  public  AryString(double x, String... es) { this(Constant, es); }
-  public  AryString(Mutability mut, AryString as) { this(mut,as._es.clone()); }
-  public  AryString(AryString as) { this(as._mut,as._es.clone()); }
+  private AryString(Mutability mut, String[] es, int len) { super(org.xvm.xec.ecstasy.text.String.GOLD,mut,len); _es = es; }
+  public  AryString(                      ) { this(Mutable , new String[ 0 ],0); }
+  private AryString(int len               ) { this(Fixed   , new String[len],len); }
+  public  AryString(double x, String... es) { this(Constant, es,es.length); }
+  public  AryString(Mutability mut, AryString as) { this(mut,as._es.clone(),as._len); }
+  public  AryString(AryString as) { this(as._mut,as._es.clone(),as._len); }
   
   public AryString( long len, LongFunction<String> fcn ) {
     this((int)len);
@@ -63,7 +65,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   /** Slice */
   public AryString at( Range r ) {
     if( r._invert ) throw XEC.TODO();
-    return new AryString(_mut, Arrays.copyOfRange(_es,(int)r._lo,(int)r._hi));
+    return new AryString(_mut, Arrays.copyOfRange(_es,(int)r._lo,(int)r._hi), (int)(r._hi-r._lo));
   }
 
   public int indexOf( String e ) {
@@ -98,16 +100,6 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
     public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
 
-  private static final SB SBX = new SB();
-  @Override public String toString() {
-    SBX.p('[');
-    for( int i=0; i<_len; i++ )
-      SBX.p('"').p(_es[i]).p('"').p(", ");
-    String str = SBX.unchar(2).p(']').toString();
-    SBX.clear();
-    return str;
-  }
-  
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.
@@ -117,7 +109,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
     if( _len != ary._len ) return false;
     if( _es == ary._es ) return true;
     for( int i=0; i<_len; i++ )
-      if( _es[i] != ary._es[i] )
+      if( _es[i].equals(ary._es[i]) )
         return false;
     return true;
   }
@@ -130,6 +122,25 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
 
   AryString clear() { _len=0; return this; }
 
+  // --- Collections
+  private static final SB SBX = new SB();
+  @Override public String toString() { return toString(", ","[","]",null,null,null); }
+  
+  public String toString(String sep, String pre, String post, Int64 limit, String trunc, Fun render) {
+    if( limit  != null ) throw XEC.TODO();
+    if( render != null ) throw XEC.TODO();
+    SBX.clear();
+    SBX.p(pre);
+    if( _len > 0 ) {
+      for( int i=0; i<_len; i++ )
+        SBX.p('"').p(_es[i]).p('"').p(sep);
+      SBX.unchar(sep.length());
+    }
+    String str = SBX.p(post).toString();
+    SBX.clear();
+    return str;
+  }
+  
   // --- Freezable
   public AryString freeze(boolean inPlace) {
     return _mut==Mutability.Constant ? this : construct(Mutability.Constant,this);

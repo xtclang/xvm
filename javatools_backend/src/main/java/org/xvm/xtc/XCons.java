@@ -118,11 +118,11 @@ public abstract class XCons {
       put(JSTRING,STRING);
     }};
 
-  // Generic Java Object[], this maps to the ecstasy.collections.Array class
-  public static XClz ARYXTC   = XClz.make_java("ecstasy.collections","AryXTC",true ,"ecstasy.collections","Array",null,"Element",XXTC  );
   // Generic array; element type is unknown, and could be primitives or Java Object.
-  public static XClz ARRAY    = XClz.make_java_ary("Array",true, VOID );
-  // Java primitive arrays                                                             
+  public static XClz ARRAY    = XClz.make_java("ecstasy.collections","Array",true ,"ecstasy.collections","Array",null,"Element",VOID);
+  // Generic Java Object[], this maps to the ecstasy.collections.Array class
+  public static XClz ARYXTC   = XClz.make_java_ary("AryXTC",false,XXTC  );
+  // Java primitive arrays
   public static XClz ARYBOOL  = XClz.make_java_ary("Aryboolean",false,JBOOL  );
   public static XClz ARYCHAR  = XClz.make_java_ary("Arychar"   ,false,JCHAR  );
   public static XClz ARYSTRING= XClz.make_java_ary("AryString" ,false,JSTRING);

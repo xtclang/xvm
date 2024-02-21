@@ -36,13 +36,7 @@ public interface Hashable extends org.xvm.xec.ecstasy.Comparable {
     sb.ip(    "return ");
     boolean any=false;
     for( Part p : clz._name2kid.values() )
-      if( p instanceof PropPart prop &&
-          // No hash on type parameters???
-          S.find(clz._tnames,prop._name) == -1 &&
-          // No hash on static props
-          !p.isStatic() &&
-          // No equals on get-only properties
-          !(p._name2kid != null && p._name2kid.containsKey("get")) ) {
+      if( p instanceof PropPart prop && prop.isField() ) {
         any = true;
         sb.p("x.").p(prop._name);
         XType xt = XType.xtype(prop._con,false);
