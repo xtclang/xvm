@@ -210,9 +210,6 @@ val distTar by tasks.existing(Tar::class) {
 
 val distZip by tasks.existing {
     dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
-    doLast {
-        printTaskDependencies()
-    }
 }
 
 val distExe by tasks.registering {
@@ -280,7 +277,6 @@ val assembleDist by tasks.existing {
 val installDist by tasks.existing {
     dependsOn(assembleDist)
     doLast {
-        printTaskDependencies()
         logger.info("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
         logger.info("$prefix Installation files:")
         printTaskOutputs(INFO)
