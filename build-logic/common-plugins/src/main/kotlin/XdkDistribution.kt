@@ -69,7 +69,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             }
             return true
         }
-        logger.warn("$prefix 'distExe' is disabled for building distributions. Only 'tar.gz' and 'zip' are allowed.")
+        logger.info("$prefix 'distExe' is disabled for building distributions. Only 'tar.gz' and 'zip' are allowed.")
         return false
     }
 
