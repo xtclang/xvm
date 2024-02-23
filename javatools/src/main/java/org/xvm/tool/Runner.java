@@ -338,8 +338,8 @@ public class Runner
             ConstantPool pool = connector.getConstantPool();
             try (var ignore = ConstantPool.withPool(pool))
                 {
-                String sMethod = options().getMethodName();
-                Set<MethodConstant> setMethods = connector.getContainer().findMethods(sMethod);
+                String               sMethod    = options().getMethodName();
+                Set<MethodStructure> setMethods = connector.getContainer().findMethods(sMethod);
                 if (setMethods.size() != 1)
                     {
                     if (setMethods.isEmpty())
@@ -355,7 +355,7 @@ public class Runner
 
                 String[]        asArg       = options().getMethodArgs();
                 ObjectHandle[]  ahArg       = Utils.OBJECTS_NONE;
-                MethodStructure method      = (MethodStructure) setMethods.iterator().next().getComponent();
+                MethodStructure method      = setMethods.iterator().next();
                 TypeConstant    typeStrings = pool.ensureArrayType(pool.typeString());
 
                 switch (method.getRequiredParamCount())
