@@ -1,7 +1,9 @@
 service Journal {
     private String[] messages = new String[];
 
-    void add(String msg) = messages.add(msg);
+    private void foo(String msg) = messages.add(msg);
+    
+    void add(String msg) = foo(msg);
 
     String[] collect(Boolean clear = True) {
         String[] report = messages.freeze(inPlace=clear);
