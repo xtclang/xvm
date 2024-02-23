@@ -47,6 +47,7 @@ dependencies {
     xdkJavaTools(libs.javatools)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
+    xtcModule(libs.xdk.cli)
     xtcModule(libs.xdk.collections)
     xtcModule(libs.xdk.crypto)
     xtcModule(libs.xdk.json)
