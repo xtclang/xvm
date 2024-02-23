@@ -18,6 +18,7 @@ public class XClz extends XType {
   public static XClz XXTC    = XClz.make_java("","XTC",null);
   public static XClz CONST   = XClz.make_java("ecstasy","Const",XXTC);
   public static XClz ENUM    = XClz.make_java("ecstasy","Enum" ,CONST);
+  public static XClz SERVICE = XClz.make_java("ecstasy","Service",XXTC);
   // Force XCons to fill the XTpe INTERNs
   public static XClz _FORCE = XCons.JNULL;
   
@@ -239,9 +240,13 @@ public class XClz extends XType {
     // _super field set.
     if( clz._f==Part.Format.CONST ) return CONST;
     if( clz._f==Part.Format.ENUM  ) return ENUM ;
+    if( clz._f==Part.Format.SERVICE ) return SERVICE;
     // Special intercept for the Const "interface", which maps to the Java
     // class (NOT interface) Const.java
     if( S.eq(clz._path._str,"ecstasy/Const.x") ) return XXTC;
+    // Special intercept for the Service "interface", which maps to the Java
+    // class (NOT interface) Service.java
+    if( S.eq(clz._path._str,"ecstasy/Service.x") ) return XXTC;
     return null;
   }
 
