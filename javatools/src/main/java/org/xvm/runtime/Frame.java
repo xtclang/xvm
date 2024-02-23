@@ -1132,7 +1132,7 @@ public class Frame
                         switch (iResult)
                             {
                             case Op.R_NEXT:
-                                hValue = popStack();
+                                hValue = framePrev.popStack();
                                 break;
 
                             case Op.R_CALL:
