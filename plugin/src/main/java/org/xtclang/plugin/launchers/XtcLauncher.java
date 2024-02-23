@@ -45,7 +45,7 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
         }
     }
 
-    protected XtcExecResult createExecResult(final XtcExecResultBuilder builder) {
+    protected static XtcExecResult createExecResult(final XtcExecResultBuilder builder) {
         assert builder.hasExitValue();
         // TODO: System.exit callback if we are running in the builder thread, or things get nasty.
         final var result = builder.build();
