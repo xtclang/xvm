@@ -1,25 +1,25 @@
 package org.xvm.tool;
 
+import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElseGet;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.StringReader;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
-
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -29,9 +29,6 @@ import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.xvm.util.ConstOrdinalList;
-
-import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElseGet;
 
 /**
  * Using the raw information from {@code ./resources/unicode/*.zip}, build the Unicode data tables
@@ -43,8 +40,18 @@ public class BuildUnicodeTables {
     private static final String UCD_ALL_FLAT_ZIP = "ucd.all.flat.zip";
     private static final String UCD_ALL_FLAT_XML = "ucd.all.flat.xml";
     private static final File OUTPUT_DIR = new File("./build/resources/unicode/");
+    private static final int BUF_SIZE = 256;
+    private static final long MB = 1024L * 1024L;
+    private static final long GB = MB * 1024L;
 
     private final String[] asArgs;
+
+    /**
+     * @param asArgs the Launcher's command-line arguments
+     */
+    public BuildUnicodeTables(final String[] asArgs) {
+        this.asArgs = asArgs;
+    }
 
     /**
      * Entry point from the OS.
@@ -53,13 +60,6 @@ public class BuildUnicodeTables {
      */
     public static void main(final String[] asArgs) throws IOException, JAXBException {
         new BuildUnicodeTables(asArgs).run();
-    }
-
-    /**
-     * @param asArgs the Launcher's command-line arguments
-     */
-    public BuildUnicodeTables(final String[] asArgs) {
-        this.asArgs = asArgs;
     }
 
     /**
@@ -85,7 +85,9 @@ public class BuildUnicodeTables {
         Arrays.fill(cats, new CharData().cat());
         // String[] labels = new String[cAll];
         final int[] decs = new int[cAll];
+        //CHECKSTYLE:OFF
         Arrays.fill(decs, 10); // 10 is illegal; use as "null"
+        //CHECKSTYLE:ON
         final String[] nums = new String[cAll];
         final int[] cccs = new int[cAll];
         Arrays.fill(cccs, 255); // 255 is illegal; use as "null"
@@ -127,11 +129,11 @@ public class BuildUnicodeTables {
             final var zip = getZipFile();
             final ZipEntry entryXML = zip.getEntry(UCD_ALL_FLAT_XML);
             final long lRawLen = entryXML.getSize();
-            assert lRawLen < 2 * 1000 * 1000 * 1000;
+            assert 2 * GB > lRawLen;
 
             final int cbRaw = (int)lRawLen;
             final byte[] abRaw = new byte[cbRaw];
-            try (final InputStream in = zip.getInputStream(entryXML)) {
+            try (var in = zip.getInputStream(entryXML)) {
                 final int cbActual = in.readNBytes(abRaw, 0, cbRaw);
                 assert cbActual == cbRaw;
                 sXML = new String(abRaw);
@@ -154,11 +156,11 @@ public class BuildUnicodeTables {
         assert file.canRead();
 
         final long lRawLen = file.length();
-        assert lRawLen < 2 * 1000 * 1000 * 1000;
+        assert 2 * GB > lRawLen;
 
         final int cbRaw = (int)lRawLen;
         final byte[] abRaw = new byte[cbRaw];
-        try (final InputStream in = new FileInputStream(file)) {
+        try (var in = new FileInputStream(file)) {
             final int cbActual = in.readNBytes(abRaw, 0, cbRaw);
             assert cbActual == cbRaw;
             sXML = new String(abRaw);
@@ -167,7 +169,7 @@ public class BuildUnicodeTables {
     }
 
     private File resolveArgumentAsFile() {
-        if (asArgs.length > 0) {
+        if (0 < asArgs.length) {
             final File ucdZip = new File(asArgs[0]);
             out(getClass().getSimpleName() + " UCD zip file: " + ucdZip.getAbsolutePath());
             return ucdZip;
@@ -176,7 +178,7 @@ public class BuildUnicodeTables {
     }
 
     private File resolveArgumentAsDestinationDir() {
-        if (asArgs.length > 1) {
+        if (1 < asArgs.length) {
             final File destDir = new File(asArgs[1]);
             out(getClass().getSimpleName() + " destination directory: " + destDir.getAbsolutePath());
             return destDir;
@@ -189,7 +191,7 @@ public class BuildUnicodeTables {
         if (!(file.exists() && file.isFile() && file.canRead())) {
             final ClassLoader loader = requireNonNullElseGet(BuildUnicodeTables.class.getClassLoader(), ClassLoader::getSystemClassLoader);
             final var resource = loader.getResource(UCD_ALL_FLAT_ZIP);
-            if (resource == null) {
+            if (null == resource) {
                 throw new IOException("Cannot find resources for unicode file: " + UCD_ALL_FLAT_ZIP);
             }
             return new ZipFile(resource.getFile());
@@ -203,9 +205,9 @@ public class BuildUnicodeTables {
         final var map = new TreeMap<String, Integer>();
         final int c = array.length;
         for (final var s : array) {
-            if (s != null) {
+            if (null != s) {
                 assert !s.isEmpty();
-                map.compute(s, (k, v) -> (v == null ? 0 : v) + 1);
+                map.compute(s, (k, v) -> (null == v ? 0 : v) + 1);
             }
         }
 
@@ -226,7 +228,7 @@ public class BuildUnicodeTables {
         final int[] an = new int[c];
         for (int i = 0; i < c; ++i) {
             final String s = array[i];
-            an[i] = s == null ? indexNull : map.get(s);
+            an[i] = null == s ? indexNull : map.get(s);
         }
 
         writeResult(name, an);
@@ -242,7 +244,8 @@ public class BuildUnicodeTables {
         //                }
         //            }
 
-        writeResult(name, ConstOrdinalList.compress(array, 256));
+        writeResult(name, ConstOrdinalList.compress(array, BUF_SIZE));
+
     }
 
     private File resolveOutput(final String name, final String extension) throws IOException {
@@ -256,13 +259,13 @@ public class BuildUnicodeTables {
     }
 
     void writeResult(final String name, final byte[] data) throws IOException {
-        try (final var out = new FileOutputStream(resolveOutput(name, "dat"))) {
+        try (var out = new FileOutputStream(resolveOutput(name, "dat"))) {
             out.write(data);
         }
     }
 
     void writeDetails(final String name, final String details) throws IOException {
-        try (final var out = new FileWriter(resolveOutput(name, "txt"))) {
+        try (var out = new FileWriter(resolveOutput(name, "txt"))) {
             out.write(details);
         }
     }
@@ -306,9 +309,8 @@ public class BuildUnicodeTables {
         @XmlElement
         public String description;
 
-        @XmlElements({@XmlElement(name = "char"), @XmlElement(name = "noncharacter"), @XmlElement(name = "surrogate"),
-                //              @XmlElement(name="group"       ), // note: none present in Unicode 13 data
-                @XmlElement(name = "reserved")})
+        //              @XmlElement(name="group"       ), // note: none present in Unicode 13 data
+        @XmlElements({ @XmlElement(name = "char"), @XmlElement(name = "noncharacter"), @XmlElement(name = "surrogate"), @XmlElement(name = "reserved") })
         @XmlElementWrapper
         public List<CharData> repertoire = new ArrayList<>();
 
@@ -319,10 +321,10 @@ public class BuildUnicodeTables {
 
             int c = 0;
             for (final var item : repertoire) {
-                if (c > 200) {
+                if (BUF_SIZE < c) {
                     sb.append(",\n...");
                     break;
-                } else if (c++ > 0) {
+                } else if (0 < c++) {
                     sb.append(",\n");
                 }
 
@@ -334,14 +336,6 @@ public class BuildUnicodeTables {
 
     @XmlAccessorType(XmlAccessType.FIELD)
     public static class CharData {
-        int firstIndex() {
-            return codepoint == null || codepoint.isEmpty() ? Integer.parseInt(codepointStart, 16) : Integer.parseInt(codepoint, 16);
-        }
-
-        int lastIndex() {
-            return codepoint == null || codepoint.isEmpty() ? Integer.parseInt(codepointEnd, 16) : Integer.parseInt(codepoint, 16);
-        }
-
         @XmlAttribute(name = "cp")
         String codepoint;
 
@@ -351,63 +345,84 @@ public class BuildUnicodeTables {
         @XmlAttribute(name = "last-cp")
         String codepointEnd;
 
-        // note: names in the XML file don't work the way they do in the Unicode .txt data file format
-        //        String label()
-        //            {
-        //            return name != null && name.length() >= 2 && name.charAt(0) == '<'
-        //                                                      && name.charAt(name.length()-1) == '>'
-        //                    ? name.substring(1, name.length()-1)
-        //                    : null;
-        //            }
-
         @XmlAttribute(name = "na")
         String name;
-
-        int cat() {
-            if (gc == null) {
-                return 29;
-            }
-
-            return switch (gc) {
-                case "Lu" -> 0;
-                case "Ll" -> 1;
-                case "Lt" -> 2;
-                case "Lm" -> 3;
-                case "Lo" -> 4;
-                case "Mn" -> 5;
-                case "Mc" -> 6;
-                case "Me" -> 7;
-                case "Nd" -> 8;
-                case "Nl" -> 9;
-                case "No" -> 10;
-                case "Pc" -> 11;
-                case "Pd" -> 12;
-                case "Ps" -> 13;
-                case "Pe" -> 14;
-                case "Pi" -> 15;
-                case "Pf" -> 16;
-                case "Po" -> 17;
-                case "Sm" -> 18;
-                case "Sc" -> 19;
-                case "Sk" -> 20;
-                case "So" -> 21;
-                case "Zs" -> 22;
-                case "Zl" -> 23;
-                case "Zp" -> 24;
-                case "Cc" -> 25;
-                case "Cf" -> 26;
-                case "Cs" -> 27;
-                case "Co" -> 28;
-                default -> 29;
-            };
-        }
 
         @XmlAttribute(name = "gc")
         String gc;
 
+        @XmlAttribute(name = "nt")
+        String nt;
+
+        @XmlAttribute(name = "nv")
+        String nv;
+
+        @XmlAttribute(name = "ccc")
+        String ccc;
+
+        @XmlAttribute(name = "slc")
+        String slc;
+
+        @XmlAttribute(name = "suc")
+        String suc;
+
+        @XmlAttribute(name = "stc")
+        String stc;
+
+        @XmlAttribute(name = "blk")
+        String blk;
+
+        @SuppressWarnings("checkstyle:MagicNumber")
+        int cat() {
+            if (null == gc) {
+                return 29;
+            }
+
+            return switch (gc) {
+            case "Lu" -> 0;
+            case "Ll" -> 1;
+            case "Lt" -> 2;
+            case "Lm" -> 3;
+            case "Lo" -> 4;
+            case "Mn" -> 5;
+            case "Mc" -> 6;
+            case "Me" -> 7;
+            case "Nd" -> 8;
+            case "Nl" -> 9;
+            case "No" -> 10;
+            case "Pc" -> 11;
+            case "Pd" -> 12;
+            case "Ps" -> 13;
+            case "Pe" -> 14;
+            case "Pi" -> 15;
+            case "Pf" -> 16;
+            case "Po" -> 17;
+            case "Sm" -> 18;
+            case "Sc" -> 19;
+            case "Sk" -> 20;
+            case "So" -> 21;
+            case "Zs" -> 22;
+            case "Zl" -> 23;
+            case "Zp" -> 24;
+            case "Cc" -> 25;
+            case "Cf" -> 26;
+            case "Cs" -> 27;
+            case "Co" -> 28;
+            default -> 29;
+            };
+        }
+
+        int firstIndex() {
+            return null == codepoint || codepoint.isEmpty() ? Integer.parseInt(codepointStart, 16) : Integer.parseInt(codepoint, 16);
+        }
+
+        int lastIndex() {
+            return null == codepoint || codepoint.isEmpty() ? Integer.parseInt(codepointEnd, 16) : Integer.parseInt(codepoint, 16);
+        }
+
         int dec() {
             if ("De".equals(nt)) {
-                assert nv != null;
+                assert null != nv;
                 assert !nv.isEmpty();
                 assert !"NaN".equals(nv);
                 return Integer.parseInt(nv);
@@ -417,78 +432,47 @@ public class BuildUnicodeTables {
         }
 
         String num() {
-            return nt == null || nt.isEmpty() || "None".equals(nt) || nv == null || nv.isEmpty() || "NaN".equals(nv) ? null : nv;
+            return null == nt || nt.isEmpty() || "None".equals(nt) || null == nv || nv.isEmpty() || "NaN".equals(nv) ? null : nv;
         }
-
-        @XmlAttribute(name = "nt")
-        String nt;
-
-        @XmlAttribute(name = "nv")
-        String nv;
 
         int combo() {
-            return ccc == null || ccc.isEmpty() ? 255 : Integer.parseInt(ccc);
+            return null == ccc || ccc.isEmpty() ? 255 : Integer.parseInt(ccc);
         }
-
-        @XmlAttribute(name = "ccc")
-        String ccc;
 
         int lower() {
-            return slc == null || slc.isEmpty() || "#".equals(slc) ? 0 : Integer.parseInt(slc, 16);
+            return null == slc || slc.isEmpty() || "#".equals(slc) ? 0 : Integer.parseInt(slc, 16);
         }
-
-        @XmlAttribute(name = "slc")
-        String slc;
 
         int upper() {
-            return suc == null || suc.isEmpty() || "#".equals(suc) ? 0 : Integer.parseInt(suc, 16);
+            return null == suc || suc.isEmpty() || "#".equals(suc) ? 0 : Integer.parseInt(suc, 16);
         }
-
-        @XmlAttribute(name = "suc")
-        String suc;
 
         int title() {
-            return stc == null || stc.isEmpty() || "#".equals(stc) ? 0 : Integer.parseInt(stc, 16);
+            return null == stc || stc.isEmpty() || "#".equals(stc) ? 0 : Integer.parseInt(stc, 16);
         }
-
-        @XmlAttribute(name = "stc")
-        String stc;
 
         String block() {
-            return blk == null || blk.isEmpty() ? null : blk;
+            return null == blk || blk.isEmpty() ? null : blk;
         }
-
-        @XmlAttribute(name = "blk")
-        String blk;
-
-        //        @XmlAttribute(name = "bc")
-        //        String bidiClass;
-        //
-        //        @XmlAttribute(name = "Bidi_M")
-        //        String bidiMirrored;
-        //
-        //        @XmlAttribute(name = "bmg")
-        //        String bidiMirrorImage;
-        //
-        //        @XmlAttribute(name = "Bidi_C")
-        //        String bidiControl;
-        //
-        //        @XmlAttribute(name = "bpt")
-        //        String bidiPairedBracketType;
-        //
-        //        @XmlAttribute(name = "bpb")
-        //        String bidiPairedBracket;
 
         @Override
         public String toString() {
-            return getClass().getSimpleName().toLowerCase() + " codepoint=" + (codepoint == null || codepoint.isEmpty() ? codepointStart + ".." + codepointEnd : codepoint) + (name != null && !name.isEmpty() ? ", name=\"" + name + "\"" : "") + ", gen-cat=" + gc + (blk != null && !blk.isEmpty() ? ", block=\"" + blk + "\"" : "") + (nt != null && !nt.isEmpty() && !"None".equals(nt) ? ", num-type=\"" + nt + "\"" : "") + (nv != null && !nv.isEmpty() && !"NaN".equals(nv) ? ", num-val=\"" + nv + "\"" : "") + (suc == null || suc.isEmpty() || "#".equals(suc) ? "" : ", suc=" + suc) + (slc == null || slc.isEmpty() || "#".equals(slc) ? "" : ", slc=" + slc) + (stc == null || stc.isEmpty() || "#".equals(stc) ? "" : ", stc=" + stc)
-                    //                    + (bidiClass != null && bidiClass.length() > 0 ? ", bidiClass=\"" + bidiClass + "\"" : "")
-                    //                    + (bidiMirrored != null && bidiMirrored.equals("Y") ? ", bidiMirrored=\"" + bidiMirrored + "\"" : "")
-                    //                    + (bidiMirrorImage != null && bidiMirrorImage.length() > 0 ? ", bidiMirrorImage=\"" + bidiMirrorImage + "\"" : "")
-                    //                    + (bidiControl != null && bidiControl.equals("Y") ? ", bidiControl=\"" + bidiControl + "\"" : "")
-                    //                    + (bidiPairedBracketType != null && bidiPairedBracketType.length() > 0 ? ", bidiPairedBracketType=\"" + bidiPairedBracketType + "\"" : "")
-                    //                    + (bidiPairedBracket != null && bidiPairedBracket.length() > 0 ? ", bidiPairedBracket=\"" + bidiPairedBracket + "\"" : "")
-                    ;
+            return getClass().getSimpleName().toLowerCase()
+                + " codepoint="
+                + (null == codepoint || codepoint.isEmpty() ? codepointStart + ".." + codepointEnd : codepoint)
+                + (null != name && !name.isEmpty()
+                ? ", name=\"" + name + "\"" : "") + ", gen-cat=" + gc + (null != blk && !blk.isEmpty()
+                ? ", block=\"" + blk + "\"" : "") + (null != nt && !nt.isEmpty() && !"None".equals(nt)
+                ? ", num-type=\"" + nt + "\"" : "") + (null != nv && !nv.isEmpty() && !"NaN".equals(nv)
+                ? ", num-val=\"" + nv + "\"" : "") + (null == suc || suc.isEmpty() || "#".equals(suc)
+                ? "" : ", suc=" + suc) + (null == slc || slc.isEmpty() || "#".equals(slc) ? "" : ", slc=" + slc)
+                + (null == stc || stc.isEmpty() || "#".equals(stc) ? "" : ", stc=" + stc);
+            //   + (bidiClass != null && bidiClass.length() > 0 ? ", bidiClass=\"" + bidiClass + "\"" : "")
+            //   + (bidiMirrored != null && bidiMirrored.equals("Y") ? ", bidiMirrored=\"" + bidiMirrored + "\"" : "")
+            //   + (bidiMirrorImage != null && bidiMirrorImage.length() > 0 ? ", bidiMirrorImage=\"" + bidiMirrorImage + "\"" : "")
+            //   + (bidiControl != null && bidiControl.equals("Y") ? ", bidiControl=\"" + bidiControl + "\"" : "")
+            //   + (bidiPairedBracketType != null && bidiPairedBracketType.length() > 0 ? ", bidiPairedBracketType=\"" + bidiPairedBracketType + "\"" : "")
+            //   + (bidiPairedBracket != null && bidiPairedBracket.length() > 0 ? ", bidiPairedBracket=\"" + bidiPairedBracket + "\"" : "")
         }
     }
 }

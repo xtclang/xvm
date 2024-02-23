@@ -1,16 +1,18 @@
 package org.xtclang.plugin.internal;
 
-import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.provider.ListProperty;
-import org.xtclang.plugin.XtcRunModule;
-import org.xtclang.plugin.XtcRuntimeExtension;
+import static java.util.Collections.emptyList;
 
-import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.List;
 
-import static java.util.Collections.emptyList;
+import javax.inject.Inject;
+
+import org.gradle.api.Action;
+import org.gradle.api.Project;
+import org.gradle.api.provider.ListProperty;
+
+import org.xtclang.plugin.XtcRunModule;
+import org.xtclang.plugin.XtcRuntimeExtension;
 
 public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension implements XtcRuntimeExtension {
     // TODO: Make it possible to add to the module path, both here and in the XTC compiler with explicit paths.
@@ -19,12 +21,11 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     //  You never know.
 
     /**
-     * Should we enable the debugger for this tas+k? Note that the "classic" Java attach way of debugging
+     * Should we enable the debugger for this task? Note that the "classic" Java attach way of debugging
      * runs into some complications with Gradle. Here is a good source of information for debugging
-     * a Gradle build with "classic Java style", and it may well involve reinvoking Gradle with
+     * a Gradle build with "classic Java style", and it may well involve re-invoking Gradle with
      * --no-daemon and --no-build-cache. See e.g.
      * "<a href="https://www.thomaskeller.biz/blog/2020/11/17/debugging-with-gradle/">...</a>"
-     *
      * <p>
      * We are working on a more seamless approach, triggered on assert:debug in Ecstasy code, and
      * controlling the executing process. While Gradle eats and throws away STDIN in lots of
@@ -57,10 +58,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
         return new DefaultXtcRunModule(project, moduleName);
     }
 
-    public static XtcRunModule createModule(final Project project, final String moduleName, final String moduleMethod, final List<String> moduleArgs) {
-        return new DefaultXtcRunModule(project, moduleName, moduleMethod, moduleArgs);
-    }
-
     private XtcRunModule createModule(final String moduleName) {
         return createModule(project, moduleName);
     }
@@ -81,13 +78,6 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
 
     @Override
     public void moduleName(final String name) {
-        // TODO:
-        // This is actually potential for a bug due to confusing syntax.. The module action also adds the runmodule, if it contains a moduleName(...) then it's not a setter'
-        // We should do:
-        //   moduleName("a")
-        //   moduleName("b")
-        // outside a closure. If we do it inside a closure, that means add extra modules names!
-        // and so on. If we combine module {
         addModule(createModule(name));
     }
 

@@ -1,13 +1,14 @@
 package org.xtclang.plugin;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import org.gradle.api.Named;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
-import org.jetbrains.annotations.NotNull;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public interface XtcLauncherTaskExtension extends Named {

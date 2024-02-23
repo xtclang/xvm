@@ -15,7 +15,7 @@ public interface XtcRunModule extends Comparable<XtcRunModule> {
         moduleArgs(arg);
     }
 
-    void moduleArg(final Provider<? extends String> provider);
+    void moduleArg(Provider<? extends String> provider);
 
     void moduleArgs(String... args);
 

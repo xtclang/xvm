@@ -1,5 +1,22 @@
 package org.xtclang.plugin.tasks;
 
+import static java.util.Collections.emptyList;
+
+import static org.gradle.api.logging.LogLevel.ERROR;
+import static org.gradle.api.logging.LogLevel.INFO;
+import static org.gradle.api.logging.LogLevel.LIFECYCLE;
+
+import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
+
+import java.io.File;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
@@ -17,7 +34,7 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.process.ExecResult;
-import org.xtclang.plugin.XtcBuildRuntimeException;
+
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
@@ -25,24 +42,11 @@ import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import static java.util.Collections.emptyList;
-import static org.gradle.api.logging.LogLevel.ERROR;
-import static org.gradle.api.logging.LogLevel.INFO;
-import static org.gradle.api.logging.LogLevel.LIFECYCLE;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
-
 /**
  * Task that runs and XTC module, given at least its name, using the module path from
  * the XTC environment.
  * <p>
- * We add a default run task to an XTC project. It's default is either run nothing, or run everything.
+ * We add a default run task to an XTC project. The default is either run nothing, or run everything.
  * First it looks in xtcRun and tries to run the modules from there.
  *    If no modules are there, we just say "nothing to run"
  *    Later - support command line modules, if we don't want to just keep that logic in build scripts, which is fine and can be lazy too.
@@ -77,7 +81,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Inject
     public XtcRunTask(final Project project) {
         // TODO clean this up:
-        super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project)); //, XtcProjectDelegate.getSourceSets(project).getByName(SourceSet.MAIN_SOURCE_SET_NAME), XtcProjectDelegate.resolveXtcRuntimeExtension(project));
+        super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
     }
@@ -114,8 +118,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
-
-    // XTC Modules declared in run configurations in project, or overridden in task, that we want to run. These should ALWAYS be a subset of getInputModulesCompiledByProject (TODO: Verify this)
+    //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
     @Input
     @Override
     public ListProperty<XtcRunModule> getModules() {
@@ -123,10 +126,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             return getExtension().getModules();
         }
         return taskLocalModules.get().getModules();
-    }
-
-    private XtcBuildRuntimeException extensionOnly(final String operation) {
-        return buildException("Operation '{}' only available through xtcRun extension DSL at the moment.", operation);
     }
 
     @Override
@@ -188,26 +187,13 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getIsVerbose().get());
         // When using the Gradle XTC plugin, having the 'xec' runtime decide to recompile stuff, is not supposed to be a thing.
-        // The whole point about the plugin is that we guarantee source->module up to date relationships, as long as you follow
+        // The whole point about the plugin is that we guarantee source->module up-to-date relationships, as long as you follow
         // the standard build lifecycle model.
         cmd.addBoolean("--no-recompile", true);
 
         // Create module path from xtcModule dependenciex, XDK contents and output of our source set.
         final var modulePath = resolveFullModulePath();
         cmd.addRepeated("-L", modulePath);
-
-        // TODO:
-        // This is ambiguous. For some reason, the Runner, when given library paths to the source set output,
-        // declared dependencies, and the xdk, and then we run a module by name, even if it is on the module
-        // path, it gets rebuilt, and placed in the output directory. The auto build tries to build the module
-        // by finding its source in some sub set of the directories and it ends up directly under build, even
-        // though it's refereshed. This also happens if touch and rebuild any x source file, and the compile
-        // tasks works fine, but the runner somehow still decides that it's stale. It's really important that
-        // the XTC runtimes do not create "invisible" dependency behavior that the plugin does not know about.
-
-        //final var sourceSetOutput = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, XtcProjectDelegate.getMainSourceSet(project)).get().getAsFile();
-        //logger.warn("{} WARNING: We hope the modules about to run are in '{}', because otherwise xec will assume they are stale and rebuild them in the wrong place.", prefix(), sourceSetOutput.getAbsolutePath());
-        //cmd.add("-o", sourceSetOutput);
 
         // Now we filter out only modules we have been specifically told to run.
         //
@@ -232,7 +218,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final var prefix = prefix();
 
         if (isEmpty()) {
-            logger.warn("{} Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", prefix, ext.getName(), getName());
+            logger.warn("{} Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
+                prefix, ext.getName(), getName());
             return emptyList();
         }
 
@@ -246,7 +233,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         //   Strictly speaking, of course, we could declare any module as long as it's on the module path. Let's discuss this later.
 
         // If we don't have any source set output, we should already return empty amd warn
-        // If we do have a module spec with one or more modules, we will queue them up to run in sequnce.
+        // If we do have a module spec with one or more modules, we will queue them up to run in sequence.
         // We will also check if the modules are in the module path, and if not, fail the build.
         logger.info("{} Found {} modules(s) in task and extension specification.", prefix, size());
         selectedModules.forEach(module -> logger.info("{}    ***** Module to run: {}", prefix, module));
@@ -266,8 +253,13 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private ExecResult runSingleModule(final XtcRunModule runConfig, final XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher, final CommandLine cmd) {
-        // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
+    private ExecResult runSingleModule(
+        final XtcRunModule runConfig,
+        final XtcLauncher<XtcRuntimeExtension,
+        ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher,
+        final CommandLine cmd) {
+        // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
+        //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
         logger.info("{} Executing resolved xtcRuntime module closure: {}", prefix(), runConfig);
         final var moduleMethod = runConfig.getMethodName().get();
         if (!runConfig.hasDefaultMethodName()) {

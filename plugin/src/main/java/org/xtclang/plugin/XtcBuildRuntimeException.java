@@ -1,8 +1,8 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.GradleException;
-
 import java.io.Serial;
+
+import org.gradle.api.GradleException;
 
 public class XtcBuildRuntimeException extends GradleException {
     @Serial

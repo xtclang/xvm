@@ -1,6 +1,19 @@
 package org.xtclang.plugin.tasks;
 
+import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILE_MAIN_TASK_NAME;
+
+import java.io.File;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import javax.inject.Inject;
+
 import kotlin.Pair;
+
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.provider.ListProperty;
@@ -16,26 +29,14 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
+
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.CommandLine;
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILE_MAIN_TASK_NAME;
-
 @CacheableTask
 public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
-    // Per-task configuration properties only.
-    private final ListProperty<String> outputFilenames;
-
     // Default values for inputs and outputs below are inherited from extension, can be reset per task
     protected final Property<Boolean> disableWarnings;
     protected final Property<Boolean> isStrict;
@@ -43,6 +44,9 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     protected final Property<Boolean> hasVersionedOutputName;
     protected final Property<String> xtcVersion;
     protected final Property<Boolean> shouldForceRebuild;
+
+    // Per-task configuration properties only.
+    private final ListProperty<String> outputFilenames;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -180,7 +184,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     Provider<Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return XtcProjectDelegate.getXtcResourceOutputDirectory(project, getCompileSourceSet()); //getCompileSourceSet().getRgetResources().getResources().getSourceDirectories();
+        return XtcProjectDelegate.getXtcResourceOutputDirectory(project, getCompileSourceSet());
     }
 
     @OutputDirectory
@@ -200,7 +204,8 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
         if (getForceRebuild().get()) {
             logger.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
-            touchAllSource(); // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
+            // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
+            touchAllSource();
         }
 
         final File outputDir = getOutputDirectory().get().getAsFile();
@@ -220,7 +225,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         args.addBoolean("--verbose", getIsVerbose().get());
         args.addBoolean("--strict", getStrict().get());
         args.addBoolean("--qualify", getQualifiedOutputName().get());
-        // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp it as the xcc version used to compile if no flag is given?
+        // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp as xcc version used to compile if not given?
         final String moduleVersion = resolveModuleVersion();
         if (moduleVersion != null) {
             if (hasVerboseLogging()) {
@@ -242,7 +247,8 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     }
 
     private String resolveModuleVersion() {
-        // TODO: We need to tell the plugin, when we build it, which version it has from the catalog. This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
+        // TODO: We need to tell the plugin, when we build it, which version it has from the catalog.
+        //    This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
         if (getXtcVersion().isPresent()) {
             return getXtcVersion().get();
         }

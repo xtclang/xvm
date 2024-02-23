@@ -1,5 +1,8 @@
 package org.xtclang.plugin.tasks;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -7,14 +10,10 @@ import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
+
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcBuildRuntimeException;
 import org.xtclang.plugin.XtcProjectDelegate;
-
-import java.util.Arrays;
-import java.util.List;
-
-import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
 
 // TODO: This is intended a common superclass to avoid the messy delegate pattern.
 //   We also put XTC launcher common logic in here, like e.g. fork, jvmArgs and such.

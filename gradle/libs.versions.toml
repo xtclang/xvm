@@ -26,6 +26,8 @@ gradle-nexus-publish = "1.3.0"
 gradle-release = "3.0.2"
 kohttp = "0.12.0"
 jakarta = "2.3.2"
+rewrite = "6.8.4"
+rewrite-lib = "1.3.1"
 
 # TODO: There is nothing like "group-ref". Might want to just generate this from a template?
 [plugins]
@@ -39,6 +41,8 @@ download = { id = "de.undercouch.download", version.ref = "download" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
+# TODO: Enable rewrite for automatic checkstyle correction on build, but need to verify that it supports all checkstyle.xml rules.
+#rewrite = { id = "org.openrewrite.rewrite", version.ref = "rewrite" }
 # TODO: Enable mavenCentral publication through this plugin: https://github.com/gradle-nexus/publish-plugin
 gradle-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradle-nexus-publish" }
 # TODO: Enable GitHub releases, and this seems to be both the most popular plugin and the one closest to the right version / process semantics.
@@ -64,6 +68,7 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
+rewrite = { module = "org.openrewrite.recipe:rewrite-static-analysis", version.ref = "rewrite-lib" }
 kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
 kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }

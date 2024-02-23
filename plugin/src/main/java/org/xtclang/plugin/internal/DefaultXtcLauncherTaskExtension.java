@@ -1,18 +1,20 @@
 package org.xtclang.plugin.internal;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import java.util.List;
+
 import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils;
-
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.List;
 
 public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTaskExtension {
     private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
@@ -48,7 +50,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.stderr = objects.property(OutputStream.class);
     }
 
-    // TODO: Sort public methods in alphabetical order for all these files, remove where just inheritance that has been added to the superclass already if any are left, and put public methods first.
+    // TODO: Sort public methods in alphabetical order for all these files, remove where just inheritance that has
+    //  been added to the superclass already if any are left, and put public methods first.
     @Override
     public Property<InputStream> getStdin() {
         return stdin;

@@ -1,5 +1,17 @@
 package org.xtclang.plugin.tasks;
 
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.getFileExtension;
+
+import java.io.File;
+
+import javax.inject.Inject;
+
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -11,18 +23,8 @@ import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+
 import org.xtclang.plugin.XtcProjectDelegate;
-
-import javax.inject.Inject;
-import java.io.File;
-
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.getFileExtension;
 
 @CacheableTask
 public abstract class XtcExtractXdkTask extends XtcDefaultTask {

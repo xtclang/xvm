@@ -22,7 +22,6 @@ private val pluginVersion = getXdkProperty("$pprefix.plugin.version", version.to
 logger.info("$prefix Plugin (id: '$pluginId') artifact version identifier: '$pluginGroup:$pluginName:$pluginVersion'")
 
 private val shouldBundleJavaTools = getXdkPropertyBoolean("$pprefix.plugin.bundle.javatools")
-
 private val javaToolsContents = project.objects.fileCollection()
 
 val xdkJavaToolsJarConsumer by configurations.registering {
@@ -31,15 +30,11 @@ val xdkJavaToolsJarConsumer by configurations.registering {
     attributes {
         attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
         attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
-        //        attribute(CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        //        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
-        //        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(JAVA_RUNTIME))
-        //        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR))
     }
 }
 
-if (shouldBundleJavaTools) {
-    dependencies {
+dependencies {
+    if (shouldBundleJavaTools) {
         @Suppress("UnstableApiUsage") xdkJavaToolsJarConsumer(libs.javatools)
     }
 }
@@ -50,13 +45,14 @@ publishing {
             groupId = pluginGroup
             artifactId = pluginName
             version = pluginVersion
-            artifact(tasks.jar)  // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the publication (i.e. don't use from(components["java"]) // TODO: Do not publish source or javadoc
+            artifact(tasks.jar)
+            // we have two more jar artifacts with "javadoc" and "source" classifiers, respectively. Tell Gradle we do NOT want those to be part of the
+            // publication (i.e. don't use from(components["java"])
             logger.info("$prefix Publication '$groupId:$artifactId:$version' (name: '$name') configured.")
         }
     }
 }
 
-// TODO: For pure maven plugin artifacts, we can also use "de.benediktritter.maven-plugin-development, mavenPlugin { }"
 @Suppress("UnstableApiUsage")
 gradlePlugin {
     // The built-in pluginMaven publication can be disabled with "isAutomatedPublishing=false"
@@ -92,7 +88,8 @@ tasks.withType<Javadoc>().configureEach {
 tasks.withType<PublishToMavenRepository>().matching { it.name.startsWith("publishPluginMaven") }.configureEach {
     enabled = false
     // TODO: Reuse the existing PluginMaven task instead, because that is the one gradlePluginPortal hardcodes.
-    logger.info("$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
+    logger.info(
+        "$prefix Disabled default publication task: '$name'. The task '${name.replace("PluginMaven", "XtcPlugin")}' should be equivalent."
     )
 }
 
@@ -107,7 +104,7 @@ tasks.withType<Jar>().configureEach {
              * are preserved correctly, and also add a dry-run/vs real diff test to see that our build caching
              * does not break.
              */
-            // TODO with the right categories we could just instead of grabbing the JAR ask for the classes as outgoing config for javatools
+            // TODO with the right categories we could just, instead of grabbing the JAR, ask for the classes as outgoing config for javatools
             inputs.files(xdkJavaToolsJarConsumer)
             val jarFiles = { zipTree(xdkJavaToolsJarConsumer.get().singleFile) }
             from(jarFiles)
