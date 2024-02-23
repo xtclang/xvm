@@ -205,15 +205,11 @@ val clean by tasks.existing {
 val distTar by tasks.existing(Tar::class) {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
+    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
-val distZip by tasks.existing(Zip::class)
-
-val assembleDist by tasks.existing {
-    if (xdkDist.shouldCreateWindowsDistribution()) {
-        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
-        dependsOn(distExe)
-    }
+val distZip by tasks.existing {
+    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
 val distExe by tasks.registering {
@@ -224,8 +220,7 @@ val distExe by tasks.registering {
         xdkDist.shouldCreateWindowsDistribution()
     }
 
-    // TODO: Why do we need this dependency? Likely just remove it.
-    dependsOn(installDist)
+    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 
     val nsi = file("src/main/nsi/xdkinstall.nsi")
     val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
@@ -268,10 +263,11 @@ val distExe by tasks.registering {
     }
 }
 
-
-val test by tasks.existing {
-    doLast {
-        TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
+val assembleDist by tasks.existing {
+    // Implicitly depends on distTar and distZip. Should also depend on distExe where relevant:
+    if (xdkDist.shouldCreateWindowsDistribution()) {
+        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
+        dependsOn(distExe)
     }
 }
 
@@ -279,6 +275,7 @@ val test by tasks.existing {
  * Take the output of assembleDist and put it in an installation directory.
  */
 val installDist by tasks.existing {
+    dependsOn(assembleDist)
     doLast {
         logger.info("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
         logger.info("$prefix Installation files:")
@@ -322,5 +319,11 @@ val installLocalDist by tasks.registering {
             logger.info("$prefix Creating symlink for launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
             Files.createSymbolicLink(symLink.toPath(), launcherExe.asFile.toPath())
         }
+    }
+}
+
+val test by tasks.existing {
+    doLast {
+        TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
     }
 }

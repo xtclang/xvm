@@ -28,7 +28,6 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * or persist in the shell, a setting that is used for stuff like always printing launcher command
      * lines, regardless of log level, but not doing it if the override is turned off (default).
      */
-    private static final boolean OVERRIDE_VERBOSE_LOGGING = "true".equalsIgnoreCase(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
 
     // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
     protected final Project project;
@@ -40,7 +39,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
     private boolean isBeingExecuted;
 
     protected XtcDefaultTask(final Project project) {
-        this(project, OVERRIDE_VERBOSE_LOGGING);
+        this(project, ProjectDelegate.OVERRIDE_VERBOSE_LOGGING);
     }
 
     protected XtcDefaultTask(final Project project, final boolean overrideVerboseLogging) {
@@ -64,10 +63,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * @return True of we are running with verbose logging enabled, false otherwise.
      */
     public boolean hasVerboseLogging() {
-        return switch (ProjectDelegate.getLogLevel(project)) {
-            case DEBUG, INFO -> true;
-            default -> overrideVerboseLogging;
-        };
+        return overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(project);
     }
 
     protected void executeTask() {

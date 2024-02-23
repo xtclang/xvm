@@ -15,6 +15,7 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.SourceSetOutput;
@@ -32,7 +33,10 @@ import org.xtclang.plugin.tasks.XtcRunTask;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -41,7 +45,7 @@ import static org.gradle.api.attributes.Category.LIBRARY;
 import static org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
-import static org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP;
+import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.UNSPECIFIED;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
@@ -71,6 +75,8 @@ import static org.xtclang.plugin.XtcPluginUtils.capitalize;
  */
 public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
+    private final Map<String, Set<SourceSet>> taskSourceSets = new HashMap<>();
+
     @SuppressWarnings("unused")
     public XtcProjectDelegate(final Project project) {
         this(project, null);
@@ -84,7 +90,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     private static Set<String> resolveHiddenTaskNames(final TaskContainer tasks) {
-        return new HashSet<>() { {
+        return new HashSet<>() {
+            {
                 addAll(Set.of("jar", "classes"));
                 addAll(tasks.stream().map(Task::getName).filter(name -> name.endsWith("java")).collect(Collectors.toSet()));
             }
@@ -120,6 +127,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         //   from doing that isn't 100% compatible with our builds.
 
         resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
+        if (hasVerboseLogging()) {
+            logger.lifecycle("{} XTC plugin executing from location: '{}'", prefix, getPluginUrl());
+        }
     }
 
     /**
@@ -154,11 +164,26 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         createDefaultRunTask();
 
         // The plugin should look for custom run tasks, and ensure that they depend on all compile tasks in the project.
+        final TaskCollection<XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
         tasks.withType(XtcRunTask.class).configureEach(runTask -> {
-            final TaskCollection<XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
             runTask.dependsOn(XDK_EXTRACT_TASK_NAME);
             runTask.dependsOn(compileTasks);
             logger.info("{} XtcRunTask named '{}': added dependency on: '{}' and '{}'", prefix, runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
+        });
+        // We should increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
+        // probable a "modules" and "<sourceSetName>" modules task. TODO: Do this when getting rid of the Java base
+        // olugin.
+        compileTasks.forEach(task -> {
+            final Set<SourceSet> sourceSets = taskSourceSets.get(task.getName());
+            if (sourceSets == null || sourceSets.isEmpty()) {
+                logger.warn("{} WARNING: No specific source set associated with compile task '{}'.", prefix, task.getName());
+            } else {
+                sourceSets.forEach(sourceSet -> {
+                    final var processResourcesTasks = List.of(getProcessResourcesTaskName(sourceSet), getJavaProcessResourcesTaskName(sourceSet));
+                    logger.info("{} Adding resource dependency for compile task '{}' -> ({}, resource tasks: {})", prefix, task.getName(), sourceSets, processResourcesTasks);
+                    task.dependsOn(processResourcesTasks);
+                });
+            }
         });
 
         createJavaToolsConfig();
@@ -174,7 +199,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     public URL getPluginUrl() {
-        project.getRepositories().add(project.getRepositories().mavenCentral());
         return pluginUrl;
     }
 
@@ -248,7 +272,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return isMainSourceSet(sourceSet) ? "classes" : sourceSet.getName() + "Classes";
     }
 
-    @SuppressWarnings("unused")
     private static String getProcessResourcesTaskName(final SourceSet sourceSet) {
         return isMainSourceSet(sourceSet) ? "processXtcResources" : "process" + capitalize(sourceSet.getName()) + "XtcResources";
     }
@@ -257,22 +280,41 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return MAIN_SOURCE_SET_NAME.equals(sourceSet.getName());
     }
 
+    private static boolean isTestSourceSet(final SourceSet sourceSet) {
+        return TEST_SOURCE_SET_NAME.equals(sourceSet.getName());
+    }
+
+    private static String getJavaProcessResourcesTaskName(final SourceSet sourceSet) {
+        return isMainSourceSet(sourceSet) ? "processResources" : "process" + capitalize(sourceSet.getName()) + "Resources";
+    }
+
     /**
      * Create a compile task with a source set. This subclasses a source task, and will add as source
-     * the "xtc" extension of a source set, regardless of its name, e.g. sourceSets,main.xtc.
+     * the "xtc" extension of a source set, regardless of its name, e.g. sourceSets.main.xtc.
      * TODO: Resources?
      */
     private TaskProvider<XtcCompileTask> createCompileTask(final SourceSet sourceSet) {
         final var compileTaskName = getCompileTaskName(sourceSet);
         final var compileTask = tasks.register(compileTaskName, XtcCompileTask.class, project);
+        final var processResourcesTaskName = getProcessResourcesTaskName(sourceSet);
+        final var processResourcesTask = tasks.register(processResourcesTaskName, Copy.class);
+        final var classesTaskName = getClassesTaskName(sourceSet);
+        final var classesTask = tasks.getByName(classesTaskName);
         final var forceRebuild = resolveXtcCompileExtension(project).getForceRebuild();
-        //final var processResources = tasks.getByName(getProcessResourcesTaskName(sourceSet));
 
-        // Always create a main and test compile task (maybe skip if source set doesn't exist)
-        // Main task: tell it to operate on the main source set, test task on the test source set .
-        //   Add for non main tests - also make sure it knows it should have other source set outputs as the module path input.
+        // In Java, the classes task would depend on process resources. In XTC, it depends on the compile task, and the compile
+        // task needs to work with the output of process resources, so for XTC we attach the process resources task for this source
+        // set as a dependency to the compile task instead of to the classes task, which is the "assemble" for Java compilation.
+        processResourcesTask.configure(task -> {
+            task.setDescription("Processes XTC resources for the " + sourceSet.getName() + " source set.");
+            final var resourceDirs = sourceSet.getResources().getSrcDirs();
+            final var outputDir = getXtcResourceOutputDirectory(project, sourceSet);
+            task.from(resourceDirs);
+            task.into(outputDir);
+            task.doLast(t -> logger.info("{} Processed XTC resources for source set: {} (srcDirs: {}, destination: {})", prefix, sourceSet.getName(), sourceSet.getResources().getSrcDirs(), outputDir.get()));
+        });
+
         compileTask.configure(task -> {
-            task.setGroup(BUILD_GROUP);
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
             // TODO Fix more exact processResources semantics so that we use the build as resource path, and not the src. This works for first merge.
@@ -280,18 +322,29 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.", prefix(projectName, compileTaskName), compileTaskName);
                 considerNeverUpToDate(task);
             }
+            // Register this task as an XTC language compiler. Not a Java compiler.
             task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
         });
 
         // Find the "classes" task in the Java build life cycle that we reuse, and set the dependency correctly. This should
         // wire in process resources too, but for some reason it seems to work differently. Basically this goes to the
         // "assemble" task, but we want to reuse some of the Java life cycle internally.
-        tasks.getByName(getClassesTaskName(sourceSet)).dependsOn(compileTask);
+        classesTask.dependsOn(compileTask);
 
         logger.info("{} Mapping source set to compile task: {} -> {}", prefix, sourceSet.getName(), compileTaskName);
+        logger.info("{} Registered and configured source set for compile task '{}' -> sourceSet: {}", prefix, compileTaskName, sourceSet.getName());
+
+        // Register the compile task as belonging to a specific source set.
+        final var sourceSets = taskSourceSets.computeIfAbsent(compileTaskName, k -> new HashSet<>());
+        sourceSets.add(sourceSet);
+
         logger.info("{} Registered and configured compile task for sourceSet: {}", prefix, sourceSet.getName());
 
         return compileTask;
+    }
+
+    public SourceSetContainer getSourceSets() {
+        return getSourceSets(project);
     }
 
     /**
@@ -326,8 +379,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         tasks.register(XDK_VERSION_TASK_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Display XTC version for project, and sanity check its application.");
-            task.doLast(t -> logger.info("{} XTC (version '{}'); Semantic Version: '{}'",
-                prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
+            task.doLast(t -> logger.info("{} XTC (version '{}'); Semantic Version: '{}'", prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
         });
 
         tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
@@ -357,7 +409,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     private void createXtcDependencyConfigs() {
-        for (final SourceSet sourceSet : getJavaExtensionContainer(project).getSourceSets()) {
+        for (final SourceSet sourceSet : getSourceSets()) {
             createXtcDependencyConfigs(sourceSet);
         }
         createXdkDependencyConfigs();
@@ -574,7 +626,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void checkProjectIsVersioned() {
         if (UNSPECIFIED.equalsIgnoreCase(project.getVersion().toString())) {
-            logger.lifecycle("WARNING: Project {} has unspecified version.", prefix);
+            logger.lifecycle("WARNING: Project '{}' has unspecified version.", prefix);
         }
     }
 }

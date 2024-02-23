@@ -3,7 +3,6 @@ package org.xtclang.plugin.tasks;
 import kotlin.Pair;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -30,6 +29,7 @@ import java.util.Set;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILE_MAIN_TASK_NAME;
 
 @CacheableTask
 public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
@@ -74,7 +74,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
     private String getCompileSourceSetName() {
         final String taskName = getName();
-        if (taskName.equals("compileXtc")) {
+        if (XTC_COMPILE_MAIN_TASK_NAME.equals(taskName)) {
             return SourceSet.MAIN_SOURCE_SET_NAME;
         }
         final int compileIndex = taskName.indexOf("compile");
@@ -175,10 +175,10 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
     @InputFiles
     @PathSensitive(PathSensitivity.ABSOLUTE)
-    FileCollection getResourceDirectory() {
+    Provider<Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return getCompileSourceSet().getResources().getSourceDirectories();
+        return XtcProjectDelegate.getXtcResourceOutputDirectory(project, getCompileSourceSet()); //getCompileSourceSet().getRgetResources().getResources().getSourceDirectories();
     }
 
     @OutputDirectory
@@ -205,16 +205,12 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         args.add("-o", outputDir.getAbsolutePath());
 
         logger.info("{} Output directory for {} is : {}", prefix, sourceSet.getName(), outputDir);
-
-        sourceSet.getResources().getSrcDirs().forEach(dir -> {
-            logger.info("{} Resolving resource dir (build): '{}'.", prefix, dir);
-            if (!dir.exists()) {
-                logger.info("{} Resource does not exist: '{}' (ignoring passing as input to compiler)", prefix, dir);
-            } else {
-                logger.info("{} Adding resource: {}", prefix, dir);
-                args.add("-r", dir.getAbsolutePath());
-            }
-        });
+        final var processedResourcesDir = getResourceDirectory().get().getAsFile();
+        logger.info("{} Resolving resource dir (build): '{}'.", prefix, processedResourcesDir);
+        if (processedResourcesDir.exists()) {
+            logger.info("{} '{}' Added as resource directory for '{}'.", prefix, processedResourcesDir.getAbsolutePath(), getName());
+            args.add("-r", processedResourcesDir.getAbsolutePath());
+        }
 
         args.addBoolean("--version", getShowVersion().get());
         args.addBoolean("--rebuild", getForceRebuild().get());

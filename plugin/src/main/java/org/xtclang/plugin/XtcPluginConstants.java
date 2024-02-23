@@ -23,6 +23,7 @@ public final class XtcPluginConstants {
     public static final String XTC_COMPILER_LAUNCHER_NAME = "xcc";
     @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
     public static final String XTC_COMPONENT_VARIANT_COMPILE = "compile";
+    public static final String XTC_COMPILE_MAIN_TASK_NAME = "compileXtc";
 
     // XTC Runtime constants:
     public static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
