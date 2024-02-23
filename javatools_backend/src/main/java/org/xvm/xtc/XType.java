@@ -301,7 +301,7 @@ public abstract class XType {
 
     case ClassCon ccon ->  XClz.make(ccon.clz());
 
-    case ServiceTCon service -> SERVICE;
+    case ServiceTCon service -> XClz.SERVICE;
 
     case VirtDepTCon virt -> xtype(virt._par,false);
 
@@ -314,6 +314,9 @@ public abstract class XType {
         xtype(acon.con(),false);
       default ->  throw XEC.TODO();
       };
+
+    case AccessTCon acon ->
+      xtype(acon._con,boxed);
     
     default -> throw XEC.TODO();
     };

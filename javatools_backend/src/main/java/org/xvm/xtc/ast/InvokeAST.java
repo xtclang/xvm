@@ -145,10 +145,15 @@ public class InvokeAST extends AST {
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
-    if( _async ) {
-      sb.p("/*TODO: Call should be async*/").nl().i();
-    }
-    _kids[0].jcode(sb).p(".").p(_meth).p("(");
+    _kids[0].jcode(sb).p(".");
+    // Service calls wrap
+    if( _kids[0]._type instanceof XClz clz && clz.isa(XClz.SERVICE) &&
+        // Except internal self-to-self
+        ClzBuilder.CCLZ._tclz != clz ) {
+      sb.p("$");               // Calling the     blocking service entry flavor
+      if( _async ) sb.p("$");  // Calling the non-blocking service entry flavor
+    } else assert !_async;     // Async is for services
+    sb.p(_meth).p("(");
     boolean once=false;
     for( int i=1; i<_kids.length; i++ )
       if( _kids[i] != null )
