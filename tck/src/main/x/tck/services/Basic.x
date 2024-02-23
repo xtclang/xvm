@@ -2,7 +2,8 @@
  * Basic service tests.
  */
 class Basic {
-
+    @Inject Console console;
+    
     void run() {
         testSlowIO();
         testLongCompute();

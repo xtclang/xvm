@@ -49,7 +49,6 @@ public abstract class XCons {
   public static XClz RANGEEE     = XClz.make_java("ecstasy","RangeEE",RANGE); // No Ecstasy matching class
   public static XClz RANGEIE     = XClz.make_java("ecstasy","RangeIE",RANGE); // No Ecstasy matching class
   public static XClz RANGEII     = XClz.make_java("ecstasy","RangeII",RANGE); // No Ecstasy matching class
-  public static XClz SERVICE     = XClz.make_java("ecstasy","Service",null);
   public static XClz STRINGBUFFER= XClz.make_java("ecstasy.text","StringBuffer",null);
   public static XClz TYPE        = XClz.make_java("ecstasy.reflect","Type",null,"DataType",XXTC,"OuterType",XXTC);
   public static XClz UNSUPPORTEDOPERATION = XClz.make_java("ecstasy","UnsupportedOperation",null);

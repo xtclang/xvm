@@ -114,7 +114,7 @@ public abstract class XTC {
   */
 
   public static class Exception extends RuntimeException {
-    Exception(String msg) {super(msg); }
+    public Exception(String msg) {super(msg); }
     public static Exception construct(String s) { return new Exception(s); }
   }
   

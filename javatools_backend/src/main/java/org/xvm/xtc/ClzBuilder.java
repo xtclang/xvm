@@ -7,6 +7,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.ecstasy.Comparable;
 import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xec.ecstasy.Orderable;
+import org.xvm.xec.ecstasy.Service;
 import org.xvm.xtc.ast.*;
 import org.xvm.xtc.cons.*;
 
@@ -130,11 +131,15 @@ public class ClzBuilder {
     // ... extends Const/XTC/etc
     if( _clz._super != null ) _sb.p("extends ").p(_clz._super._name);
     else if( is_iface ) ; // No extends
-    else if( _clz._f!=Part.Format.CONST ) _sb.p("extends ").p(is_runclz() ? "XRunClz" : "XTC");
-    else {
+    else if( _clz._f==Part.Format.CONST ) {
       _sb.p("extends Const");
       IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
       IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
+    } else if( _clz._f==Part.Format.SERVICE ) {
+      _sb.p("extends Service");
+      IMPORTS.add(XEC.XCLZ+".ecstasy.Service");
+    } else {
+      _sb.p("extends ").p(is_runclz() ? "XRunClz" : "XTC");
     }
 
     // ...implements IMPL
@@ -207,18 +212,18 @@ public class ClzBuilder {
         
         // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args); }"
         _sb.nl();
-        keywords(meth,false);
+        keywords(meth,true);
         _tclz.clz_generic(_sb,false,true);
         _sb.fmt("%0 construct( ",java_class_name); // Return type
         for( int i=0; i<_tclz.nTypeParms(); i++ )
           _sb.fmt("$%0 %0,",_tclz._flds[i]);
         _sb.unchar();
-        args(meth,false);
+        args(meth,_sb);
         _sb.p(") { return new ").p(java_class_name).p("( ");
         for( int i=0; i<_tclz.nTypeParms(); i++ )
           _sb.fmt("%0,",_tclz._flds[i]);
         _sb.unchar().p(").$construct(");
-        arg_names(meth);
+        arg_names(meth,_sb);
         _sb.p("); }").nl();
 
         // "private Foo $construct(args) { ..."
@@ -239,13 +244,12 @@ public class ClzBuilder {
       case MMethodPart mmp: 
         // Output java methods.
         String mname = jname(mmp._name);
-        MethodPart meth = (MethodPart)mmp.child(mname);
-        while( meth != null ) {
-          if( !S.eq(mname,"construct") ) _sb.nl(); // Blank line between methods
+        for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
+          if( S.eq(mname,"construct") )
+            continue;           // Constructors emitted first for easy reading
+          _sb.nl(); // Blank line between methods
           // A bunch of methods that have special dispatch rules.
           switch( mname ) {
-          case "construct":
-            break;             // Constructors emitted first for easy reading
           case "equals":
             Comparable.make_equals(java_class_name,_sb);
             // Add a full default method
@@ -267,9 +271,11 @@ public class ClzBuilder {
           default:
             // Generate the method from the AST
             jmethod(meth,mname);
+            // Service classes generate $mname and $$mname wrapper methods.
+            if( _tclz.isa(XClz.SERVICE) && meth.isPublic() )
+              Service.make_methods(meth,java_class_name,_sb);
             break;
           }
-          meth = meth._sibling;
         }
         break;
 
@@ -343,11 +349,14 @@ public class ClzBuilder {
   private void keywords(MethodPart m, boolean is_constructor) {
     _sb.i();
     int access = m._nFlags & Part.ACCESS_MASK;
+    // Public service methods get rewritten to private
+    if( _tclz.isa(XClz.SERVICE) && !is_constructor && !S.eq(m._name,"toString") )
+      access = Part.ACCESS_PRIVATE;
     if( access==Part.ACCESS_PRIVATE   ) _sb.p("private "  );
     if( access==Part.ACCESS_PROTECTED ) _sb.p("protected ");
-    if( access==Part.ACCESS_PUBLIC && !_tclz._iface ) _sb.p("public "   );
-    if( m.isStatic() && !is_constructor ) _sb.p("static ");
-    if( m._ast.length==0 ) _sb.p("abstract ");
+    if( access==Part.ACCESS_PUBLIC &&  !_tclz._iface ) _sb.p("public "   ); 
+    if( m.isStatic() )      _sb.p("static ");
+    if( m._ast.length==0 )  _sb.p("abstract ");
     else if( _tclz._iface ) _sb.p("default ");
 
     // XType the args and rets
@@ -356,7 +365,7 @@ public class ClzBuilder {
   }
 
   // Argument with types "( int arg0, String arg1, ... )"
-  private void args(MethodPart m, boolean define_args) {
+  static public void args(MethodPart m, SB sb) {
     // Argument list
     if( m._xargs!=null ) {
       for( int i = 0; i < m._xargs.length; i++ ) {
@@ -367,30 +376,59 @@ public class ClzBuilder {
         // Parameter class, using local generic parameters
         Parameter p = m._args[i];
         if( p.tcon() instanceof TermTCon ttc && ttc.id() instanceof FormalCon )
-          _sb.p("$").p(ttc.name());
+          sb.p("$").p(ttc.name());
         else if( p._special )
-          _sb.p("$").p(p._name);
+          sb.p("$").p(p._name);
         else 
-          m._xargs[i].clz(_sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
+          m._xargs[i].clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
 
         // Parameter name, and define it in scope
-        _sb.p(' ').p(p._name).p(", ");
-        if( define_args )
-          define(p._name,m._xargs[i]);
+        sb.p(' ').p(p._name).p(", ");
       }
-      _sb.unchar(2);
+      sb.unchar(2);
     }
   }
   
   // Argument names "arg0, arg1, ..."
-  private void arg_names(MethodPart m) {
+  static public void arg_names(MethodPart m, SB sb) {
     if( m._args!=null ) {
       for( Parameter p : m._args )
-        _sb.p(p._name).p(", ");
-      _sb.unchar(2);
+        sb.p(p._name).p(", ");
+      sb.unchar(2);
     }
   }
 
+  // Return signature; stuff like "long " or "<T extends BAZ> HashSet<T> "
+  public static SB ret_sig( MethodPart m, SB sb ) {
+    // Check for XTC generic method, needing a Java generic type
+    if( m._args!=null && m._args.length>1 && m._args[0]._special ) {
+      // TODO: XClz.clz_def
+      sb.p("<");
+      // Check the type-parm parm flag, and insert Java generics for all
+      for( int i=0; i<m._args.length; i++ )
+        if( m._args[i]._special ) {
+          sb.p("$").p(m._args[i]._name).p(" extends ");
+          if( ((XClz)m._xargs[i])._iface ) sb.p("XTC & ");
+          m._xargs[i].clz(sb).p(", ");
+        }
+      sb.unchar(2).p("> ");
+    }
+    
+    // Return type
+    if( m._xrets==null ) sb.p("void ");
+    else {
+      XType xret = 
+        m._xrets.length == 1 ?  m._xrets[0] :
+        // Conditional return!  Passes the extra return in XRuntime$COND.
+        // The m._rets[0] is the boolean
+        m.is_cond_ret() ? m._xrets[1] :
+        // Tuple multi-return
+        XClz.make_tuple(m._xrets);
+      xret.clz(sb).p(' ');
+    }
+
+    return sb;
+  }
   
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
@@ -401,32 +439,8 @@ public class ClzBuilder {
     // Print out the function header keywords
     keywords(m,false);
     
-    // Check for XTC generic method, needing a Java generic type
-    if( m._args!=null && m._args.length>1 && m._args[0]._special ) {
-      // TODO: XClz.clz_def
-      _sb.p("<");
-      // Check the type-parm parm flag, and insert Java generics for all
-      for( int i=0; i<m._args.length; i++ )
-        if( m._args[i]._special ) {
-          _sb.p("$").p(m._args[i]._name).p(" extends ");
-          if( ((XClz)m._xargs[i])._iface ) _sb.p("XTC & ");
-          m._xargs[i].clz(_sb).p(", ");
-        }
-      _sb.unchar(2).p("> ");
-    }
-    
-    // Return type
-    if( m._xrets==null ) _sb.p("void ");
-    else {
-      XType xret = 
-        m._xrets.length == 1 ?  m._xrets[0] :
-        // Conditional return!  Passes the extra return in XRuntime$COND.
-        // The m._rets[0] is the boolean
-        m.is_cond_ret() ? m._xrets[1] :
-        // Tuple multi-return
-        XClz.make_tuple(m._xrets);
-      xret.clz(_sb).p(' ');
-    }
+    // Return signature; stuff like "long " or "<T extends BAZ> HashSet<T> "
+    ret_sig(m, _sb);
     
     jmethod_body(m,mname,false);
   }
@@ -440,9 +454,13 @@ public class ClzBuilder {
     // Argument list:
     // ... method_name( int arg0, String, arg1, ... ) {
     _sb.p(mname).p("( ");
-    args(m,true);
+    args(m,_sb);
     _sb.p(" ) ");
-
+    // Define argument names
+    if( m._xargs!=null )
+      for( int i = 0; i < m._xargs.length; i++ )
+        define(m._args[i]._name,m._xargs[i]);
+    
     // Abstract method, no body
     if( m._ast.length==0 ) {
       _sb.p(";").nl();
