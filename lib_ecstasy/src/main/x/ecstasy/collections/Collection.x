@@ -43,7 +43,7 @@
 interface Collection<Element>
         extends Iterable<Element>
         extends Appender<Element>
-        extends Stringable {
+        extends Stringable {    // TODO this should be a mixin
     /**
      * An Orderer is a function that compares two elements for order.
      */

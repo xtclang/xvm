@@ -5,12 +5,12 @@
  * TODO
  * * add "ensureMutable()" or something like that (constructor?)
  * * mixins for e.g. numeric types
+ * * rotate, flip, etc.
  */
 @Abstract class Matrix<Element>
+        implements Stringable
         incorporates conditional HashableMatrix<Element extends Hashable>
-        incorporates conditional FreezableMatrix<Element extends Shareable>
-        incorporates conditional StringableMatrix<Element extends Stringable> {
-
+        incorporates conditional FreezableMatrix<Element extends Shareable> {
     /**
      * (Internal) Construct a matrix of the specified size.
      *
@@ -21,6 +21,35 @@
         assert:bounds rows >= 0 && cols >= 0;
         this.rows  = rows;
         this.cols  = cols;
+    }
+
+    /**
+     * An mix-in implementation of [CopyableCollection] that requires the underlying [Collection] to
+     * be [Replicable].
+     */
+    static mixin ReplicableCopier<Element>
+            into Replicable + Collection<Element>
+            implements CopyableCollection<Element> {
+        /**
+         * @param transform  an optional element transformer
+         */
+        @Override
+        ReplicableCopier duplicate(function Element(Element)? transform = Null) {
+            if (this.is(immutable ReplicableCopier) && transform == Null) {
+                return this;
+            }
+
+            if (transform == Null) {
+                return this.new(this);
+            }
+
+            return this.map(transform, Collect.to(ReplicableCopier<Element>));
+        }
+
+        @Override
+        ReplicableCopier clear() {
+            return inPlace ? super() : this.new();
+        }
     }
 
     /**
@@ -48,8 +77,8 @@
             return False;
         }
 
-        for (Int row : 0 ..< rows) {
-            for (Int col : row+1 ..< cols) {
+        for (Int row : 0..<rows) {
+            for (Int col : row+1..<cols) {
                 if (this[row,col] != this[col,row]) {
                     return False;
                 }
@@ -170,7 +199,9 @@
      *
      * @return the transpose of this Matrix
      */
-    Matrix transpose() = new MatrixView<Element>(cols, rows, this, (r, c) -> (c, r);
+    Matrix transpose() {
+        return new MatrixView<Element>(cols, rows, this, (r, c) -> (c, r);
+    }
 
     /**
      * Returns a rightwards-rotation of this Matrix. The new Matrix behaves as a _view_  of this
@@ -235,37 +266,6 @@
     }
 
 
-    // ----- Comparable ----------------------------------------------------------------------------
-
-    /**
-     * Compare two matrices of the same type for equality.
-     *
-     * @return True iff the matrices have the same size, and for each index `(row, col)`, the
-     *         element at that index from each matrix is equal
-     */
-    static <CompileType extends Matrix> Boolean equals(CompileType value1, CompileType value2) {
-        Int rows = value1.rows;
-        if (rows != value2.rows) {
-            return False;
-        }
-
-        Int cols = value1.cols;
-        if (cols != value2.cols) {
-            return False;
-        }
-
-        for (Int row : 0 ..< rows) {
-            for (Int col : 0 ..< cols) {
-                if (value1[row, col] != value2[row, col]) {
-                    return False;
-                }
-            }
-        }
-
-        return True;
-    }
-
-
     // ----- Hashable mixin ------------------------------------------------------------------------
 
     /**
@@ -308,59 +308,251 @@
             }
 
             if (inPlace) {
-                // while "in-place" means that we're avoiding any unnecessary copies, the reify()
-                // is necessary because this Matrix could be a view of another Matrix, and we don't
-                // "own" that other Matrix; if this is not a view, then reify() is a no-op
-                Matrix<Element> result = reify();
                 for (Int row : 0..rows) {
                     for (Int col : 0..cols) {
-                        result[row, col] = frozen(result[row, col]);
+                        this[row, col] = frozen(this[row, col]);
                     }
                 }
-                return result.makeImmutable();
+                return makeImmutable();
             }
 
             return duplicate(frozen).makeImmutable();
         }
     }
+}
 
 
-    // ----- Stringable interface ------------------------------------------------------------------
+
+//-----
+
+class Matrix<Element>
+        implements Duplicable
+        incorporates conditional HashableMatrix<Element extends Hashable>
+        incorporates conditional FreezableMatrix<Element extends Shareable> {
 
     /**
-     * A mixin that implements the Freezable interface on a Matrix of Shareable elements.
+     * Construct a fixed size matrix with the specified size and initial value. An initial value is
+     * always required.
+     *
+     * @param rows    the number of rows
+     * @param cols    the number of columns
+     * @param supply  the value or the supply function for initializing the elements of the matrix
      */
-    protected static mixin StringableMatrix<Element extends Stringable>
-            into Matrix<Element>
-            implements Stringable {
+    construct(Int rows, Int cols, Element | function Element(Int, Int) supply) {
+        assert:bounds rows > 0 && cols > 0;
+        this.rows  = rows;
+        this.cols  = cols;
+        this.cells = supply.is(Element)
+                ? new Element[rows*cols](supply)
+                : new Element[rows*cols](TODO("translate i->row,col")); // TODO
+    }
 
-        @Override
-        String toString() {
-            val buf = new StringBuffer(estimateStringLength());
-            appendTo(buf);
-            return buf.toString();
-        }
-
-        @Override
-        immutable FreezableMatrix freeze(Boolean inPlace = False) {
-            if (this.is(immutable)) {
-                return this;
-            }
-
-            if (inPlace) {
-                // while "in-place" means that we're avoiding any unnecessary copies, the reify()
-                // is necessary because this Matrix could be a view of another Matrix, and we don't
-                // "own" that other Matrix; if this is not a view, then reify() is a no-op
-                Matrix<Element> result = reify();
-                for (Int row : 0..rows) {
-                    for (Int col : 0..cols) {
-                        result[row, col] = frozen(result[row, col]);
-                    }
-                }
-                return result.makeImmutable();
-            }
-
-            return duplicate(frozen).makeImmutable();
+    /**
+     * `Duplicable` interface constructor.
+     *
+     * @param that       the Matrix to copy from
+     * @param transform  optional element transformer
+     */
+    @Override
+    construct(Matrix that, function Element(Element)? transform = Null, Boolean freeze = False) {
+        this.rows  = that.rows;
+        this.cols  = that.cols;
+        this.cells = transform == Null && freeze == that.cells.is(immutable))
+                ? that.cells.duplicate()
+                : new Element[that.cells.size](i -> transform(that.cells[i]));
+    } finally {
+        if (freeze) {
+            cells.freeze(inPlace=True);
+            makeImmutable();
         }
     }
+
+    /**
+     * (Internal) Construct a fixed size matrix with the specified size and element storage.
+     *
+     * @param rows   the number of rows
+     * @param cols   the number of columns
+     * @param cells  the internal storage array of element values in the matrix
+     */
+    protected construct(Int rows, Int cols, Element[] cells) {
+        this.rows  = rows;
+        this.cols  = cols;
+        this.cells = cells;
+    }
+
+    /**
+     * The contents of the Matrix. The form of the internal storage of elements is purposefully
+     * hidden behind the API, so that the implementation of `Matrix` can be optimized by the
+     * runtime in order to take advantage of hardware acceleration and optimized math libraries.
+     */
+    private Element[] cells;
+
+    private Int index(Int row, Int col=0) {
+        return row * cols + col;
+    }
+
+    @Override
+    @Op("[]") Element getElement(Int row, Int col) {
+        assert:bounds 0 <= row < rows && 0 <= col < cols;
+        return cells[index(row, col)];
+    }
+
+    @Override
+    @Op("[]=") void setElement(Int col, Int row, Element value) {
+        assert:bounds 0 <= row < rows && 0 <= col < cols;
+        cells[index(row, col)] = value;
+    }
+
+    @Op("[_,?]=") void setCol(Int col, List<Element> vector) {
+        assert:bounds 0 <= col < cols && vector.size == rows;
+        Int index = col;
+        for (Int row : 0..<rows) {
+            cells[index] = vector[row];
+            index += cols;
+        }
+    }
+
+    @Override
+    @Op("[?,_]") List<Element> getRow(Int row) {
+        assert:bounds 0 <= row < rows;
+        return cells[index(row) ..< index(row+1)];
+    }
+
+    @Override
+    @Op("[?,_]=") void setRow(Int row, List<Element> vector) {
+        assert:bounds 0 <= row < rows && vector.size == cols;
+        Int offset = index(row);
+        for (Int col : 0..<cols) {
+            cells[col+offset] = vector[col];
+        }
+    }
+
+    /**
+     * Returns a sub-matrix of this Matrix. The new Matrix will likely be backed by this Matrix,
+     * which means that if this Matrix is mutable, changes made to this Matrix may be visible
+     * through the new Matrix, and vice versa; if that behavior is not desired, {@link reify} the
+     * value returned from this method.
+     *
+     * @param rowRange  the range of rows of this Matrix to obtain a slice for
+     * @param colRange  the range of columns of this Matrix to obtain a slice for
+     *
+     * @return a slice of this Matrix corresponding to the specified ranges of columns and rows
+     *
+     * @throws OutOfBounds  if the specified ranges exceed either the lower or upper bounds of
+     *                      the dimensions of this Matrix
+     */
+    @Op("[..]") Matrix slice(Range<Int> rowRange, Range<Int> colRange) {
+        assert:bounds 0 <= colRange.effectiveLowerBound < colRange.effectiveUpperBound < cols;
+        assert:bounds 0 <= rowRange.effectiveLowerBound < rowRange.effectiveUpperBound < rows;
+// TODO GG return new Element[colRange.size, colRange.size](row,col->TODO("slice"));
+        return new Matrix<Element>(rowRange.size, colRange.size,(row,col)->TODO("slice")); // TODO
+    }
+
+    /**
+     * Obtain a Matrix of the same dimensions and that contains the same values as this Matrix, but
+     * which has two additional attributes:
+     *
+     * * First, if this Matrix is a portion of a larger Matrix, then the returned Matrix will
+     *   no longer be dependent on the larger Matrix for its storage;
+     * * Second, if this Matrix is a portion of a larger Matrix, then changes to the returned
+     *   Matrix will not be visible in the larger Matrix, and changes to the larger Matrix
+     *   will not be visible in the returned Matrix.
+     *
+     * The contract is designed to allow for the use of copy-on-write and other lazy semantics to
+     * achieve efficiency for both time and space.
+     *
+     * @return a reified Matrix
+     */
+    Matrix reify() {
+        return this;
+    }
+
+    // ----- Comparable ----------------------------------------------------------------------------
+
+    /**
+     * Compare two arrays of the same type for equality.
+     *
+     * @return True iff the arrays have the same size, and for each index _i_, the element at that
+     *         index from each array is equal
+     */
+    static <CompileType extends Matrix> Boolean equals(CompileType value1, CompileType value2) {
+        Int rows = value1.rows;
+        if (rows != value2.rows) {
+            return False;
+        }
+
+        Int cols = value1.cols;
+        if (cols != value2.cols) {
+            return False;
+        }
+
+        for (Int row : 0 ..< rows) {
+            for (Int col : 0 ..< cols) {
+                if (value1[row, col] != value2[row, col]) {
+                    return False;
+                }
+            }
+        }
+
+        return True;
+    }
+
+
+// TODO numeric mixin
+//    /**
+//     * True iff the matrix is identity.
+//     */
+//    Boolean square.get() {
+//        if (!square) {
+//            return False;
+//        }
+//
+//        for (Int i : 0..<rows) {
+//            if (this[i,i] != 1) {
+//                return False;
+//            }
+//        }
+//
+//        return True;
+//    }
+// TODO determinant
+// TODO trace
+
+    static class RowMatrix<Element>
+            extends Matrix<Element> {
+    }
+
+    static class RowMatrix<Element>
+            extends Matrix<Element> {
+    }
+
+    static class ColMatrix<Element>
+            extends Matrix<Element> {
+    }
+
+    private static class ViewMatrix<Element>
+            extends Matrix<Element> {
+        /**
+         *
+         */
+        construct(Matrix<Element> matrix, Range<Int> rowRange, Range<Int> colRange) {
+            construct Matrix(rowRange.size, colRange.size, []);
+            rowOffset = rowRange.effectiveFirst;
+            rowFactor = rowRange.descending ? +1 : -1;
+            colOffset = colRange.effectiveFirst;
+            colFactor = colRange.descending ? +1 : -1;
+        } finally {
+            if (matrix.is(immutable)) {
+                makeImmutable();
+            }
+        }
+
+        private Matrix<Element> matrix;
+        private Range<Int> rowRange;
+        private Range<Int> colRange)
+
+        // TODO
+    }
+
+    protected static class RowView(Matrix<Element> matrix)
 }
