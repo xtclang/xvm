@@ -628,7 +628,8 @@ public class NewExpression
                             break;
 
                         default:
-                            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Multi-dimensional array");
+                            log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
+                                    "Multi-dimensional array");
                             return null;
                         }
                     }

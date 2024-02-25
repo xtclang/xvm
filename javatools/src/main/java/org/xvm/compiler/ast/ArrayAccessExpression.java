@@ -15,6 +15,7 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.ArrayAccessExprAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.InvokeExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -28,6 +29,7 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.I_Get;
 import org.xvm.asm.op.Invoke_11;
+import org.xvm.asm.op.Invoke_N1;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
@@ -713,8 +715,16 @@ public class ArrayAccessExpression
                             ? arg
                             : ensurePointInTime(code, arg);
                     }
-                throw notImplemented();
-                // TODO code.add(new M_Get(argArray, aIndexArgs, regResult));
+
+                if (m_idGet == null)
+                    {
+                    // TODO code.add(new M_Get(argArray, aIndexArgs, regResult));
+                    throw notImplemented();
+                    }
+                else
+                    {
+                    code.add(new Invoke_N1(argArray, m_idGet, aIndexArgs, argResult));
+                    }
                 }
 
             // if we created a local variable as a temporary for the result, we need to transfer
@@ -754,11 +764,25 @@ public class ArrayAccessExpression
     @Override
     public ExprAST getExprAST(Context ctx)
         {
-        if (indexes.size() == 1)
+        int cIndexes = indexes.size();
+        if (cIndexes == 1)
             {
             return new ArrayAccessExprAST(expr.getExprAST(ctx), indexes.get(0).getExprAST(ctx));
             }
-        throw notImplemented();
+
+        if (m_idGet == null)
+            {
+            throw notImplemented();
+            }
+        else
+            {
+            ExprAST[] astArgs = new ExprAST[cIndexes];
+            for (int i = 0; i < cIndexes; i++)
+                {
+                astArgs[i] = indexes.get(i).getExprAST(ctx);
+                }
+            return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
+            }
         }
 
 

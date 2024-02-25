@@ -104,22 +104,7 @@ public class ArrayTypeExpression
             }
         type = exprTypeNew;
 
-        ArrayTypeExpression exprNew = (ArrayTypeExpression) super.validate(ctx, typeRequired, errs);
-        if (exprNew == null || dims <= 1)
-            {
-            return exprNew;
-            }
-
-        // array[c1, c2, ...] is a fixed size matrix and is allowed only for types with default values
-        TypeConstant typeArray   = exprNew.ensureTypeConstant(ctx, errs);
-        TypeConstant typeElement = typeArray.getParamType(0);
-
-        if (typeElement.getDefaultValue() == null)
-            {
-            log(errs, Severity.ERROR, Compiler.NO_DEFAULT_VALUE, typeElement.getValueString());
-            return null;
-            }
-        return exprNew;
+        return super.validate(ctx, typeRequired, errs);
         }
 
     /**
