@@ -155,32 +155,34 @@ public class IsExpression
                     }
                 }
 
-            if (exprTarget.isConstant() && exprTest.isConstant() && fSingle)
+            if (exprTarget.isConstant())
                 {
-                aconstVal = new Constant[] {pool.valOf(typeTarget.isA(typeTest))};
+                if (exprTest.isConstant() && fSingle)
+                    {
+                    aconstVal = new Constant[] {pool.valOf(typeTarget.isA(typeTest))};
+                    }
+                else
+                    {
+                    if (exprTest instanceof NamedTypeExpression exprNameType
+                            && !exprNameType.isDynamic() && typeTest.isFormalType())
+                        {
+                        // if the test is a formal type, we can draw an inference from the target's type;
+                        // consider this snippet (Value is a generic type):
+                        //      if (Null.is(Value)) { ... }
+                        // since Value type is assignable from Null, we can use that knowledge on the
+                        // WhenTrue branch (widening the formal type to a union with the target's type)
+                        FormalConstant constTest = (FormalConstant) typeTest.getDefiningConstant();
+                        ctx.replaceGenericType(constTest, Branch.WhenTrue,
+                                typeTest.union(pool, typeTarget).getType());
+                        }
+                    }
                 }
-            else
+            else if (exprTarget instanceof NameExpression exprName)
                 {
-                if (exprTarget instanceof NameExpression exprName)
-                    {
-                    typeInferred = computeInferredType(pool, typeTarget, typeTest);
+                typeInferred = computeInferredType(pool, typeTarget, typeTest);
 
-                    exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
-                    exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
-                    }
-
-                if (exprTest instanceof NamedTypeExpression exprNameType
-                        && !exprNameType.isDynamic() && typeTest.isFormalType())
-                    {
-                    // if the test is a formal type, we can draw an inference from the target's type;
-                    // consider this snippet (Value is a generic type):
-                    //      if (Null.is(Value)) { ... }
-                    // since Value type is assignable from Null, we can use that knowledge on the
-                    // WhenTrue branch (widening the formal type to a union with the target's type)
-                    FormalConstant constTest = (FormalConstant) typeTest.getDefiningConstant();
-                    ctx.replaceGenericType(constTest, Branch.WhenTrue,
-                            typeTest.union(pool, typeTarget).getType());
-                    }
+                exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
+                exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
                 }
 
             if (!fSingle)
