@@ -34,8 +34,8 @@ public abstract class XValue {
       ASB.p(fc._flt);
 
     // Character constant
-    case CharCon cc -> 
-      ASB.p('\'').p((char)cc._x).p('\'');
+    case CharCon cc ->
+      cc._x=='\n' ? ASB.p("'\\n'") : ASB.p('\'').p((char)cc._x).p('\'');
     case ByteCon bc ->
       ASB.p(bc._x);
 

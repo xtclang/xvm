@@ -137,7 +137,4 @@ public class Arylong extends Array<Int64> {
     return (int)(sum ^ (sum>>32));
   }
 
-  @Override public Appenderchar appendTo(Appenderchar ary) {
-    throw XEC.TODO();
-  }
 }

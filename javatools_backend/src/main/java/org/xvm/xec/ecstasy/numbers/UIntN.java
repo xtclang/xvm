@@ -24,7 +24,4 @@ public class UIntN extends UIntNumber {
 
   @Override public final String toString() { throw XEC.TODO(); }
   @Override public long estimateStringLength() { return 128; }
-  @Override public final Appenderchar appendTo(Appenderchar buf) {
-    return buf.appendTo(toString());
-  }
 }

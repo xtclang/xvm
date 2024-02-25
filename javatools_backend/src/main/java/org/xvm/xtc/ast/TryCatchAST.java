@@ -39,6 +39,8 @@ class TryCatchAST extends AST {
       // Restructure as (Block DefReg (Multi...) as (Block DefReg (Block ...))
       if( aks[1] instanceof MultiAST  )
         aks[1] = new BlockAST(aks[1]._kids);
+      else if( aks[1] instanceof NoneAST )
+        ; // Do nothing
       else throw XEC.TODO();
     }
   }
