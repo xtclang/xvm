@@ -47,7 +47,4 @@ public class Int32 extends IntNumber {
 
   @Override public final String toString() { return ""+_i; }
   @Override public long estimateStringLength() { return (32 - Long.numberOfLeadingZeros(_i)); }
-  @Override public final Appenderchar appendTo(Appenderchar buf) {
-    return buf.appendTo(toString());
-  }
 }

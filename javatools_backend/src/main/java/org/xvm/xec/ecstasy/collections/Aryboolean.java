@@ -118,7 +118,4 @@ public class Aryboolean extends Array<Boolean> {
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
-  @Override public Appenderchar appendTo(Appenderchar ary) {
-    throw XEC.TODO();
-  }
 }

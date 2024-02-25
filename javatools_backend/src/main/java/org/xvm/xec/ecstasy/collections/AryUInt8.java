@@ -107,8 +107,5 @@ public class AryUInt8 extends Array<UInt8> {
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*5; }
-  @Override public Appenderchar appendTo(Appenderchar ary) {
-    throw XEC.TODO();
-  }
 
 }

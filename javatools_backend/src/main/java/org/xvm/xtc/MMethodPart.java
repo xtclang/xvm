@@ -33,6 +33,7 @@ public class MMethodPart extends Part {
     case "hashCode" -> build(XCons.LONG,"gold",tcon);
     case "compare"  -> build(XCons.ORDERED,"gold",tcon,"lhs",tcon,"rhs",tcon);
     case "appendTo" -> build(XCons.APPENDERCHAR,new Parameter[]{new Parameter("buf",XCons.APPENDERCHAR)});
+    case "estimateStringLength" -> build(XCons.LONG);
     default -> throw XEC.TODO();
     };
     putkid(_name,meth);
@@ -57,6 +58,7 @@ public class MMethodPart extends Part {
       add("compare");
       add("construct");
       add("equals");
+      add("estimateStringLength");
       add("get");
       add("hashCode");
       add("set");
