@@ -83,7 +83,6 @@ public class ClzBuilder {
   }
   
   // Fill in the body of the matching java class
-  // Fill in the body of the matching java class
   public void jclass( ) {
     assert _is_top;
     _sbhead.p("// ---------------------------------------------------------------").nl();
@@ -114,6 +113,7 @@ public class ClzBuilder {
   }
   
   // Java Class body; can be nested (static inner class)
+  @SuppressWarnings("fallthrough")
   private void jclass_body() {
     String java_class_name = _tclz._name;
     _sb.nl();                   // Blank line
@@ -268,6 +268,11 @@ public class ClzBuilder {
             if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
             else jmethod(meth,mname+"$"+java_class_name);
             break;
+          case "estimateStringLength":
+          case "appendTo":
+            if( meth._ast==null ) // No body, but declared.  Use the interface default.
+              break;
+            //noinspection fallthrough
           default:
             // Generate the method from the AST
             jmethod(meth,mname);

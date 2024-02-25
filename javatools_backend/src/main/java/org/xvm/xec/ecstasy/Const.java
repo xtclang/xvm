@@ -56,10 +56,6 @@ public abstract class Const extends XTC
   }
   
   // --- Default Implementations ----------------------------------------------
-  // Default appendTo
-  @Override public Appenderchar appendTo(Appenderchar buf) {
-    return buf.appendTo(toString());
-  }
 
   // Subclasses that use this must override
   @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }

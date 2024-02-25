@@ -82,9 +82,6 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*10L; }
-  @Override public Appenderchar appendTo(Appenderchar buf) {
-    return buf.appendTo(toString());
-  }
 
   // --- Comparable
   public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }

@@ -3,6 +3,7 @@ package org.xvm.xtc.ast;
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
 import org.xvm.xtc.*;
+import org.xvm.util.S;
 import org.xvm.util.SB;
 
 class DefRegAST extends AST {
@@ -23,7 +24,11 @@ class DefRegAST extends AST {
     _type = XType.xtype(type,false);
     if( _type instanceof XClz clz )
       ClzBuilder.add_import(clz);
-    _name = name==null ? null : ((StringCon)name)._str;
+    if( name==null ) _name = null;
+    else {
+      String s = ((StringCon)name)._str;
+      _name = S.eq(s,"_") ? "$ignore" : s;
+    }
     
     if( init instanceof AnnotTCon anno ) {
       _init = XValue.val (X,anno);

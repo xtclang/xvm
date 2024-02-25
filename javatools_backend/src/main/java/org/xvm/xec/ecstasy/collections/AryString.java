@@ -148,7 +148,4 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
-  @Override public Appenderchar appendTo(Appenderchar ary) {
-    throw XEC.TODO();
-  }
 }
