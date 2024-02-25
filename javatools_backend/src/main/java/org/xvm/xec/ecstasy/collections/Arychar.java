@@ -119,7 +119,4 @@ public class Arychar extends Array<Char> {
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
-  @Override public Appenderchar appendTo(Appenderchar ary) {
-    throw XEC.TODO();
-  }
 }

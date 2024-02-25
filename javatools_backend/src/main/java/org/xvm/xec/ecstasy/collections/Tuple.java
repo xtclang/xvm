@@ -84,11 +84,11 @@ public interface Tuple extends Cloneable {
     sb.fmt("public class %0 extends Tuple%1 {\n",tclz,N).ii();
     // N field declares
     for( int i=0; i<N; i++ )
-      sb.ifmt("public %0 _f%1;\n",xtt.typeParm(i).toString(),i);
+      sb.ifmt("public %0 _f%1;\n",xtt.typeParm(i).clz(),i);
     // Constructor, taking N arguments
     sb.ifmt("public %0(",tclz);
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xtt.typeParm(i).toString(),i);
+      sb.fmt("%0 f%1, ",xtt.typeParm(i).clz(),i);
     sb.unchar(2).p(") {\n").ii().i();
     // N arg to  field assigns
     for( int i=0; i<N; i++ )
