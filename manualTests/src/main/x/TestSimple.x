@@ -2,13 +2,11 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-    }
+        String[] results = new String[];
+        String   next    = "012345";
 
-   class Test<Element> {
-        construct(Element | function Element(Int, Int) supply) {
-            Element[] array = supply.is(Element)
-                  ? new Element[1](supply) // this used to fail to compile
-                  : TODO
-        }
+        results += next[1 ..< 4]; // this used to fail to compile
+        console.print(results);
+
     }
 }

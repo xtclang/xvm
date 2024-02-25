@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -767,7 +768,11 @@ public class ArrayAccessExpression
         int cIndexes = indexes.size();
         if (cIndexes == 1)
             {
-            return new ArrayAccessExprAST(expr.getExprAST(ctx), indexes.get(0).getExprAST(ctx));
+            ExprAST astArray = expr.getExprAST(ctx);
+            ExprAST astArg   = indexes.get(0).getExprAST(ctx);
+            return m_fSlice
+                ? new InvokeExprAST(m_idGet, getTypes(), astArray, new ExprAST[] {astArg}, false)
+                : new ArrayAccessExprAST(astArray, astArg);
             }
 
         if (m_idGet == null)
@@ -1205,13 +1210,8 @@ public class ArrayAccessExpression
 
         // create a nominally-sized array of field types that are all "Object", since Tuple<T1, Tn>
         // is by definition a Tuple<Object, Object>, which is in turn a Tuple<Object>
-        int            cTestFields = nHi + 1;
-        TypeConstant[] atypeFields = new TypeConstant[cTestFields];
-        TypeConstant   typeObject  = pool.typeObject();
-        for (int i = 0; i < cTestFields; ++i)
-            {
-            atypeFields[i] = typeObject;
-            }
+        TypeConstant[] atypeFields = new TypeConstant[nHi + 1];
+        Arrays.fill(atypeFields, pool.typeObject());
 
         if (fSlice)
             {
