@@ -187,10 +187,12 @@ const String
      * character.
      *
      * @param separator  the character that separates the items in the String
+     * @param trim       (optional) indicates whether empty strings are to be trimmed from the
+     *                    resulting array
      *
      * @return an array of Strings
      */
-    String![] split(Char separator) {
+    String![] split(Char separator, Boolean trim = True) {
         if (size == 0) {
             return [""];
         }
@@ -199,8 +201,14 @@ const String
 
         Int start = 0;
         while (Int next := indexOf(separator, start)) {
-            results += start == next ? "" : this[start ..< next];
-            start    = next + 1;
+            if (start == next) {
+                if (!trim) {
+                    results += "";
+                }
+            } else {
+                results += this[start ..< next];
+            }
+            start = next + 1;
         }
 
         // whatever remains after the last separator (or the entire String, if there were no
