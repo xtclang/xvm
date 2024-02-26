@@ -1,12 +1,13 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.util.SB;
 import org.xvm.XEC;
+import org.xvm.util.S;
+import org.xvm.util.SB;
 import org.xvm.xtc.ClzBuilder;
 import org.xvm.xtc.MethodPart;
-import org.xvm.xtc.XType;
 import org.xvm.xtc.XClz;
 import org.xvm.xtc.XCons;
+import org.xvm.xtc.XType;
 
 public class ReturnAST extends AST {
   private final String _ztype;  // Set if this is a conditional return
@@ -40,9 +41,13 @@ public class ReturnAST extends AST {
       // Conditional return, always false, no other returned type
       if( _kids.length==1 )
         return XCons.VOID;
+      assert _kids.length==2;
       // Report the non-boolean type
-      assert _kids.length==2 && _kids[0] instanceof MultiAST;
-      return _kids[0]._kids[1]._type;
+      if( _kids[0] instanceof MultiAST )
+        return _kids[0]._kids[1]._type;
+      // False returns have no other value
+      assert _kids[0] instanceof ConAST con && S.eq(con._con,"true");
+      return _kids[1]._type;
     }
 
     // Single normal return
