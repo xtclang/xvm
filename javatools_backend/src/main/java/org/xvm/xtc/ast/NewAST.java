@@ -23,7 +23,7 @@ class NewAST extends AST {
     _type = xt;
     //_meth = meth==null ? null : (MethodPart)meth.part();
     _meth=null;
-    if( xt.needs_import() )
+    if( xt.needs_import(true) )
       ClzBuilder.add_import(xt);
   }
 
