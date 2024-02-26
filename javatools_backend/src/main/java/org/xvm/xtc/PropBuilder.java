@@ -37,7 +37,7 @@ public abstract class PropBuilder {
       ClzBuilder.add_import(xclz);
     String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     boolean lazy = "LazyVar".equals(ano); // TODO: Need a proper flag
-    boolean stat = pp.isStatic();
+    boolean stat = pp.isStatic() || pp._par instanceof ModPart;
     boolean tfld = (S.find(X._tclz._flds,pname)&0xFFFF) < X._tclz.nTypeParms(); // Is a type field
     boolean pub = pp._access == Const.Access.PUBLIC || (pp._access==null && X._tclz._super==XClz.CONST);
     boolean iface = X._tclz._iface;
