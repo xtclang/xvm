@@ -1,4 +1,3 @@
-import XdkBuildLogic.Companion.getDateTimeStampWithTz
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
@@ -9,15 +8,15 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val MAKENSIS = "makensis"
+        const val JAVATOOLS_JARFILE_PATTERN = "**/javatools*"
 
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
-        private const val LOCALDIST_BACKUP_DIR = "localdist-backup"
 
         private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
 
-        val distributionTasks = listOfNotNull("distTar", "distZip", "distExe")
+        val distributionTasks = listOfNotNull("distTar", "distZip")
     }
 
     init {
@@ -32,8 +31,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         """.trimIndent())
     }
 
+    @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
     val distributionName: String get() = project.name // Default: "xdk"
 
+    @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
     val distributionVersion: String get() = buildString {
         append(project.version)
         if (isCiEnabled) {
