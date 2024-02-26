@@ -17,5 +17,6 @@ public class IntLiteral extends Const {
   public IntLiteral(long x) { _s=Long.toString(x); }
 
   public static IntLiteral construct(String s) { return new IntLiteral(s); }
+  public long toInt64() { return Long.valueOf(_s); }
   @Override public String toString() { return _s; }
 }
