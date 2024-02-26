@@ -31,7 +31,7 @@ class AssignAST extends AST {
     super(kids);
     _op=op;
     _meth=meth;
-    _name = kids[0] instanceof MultiAST ? null : kids[0].name();
+    _name = kids[0] instanceof MultiAST || kids[0] instanceof BinOpAST ? null : kids[0].name();
   }
 
 
