@@ -19,7 +19,6 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle;
@@ -119,7 +118,7 @@ public class Runner
         File            fileBin    = null;
         boolean         binExists  = false;
         ModuleStructure module     = null;
-        String          binLocDesc = null;
+        String          binLocDesc;
         if (isExplicitCompiledFile(filePath) && fileSpec.exists()
                 && (options().isCompileDisabled() || isPathed(filePath)))
             {
@@ -238,13 +237,13 @@ public class Runner
 
             if (fCompile)
                 {
-                ArrayList<String> compilerArgs = new ArrayList<>();
+                List<String> compilerArgs = new ArrayList<>();
                 if (options.specified("v"))
                     {
                     compilerArgs.add("-v");
                     }
 
-                ArrayList<File> libPath = (ArrayList<File>) options.getModulePath();
+                List<File> libPath = options.getModulePath();
                 if (!libPath.isEmpty())
                     {
                     for (File libFile : libPath)
