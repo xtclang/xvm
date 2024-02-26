@@ -61,6 +61,7 @@ public class Arychar extends Array<Char> {
     _es[_len++] = c;
     return this;
   }
+  public Arychar add( long x ) { return add((char)x); }
   // Add an element, doubling base array as needed
   @Override public Arychar add( Char c ) { return add(c._c); }
 
