@@ -45,7 +45,7 @@ public class XFun extends XType {
     if( ptc != null ) {
       XClz xargs = (XClz)xtype(ptc._parms[0],true);
       if( xargs.nTypeParms()!=_nargs ) throw XEC.TODO();
-      if( _nargs!=0 ) throw XEC.TODO();
+      //if( _nargs!=0 ) throw XEC.TODO();
     }
     sb.p("Fun").p(_nargs);
     for( int i=0; i<_nargs; i++ )
