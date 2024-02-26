@@ -24,7 +24,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   public Array(Never n) { _gold=null; _mut=null; } // No-arg-no-work constructor
 
   public final E _gold;         // Golden instance type
-  public final Mutability _mut;
+  public Mutability _mut;
   public int _len;
 
   Array( E gold, Mutability mut, int len ) { _gold=gold; _mut = mut; _len=len; }
@@ -38,6 +38,8 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
       throw XEC.TODO();
     }
     assert gold==ary._gold : "Given GOLD: " + gold + " and an ary.GOLD: " + ary._gold;
+    
+    if( gold == Boolean.GOLD ) return new Aryboolean(mut, (Aryboolean)ary);
     throw XEC.TODO();
   }
   
@@ -62,6 +64,17 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   abstract public Iterator<E> iterator();
 
   @Override public Mutability mutability$get() { return _mut; }
+
+  public Array<E> toArray(Mutability mut, boolean inPlace) {
+    if( inPlace && (mut == null || mut == _mut) ) return this;
+    if( mut == Mutability.Constant ) return freeze(inPlace);
+    if( !inPlace || mut.ordinal() > _mut.ordinal())
+      return $new(_gold, mut, this);  // return a copy that has the desired mutability
+    _mut = mut;
+    return this;
+  }
+
+  Array freeze( boolean inPlace ) { throw XEC.TODO(); }
 
   static final SB SBX = new SB();
   abstract public String toString();
