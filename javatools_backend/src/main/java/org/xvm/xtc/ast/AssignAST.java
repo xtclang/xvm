@@ -148,6 +148,7 @@ class AssignAST extends AST {
     case SubAsn -> asn(sb);
     case MulAsn -> asn(sb);
     case DivAsn -> asn(sb);
+    case  OrAsn -> asn(sb);
     default -> throw XEC.TODO();
     };
   }

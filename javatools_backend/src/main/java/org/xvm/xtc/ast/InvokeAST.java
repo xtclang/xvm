@@ -69,7 +69,7 @@ public class InvokeAST extends AST {
   @Override AST prewrite() {
     XType k0t = _kids[0]._type;
     // Handle all the Int/Int64/Intliteral to "long" calls
-    if( k0t == XCons.JLONG || k0t == XCons.INTLITERAL || k0t == XCons.LONG ) {
+    if( k0t == XCons.JLONG || k0t == XCons.LONG ) {
       return switch( _meth ) {
       case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long"),_kids[0]).do_type();
       case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java

@@ -21,7 +21,7 @@ public class Aryboolean extends Array<Boolean> {
   public boolean[] _es;
   private Aryboolean(Mutability mut, boolean[] es) { super(Boolean.GOLD,mut,es.length); _es = es; }
   public  Aryboolean(                       ) { this(Mutable , new boolean[ 0 ]); }
-  public  Aryboolean(int len                ) { this(Fixed   , new boolean[len]); }
+  public  Aryboolean(long len               ) { this(Fixed   , new boolean[(int)len]); }
   public  Aryboolean(double x, boolean... es) { this(Constant, es); }
   public  Aryboolean(Mutability mut, Aryboolean as) { this(mut,as._es.clone()); }
   public  Aryboolean(Aryboolean as) { this(as._mut,as); }
@@ -35,6 +35,7 @@ public class Aryboolean extends Array<Boolean> {
   }
 
   public static Aryboolean construct(Mutability mut, Aryboolean as) { return new Aryboolean(mut,as); }
+  public static Aryboolean construct(long len) { return new Aryboolean(len); }
   
   // Fetch element
   public boolean at8(long idx) {
@@ -56,11 +57,13 @@ public class Aryboolean extends Array<Boolean> {
   // Add an element, doubling base array as needed
   @Override public Aryboolean add( Boolean c ) { return add(c==Boolean.TRUE); }
 
-  public void setElement(long idx, boolean e) {
+  public void set(long idx, boolean e) {
     if( !(0 <= idx && idx < _len) )
       throw new ArrayIndexOutOfBoundsException( idx+" >= "+_len );
     _es[(int)idx] = e;
   }
+
+  public void setElement(long idx, boolean e) { set(idx,e); }
 
   /** Slice */
   public Aryboolean at( Range r ) {
