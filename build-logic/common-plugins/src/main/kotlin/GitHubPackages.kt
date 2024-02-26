@@ -32,11 +32,11 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
         private const val GITHUB_USER_RO_DEFAULT_VALUE = "xtclang-bot"
         private const val GITHUB_TOKEN_RO_DEFAULT_VALUE = "Z2hwX0ZjNGRWeDhNYmxPcnZDYWZrRW96Q0NrQXAzaVZ5RjBUb0NheAo="
 
-        val publishTaskPrefixes = listOfNotNull("list", "delete")
-        val publishTaskSuffixesRemote = listOfNotNull("AllRemotePublications")
-        val publishTaskSuffixesLocal = listOfNotNull("AllLocalPublications")
+        val publishTaskPrefixes = listOf("list", "delete")
+        val publishTaskSuffixesRemote = listOf("AllRemotePublications")
+        val publishTaskSuffixesLocal = listOf("AllLocalPublications")
 
-        fun restHeaders(token: String): List<Pair<String, String>> = listOfNotNull(
+        fun restHeaders(token: String): List<Pair<String, String>> = listOf(
             "Accept" to "application/vnd.github+json",
             "X-GitHub-Api-Version" to "2022-11-28",
             "Authorization" to "Bearer $token")

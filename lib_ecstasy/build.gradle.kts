@@ -15,7 +15,7 @@ plugins {
     alias(libs.plugins.xtc)
 }
 
-val xdkTurtle by configurations.registering {
+val xdkTurtleConsumer by configurations.registering {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
@@ -24,11 +24,19 @@ val xdkTurtle by configurations.registering {
     }
 }
 
+val xdkUnicodeConsumer by configurations.registering {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
+    }
+}
+
 dependencies {
-    // TODO: Find out why xdkJavaTools is not an unstable API, while xdkTurtle and xdkUnicode are.
     xdkJavaTools(libs.javatools)
     @Suppress("UnstableApiUsage")
-    xdkTurtle(libs.javatools.turtle) // A dependency declaration like this works equally well if we are working with an included build/project or with an artifact. This is exactly what we want.
+    xdkTurtleConsumer(libs.javatools.turtle) // A dependency declaration like this works equally well if we are working with an included build/project or with an artifact. This is exactly what we want.
 }
 
 val compileXtc by tasks.existing(XtcCompileTask::class) {
@@ -45,15 +53,7 @@ sourceSets {
     main {
         xtc {
             // mack.x is in a different project, and does not build on its own, hence we add it to the lib_ecstasy source set instead.
-            srcDir(xdkTurtle)
+            srcDir(xdkTurtleConsumer)
         }
-        //resources {
-            // Skip the local unicode files if we are in "rebuild unicode" mode.
-            //if (xdkBuild.rebuildUnicode()) {
-            //    exclude("**/ecstasy/text**")
-            //}
-        //}
     }
 }
-
-// TODO Add resource processing for unicode

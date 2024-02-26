@@ -114,18 +114,20 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
     /**
      * Add an output Filename mapping.
-     * TODO Why does IntelliJ think these are unused? Check that it doesn't lead to any unknown dependency problems for the Plugin.
      */
+    @SuppressWarnings("unused") // No, IntelliJ. It's not.
     public void outputFilename(final String from, final String to) {
         outputFilenames.add(from);
         outputFilenames.add(to);
     }
 
+    @SuppressWarnings("unused") // No, IntelliJ. It's not.
     public void outputFilename(final Pair<String, String> pair) {
         outputFilenames.add(pair.getFirst());
         outputFilenames.add(pair.getSecond());
     }
 
+    @SuppressWarnings("unused") // No, IntelliJ. It's not.
     public void outputFilename(final Provider<String> from, final Provider<String> to) {
         outputFilenames.add(from);
         outputFilenames.add(to);

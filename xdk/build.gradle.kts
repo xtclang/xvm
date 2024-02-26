@@ -43,16 +43,6 @@ val xdkProvider by configurations.registering {
     }
 }
 
-val xtcUnicodeConsumer by configurations.registering {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    // TODO: Can likely remove these.
-    attributes {
-        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
-    }
-}
-
 dependencies {
     xdkJavaTools(libs.javatools)
     xtcModule(libs.xdk.ecstasy)
@@ -316,7 +306,7 @@ val installLocalDist by tasks.registering {
         listOf("xcc", "xec", "xtc").forEach {
             val symLink = File(binDir, it)
             logger.info("$prefix Copying launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
-            Files.copy(symLink.toPath(), launcherExe.asFile.toPath())
+            Files.copy(launcherExe.asFile.toPath(), symLink.toPath())
         }
     }
 }

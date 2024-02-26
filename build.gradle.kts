@@ -13,7 +13,7 @@ plugins {
 
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
+private val includedBuildsWithPublications = listOf(xdk, plugin)
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included

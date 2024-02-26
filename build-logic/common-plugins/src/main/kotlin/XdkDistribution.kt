@@ -16,7 +16,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
 
-        val distributionTasks = listOfNotNull("distTar", "distZip")
+        val distributionTasks = listOf("distTar", "distZip", "distExe")
     }
 
     init {
