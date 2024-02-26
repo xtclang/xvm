@@ -36,7 +36,7 @@ tasks.withType(Checkstyle::class) {
         @Suppress("UnstableApiUsage")
         ignoreFailures = true
         // If we have thousands of errors, like at the outset of checkstyle, we need to limit the parser,
-        // or checkstyl will simply run out of heap memory with default settings.
+        // or checkstyle will simply run out of heap memory with default settings.
         maxErrors = 100
         maxWarnings = 100
     }
