@@ -119,6 +119,9 @@ class BindFuncAST extends AST {
     if( ast instanceof DefRegAST def && def._reg==reg._reg ) {
       if( def._par instanceof ForRangeAST )
         return def._type instanceof XBase;
+      // TODO: Not correct, need some kind of final-field indication
+      if( def._par instanceof BlockAST && def._init!=null )
+        return true;
       // Not a parent ForRange, need to look more
       throw XEC.TODO();
     }
