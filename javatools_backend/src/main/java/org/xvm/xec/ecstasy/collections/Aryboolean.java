@@ -75,6 +75,10 @@ public class Aryboolean extends Array<Boolean> {
     return this;
   }
 
+  @Override public Aryboolean toArray(Mutability mut, boolean inPlace) {
+    return (Aryboolean)super.toArray(mut,inPlace);
+  }
+
   private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
