@@ -75,8 +75,24 @@ public abstract class XType {
 
   // --------------------------------------------------------------------------
 
-  public boolean needs_import() { return false; }
+  public boolean needs_import(boolean self) { return false; }
 
+  public static void makeImports( SB sb, XType[] xts, int N ) {
+    HashSet<String> imports = new HashSet<>();
+    for( int i=0; i<N; i++ ) {
+      XClz box = xts[i].box();
+      if( box.needs_import(false) ) {
+        String tqual = box.qualified_name();
+        if( !imports.contains(tqual) ) {
+          imports.add(tqual);
+          sb.fmt("import %0;\n",tqual);
+        }
+      }
+    }
+    sb.nl();
+  }
+
+  
   abstract boolean eq( XType xt ); // Subclass specialized eq check
   @Override public final boolean equals(Object o) {
     if( this==o ) return true;
