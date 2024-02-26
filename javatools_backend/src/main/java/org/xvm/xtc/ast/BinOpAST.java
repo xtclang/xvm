@@ -200,6 +200,6 @@ class BinOpAST extends AST {
     Integer ii1 = PRECS.get(ex);
     if( ii0==null ) { System.err.println("Missing \""+op+"\" from BinOpAST"); return true; }
     if( ii1==null ) { System.err.println("Missing \""+ex+"\" from BinOpAST"); return true; }
-    return ii0 < ii1;
+    return ii0 > ii1;
   }
 }

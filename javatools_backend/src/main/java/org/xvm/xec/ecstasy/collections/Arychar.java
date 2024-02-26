@@ -22,12 +22,12 @@ public class Arychar extends Array<Char> {
   public static final Arychar EMPTY= new Arychar();
   
   public char[] _es;
-  private Arychar(Mutability mut, char[] es) { super(Char.GOLD,mut,es.length); _es = es; }
-  public  Arychar(                    ) { this(Mutable , new char[ 0 ]); }
-  public  Arychar(int len             ) { this(Fixed   , new char[len]); }
-  public  Arychar(double x, char... es) { this(Constant, es); }
-  public  Arychar(Mutability mut, Arychar as) { this(mut    , as._es.clone()); }
-  public  Arychar(Arychar as) { this(as._mut,as); }
+  protected Arychar(Mutability mut, int len, char[] es) { super(Char.GOLD,mut,len); _es = es; }
+  public    Arychar(                    ) { this(Mutable , 0  , new char[ 0 ]); }
+  public    Arychar(int len             ) { this(Fixed   , len, new char[len]); }
+  public    Arychar(Mutability mut, Arychar as) { this(mut, as._len, as._es.clone()); }
+  public    Arychar(double x, char... es) { this(Constant, es.length, es); }
+  public    Arychar(Arychar as) { this(as._mut,as); }
   
   public Arychar( long len, LongUnaryOperator fcn ) {
     this((int)len);
