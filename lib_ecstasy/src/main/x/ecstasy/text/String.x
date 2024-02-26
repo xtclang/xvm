@@ -188,11 +188,11 @@ const String
      *
      * @param separator  the character that separates the items in the String
      * @param trim       (optional) indicates whether empty strings are to be trimmed from the
-     *                    resulting array
+     *                   resulting array
      *
      * @return an array of Strings
      */
-    String![] split(Char separator, Boolean trim = True) {
+    String![] split(Char separator, Boolean trim = False) {
         if (size == 0) {
             return [""];
         }
