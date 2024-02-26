@@ -1413,6 +1413,10 @@ public class Compiler
      */
     public static final String MISSING_PARAM_RESOURCE             = "COMPILER-200";
     /**
+     * Property {0} is assigned to itself.
+     */
+    public static final String PROP_SELF_ASSIGNED                 = "COMPILER-201";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
