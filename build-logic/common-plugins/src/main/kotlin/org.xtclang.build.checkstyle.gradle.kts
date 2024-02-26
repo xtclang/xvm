@@ -43,7 +43,7 @@ tasks.withType(Checkstyle::class) {
 
     onlyIf {
         if (!enabled) {
-            logger.warn("$prefix WARNING: Checkstyle is disabled for: '${project.name}'.")
+            logger.info("$prefix WARNING: Checkstyle is disabled for: '${project.name}'.")
         }
         enabled
     }
