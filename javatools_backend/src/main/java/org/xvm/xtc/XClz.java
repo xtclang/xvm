@@ -23,7 +23,7 @@ public class XClz extends XType {
   public static XClz _FORCE = XCons.JNULL;
   
   // The uniqueness is on these 3 things: package, name, and all type parms.
-  public String _pack, _name; // Self short name, package name
+  public String _pack, _nest, _name; // Package name, nested class name, short name
   public int _nTypeParms;     // Number of XTC type parameters
 
   public String _jpack, _jname; // Java-name, if any there exists a Java implementation
@@ -37,12 +37,13 @@ public class XClz extends XType {
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _nTypeParms = -99; }
 
-  private static XClz make( String pack, String name, int len ) {
+  private static XClz make( String pack, String nest, String name, int len ) {
     XClz clz = FREE==null ? new XClz() : FREE;
     if( clz==FREE ) FREE=null;
     
     // Class & package names.
     clz._pack = pack;
+    clz._nest = nest;
     clz._name = name;
     // See if we can reuse the xts,flds
     if( clz._nTypeParms != len ) {
@@ -70,7 +71,7 @@ public class XClz extends XType {
     return make_java(pack,name,true,pack,name,supr,flds);
   }
   public static XClz make_java( String jpack, String jname, boolean jparms, String pack, String name, XClz supr, Object... flds ) {
-    XClz clz = make(pack,name,flds.length>>1);
+    XClz clz = make(pack,"",name,flds.length>>1);
     clz._jpack = jpack;
     clz._jname = jname;
     clz._jparms = jparms;
@@ -113,7 +114,7 @@ public class XClz extends XType {
 
   // Java primitive array classes, no corresponding XTC class
   public static XClz make_java_ary( String jname, boolean jparms, XType xelem ) {
-    XClz clz = make("ecstasy.collections","Array",1);
+    XClz clz = make("ecstasy.collections","","Array",1);
     clz._jpack = "ecstasy.collections";
     clz._jname = jname;
     clz._jparms = jparms;
@@ -125,7 +126,7 @@ public class XClz extends XType {
   }
 
   public static XClz make_tuple( XType... clzs ) {
-    XClz clz = make("ecstasy.collections","Tuple",clzs.length);
+    XClz clz = make("ecstasy.collections","","Tuple",clzs.length);
     clz._jpack = "ecstasy.collections";
     clz._jname = "Tuple";
     clz._jparms = true;
@@ -142,9 +143,24 @@ public class XClz extends XType {
     // Extra useful info
     ModPart mod = clz.mod();
     // Class & package names.
-    String cname = S.java_class_name(clz.name());
-    if( clz==mod ) cname = ("M$"+cname).intern();
-    XClz xclz = make( pack(clz,mod), cname, clz._tnames.length );
+    String cname, cnest;
+    if( clz==mod ) {
+      // Module: java name is always Module.M$Module
+      // Class : java name is always Module.Class
+      cnest = "";
+      cname = ("M$"+S.java_class_name(clz.name())).intern();
+    } else if( !clz._path.equals(mod._path) ) {
+      cnest = "";
+      cname = S.java_class_name(clz.name());
+    } else {
+      // Class embedded in a Module:
+      // java name is always Module.M$Module.Class
+      cnest = S.java_class_name(mod.name());
+      cnest = ("M$"+cnest).intern();
+      cname = S.java_class_name(clz.name());
+    }
+    
+    XClz xclz = make( pack(clz,mod), cnest, cname, clz._tnames.length );
     xclz._mod = mod;  // Self module
     xclz._clz = clz;
     xclz._iface = clz._f==Part.Format.INTERFACE;
@@ -267,16 +283,24 @@ public class XClz extends XType {
   // Class & package names.
 
   // Example: tck_module (the module itself)
-  // _pack: null;
+  // _pack: ""
+  // _nest: ""
   // _name: tck_module
   
   // Example:  tck_module.comparison.Compare.AnyValue
   // _pack: tck_module.comparison
+  // _nest: ""
   // _name: Compare.AnyValue
 
   // Example: ecstasy.Enum
   // _pack: ecstasy
+  // _nest: ""
   // _name: Enum
+  
+  // Example:  nQueens.Board
+  // _pack: nQueens
+  // _nest: M$nQueens
+  // _name: Board
   private static String pack(ClassPart clz, ModPart mod) {
     assert mod!=null;
     if( clz == mod ) return mod.name(); // XTC Modules never have a Java package
@@ -292,7 +316,7 @@ public class XClz extends XType {
   }
 
   
-  @Override public boolean needs_import() {
+  @Override public boolean needs_import(boolean self) {
     // Built-ins before being 'set' have no clz, and do not needs_import
     // Self module is also compile module.
     if( this==XXTC ) return false;
@@ -300,7 +324,7 @@ public class XClz extends XType {
     if( this==XCons.JFALSE) return false;
     if( this==XCons.JNULL ) return false;
     if( this==XCons.JSTRING ) return false;
-    return !S.eq("java.lang",_jpack) && _clz != ClzBuilder.CCLZ;
+    return !S.eq("java.lang",_jpack) && (!self || _clz != ClzBuilder.CCLZ);
   }
   // No java name means needs a build
   public boolean needs_build() { return _jname.isEmpty(); }
@@ -366,6 +390,16 @@ public class XClz extends XType {
 
   public String name( ) { return _jname.isEmpty() ? _name : _jname; }
   public String pack( ) { return _jpack.isEmpty() ? _pack : _jpack; }
+
+  // Module: Lib  as  org.xv.xec.X$Lib
+  // Class : tck_module.comparison.Compare.AnyValue  as  org.xv.xec.tck_module.comparison.Compare.AnyValue
+  public String qualified_name() {
+    if( S.eq(_jpack,"java.lang") )
+      return "java.lang."+_jname;
+    String name = this==XCons.TUPLE0 ? "Tuple0" : name();
+    return (XEC.XCLZ + "." + pack() + (_nest.isEmpty() ? "" : "."+_nest) + "." + name).intern();
+  }
+
   // Bare name
   public String clz_bare( ) {
     return this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ? qualified_name() : name();
@@ -401,23 +435,14 @@ public class XClz extends XType {
     return sb.unchar();
   }
   
-  // Module: Lib  as  org.xv.xec.X$Lib
-  // Class : tck_module.comparison.Compare.AnyValue  as  org.xv.xec.tck_module.comparison.Compare.AnyValue
-  public String qualified_name() {
-    if( S.eq(_jpack,"java.lang") )
-      return "java.lang."+_jname;
-    String name = this==XCons.TUPLE0 ? "Tuple0" : name();
-    return (XEC.XCLZ + "." + pack() + "." + name).intern();
-  }
-  
   // Using shallow equals, hashCode, not deep, because the parts are already interned
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;
     return Arrays.equals(_flds,clz._flds) &&
-      S.eq( _name,clz. _name) && S.eq( _pack,clz. _pack);
+      S.eq( _name,clz. _name) && S.eq( _nest,clz. _nest) && S.eq( _pack,clz. _pack);
   }
   @Override int hash() {
-    int hash = _name.hashCode() ^  _pack.hashCode();
+    int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode();
     if( _flds != null )
       for( String fld : _flds )
         hash ^= fld.hashCode();

@@ -558,7 +558,7 @@ public class ClzBuilder {
     if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) )
       return tclz;
     // External; needs an import
-    if( tclz.needs_import() ) {
+    if( tclz.needs_import(true) ) {
       // Check for colliding on the base names; means we have to use the fully
       // qualified name everywhere.
       String tqual = tclz.qualified_name();
