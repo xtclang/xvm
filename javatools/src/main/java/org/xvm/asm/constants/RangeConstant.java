@@ -214,20 +214,14 @@ public class RangeConstant
             return m_fExclude1 || m_fExclude2 ? 0 : 1;
             }
 
-        int nOff = m_fExclude1 ^ m_fExclude2 ?  0 :
-                   m_fExclude1               ? -1 : // both excluded
-                                                1 ; // both included
-        long lSize;
         try
             {
-            lSize = constHi.apply(Id.SUB, constLo).getIntValue().getLong() + nOff;
+            return constHi.apply(Id.SUB, constLo).getIntValue().getLong() + 1;
             }
         catch (RuntimeException e)
             {
-            lSize = constHi.getIntValue().sub(constLo.getIntValue()).getLong() + nOff;
+            return constHi.getIntValue().sub(constLo.getIntValue()).getLong() + 1;
             }
-
-        return lSize;
         }
 
     /**

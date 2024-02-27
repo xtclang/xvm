@@ -390,5 +390,21 @@ module TestLiterals {
         assert (1..1).size == 1;
         assert !(1..2).empty;
         assert (1..2).size == 2;
+
+        Int count = 0;
+        for (Int i : 1>..1) { count++; }
+        assert count == 0;
+
+        for (Int i : 1..<1) { count++; }
+        assert count == 0;
+
+        for (Int i : 1>..<1) { count++; }
+        assert count == 0;
+
+        for (Int i : 1..1) { count++; }
+        assert count == 1;
+
+        for (Int i : 1..<2) { count++; }
+        assert count == 2;
     }
 }
