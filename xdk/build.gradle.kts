@@ -147,10 +147,7 @@ distributions {
              * 4) copy XDK modules to install/xdk/lib
              * 5) copy javatools.jar, turtle and bridge to install/xdk/javatools
              */
-            // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
-            // TODO WE should really not do get() here.
-            logger.info("$prefix Distribution contents need to use lazy resources.")
-            val xdkTemplate = tasks.processResources.get().destinationDir.toString() + "/xdk/"
+            val xdkTemplate = tasks.processResources.map { File(it.outputs.files.singleFile, "xdk") }
             from(xdkTemplate) {
             }
             from(xtcLauncherBinaries) {
@@ -205,7 +202,7 @@ val distTar by tasks.existing(Tar::class) {
     dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
-val distZip by tasks.existing {
+val distZip by tasks.existing(Zip::class) {
     dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
@@ -213,21 +210,19 @@ val distExe by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Use an NSIS compatible plugin to create the Windows .exe installer."
 
+    dependsOn(distZip)
     onlyIf {
         xdkDist.shouldCreateWindowsDistribution()
     }
 
-    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
-
+    // TODO: Why do we need this dependency? Likely just remove it.
     val nsi = file("src/main/nsi/xdkinstall.nsi")
     val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
     onlyIf {
-        makensis != null
+        makensis != null && xdkDist.shouldCreateWindowsDistribution()
     }
 
-    val inputDir = layout.buildDirectory.dir("install/xdk")
     val outputFile = layout.buildDirectory.file("distributions/xdk-$version.exe")
-    inputs.dir(inputDir)
     outputs.file(outputFile)
 
     // notes:
@@ -244,9 +239,14 @@ val distExe by tasks.registering {
         }
         logger.info("$prefix Writing Windows installer: ${outputFile.get()}")
         val stdout = ByteArrayOutputStream()
+        val distributionDir = layout.buildDirectory.dir("tmp-archives")
+        copy {
+            from(zipTree(distZip.get().archiveFile))
+            into(distributionDir)
+        }
         exec {
             environment(
-                "NSIS_SRC" to inputDir.get(),
+                "NSIS_SRC" to distributionDir.get(),
                 "NSIS_ICO" to xdkIconFile,
                 "NSIS_OUT" to outputFile.get(),
                 "NSIS_VER" to xdkDist.distributionVersion
@@ -260,6 +260,7 @@ val distExe by tasks.registering {
     }
 }
 
+
 val assembleDist by tasks.existing {
     // Implicitly depends on distTar and distZip. Should also depend on distExe where relevant:
     if (xdkDist.shouldCreateWindowsDistribution()) {
@@ -272,7 +273,7 @@ val assembleDist by tasks.existing {
  * Take the output of assembleDist and put it in an installation directory.
  */
 val installDist by tasks.existing {
-    dependsOn(assembleDist)
+    inputs.files(tasks.processXtcResources, tasks.processResources)
     doLast {
         logger.info("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
         logger.info("$prefix Installation files:")
