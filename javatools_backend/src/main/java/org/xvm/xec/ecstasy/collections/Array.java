@@ -74,7 +74,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
     return this;
   }
 
-  Array freeze( boolean inPlace ) { throw XEC.TODO(); }
+  Array<E> freeze( boolean inPlace ) { throw XEC.TODO(); }
 
   static final SB SBX = new SB();
   abstract public String toString();
