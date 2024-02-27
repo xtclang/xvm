@@ -1107,6 +1107,11 @@ public class NameExpression
                             }
 
                         case This:
+                            if (idProp.equals(argLVal))
+                                {
+                                log(errs, Severity.ERROR, Compiler.PROP_SELF_ASSIGNED,
+                                        idProp.getName());
+                                }
                             code.add(new L_Get(idProp, argLVal));
 
                             m_astResult = new PropertyExprAST(ctx.getThisRegisterAST(), idProp);
