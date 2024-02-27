@@ -40,7 +40,7 @@ val installLocalDist by tasks.registering {
 
 val install by tasks.registering {
     doLast {
-        TODO("The 'install' task has now changes names to 'installDist', as per the common standard.")
+        TODO("The 'install' task has been renamed to 'installDist', as per the common standard.")
     }
 }
 

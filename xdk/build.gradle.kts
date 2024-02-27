@@ -140,10 +140,6 @@ distributions {
         distributionBaseName = xdkDist.distributionName
         assert(distributionBaseName.get() == "xdk") // TODO: Should really rename the distribution to "xdk" explicitly per convention.
         contents {
-            // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
-            // TODO WE should really not do get() here.
-            val resources = tasks.processResources.get().outputs.files.asFileTree
-            logger.info("$prefix Distribution contents need to use lazy resources.")
             /*
              * 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
              * 2) copy xdk resources/main/xdk to install/xdk/
@@ -151,10 +147,11 @@ distributions {
              * 4) copy XDK modules to install/xdk/lib
              * 5) copy javatools.jar, turtle and bridge to install/xdk/javatools
              */
-            from(resources) {
-                eachFile {
-                    includeEmptyDirs = false
-                }
+            // TODO: Why do we need the indirect - likely change these to lazy properties through map format.
+            // TODO WE should really not do get() here.
+            logger.info("$prefix Distribution contents need to use lazy resources.")
+            val xdkTemplate = tasks.processResources.get().destinationDir.toString() + "/xdk/"
+            from(xdkTemplate) {
             }
             from(xtcLauncherBinaries) {
                 into("bin")
