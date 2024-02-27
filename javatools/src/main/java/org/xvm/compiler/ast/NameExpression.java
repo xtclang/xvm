@@ -1109,7 +1109,7 @@ public class NameExpression
                         case This:
                             if (idProp.equals(argLVal))
                                 {
-                                log(errs, Severity.WARNING, Compiler.PROP_SELF_ASSIGNED,
+                                log(errs, Severity.ERROR, Compiler.PROP_SELF_ASSIGNED,
                                         idProp.getName());
                                 }
                             code.add(new L_Get(idProp, argLVal));
