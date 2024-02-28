@@ -32,7 +32,7 @@
 
 name: XVM Repository build, test and verification runner.
 
-# Check if "pull-request" makes it possbile to add a branch protection status check requirement on master.
+# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
 on:
   push
 
@@ -94,7 +94,7 @@ jobs:
       # @see: https://github.com/gradle/actions/blob/main/setup-gradle/README.md#exclude-content-from-gradle-user-home-cache
       #
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2.4.2
+        uses: gradle/actions/setup-gradle@v3
 
       # 4. Run the Gradle build, with verbose logs, and stack traces enabled to verify it works.
       - name: Verify Gradle Build

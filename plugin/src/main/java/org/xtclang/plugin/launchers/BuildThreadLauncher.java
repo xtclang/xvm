@@ -1,20 +1,25 @@
 package org.xtclang.plugin.launchers;
 
-import org.gradle.api.Project;
-import org.gradle.process.ExecResult;
-import org.xtclang.plugin.XtcLauncherTaskExtension;
-import org.xtclang.plugin.internal.DefaultXtcLauncherTaskExtension;
-import org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
-import org.xtclang.plugin.tasks.XtcLauncherTask;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
 import java.net.URL;
 import java.net.URLClassLoader;
+
 import java.util.Objects;
+
+import org.gradle.api.Project;
+import org.gradle.process.ExecResult;
+
+import org.xtclang.plugin.XtcLauncherTaskExtension;
+import org.xtclang.plugin.internal.DefaultXtcLauncherTaskExtension;
+import org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
+import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     /**
@@ -47,6 +52,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         return out instanceof PrintStream ? (PrintStream)out : new PrintStream(out);
     }
 
+    // CHECKSTYLE: OFF
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("{} Launching task {}}", prefix, this);
@@ -59,7 +65,8 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         final var builder = resultBuilder(cmd);
         try {
             if (task.hasVerboseLogging()) {
-                logger.lifecycle("{} WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}", prefix, cmd.toString());
+                logger.lifecycle("{} WARNING: (equivalent to what we are executing without forking in current thread) JavaExec command: {}",
+                    prefix, cmd.toString());
             }
             // TODO: Rewrite super.redirectIo so we can reuse it here. That is prettier. Push and pop streams to field?
             //   (may be even more readable to implement it as a try-with-resources of some kind)
@@ -76,8 +83,8 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
             builder.exitValue(0);
         } catch (final IllegalAccessException e) {
             throw buildException("Failed to invoke '{}.{}' through reflection: {}", main.getDeclaringClass().getName(), main.getName(), e.getMessage());
-        } catch (final Throwable t) {
-            handleThrowable(builder, t);
+        } catch (final InvocationTargetException e) {
+            handleThrowable(builder, e);
         } finally {
             System.setIn(oldIn);
             System.setOut(oldOut);
@@ -85,6 +92,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         }
         return createExecResult(builder);
     }
+    // CHECKSTYLE: ON
 
     private void handleThrowable(final XtcExecResultBuilder builder, final Throwable t) {
         final var cause = t.getCause();
@@ -112,7 +120,7 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
 
     @SuppressWarnings("unused")
     private Class<?> dynamicallyLoadJar(final File jar, final String className) throws IOException {
-        try (final var classLoader = new URLClassLoader(new URL[]{jar.toURI().toURL()})) {
+        try (var classLoader = new URLClassLoader(new URL[]{jar.toURI().toURL()})) {
             return classLoader.loadClass(className);
         } catch (final ClassNotFoundException e) {
             throw buildException(e, "Failed to load class from jar '{}': {}", jar, e.getMessage());
@@ -124,7 +132,8 @@ public class BuildThreadLauncher<E extends XtcLauncherTaskExtension, T extends X
         try {
             return Class.forName(task.getJavaLauncherClassName()).getMethod(LAUNCH_METHOD_NAME, LAUNCH_METHOD_PARAMS);
         } catch (final ClassNotFoundException | NoSuchMethodException e) {
-            throw task.buildException(e, "Failed to resolve method '{}' in class '{}': {}.", LAUNCH_METHOD_NAME, task.getJavaLauncherClassName(), e.getMessage());
+            throw task.buildException(e, "Failed to resolve method '{}' in class '{}': {}.",
+                LAUNCH_METHOD_NAME, task.getJavaLauncherClassName(), e.getMessage());
         }
     }
 }

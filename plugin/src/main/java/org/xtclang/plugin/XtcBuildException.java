@@ -1,6 +1,7 @@
 package org.xtclang.plugin;
 
 import java.io.Serial;
+
 import java.util.Arrays;
 
 public class XtcBuildException extends Exception {

@@ -1,13 +1,14 @@
 package org.xtclang.plugin.launchers;
 
+import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
+
 import org.gradle.api.Project;
 import org.gradle.process.BaseExecSpec;
 import org.gradle.process.ExecResult;
+
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
-
-import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends ProjectDelegate<CommandLine, ExecResult> {
     protected final T task;

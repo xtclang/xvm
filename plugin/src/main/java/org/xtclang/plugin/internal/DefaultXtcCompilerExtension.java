@@ -1,10 +1,11 @@
 package org.xtclang.plugin.internal;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
-import org.xtclang.plugin.XtcCompilerExtension;
 
-import javax.inject.Inject;
+import org.xtclang.plugin.XtcCompilerExtension;
 
 public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension implements XtcCompilerExtension {
     // Even though we have getters, these need to be protected for subclasses to be able to use them in the build DSL

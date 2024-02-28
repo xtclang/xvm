@@ -1,10 +1,11 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.Project;
-
 import java.io.File;
+
 import java.util.Collections;
 import java.util.Set;
+
+import org.gradle.api.Project;
 
 public final class XtcPluginConstants {
     // XTC Language and dependency constants:

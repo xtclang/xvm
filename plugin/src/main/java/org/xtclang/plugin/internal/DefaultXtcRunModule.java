@@ -1,27 +1,29 @@
 package org.xtclang.plugin.internal;
 
+import static java.util.Collections.emptyList;
+import static java.util.Objects.requireNonNull;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.inject.Inject;
+
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+
 import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcRunModule;
-
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.util.Collections.emptyList;
-import static java.util.Objects.requireNonNull;
 
 public class DefaultXtcRunModule implements XtcRunModule {
     private static final String DEFAULT_METHOD_NAME = "run";
 
-    private final Project project;
-
     protected final Property<String> moduleName; // mandatory
     protected final Property<String> methodName; // optional but always has a modifiable convention value
     protected final ListProperty<String> moduleArgs; // optional but always has a modifiable, initially empty, set of arguments
+
+    private final Project project;
 
     @Inject
     @SuppressWarnings("unused")

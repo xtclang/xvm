@@ -1,9 +1,9 @@
 package org.xtclang.plugin;
 
+import java.util.List;
+
 import org.gradle.api.Action;
 import org.gradle.api.provider.ListProperty;
-
-import java.util.List;
 
 /**
  * This is the "xtcRun" extension. It can be used to set up common runtime

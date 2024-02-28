@@ -1,6 +1,7 @@
 package org.xtclang.plugin.launchers;
 
 import java.io.File;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,7 +33,7 @@ public final class CommandLine {
 
     public String getIdentifier() {
         final int dot = mainClass.lastIndexOf('.');
-        return (dot == - 1 || dot == mainClass.length() - 1) ? mainClass : mainClass.substring(dot + 1);
+        return (dot == -1 || dot == mainClass.length() - 1) ? mainClass : mainClass.substring(dot + 1);
     }
 
     /**

@@ -1,51 +1,11 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.Project;
-import org.gradle.api.Task;
-import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.ModuleVersionSelector;
-import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
-import org.gradle.api.attributes.Category;
-import org.gradle.api.attributes.LibraryElements;
-import org.gradle.api.component.AdhocComponentWithVariants;
-import org.gradle.api.file.Directory;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.internal.tasks.DefaultSourceSet;
-import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.plugins.JavaPlugin;
-import org.gradle.api.plugins.JavaPluginExtension;
-import org.gradle.api.provider.Provider;
-import org.gradle.api.tasks.Copy;
-import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.SourceSetOutput;
-import org.gradle.api.tasks.TaskCollection;
-import org.gradle.api.tasks.TaskContainer;
-import org.gradle.api.tasks.TaskProvider;
-import org.xtclang.plugin.internal.DefaultXtcCompilerExtension;
-import org.xtclang.plugin.internal.DefaultXtcExtension;
-import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
-import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
-import org.xtclang.plugin.tasks.XtcCompileTask;
-import org.xtclang.plugin.tasks.XtcExtractXdkTask;
-import org.xtclang.plugin.tasks.XtcRunTask;
-
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import static org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE;
 import static org.gradle.api.attributes.Category.LIBRARY;
 import static org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE;
 import static org.gradle.api.plugins.ApplicationPlugin.APPLICATION_GROUP;
 import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
-import static org.gradle.api.tasks.SourceSet.TEST_SOURCE_SET_NAME;
+
 import static org.xtclang.plugin.XtcPluginConstants.UNSPECIFIED;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
@@ -70,6 +30,50 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 
+import java.io.IOException;
+
+import java.net.URL;
+
+import java.nio.file.Files;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.gradle.api.Project;
+import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ModuleVersionSelector;
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition;
+import org.gradle.api.attributes.Category;
+import org.gradle.api.attributes.LibraryElements;
+import org.gradle.api.component.AdhocComponentWithVariants;
+import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileCollection;
+import org.gradle.api.internal.tasks.DefaultSourceSet;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.plugins.JavaPlugin;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.tasks.Copy;
+import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.SourceSetContainer;
+import org.gradle.api.tasks.SourceSetOutput;
+import org.gradle.api.tasks.TaskCollection;
+import org.gradle.api.tasks.TaskContainer;
+import org.gradle.api.tasks.TaskProvider;
+
+import org.xtclang.plugin.internal.DefaultXtcCompilerExtension;
+import org.xtclang.plugin.internal.DefaultXtcExtension;
+import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
+import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
+import org.xtclang.plugin.tasks.XtcCompileTask;
+import org.xtclang.plugin.tasks.XtcExtractXdkTask;
+import org.xtclang.plugin.tasks.XtcRunTask;
+
 /**
  * Base class for the Gradle XTC Plugin in a project context.
  */
@@ -90,12 +94,9 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     private static Set<String> resolveHiddenTaskNames(final TaskContainer tasks) {
-        return new HashSet<>() {
-            {
-                addAll(Set.of("jar", "classes"));
-                addAll(tasks.stream().map(Task::getName).filter(name -> name.endsWith("java")).collect(Collectors.toSet()));
-            }
-        };
+        final Set<String> hiddenTasks = new HashSet<>(Set.of("jar", "classes"));
+        hiddenTasks.addAll(tasks.stream().map(Task::getName).filter(name -> name.endsWith("java")).collect(Collectors.toSet()));
+        return hiddenTasks;
     }
 
     private void hideAndDisableTask(final String taskName) {
@@ -168,11 +169,11 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         tasks.withType(XtcRunTask.class).configureEach(runTask -> {
             runTask.dependsOn(XDK_EXTRACT_TASK_NAME);
             runTask.dependsOn(compileTasks);
-            logger.info("{} XtcRunTask named '{}': added dependency on: '{}' and '{}'", prefix, runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
+            logger.info("{} XtcRunTask named '{}': added dependency on: '{}' and '{}'",
+                prefix, runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
         });
         // We should increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
-        // probable a "modules" and "<sourceSetName>" modules task. TODO: Do this when getting rid of the Java base
-        // olugin.
+        // probable a "modules" and "<sourceSetName>" modules task. TODO: Do this when getting rid of the Java base plugin.
         compileTasks.forEach(task -> {
             final Set<SourceSet> sourceSets = taskSourceSets.get(task.getName());
             if (sourceSets == null || sourceSets.isEmpty()) {
@@ -180,7 +181,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             } else {
                 sourceSets.forEach(sourceSet -> {
                     final var processResourcesTasks = List.of(getProcessResourcesTaskName(sourceSet), getJavaProcessResourcesTaskName(sourceSet));
-                    logger.info("{} Adding resource dependency for compile task '{}' -> ({}, resource tasks: {})", prefix, task.getName(), sourceSets, processResourcesTasks);
+                    logger.info("{} Adding resource dependency for compile task '{}' -> ({}, resource tasks: {})",
+                        prefix, task.getName(), sourceSets, processResourcesTasks);
                     task.dependsOn(processResourcesTasks);
                 });
             }
@@ -208,12 +210,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     public static XtcCompilerExtension resolveXtcCompileExtension(final Project project) {
-        // TODO: Separate extensions for separate tasks, or just a global xtcRun applied to all? Decide later if we are per-sourceSet. It's not necessarily better or something we need.
+        // TODO: Separate extensions for separate tasks, or just a global xtcRun applied to all?
+        //  Decide later if we are per-sourceSet. It's not necessarily better or something we need.
         return ensureExtension(project, XTC_EXTENSION_NAME_COMPILER, DefaultXtcCompilerExtension.class);
     }
 
     public static XtcRuntimeExtension resolveXtcRuntimeExtension(final Project project) {
-        // TODO: Separate extensions for separate tasks, or just a global xtcRun applied to all? Decide later if we are per-sourceSet. It's not necessarily better or something we need.
+        // TODO: Separate extensions for separate tasks, or just a global xtcRun applied to all?
+        //  Decide later if we are per-sourceSet. It's not necessarily better or something we need.
         return ensureExtension(project, XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
     }
 
@@ -225,7 +229,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         return "src/" + sourceSet.getName() + '/' + XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
     }
 
-    @SuppressWarnings({"SameParameterValue", "unused"})
+    @SuppressWarnings({ "SameParameterValue", "unused" })
     static String locationFor(final Class<?> clazz) {
         return clazz.getProtectionDomain().getCodeSource().getLocation().toString();
     }
@@ -269,23 +273,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     }
 
     private static String getClassesTaskName(final SourceSet sourceSet) {
-        return isMainSourceSet(sourceSet) ? "classes" : sourceSet.getName() + "Classes";
+        return SourceSet.isMain(sourceSet) ? "classes" : sourceSet.getName() + "Classes";
     }
 
     private static String getProcessResourcesTaskName(final SourceSet sourceSet) {
-        return isMainSourceSet(sourceSet) ? "processXtcResources" : "process" + capitalize(sourceSet.getName()) + "XtcResources";
-    }
-
-    private static boolean isMainSourceSet(final SourceSet sourceSet) {
-        return MAIN_SOURCE_SET_NAME.equals(sourceSet.getName());
-    }
-
-    private static boolean isTestSourceSet(final SourceSet sourceSet) {
-        return TEST_SOURCE_SET_NAME.equals(sourceSet.getName());
+        return SourceSet.isMain(sourceSet) ? "processXtcResources" : "process" + capitalize(sourceSet.getName()) + "XtcResources";
     }
 
     private static String getJavaProcessResourcesTaskName(final SourceSet sourceSet) {
-        return isMainSourceSet(sourceSet) ? "processResources" : "process" + capitalize(sourceSet.getName()) + "Resources";
+        return SourceSet.isMain(sourceSet) ? "processResources" : "process" + capitalize(sourceSet.getName()) + "Resources";
     }
 
     /**
@@ -311,7 +307,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             final var outputDir = getXtcResourceOutputDirectory(project, sourceSet);
             task.from(resourceDirs);
             task.into(outputDir);
-            task.doLast(t -> logger.info("{} Processed XTC resources for source set: {} (srcDirs: {}, destination: {})", prefix, sourceSet.getName(), sourceSet.getResources().getSrcDirs(), outputDir.get()));
+            task.doLast(t -> logger.info("{} Processed XTC resources for source set: {} (srcDirs: {}, destination: {})",
+                prefix, sourceSet.getName(), sourceSet.getResources().getSrcDirs(), outputDir.get()));
         });
 
         compileTask.configure(task -> {
@@ -319,7 +316,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
             // TODO Fix more exact processResources semantics so that we use the build as resource path, and not the src. This works for first merge.
             if (forceRebuild.get()) {
-                logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.", prefix(projectName, compileTaskName), compileTaskName);
+                logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.",
+                    prefix(projectName, compileTaskName), compileTaskName);
                 considerNeverUpToDate(task);
             }
             // Register this task as an XTC language compiler. Not a Java compiler.
@@ -379,7 +377,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         tasks.register(XDK_VERSION_TASK_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Display XTC version for project, and sanity check its application.");
-            task.doLast(t -> logger.info("{} XTC (version '{}'); Semantic Version: '{}'", prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
+            task.doLast(t -> logger.info("{} XTC (version '{}'); Semantic Version: '{}'",
+                prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
         });
 
         tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
@@ -390,7 +389,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             task.doLast(t -> {
                 final var semanticVersion = getSemanticVersion();
                 final var file = version.get().getAsFile();
-                logger.info("{} Writing version information: '{}' to '{}'", prefix(projectName, XDK_VERSION_FILE_TASK_NAME), semanticVersion, file.getAbsolutePath());
+                logger.info("{} Writing version information: '{}' to '{}'",
+                    prefix(projectName, XDK_VERSION_FILE_TASK_NAME), semanticVersion, file.getAbsolutePath());
                 try {
                     Files.writeString(file.toPath(), semanticVersion + System.lineSeparator());
                 } catch (final IOException e) {
@@ -400,6 +400,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         });
     }
 
+    @SuppressWarnings("unused")
     public static SourceSet getMainSourceSet(final Project project) {
         return getSourceSets(project).getByName(MAIN_SOURCE_SET_NAME);
     }
@@ -447,12 +448,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         final var xtcModuleConsumerConfig = incomingXtcModuleDependencies(sourceSet);
         final var xtcModuleProducerConfig = outgoingXtcModules(sourceSet);
 
-        @SuppressWarnings("unused") final var xtcModule = configs.register(xtcModuleConsumerConfig, config -> {
-            config.setDescription("Configuration that contains location of the .xtc file created by other entities, so that they can be declared as dependencies.");
+        final var xtcModule = configs.register(xtcModuleConsumerConfig, config -> {
+            config.setDescription(
+                "Configuration that contains location of the .xtc file created by other entities, so that they can be declared as dependencies.");
             config.setCanBeResolved(true);
             config.setCanBeConsumed(false);
             addXtcModuleAttributes(config);
         });
+        logger.info("{} Created config '{}'", prefix, xtcModule.getName());
 
         final var xtcModuleProvider = configs.register(xtcModuleProducerConfig, config -> {
             config.setDescription("Configuration that contains location of the .xtc files produced by this project build.");
@@ -461,6 +464,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             config.setVisible(false);
             addXtcModuleAttributes(config);
         });
+        logger.info("{} Created config '{}'", prefix, xtcModuleProvider.getName());
 
         // Tell the system that the system may produce an artifact, which is the output directory for this sourceSet,
         // that will contain all xtc files built by the compile task for this source set. This makes it possible for
@@ -481,7 +485,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
         // Ensure that any produced XTC module files are publishable if we publish the xtcComponent.
         // (symmetrical to e.g. jar files and the "java" component)
-        // List.of(XTC_COMPONENT_VARIANT_COMPILE, XTC_COMPONENT_VARIANT_RUNTIME).forEach(v -> component.addVariantsFromConfiguration(xtcModuleProvider.get(), new JavaConfigurationVariantMapping(v, true)));
+        // List.of(XTC_COMPONENT_VARIANT_COMPILE, XTC_COMPONENT_VARIANT_RUNTIME).
+        // forEach(v -> component.addVariantsFromConfiguration(xtcModuleProvider.get(), new JavaConfigurationVariantMapping(v, true)));
     }
 
     private void createXdkDependencyConfigs() {
@@ -532,7 +537,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         project.artifacts(artifactHandler -> {
             final var location = getXdkContentsDir();
             artifactHandler.add(XDK_CONFIG_NAME_CONTENTS, location, artifact -> {
-                logger.info("{} Adding outgoing XDK contents artifact to project {} ({}) builtBy {} (dir).", prefix, projectName, location.get(), extractTask.getName());
+                logger.info("{} Adding outgoing XDK contents artifact to project {} ({}) builtBy {} (dir).",
+                    prefix, projectName, location.get(), extractTask.getName());
                 artifact.builtBy(extractTask);
                 artifact.setType(ArtifactTypeDefinition.DIRECTORY_TYPE);
             });
@@ -542,7 +548,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
     private XtcSourceDirectorySet createXtcSourceDirectorySet(final String parentName, final String parentDisplayName) {
         final String name = parentDisplayName + '.' + XTC_LANGUAGE_NAME;
         final String displayName = parentDisplayName + ' ' + XTC_LANGUAGE_NAME + " source";
-        logger.info("{} Creating XTC source directory set from (parentName: {} parentDisplayName: {}, name: {}, displayName: {})", prefix, parentName, parentDisplayName, name, displayName);
+        logger.info("{} Creating XTC source directory set from (parentName: {} parentDisplayName: {}, name: {}, displayName: {})",
+            prefix, parentName, parentDisplayName, name, displayName);
 
         final ObjectFactory objects = project.getObjects();
         final var xtcSourceDirectorySet = objects.newInstance(DefaultXtcSourceDirectorySet.class, objects.sourceDirectorySet(name, displayName));
@@ -585,7 +592,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             logger.info("{} Config '{}'; evaluating dependency resolutions", prefix, config.getName());
             config.getResolutionStrategy().eachDependency(dependency -> {
                 final var request = dependency.getRequested();
-                logger.info("{} Config '{}'    Requests dependency (artifact: {}, moduleId: {})", prefix, config.getName(), requestToNotation(request), request.getModule());
+                logger.info("{} Config '{}'    Requests dependency (artifact: {}, moduleId: {})",
+                    prefix, config.getName(), requestToNotation(request), request.getModule());
             });
         });
     }
@@ -615,7 +623,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
          */
         final var container = project.getExtensions().findByType(JavaPluginExtension.class);
         if (container == null) {
-            throw XtcProjectDelegate.buildException(project.getLogger(), prefix(project), "Internal error; was expected to have a Java extension container.");
+            throw buildException(project.getLogger(), prefix(project), "Internal error; was expected to have a Java extension container.");
         }
         return container;
     }

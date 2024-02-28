@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
+    id("org.xtclang.build.checkstyle")
     java
 }
 
@@ -111,7 +112,6 @@ tasks.withType<Test>().configureEach {
     if (enablePreview()) {
         jvmArgs("--enable-preview")
     }
-    maxHeapSize = getXdkProperty("$pprefix.maxHeap", "4G")
     testLogging {
         showStandardStreams = getXdkPropertyBoolean("$pprefix.test.stdout")
         if (showStandardStreams) {

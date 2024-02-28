@@ -1,13 +1,19 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.Project;
-import org.gradle.api.provider.Provider;
+import static java.util.Objects.requireNonNull;
+
+import static org.xtclang.plugin.XtcPluginConstants.JAVATOOLS_JAR_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MAGIC;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+
 import java.nio.file.Files;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -15,10 +21,8 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import static java.util.Objects.requireNonNull;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_MAGIC;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
+import org.gradle.api.Project;
+import org.gradle.api.provider.Provider;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -83,7 +87,7 @@ public final class XtcPluginUtils {
             if (!checkMagic) {
                 return true;
             }
-            try (final var in = new DataInputStream(new FileInputStream(file))) {
+            try (var in = new DataInputStream(new FileInputStream(file))) {
                 return (in.readInt() & 0xffff_ffffL) == XTC_MAGIC;
             } catch (final IOException e) {
                 return false;
@@ -114,7 +118,7 @@ public final class XtcPluginUtils {
             }
             final var path = file.getAbsolutePath();
             assert file.isFile();
-            try (final var jarFile = new JarFile(file)) {
+            try (var jarFile = new JarFile(file)) {
                 final Manifest m = jarFile.getManifest();
                 final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
                 if (implVersion == null) {
@@ -122,7 +126,7 @@ public final class XtcPluginUtils {
                 }
                 return implVersion.toString();
             } catch (final IOException e) {
-                throw new XtcBuildRuntimeException(e, "Not a valid 'javatools.jar': '{}'", path);
+                throw new XtcBuildRuntimeException(e, "Not a valid '{}': '{}'", path, JAVATOOLS_JAR_NAME);
             }
         }
 

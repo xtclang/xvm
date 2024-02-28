@@ -1,14 +1,16 @@
 package org.xtclang.plugin.launchers;
 
+import java.io.File;
+
+import java.util.Objects;
+import java.util.StringTokenizer;
+
 import org.gradle.api.Project;
 import org.gradle.process.ExecResult;
+
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.internal.DefaultXtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
-
-import java.io.File;
-import java.util.Objects;
-import java.util.StringTokenizer;
 
 @SuppressWarnings("unused")
 public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
@@ -25,7 +27,8 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         final var mainClassName = cmd.getMainClassName();
         final var jvmArgs = cmd.getJvmArgs();
         if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
-            logger.warn("{} WARNING: Launcher for mainClassName '{}' has non-default JVM args ({}). These will be ignored, as we are running a native launcher.", prefix, mainClassName, jvmArgs);
+            logger.warn("{} WARNING: Launcher for mainClassName '{}' has non-default JVM args ({}). These are ignored, as we are running a native launcher.",
+                prefix, mainClassName, jvmArgs);
         }
         return super.validateCommandLine(cmd);
     }

@@ -1,11 +1,11 @@
 package org.xtclang.plugin.launchers;
 
-import org.gradle.process.ExecResult;
-import org.gradle.process.internal.ExecException;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import org.gradle.process.ExecResult;
+import org.gradle.process.internal.ExecException;
 
 public final class XtcExecResult implements ExecResult {
     private final int exitValue;

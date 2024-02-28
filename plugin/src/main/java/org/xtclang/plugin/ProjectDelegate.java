@@ -1,5 +1,9 @@
 package org.xtclang.plugin;
 
+import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
+
+import java.net.URL;
+
 import org.gradle.StartParameter;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -16,10 +20,6 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
-
-import java.net.URL;
-
-import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
 
 public abstract class ProjectDelegate<T, R> {
     public static final boolean OVERRIDE_VERBOSE_LOGGING = "true".equalsIgnoreCase(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
@@ -86,8 +86,8 @@ public abstract class ProjectDelegate<T, R> {
 
     public static boolean hasVerboseLogging(final Project project) {
         return switch (getLogLevel(project)) {
-            case DEBUG, INFO -> true;
-            default -> OVERRIDE_VERBOSE_LOGGING;
+        case DEBUG, INFO -> true;
+        default -> OVERRIDE_VERBOSE_LOGGING;
         };
     }
 
@@ -103,7 +103,8 @@ public abstract class ProjectDelegate<T, R> {
         return buildException(logger, prefix, t, msg, args);
     }
 
-    public static XtcBuildRuntimeException buildException(final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
+    public static XtcBuildRuntimeException buildException(
+        final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
         logger.error(msg, t);
         return new XtcBuildRuntimeException(t, prefix + ": " + msg, args);
     }
@@ -177,12 +178,14 @@ public abstract class ProjectDelegate<T, R> {
     public void considerNeverUpToDate(final Task task) {
         task.getOutputs().cacheIf(t -> false);
         task.getOutputs().upToDateWhen(t -> false);
-        logger.warn("{} WARNING: '{}' is configured to always be treated as out of date, and will be run. Do not include this as a part of the normal build cycle!", prefix, task.getName());
+        logger.warn("{} WARNING: '{}' is configured to always be treated as out of date, and will be run.", prefix, task.getName());
     }
 
     protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {
         final var exts = project.getExtensions();
-        if (exts.findByType(clazz) == null) { // WARNING TODO TODO There can be several run and compile extensions (one per source set), if I understand conventions correctly. Or we cold just add the configuration inline to our source sets or have sections in the xtcXXX extensions or something.
+        // TODO: WARNING: there can be several run and compile extensions (one per source set), if I understand conventions correctly.
+        //    Or we cold just add the configuration inline to our source sets or have sections in the xtcXXX extensions or something.
+        if (exts.findByType(clazz) == null) {
             return exts.create(name, clazz, project);
         }
         return exts.getByType(clazz);

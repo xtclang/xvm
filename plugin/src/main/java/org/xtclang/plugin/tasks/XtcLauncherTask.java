@@ -1,5 +1,27 @@
 package org.xtclang.plugin.tasks;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xtclang.plugin.XtcPluginConstants.EMPTY_FILE_COLLECTION;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPENDENCY;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModule;
+import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
+import static org.xtclang.plugin.XtcPluginUtils.singleArgumentIterableProvider;
+
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -15,33 +37,13 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.process.ExecResult;
-import org.jetbrains.annotations.MustBeInvokedByOverriders;
+
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.launchers.BuildThreadLauncher;
 import org.xtclang.plugin.launchers.JavaExecLauncher;
 import org.xtclang.plugin.launchers.NativeBinaryLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
-
-import java.io.File;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static java.util.Objects.requireNonNull;
-import static org.xtclang.plugin.XtcPluginConstants.EMPTY_FILE_COLLECTION;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_CONTENTS;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPENDENCY;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModule;
-import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
-import static org.xtclang.plugin.XtcPluginUtils.singleArgumentIterableProvider;
 
 /**
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
@@ -76,7 +78,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             stdout.set(ext.getStdout());
         }
         if (ext.getStderr().isPresent()) {
-            stderr.set(ext.getStderr()); // TODO maybe rename the properties to standardOutput, errorOutput etc to conform to Gradle name standard. Right now we clearly want them to be separated from any defaults, though, so we know our launcher tasks pick the correct configured streams.
+            stderr.set(ext.getStderr()); // TODO maybe rename the properties to standardOutput, errorOutput etc to conform to Gradle name standard. Right now
+            // we clearly want them to be separated from any defaults, though, so we know our launcher tasks pick the correct configured streams.
         }
         this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
         this.isVerbose = objects.property(Boolean.class).convention(ext.getVerbose());
@@ -233,7 +236,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             logger.info("{} Created XTC launcher: Java process forked from build.", prefix);
             return new JavaExecLauncher<>(project, this);
         } else {
-            logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production use.", prefix);
+            logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
+                prefix);
             return new BuildThreadLauncher<>(project, this);
         }
     }
@@ -270,7 +274,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         final List<SourceSet> sourceSets = getDependentSourceSets();
         final List<String> xtcDependencyConfigNames = sourceSets.stream().map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();
         final FileCollection xtcDependencyConfigs = filesFromConfigs(xtcDependencyConfigNames);
-        logger.info("{} Incoming XTC module dependencies for source sets (execution phase: {}): {} -> {}", prefix(), isBeingExecuted(), sourceSets, xtcDependencyConfigNames);
+        logger.info("{} Incoming XTC module dependencies for source sets (execution phase: {}): {} -> {}", prefix(), isBeingExecuted(), sourceSets,
+                    xtcDependencyConfigNames);
         return xtcDependencyConfigs;
     }
 
@@ -328,7 +333,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 continue;
             }
             final List<File> dupes = modulePathSet.stream().filter(File::isFile).filter(f -> f.getName().equals(module.getName())).toList();
-            assert (!dupes.isEmpty());
+            assert !dupes.isEmpty();
             if (dupes.size() != 1) {
                 throw buildException("A dependency with the same name is defined in more than one ({}) location on the module path.", dupes.size());
             }

@@ -1,15 +1,16 @@
-
 package org.xtclang.plugin;
 
-import org.gradle.api.Project;
+import java.util.Set;
+
+import javax.inject.Inject;
+
 import org.gradle.api.Plugin;
+import org.gradle.api.Project;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.component.SoftwareComponentFactory;
 import org.gradle.api.plugins.JavaBasePlugin;
-import org.jetbrains.annotations.NotNull;
 
-import javax.inject.Inject;
-import java.util.Set;
+import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
 public class XtcPlugin implements Plugin<Project> {
@@ -18,6 +19,12 @@ public class XtcPlugin implements Plugin<Project> {
         JavaBasePlugin.class,
         XtcProjectPlugin.class
     );
+
+    @Override
+    public void apply(final Project project) {
+        final var plugins = project.getPluginManager();
+        REQUIRED_PLUGINS.forEach(plugins::apply);
+    }
 
     /**
      * A project scoped XTC plugin. Delegates is state on apply to a project
@@ -39,9 +46,4 @@ public class XtcPlugin implements Plugin<Project> {
         }
     }
 
-    @Override
-    public void apply(final Project project) {
-        final var plugins = project.getPluginManager();
-        REQUIRED_PLUGINS.forEach(plugins::apply);
-    }
 }

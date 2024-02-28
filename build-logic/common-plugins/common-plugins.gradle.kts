@@ -3,8 +3,6 @@ plugins {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$embeddedKotlinVersion")
-
     // TODO: Figure out how to get this to live in the version catalog instead. Since
     //  build logic for talking with GitHub needs this, and because that is compiled
     //  as a build-logic plugin, we are too early in the lifecycle to resolve from the

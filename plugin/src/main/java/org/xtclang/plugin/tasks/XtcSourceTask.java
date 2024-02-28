@@ -1,6 +1,16 @@
 package org.xtclang.plugin.tasks;
 
+import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.hasFileExtension;
+
+import java.io.File;
+
+import java.util.Set;
+
+import javax.inject.Inject;
+
 import groovy.lang.Closure;
+
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileTree;
@@ -16,16 +26,11 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
 import org.gradle.internal.Factory;
+
 import org.jetbrains.annotations.NotNull;
+
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
-
-import javax.inject.Inject;
-import java.io.File;
-import java.util.Set;
-
-import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.hasFileExtension;
 
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
     // This is just necessary since we assume some things about module definition source locations. It should not be exported.
@@ -104,7 +109,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Override
-    public @NotNull XtcSourceTask include(final String @NotNull ... includes) {
+    public @NotNull XtcSourceTask include(final String @NotNull... includes) {
         patternSet.include(includes);
         return this;
     }
@@ -129,7 +134,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     }
 
     @Override
-    public @NotNull XtcSourceTask exclude(final String @NotNull ... excludes) {
+    public @NotNull XtcSourceTask exclude(final String @NotNull... excludes) {
         patternSet.exclude(excludes);
         return this;
     }
@@ -179,7 +184,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
 
     /**
      * Update the lastModified on all source files to 'now' in the epoch. This is probably overkill, as it is used
-     * only for "forceRebuild", which really making the compileXtc<SourceSetName> tasks non-cacheable and never up
+     * only for "forceRebuild", which really making the compileXtc[SourceSetName] tasks non-cacheable and never up
      * to date during configuration, should be enough to accomplish. TODO: Verify this.
      */
     public void touchAllSource() {
@@ -201,7 +206,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
             logger.warn("{} Failed to update modification time stamp for file: {}", prefix(), file.getAbsolutePath());
         }
         logger.info("{} Touch file: {} (timestamp: {} -> {})", prefix(), file.getAbsolutePath(), oldLastModified, now);
-        assert(file.lastModified() == now);
+        assert file.lastModified() == now;
         return now;
     }
 
@@ -222,9 +227,10 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         assert file.isFile();
         final var topLevelSourceDirs = new java.util.HashSet<>(sourceSet.getAllSource().getSrcDirs());
         final var dir = file.getParentFile();
-        assert (dir != null && dir.isDirectory());
+        assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}", prefix(), file.getAbsolutePath(), isTopLevelSrc);
+        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
+            prefix(), file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
             logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
             return true;
