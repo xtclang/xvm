@@ -212,10 +212,16 @@ public class BuildUnicodeTables {
         }
 
         final var sb = new StringBuilder();
-        sb.append(name).append(": [index] \"str\" (freq) \n--------------------");
+        sb.append(name)
+            .append(": [index] \"str\" (freq) \n--------------------");
         int index = 0;
         for (final var entry : map.entrySet()) {
-            sb.append("\n[").append(index).append("] \"").append(entry.getKey()).append("\" (").append(entry.getValue()).append("x)");
+            sb.append("\n[")
+                .append(index)
+                .append("] \"")
+                .append(entry.getKey())
+                .append("\" (")
+                .append(entry.getValue()).append("x)");
             entry.setValue(index++);
         }
 
@@ -317,7 +323,9 @@ public class BuildUnicodeTables {
         @Override
         public String toString() {
             final var sb = new StringBuilder();
-            sb.append("UCD description=").append(description).append(", repertoire=\n");
+            sb.append("UCD description=")
+                .append(description)
+                .append(", repertoire=\n");
 
             int c = 0;
             for (final var item : repertoire) {

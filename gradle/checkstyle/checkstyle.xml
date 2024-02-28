@@ -122,7 +122,10 @@
         <module name="RedundantImport"/>
         <module name="RedundantModifier"/>
         <module name="RightCurly"/>
-        <module name="SeparatorWrap"/>
+        <module name="SeparatorWrap">
+            <property name="option" value="nl"/>
+            <property name="tokens" value="DOT"/>
+        </module>
         <module name="SimplifyBooleanExpression"/>
         <module name="SimplifyBooleanReturn"/>
         <module name="StaticVariableName"/>
