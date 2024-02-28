@@ -78,7 +78,7 @@ gradlePlugin {
             displayName = getXdkProperty("$pprefix.plugin.display.name")
             description = getXdkProperty("$pprefix.plugin.description")
             logger.info("$prefix Configuring gradlePlugin; pluginId=$pluginId, implementationClass=$implementationClass, displayName=$displayName, description=$description")
-            tags = listOfNotNull("xtc", "language", "ecstasy", "xdk")
+            tags = listOf("xtc", "language", "ecstasy", "xdk")
         }
     }
 }

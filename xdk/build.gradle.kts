@@ -1,9 +1,9 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
+import XdkDistribution.Companion.JAVATOOLS_JARFILE_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
-import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
@@ -40,16 +40,6 @@ val xdkProvider by configurations.registering {
     attributes {
         attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
         attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE))
-    }
-}
-
-val xtcUnicodeConsumer by configurations.registering {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    // TODO: Can likely remove these.
-    attributes {
-        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
-        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("unicodeDir"))
     }
 }
 
@@ -135,51 +125,55 @@ val publishPluginToLocalDist by tasks.registering {
  * resolve outputs to other tasks to their explicit destination files yet, unless they have run.
  * However, we _can_ use a from spec that refers to a task, which then becomes a dependency.
  */
+
+private fun distContents(): CopySpec {
+    return copySpec {
+        val resources = tasks.processResources.get().outputs.files.asFileTree
+        logger.info("$prefix Distribution contents need to use lazy resources.")
+        from(resources) {
+            eachFile {
+                includeEmptyDirs = false
+            }
+        }
+        from(xtcLauncherBinaries) {
+            into("bin")
+        }
+        from(configurations.xtcModule) {
+            into("lib")
+            exclude("**/javatools*")
+        }
+        from(configurations.xtcModule) {
+            into("javatools")
+            include("**/javatools*")
+        }
+        from(configurations.xdkJavaTools) {
+            rename {
+                assert(it.endsWith(".jar"))
+                it.replace(Regex("-.*.jar"), ".jar")
+            }
+            into("javatools") // should just be one file with corrected dependencies, assert?
+        }
+        if (shouldPublishPluginToLocalDist()) {
+            val published = publishPluginToLocalDist.get().outputs.files
+            from(published) {
+                into("repo")
+            }
+        }
+        from(tasks.xtcVersionFile)
+    }
+}
+
 distributions {
     main {
-        distributionBaseName = xdkDist.distributionName
-        assert(distributionBaseName.get() == "xdk") // TODO: Should really rename the distribution to "xdk" explicitly per convention.
-        contents {
-            /*
-             * 1) copy build plugin repository publication of the XTC plugin to install/xdk/repo
-             * 2) copy xdk resources/main/xdk to install/xdk/
-             * 3) copy javatools_launcher/bin/\* to install/xdk/bin/
-             * 4) copy XDK modules to install/xdk/lib
-             * 5) copy javatools.jar, turtle and bridge to install/xdk/javatools
-             */
-            val xdkTemplate = tasks.processResources.map { File(it.outputs.files.singleFile, "xdk") }
-            from(xdkTemplate) {
-            }
-            from(xtcLauncherBinaries) {
-                into("bin")
-            }
-            from(configurations.xtcModule) {
-                // This copies everything not a javatools jar into javatools, which is where XTC wants the
-                // javatools_turtle.xtc and javatools_bridge.xtc modules.
-                // TODO consider breaking out javatools_bridge.xtc, javatools_turtle.xtc into a separate configuration.
-                into("lib")
-                exclude("**/javatools*")
-            }
-            from(configurations.xtcModule) {
-                into("javatools")
-                include("**/javatools*")
-            }
-            from(configurations.xdkJavaTools) {
-                rename {
-                    assert(it.endsWith(".jar"))
-                    it.replace(Regex("-.*.jar"), ".jar")
-                }
-                into("javatools") // should just be one file with corrected dependencies, assert?
-            }
-            if (shouldPublishPluginToLocalDist()) {
-                val published = publishPluginToLocalDist.get().outputs.files
-                from(published) {
-                    into("repo")
-                }
-            }
-            from(tasks.xtcVersionFile)
-        }
+        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
     }
+    // The contents logic is broken out so we can use it in multiple distributions, should we want
+    // to build e.g. linux/windows/mac zip files. It's still not perfectly aligned with any release
+    // pipeline, or tools like JReleaser, but its a potential way to create more than one distribution and
+    // use them as the basis for any framework that works with Gradle installs and distros.
+    //create("xdk-macos") {
+    //    contentSpec("xdk", xdkDist.distributionVersion, "macosx")
+    //}
 }
 
 val cleanXdk by tasks.registering(Delete::class) {
@@ -211,11 +205,7 @@ val distExe by tasks.registering {
     description = "Use an NSIS compatible plugin to create the Windows .exe installer."
 
     dependsOn(distZip)
-    onlyIf {
-        xdkDist.shouldCreateWindowsDistribution()
-    }
 
-    // TODO: Why do we need this dependency? Likely just remove it.
     val nsi = file("src/main/nsi/xdkinstall.nsi")
     val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
     onlyIf {
@@ -274,10 +264,11 @@ val assembleDist by tasks.existing {
  */
 val installDist by tasks.existing {
     inputs.files(tasks.processXtcResources, tasks.processResources)
+    dependsOn(tasks.assembleDist)
     doLast {
         logger.info("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
         logger.info("$prefix Installation files:")
-        printTaskOutputs(INFO)
+        printTaskOutputs(LogLevel.INFO)
     }
 }
 
@@ -314,8 +305,8 @@ val installLocalDist by tasks.registering {
         // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
         listOf("xcc", "xec", "xtc").forEach {
             val symLink = File(binDir, it)
-            logger.info("$prefix Creating symlink for launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
-            Files.createSymbolicLink(symLink.toPath(), launcherExe.asFile.toPath())
+            logger.info("$prefix Copying launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
+            Files.copy(launcherExe.asFile.toPath(), symLink.toPath())
         }
     }
 }
@@ -323,5 +314,58 @@ val installLocalDist by tasks.registering {
 val test by tasks.existing {
     doLast {
         TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
+    }
+}
+
+/**
+ * Creates distribution contents based on a distribution name, version and classifier.
+ * This logic is used for the nain distribution artifact (named "xdk"), and the contents
+ * has been broken out into this function so that we can easily generate ore installations
+ * and distributions with slightly different contents, for example, based o OS, and with
+ * an OS specific launcher already in "bin".
+ */
+private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "") {
+    distributionBaseName = distName
+    version = distVersion
+    if (distClassifier.isNotEmpty()) {
+        @Suppress("UnstableApiUsage")
+        distributionClassifier = distClassifier
+    }
+
+    contents {
+        val xdkTemplate = tasks.processResources.map {
+            logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
+            File(it.outputs.files.singleFile, "xdk")
+        }
+        from(xdkTemplate) {
+            eachFile {
+                includeEmptyDirs = false
+            }
+        }
+        from(xtcLauncherBinaries) {
+            into("bin")
+        }
+        from(configurations.xtcModule) {
+            into("lib")
+            exclude(JAVATOOLS_JARFILE_PATTERN)
+        }
+        from(configurations.xtcModule) {
+            into("javatools")
+            include(JAVATOOLS_JARFILE_PATTERN)
+        }
+        from(configurations.xdkJavaTools) {
+            rename {
+                assert(it.endsWith(".jar"))
+                it.replace(Regex("-.*.jar"), ".jar")
+            }
+            into("javatools") // should just be one file with corrected dependencies, assert?
+        }
+        if (shouldPublishPluginToLocalDist()) {
+            val published = publishPluginToLocalDist.get().outputs.files
+            from(published) {
+                into("repo")
+            }
+        }
+        from(tasks.xtcVersionFile)
     }
 }

@@ -13,7 +13,7 @@ plugins {
 
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOfNotNull(xdk, plugin)
+private val includedBuildsWithPublications = listOf(xdk, plugin)
 
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
@@ -29,19 +29,13 @@ val installDist by tasks.registering {
     XdkDistribution.distributionTasks.forEach {
         dependsOn(xdk.task(":$it"))
     }
-    dependsOn(xdk.task(":installDist"))
+    dependsOn(xdk.task(":$name"))
 }
 
 val installLocalDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Build and overwrite any local distribution with the new distribution produced by the build."
     dependsOn(xdk.task(":$name"))
-}
-
-val install by tasks.registering {
-    doLast {
-        TODO("The 'install' task has been renamed to 'installDist', as per the common standard.")
-    }
 }
 
 /*
