@@ -197,9 +197,12 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     @Override
     public void executeTask() {
         super.executeTask();
+        maybeAddJvmDebugArg();
 
         final var prefix = prefix();
         final var sourceSet = getCompileSourceSet();
+
+        maybeAddJvmDebugArg();
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, getJvmArgs().get());
 
         if (getForceRebuild().get()) {

@@ -269,6 +269,7 @@ xtcRun {
 // This shows how to add a custom run task that overrides the global xtcRun config.
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
+    debug = true
     verbose = true // override a default from xtcRun
     module {
         moduleName = "EchoTest"

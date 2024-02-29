@@ -57,6 +57,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Property<OutputStream> stderr;
     protected final ListProperty<String> jvmArgs;
     protected final Property<Boolean> debug;
+    protected final Property<Integer> debugPort;
+    protected final Property<Boolean> debugSuspend;
     protected final Property<Boolean> isVerbose;
     protected final Property<Boolean> isFork;
     protected final Property<Boolean> showVersion;
@@ -66,11 +68,17 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected XtcLauncherTask(final Project project, final E ext) {
         super(project);
+
         this.ext = ext;
-        this.debug = objects.property(Boolean.class).value(ext.getDebug());
+
+        this.debug = objects.property(Boolean.class).convention(ext.getDebug());
+        this.debugPort = objects.property(Integer.class).convention(ext.getDebugPort());
+        this.debugSuspend = objects.property(Boolean.class).convention(ext.getDebugSuspend());
+
         this.stdin = objects.property(InputStream.class);
         this.stdout = objects.property(OutputStream.class);
         this.stderr = objects.property(OutputStream.class);
+
         if (ext.getStdin().isPresent()) {
             stdin.set(ext.getStdin());
         }
@@ -81,7 +89,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             stderr.set(ext.getStderr()); // TODO maybe rename the properties to standardOutput, errorOutput etc to conform to Gradle name standard. Right now
             // we clearly want them to be separated from any defaults, though, so we know our launcher tasks pick the correct configured streams.
         }
+
         this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
+
         this.isVerbose = objects.property(Boolean.class).convention(ext.getVerbose());
         this.isFork = objects.property(Boolean.class).convention(ext.getFork());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
@@ -130,6 +140,18 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Override
     public Property<Boolean> getDebug() {
         return debug;
+    }
+
+    @Input
+    @Override
+    public Property<Integer> getDebugPort() {
+        return debugPort;
+    }
+
+    @Input
+    @Override
+    public Property<Boolean> getDebugSuspend() {
+        return debugSuspend;
     }
 
     @Optional
@@ -237,7 +259,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return new JavaExecLauncher<>(project, this);
         } else {
             logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
-                prefix);
+                    prefix);
             return new BuildThreadLauncher<>(project, this);
         }
     }
@@ -355,5 +377,18 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected Set<File> resolveDirectories(final Provider<Directory> dirProvider) {
         return resolveDirectories(resolveFiles(project.files(dirProvider)));
+    }
+
+    private static char yesOrNo(final boolean value) {
+        return value ? 'y' : 'n';
+    }
+
+    protected final boolean maybeAddJvmDebugArg() {
+        if (getDebug().get()) {
+            jvmArg(String.format("-Xrunjdwp:transport=dt_socket,server=y,suspend=%c,address=%d", yesOrNo(getDebugSuspend().get()), getDebugPort().get()));
+            logger.lifecycle("{} Added debug argument: {}", prefix(), jvmArgs.get());
+            return true;
+        }
+        return false;
     }
 }
