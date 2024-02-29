@@ -249,7 +249,7 @@ public class SwitchExpression
             }
 
         // notify the case manager that we're finished collecting everything
-        fValid &= mgr.validateEnd(ctxCase, errs);
+        fValid = fValid && mgr.validateEnd(ctxCase, errs);
 
         ctx = ctx.exit();
 

@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -1123,21 +1124,18 @@ public class CaseManager<CookieType>
             return false;
             }
 
-        Object  oThisLo, oThisHi;
-        boolean fThisLoEx, fThisHiEx;
+        Object oThisLo, oThisHi;
         if (fRangeThis)
             {
             if (constThis instanceof RangeConstant constRange)
                 {
-                oThisLo = constRange.getFirst();
-                oThisHi = constRange.getLast();
+                oThisLo = constRange.getEffectiveLow();
+                oThisHi = constRange.getEffectiveHigh();
                 if (oThisLo instanceof ValueConstant valLo &&
                     oThisHi instanceof ValueConstant valHi)
                     {
-                    oThisLo   = valLo.getValue();
-                    oThisHi   = valHi.getValue();
-                    fThisLoEx = constRange.isFirstExcluded();
-                    fThisHiEx = constRange.isLastExcluded();
+                    oThisLo = valLo.getValue();
+                    oThisHi = valHi.getValue();
                     }
                 else
                     {
@@ -1151,8 +1149,7 @@ public class CaseManager<CookieType>
             }
         else
             {
-            oThisLo   = oThisHi   = ((ValueConstant) constThis).getValue();
-            fThisLoEx = fThisHiEx = false;
+            oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
             }
 
         if (!(oThisLo instanceof Comparable cmpThisLo &&
@@ -1161,21 +1158,18 @@ public class CaseManager<CookieType>
             return false;
             }
 
-        Object  oThatLo, oThatHi;
-        boolean fThatLoEx, fThatHiEx;
+        Object oThatLo, oThatHi;
         if (fRangeThat)
             {
             if (constThat instanceof RangeConstant constRange)
                 {
-                oThatLo = constRange.getFirst();
-                oThatHi = constRange.getLast();
+                oThatLo = constRange.getEffectiveLow();
+                oThatHi = constRange.getEffectiveHigh();
                 if (oThatLo instanceof ValueConstant valueLo &&
                     oThatHi instanceof ValueConstant valueHi)
                     {
-                    oThatLo   = valueLo.getValue();
-                    oThatHi   = valueHi.getValue();
-                    fThatLoEx = constRange.isFirstExcluded();
-                    fThatHiEx = constRange.isLastExcluded();
+                    oThatLo = valueLo.getValue();
+                    oThatHi = valueHi.getValue();
                     }
                 else
                     {
@@ -1189,49 +1183,21 @@ public class CaseManager<CookieType>
             }
         else
             {
-            oThatLo   = oThatHi   = ((ValueConstant) constThat).getValue();
-            fThatLoEx = fThatHiEx = false;
+            oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
             }
-        if (!(  oThatLo instanceof Comparable cmpThatLo &&
-                oThatHi instanceof Comparable cmpThatHi))
+        if (!(oThatLo instanceof Comparable cmpThatLo &&
+              oThatHi instanceof Comparable cmpThatHi))
             {
             return false;
             }
 
-        // this automatically works for ValueConstant types that have a corresponding Java type,
-        // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
         try
             {
-            if (cmpThisLo.compareTo(cmpThisHi) > 0)
-                {
-                Comparable cmpOops = cmpThisLo;
-                cmpThisLo = cmpThisHi;
-                cmpThisHi = cmpOops;
-
-                boolean fOops = fThisHiEx;
-                fThisHiEx = fThisLoEx;
-                fThisLoEx = fOops;
-                }
-            if (cmpThatLo.compareTo(cmpThatHi) > 0)
-                {
-                Comparable cmpOops = cmpThatLo;
-                cmpThatLo = cmpThatHi;
-                cmpThatHi = cmpOops;
-
-                boolean fOops = fThatHiEx;
-                fThatHiEx = fThatLoEx;
-                fThatLoEx = fOops;
-                }
-
             // this range covers that range if "this lo" <= "that lo" and "this hi" >= "that hi"
 
-            int nCmpLo = cmpThisLo.compareTo(cmpThatLo);
-            int nCmpHi = cmpThisHi.compareTo(cmpThatHi);
-
-            boolean fCoverLo = !fThisLoEx || fThatLoEx ? nCmpLo <= 0 : nCmpLo < 0;
-            boolean fCoverHi = !fThisHiEx || fThatHiEx ? nCmpHi >= 0 : nCmpHi > 0;
-
-            return  fCoverLo && fCoverHi;
+            // this automatically works for ValueConstant types that have a corresponding Java type,
+            // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
+            return cmpThisLo.compareTo(cmpThatLo) <= 0 && cmpThisHi.compareTo(cmpThatHi) >= 0;
             }
         catch (Exception e)
             {
@@ -1269,11 +1235,12 @@ public class CaseManager<CookieType>
                 return false;
                 }
 
-            int cCovered = 0;
             if (usesNonExactMatching())
                 {
                 // we know that the ranges don't intersect, but there is a possibility that some
                 // former values intersect with later ranges; so we need to account for those
+                Constant constBase  = typeCase.getCardinalBase();
+                BitSet   setCovered = new BitSet(cCardinality);
                 for (Constant constCase : m_listsetCase)
                     {
                     if (constCase instanceof MatchAnyConstant)
@@ -1283,38 +1250,23 @@ public class CaseManager<CookieType>
 
                     if (constCase instanceof RangeConstant constRange)
                         {
-                        cCovered += (int) constRange.size();
-
-                        // compensate for all previous intersections with this range
-                        for (Constant constPrev : m_listsetCase)
-                            {
-                            if (constPrev == constCase)
-                                {
-                                break;
-                                }
-
-                            if (!(constPrev instanceof RangeConstant) &&
-                                    covers(constCase, true, constPrev, false))
-                                {
-                                cCovered--;
-                                }
-                            }
+                        int nLo = getOrdinal(constRange.getEffectiveLow(),  constBase);
+                        int nHi = getOrdinal(constRange.getEffectiveHigh(), constBase);
+                        setCovered.set(nLo, nHi + 1); // exclusive "toIndex"
                         }
                     else
                         {
-                        cCovered++;
+                        setCovered.set(getOrdinal(constCase, constBase));
                         }
                     }
+                return setCovered.cardinality() == cCardinality;
                 }
             else
                 {
                 // without a wildcard or ranges (since we know that the simple cases don't
                 // intersect) the answer is simple
-                cCovered = cCases;
+                return cCardinality == cCases;
                 }
-
-            assert cCardinality >= cCovered;
-            return cCardinality == cCovered;
             }
 
         // there are multiple columns; be reasonable on the number of possible combinations
@@ -1398,17 +1350,9 @@ public class CaseManager<CookieType>
             }
         else if (constCase instanceof RangeConstant constRange)
             {
-            Constant constFirst = constRange.getFirst();
-            Constant constLast  = constRange.getLast();
-            boolean  fReverse   = constRange.isReverse();
-            Constant constBase  = aconstBase[iCond];
-
-            IntConstant constMin = (IntConstant)
-                (fReverse ? constLast : constFirst).apply(Token.Id.SUB, constBase);
-            IntConstant constMax = (IntConstant)
-                (fReverse ? constFirst : constLast).apply(Token.Id.SUB, constBase);
-            int nMin = constMin.getValue().getInt();
-            int nMax = constMax.getValue().getInt();
+            Constant constBase = aconstBase[iCond];
+            int      nMin      = getOrdinal(constRange.getEffectiveLow() , constBase);
+            int      nMax      = getOrdinal(constRange.getEffectiveHigh(), constBase);
 
             for (int i = nMin; i <= nMax; i++)
                 {
@@ -1418,10 +1362,15 @@ public class CaseManager<CookieType>
             }
         else
             {
-            IntConstant constOrdinal = (IntConstant) constCase.apply(Token.Id.SUB, aconstBase[iCond]);
-            anPoint[iCond] = constOrdinal.getValue().getInt();
+            anPoint[iCond] = getOrdinal(constCase, aconstBase[iCond]);
             processCondition(cube, iCond + 1, anPoint, cCondVals, aconstCase, aconstBase);
             }
+        }
+
+    private static int getOrdinal(Constant constVal, Constant constBase)
+        {
+        IntConstant constSub = (IntConstant) constVal.apply(Token.Id.SUB, constBase);
+        return constSub.getIntValue().getInt();
         }
 
     /**

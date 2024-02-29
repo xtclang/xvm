@@ -32,7 +32,8 @@ public class RangeConstant
      * @param const1  the value of the first constant
      * @param const2  the value of the second constant
      */
-    public RangeConstant(ConstantPool pool, Constant const1, boolean fExclude1, Constant const2, boolean fExclude2)
+    public RangeConstant(ConstantPool pool, Constant const1, boolean fExclude1,
+                                            Constant const2, boolean fExclude2)
         {
         super(pool);
 
@@ -196,31 +197,35 @@ public class RangeConstant
         }
 
     /**
-     * @return the number of elements in the interval (inclusive)
+     * @return the number of elements in the interval
      */
     public long size()
         {
-        assert isInterval();
-
-        Constant constFirst = getEffectiveFirst();
-        Constant constLast  = getEffectiveLast();
-        boolean  fReverse   = isReverse();
-        Constant constLo    = fReverse ? constLast : constFirst;
-        Constant constHi    = fReverse ? constFirst : constLast;
+        Constant constLo = getEffectiveLow();
+        Constant constHi = getEffectiveHigh();
 
         Constant constGT = constLo.apply(Id.COMP_GT, constHi);
         if (getConstantPool().valTrue().equals(constGT))
             {
-            return m_fExclude1 || m_fExclude2 ? 0 : 1;
+            // lo > hi, e.g. "0 >..< 1" or "1 ..< 1"
+            return 0;
             }
 
+        return sub(constHi, constLo) + 1;
+        }
+
+    /**
+     * @return the distance between two constants (can be negative)
+     */
+    private static long sub(Constant const1, Constant const2)
+        {
         try
             {
-            return constHi.apply(Id.SUB, constLo).getIntValue().getLong() + 1;
+            return const1.apply(Id.SUB, const2).getIntValue().getLong();
             }
         catch (RuntimeException e)
             {
-            return constHi.getIntValue().sub(constLo.getIntValue()).getLong() + 1;
+            return const1.getIntValue().sub(const2.getIntValue()).getLong();
             }
         }
 
@@ -233,7 +238,8 @@ public class RangeConstant
 
         Constant constFirst = getFirst();
         return isFirstExcluded()
-                ? constFirst.apply(isReverse() ? Id.SUB : Id.ADD, getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
+                ? constFirst.apply(isReverse() ? Id.SUB : Id.ADD,
+                        getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
                 : constFirst;
         }
 
@@ -246,8 +252,25 @@ public class RangeConstant
 
         Constant constLast = getLast();
         return isLastExcluded()
-            ? constLast.apply(isReverse() ? Id.ADD : Id.SUB, getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
+            ? constLast.apply(isReverse() ? Id.ADD : Id.SUB,
+                        getConstantPool().ensureLiteralConstant(Format.IntLiteral, "1"))
             : constLast;
+        }
+
+    /**
+     * @return the effective lower bound value in the interval (ie if it were inclusive)
+     */
+    public Constant getEffectiveLow()
+        {
+        return isReverse() ? getEffectiveLast() : getEffectiveFirst();
+        }
+
+    /**
+     * @return the effective high value in the interval (ie if it were inclusive)
+     */
+    public Constant getEffectiveHigh()
+        {
+        return isReverse() ? getEffectiveFirst() : getEffectiveLast();
         }
 
 
@@ -435,4 +458,34 @@ public class RangeConstant
      * True iff the second value of the range is excluded.
      */
     private final boolean m_fExclude2;
+
+    /**
+     * Unfortunately, there is currently no way to write a standalone test for RangeConstant since
+     * it requires a real ConstantPool. This function is just a sanity check to run in the debugger.
+     */
+    public static void testSize(ConstantPool pool)
+        {
+        IntConstant n0 = pool.ensureIntConstant(0);
+        IntConstant n1 = pool.ensureIntConstant(1);
+
+        RangeConstant r0e0e = pool.ensureRangeConstant(n0, true,  n0, true);  // 0>..<0
+        RangeConstant r0e0i = pool.ensureRangeConstant(n0, true,  n0, false); // 0>..0
+        RangeConstant r0i0e = pool.ensureRangeConstant(n0, false, n0, true);  // 0..<0
+        RangeConstant r0i0i = pool.ensureRangeConstant(n0, false, n0, false); // 0..0
+
+        assert r0e0e.size() == 0;
+        assert r0e0i.size() == 0;
+        assert r0i0e.size() == 0;
+        assert r0i0i.size() == 1;
+
+        RangeConstant r0e1e = pool.ensureRangeConstant(n0, true,  n1, true);  // 0>..<1
+        RangeConstant r0e1i = pool.ensureRangeConstant(n0, true,  n1, false); // 0>..1
+        RangeConstant r0i1e = pool.ensureRangeConstant(n0, false, n1, true);  // 0..<1
+        RangeConstant r0i1i = pool.ensureRangeConstant(n0, false, n1, false); // 0..1
+
+        assert r0e1e.size() == 0;
+        assert r0e1i.size() == 1;
+        assert r0i1e.size() == 1;
+        assert r0i1i.size() == 2;
+        }
     }

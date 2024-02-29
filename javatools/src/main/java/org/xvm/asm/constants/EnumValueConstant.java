@@ -11,6 +11,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.util.PackedInteger;
+
 
 /**
  * Represent a singleton instance of an enum value class.
@@ -100,6 +102,15 @@ public class EnumValueConstant
                 ? this
                 : (EnumValueConstant) getConstantPool().register(
                         new EnumValueConstant(getConstantPool(), constNew));
+        }
+
+    @Override
+    public PackedInteger getIntValue()
+        {
+        int iOrdinal = getPresumedOrdinal();
+        return iOrdinal >= 0
+                ? new PackedInteger(iOrdinal)
+                : super.getIntValue();
         }
 
     @Override

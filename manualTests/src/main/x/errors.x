@@ -139,4 +139,14 @@ module TestCompilerErrors {
 
         i = 2;  // should not compile - cannot be assigned to
     }
+
+    enum Group {A, B, C, D, E, F}
+    Int testDuplicateCase(Group g) {
+        return switch (g) // should not compile; default is missing
+            {
+            case C:    1;
+            case B..D: 2;
+            case A..E: 3;
+            };
+    }
 }

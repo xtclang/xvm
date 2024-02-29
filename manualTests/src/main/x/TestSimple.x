@@ -1,16 +1,14 @@
 module TestSimple {
     @Inject Console console;
 
-    void run() {
-        String s = "hello    there";
-        console.print(s.split(' '));       // old behavior
-        console.print(s.split(' ', True)); // new behavior
-    }
+    enum Group {A, B, C, D, E, F}
 
-    class Test(String value) {
-        private String values;
-        construct(String value) {
-            this.values = values; // causes a compiler warning
-        }
+    Int test(Group g) {
+        return switch (g)
+            {
+            case C:    1;
+            case B..D: 2; // this used to assert in the compiler
+            case A..F: 3;
+            };
     }
 }
