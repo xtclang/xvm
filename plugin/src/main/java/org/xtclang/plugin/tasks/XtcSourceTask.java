@@ -230,7 +230,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
         logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
-            prefix(), file.getAbsolutePath(), isTopLevelSrc);
+                prefix(), file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
             logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());
             return true;

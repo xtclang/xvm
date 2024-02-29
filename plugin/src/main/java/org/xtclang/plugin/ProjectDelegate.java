@@ -104,7 +104,7 @@ public abstract class ProjectDelegate<T, R> {
     }
 
     public static XtcBuildRuntimeException buildException(
-        final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
+            final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
         logger.error(msg, t);
         return new XtcBuildRuntimeException(t, prefix + ": " + msg, args);
     }

@@ -48,10 +48,10 @@ import org.xtclang.plugin.launchers.XtcLauncher;
  * <p>
  * We add a default run task to an XTC project. The default is either run nothing, or run everything.
  * First it looks in xtcRun and tries to run the modules from there.
- *    If no modules are there, we just say "nothing to run"
- *    Later - support command line modules, if we don't want to just keep that logic in build scripts, which is fine and can be lazy too.
- *    If there is a module command line, we replace the xtcRun modules with these, and we leave the tasks alone.
- *    They still override, but if you haven't touched the default xtcRun task that does what you want, i.e. runXtc -PmoduleName=foo
+ * If no modules are there, we just say "nothing to run"
+ * Later - support command line modules, if we don't want to just keep that logic in build scripts, which is fine and can be lazy too.
+ * If there is a module command line, we replace the xtcRun modules with these, and we leave the tasks alone.
+ * They still override, but if you haven't touched the default xtcRun task that does what you want, i.e. runXtc -PmoduleName=foo
  * If there is a module config in the task, it overrides/replaces those totally.
  * <p>
  * We should easily be able to create XTC run tasks of our own
@@ -76,7 +76,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
      * needed types have been resolved.
      *
-     * @param project  Project
+     * @param project Project
      */
     @Inject
     public XtcRunTask(final Project project) {
@@ -219,7 +219,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         if (isEmpty()) {
             logger.warn("{} Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.",
-                prefix, ext.getName(), getName());
+                    prefix, ext.getName(), getName());
             return emptyList();
         }
 
@@ -254,10 +254,10 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     @SuppressWarnings("UnusedReturnValue")
     private ExecResult runSingleModule(
-        final XtcRunModule runConfig,
-        final XtcLauncher<XtcRuntimeExtension,
-        ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher,
-        final CommandLine cmd) {
+            final XtcRunModule runConfig,
+            final XtcLauncher<XtcRuntimeExtension,
+            ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher,
+            final CommandLine cmd) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
         logger.info("{} Executing resolved xtcRuntime module closure: {}", prefix(), runConfig);

@@ -28,7 +28,7 @@ public class NativeBinaryLauncher<E extends XtcLauncherTaskExtension, T extends 
         final var jvmArgs = cmd.getJvmArgs();
         if (DefaultXtcLauncherTaskExtension.hasModifiedJvmArgs(jvmArgs)) {
             logger.warn("{} WARNING: Launcher for mainClassName '{}' has non-default JVM args ({}). These are ignored, as we are running a native launcher.",
-                prefix, mainClassName, jvmArgs);
+                    prefix, mainClassName, jvmArgs);
         }
         return super.validateCommandLine(cmd);
     }

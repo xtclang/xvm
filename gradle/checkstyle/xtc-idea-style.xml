@@ -48,6 +48,8 @@
         <emptyLine />
         <package name="java.util" withSubpackages="true" static="false" />
         <emptyLine />
+        <package name="javax" withSubpackages="true" static="false" />
+        <emptyLine />
         <package name="groovy" withSubpackages="true" static="false" />
         <emptyLine />
         <package name="kotlin" withSubpackages="true" static="false" />
@@ -86,7 +88,7 @@
     <option name="WHILE_BRACE_FORCE" value="3" />
     <option name="FOR_BRACE_FORCE" value="3" />
     <indentOptions>
-      <option name="CONTINUATION_INDENT_SIZE" value="4" />
+      <option name="CONTINUATION_INDENT_SIZE" value="8" />
     </indentOptions>
     <arrangement>
       <groups />

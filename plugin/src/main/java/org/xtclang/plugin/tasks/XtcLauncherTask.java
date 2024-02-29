@@ -237,7 +237,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             return new JavaExecLauncher<>(project, this);
         } else {
             logger.warn("{} WARNING: Created XTC launcher: Running launcher in the same thread as the build process. This is not recommended for production",
-                prefix);
+                    prefix);
             return new BuildThreadLauncher<>(project, this);
         }
     }

@@ -117,7 +117,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         if (resolvedFromConfig != null && resolvedFromXdk != null) {
             if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
                 logger.warn("{} Different '{}' files resolved, preferring the non-XDK version: {}",
-                    prefix, JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath());
+                        prefix, JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath());
                 return processJar(resolvedFromConfig);
             }
         }
@@ -125,7 +125,7 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
         if (resolvedFromConfig != null) {
             assert resolvedFromXdk == null;
             logger.info("{} Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})",
-                prefix, JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath(), versionConfig);
+                    prefix, JAVATOOLS_JAR_NAME, resolvedFromConfig.getAbsolutePath(), versionConfig);
             return processJar(resolvedFromConfig);
         }
 
