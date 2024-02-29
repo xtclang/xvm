@@ -45,7 +45,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         final var env = System.getenv();
         this.debug = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG", "false")));
         this.debugPort = objects.property(Integer.class).convention(Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", "4711")));
-        this.debugSuspend = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG_SUSPEND", "false")));
+        this.debugSuspend = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG_SUSPEND", "true")));
         this.jvmArgs = objects.listProperty(String.class).convention(DEFAULT_JVM_ARGS);
         this.isVerbose = objects.property(Boolean.class).convention(false);
         this.isFork = objects.property(Boolean.class).convention(true);

@@ -184,9 +184,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     public void executeTask() {
         super.executeTask();
 
-        maybeAddJvmDebugArg();
-
-        final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, getJvmArgs().get());
+        final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, resolveJvmArgs());
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getIsVerbose().get());
         // When using the Gradle XTC plugin, having the 'xec' runtime decide to recompile stuff, is not supposed to be a thing.

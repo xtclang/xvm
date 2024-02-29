@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -383,12 +384,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return value ? 'y' : 'n';
     }
 
-    protected final boolean maybeAddJvmDebugArg() {
+    protected final List<String> resolveJvmArgs() {
+        final var list = new ArrayList<>(getJvmArgs().get());
         if (getDebug().get()) {
-            jvmArg(String.format("-Xrunjdwp:transport=dt_socket,server=y,suspend=%c,address=%d", yesOrNo(getDebugSuspend().get()), getDebugPort().get()));
+            list.add(String.format("-Xrunjdwp:transport=dt_socket,server=y,suspend=%c,address=%d", yesOrNo(getDebugSuspend().get()), getDebugPort().get()));
             logger.lifecycle("{} Added debug argument: {}", prefix(), jvmArgs.get());
-            return true;
         }
-        return false;
+        return Collections.unmodifiableList(list);
     }
 }
