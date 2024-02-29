@@ -269,6 +269,13 @@ xtcRun {
 // This shows how to add a custom run task that overrides the global xtcRun config.
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
+
+    // The default debugger settings are debug = false, debugPort = 4711 and debugSuspend = true
+    // If you run with debugSuspend = false, you can attacha devbugger to the debugPort at any time.
+    //debug = true
+    //debugPort = 5005
+    //debugSuspend = false
+
     verbose = true // override a default from xtcRun
     module {
         moduleName = "EchoTest"

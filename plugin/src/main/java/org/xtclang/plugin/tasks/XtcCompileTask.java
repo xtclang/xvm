@@ -200,7 +200,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
         final var prefix = prefix();
         final var sourceSet = getCompileSourceSet();
-        final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, getJvmArgs().get());
+        final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
         if (getForceRebuild().get()) {
             logger.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());

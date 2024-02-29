@@ -30,7 +30,11 @@ public interface XtcLauncherTaskExtension extends Named {
 
     Property<Boolean> getDebug();
 
-    default void jvmArg(String arg) {
+    Property<Integer> getDebugPort();
+
+    Property<Boolean> getDebugSuspend();
+
+    default void jvmArg(final String arg) {
         jvmArgs(arg);
     }
 
