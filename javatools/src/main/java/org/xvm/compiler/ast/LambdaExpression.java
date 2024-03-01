@@ -927,9 +927,9 @@ public class LambdaExpression
     public AstNode clone()
         {
         // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression exprClone = (LambdaExpression) super.clone();
-        exprClone.m_lambda = null;
-        return exprClone;
+        LambdaExpression that = (LambdaExpression) super.clone();
+        that.m_lambda = null;
+        return that;
         }
 
     @Override

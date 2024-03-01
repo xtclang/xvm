@@ -1184,6 +1184,32 @@ public class NamedTypeExpression
         }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public AstNode clone()
+        {
+        NamedTypeExpression that = (NamedTypeExpression) super.clone();
+        // the "m_exprDynamic" is not a child and has to be handled manually
+        if (m_exprDynamic != null)
+            {
+            that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
+            }
+        return that;
+        }
+
+    @Override
+    protected void discard(boolean fRecurse)
+        {
+        super.discard(fRecurse);
+
+        if (fRecurse && m_exprDynamic != null)
+            {
+            m_exprDynamic.discard(fRecurse);
+            }
+        }
+
+
     // ----- helper methods ------------------------------------------------------------------------
 
     /**

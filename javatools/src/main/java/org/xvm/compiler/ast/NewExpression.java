@@ -158,15 +158,15 @@ public class NewExpression
     @Override
     public AstNode clone()
         {
-        NewExpression exprClone = (NewExpression) super.clone();
+        NewExpression that = (NewExpression) super.clone();
         // the "body" is not a child and has to be handled manually
         if (body != null)
             {
-            exprClone.body = (anon == null)
+            that.body = anon == null
                     ? (StatementBlock) body.clone()
-                    : exprClone.anon.body;
+                    : that.anon.body;
             }
-        return exprClone;
+        return that;
         }
 
     @Override
