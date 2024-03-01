@@ -1,8 +1,10 @@
+import ecstasy.Freezable;
+
 import ecstasy.collections.Array.ArrayDelegate;
 import ecstasy.collections.Array.Mutability;
 
 /**
- * The native ArrayDelegate<Object> class.
+ * The native ArrayDelegate<Element> class.
  */
 class RTDelegate<Element>
         implements ArrayDelegate<Element> {
@@ -34,9 +36,11 @@ class RTDelegate<Element>
     /**
      * Native constructor helper; fill the array from the Iterable source.
      */
-    private static Array fillFromIterable(Array array, Iterable iterable, Mutability mutability) {
-        loop: for (Object element : iterable) {
-            array[loop.count] = element;
+    private static <Element> Array<Element> fillFromIterable(
+            Array<Element> array, Iterable<Element> iterable, Mutability mutability) {
+
+        loop: for (Element element : iterable) {
+            array[loop.count] = mutability == Constant ? Freezable.frozen(element) : element;
         }
         return array.reify(mutability);
     }

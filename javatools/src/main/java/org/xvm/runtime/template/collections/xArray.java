@@ -87,6 +87,91 @@ public class xArray
         }
 
     @Override
+    public void initNative()
+        {
+        // register array specializations
+        ConstantPool              pool         = f_container.getConstantPool();
+        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
+
+        mapTemplates.put(pool.typeBit(),  xBitArray.INSTANCE);
+        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
+
+        ARRAY_TEMPLATES = mapTemplates;
+
+        // cache the constructors
+        for (MethodStructure method :
+                ((MultiMethodStructure) getStructure().getChild("construct")).methods())
+            {
+            if (method.getAccess() == Constants.Access.PUBLIC)
+                {
+                TypeConstant typeParam0 = method.getParam(0).getType();
+
+                if (method.getParamCount() == 1)
+                    {
+                    if (typeParam0.equals(pool.typeInt64()))
+                        {
+                        // 0) construct(Int capacity = 0)
+                        CONSTRUCTORS[0] = method.getIdentityConstant();
+                        }
+                    else
+                        {
+                        // 3) construct(Array that)
+                        CONSTRUCTORS[3] = method.getIdentityConstant();
+                        }
+                    }
+                else
+                    {
+                    // 1) construct(Int size, Element | function Element (Int) supply)
+                    // 2) construct(Mutability mutability, Element... elements)
+                    if (typeParam0.equals(pool.typeInt64()))
+                        {
+                        CONSTRUCTORS[1] = method.getIdentityConstant();
+                        }
+                    else
+                        {
+                        CONSTRUCTORS[2] = method.getIdentityConstant();
+                        }
+                    }
+                }
+            else
+                {
+                // protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
+                CONSTRUCTORS[4] = method.getIdentityConstant();
+                }
+            }
+
+        // cache helper methods
+        FILL_FROM_ITERABLE = xRTDelegate.INSTANCE.getStructure().findMethod("fillFromIterable", 4);
+        CREATE_LIST_SET    = Utils.CONST_HELPER.findMethod("createListSet", 2);
+
+        // cache Mutability template
+        MUTABILITY = (xEnum) f_container.getTemplate("collections.Array.Mutability");
+
+        OBJECT_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeObject()));
+        STRING_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeString()));
+        BOOLEAN_ARRAY_CLZ = f_container.resolveClass(pool.ensureArrayType(pool.typeBoolean()));
+        CHAR_ARRAY_CLZ    = f_container.resolveClass(pool.ensureArrayType(pool.typeChar()));
+        BIT_ARRAY_CLZ     = f_container.resolveClass(pool.typeBitArray());
+        BYTE_ARRAY_CLZ    = f_container.resolveClass(pool.typeByteArray());
+
+        // mark native properties and methods
+        markNativeProperty("delegate");
+        markNativeProperty("mutability");
+
+        markNativeMethod("clear",      VOID, THIS);
+        markNativeMethod("getElement", INT,  ELEMENT_TYPE);
+        markNativeMethod("setElement", null, VOID);
+        markNativeMethod("elementAt",  INT,  null);
+        markNativeMethod("slice",      null, THIS);
+        markNativeMethod("deleteAll",  null, THIS);
+
+        ClassTemplate mixinNumber = f_container.getTemplate("collections.arrays.NumberArray");
+        mixinNumber.markNativeMethod("asBitArray" , VOID, null);
+
+        invalidateTypeInfo();
+        }
+
+    @Override
     public boolean isGenericHandle()
         {
         return false;
@@ -172,6 +257,192 @@ public class xArray
 
             return frame.pushStack(createImmutableArray(clzArray, ahValue));
             }
+        }
+
+    @Override
+    public int construct(Frame frame, MethodStructure constructor, TypeComposition clzArray,
+                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
+        {
+        IdentityConstant idConstruct = constructor.getIdentityConstant();
+        int              nScenario;
+        for (nScenario = 0; nScenario < 4; nScenario++)
+            {
+            if (CONSTRUCTORS[nScenario].equals(idConstruct))
+                {
+                break;
+                }
+            }
+
+        return switch (nScenario)
+            {
+            case 0  -> construct0(frame, clzArray, ahVar, iReturn);
+            case 1  -> construct1(frame, clzArray, ahVar, iReturn);
+            case 2  -> construct2(frame, clzArray, ahVar, iReturn);
+            case 3  -> construct3(frame, clzArray, ahVar, iReturn);
+            case 4  -> construct4(frame, clzArray, ahVar, iReturn);
+            default -> frame.raiseException("Unknown constructor: " + idConstruct.getValueString());
+            };
+        }
+
+    /**
+     * Native implementation of "construct(Int capacity = 0)".
+     */
+    private int construct0(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+        {
+        ObjectHandle hCapacity = ahVar[0];
+        long         cCapacity = hCapacity == ObjectHandle.DEFAULT ?
+                                    0 : ((JavaLong) hCapacity).getValue();
+
+        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
+            }
+
+        ObjectHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Mutable);
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Native implementation of "construct(Int size, Element | function Element (Int) supply)".
+     */
+    private int construct1(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+        {
+        JavaLong hCapacity = (JavaLong) ahVar[0];
+        long     cCapacity = hCapacity.getValue();
+
+        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
+            {
+            return frame.raiseException(
+                xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
+            }
+
+        ArrayHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Fixed);
+        int cSize = (int) cCapacity;
+        if (cSize > 0)
+            {
+            hArray.m_hDelegate.m_cSize = cSize;
+
+            ObjectHandle hValue = ahVar[1];
+            // we could get here either naturally (e.g. new Array<String>(7, "");)
+            // or via the ArrayExpression (e.g. new Int[7])
+            TypeConstant typeEl = clzArray.getType().getParamType(0);
+            if (hValue == ObjectHandle.DEFAULT)
+                {
+                hValue = frame.getConstHandle(typeEl.getDefaultValue());
+                if (Op.isDeferred(hValue))
+                    {
+                    return hValue.proceed(frame, frameCaller ->
+                        fill(frameCaller, hArray, cSize, frameCaller.popStack(), iReturn));
+                    }
+                }
+            else
+                {
+                ConstantPool pool      = frame.poolContext();
+                TypeConstant typeValue = hValue.getType();
+
+                IsFunction:
+                if (typeValue.isA(pool.typeFunction()))
+                    {
+                    TypeConstant[] atypeParam = pool.extractFunctionParams(typeValue);
+                    if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt64()))
+                        {
+                        break IsFunction;
+                        }
+                    TypeConstant[] atypeRet = pool.extractFunctionReturns(typeValue);
+                    if (atypeRet.length != 1 || !atypeRet[0].isA(typeEl))
+                        {
+                        break IsFunction;
+                        }
+
+                    FunctionHandle      hfnSupplier = (FunctionHandle) hValue;
+                    int                 cArgs       = hfnSupplier.getVarCount();
+                    ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
+                    Utils.ValueSupplier supplier    = (frameCaller, index) ->
+                        {
+                        ahArg[0] = xInt64.makeHandle(index);
+                        return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
+                        };
+                    return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);
+                    }
+                }
+            return fill(frame, hArray, cSize, hValue, iReturn);
+            }
+        return frame.assignValue(iReturn, hArray);
+        }
+
+    /**
+     * Native implementation of "construct(Mutability mutability, Iterable<Element> elements)".
+     */
+    private int construct2(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+        {
+        // call RTDelegate.fillFromIterable() helper naturally
+        ObjectHandle hMutability = ahVar[0];
+        ObjectHandle hIterable   = ahVar[1];
+
+        int cCapacity = hIterable instanceof ArrayHandle hA
+                ? (int) hA.m_hDelegate.m_cSize
+                : 0;
+
+        ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
+        ObjectHandle[] ahArg = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
+        ahArg[0] = clzArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
+        ahArg[1] = hArray;
+        ahArg[2] = hIterable;
+        ahArg[3] = hMutability;
+
+        return frame.call1(FILL_FROM_ITERABLE, null, ahArg, iReturn);
+        }
+
+    /**
+     * Native implementation of "construct(Array that)".
+     */
+    private int construct3(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+        {
+        // see the natural implementation for the comments
+        ArrayHandle hThat      = (ArrayHandle) ahVar[0];
+        Mutability  mutability = hThat.getMutability();
+
+        if (hThat.isMutable() && (mutability == Mutability.Mutable || mutability == Mutability.Fixed))
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[]
+                {
+                MUTABILITY.getEnumByOrdinal(mutability.ordinal()),
+                hThat
+                };
+            return construct2(frame, clzArray, ahArg, iReturn);
+            }
+        else
+            {
+            ObjectHandle[] ahArg = new ObjectHandle[]
+                {
+                hThat.m_hDelegate,
+                MUTABILITY.getEnumByOrdinal(mutability.ordinal())
+                };
+            return construct4(frame, clzArray, ahArg, iReturn);
+            }
+        }
+
+    /**
+     * Native implementation of "protected construct(ArrayDelegate<Element> delegate, Mutability mutability)".
+     */
+    private int construct4(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
+        {
+        ObjectHandle hTarget = ahVar[0];
+        if (!(hTarget instanceof DelegateHandle hDelegate))
+            {
+            return frame.raiseException(xException.unsupported(frame));
+            }
+
+        ObjectHandle hMutability = ahVar[1];
+        ArrayHandle  hArray      = new ArrayHandle(
+            clzArray, hDelegate, Mutability.values()[((EnumHandle) hMutability).getOrdinal()]);
+
+        if (hArray.m_mutability == Mutability.Constant)
+            {
+            hArray.makeImmutable();
+            }
+        return frame.assignValue(iReturn, hArray);
         }
 
     @Override
@@ -828,276 +1099,6 @@ public class xArray
 
     // array of constructors
     private static final MethodConstant[] CONSTRUCTORS = new MethodConstant[5];
-
-    @Override
-    public void initNative()
-        {
-        // register array specializations
-        ConstantPool              pool         = f_container.getConstantPool();
-        Map<TypeConstant, xArray> mapTemplates = new HashMap<>();
-
-        mapTemplates.put(pool.typeBit(),  xBitArray.INSTANCE);
-        mapTemplates.put(pool.typeByte(), xByteArray.INSTANCE);
-
-        ARRAY_TEMPLATES = mapTemplates;
-
-        // cache the constructors
-        for (MethodStructure method :
-                ((MultiMethodStructure) getStructure().getChild("construct")).methods())
-            {
-            if (method.getAccess() == Constants.Access.PUBLIC)
-                {
-                TypeConstant typeParam0 = method.getParam(0).getType();
-
-                if (method.getParamCount() == 1)
-                    {
-                    if (typeParam0.equals(pool.typeInt64()))
-                        {
-                        // 0) construct(Int capacity = 0)
-                        CONSTRUCTORS[0] = method.getIdentityConstant();
-                        }
-                    else
-                        {
-                        // 3) construct(Array that)
-                        CONSTRUCTORS[3] = method.getIdentityConstant();
-                        }
-                    }
-                else
-                    {
-                    // 1) construct(Int size, Element | function Element (Int) supply)
-                    // 2) construct(Mutability mutability, Element... elements)
-                    if (typeParam0.equals(pool.typeInt64()))
-                        {
-                        CONSTRUCTORS[1] = method.getIdentityConstant();
-                        }
-                    else
-                        {
-                        CONSTRUCTORS[2] = method.getIdentityConstant();
-                        }
-                    }
-                }
-            else
-                {
-                // protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
-                CONSTRUCTORS[4] = method.getIdentityConstant();
-                }
-            }
-
-        // cache helper methods
-        FILL_FROM_ITERABLE = xRTDelegate.INSTANCE.getStructure().findMethod("fillFromIterable", 3);
-        CREATE_LIST_SET    = Utils.CONST_HELPER.findMethod("createListSet", 2);
-
-        // cache Mutability template
-        MUTABILITY = (xEnum) f_container.getTemplate("collections.Array.Mutability");
-
-        OBJECT_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeObject()));
-        STRING_ARRAY_CLZ  = f_container.resolveClass(pool.ensureArrayType(pool.typeString()));
-        BOOLEAN_ARRAY_CLZ = f_container.resolveClass(pool.ensureArrayType(pool.typeBoolean()));
-        CHAR_ARRAY_CLZ    = f_container.resolveClass(pool.ensureArrayType(pool.typeChar()));
-        BIT_ARRAY_CLZ     = f_container.resolveClass(pool.typeBitArray());
-        BYTE_ARRAY_CLZ    = f_container.resolveClass(pool.typeByteArray());
-
-        // mark native properties and methods
-        markNativeProperty("delegate");
-        markNativeProperty("mutability");
-
-        markNativeMethod("clear",      VOID, THIS);
-        markNativeMethod("getElement", INT,  ELEMENT_TYPE);
-        markNativeMethod("setElement", null, VOID);
-        markNativeMethod("elementAt",  INT,  null);
-        markNativeMethod("slice",      null, THIS);
-        markNativeMethod("deleteAll",  null, THIS);
-
-        ClassTemplate mixinNumber = f_container.getTemplate("collections.arrays.NumberArray");
-        mixinNumber.markNativeMethod("asBitArray" , VOID, null);
-
-        invalidateTypeInfo();
-        }
-
-    @Override
-    public int construct(Frame frame, MethodStructure constructor, TypeComposition clzArray,
-                         ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn)
-        {
-        IdentityConstant idConstruct = constructor.getIdentityConstant();
-        int              nScenario;
-        for (nScenario = 0; nScenario < 4; nScenario++)
-            {
-            if (CONSTRUCTORS[nScenario].equals(idConstruct))
-                {
-                break;
-                }
-            }
-
-        return switch (nScenario)
-            {
-            case 0  -> construct0(frame, clzArray, ahVar, iReturn);
-            case 1  -> construct1(frame, clzArray, ahVar, iReturn);
-            case 2  -> construct2(frame, clzArray, ahVar, iReturn);
-            case 3  -> construct3(frame, clzArray, ahVar, iReturn);
-            case 4  -> construct4(frame, clzArray, ahVar, iReturn);
-            default -> frame.raiseException("Unknown constructor: " + idConstruct.getValueString());
-            };
-        }
-
-    /**
-     * Native implementation of "construct(Int capacity = 0)".
-     */
-    private int construct0(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
-        {
-        ObjectHandle hCapacity = ahVar[0];
-        long         cCapacity = hCapacity == ObjectHandle.DEFAULT ?
-                                    0 : ((JavaLong) hCapacity).getValue();
-
-        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
-            {
-            return frame.raiseException(
-                xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
-            }
-
-        ObjectHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Mutable);
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * Native implementation of "construct(Int size, Element | function Element (Int) supply)".
-     */
-    private int construct1(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
-        {
-        JavaLong hCapacity = (JavaLong) ahVar[0];
-        long     cCapacity = hCapacity.getValue();
-
-        if (cCapacity < 0 || cCapacity > Integer.MAX_VALUE)
-            {
-            return frame.raiseException(
-                xException.illegalArgument(frame, "Invalid array size: " + cCapacity));
-            }
-
-        ArrayHandle hArray = createEmptyArray(clzArray, (int) cCapacity, Mutability.Fixed);
-        int cSize = (int) cCapacity;
-        if (cSize > 0)
-            {
-            hArray.m_hDelegate.m_cSize = cSize;
-
-            ObjectHandle hValue = ahVar[1];
-            // we could get here either naturally (e.g. new Array<String>(7, "");)
-            // or via the ArrayExpression (e.g. new Int[7])
-            TypeConstant typeEl = clzArray.getType().getParamType(0);
-            if (hValue == ObjectHandle.DEFAULT)
-                {
-                hValue = frame.getConstHandle(typeEl.getDefaultValue());
-                if (Op.isDeferred(hValue))
-                    {
-                    return hValue.proceed(frame, frameCaller ->
-                        fill(frameCaller, hArray, cSize, frameCaller.popStack(), iReturn));
-                    }
-                }
-            else
-                {
-                ConstantPool pool      = frame.poolContext();
-                TypeConstant typeValue = hValue.getType();
-
-                IsFunction:
-                if (typeValue.isA(pool.typeFunction()))
-                    {
-                    TypeConstant[] atypeParam = pool.extractFunctionParams(typeValue);
-                    if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt64()))
-                        {
-                        break IsFunction;
-                        }
-                    TypeConstant[] atypeRet = pool.extractFunctionReturns(typeValue);
-                    if (atypeRet.length != 1 || !atypeRet[0].isA(typeEl))
-                        {
-                        break IsFunction;
-                        }
-
-                    FunctionHandle      hfnSupplier = (FunctionHandle) hValue;
-                    int                 cArgs       = hfnSupplier.getVarCount();
-                    ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
-                    Utils.ValueSupplier supplier    = (frameCaller, index) ->
-                        {
-                        ahArg[0] = xInt64.makeHandle(index);
-                        return hfnSupplier.call1(frameCaller, null, ahArg, Op.A_STACK);
-                        };
-                    return new Utils.FillArray(hArray, cSize, supplier, iReturn).doNext(frame);
-                    }
-                }
-            return fill(frame, hArray, cSize, hValue, iReturn);
-            }
-        return frame.assignValue(iReturn, hArray);
-        }
-
-    /**
-     * Native implementation of "construct(Mutability mutability, Iterable<Element> elements)".
-     */
-    private int construct2(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
-        {
-        // call RTDelegate.fillFromIterable() helper naturally
-        ObjectHandle hMutability = ahVar[0];
-        ObjectHandle hIterable   = ahVar[1];
-
-        int cCapacity = hIterable instanceof ArrayHandle hA
-            ? (int) hA.m_hDelegate.m_cSize
-            : 0;
-
-        ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
-        ObjectHandle[] ahArg = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
-        ahArg[0] = hArray;
-        ahArg[1] = hIterable;
-        ahArg[2] = hMutability;
-
-        return frame.call1(FILL_FROM_ITERABLE, null, ahArg, iReturn);
-        }
-
-    /**
-     * Native implementation of "construct(Array that)".
-     */
-    private int construct3(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
-        {
-        // see the natural implementation for the comments
-        ArrayHandle hThat      = (ArrayHandle) ahVar[0];
-        Mutability  mutability = hThat.getMutability();
-
-        if (hThat.isMutable() && (mutability == Mutability.Mutable || mutability == Mutability.Fixed))
-            {
-            ObjectHandle[] ahArg = new ObjectHandle[]
-                {
-                MUTABILITY.getEnumByOrdinal(mutability.ordinal()),
-                hThat
-                };
-            return construct2(frame, clzArray, ahArg, iReturn);
-            }
-        else
-            {
-            ObjectHandle[] ahArg = new ObjectHandle[]
-                {
-                hThat.m_hDelegate,
-                MUTABILITY.getEnumByOrdinal(mutability.ordinal())
-                };
-            return construct4(frame, clzArray, ahArg, iReturn);
-            }
-        }
-
-    /**
-     * Native implementation of "protected construct(ArrayDelegate<Element> delegate, Mutability mutability)".
-     */
-    private int construct4(Frame frame, TypeComposition clzArray, ObjectHandle[] ahVar, int iReturn)
-        {
-        ObjectHandle hTarget = ahVar[0];
-        if (!(hTarget instanceof DelegateHandle hDelegate))
-            {
-            return frame.raiseException(xException.unsupported(frame));
-            }
-
-        ObjectHandle hMutability = ahVar[1];
-        ArrayHandle  hArray      = new ArrayHandle(
-            clzArray, hDelegate, Mutability.values()[((EnumHandle) hMutability).getOrdinal()]);
-
-        if (hArray.m_mutability == Mutability.Constant)
-            {
-            hArray.makeImmutable();
-            }
-        return frame.assignValue(iReturn, hArray);
-        }
 
     protected static final String[] ELEMENT_TYPE = new String[] {"Element"};
 
