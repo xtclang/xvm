@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -611,19 +610,10 @@ public class ClassComposition
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
         Map<Object, FieldInfo> mapFields = new ListMap<>();
-
-        Map.Entry<PropertyConstant, PropertyInfo>[] aEntry =
-                infoStruct.getProperties().entrySet().toArray(new Map.Entry[0]);
-
-        if (aEntry.length > 1)
-            {
-            Arrays.sort(aEntry, PropertyInfo.RANKER);
-            }
-
         int cRegular = 0;
         int nIndex   = 0;
 
-        // create storage for implicits
+        // create storage for implicit fields
         for (String sField : f_template.getImplicitFields())
             {
             if (sField.equals(GenericHandle.OUTER))
@@ -635,7 +625,7 @@ public class ClassComposition
                         /*synthetic*/ true, false, false, false));
             }
 
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : aEntry)
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoStruct.sortedProperties())
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();

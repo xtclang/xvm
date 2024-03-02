@@ -339,7 +339,7 @@ public class PropertyClassTypeConstant
 
                 PropertyStructure prop = infoProp.getHead().getStructure();
                 collectChildInfo(idBase, false, prop, mapTypeParams,
-                    mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, errs);
+                    mapContribProps, mapContribMethods, mapContribChildren, listExplode, 0, 0, errs);
 
                 if (!listExplode.isEmpty())
                     {

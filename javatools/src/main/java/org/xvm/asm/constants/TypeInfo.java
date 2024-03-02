@@ -1,6 +1,7 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -933,6 +934,19 @@ public class TypeInfo
         }
 
     /**
+     * @return all properties for this type sorted by their {@link PropertyInfo#getRank() rank}
+     */
+    public Entry<PropertyConstant, PropertyInfo>[] sortedProperties()
+        {
+        Entry<PropertyConstant, PropertyInfo>[] aEntry = f_mapProps.entrySet().toArray(new Entry[0]);
+        if (aEntry.length > 1)
+            {
+            Arrays.sort(aEntry, PropertyInfo.RANKER);
+            }
+        return aEntry;
+        }
+
+    /**
      * @return virtual properties keyed by nested id
      */
     public Map<Object, PropertyInfo> getVirtProperties()
@@ -1301,11 +1315,24 @@ public class TypeInfo
         }
 
     /**
-     * @return all the non-scoped methods for this type
+     * @return all non-scoped methods for this type
      */
     public Map<MethodConstant, MethodInfo> getMethods()
         {
         return f_mapMethods;
+        }
+
+    /**
+     * @return all methods for this type sorted by their {@link MethodInfo#getRank() rank}
+     */
+    public Entry<MethodConstant, MethodInfo>[] sortedMethods()
+        {
+        Entry<MethodConstant, MethodInfo>[] aEntry = f_mapMethods.entrySet().toArray(new Entry[0]);
+        if (aEntry.length > 1)
+            {
+            Arrays.sort(aEntry, MethodInfo.RANKER);
+            }
+        return aEntry;
         }
 
     /**

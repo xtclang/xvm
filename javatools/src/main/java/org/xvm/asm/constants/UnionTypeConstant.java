@@ -697,7 +697,8 @@ public class UnionTypeConstant
                         {
                         if (body2.getIdentity().equals(id1))
                             {
-                            MethodInfo methodBase = new MethodInfo(Arrays.copyOfRange(abody1, i1, c1));
+                            MethodInfo methodBase = new MethodInfo(Arrays.copyOfRange(abody1, i1, c1),
+                                                            method1.getRank());
                             mapMerged.put(id1, methodBase);
                             if (methodBase.isCapped())
                                 {
@@ -745,7 +746,8 @@ public class UnionTypeConstant
                     MethodConstant  idSynthMethod  = methodSynth.getIdentityConstant();
 
                     mapMerged.put(idSynthMethod,
-                        new MethodInfo(new MethodBody(idSynthMethod, sig, Implementation.Implicit)));
+                        new MethodInfo(new MethodBody(idSynthMethod, sig, Implementation.Implicit),
+                                method1.getRank()));
                     }
                 }
             }

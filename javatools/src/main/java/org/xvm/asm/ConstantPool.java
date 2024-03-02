@@ -3792,7 +3792,7 @@ public class ConstantPool
                                         sig.resolveGenericTypes(this, resolver));
         SignatureConstant sigNew    = idNew.getSignature();
         MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
-        MethodInfo        methodNew = new MethodInfo(bodyNew);
+        MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
         bodyNew.setMethodStructure(body.getMethodStructure());
 
         Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(info.getMethods());

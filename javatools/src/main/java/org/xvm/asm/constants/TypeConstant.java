@@ -509,7 +509,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this type is annotated by the specified annotation class
+     * @return the array of annotations
      */
     public Annotation[] getAnnotations()
         {
@@ -3234,9 +3234,10 @@ public abstract class TypeConstant
                 mapContribMethods  = new HashMap<>();
                 mapContribChildren = new ListMap<>();
 
-                int nBaseRank = mapProps.size();
+                int nBasePropRank = mapProps.size();
+                int nBaseMethRank = mapMethods.size();
 
-                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBaseRank, errs))
+                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, errs))
                     {
                     fIncomplete = true;
                     }
@@ -3244,7 +3245,8 @@ public abstract class TypeConstant
                 ArrayList<PropertyConstant> listExplode = new ArrayList<>();
                 boolean                     fInterface  = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
-                        mapContribProps, mapContribMethods, mapContribChildren, listExplode, nBaseRank, errs))
+                        mapContribProps, mapContribMethods, mapContribChildren, listExplode,
+                        nBasePropRank, nBaseMethRank, errs))
                     {
                     fIncomplete = true;
                     errs        = ErrorListener.BLACKHOLE;
@@ -3590,16 +3592,17 @@ public abstract class TypeConstant
                 MethodConstant idSet   = info.getSetterId();
                 MethodInfo     infoGet = mapMethods.get(idGet);
                 MethodInfo     infoSet = mapMethods.get(idSet);
+                int            nRank   = mapMethods.size();
 
                 if (prop.isNative())
                     {
                     // replace the entire chain with a native body
                     infoGet = new MethodInfo(
-                        new MethodBody(idGet, idGet.getSignature(), Implementation.Native));
+                        new MethodBody(idGet, idGet.getSignature(), Implementation.Native), nRank);
                     if (infoSet != null)
                         {
                         infoSet = new MethodInfo(
-                            new MethodBody(idSet, idSet.getSignature(), Implementation.Native));
+                            new MethodBody(idSet, idSet.getSignature(), Implementation.Native), nRank+1);
                         }
                     }
                 else
@@ -3613,12 +3616,12 @@ public abstract class TypeConstant
                         }
 
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(
-                            idGet, idGet.getSignature(), Implementation.Implicit)), false, errs);
+                            idGet, idGet.getSignature(), Implementation.Implicit), nRank), false, errs);
 
                     if (infoSet != null)
                         {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(
-                                idSet, idSet.getSignature(), Implementation.Implicit)), false, errs);
+                                idSet, idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
                         }
                     }
 
@@ -4379,7 +4382,7 @@ public abstract class TypeConstant
                         MethodBody bodyDelegate = new MethodBody(
                             idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
                         methodResult = new MethodInfo(
-                            Handy.appendHead(methodResult.getChain(), bodyDelegate));
+                            Handy.appendHead(methodResult.getChain(), bodyDelegate), methodResult.getRank());
                         }
                     }
                 }
@@ -4749,17 +4752,17 @@ public abstract class TypeConstant
                 }
             }
 
+        int nRank = nBaseRank + mapProps.size();
         for (Component child : struct.children())
             {
             if (child instanceof PropertyStructure prop)
                 {
                 if (prop.isGenericTypeParameter())
                     {
-                    PropertyConstant id    = prop.getIdentityConstant();
-                    int              nRank = nBaseRank + mapProps.size() + 1;
+                    PropertyConstant id = prop.getIdentityConstant();
 
                     mapProps.put(id, new PropertyInfo(new PropertyBody(prop,
-                                        mapTypeParams.get(id.getName())), nRank));
+                                        mapTypeParams.get(id.getName())), nRank++));
                     }
                 }
             }
@@ -4777,7 +4780,8 @@ public abstract class TypeConstant
      * @param mapMethods     the methods of the class
      * @param mapChildren    the child types of the class
      * @param listExplode    used to collect the list of properties that must be "exploded"
-     * @param nBaseRank      the base rank for any properties added by "this" class
+     * @param nBasePropRank  the base rank for any properties added by "this" class
+     * @param nBaseMethRank  the base rank for any methods added by "this" class
      * @param errs           the error list to log any errors to
      *
      * @return true iff the processing was able to obtain all of its dependencies
@@ -4791,7 +4795,8 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo>   mapMethods,
             ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
-            int                                 nBaseRank,
+            int                                 nBasePropRank,
+            int                                 nBaseMethRank,
             ErrorListener                       errs)
         {
         boolean fComplete = true;
@@ -4806,14 +4811,16 @@ public abstract class TypeConstant
                     if (!method.isLambda() && !method.isConstructorFinalizer())
                         {
                         fComplete &= createMemberInfo(constId, fInterface, method, mapTypeParams,
-                            mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
+                                        mapProps, mapMethods, mapChildren, listExplode,
+                                        nBasePropRank, nBaseMethRank, errs);
                         }
                     }
                 }
             else if (child instanceof PropertyStructure)
                 {
                 fComplete &= createMemberInfo(constId, fInterface, child, mapTypeParams,
-                    mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
+                                mapProps, mapMethods, mapChildren, listExplode,
+                                nBasePropRank, nBaseMethRank, errs);
                 }
             else if (child instanceof ClassStructure || child instanceof TypedefStructure)
                 {
@@ -4844,7 +4851,8 @@ public abstract class TypeConstant
      * @param mapMethods     the methods of the class
      * @param mapChildren    the child types of the class
      * @param listExplode    used to collect the list of properties that must be "exploded"
-     * @param nBaseRank      the base rank for any properties added by "this" class
+     * @param nBasePropRank  the base rank for any properties added by "this" class
+     * @param nBaseMethRank  the base rank for any methods added by "this" class
      * @param errs           the error list to log any errors to
      *
      * @return true iff the processing was able to obtain all of its dependencies
@@ -4858,7 +4866,8 @@ public abstract class TypeConstant
             Map<MethodConstant  , MethodInfo>   mapMethods,
             ListMap<String, ChildInfo>          mapChildren,
             List<PropertyConstant>              listExplode,
-            int                                 nBaseRank,
+            int                                 nBasePropRank,
+            int                                 nBaseMethRank,
             ErrorListener                       errs)
         {
         ConstantPool pool    = getConstantPool();
@@ -4891,7 +4900,7 @@ public abstract class TypeConstant
                     fHasAbstract             ? Implementation.Abstract :
                     fHasNoCode               ? Implementation.SansCode :
                                                Implementation.Explicit);
-            MethodInfo infoNew = new MethodInfo(body);
+            MethodInfo infoNew = new MethodInfo(body, nBaseMethRank + mapMethods.size());
             mapMethods.put(id, infoNew);
             }
         else if (structContrib instanceof PropertyStructure prop)
@@ -4906,7 +4915,7 @@ public abstract class TypeConstant
             boolean fFromIface = fInterface && !fRebase;
 
             PropertyConstant  id    = prop.getIdentityConstant();
-            int               nRank = nBaseRank + mapProps.size() + 1;
+            int               nRank = nBasePropRank + mapProps.size();
             PropertyInfo      info  = createPropertyInfo(prop, constId,
                                             fRebase | prop.isNative(), fFromIface, nRank, errs);
             mapProps.put(id, info);
@@ -4934,7 +4943,8 @@ public abstract class TypeConstant
                 }
             }
         return collectChildInfo(constId, fInterface, structContrib,
-                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode, nBaseRank, errs);
+                mapTypeParams, mapProps, mapMethods, mapChildren, listExplode,
+                nBasePropRank, nBaseMethRank, errs);
         }
 
     /**
@@ -6409,7 +6419,7 @@ public abstract class TypeConstant
      * @param access      the access level to limit the check to
      * @param listParams  the list of actual generic parameters
      *
-     * @return true iff this type is a producer of the specified formal type
+     * @return one of the {@link Usage} values
      */
     protected Usage checkProduction(String sTypeName, Access access, List<TypeConstant> listParams)
         {

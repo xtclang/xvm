@@ -1,14 +1,20 @@
 module TestSimple {
     @Inject Console console;
 
-    enum Group {A, B, C, D, E, F}
+    void run() {
+        Type t = Test;
+        console.print("Multimethods:");
+        console.print($"{t.multimethods.keys.toString(sep="\n")}");
+        console.print("Methods:");
+        console.print($"{t.methods.toString(sep="\n")}"); // the order used to be random
+    }
 
-    Int test(Group g) {
-        return switch (g)
-            {
-            case C:    1;
-            case B..D: 2; // this used to assert in the compiler
-            case A..F: 3;
-            };
+    class Test {
+        void f1(Int i);
+        void f1(String s);
+        void f2(String s);
+        void f2(Boolean f);
+        void f3(Boolean f);
+        void f4(Byte b);
     }
 }

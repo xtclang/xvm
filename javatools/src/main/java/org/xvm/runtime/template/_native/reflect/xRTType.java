@@ -783,10 +783,11 @@ public class xRTType
             return frame.assignValue(iReturn, xRTMethod.ensureEmptyArray(frame.f_context.f_container));
             }
 
-        TypeConstant                    typeTarget  = hType.getDataType();
-        Map<MethodConstant, MethodInfo> mapMethods  = typeTarget.ensureTypeInfo().getMethods();
-        ArrayList<ObjectHandle>         listHandles = new ArrayList<>(mapMethods.size());
-        for (Map.Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet())
+        TypeConstant            typeTarget  = hType.getDataType();
+        var                     aMethods    = typeTarget.ensureTypeInfo().sortedMethods();
+        ArrayList<ObjectHandle> listHandles = new ArrayList<>(aMethods.length);
+
+        for (Map.Entry<MethodConstant, MethodInfo> entry : aMethods)
             {
             MethodConstant idMethod = entry.getKey();
             MethodInfo     info     = entry.getValue();
@@ -819,22 +820,21 @@ public class xRTType
             return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(frame.f_context.f_container));
             }
 
-        TypeConstant                        typeTarget = hType.getDataType();
-        TypeInfo                            infoTarget = typeTarget.ensureTypeInfo();
-        Map<PropertyConstant, PropertyInfo> mapProps   = infoTarget.getProperties();
+        TypeConstant            typeTarget = hType.getDataType();
+        var                     aProps     = typeTarget.ensureTypeInfo().sortedProperties();
+        ArrayList<PropertyInfo> listProps  = new ArrayList<>(aProps.length);
 
-        ArrayList<PropertyInfo> listInfo = new ArrayList<>(mapProps.size());
-        for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet())
+        for (Map.Entry<PropertyConstant, PropertyInfo> entry : aProps)
             {
             PropertyConstant idProp   = entry.getKey();
             PropertyInfo     infoProp = entry.getValue();
             if (!infoProp.isConstant() && idProp.isTopLevel())
                 {
-                listInfo.add(infoProp);
+                listProps.add(infoProp);
                 }
             }
 
-        return makePropertyArray(frame, typeTarget, listInfo, iReturn);
+        return makePropertyArray(frame, typeTarget, listProps, iReturn);
         }
 
     /**

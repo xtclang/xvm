@@ -4,6 +4,7 @@ package org.xvm.asm.constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,23 +35,26 @@ public class MethodInfo
     /**
      * Construct a MethodInfo for a method body.
      *
-     * @param body  the initial method body
+     * @param body   the initial method body
+     * @param nRank  the rank of the method
      */
-    public MethodInfo(MethodBody body)
+    public MethodInfo(MethodBody body, int nRank)
         {
-        this(new MethodBody[] {body});
+        this(new MethodBody[] {body}, nRank);
         }
 
     /**
      * Internal: Construct a MethodInfo.
      *
      * @param aBody  the array of method bodies that make up the method chain
+     * @param nRank  the rank of the method
      */
-    protected MethodInfo(MethodBody[] aBody)
+    protected MethodInfo(MethodBody[] aBody, int nRank)
         {
         assert aBody != null && aBody.length >= 1;
 
         m_aBody = aBody;
+        f_nRank = nRank;
         }
 
     /**
@@ -98,7 +102,7 @@ public class MethodInfo
                                     idThat.resolveNestedIdentity(pool, typeCtx));
         System.arraycopy(aOld, 0, aNew, 1, cOld);
 
-        return new MethodInfo(aNew);
+        return new MethodInfo(aNew, f_nRank);
         }
 
     /**
@@ -244,7 +248,7 @@ public class MethodInfo
             }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES));
+        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
         }
 
     /**
@@ -292,7 +296,7 @@ public class MethodInfo
             }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES));
+        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
         }
 
     /**
@@ -329,7 +333,7 @@ public class MethodInfo
         System.arraycopy(aThat, 0, aNew, 0, cThat);
         System.arraycopy(aThis, 0, aNew, cThat, cThis);
 
-        return new MethodInfo(aNew);
+        return new MethodInfo(aNew, f_nRank);
         }
 
     /**
@@ -385,7 +389,7 @@ public class MethodInfo
             }
 
         Collections.addAll(listMerge, aBase);
-        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES));
+        return new MethodInfo(listMerge.toArray(MethodBody.NO_BODIES), f_nRank);
         }
 
     /**
@@ -444,7 +448,7 @@ public class MethodInfo
 
         return list.isEmpty()
                 ? null
-                : new MethodInfo(list.toArray(MethodBody.NO_BODIES));
+                : new MethodInfo(list.toArray(MethodBody.NO_BODIES), f_nRank);
         }
 
     /**
@@ -502,7 +506,7 @@ public class MethodInfo
 
         MethodBody bodyResult = new MethodBody(bodyFirstNonDefault.getIdentity(),
                 bodyFirstNonDefault.getSignature(), Implementation.Native);
-        return layerOn(new MethodInfo(bodyResult), true, errs);
+        return layerOn(new MethodInfo(bodyResult, f_nRank), true, errs);
         }
 
     /**
@@ -524,7 +528,7 @@ public class MethodInfo
         MethodBody[] chainNew = getChain().clone();
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
                                      Implementation.Capped, nidTarget);
-        return new MethodInfo(chainNew);
+        return new MethodInfo(chainNew, f_nRank);
         }
 
     /**
@@ -567,7 +571,7 @@ public class MethodInfo
 
             aBodyNew[i] = new MethodBody(body.getIdentity(), body.getSignature(), Implementation.Implicit);
             }
-        return new MethodInfo(aBodyNew);
+        return new MethodInfo(aBodyNew, f_nRank);
         }
 
     /**
@@ -1248,6 +1252,14 @@ public class MethodInfo
         }
 
     /**
+     * @return the current rank
+     */
+    public int getRank()
+        {
+        return f_nRank;
+        }
+
+    /**
      * @return the ConstantPool
      */
     private ConstantPool pool()
@@ -1299,12 +1311,25 @@ public class MethodInfo
         }
 
 
-    // -----fields ---------------------------------------------------------------------------------
+    // ----- constants and fields ------------------------------------------------------------------
+
+    /**
+     * Rank comparator for Map.Entry<MethodConstant, MethodInfo> objects.
+     */
+    public static final Comparator<Map.Entry<MethodConstant, MethodInfo>> RANKER =
+            Comparator.comparingInt(e -> e.getValue().getRank());
 
     /**
      * The method chain.
      */
     private final MethodBody[] m_aBody;
+
+    /**
+     * This value represents a relative order of method's appearance in the containing class. It's
+     * used only to preserve a natural (in the order of introduction) enumeration of methods by the
+     * reflection API (e.g. Type.methods, Type.multimethods).
+     */
+    private final int f_nRank;
 
     /**
      * The "optimized" (resolved) method chain.
