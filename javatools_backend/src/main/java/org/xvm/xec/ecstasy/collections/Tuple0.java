@@ -22,9 +22,10 @@ public class Tuple0 extends XTC implements Tuple {
   // Select a range using array syntax.
   // Loses all Java compiler knowledge of the types.
   @Override public Tuple at(Range r) {
-    Object[] es = new Object[(int)(r._hi - r._lo)];
+    if( r._incr != 1 ) throw XEC.TODO();
+    Object[] es = new Object[(int)r.span()];
     for( int i=0; i<es.length; i++ )
-      es[i] = at((int)(i+r._lo));
+      es[i] = at((int)(i+r._start));
     TupleN t = new TupleN(es);
     t._mut = _mut;              // Same mutability
     return t;

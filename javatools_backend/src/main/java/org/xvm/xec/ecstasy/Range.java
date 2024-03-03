@@ -12,39 +12,35 @@ import java.util.Iterator;
      Support XTC range iterator
 */
 abstract public class Range extends XTC implements Iterable<Int64> {
-  public Range( ) {_lo=_hi=0; _lx=_hx=_invert=false; } // No arg constructor
+  public Range( ) {_start=_end=0; _lx=_hx=false; _incr=1; } // No arg constructor
   
-  public final long _lo, _hi;   // Inclusive lo, exclusive hi
+  public final long _start, _end, _incr; // Inclusive start, exclusive end
   public final boolean _lx, _hx;       // True if exclusive
-  public final boolean _invert;        // Inverted range
-  Range( long lo, long hi, boolean lx, boolean hx ) {
-    boolean invert=false;
-    if( lo > hi ) {
-      long tmp=lo; lo=hi; hi=tmp;
-      boolean b=lx; lx=hx; hx=b;
-      invert=true;
-    }
-    if( !hx ) hi++;
-    if(  lx ) lo++;
-    _lo=lo;
-    _hi=hi;
+  Range( long start, long end, boolean lx, boolean hx ) {
+    int incr = 1;
+    if( start > end )
+      incr = -1;
+    if( !hx ) end  +=incr;
+    if(  lx ) start+=incr;
+    _start=start;
+    _end=end;
     _lx=lx;
     _hx=hx;
-    _invert = invert;
+    _incr = incr;
   }
 
   @Override
   public final String toString() {
     return
-      (_lx ? "("+(_lo-1) : "["+_lo ) +
+      (_lx ? "("+(_start-_incr) : "["+_start ) +
       ".." +
-      (!_hx ? ""+(_hi-1)+"]" : ""+_hi+")" );
+      (!_hx ? ""+(_end-_incr)+"]" : ""+_end+")" );
   }
 
-  public long span() { return _hi-_lo; }
-  public static long lo(RangeCon rcon) { return rcon.lo() + (rcon._xlo ? 1 : 0); }
-  public static long hi(RangeCon rcon) { return rcon.hi() + (rcon._xhi ? 0 : 1); }
-  public boolean in( long x ) { return _lo <= x && x < _hi; }
+  public long span() { return _end-_start; }
+  public static long start(RangeCon rcon) { return rcon.lo() + (rcon._xlo ? 1 : 0); }
+  public static long end  (RangeCon rcon) { return rcon.hi() + (rcon._xhi ? 0 : 1); }
+  public boolean in( long x ) { return _incr == 1 ? x < _end : x > _end; }
   
   /** @return an iterator */
   @Override public Iterator iterator() {

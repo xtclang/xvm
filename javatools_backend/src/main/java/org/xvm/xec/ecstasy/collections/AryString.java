@@ -64,8 +64,8 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
 
   /** Slice */
   public AryString at( Range r ) {
-    if( r._invert ) throw XEC.TODO();
-    return new AryString(_mut, Arrays.copyOfRange(_es,(int)r._lo,(int)r._hi), (int)(r._hi-r._lo));
+    if( r._incr != 1 ) throw XEC.TODO();
+    return new AryString(_mut, Arrays.copyOfRange(_es,(int)r._start,(int)r._end), (int)(r._start-r._end));
   }
 
   public int indexOf( String e ) {

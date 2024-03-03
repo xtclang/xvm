@@ -108,8 +108,8 @@ class SwitchAST extends AST {
       for( int i=0, j=0; i<clen-1; i++, j++ ) {
         String arm;
         if( _cases[j] instanceof RangeCon rcon ) {
-          long lo = Range.lo(rcon); // Insert the range now
-          long hi = Range.hi(rcon);
+          long lo = Range.start(rcon); // Insert the range now
+          long hi = Range.end  (rcon);
           SB sb = new SB();
           for( long k=lo; k<hi; k++ )
             sb.p(k).p(", ");
