@@ -50,7 +50,7 @@ class ForRangeAST extends AST {
       _kids[1].jcode(sb).p(";").nl();
       DefRegAST def = (DefRegAST)_kids[0];
       def._type.clz(sb.i().p("for( "));
-      sb.fmt(" %0 = %1._lo; %0 < %1._hi; %0++ ) ",def._name,_tmp);
+      sb.fmt(" %0 = %1._start; %1.in(%0); %0 += %1._incr ) ",def._name,_tmp);
     }
     // Body
     _kids[2].jcode(sb);
