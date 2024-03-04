@@ -115,7 +115,9 @@ public abstract class XTC {
 
   public static class Exception extends RuntimeException {
     public Exception(String msg) {super(msg); }
+    public Exception() { }
     public static Exception construct(String s) { return new Exception(s); }
+    public String message$get() { return getMessage(); };
   }
   
 
@@ -132,8 +134,8 @@ public abstract class XTC {
   }
 
   // XTC ReadOnlyException mapped to Java
-  public static class ReadOnlyException extends RuntimeException {}
+  public static class ReadOnlyException extends Exception { }
 
   // XTC NotImplemented mapped to Java
-  public static class NotImplemented extends RuntimeException {}
+  public static class NotImplemented extends Exception {}
 }
