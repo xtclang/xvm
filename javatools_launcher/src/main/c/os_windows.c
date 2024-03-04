@@ -23,15 +23,18 @@ const char* findLauncherPath() {
 }
 
 const char* getXdkHome() {
-    char*  buf = NULL;
-    size_t len = 0;
-    getenv_s(&len, buf, len, XDK_HOME);         // get the length
-    if (len > 0) {
-        buf = allocBuffer(len);
-        getenv_s(&len, buf, len, XDK_HOME);     // get the string
-    }
-
-    return (const char*) buf;
+// note: gcc+mingw can't figure out what getenv_s is, even with __STDC_WANT_LIB_EXT1__=1
+//
+//    char*  buf = NULL;
+//    size_t len = 0;
+//    getenv_s(&len, buf, len, XDK_HOME);         // get the length
+//    if (len > 0) {
+//        buf = allocBuffer(len);
+//        getenv_s(&len, buf, len, XDK_HOME);     // get the string
+//    }
+//
+//    return (const char*) buf;
+    return getenv(XDK_HOME);
 }
 
 const char* resolveLinks(const char* path) {
