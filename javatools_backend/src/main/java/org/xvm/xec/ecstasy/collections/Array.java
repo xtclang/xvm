@@ -58,7 +58,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   abstract public Array<E> add( E e );
 
   /** Slice */
-  abstract public Array<E> at( Range r );
+  abstract public Array<E> slice( Range r );
   
   /** @return an iterator */
   abstract public Iterator<E> iterator();

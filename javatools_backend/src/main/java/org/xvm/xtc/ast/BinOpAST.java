@@ -63,6 +63,9 @@ class BinOpAST extends AST {
         // Tuple at fixed field offset
         _op0 = "._f";           // Field load at fixed offset
         _op1 = "";
+        ConAST fldNum = (ConAST)_kids[1];
+        fldNum._con = fldNum._con.substring(0,fldNum._con.length()-1);
+        fldNum._type = XCons.INT;
       }
       return this;
     }
