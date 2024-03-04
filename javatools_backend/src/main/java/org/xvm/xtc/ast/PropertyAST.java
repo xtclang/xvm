@@ -33,7 +33,7 @@ class PropertyAST extends AST {
   @Override AST prewrite() {
     // Java strings do not have any properties, just rewrite to the java name
     if( _prop.equals("size") || _prop.equals("size$get()")) {
-      if( _kids[0]._type == XCons.STRING )
+      if( _kids[0]._type == XCons.STRING || _kids[0]._type == XCons.STRINGN )
         { _prop="length()"; _type=XCons.LONG; return this; }
       if( _kids[0]._type.isAry() )
         { _prop="_len"    ; _type=XCons.LONG; return this; }

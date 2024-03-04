@@ -24,6 +24,12 @@ public abstract class XType {
   // Children, if any
   public XType[] _xts;
 
+  // Must a field be initialized not-null?
+  // Primitives are always "nullable" even when 0.
+  // XBase.STRING is not-nullable, despite being a XBase.
+  // XClzs go both ways, depends on if they got unioned with Null or not.
+  public boolean _notNull;
+  
   // Interning support
   static XType intern( XType free ) {
     free._hash = 0;
@@ -97,15 +103,17 @@ public abstract class XType {
   @Override public final boolean equals(Object o) {
     if( this==o ) return true;
     if( this.getClass() != o.getClass() ) return false;
-    if( !Arrays.equals(_xts,((XType)o)._xts) ) return false;
-    return eq((XType)o);
+    XType xt = (XType)o;
+    if( !Arrays.equals(_xts,xt._xts) ) return false;
+    if( _notNull != xt._notNull ) return false;
+    return eq(xt);
   }
     
   private int _hash;            // Hash cache, never 0
   abstract int hash();
   @Override final public int hashCode() {
     if( _hash!=0 ) return _hash;
-    long hash = hash();
+    long hash = hash() ^ (_notNull ? 1024 : 0);
     if( _xts!=null )
       for( XType xt : _xts )
         hash = (hash<<25) | (hash>>(64-25)) ^ xt._uid;
@@ -125,6 +133,11 @@ public abstract class XType {
   }
   public XType box( boolean boxed ) {
     return boxed ? this : unbox();
+  }
+
+  XType nullable() {
+    if( !_notNull ) return this;
+    throw XEC.TODO();
   }
   
   static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
@@ -195,7 +208,7 @@ public abstract class XType {
         } else if( ttc.id() instanceof DynFormalCon dfc ) {
           // Generic parameter name
           String dynt = ((TermTCon)((ParamTCon)dfc.type())._parms[0]).name();
-          yield XBase.make("$"+dynt);
+          yield XBase.make("$"+dynt,true);
         } else 
           throw XEC.TODO();
       }
@@ -266,7 +279,7 @@ public abstract class XType {
     case UnionTCon utc -> {
       XType u2 = xtype(utc._con2,false);
       if( ((ClzCon)utc._con1).clz()._name.equals("Nullable") )
-        yield u2.zero() ? u2.box() : u2;
+        yield (u2.zero() ? u2.box() : u2).nullable();
       XType u1 = xtype(utc._con1,false);
       yield XUnion.make(u1,u2);
     }
@@ -307,7 +320,7 @@ public abstract class XType {
       if( con0.part() instanceof ModPart mod )
         yield XClz.make(mod);
       if( con0.part() instanceof PropPart prop )
-        yield XBase.make(PropBuilder.jname(prop));
+        yield XBase.make(PropBuilder.jname(prop),false);
       throw XEC.TODO();
     }
 
