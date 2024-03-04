@@ -8,7 +8,7 @@
 SHELL := /bin/bash
 
 # Keep partial builds but not partial recipes
-.NOTINTERMEDIATE:	
+.SECONDARY:	
 
 # for printing variable values
 # usage: make print-VARIABLE
@@ -17,9 +17,9 @@ print-%  : ; @echo $* = $($*)
 
 # jar-file seperator - I can make this more specific for e.g. mac vs linux
 ifeq ($(OS),Windows_NT)
-SEP = ;
+	SEP = ;
 else
-SEP = :
+	SEP = :
 endif
 
 # Handy for Cliff, $DESK/xvm
@@ -72,8 +72,6 @@ XDK_DIR = xdk/build/install/xdk
 XDK = $(XDK_DIR)/javatools/javatools.jar
 XTC = java -jar $(XDK) xcc -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib --rebuild
 XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
-COM = java -jar $(XDK) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
-
 
 # General recipe for making an XTC from a X file
 %.xtc:	%.x $(XDK)
@@ -87,12 +85,6 @@ COM = java -jar $(XDK) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
 	@echo "running " $@
 	@$(XEC) $< $(ARG)
 
-# General recpie for executing an XTC with the existing interpreter-based backend.
-# Since no "EXE" is ever made, this just always runs the module.
-# Additional arguments can be passed from the command line via "ARG=arg"
-%.com:	%.xtc $(XDK)
-	@echo "running " $@
-	@$(COM) $< $(ARG)
 
 # Build examples, .xtc from .x
 # Assuming a minor version change in XTC, rebuild XTC examples
@@ -120,18 +112,6 @@ manuals_xtc:	$(manuals_x:x=xtc) $(XDK)
 manuals_exe:	$(manuals_x:x=exe) $(classes)
 
 
-# General recipe for making a make-depend file from an XTC file
-%.d:	%.xtc
-	@rm -f $@
-	@echo -ne $@ $*.xtc ":\t" > $@
-	@([ $* ] && /usr/bin/find $* -name *.x | xargs echo) >> $@
-
-# Pick up any make-depends files for each desired XTC file.
-# Useful to pick up updates in top-level XTC modules from deep child X files.
-ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
-include $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)
-endif
-
 
 #MULTI = multiModule/Lib.x multiModule/Main.x
 #multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
@@ -143,7 +123,6 @@ endif
 #multi_exe:	$(XDK) $(classes) $(multi_x:x=xtc)
 #	@echo "Running test" $?
 #	@$(XEC) -L $(MANUAL_DIR)/multiModule $(MANUAL_DIR)/multiModule/Main.xtc
-
 
 # TAGS
 tags:	TAGS

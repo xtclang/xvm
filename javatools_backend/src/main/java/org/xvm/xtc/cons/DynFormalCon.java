@@ -15,15 +15,15 @@ public class DynFormalCon extends FormalCon {
   private FormalCon _formal;
   public DynFormalCon( CPool X ) {
     super(X);
-    _reg  = X.u16();
-    _nreg = X.u16();
+    _reg  = X.u31();
+    _nreg = X.u31();
     X.u31();
     X.u31();
   }
   @Override public void resolve( CPool X ) {
     super.resolve(X);
-    X.u16();
-    X.u16();
+    X.u31();
+    X.u31();
     _type   = (     TCon)X.xget();
     _formal = (FormalCon)X.xget();
   }
