@@ -57,9 +57,7 @@ public class AryXTC<E extends XTC> extends Array<E> {
   }
 
   /** Slice */
-  public AryXTC<E> at( Range r ) {
-    throw XEC.TODO();
-  }
+  public AryXTC<E> slice( Range r ) { throw XEC.TODO(); }
   public AryXTC delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;
