@@ -210,7 +210,7 @@ public class ClzBuilder {
         // moral equivalent is calling 'this' in a constructor, but XTC allows
         // calling 'this' anywhere.
         
-        // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args); }"
+        // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args).$check(); }"
         _sb.nl();
         keywords(meth,true);
         _tclz.clz_generic(_sb,false,true);
@@ -224,7 +224,7 @@ public class ClzBuilder {
           _sb.fmt("%0,",_tclz._flds[i]);
         _sb.unchar().p(").$construct(");
         arg_names(meth,_sb);
-        _sb.p("); }").nl();
+        if( !is_iface ) _sb.p(").$check(); }").nl();
 
         // "private Foo $construct(args) { ..."
         _sb.ip("private ").p(java_class_name).p(" ");
@@ -236,7 +236,6 @@ public class ClzBuilder {
         }
       }
     }
-   
 
     // Output Java methods for all class methods
     for( Part part : _clz._name2kid.values() ) {
@@ -336,6 +335,18 @@ public class ClzBuilder {
             _sb.ip("public void main( AryString args ) { run( args ); }").nl();
           }
         }
+    }
+  
+    // Check fields definitely assigned
+    if( !is_iface ) {
+      _sb.ip("private ").p(java_class_name).p(" $check() {").nl().ii();;
+      for( Part part : _clz._name2kid.values() )
+        if( part instanceof PropPart prop && 
+            prop.isField() && 
+            XType.xtype(prop._con,false)._notNull )
+          _sb.ifmt("if( %0==null ) throw new XTC.IllegalState(\"Did not initialize %0\");",prop._name).nl();
+      _sb.ip("return this;").nl();
+      _sb.di().ip("}").nl();
     }
 
     // End the class body

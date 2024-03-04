@@ -40,6 +40,7 @@ public class XClz extends XType {
   private static XClz make( String pack, String nest, String name, int len ) {
     XClz clz = FREE==null ? new XClz() : FREE;
     if( clz==FREE ) FREE=null;
+    assert clz._nTypeParms == -99; // Was from FREE list
     
     // Class & package names.
     clz._pack = pack;
@@ -50,9 +51,9 @@ public class XClz extends XType {
       clz._xts = len==0 ? null : new XType [len];
       clz._flds= len==0 ? null : new String[len];
     }
-    assert clz._nTypeParms == -99; // Was from FREE list
     clz._nTypeParms = len;
     clz._jpack = clz._jname = null; // Need these to be filled in
+    clz._notNull = true;
     return clz;
   }
   private XClz _intern() {
@@ -319,6 +320,21 @@ public class XClz extends XType {
     return pack.intern();
   }
 
+  @Override public XClz nullable() {
+    if( !_notNull ) return this;
+    XClz clz = make(_pack,_nest,_name,_nTypeParms);
+    clz._xts      = _xts   ;       // Share subtypes and fields
+    clz._flds     = _flds  ;
+    clz._jpack    = _jpack ;
+    clz._jname    = _jname ;
+    clz._jparms   = _jparms;
+    clz._clz      = _clz   ;
+    clz._iface    = _iface ;
+    clz._ambiguous= _ambiguous;
+    clz._super    = _super ;
+    clz._notNull  = false  ;
+    return clz._intern();
+  }
   
   @Override public boolean needs_import(boolean self) {
     // Built-ins before being 'set' have no clz, and do not needs_import
@@ -354,7 +370,9 @@ public class XClz extends XType {
     if( _flds != null ) 
       for( int i=0; i<_flds.length; i++ )
         _xts[i].str(sb.p("  ").p(_flds[i]).p(":"),visit,dups).p(";").nl();
-    return sb.p("}").nl();
+    sb.p("}");
+    if( !_notNull ) sb.p("?");
+    return sb.nl();
   }
 
   // Walk and print Java class name, including generics.  If XTC is providing
