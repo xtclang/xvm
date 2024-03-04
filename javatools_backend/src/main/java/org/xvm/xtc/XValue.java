@@ -26,8 +26,7 @@ public abstract class XValue {
       if( ic._big != null ) throw XEC.TODO();
       if( ic._f==Const.Format.Int128 )
         yield ASB.p("Int128.construct(").p(ic._x).p("L)");
-      ASB.p(ic._x).p('L');
-      yield ASB;
+      yield ASB.p(ic._x).p('L');
     }
     case Flt64Con fc ->
       ASB.p(fc._flt);

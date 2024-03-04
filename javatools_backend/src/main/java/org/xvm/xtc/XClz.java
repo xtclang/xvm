@@ -149,9 +149,12 @@ public class XClz extends XType {
       // Class : java name is always Module.Class
       cnest = "";
       cname = ("M$"+S.java_class_name(clz.name())).intern();
+    } else if( clz._par instanceof MethodPart meth ) {
+      cnest = "";
+      cname = S.java_class_name(meth._name+"$"+clz.name());
     } else if( !clz._path.equals(mod._path) ) {
       cnest = "";
-      cname = S.java_class_name(clz.name());
+      cname = S.java_class_name( clz.name() );
     } else {
       // Class embedded in a Module:
       // java name is always Module.M$Module.Class
@@ -301,10 +304,11 @@ public class XClz extends XType {
   // _pack: nQueens
   // _nest: M$nQueens
   // _name: Board
-  private static String pack(ClassPart clz, ModPart mod) {
+  private static String pack(Part pclz, ModPart mod) {
     assert mod!=null;
-    if( clz == mod ) return mod.name(); // XTC Modules never have a Java package
-    clz = (ClassPart)clz._par;     // Skip the class, already in the _name field
+    if( pclz == mod ) return mod.name(); // XTC Modules never have a Java package
+    while( !(pclz._par instanceof ClassPart clz) )
+      pclz = pclz._par;
     String pack = null;
     while( true ) {
       String pxname = S.java_class_name(clz.name());
