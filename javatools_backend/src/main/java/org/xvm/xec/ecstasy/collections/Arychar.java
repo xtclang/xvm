@@ -71,9 +71,7 @@ public class Arychar extends Array<Char> {
   }
 
   /** Slice */
-  public Arychar at( Range r ) {
-    throw XEC.TODO();
-  }
+  public Arychar slice( Range r ) { throw XEC.TODO(); }
 
   private static final SB SBX = new SB();
   @Override public String toString() {
