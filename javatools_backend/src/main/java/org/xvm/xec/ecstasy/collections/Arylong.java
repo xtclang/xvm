@@ -38,7 +38,7 @@ public class Arylong extends Array<Int64> {
   public static Arylong construct(Mutability mut, Arylong as) { return new Arylong(mut,as); }
   public static Arylong construct() { return new Arylong(); }
   public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
-  public static Arylong construct(int len) { return new Arylong(len); }
+  public static Arylong construct(long len) { return new Arylong((int)len); }
   
   
   // Fetch element
@@ -64,7 +64,7 @@ public class Arylong extends Array<Int64> {
   }
 
   /** Slice */
-  public Arylong at( Range r ) {
+  public Arylong slice( Range r ) {
     throw XEC.TODO();
   }
 
@@ -84,8 +84,8 @@ public class Arylong extends Array<Int64> {
     int idx = indexOf(e);
     return idx== -1 ? this : deleteUnordered(idx);
   }
-  public Arylong deleteUnordered(int idx) {
-    _es[idx] = _es[--_len];
+  public Arylong deleteUnordered(long idx) {
+    _es[(int)idx] = _es[--_len];
     return this;
   }
   

@@ -57,9 +57,7 @@ public class AryUInt8 extends Array<UInt8> {
   }
 
   /** Slice */
-  public AryUInt8 at( Range r ) {
-    throw XEC.TODO();
-  }
+  public AryUInt8 slice( Range r ) { throw XEC.TODO(); }
 
   public AryUInt8 addAll( AryUInt8 ls ) { throw XEC.TODO(); }
 

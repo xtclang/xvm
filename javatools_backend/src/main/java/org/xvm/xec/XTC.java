@@ -133,5 +133,7 @@ public abstract class XTC {
 
   // XTC ReadOnlyException mapped to Java
   public static class ReadOnlyException extends RuntimeException {}
-  
+
+  // XTC NotImplemented mapped to Java
+  public static class NotImplemented extends RuntimeException {}
 }

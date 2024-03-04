@@ -40,6 +40,7 @@ public abstract class XCons {
   public static XClz HASHABLE    = XClz.make_java("ecstasy.collections","Hashable",null);
   public static XClz ILLARGX     = XClz.make_java("XTC","IllegalArgument",false,"ecstasy","IllegalArgument",null);
   public static XClz ILLSTATEX   = XClz.make_java("XTC","IllegalState"   ,false,"ecstasy","IllegalState"   ,null);
+  public static XClz NOTIMPL     = XClz.make_java("XTC","NotImplemented" ,false,"ecstasy","NotImplemented" ,null);
   public static XClz ITERABLE    = XClz.make_java("ecstasy","Iterable",null,"Element",XXTC);
   public static XClz ITERATOR    = XClz.make_java("ecstasy","Iterator",null,"Element",XXTC);
   public static XClz MUTABILITY  = XClz.make_java("ecstasy.collections.Array","Mutability",ENUM);
