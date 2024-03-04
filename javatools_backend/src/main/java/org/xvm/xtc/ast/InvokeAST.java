@@ -122,7 +122,15 @@ public class InvokeAST extends AST {
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
       case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String"),_kids[0]);
-      case "equals", "split", "indexOf" -> this;
+      case "equals", "split" -> this;
+      case "indexOf" -> {
+        castInt(2);                         // Force index to be an int not a long
+        if( _type!=XCons.BOOL ) yield this; // Return int result
+        // Request for the boolean result instead of int result
+        _type = XCons.LONG;   // Back to producing an an int result
+        // But insert compare to -1 for boolean
+        yield new BinOpAST( "!=", "", XCons.BOOL, this, new ConAST( "-1" ) );
+      }
       default -> throw XEC.TODO();
       };
 
