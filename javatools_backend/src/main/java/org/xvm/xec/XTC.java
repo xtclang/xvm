@@ -123,7 +123,7 @@ public abstract class XTC {
 
   // XTC IllegalState mapped to Java
   public static class IllegalState extends Exception {
-    IllegalState(String msg) {super(msg); }
+    public IllegalState(String msg) {super(msg); }
     public static IllegalState construct(String s) { return new IllegalState(s); }
   }
 
