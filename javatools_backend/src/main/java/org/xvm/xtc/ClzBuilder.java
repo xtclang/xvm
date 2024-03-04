@@ -506,6 +506,11 @@ public class ClzBuilder {
             jmethod(meth,mname+"$"+mmp._name);
           }
           break;
+        case ClassPart clz_nest:
+          // Nested class.  Becomes a java static inner class
+          ClzBuilder X = new ClzBuilder(this,clz_nest);
+          X.jclass_body();
+          break;
         default: throw XEC.TODO();
         }
       }

@@ -58,6 +58,20 @@ public abstract class AST {
     }
   }
 
+  // Cast nth child from a long to an int
+  AST castInt(int n) {
+    AST kid = _kids[n];
+    // Update a long constant to an int in-place
+    if( kid instanceof ConAST con ) {
+      if( con._type == XCons.INT ) return this; // Already an int
+      assert con._type == XCons.LONG;
+      con._con = con._con.substring(0,con._con.length()-1);
+      con._type = XCons.INT;
+      return this;
+    }
+    throw XEC.TODO();
+  }
+  
   // Recursively walk the AST, setting the _type field.
   public final void type( ) {
     if( _kids != null )
