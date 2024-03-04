@@ -13,7 +13,7 @@ CMP_OPTS ?= -O0
 
 # extra source file for shared linux/unix code
 ifneq ($(OS_NAME),windows)
-    SHARED_IMPL = os_unux.c
+	SHARED_IMPL = os_unux.c
 endif
 
 # result executable name
@@ -80,3 +80,5 @@ endif
 # windows resource linking
 resfile:
 	windres $(RC_FILE) --output-format coff --output $(RES_FILE)
+
+
