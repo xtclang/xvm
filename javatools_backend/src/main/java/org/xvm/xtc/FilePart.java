@@ -36,7 +36,7 @@ public class FilePart extends Part {
    * will be displayed if there is a version mismatch, which should save some frustration -- since
    * otherwise the resulting error(s) can be very hard to diagnose.
    */
-  static final int VERSION_MINOR_CUR = 2023_11_22;
+  static final int VERSION_MINOR_CUR = 2024_02_18;
   final int _minor;
 
   // Main module
