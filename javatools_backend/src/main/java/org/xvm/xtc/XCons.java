@@ -16,21 +16,22 @@ public abstract class XCons {
   public static XClz EXCEPTION = XClz.make_java("java.lang","Exception",false,"ecstasy","Exception",CONST);
 
   // Java primitives or primitive classes
-  public static XBase BOOL = XBase.make("boolean");
-  public static XBase BYTE = XBase.make("byte");
-  public static XBase CHAR = XBase.make("char");
-  public static XBase SHORT= XBase.make("short");
-  public static XBase INT  = XBase.make("int");
-  public static XBase LONG = XBase.make("long");
-  public static XBase DOUBLE = XBase.make("double");
-  public static XBase STRING = XBase.make("String");
+  public static XBase BOOL = XBase.make("boolean",false);
+  public static XBase BYTE = XBase.make("byte",false);
+  public static XBase CHAR = XBase.make("char",false);
+  public static XBase SHORT= XBase.make("short",false);
+  public static XBase INT  = XBase.make("int",false);
+  public static XBase LONG = XBase.make("long",false);
+  public static XBase DOUBLE = XBase.make("double",false);
+  public static XBase STRING = XBase.make("String",true);
+  public static XBase STRINGN= XBase.make("String",false);
   
-  public static XBase VOID = XBase.make("void");
-  public static XBase TRUE = XBase.make("true");
+  public static XBase VOID = XBase.make("void",false);
+  public static XBase TRUE = XBase.make("true",false);
   public static XClz JTRUE = XClz.make_java("ecstasy.Boolean","True" ,JBOOL);
-  public static XBase FALSE= XBase.make("false");
+  public static XBase FALSE= XBase.make("false",false);
   public static XClz JFALSE= XClz.make_java("ecstasy.Boolean","False",JBOOL);
-  public static XBase NULL = XBase.make("null");
+  public static XBase NULL = XBase.make("null",false);
   public static XClz JNULL = XClz.make_java("ecstasy","Nullable",null);
   
   // A set of common XTC classes, and their Java replacements...
