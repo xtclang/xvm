@@ -6,8 +6,11 @@ module tck.xtclang.org {
     void run() {
 //        constructors.Basic b = new constructors.Basic();
 //        b.testUnFreezable();
-//
+
 //        constructors.Medium m = new constructors.Medium();
-//        m.testFinalizerChain();
+//        m.testAssertChain();
+
+//        constructors.Reflect r = new constructors.Reflect();
+//        r.testAssertChain();
     }
 }

@@ -3,14 +3,8 @@
  */
 class Medium {
 
-    void run() {
-        testAssert();
-        testFinalizer();
-        testFinalizerChain();
-    }
-
     /**
-     * At the end of construction the assert() function must be invoked.
+     * At the end of construction the validator (assert function) must be invoked.
      */
     @Test
     void testAssert() {
@@ -26,6 +20,27 @@ class Medium {
         } catch (IllegalState e) {
             assert e.message.indexOf("a2.size");
         }
+    }
+
+    /**
+     * The validators must be invoked in the natural inheritance order (derived first).
+     */
+    @Test
+    void testAssertChain() {
+        static class Base(String s) {
+            assert() {
+                this.s = s + "-BA";
+            }
+        }
+        static class Derived(String s)
+                extends Base(s) {
+            assert() {
+                this.s = s + "-DA";
+            }
+        }
+
+        Base b = new Derived("Test");
+        assert b.s == "Test-DA-BA";
     }
 
     /**
@@ -67,7 +82,7 @@ class Medium {
             }
         }
         static class Derived(String s)
-            extends Base {
+                extends Base {
 
             construct(String s) {
                 construct Base(s + "-DC");
