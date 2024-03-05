@@ -65,6 +65,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
 
@@ -126,6 +127,7 @@ public class xRTType
         markNativeMethod("parameterized"    , null, null);
         markNativeMethod("purify"           , null, null);
         markNativeMethod("resolveFormalType", null, null);
+        markNativeMethod("structConstructor", null, null);
 
         final String[] PARAM_TYPE    = new String[] {"reflect.Type!<>"};
         final String[] PARAM_METHODS = new String[] {"collections.Array<reflect.Method>"};
@@ -341,6 +343,9 @@ public class xRTType
 
             case "resolveFormalType":
                 return invokeResolveFormalType(frame, hType, (StringHandle) ahArg[0], aiReturn);
+
+            case "structConstructor":
+                return invokeStructConstructor(frame, hType, ahArg[0], aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -597,7 +602,6 @@ public class xRTType
         //         type is a class of a module that is loaded in this container, or shared with this
         //         container from its parent container, or loaded in a container that is nested
         //         within this container)
-        // TODO verify that pure type is not newable
         TypeConstant typeTarget = hType.getDataType();
         TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
 
@@ -614,23 +618,16 @@ public class xRTType
         ObjectHandle[] ahFunctions;
         if (infoTarget.isNewable(false, ErrorListener.BLACKHOLE))
             {
-            ConstantPool    pool       = frame.poolContext();
-            TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
-            TypeComposition clzTarget  = typeTarget.ensureClass(frame);
-
-            ArrayList<ObjectHandle> listHandles   = new ArrayList<>();
-            boolean                 fStructConstr = false;
-            for (MethodConstant idConstr : infoTarget.findMethods("construct", -1, TypeInfo.MethodKind.Constructor))
+            ConstantPool            pool        = frame.poolContext();
+            TypeComposition         clzTarget   = typeTarget.ensureClass(frame);
+            ArrayList<ObjectHandle> listHandles = new ArrayList<>();
+            for (MethodConstant idConstr :
+                    infoTarget.findMethods("construct", -1, TypeInfo.MethodKind.Constructor))
                 {
                 MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr, true);
                 MethodStructure constructor = infoMethod.getTopmostMethodStructure(infoTarget);
                 Parameter[]     aParams     = constructor.getParamArray();
-
-                TypeConstant[] atypeParams = infoMethod.getSignature().getRawParams();
-                if (atypeParams.length == 1 && atypeParams[0].equals(typeStruct))
-                    {
-                    fStructConstr = true;
-                    }
+                TypeConstant[]  atypeParams = infoMethod.getSignature().getRawParams();
 
                 // each constructor function will be of a certain type, which differs only in the
                 // additional parameters that each constructor has; for a virtual child, all of the
@@ -665,37 +662,6 @@ public class xRTType
                 listHandles.add(xRTFunction.makeConstructorHandle(frame, constructor,
                             typeConstructor, clzTarget, aParams, typeParent != null));
                 }
-
-            if (!fStructConstr)
-                {
-                // add a synthetic struct constructor handle (e.g. for deserialization)
-                TypeConstant[] atypeParams;
-                Parameter[]    aParams;
-                if (typeParent == null)
-                    {
-                    atypeParams = new TypeConstant[] {typeStruct};
-                    aParams     = new Parameter[]
-                                    {
-                                    new Parameter(pool, typeStruct, "0", null, false, 0, false)
-                                    };
-                    }
-                else
-                    {
-                    atypeParams = new TypeConstant[] {typeParent, typeStruct};
-                    aParams     = new Parameter[]
-                                    {
-                                    new Parameter(pool, typeParent, "0", null, false, 0, false),
-                                    new Parameter(pool, typeStruct, "1", null, false, 1, false)
-                                    };
-                    }
-
-                // synthetic constructor is definitely not annotated
-                TypeConstant typeConstructor = pool.buildFunctionType(atypeParams, typeTarget);
-
-                listHandles.add(xRTFunction.makeConstructorHandle(frame, null,
-                            typeConstructor, clzTarget, aParams, typeParent != null));
-                }
-
             ahFunctions = listHandles.toArray(Utils.OBJECTS_NONE);
             }
         else
@@ -1283,6 +1249,73 @@ public class xRTType
         return typeR == null
             ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
             : frame.assignValues(aiReturn, xBoolean.TRUE, typeR.ensureTypeHandle(frame.f_context.f_container));
+        }
+
+    /**
+     * Implementation for:
+     *      {@code conditional function DataType(Struct) structConstructor(OuterType? outer = Null)}
+     */
+    public int invokeStructConstructor(Frame frame, TypeHandle hType, ObjectHandle hOuter, int[] aiReturn)
+        {
+        TypeConstant typeTarget = hType.getDataType();
+        TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+        if (hOuter == ObjectHandle.DEFAULT)
+            {
+            hOuter = xNullable.NULL;
+            }
+
+        TypeConstant typeParent = null;
+        if (infoTarget.isVirtualChildClass())
+            {
+            if (hOuter == xNullable.NULL)
+                {
+                return frame.raiseException(
+                    xException.illegalArgument(frame, "Parent is not specified"));
+                }
+            typeParent = hType.getOuterType();
+            assert typeParent != null;
+            assert !typeParent.equals(pool().typeObject());
+            }
+
+        if (!infoTarget.isNewable(false, ErrorListener.BLACKHOLE))
+            {
+            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            }
+
+        ConstantPool    pool       = frame.poolContext();
+        TypeConstant    typeStruct = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
+        TypeComposition clzTarget  = typeTarget.ensureClass(frame);
+
+        // create a synthetic constructor handle
+        TypeConstant[] atypeParams;
+        Parameter[]    aParams;
+        if (typeParent == null)
+            {
+            atypeParams = new TypeConstant[] {typeStruct};
+            aParams     = new Parameter[]
+                            {
+                            new Parameter(pool, typeStruct, "0", null, false, 0, false)
+                            };
+            }
+        else
+            {
+            atypeParams = new TypeConstant[] {typeParent, typeStruct};
+            aParams     = new Parameter[]
+                            {
+                            new Parameter(pool, typeParent, "0", null, false, 0, false),
+                            new Parameter(pool, typeStruct, "1", null, false, 1, false)
+                            };
+            }
+
+        TypeConstant   typeConstructor = pool.buildFunctionType(atypeParams, typeTarget);
+        FunctionHandle hConstructor    = (FunctionHandle) xRTFunction.makeConstructorHandle(frame,
+                null, typeConstructor, clzTarget, aParams, typeParent != null);
+        if (typeParent != null)
+            {
+            hConstructor = hConstructor.bind(frame, 0, hOuter);
+            }
+        return frame.assignValues(aiReturn, xBoolean.TRUE, hConstructor);
         }
 
 

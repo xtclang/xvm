@@ -1498,12 +1498,10 @@ public class xRTFunction
      * Create an immutable FunctionHandle for a given constructor. Note, that the constructor
      * may be null for synthetic constructor function.
      *
-     * The returned handle could be deferred.
+     * If the constructor is specified and has annotations, the returned handle could be deferred.
      */
     public static ObjectHandle makeConstructorHandle(Frame frame, MethodStructure constructor,
-                                                     TypeConstant typeConstructor,
-                                                     TypeComposition clzTarget,
-                                                     Parameter[] aParams, boolean fParent)
+            TypeConstant typeConstructor, TypeComposition clzTarget, Parameter[] aParams, boolean fParent)
         {
         Container       container = frame.f_context.f_container;
         TypeComposition clzConstruct;
@@ -1584,7 +1582,7 @@ public class xRTFunction
         @Override
         public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
             {
-            // this can only a call from Call_01
+            // this can only be a call from Call_01
             return callImpl(frame, ahArg, iReturn);
             }
 
@@ -1627,11 +1625,11 @@ public class xRTFunction
                 }
 
             TypeComposition clzTarget   = f_clzTarget;
-            ClassTemplate template    = clzTarget.getTemplate();
+            ClassTemplate   template    = clzTarget.getTemplate();
             MethodStructure constructor = f_constructor;
 
             // constructor could be null for a synthetic run-time structure-based constructor
-            // created above by "getPropertyConstructors" method
+            // created by the "xRTType.invokeStructConstructor" method
             return constructor == null
                 ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, iReturn)
                 : template.construct(frame, constructor, clzTarget, hParent, ahArg, iReturn);

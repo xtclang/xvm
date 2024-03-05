@@ -112,14 +112,14 @@ interface Type<DataType, OuterType>
     /**
      * Obtain the raw set of all properties on the type.
      */
-    @RO Array<Property<DataType>> properties;
+    @RO Property<DataType>[] properties;
 
     /**
      * Obtain the raw set of all constants associated with the type. Constants are technically not
      * part of the type definition, but are provided here for convenience, because otherwise it
      * would be relatively difficult to gather this information.
      */
-    @RO Array<Property> constants;
+    @RO Property[] constants;
 
     /**
      * Obtain the methods and functions of the type, collected by name, and represented by
@@ -132,24 +132,23 @@ interface Type<DataType, OuterType>
     /**
      * Obtain the raw set of all methods on the type.
      */
-    @RO Array<Method<DataType>> methods;
+    @RO Method<DataType>[] methods;
 
     /**
      * Obtain the raw set of all functions associated with the type. Functions are technically not
      * part of the type definition, but are provided here for convenience, because otherwise it
      * would be relatively difficult to gather this information.
      */
-    @RO Array<Function> functions;
+    @RO Function[] functions;
 
     /**
-     * The constructors for the type. Constructors are technically not part of the type definition,
-     * but are provided here for convenience, because otherwise it would be relatively difficult to
-     * gather this information. In addition to the explicitly declared constructors, an instantiable
-     * class always has an implicit constructor that takes a parameter of type `StructType`. All
-     * constructors for a virtual child class require the parent (i.e. outer) reference to be
-     * provided as the first parameter of construction.
+     * The factory functions representing the constructors for this type. These constructors are
+     * technically not part of the type definition, but are provided here for convenience, because
+     * otherwise it would be relatively difficult to gather this information. All constructors for
+     * a virtual child class require the parent (i.e. the "outer") reference to be provided as the
+     * first parameter of construction.
      */
-    @RO Array<Constructor> constructors;
+    @RO Constructor[] constructors;
 
     /**
      * If this type is a class type, and the class has child classes, then this provides the types
@@ -595,6 +594,9 @@ interface Type<DataType, OuterType>
     /**
      * Helper method to locate the default (no-parameter) constructor.
      *
+     * @param outer  (optional) the parent instance, which is required if this is a virtual child
+     *               type
+     *
      * @return True iff the Class has a default constructor
      * @return (conditional) the default constructor
      */
@@ -626,30 +628,18 @@ interface Type<DataType, OuterType>
     }
 
     /**
-     * Helper method to locate the structure-based constructor.
+     * For types that correspond to non-abstract classes, obtain the factory function that allows
+     * new class instances to be created from the corresponding structures.
      *
-     * @return True iff the Class has a default constructor
-     * @return (conditional) the default constructor
+     * @param outer  (optional) the parent instance, which is required if this is a virtual child
+     *               type
+     *
+     * @return True iff the Class has a structure-based constructor
+     * @return (conditional) the constructor
+     *
+     * @throw IllegalArgument if this is a virtual child type, but a parent is not specified
      */
-    conditional function DataType(Struct) structConstructor(OuterType? outer = Null) {
-        if (Class clz := fromClass(), clz.virtualChild) {
-            assert:arg outer != Null;
-            for (val fn : constructors) {
-                if (fn.ParamTypes.size == 2 && fn.ParamTypes[1].is(Type!<Struct>)) {
-                    assert fn.ParamTypes[0] == OuterType;
-                    return True, structure -> fn.invoke((outer, structure))[0];
-                }
-            }
-        } else {
-            for (val fn : constructors) {
-                if (fn.ParamTypes.size == 1 && fn.ParamTypes[0].is(Type!<Struct>)) {
-                    return True, structure -> fn.invoke(Tuple:(structure))[0];
-                }
-            }
-        }
-
-        return False;
-    }
+    conditional function DataType(Struct) structConstructor(OuterType? outer = Null);
 
 
     // ----- Stringable methods --------------------------------------------------------------------

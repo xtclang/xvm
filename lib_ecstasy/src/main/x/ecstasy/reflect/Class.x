@@ -488,7 +488,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * parameters.
      *
      * @param name        the name of the child class
-     * @param paramTypes  the type parameters of the child class
+     * @param paramTypes  (optional) the type parameters of the child class
      *
      * @return the child class as specified
      */
@@ -535,6 +535,12 @@ const Class<PublicType, ProtectedType extends PublicType,
 
     /**
      * Allocate an empty structure for this class.
+     *
+     * @param outer  (optional) the parent instance, which is required if this is a [virtualChild]
+     *               class
+     *
+     * @return True iff this class is instantiatable; False otherwise
+     * @return (conditional) an empty structure
      */
     conditional StructType allocate(PublicType.OuterType? outer = Null) {
         ClassTemplate baseTemplate = this.baseTemplate;
@@ -545,10 +551,16 @@ const Class<PublicType, ProtectedType extends PublicType,
     }
 
     /**
-     * - if a corresponding constructor exists, it will be called before the automatic structure
-     *   validation
+     * Create an instance of this class using the specified structure.
      *
-     * @throws IllegalState if the structure is illegal in any way
+     * @param structure  the structure to use for this class instance
+     * @param outer      (optional) the parent instance, which is required if this is a
+     *                   [virtualChild] class
+     *
+     * @return a new instance of the class
+     *
+     * @throws IllegalState    if the structure is illegal in any way
+     * @throw  IllegalArgument if a virtual child parent is not specified
      */
     PublicType instantiate(StructType structure, PublicType.OuterType? outer = Null) {
         assert function PublicType (StructType) constructor := PublicType.structConstructor(outer);
