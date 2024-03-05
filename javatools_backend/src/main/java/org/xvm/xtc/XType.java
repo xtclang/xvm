@@ -194,7 +194,7 @@ public abstract class XType {
     case TermTCon ttc -> {
       if( ttc.part() instanceof ClassPart clz ) {
         if( clz._path !=null && S.eq(clz._path._str,"ecstasy/Object.x") )
-          yield XClz.XXTC;
+          yield XCons.XXTC;
         if( S.eq("Null",clz._name) )
           yield XCons.NULL;     // Primitive null
         XClz xclz = XClz.make(clz);
@@ -254,7 +254,7 @@ public abstract class XType {
         XType[] clzs = new XType[N];
         for( int i=0; i<N; i++ )
           clzs[i] = XType.xtype(ptc._parms[i],false);
-        yield org.xvm.xec.ecstasy.collections.Tuple.make_class(XClz.make_tuple(clzs));
+        yield org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(clzs));
       }
 
       // Attempt to use the Java class name
@@ -284,7 +284,7 @@ public abstract class XType {
       yield XUnion.make(u1,u2);
     }
 
-    case IntCon itc -> XClz.format_clz(itc._f).box(boxed);
+    case IntCon itc -> XCons.format_clz(itc._f).box(boxed);
     case CharCon cc -> JCHAR.box(boxed);
     case ByteCon cc -> JBYTE.box(boxed);
     case Flt64Con fc -> JDOUBLE.box(boxed);
@@ -330,7 +330,7 @@ public abstract class XType {
 
     case ClassCon ccon ->  XClz.make(ccon.clz());
 
-    case ServiceTCon service -> XClz.SERVICE;
+    case ServiceTCon service -> XCons.SERVICE;
 
     case VirtDepTCon virt -> xtype(virt._par,false);
 

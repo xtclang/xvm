@@ -26,8 +26,13 @@ public class Char extends Const {
     long x = _c-'0';
     return XRuntime.SET$COND(0 <= x && x <= 9,x);
   }
+  // Unicode version of ASCII digit check
+  public long decimalValue() {
+    return asciiDigit();
+  }
 
   public static String quoted(char c) {
     throw XEC.TODO();
   }
+
 }

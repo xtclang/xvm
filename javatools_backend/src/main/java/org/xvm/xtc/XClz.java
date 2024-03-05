@@ -1,7 +1,9 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.util.*;
+import org.xvm.util.S;
+import org.xvm.util.SB;
+import org.xvm.util.VBitSet;
 import org.xvm.xtc.cons.*;
 
 import java.util.Arrays;
@@ -13,12 +15,29 @@ import java.util.Arrays;
 // We can map from a ParamTCon to a true generic XType, with XType generic classes.
 // An XType carries the ClassPart it came from, but not the PTC (if any).
 
+// XClz tracks super-class but NOT the set of implemented interfaces
+
+// Example class def:
+//   Here E is the class name for a type
+//   class List<E> { ... }
+//   XClz: List{E=XTC}
+
+// Example class usage with a concrete type, not a type-variable:
+//   No field name, since Int is a Type not a TypeVar
+//   class Nums extends List<Int> { ... }
+//   XClz: Nums{_=Int}
+
+//Example class usage:
+//   Name is valid in local scope and NOT in List's scope
+//   class MyList<Q> extends List<Q> { ... }
+//   XClz: MyList{Q=XTC}
+
+//Example class usage:
+//   Name and constraint are valid in local scope.
+//   class MyList<H extends Hashable> extends List<H> { ... }
+//   XClz: MyList{H=Hashable}
+
 public class XClz extends XType {
-  private static XClz FREE;
-  public static XClz XXTC    = XClz.make_java("","XTC",null);
-  public static XClz CONST   = XClz.make_java("ecstasy","Const",XXTC);
-  public static XClz ENUM    = XClz.make_java("ecstasy","Enum" ,CONST);
-  public static XClz SERVICE = XClz.make_java("ecstasy","Service",XXTC);
   // Force XCons to fill the XTpe INTERNs
   public static XClz _FORCE = XCons.JNULL;
   
@@ -32,12 +51,14 @@ public class XClz extends XType {
   public ClassPart _clz;        // Self class, can be a module
   public boolean _iface;        // True if interface
   public boolean _ambiguous;    // True if ambiguous in the current compilation unit, and needs the fully qualified name everywhere
-  public XClz _super;           // Super xtype or null
-  public String[] _flds;        // Field names, matching _xts
+  XClz _super;                  // Super xtype or null
+  public String[] _tnames;      // Type names, matching _xts
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _nTypeParms = -99; }
 
-  private static XClz make( String pack, String nest, String name, int len ) {
+  // Free list of XClzs to recycle
+  private static XClz FREE;
+  static XClz make( String pack, String nest, String name, int len ) {
     XClz clz = FREE==null ? new XClz() : FREE;
     if( clz==FREE ) FREE=null;
     assert clz._nTypeParms == -99; // Was from FREE list
@@ -48,95 +69,21 @@ public class XClz extends XType {
     clz._name = name;
     // See if we can reuse the xts,flds
     if( clz._nTypeParms != len ) {
-      clz._xts = len==0 ? null : new XType [len];
-      clz._flds= len==0 ? null : new String[len];
+      clz._xts = len==0 ? null : new XType[len];
+      clz._tnames = len==0 ? null : new String[len];
+      clz._nTypeParms = len;
     }
-    clz._nTypeParms = len;
+    // If this class has a direct Java implementation, these are the Java names
     clz._jpack = clz._jname = null; // Need these to be filled in
-    clz._notNull = true;
+    clz._notNull = true;            // Default, use nullable to change
+    clz._super = null;
     return clz;
   }
-  private XClz _intern() {
+  
+  XClz _intern() {
     XClz clz = (XClz)intern(this);
     if( clz!=this ) { FREE = this; _nTypeParms = -99; }
     return clz;
-  }
-
-  
-  // Made from a Java class directly; the XTC class shows up later.
-  // Fields are hand-added and need to match the ClazzPart later.
-  public static XClz make( String pack, String name, XClz supr, Object... flds ) {
-    return make_java(null,null,true,pack,name,supr,flds);
-  }
-  public static XClz make_java( String pack, String name, XClz supr, Object... flds ) {
-    return make_java(pack,name,true,pack,name,supr,flds);
-  }
-  public static XClz make_java( String jpack, String jname, boolean jparms, String pack, String name, XClz supr, Object... flds ) {
-    XClz clz = make(pack,"",name,flds.length>>1);
-    clz._jpack = jpack;
-    clz._jname = jname;
-    clz._jparms = jparms;
-    clz._nTypeParms = flds.length>>1;
-    for( int i=0; i<flds.length; i += 2 ) {
-      clz._flds[i>>1] = (String)flds[i  ];
-      clz._xts [i>>1] = (XType )flds[i+1];
-    }
-    // XXTC root XClz has no XTC _clz
-    if( pack.isEmpty() && S.eq(name,"XTC") )
-      return clz._intern();
-
-    // Walk the XTC REPO in parallel, and find the matching XTC class
-    String[] packs = pack.split("\\.");
-    assert packs[0].equals("ecstasy");
-    ClassPart pclz = XEC.ECSTASY;
-    for( int i=1; i<packs.length; i++ )
-      pclz = (ClassPart)pclz.child(packs[i]);
-    pclz = (ClassPart)pclz.child(name);
-    // Some XClzs have no XTC equivalent
-    if( pclz==null || pclz._tclz!=null ) {
-      clz._super = supr;
-    } else {
-      // Fill in XTC class details
-      assert pclz._tcons.length==clz._nTypeParms;
-      pclz._tclz = clz;
-      // Set the super
-      XClz sup = get_super(pclz);
-      assert supr==sup || supr==null;
-      clz._super = sup;
-      // Set mod and clz
-      clz._mod = pclz.mod();
-      clz._clz = pclz;
-      clz._iface = pclz._f==Part.Format.INTERFACE;
-    }
-    XClz clz2 = clz._intern();
-    assert clz==clz2;           // No prior versions of these java-based XClzs
-    return clz;
-  }
-
-  // Java primitive array classes, no corresponding XTC class
-  public static XClz make_java_ary( String jname, boolean jparms, XType xelem ) {
-    XClz clz = make("ecstasy.collections","","Array",1);
-    clz._jpack = "ecstasy.collections";
-    clz._jname = jname;
-    clz._jparms = jparms;
-    clz._flds[0] = "Element";
-    clz._xts [0] = xelem;
-    clz._clz = XCons.ARRAY._clz;
-    clz._super = null;
-    return clz._intern();
-  }
-
-  public static XClz make_tuple( XType... clzs ) {
-    XClz clz = make("ecstasy.collections","","Tuple",clzs.length);
-    clz._jpack = "ecstasy.collections";
-    clz._jname = "Tuple";
-    clz._jparms = true;
-    for( int i=0; i<clzs.length; i++ )
-      clz._flds[i] = (""+i).intern();
-    clz._xts = clzs;
-    clz._clz = XXTC._clz;
-    clz._super = XXTC;
-    return clz._intern();
   }
 
   // Fill in common fields.  Not interned yet.
@@ -174,7 +121,10 @@ public class XClz extends XType {
   }
   
   
-  // Made from XTC class
+  // Made from XTC class.
+  //   Here E is the class name for a type
+  //   class List<E> { ... }
+  //   XClz: List{E=XTC}
   public static XClz make( ClassPart clz ) {
     if( clz._tclz != null )
       return clz._tclz;
@@ -182,7 +132,7 @@ public class XClz extends XType {
     xclz._jname = xclz._jpack = ""; // No corresponding java name
     // Load the type parameters, part of the uniqueness
     for( int i=0; i<clz._tnames.length; i++ ) {
-      xclz._flds[i] = clz._tnames[i];
+      xclz._tnames[i] = clz._tnames[i];
       xclz._xts [i] = xtype(clz._tcons[i],true);
     }
     xclz._super = get_super(clz);
@@ -192,24 +142,34 @@ public class XClz extends XType {
     return xclz;
   }
 
-  // Make a specialized FutureVar type
-  public static XClz wrapFuture( XType xt ) {
-    ClzBuilder.add_import(XCons.FUTUREVAR);
-    if( xt instanceof XClz clz ) ClzBuilder.add_import(clz);
-    XClz xclz = _make_clz(XCons.FUTUREVAR._clz);
-    xclz._flds = XCons.FUTUREVAR._flds;
-    xclz._xts[0] = xt;
-    return xclz._make(XCons.FUTUREVAR);
-  }
   
-  // Make from a parameterized class; normal class but the type parms from the
-  // PTC.
+  // Make from a parameterized class: like a
+  // normal class but the type parms from the PTC.
+  
+  // Example class usage with a concrete type, not a type-variable:
+  //   class Nums extends List<Int> { ... }
+  //   XClz: Nums{_=Int}
+  //   No field name, since Int is a Type not a TypeVar
+  
+  //Example class usage:
+  //   class MyList<Q> extends List<Q> { ... }
+  //   XClz: MyList{Q=XTC}
+  //   Name is valid in local scope and NOT in List's scope
+  
+  //Example class usage:
+  //   class MyList<H extends Hashable> extends List<H> { ... }
+  //   XClz: MyList{H=Hashable}
+  //   Name and constraint are valid in local scope.
+  
   public static XClz make( ParamTCon ptc ) {
     ClassPart clz = ptc.clz();
     XClz xclz = _make_clz(clz);
     // Override parameterized type fields
     for( int i=0; i<ptc._parms.length; i++ ) {
-      xclz._flds[i] = clz._tnames[i];
+      // If the ptc parameter is a TermTCon - a "terminal type constant" it's a
+      // type, not a type variable.  No type name, but a type directly.
+      boolean isType = ptc._parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
+      xclz._tnames[i] = isType ? null : clz._tnames[i];
       xclz._xts [i] = xtype(ptc._parms[i],true);
     }
     
@@ -232,7 +192,6 @@ public class XClz extends XType {
   private XClz _make( XClz plain_clz ) {
     // See if already exists
     XClz xclz2 = _intern();
-
     if( xclz2 != this ) return xclz2; // Already did
 
     // Copy Java fields; this could be a parameterized version of a Java
@@ -248,6 +207,16 @@ public class XClz extends XType {
     return xclz2;
   }
   
+
+  // Make a specialized FutureVar type
+  public static XClz wrapFuture( XType xt ) {
+    ClzBuilder.add_import(XCons.FUTUREVAR);
+    if( xt instanceof XClz clz ) ClzBuilder.add_import(clz);
+    XClz xclz = _make_clz(XCons.FUTUREVAR._clz);
+    xclz._tnames = XCons.FUTUREVAR._tnames;
+    xclz._xts[0] = xt;
+    return xclz._make(XCons.FUTUREVAR);
+  }
   
   // You'd think the clz._super would be it, but not for enums
   static XClz get_super( ClassPart clz ) {
@@ -255,18 +224,18 @@ public class XClz extends XType {
       return make(clz._super);
     // The XTC Enum is a special interface, extending the XTC Const interface.
     // They are implemented as normal Java classes, with Enum extending Const.
-    if( S.eq(clz._path._str,"ecstasy/Enum.x") ) return CONST;
+    if( S.eq(clz._path._str,"ecstasy/Enum.x") ) return XCons.CONST;
     // Other enums are flagged via the Part.Format and do not have the
     // _super field set.
-    if( clz._f==Part.Format.CONST ) return CONST;
-    if( clz._f==Part.Format.ENUM  ) return ENUM ;
-    if( clz._f==Part.Format.SERVICE ) return SERVICE;
+    if( clz._f==Part.Format.CONST ) return XCons.CONST;
+    if( clz._f==Part.Format.ENUM  ) return XCons.ENUM ;
+    if( clz._f==Part.Format.SERVICE ) return XCons.SERVICE;
     // Special intercept for the Const "interface", which maps to the Java
     // class (NOT interface) Const.java
-    if( S.eq(clz._path._str,"ecstasy/Const.x") ) return XXTC;
+    if( S.eq(clz._path._str,"ecstasy/Const.x") ) return XCons.XXTC;
     // Special intercept for the Service "interface", which maps to the Java
     // class (NOT interface) Service.java
-    if( S.eq(clz._path._str,"ecstasy/Service.x") ) return XXTC;
+    if( S.eq(clz._path._str,"ecstasy/Service.x") ) return XCons.XXTC;
     return null;
   }
 
@@ -324,7 +293,7 @@ public class XClz extends XType {
     if( !_notNull ) return this;
     XClz clz = make(_pack,_nest,_name,_nTypeParms);
     clz._xts      = _xts   ;       // Share subtypes and fields
-    clz._flds     = _flds  ;
+    clz._tnames = _tnames;
     clz._jpack    = _jpack ;
     clz._jname    = _jname ;
     clz._jparms   = _jparms;
@@ -339,7 +308,7 @@ public class XClz extends XType {
   @Override public boolean needs_import(boolean self) {
     // Built-ins before being 'set' have no clz, and do not needs_import
     // Self module is also compile module.
-    if( this==XXTC ) return false;
+    if( this==XCons.XXTC ) return false;
     if( this==XCons.JTRUE ) return false;
     if( this==XCons.JFALSE) return false;
     if( this==XCons.JNULL ) return false;
@@ -349,11 +318,11 @@ public class XClz extends XType {
   // No java name means needs a build
   public boolean needs_build() { return _jname.isEmpty(); }
   
-  // Find a field in the superclass chain
-  XType find(String fld) {
+  // Find a type name in the superclass chain
+  XType find(String tname) {
     XClz clz = this;
     for( ; clz!=null; clz = clz._super ) {
-      int idx = S.find(clz._flds,fld);
+      int idx = S.find(clz._tnames,tname);
       if( idx!= -1 )
         return clz._xts[idx];
     }
@@ -367,9 +336,14 @@ public class XClz extends XType {
     sb.p("class ").p(_ambiguous ? qualified_name() : _name);
     if( _super!=null ) sb.p(":").p(_super._name);
     sb.p(" {").nl();
-    if( _flds != null ) 
-      for( int i=0; i<_flds.length; i++ )
-        _xts[i].str(sb.p("  ").p(_flds[i]).p(":"),visit,dups).p(";").nl();
+    if( _tnames != null )
+      for( int i = 0; i< _tnames.length; i++ ) {
+        sb.p("  ");
+        if( _tnames[i]!=null ) sb.p(_tnames[i]);
+        sb.p(":");
+        if( _xts[i] != null )  _xts[i].str(sb,visit,dups);
+        sb.p(";").nl();
+      }
     sb.p("}");
     if( !_notNull ) sb.p("?");
     return sb.nl();
@@ -403,7 +377,7 @@ public class XClz extends XType {
       // ParamTCon has a different name, it's not a type, it's a generic name.
       else if( ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm )
         sb.p("$").p(parm._name);
-      // Sructurally recurse
+      // Structurally recurse
       else _xts[i].clz(sb);
       sb.p(",");
     }
@@ -438,7 +412,8 @@ public class XClz extends XType {
     // Printing generic type parameters
     sb.p("<");
     for( int i=0; i<_nTypeParms; i++ ) {
-      sb.p("$").p(_flds[i]);
+      if( _tnames[i]==null ) _xts[i].clz(sb);
+      else sb.p("$").p(_tnames[i]);
       if( generic_def ) {
         XClz xclz = (XClz)_xts[i];
         sb.p(" extends XTC" );
@@ -460,14 +435,15 @@ public class XClz extends XType {
   // Using shallow equals, hashCode, not deep, because the parts are already interned
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;
-    return Arrays.equals(_flds,clz._flds) &&
+    return Arrays.equals( _tnames,clz._tnames ) &&
       S.eq( _name,clz. _name) && S.eq( _nest,clz. _nest) && S.eq( _pack,clz. _pack);
   }
   @Override int hash() {
     int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode();
-    if( _flds != null )
-      for( String fld : _flds )
-        hash ^= fld.hashCode();
+    if( _tnames != null )
+      for( String tname : _tnames )
+        if( tname != null )
+          hash ^= tname.hashCode();
     return hash;
   }
 
@@ -487,23 +463,4 @@ public class XClz extends XType {
         return false;
     return true;
   }
-
-  private static final XClz[] XCLZS = new XClz[] {
-    null,                     // IntLiteral
-    null,                     // Bit
-    null,                     // Nybble
-    XCons.JBYTE   ,
-    XCons.JINT16  ,
-    XCons.JINT32  ,
-    XCons.JLONG   ,
-    XCons.JINT128 ,
-    XCons.JINTN   ,
-    null,
-    XCons.JUINT16 ,
-    XCons.JUINT32 ,
-    XCons.JUINT64 ,
-    XCons.JUINT128,
-    XCons.JUINTN  ,
-  };
-  public static XClz format_clz(Const.Format f) { return XCLZS[f.ordinal()]; }
 }

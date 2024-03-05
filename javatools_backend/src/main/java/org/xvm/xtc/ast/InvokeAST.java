@@ -59,7 +59,7 @@ public class InvokeAST extends AST {
     if( _rets.length == 1 ) return _rets[0];
     if( _rets.length == 2 && (_rets[0]==XCons.BOOL || _rets[0]==XCons.JBOOL) )
       return _rets[1];          // Conditional
-    return XClz.make_tuple(_rets);
+    return XCons.make_tuple(_rets);
   }
   @Override boolean _cond() {
     if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
@@ -104,7 +104,7 @@ public class InvokeAST extends AST {
       return switch( _meth ) {
       case "add" -> new BinOpAST( "+", "", XCons.INT, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.INT, _kids );
-      case "asciiDigit" -> this;
+      case "asciiDigit", "decimalValue" -> this;
       case "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char"),_kids[0]);
       default -> throw XEC.TODO(_meth);
       };
@@ -143,7 +143,7 @@ public class InvokeAST extends AST {
     }
 
     // Auto-box arguments for non-internal calls
-    if( _args!=null && (k0t==XClz.XXTC || !(k0t instanceof XClz clz) || clz._jname.isEmpty()) )
+    if( _args!=null && (k0t==XCons.XXTC || !(k0t instanceof XClz clz) || clz._jname.isEmpty()) )
       for( int i=0; i<_args.length; i++ )
         autobox(i+1, _args[i]);
 
@@ -155,7 +155,7 @@ public class InvokeAST extends AST {
     if( sb.was_nl() ) sb.i();
     _kids[0].jcode(sb).p(".");
     // Service calls wrap
-    if( _kids[0]._type instanceof XClz clz && clz.isa(XClz.SERVICE) &&
+    if( _kids[0]._type instanceof XClz clz && clz.isa(XCons.SERVICE) &&
         // Except internal self-to-self
         ClzBuilder.CCLZ._tclz != clz ) {
       sb.p("$");               // Calling the     blocking service entry flavor
