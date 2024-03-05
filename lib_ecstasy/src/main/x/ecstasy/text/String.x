@@ -637,7 +637,7 @@ const String
      * @param pattern  the regular expression to match
      *
      * @return True iff this entire String matches the pattern
-     * @return (optional) a Matcher resulting from matching the regular expression with this String
+     * @return (conditional) a Matcher resulting from matching the regular expression with this String
      */
     conditional Match matches(RegEx pattern) {
         return pattern.match(this);
@@ -652,7 +652,7 @@ const String
      * @param pattern  the regular expression to match
      *
      * @return True iff this String starts with a sub-sequence that matches the regular expression
-     * @return (optional) a Matcher resulting from matching the start of this String
+     * @return (conditional) a Matcher resulting from matching the start of this String
      */
     conditional Match prefixMatches(RegEx pattern) {
         return pattern.matchPrefix(this);
@@ -672,7 +672,7 @@ const String
      * @param offset   the position in the String to start searching from
      *
      * @return True iff the input contains a sub-sequence that matches the pattern
-     * @return (optional) a Match resulting from matching the pattern
+     * @return (conditional) a Match resulting from matching the pattern
      */
     conditional Match containsMatch(RegEx pattern, Int offset = 0) {
         return pattern.find(this, offset);

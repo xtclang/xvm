@@ -168,7 +168,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @param typeSystem  a TypeSystem
      *
      * @return True iff the class exists within the specified TypeSystem
-     * @return (optional) the qualified path to the class within the TypeSystem, in a format that
+     * @return (conditional) the qualified path to the class within the TypeSystem, in a format that
      *         is supported by [TypeSystem.classForName]
      */
     conditional String pathWithin(TypeSystem typeSystem) {
@@ -505,7 +505,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * requested).
      *
      * @return True iff the class defines a singleton
-     * @return (optional) the singleton instance
+     * @return (conditional) the singleton instance
 
      * @throws IllegalState if the class is not part of the caller's type system, or a type system
      *         of a container nested under the caller's container
@@ -522,7 +522,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * Determine if the class defines a default value, and if so, obtain that value.
      *
      * @return True iff the class defines a default value
-     * @return (optional) the default value
+     * @return (conditional) the default value
 
      * @throws IllegalState if the class is not part of the caller's type system, or a type system
      *         of a container nested under the caller's container

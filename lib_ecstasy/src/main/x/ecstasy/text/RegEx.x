@@ -16,7 +16,7 @@ const RegEx(String pattern, Int flags = 0) {
      * @param input  the string value to match
      *
      * @return True iff the entire input String matches this pattern
-     * @return (optional) a Match resulting from matching the input string
+     * @return (conditional) a Match resulting from matching the input string
      */
     conditional Match match(String input) {
         return False;
@@ -36,7 +36,7 @@ const RegEx(String pattern, Int flags = 0) {
      * @param input  the string value to match
      *
      * @return True iff the input starts with a sub-sequence that matches this pattern
-     * @return (optional) a Match resulting from matching the input string
+     * @return (conditional) a Match resulting from matching the input string
      */
     conditional Match matchPrefix(String input) {
         return False;
@@ -59,7 +59,7 @@ const RegEx(String pattern, Int flags = 0) {
      * @param offset  the optional index of the character in the input String to begin searching from
      *
      * @return True iff the input contains a sub-sequence that matches this pattern
-     * @return (optional) a Match resulting from matching the input string
+     * @return (conditional) a Match resulting from matching the input string
      */
     conditional Match find(String input, Int offset = 0) {
         return False;

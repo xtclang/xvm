@@ -949,7 +949,7 @@ class Array<Element>
          * Compute the minimal value in this array.
          *
          * @return True iff the array is not empty
-         * @return (optional) the minimum element value
+         * @return (conditional) the minimum element value
          */
         conditional Element min() {
             switch (Int size = size) {
@@ -973,7 +973,7 @@ class Array<Element>
          * Compute the maximal value in this array.
          *
          * @return True iff the array is not empty
-         * @return (optional) the maximum element value
+         * @return (conditional) the maximum element value
          */
         conditional Element max() {
             switch (Int size = size) {
@@ -997,8 +997,8 @@ class Array<Element>
          * Compute the range of values in this array.
          *
          * @return True iff the array is not empty
-         * @return (optional) the minimum value
-         * @return (optional) the maximum value
+         * @return (conditional) the minimum value
+         * @return (conditional) the maximum value
          */
         conditional (Element min, Element max) range() {
             switch (Int size = size) {

@@ -311,7 +311,7 @@ interface Type<DataType, OuterType>
      * @param typeName  the formal type name
      *
      * @return True iff the formal type name can be resolved
-     * @return (optional) the resolved type
+     * @return (conditional) the resolved type
      */
      conditional Type!<> resolveFormalType(String typeName);
 

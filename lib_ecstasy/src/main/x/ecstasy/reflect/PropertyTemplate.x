@@ -22,7 +22,7 @@ interface PropertyTemplate
      * Check if the property is initialized using an initializer function.
      *
      * @return True iff the property is initialized using an initializer function
-     * @return (optional) the MethodTemplate representing the initializer of the property
+     * @return (conditional) the MethodTemplate representing the initializer of the property
      */
     conditional MethodTemplate hasInitializer();
 

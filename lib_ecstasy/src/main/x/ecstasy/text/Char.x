@@ -630,7 +630,7 @@ const Char(UInt32 codepoint)
      * Determine if the character represents a nibble value.
      *
      * @return True iff the character represents a nibble value
-     * @return (optional) the corresponding Nibble
+     * @return (conditional) the corresponding Nibble
      */
     conditional Nibble isNibble() {
         return switch (this) {

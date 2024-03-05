@@ -1440,8 +1440,8 @@ interface List<Element>
      * most often in this array.
      *
      * @return True iff the list is not empty
-     * @return (optional) the longest run ("mode") of the list values
-     * @return (optional) the size of the longest run
+     * @return (conditional) the longest run ("mode") of the list values
+     * @return (conditional) the size of the longest run
      */
     conditional (Element, Int) longestRun() {
         if (empty) {

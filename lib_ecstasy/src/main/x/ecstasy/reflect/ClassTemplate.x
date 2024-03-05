@@ -545,7 +545,7 @@ interface ClassTemplate
      * TODO CP please explain
      *
      * @return True iff the class represents an inflated property
-     * @return (optional) the PropertyTemplate this class comes from
+     * @return (conditional) the PropertyTemplate this class comes from
      */
     conditional PropertyTemplate fromProperty();
 
@@ -590,7 +590,7 @@ interface ClassTemplate
      *
      * @return True iff the class template can be addressed within the main module of its
      *         enclosing FileTemplate
-     * @return (optional) the qualified path to the class from the main module of the enclosing
+     * @return (conditional) the qualified path to the class from the main module of the enclosing
      *         FileTemplate
      */
     conditional String pathWithin() {

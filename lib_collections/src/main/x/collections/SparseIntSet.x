@@ -350,7 +350,7 @@ class SparseIntSet
      * @param  bitset  an integer value containing some number of set (1) and clear (0) bits
      *
      * @return True iff the bitset was modified
-     * @return (optional) an integer value containing the modified bitset
+     * @return (conditional) an integer value containing the modified bitset
      */
     protected static conditional Int setBit(Int n, Int bitset) {
         Int mask = maskFor(n);
@@ -368,7 +368,7 @@ class SparseIntSet
      * @param  bitset  an integer value containing some number of set (1) and clear (0) bits
      *
      * @return True iff the bitset was modified
-     * @return (optional) an integer value containing the modified bitset
+     * @return (conditional) an integer value containing the modified bitset
      */
     protected static conditional Int clearBit(Int n, Int bitset) {
         Int mask = maskFor(n);

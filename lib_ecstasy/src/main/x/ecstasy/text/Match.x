@@ -26,8 +26,8 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups) {
      * @param  index  the index of a capturing group in this matcher's pattern
      *
      * @return True iff the group at the given index index matched part of the input String
-     * @return (optional) the substring of the input String matched by the group
-     * @return (optional) the Range containing the start and end index the input text of the
+     * @return (conditional) the substring of the input String matched by the group
+     * @return (conditional) the Range containing the start and end index the input text of the
      *         specified capturing group
      */
     conditional (String, Range<Int>) group(Int index = 0) {
@@ -66,7 +66,7 @@ const Match(RegEx regEx, String text, Range<Int>?[] groups) {
      * last character in the input text matched by this Match.
      *
      * @return True iff the input text contains a further sub-sequence that matches this pattern
-     * @return (optional) a Match resulting from matching the remaining input string
+     * @return (conditional) a Match resulting from matching the remaining input string
      */
     conditional Match! next() {
         if (Range<Int> range ?= groups[0]) {

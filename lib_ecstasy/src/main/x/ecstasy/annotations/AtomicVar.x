@@ -98,7 +98,7 @@ mixin AtomicVar<Referent>
      *
      * @return True iff the operation failed due to the fact that the current value didn't match
      *         the specified `oldValue`
-     * @return (optional) the current value
+     * @return (conditional) the current value
      */
     conditional Referent replaceFailed(Referent oldValue, Referent newValue) {
         Referent curValue = get();

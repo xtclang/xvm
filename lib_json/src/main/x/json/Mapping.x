@@ -40,7 +40,7 @@ interface Mapping<Serializable>
      * @param type    the `Type` to obtain a more specific `Mapping` instance for
      *
      * @return True iff a more specific Mapping is available for the specified type
-     * @return (optional) a more specific Mapping for the specified type
+     * @return (conditional) a more specific Mapping for the specified type
      */
     <SubType extends Serializable> conditional Mapping!<SubType> narrow(Schema schema, Type<SubType> type) {
         return False;

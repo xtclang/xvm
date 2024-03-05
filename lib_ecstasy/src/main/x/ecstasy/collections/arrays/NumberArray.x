@@ -389,7 +389,7 @@ mixin NumberArray<Element extends Number>
      * Compute the sum of values in this array.
      *
      * @return True iff the array is not empty
-     * @return (optional) the sum of element values
+     * @return (conditional) the sum of element values
      */
     conditional Element sum() {
         if (empty) {

@@ -769,7 +769,7 @@ mixin FPNumberArray<Element extends FPNumber>
      * Compute variance of the array values.
      *
      * @return True iff the array is not empty
-     * @return (optional) the variance
+     * @return (conditional) the variance
      */
     conditional Element variance() {
         Int size = this.size;
