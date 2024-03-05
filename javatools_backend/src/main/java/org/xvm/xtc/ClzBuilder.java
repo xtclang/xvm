@@ -147,7 +147,12 @@ public class ClzBuilder {
       int once=0;
       for( Contrib c : _clz._contribs )
         if( c._comp==Part.Composition.Implements ) {
-          XClz iclz = c._tContrib instanceof ParamTCon ptc ? XClz.make(ptc) : XClz.make(((TermTCon)c._tContrib).clz());
+          XClz iclz = switch( c._tContrib ) {
+          case ParamTCon ptc -> XClz.make(ptc);
+          case TermTCon ttc -> XClz.make(ttc.clz());
+          case VirtDepTCon vtc -> XClz.make(vtc.clz());
+          default -> { throw XEC.TODO(); }
+          };
           iclz.clz_generic(_sb.p((once++ == 0) ? (_clz._tclz._iface ? " extends " : " implements ") : ", "),true,false);
           add_import(iclz);
         }
@@ -197,11 +202,11 @@ public class ClzBuilder {
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
       for( int i=0; i<_tclz.nTypeParms(); i++ )
-        _sb.fmt("$%0 %0,",_tclz._flds[i]);
+        _sb.fmt("$%0 %0,",_tclz._tnames[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
       for( int i=0; i<_tclz.nTypeParms(); i++ )
-        _sb.ifmt("this.%0 = %0;\n",_tclz._flds[i]);
+        _sb.ifmt("this.%0 = %0;\n",_tclz._tnames[i]);
       _sb.di().ip("}\n");
       
       // For all other constructors
@@ -216,12 +221,12 @@ public class ClzBuilder {
         _tclz.clz_generic(_sb,false,true);
         _sb.fmt("%0 construct( ",java_class_name); // Return type
         for( int i=0; i<_tclz.nTypeParms(); i++ )
-          _sb.fmt("$%0 %0,",_tclz._flds[i]);
+          _sb.fmt("$%0 %0,",_tclz._tnames[i]);
         _sb.unchar();
         args(meth,_sb);
         _sb.p(") { return new ").p(java_class_name).p("( ");
         for( int i=0; i<_tclz.nTypeParms(); i++ )
-          _sb.fmt("%0,",_tclz._flds[i]);
+          _sb.fmt("%0,",_tclz._tnames[i]);
         _sb.unchar().p(").$construct(");
         arg_names(meth,_sb);
         if( !is_iface ) _sb.p(").$check(); }").nl();
@@ -276,7 +281,7 @@ public class ClzBuilder {
             // Generate the method from the AST
             jmethod(meth,mname);
             // Service classes generate $mname and $$mname wrapper methods.
-            if( _tclz.isa(XClz.SERVICE) && meth.isPublic() )
+            if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
               Service.make_methods(meth,java_class_name,_sb);
             break;
           }
@@ -366,7 +371,7 @@ public class ClzBuilder {
     _sb.i();
     int access = m._nFlags & Part.ACCESS_MASK;
     // Public service methods get rewritten to private
-    if( _tclz.isa(XClz.SERVICE) && !is_constructor && !S.eq(m._name,"toString") )
+    if( _tclz.isa(XCons.SERVICE) && !is_constructor && !S.eq(m._name,"toString") )
       access = Part.ACCESS_PRIVATE;
     if( access==Part.ACCESS_PRIVATE   ) _sb.p("private "  );
     if( access==Part.ACCESS_PROTECTED ) _sb.p("protected ");
@@ -439,7 +444,7 @@ public class ClzBuilder {
         // The m._rets[0] is the boolean
         m.is_cond_ret() ? m._xrets[1] :
         // Tuple multi-return
-        XClz.make_tuple(m._xrets);
+        XCons.make_tuple(m._xrets);
       xret.clz(sb).p(' ');
     }
 
@@ -535,7 +540,7 @@ public class ClzBuilder {
       if( kid instanceof CallAST call &&
           call._kids[0] instanceof ConAST con &&
           ((MethodCon)con._tcon).name().equals("construct") ) {
-        kid._kids[0] = new RegAST(-13,"super",_tclz._super);
+        kid._kids[0] = new RegAST(-13,"super",XCons.XXTC/*_tclz._super*/);
         ast._kids[i] = new InvokeAST("$construct",new XType[]{XCons.VOID},kid._kids);
         return;
       }

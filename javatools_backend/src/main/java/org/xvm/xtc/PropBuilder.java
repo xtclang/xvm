@@ -4,7 +4,6 @@ import org.xvm.XEC;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const;
-import org.xvm.xtc.ast.AST;
 
 public abstract class PropBuilder {
   
@@ -38,8 +37,8 @@ public abstract class PropBuilder {
     String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     boolean lazy = "LazyVar".equals(ano); // TODO: Need a proper flag
     boolean stat = pp.isStatic() || pp._par instanceof ModPart;
-    boolean tfld = (S.find(X._tclz._flds,pname)&0xFFFF) < X._tclz.nTypeParms(); // Is a type field
-    boolean pub = pp._access == Const.Access.PUBLIC || (pp._access==null && X._tclz._super==XClz.CONST);
+    boolean tfld = (S.find(X._tclz._tnames,pname)&0xFFFF) < X._tclz.nTypeParms(); // Is a type field
+    boolean pub = pp._access == Const.Access.PUBLIC || (pp._access==null && X._tclz.isa(XCons.CONST));
     boolean iface = X._tclz._iface;
     SB sb = X._sb;
 
@@ -56,7 +55,7 @@ public abstract class PropBuilder {
     if( iface ) do_def=false;
 
     // No set property on type parameters
-    if( (S.find(X._tclz._flds,pname)&0xFFFF) <= X._tclz.nTypeParms() )
+    if( (S.find(X._tclz._tnames,pname)&0xFFFF) <= X._tclz.nTypeParms() )
       do_set = false;
     
     // If overriding some methods
@@ -119,7 +118,7 @@ public abstract class PropBuilder {
         if( pp._name2kid != null && (get=pp._name2kid.get("get"))!=null ) {
           MMethodPart mm = (MMethodPart)get;
           MethodPart meth = (MethodPart)mm._name2kid.get("get");
-          ClzBuilder X2 =  new ClzBuilder(X,null);
+          ClzBuilder X2 =  new ClzBuilder(X,X._clz);
           // Method has to be a no-args function, that is executed exactly once here.
           // Inline instead.
           sb.nl().ii().ip("return ");
