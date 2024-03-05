@@ -8,7 +8,7 @@
 SHELL := /bin/bash
 
 # Keep partial builds but not partial recipes
-.SECONDARY:	
+.NOTINTERMEDIATE:	
 
 # for printing variable values
 # usage: make print-VARIABLE
@@ -128,7 +128,7 @@ manuals_exe:	$(manuals_x:x=exe) $(classes)
 
 # Pick up any make-depends files for each desired XTC file.
 # Useful to pick up updates in top-level XTC modules from deep child X files.
-ifeq (,$(filter clean,$(MAKECMDGOALS)))
+ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
 include $(MAKECMDGOALS:.xtc=.d)
 endif
 
