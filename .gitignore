@@ -25,6 +25,8 @@
 \.#*
 *~
 TAGS
+# Makefile generated make-depends for XTC files
+*.d
 
 # Logs and databases
 *.log
