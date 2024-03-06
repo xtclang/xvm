@@ -34,6 +34,12 @@ class BinOpAST extends AST {
     _op1 = op1;
     _type = type;
   }
+  
+  private NumCon isTuple() {
+    // Tuple at fixed field offset is a NumCon.
+    // Something else (PropCon?) means get the collections' element type
+    return _kids[1] instanceof ConAST con && con._tcon instanceof NumCon num ? num : null;
+  }
 
   @Override XType _type() {
     if( _op0.equals(".at(") ) {
@@ -41,9 +47,10 @@ class BinOpAST extends AST {
       XType tk = _kids[0]._type;
       if( tk.isAry()  )
         return tk.e();
-      // Tuple at fixed field offset
-      ConAST con = (ConAST)_kids[1];
-      int idx = (int)((NumCon)con._tcon)._x;
+      // Tuple at fixed field offset is a NumCon.
+      // Something else (PropCon?) means get the collections' element type
+      NumCon num = isTuple();
+      int idx = num==null ? 0 : (int)num._x;
       return tk._xts[idx];
     }
     return _type;
@@ -59,6 +66,9 @@ class BinOpAST extends AST {
         _op0 = ".charAt((int)";
       } else if( _kids[0]._type.isAry() ) {
         _op0 = ".at8(";         // Use primitive 'at' instead of generic
+      } else if( isTuple()==null ) {
+        // Use generic at for generic collection
+        _op0 = ".getElement(";
       } else {
         // Tuple at fixed field offset
         _op0 = "._f";           // Field load at fixed offset

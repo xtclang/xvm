@@ -185,7 +185,8 @@ public abstract class AST {
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
     case NarrowedExpr ->   NarrowAST.make(X);
     case NegExpr      ->    UniOpAST.make(X,"-",null);
-    case NewExpr      ->      NewAST.make(X);
+    case NewExpr      ->      NewAST.make(X,false);
+    case NewChildExpr ->      NewAST.make(X,true );
     case NotExpr      ->    UniOpAST.make(X,"!",null);
     case None         ->     NoneAST.make(X);
     case NotNullExpr  ->    UniOpAST.make(X,"ELVIS",null);
