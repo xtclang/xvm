@@ -3,6 +3,7 @@ package org.xvm.xtc.ast;
 import org.xvm.xtc.XType;
 import org.xvm.xtc.XCons;
 import org.xvm.xtc.ClzBuilder;
+import org.xvm.xtc.ClassPart;
 import org.xvm.util.SB;
 
 // Always replaced before writing out.
@@ -24,6 +25,7 @@ public class RegAST extends AST {
     case -4 ->  "default";  // A_DEFAULT
     case -5 ->  "this";     // A_THIS
     case -10 -> "this";     // A_STRUCT: this as a struct
+    case -11 -> "class";    // A_CLASS
     case -13 -> "super";    // A_SUPER
     default -> X._locals.at(reg);
     };
@@ -31,7 +33,8 @@ public class RegAST extends AST {
     case -4 ->  XCons.VOID;  // A_DEFAULT
     case -5 ->  X._tclz;     // A_THIS
     case -10 -> X._tclz;     // A_STRUCT: this as a struct
-    case -13 -> XType.xtype(X._meth._rets[0].tcon(),false);
+    case -11 -> X._tclz;     // A_CLASS
+    case -13 -> ((ClassPart)X._clz._par)._tclz;
     default -> X._ltypes.at(reg);
     };    
     assert _type!=null;

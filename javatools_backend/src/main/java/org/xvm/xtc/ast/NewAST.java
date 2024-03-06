@@ -7,22 +7,29 @@ import org.xvm.xtc.cons.ParamTCon;
 import org.xvm.xtc.cons.TermTCon;
 import org.xvm.util.SB;
 
+import java.util.Arrays;
+
 class NewAST extends AST {
-  final MethodPart _meth;
-  static NewAST make( ClzBuilder X ) {
-    return new NewAST(X, X.con(),(MethodCon)X.con(),X.kids());
+  final boolean _isChild;
+  static NewAST make( ClzBuilder X, boolean isChild ) {
+    AST outer = isChild ? ast_term(X) : null;
+    Const type = X.con();
+    X.con();                    //  MethodCon
+    AST[] kids = X.kids();
+    if( isChild ) {
+      kids = Arrays.copyOf(kids,kids.length+1);
+      kids[kids.length-1] = outer;
+    }
+    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,isChild);
   }
-  private NewAST( ClzBuilder X, Const type, MethodCon meth, AST[] kids ) {
-    this(kids,(XClz)XType.xtype(type,true), X, type, meth);
-  }
+  // For internal constructors like auto-boxing
   NewAST( AST[] kids, XClz xt ) {
-    this(kids,xt,null,null,null);
+    this(kids,xt,null,null,false);
   }
-  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodCon meth ) {
+  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, boolean isChild ) {
     super(kids_plus_clz(kids,xt,X,type));
+    _isChild = isChild;
     _type = xt;
-    //_meth = meth==null ? null : (MethodPart)meth.part();
-    _meth=null;
     if( xt.needs_import(true) )
       ClzBuilder.add_import(xt);
   }
