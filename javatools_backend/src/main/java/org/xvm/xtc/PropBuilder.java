@@ -135,20 +135,30 @@ public abstract class PropBuilder {
 
     // No set property on type parameters
     if( do_set ) {
-    
-      // void prop$set(Type p) { prop=p; }
-      sb.i();
-      if( stat ) sb.p("static ");
-      if( pub ) sb.p("public ");
-      if( iface ) sb.p("abstract ");
-      sb.fmt("void %0$set( ",pname);
-      xtype.clz(sb).p(" p )");
-      if( iface ) {
-        sb.p(";").nl();      
+
+      // Explicit set via function
+      Part set;
+      if( pp._name2kid != null && (set=pp._name2kid.get("set"))!=null ) {
+        MMethodPart mm = (MMethodPart)set;
+        MethodPart meth = (MethodPart)mm._name2kid.get("set");
+        ClzBuilder X2 =  new ClzBuilder(X,X._clz);
+        X2.jmethod(meth,"set");
+        
       } else {
-        sb.p(" { ");
-        boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
-        sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }").nl();
+        // void prop$set(Type p) { prop=p; }
+        sb.i();
+        if( stat ) sb.p("static ");
+        if( pub ) sb.p("public ");
+        if( iface ) sb.p("abstract ");
+        sb.fmt("void %0$set( ",pname);
+        xtype.clz(sb).p(" p )");
+        if( iface ) {
+          sb.p(";").nl();      
+        } else {
+          sb.p(" { ");
+          boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
+          sb.p( is_const ? "throw new ReadOnlyException();" : pname + " = p;").p(" }").nl();
+        }
       }
     }
 

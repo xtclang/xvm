@@ -51,7 +51,7 @@ public class XClz extends XType {
   public ClassPart _clz;        // Self class, can be a module
   public boolean _iface;        // True if interface
   public boolean _ambiguous;    // True if ambiguous in the current compilation unit, and needs the fully qualified name everywhere
-  XClz _super;                  // Super xtype or null
+  public XClz _super;           // Super xtype or null
   public String[] _tnames;      // Type names, matching _xts
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _nTypeParms = -99; }
