@@ -3,19 +3,15 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Boolean;
 import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.Iterable;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xec.ecstasy.text.Char;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xrun.Never;
-
-import java.util.Arrays;
-import java.util.function.LongFunction;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
@@ -58,7 +54,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   abstract public Array<E> add( E e );
 
   /** Slice */
-  abstract public Array<E> slice( Range r );
+  abstract public Array<E> slice( AbstractRange r );
   
   /** @return an iterator */
   abstract public Iterator<E> iterator();

@@ -3,9 +3,8 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xrun.XRuntime;
 
@@ -64,7 +63,7 @@ public class Arylong extends Array<Int64> {
   }
 
   /** Slice */
-  public Arylong slice( Range r ) {
+  public Arylong slice( AbstractRange r ) {
     throw XEC.TODO();
   }
 

@@ -3,9 +3,8 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.text.Char;
 import org.xvm.xrun.XRuntime;
 
@@ -71,7 +70,7 @@ public class Arychar extends Array<Char> {
   }
 
   /** Slice */
-  public Arychar slice( Range r ) { throw XEC.TODO(); }
+  public Arychar slice( AbstractRange r ) { throw XEC.TODO(); }
 
   private static final SB SBX = new SB();
   @Override public String toString() {
