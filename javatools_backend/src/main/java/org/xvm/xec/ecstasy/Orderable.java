@@ -71,7 +71,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
       String fld = prop._name;
       sb.ip(  "if( ($x=");
       if( xeq(prop) ) { sb.p("Orderable.spaceship( x0.").p(fld).p(",x1.").p(fld).p(")");  ClzBuilder.add_import(XCons.ORDERABLE); }
-      else            { sb.p("x0.").p(fld).p(".compare(x1.").p(fld).p(")"); }
+      else            { sb.fmt("gold.compare(x0.%0,x1.%0)",fld); }
       sb.p(") != Ordered.Equal ) return $x;\n");
     }
     sb.ip(  "return Ordered.Equal;\n").di();
@@ -82,7 +82,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
     sb.ip("// Default compare\n");
     sb.ip("public Ordered compare( XTC x0, XTC x1 ) {\n").ii();
     sb.ifmt("return compare$%0(GOLD,(%0)x0,(%0)x1);\n",clzname).di();
-    sb.ip("}\n");    
+    sb.ip("}\n");
   }
   private static boolean xeq(PropPart p) {
     return XType.xtype(p._con,false).is_jdk();
