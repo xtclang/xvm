@@ -66,7 +66,7 @@ public class Aryboolean extends Array<Boolean> {
   public void setElement(long idx, boolean e) { set(idx,e); }
 
   /** Slice */
-  public Aryboolean slice( Range r ) { throw XEC.TODO(); }
+  public Aryboolean slice( AbstractRange r ) { throw XEC.TODO(); }
   
   public Aryboolean delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);

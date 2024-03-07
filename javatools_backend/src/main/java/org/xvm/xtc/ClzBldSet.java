@@ -1,12 +1,10 @@
 package org.xvm.xtc;
 
-import org.xvm.XEC;
 import org.xvm.util.Ary;
 import org.xvm.util.SB;
 import org.xvm.util.S;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 // Build a set of Java classes all at once, so 'javac' can compile them all at once.
 public abstract class ClzBldSet {

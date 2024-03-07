@@ -37,9 +37,9 @@ public abstract class PropBuilder {
     String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
     boolean lazy = "LazyVar".equals(ano); // TODO: Need a proper flag
     boolean stat = pp.isStatic() || pp._par instanceof ModPart;
-    boolean tfld = (S.find(X._tclz._tnames,pname)&0xFFFF) < X._tclz.nTypeParms(); // Is a type field
+    boolean tfld = X._tclz.find(pname)!=null; // Is a type field
     boolean pub = pp._access == Const.Access.PUBLIC || (pp._access==null && X._tclz.isa(XCons.CONST));
-    boolean iface = X._tclz._iface;
+    boolean iface = X._tclz.iface();
     SB sb = X._sb;
 
     boolean do_def=true, do_get=true, do_set=true;
@@ -55,8 +55,7 @@ public abstract class PropBuilder {
     if( iface ) do_def=false;
 
     // No set property on type parameters
-    if( (S.find(X._tclz._tnames,pname)&0xFFFF) <= X._tclz.nTypeParms() )
-      do_set = false;
+    if( tfld ) do_set = false;
     
     // If overriding some methods
     if( pp._name2kid != null ) {

@@ -3,7 +3,7 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.util.SB;
-import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
 public class Tuple0 extends XTC implements Tuple {
@@ -21,7 +21,7 @@ public class Tuple0 extends XTC implements Tuple {
     
   // Select a range using array syntax.
   // Loses all Java compiler knowledge of the types.
-  @Override public Tuple at(Range r) {
+  @Override public Tuple at( AbstractRange r) {
     if( r._incr != 1 ) throw XEC.TODO();
     Object[] es = new Object[(int)r.span()];
     for( int i=0; i<es.length; i++ )

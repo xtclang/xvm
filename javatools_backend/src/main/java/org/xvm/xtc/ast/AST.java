@@ -49,7 +49,7 @@ public abstract class AST {
     // If base is a Base and subclasses any of the box hierarchy, needs a box
     if( tbase.is_jdk() &&
         (tbase.box().isa(tbox) ||
-         (tbox instanceof XClz xclz && xclz._iface)) ) {
+         (tbox instanceof XClz xclz && xclz.iface())) ) {
       _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbase.box());
 
       // Reverse situation: the box is unboxed and boxing it subclasses the base.  Unbox the base.
