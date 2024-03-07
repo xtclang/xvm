@@ -129,7 +129,7 @@ manuals_exe:	$(manuals_x:x=exe) $(classes)
 # Pick up any make-depends files for each desired XTC file.
 # Useful to pick up updates in top-level XTC modules from deep child X files.
 ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
-include $(MAKECMDGOALS:.xtc=.d)
+include $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)
 endif
 
 
