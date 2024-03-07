@@ -332,7 +332,7 @@ public abstract class XType {
 
     case ServiceTCon service -> XCons.SERVICE;
 
-    case VirtDepTCon virt -> xtype(virt._par,false);
+    case VirtDepTCon virt -> XClz.make(virt);
 
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
