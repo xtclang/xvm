@@ -154,7 +154,6 @@ public abstract class XType {
   // Only valid for Ary, Clz (Tuple???).
   // Always arrays have 1 type parameter, the element type.
   // Clzs mostly have 0, sometimes have 1 (e.g. Hashable<Value>), rarely have 2 or more (e.g. Map<Key,Value>)
-  public int nTypeParms() { throw XEC.TODO(); }
   public XType typeParm(int i) { return _xts[i]; }
 
   

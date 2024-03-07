@@ -1,7 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
-import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
@@ -108,8 +108,8 @@ class SwitchAST extends AST {
       for( int i=0, j=0; i<clen-1; i++, j++ ) {
         String arm;
         if( _cases[j] instanceof RangeCon rcon ) {
-          long lo = Range.start(rcon); // Insert the range now
-          long hi = Range.end  (rcon);
+          long lo = AbstractRange.start(rcon); // Insert the range now
+          long hi = AbstractRange.end  (rcon);
           SB sb = new SB();
           for( long k=lo; k<hi; k++ )
             sb.p(k).p(", ");

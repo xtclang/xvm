@@ -3,11 +3,8 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Appenderchar;
-import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.Range;
-import org.xvm.xec.ecstasy.text.Stringable;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xrun.Never;
 import org.xvm.xrun.XRuntime;
 
@@ -57,7 +54,7 @@ public class AryXTC<E extends XTC> extends Array<E> {
   }
 
   /** Slice */
-  public AryXTC<E> slice( Range r ) { throw XEC.TODO(); }
+  public AryXTC<E> slice( AbstractRange r ) { throw XEC.TODO(); }
   public AryXTC delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;

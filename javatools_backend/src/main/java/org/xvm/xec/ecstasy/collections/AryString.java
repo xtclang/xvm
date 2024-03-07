@@ -4,12 +4,9 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.Fun;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.Range;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.numbers.Int64;
-import org.xvm.xec.ecstasy.collections.Array.Mutability;
-import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xrun.XRuntime;
 
 import static org.xvm.xec.ecstasy.collections.Array.Mutability.*;
@@ -63,7 +60,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
 
   /** Slice */
-  public AryString slice( Range r ) {
+  public AryString slice( AbstractRange r ) {
     if( r._incr != 1 ) throw XEC.TODO();
     return new AryString(_mut, Arrays.copyOfRange(_es,(int)r._start,(int)r._end), (int)r.span());
   }

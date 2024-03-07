@@ -4,6 +4,8 @@ import org.xvm.XEC;
 import org.xvm.util.S;
 import org.xvm.xtc.cons.Const;
 
+import static org.xvm.XEC. TODO;
+
 import java.util.HashMap;
 
 public abstract class XCons {
@@ -14,10 +16,10 @@ public abstract class XCons {
   
   // Java non-primitive classes
   public static XClz JBOOL  = make_java("ecstasy","Boolean",ENUM);
-  public static XClz JCHAR  = make_java("ecstasy.text","Char",null);
+  public static XClz JCHAR  = make_java("ecstasy.text","Char",CONST);
   public static XClz JSTRING= make_java("ecstasy.text","String",CONST);
   public static XClz JOBJECT= make_java("ecstasy","Object",null);
-  public static XClz EXCEPTION = make_java("java.lang","Exception",false,"ecstasy","Exception",CONST);
+  public static XClz EXCEPTION = make_java("java.lang","Exception","ecstasy","Exception",CONST);
 
   // Java primitives or primitive classes
   public static XBase BOOL = XBase.make("boolean",false);
@@ -36,28 +38,28 @@ public abstract class XCons {
   public static XBase FALSE= XBase.make("false",false);
   public static XClz JFALSE= make_java("ecstasy.Boolean","False",JBOOL);
   public static XBase NULL = XBase.make("null",false);
-  public static XClz JNULL = make_java("ecstasy","Nullable",null);
+  public static XClz JNULL = make_java("ecstasy","Nullable",ENUM);
   
   // A set of common XTC classes, and their Java replacements...
   // AND these take the default import path from "org.xvm.xec.ecstasy...".
-  public static XClz APPENDERCHAR= make_java("ecstasy","Appenderchar",false,"ecstasy","Appender",null,"Element",JCHAR);
+  public static XClz APPENDERCHAR= make_java("ecstasy","Appenderchar","ecstasy","Appender",null,"Element",JCHAR);
   public static XClz CONSOLE     = make_java("ecstasy.io","Console",null);
   public static XClz HASHABLE    = make_java("ecstasy.collections","Hashable",null);
-  public static XClz ILLARGX     = make_java("XTC","IllegalArgument",false,"ecstasy","IllegalArgument",null);
-  public static XClz ILLSTATEX   = make_java("XTC","IllegalState"   ,false,"ecstasy","IllegalState"   ,null);
-  public static XClz NOTIMPL     = make_java("XTC","NotImplemented" ,false,"ecstasy","NotImplemented" ,null);
-  public static XClz ITERABLE    = make_java("ecstasy","Iterable",null,"Element",XXTC);
-  public static XClz ITERATOR    = make_java("ecstasy","Iterator",null,"Element",XXTC);
+  public static XClz ILLARGX     = make_java("XTC","IllegalArgument","ecstasy","IllegalArgument",EXCEPTION);
+  public static XClz ILLSTATEX   = make_java("XTC","IllegalState"   ,"ecstasy","IllegalState"   ,EXCEPTION);
+  public static XClz UNSUPPORTED = make_java("XTC","Unsupported"    ,"ecstasy","Unsupported"    ,EXCEPTION);
+  public static XClz NOTIMPL     = make_java("XTC","NotImplemented" ,"ecstasy","NotImplemented" ,UNSUPPORTED);
+  public static XClz ITERABLE    = make_java("ecstasy","Iterable",(XClz)null,"Element",XXTC);
+  public static XClz ITERATOR    = make_java("ecstasy","Iterator",(XClz)null,"Element",XXTC);
   public static XClz MUTABILITY  = make_java("ecstasy.collections.Array","Mutability",ENUM);
   public static XClz ORDERABLE   = make_java("ecstasy","Orderable",null);
   public static XClz ORDERED     = make_java("ecstasy","Ordered",ENUM);
-  public static XClz RANGE       = make_java("ecstasy","Range",false,"ecstasy","Range",CONST,"Element",ORDERABLE);
+  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy","Range",CONST,"Element",ORDERABLE);
   public static XClz RANGEEE     = make_java("ecstasy","RangeEE",RANGE); // No Ecstasy matching class
   public static XClz RANGEIE     = make_java("ecstasy","RangeIE",RANGE); // No Ecstasy matching class
   public static XClz RANGEII     = make_java("ecstasy","RangeII",RANGE); // No Ecstasy matching class
   public static XClz STRINGBUFFER= make_java("ecstasy.text","StringBuffer",null);
-  public static XClz TYPE        = make_java("ecstasy.reflect","Type",null,"DataType",XXTC,"OuterType",XXTC);
-  public static XClz UNSUPPORTEDOPERATION = make_java("ecstasy","UnsupportedOperation",null);
+  public static XClz TYPE        = make_java("ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
   public static XClz BIT     = make_java("ecstasy.numbers","Bit",CONST);
@@ -89,7 +91,8 @@ public abstract class XCons {
   public static XClz ROUNDING    = make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
 
   // This is a mixin type
-  public static XClz FUTUREVAR   = make_java("ecstasy.annotations","FutureVar",true,"ecstasy.annotations","FutureVar",null,"Referent",XXTC);
+  public static XClz VOLATILEVAR = make_java("","","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
+  public static XClz FUTUREVAR   = make_java("ecstasy.annotations","FutureVar","ecstasy.annotations","FutureVar",VOLATILEVAR,"Referent",XXTC);
   
   // Convert a Java primitive to the Java object version.
   static final HashMap<XBase, XClz> XBOX = new HashMap<>() {{
@@ -124,24 +127,24 @@ public abstract class XCons {
     }};
 
   // Generic array; element type is unknown, and could be primitives or Java Object.
-  public static XClz ARRAY    = make_java("ecstasy.collections","Array",true ,"ecstasy.collections","Array",null,"Element",VOID);
+  public static XClz ARRAY    = make_java("ecstasy.collections","Array","ecstasy.collections","Array",null,"Element",VOID);
   // Generic Java Object[], this maps to the ecstasy.collections.Array class
-  public static XClz ARYXTC   = make_java_ary("AryXTC",false,XXTC  );
+  public static XClz ARYXTC   = make_java_ary("AryXTC",XXTC  );
   // Java primitive arrays
-  public static XClz ARYBOOL  = make_java_ary("Aryboolean",false,JBOOL  );
-  public static XClz ARYCHAR  = make_java_ary("Arychar"   ,false,JCHAR  );
-  public static XClz ARYSTRING= make_java_ary("AryString" ,false,JSTRING);
-  public static XClz ARYLONG  = make_java_ary("Arylong"   ,false,JLONG  );
-  public static XClz ARYUBYTE = make_java_ary("AryUInt8"  ,false,JUINT8 );
+  public static XClz ARYBOOL  = make_java_ary("Aryboolean",JBOOL  );
+  public static XClz ARYCHAR  = make_java_ary("Arychar"   ,JCHAR  );
+  public static XClz ARYSTRING= make_java_ary("AryString" ,JSTRING);
+  public static XClz ARYLONG  = make_java_ary("Arylong"   ,JLONG  );
+  public static XClz ARYUBYTE = make_java_ary("AryUInt8"  ,JUINT8 );
 
   // Type sig for Iterator<Int64>, which returns a non-XTC type "Iteratorlong"
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
-  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong",false,"ecstasy","Iterator",null,null,JLONG);
+  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,null,JLONG);
 
   // These are always expanded to some Java constant
-  public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral",false,"ecstasy.numbers","IntLiteral",CONST);
-  public static XClz  FPLITERAL = make_java("ecstasy.numbers", "FPLiteral",false,"ecstasy.numbers", "FPLiteral",CONST);
+  public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);
+  public static XClz  FPLITERAL = make_java("ecstasy.numbers", "FPLiteral","ecstasy.numbers", "FPLiteral",CONST);
 
   // Some tuples
   public static XClz TUPLE0 = make_tuple();
@@ -172,16 +175,14 @@ public abstract class XCons {
   // Made from a Java class directly; the XTC class shows up later.
   // Fields are hand-added and need to match the ClazzPart later.
   public static XClz make_java( String pack, String name, XClz supr, Object... flds ) {
-    return make_java(pack,name,true,pack,name,supr,flds);
+    return make_java(pack,name,pack,name,supr,flds);
   }
-  public static XClz make_java( String jpack, String jname, boolean jparms, String pack, String name, XClz supr, Object... flds ) {
-    XClz clz = XClz.make(pack,"",name,flds.length>>1);
+  public static XClz make_java( String jpack, String jname, String pack, String name, XClz supr, Object... flds ) {
+    XClz clz = XClz.malloc(true, pack,"",name,flds.length>>1);
     clz._jpack = jpack;
     clz._jname = jname;
-    clz._jparms = jparms;
-    clz._nTypeParms = flds.length>>1;
     for( int i=0; i<flds.length; i += 2 ) {
-      clz._tnames[i>>1] = (String)flds[i];
+      clz._tns[i>>1] = (String)flds[i];
       clz._xts[i>>1] = (XType)flds[i+1];
     }
     // XXTC root XClz has no XTC _clz
@@ -196,20 +197,19 @@ public abstract class XCons {
       pclz = (ClassPart)pclz.child(packs[i]);
     pclz = (ClassPart)pclz.child(name);
     // Some XClzs have no XTC equivalent
-    if( pclz==null || pclz._tclz!=null ) {
+    if( pclz==null ) {
       clz._super = supr;
     } else {
       // Fill in XTC class details
-      assert pclz._tcons.length==clz._nTypeParms;
-      pclz._tclz = clz;
+      assert clz._xts.length == pclz._tcons.length;
       // Set the super
       XClz sup = XClz.get_super(pclz);
-      assert supr==sup || supr==null;
-      clz._super = sup;
+      assert supr==sup;
+      clz._super = supr;
       // Set mod and clz
       clz._mod = pclz.mod();
       clz._clz = pclz;
-      clz._iface = pclz._f==Part.Format.INTERFACE;
+      pclz._tclz = clz;         // Fill in class cache
     }
     XClz clz2 = clz._intern();
     assert clz==clz2;           // No prior versions of these java-based XClzs
@@ -218,28 +218,29 @@ public abstract class XCons {
 
   // Java primitive array classes, no corresponding XTC class.
   // Treated as a specific instance of the generic Array class using concrete types.
-  private static XClz make_java_ary( String jname, boolean jparms, XType xelem ) {
-    XClz clz = XClz.make("ecstasy.collections","","Array",1);
-    clz._jpack = "ecstasy.collections";
-    clz._jname = jname;
-    clz._jparms = jparms;
-    clz._tnames[0] = null;      // Concrete generic type
+  private static XClz make_java_ary( String jname, XType xelem ) {
+    XClz clz = XClz.malloc(true, "ecstasy.collections","","Array",1);
+    clz._tns[0] = null;      // Concrete generic type
     clz._xts[0] = xelem;
-    clz._clz = XCons.ARRAY._clz;
-    return clz._intern();
+    clz._intern(XCons.ARRAY);
+    clz._jname = jname;
+    return clz;
   }
 
   
   public static XClz make_tuple( XType... clzs ) {
-    XClz clz = XClz.make("ecstasy.collections","","Tuple",clzs.length);
-    clz._jpack = "ecstasy.collections";
-    clz._jname = "Tuple";
-    clz._jparms = true;
+    XClz clz = XClz.malloc(true,"ecstasy.collections","","Tuple",clzs.length);
     for( int i=0; i<clzs.length; i++ )
-      clz._tnames[i] = (""+i).intern();
+      clz._tns[i] = (""+i).intern();
     clz._xts = clzs;
+    XClz clz2 = clz._intern();
+    if( clz2 != clz ) return clz2;
     clz._clz = XXTC._clz;
     clz._super = XXTC;
-    return clz._intern();
+    clz._jpack = "ecstasy.collections";
+    clz._jname = "Tuple";
+    // TODO: Name is same but need to honor parameters
+    // TODO: Name should not be same
+    return clz;
   }
 }
