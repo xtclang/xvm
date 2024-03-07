@@ -11,12 +11,12 @@ import java.util.Iterator;
 /**
      Support XTC range iterator
 */
-abstract public class Range extends XTC implements Iterable<Int64> {
-  public Range( ) {_start=_end=0; _lx=_hx=false; _incr=1; } // No arg constructor
+abstract public class AbstractRange extends XTC implements Iterable<Int64> {
+  public AbstractRange( ) {_start=_end=0; _lx=_hx=false; _incr=1; } // No arg constructor
   
   public final long _start, _end, _incr; // Inclusive start, exclusive end
   public final boolean _lx, _hx;       // True if exclusive
-  Range( long start, long end, boolean lx, boolean hx ) {
+  AbstractRange( long start, long end, boolean lx, boolean hx ) {
     int incr = 1;
     if( start > end )
       incr = -1;

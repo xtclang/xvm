@@ -3,6 +3,7 @@ package org.xvm.xtc.ast;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
+import org.xvm.util.S;
 
 import java.util.Arrays;
 
@@ -37,17 +38,17 @@ class NewAST extends AST {
   // "new RegAST".
   private static AST[] kids_plus_clz(AST[] kids, XClz xt, ClzBuilder X, Const type) {
     // See if there are any type parameters needing adding
-    int nTypeParms = xt.nTypeParms();
-    if( nTypeParms == 0 || !xt._jparms )
+    if( xt.noTypeParms(null,false) )
       return kids;
 
     // Type parameters can be constants or can be function arguments passed in.
     // Function argument names are hidden in the ParamTCon.
     ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((VirtDepTCon)type)._par;
-    assert ptc._parms.length==nTypeParms;
-    AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+nTypeParms];
-    if( kids!=null ) System.arraycopy(kids,0,kids2,nTypeParms,kids.length);
-    for( int i=0; i<nTypeParms; i++ ) {
+    int N = xt._xts.length;
+    assert ptc._parms.length==N;
+    AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+N];
+    if( kids!=null ) System.arraycopy(kids,0,kids2,N,kids.length);
+    for( int i=0; i<N; i++ ) {
       if( ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
         // Type parameter comes from the method arguments.
         // Do a name lookup.

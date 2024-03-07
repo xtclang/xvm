@@ -2,13 +2,9 @@ package org.xvm.xec.ecstasy.collections;
 
 import org.xvm.XEC;
 import org.xvm.util.SB;
-import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Appenderchar;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.Range;
-import org.xvm.xec.ecstasy.collections.Array.Mutability;
+import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.numbers.UInt8;
-import org.xvm.xec.ecstasy.text.Stringable;
 
 import static org.xvm.xec.ecstasy.collections.Array.Mutability.*;
 
@@ -57,7 +53,7 @@ public class AryUInt8 extends Array<UInt8> {
   }
 
   /** Slice */
-  public AryUInt8 slice( Range r ) { throw XEC.TODO(); }
+  public AryUInt8 slice( AbstractRange r ) { throw XEC.TODO(); }
 
   public AryUInt8 addAll( AryUInt8 ls ) { throw XEC.TODO(); }
 

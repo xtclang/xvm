@@ -153,7 +153,7 @@ public class ClzBuilder {
           case VirtDepTCon vtc -> XClz.make(vtc.clz());
           default -> { throw XEC.TODO(); }
           };
-          iclz.clz_generic(_sb.p((once++ == 0) ? (_clz._tclz._iface ? " extends " : " implements ") : ", "),true,false);
+          iclz.clz_generic(_sb.p((once++ == 0) ? (_clz._tclz.iface() ? " extends " : " implements ") : ", "),true,false);
           add_import(iclz);
         }
     }
@@ -201,12 +201,12 @@ public class ClzBuilder {
       // This is an "empty" constructor: it takes required explicit type
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
-      for( int i=0; i<_tclz.nTypeParms(); i++ )
-        _sb.fmt("$%0 %0,",_tclz._tnames[i]);
+      for( int i=0; i<_tclz._tns.length; i++ )
+        _sb.fmt("$%0 %0,",_tclz._tns[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
-      for( int i=0; i<_tclz.nTypeParms(); i++ )
-        _sb.ifmt("this.%0 = %0;\n",_tclz._tnames[i]);
+      for( int i=0; i<_tclz._tns.length; i++ )
+        _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
       _sb.di().ip("}\n");
       
       // For all other constructors
@@ -220,13 +220,13 @@ public class ClzBuilder {
         keywords(meth,true);
         _tclz.clz_generic(_sb,false,true);
         _sb.fmt("%0 construct( ",java_class_name); // Return type
-        for( int i=0; i<_tclz.nTypeParms(); i++ )
-          _sb.fmt("$%0 %0,",_tclz._tnames[i]);
+        for( int i=0; i<_tclz._tns.length; i++ )
+          _sb.fmt("$%0 %0,",_tclz._tns[i]);
         _sb.unchar();
         args(meth,_sb);
         _sb.p(") { return new ").p(java_class_name).p("( ");
-        for( int i=0; i<_tclz.nTypeParms(); i++ )
-          _sb.fmt("%0,",_tclz._tnames[i]);
+        for( int i=0; i<_tclz._tns.length; i++ )
+          _sb.fmt("%0,",_tclz._tns[i]);
         _sb.unchar().p(").$construct(");
         arg_names(meth,_sb);
         if( !is_iface ) _sb.p(").$check(); }").nl();
@@ -375,10 +375,10 @@ public class ClzBuilder {
       access = Part.ACCESS_PRIVATE;
     if( access==Part.ACCESS_PRIVATE   ) _sb.p("private "  );
     if( access==Part.ACCESS_PROTECTED ) _sb.p("protected ");
-    if( access==Part.ACCESS_PUBLIC &&  !_tclz._iface ) _sb.p("public "   ); 
+    if( access==Part.ACCESS_PUBLIC &&  !_tclz.iface() ) _sb.p("public "   ); 
     if( m.isStatic() )      _sb.p("static ");
     if( m._ast.length==0 )  _sb.p("abstract ");
-    else if( _tclz._iface ) _sb.p("default ");
+    else if( _tclz.iface() ) _sb.p("default ");
 
     // XType the args and rets
     m._xargs = XType.xtypes(m._args);
@@ -429,7 +429,7 @@ public class ClzBuilder {
       for( int i=0; i<m._args.length; i++ )
         if( m._args[i]._special ) {
           sb.p("$").p(m._args[i]._name).p(" extends ");
-          if( ((XClz)m._xargs[i])._iface ) sb.p("XTC & ");
+          if( ((XClz)m._xargs[i]).iface() ) sb.p("XTC & ");
           m._xargs[i].clz(sb).p(", ");
         }
       sb.unchar(2).p("> ");
