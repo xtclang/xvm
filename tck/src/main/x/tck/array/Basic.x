@@ -2,7 +2,7 @@
  * Very basic array tests.
  */
 class Basic {
-    
+
     // -----------------------------
     // Create; set; get; size
     @Test
@@ -82,13 +82,13 @@ class Basic {
     }
 
     @Test
-    void mutImteralInts() {
+    void mutConstInts() {
         Int[] array = [0, 1];
         assert array.mutability == Constant;
     }
 
     @Test
-    void mutDefaultFixed() {
+    void mutDefaultInts() {
         Int[] array = new Int[2];
         assert array.mutability == Fixed;
     }
@@ -111,7 +111,7 @@ class Basic {
         assert array.mutability == Fixed;
     }
 
-    
+
     // -----------------------------
     // Plus add, delete, create allowing mutation
     @Test
@@ -177,7 +177,6 @@ class Basic {
         assert slice[2] == "four";
     }
 
-    
     // -----------------------------
 
     @Test
@@ -210,10 +209,10 @@ class Basic {
         array = array.delete(1);
         assert array.mutability == Constant;
     }
-    
+
     // -----------------------------
     // Remove, delete
-    
+
     @Test
     void deleteUnordered() {
         Int[] array = new Int[].addAll([7, 2, 5, 21, 13, 42]);

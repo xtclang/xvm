@@ -12,5 +12,8 @@ module tck.xtclang.org {
 
 //        constructors.Reflect r = new constructors.Reflect();
 //        r.testAssertChain();
+
+//        tuple.Basic t = new tuple.Basic();
+//        t.testSlice();
     }
 }
