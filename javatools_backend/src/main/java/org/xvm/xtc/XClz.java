@@ -170,7 +170,7 @@ public class XClz extends XType {
       // type, not a type variable.  No type name, but a type directly.
       boolean isType = ptc._parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
       xclz._tnames[i] = isType ? null : clz._tnames[i];
-      xclz._xts [i] = xtype(ptc._parms[i],true);
+      xclz._xts[i] = xtype(ptc._parms[i],true);
     }
     
     // Get the UNparameterized class, for the jpack/jname
@@ -187,6 +187,36 @@ public class XClz extends XType {
 
     return xclz._make(plain_clz);
   }
+
+  // An inner class, which gets the outer class Type variables
+  public static XClz make( VirtDepTCon virt ) {
+    ClassPart iclz = virt.part(); // Inner clz
+    XClz xclz = _make_clz(iclz);  // Inner xclz
+    ParamTCon ptc = (ParamTCon)virt._par;
+    TCon[] parms = ptc._parms;
+    if( parms != null ) {
+      ClassPart oclz = ptc.clz(); // Outer class
+      XType [] xts = xclz._xts;
+      String[] tns = xclz._tnames;
+      int len = xts==null ? 0 : xts.length;
+      xclz._xts    = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
+      xclz._tnames = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
+      for( int i=0; i<parms.length; i++ ) {
+        boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
+        tns[len+i] = isType ? null : oclz._tnames[i];
+        xts[len+i] = xtype(parms[i],true);
+      }
+      xclz._nTypeParms = xts.length;
+    }
+    xclz._super = get_super(iclz);
+    xclz._jpack = "";
+    xclz._jname = "";
+    XClz xclz2 = xclz._intern();
+    if( xclz2 != xclz ) return xclz2;
+    iclz._tclz = xclz;
+    return xclz;
+  }
+
   
   // Intern and fill out a parameterized class from a plain class
   private XClz _make( XClz plain_clz ) {

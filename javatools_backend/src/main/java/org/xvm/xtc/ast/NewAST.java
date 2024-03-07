@@ -1,10 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
-import org.xvm.xtc.cons.Const;
-import org.xvm.xtc.cons.MethodCon;
-import org.xvm.xtc.cons.ParamTCon;
-import org.xvm.xtc.cons.TermTCon;
+import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
 
 import java.util.Arrays;
@@ -46,7 +43,7 @@ class NewAST extends AST {
 
     // Type parameters can be constants or can be function arguments passed in.
     // Function argument names are hidden in the ParamTCon.
-    ParamTCon ptc = (ParamTCon)type;
+    ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((VirtDepTCon)type)._par;
     assert ptc._parms.length==nTypeParms;
     AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+nTypeParms];
     if( kids!=null ) System.arraycopy(kids,0,kids2,nTypeParms,kids.length);
