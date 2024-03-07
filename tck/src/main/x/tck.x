@@ -15,5 +15,8 @@ module tck.xtclang.org {
 
 //        tuple.Basic t = new tuple.Basic();
 //        t.testSlice();
+
+//        inner.Basic i = new inner.Basic();
+//        i.testCallChain();
     }
 }
