@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.ParamTCon;
 import org.xvm.util.SB;
+import org.xvm.util.S;
 import org.xvm.xtc.cons.Const.BinOp;
 
 class DivRemAST extends AST {
@@ -34,18 +35,14 @@ class DivRemAST extends AST {
   @Override public SB jcode(SB sb) {
     if( _op.equals("is") ) {
       if( _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ) {
-        _kids[1].jcode(sb);
-        sb.p(".getClass().isInstance(");
-        _kids[0].jcode(sb);
-        sb.p(")");
-        return sb;
-        
+        _kids[1].jcode(sb).p(".isa(");
+        _kids[0].jcode(sb).p(")");
       } else {
-        _kids[0].jcode(sb);
-        sb.p(" instanceof ");
+        // TODO: check immutability
+        _kids[0].jcode(sb).p(" instanceof ");
         _kids[1].jcode(sb);
-        return sb;
       }
+      return sb;
       
     } else
       throw XEC.TODO();
