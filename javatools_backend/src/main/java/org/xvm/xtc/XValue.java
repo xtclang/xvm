@@ -138,7 +138,7 @@ public abstract class XValue {
       XType ary = XType.xtype(ac.type(),false);
       // Cannot make a zero-length instance of ARRAY, since its abstract - but
       // a zero-length version is meaningful.
-      if( ary==XCons.ARRAY ) {
+      if( ary==XCons.ARRAY || ary==XCons.ARRAY_RO ) {
         ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.AryXTC");
         yield ASB.p("AryXTC.EMPTY"); // Untyped array creation; cannot hold elements
       }

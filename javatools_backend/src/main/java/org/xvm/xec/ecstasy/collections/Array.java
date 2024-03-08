@@ -82,8 +82,8 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   // --- Mutability
   public enum Mutability {
     Constant,                   // Deeply immutable
-    Persistent,                 // Odd name, but shallow immutable
-    Fixed,                      // Tuples and arrays are fixed length, but mutable
+    Persistent,                 // Odd name, but shallow immutable.  Deeper elements can change.
+    Fixed,                      // Tuples and arrays are fixed length, but mutable array contents
     Mutable;                    // Classic mutable    
     public static final Mutability[] VALUES = values();
     public static final Enum GOLD = Enum.GOLD; // Dispatch against Ordered class same as Enum class

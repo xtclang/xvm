@@ -128,8 +128,10 @@ public abstract class XCons {
 
   // Generic array; element type is unknown, and could be primitives or Java Object.
   public static XClz ARRAY    = make_java("ecstasy.collections","Array","ecstasy.collections","Array",null,"Element",VOID);
+  public static XClz ARRAY_RO = ARRAY.readOnly();
   // Generic Java Object[], this maps to the ecstasy.collections.Array class
   public static XClz ARYXTC   = make_java_ary("AryXTC",XXTC  );
+  public static XClz ARYXTC_RO= ARYXTC.readOnly();
   // Java primitive arrays
   public static XClz ARYBOOL  = make_java_ary("Aryboolean",JBOOL  );
   public static XClz ARYCHAR  = make_java_ary("Arychar"   ,JCHAR  );
