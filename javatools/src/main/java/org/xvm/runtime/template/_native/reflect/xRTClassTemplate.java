@@ -373,8 +373,10 @@ public class xRTClassTemplate
                             String       sName = entry.getKey().getValue();
                             TypeConstant type  = entry.getValue();
 
+                            // use Type<Object> as an indicator of a non-constrained formal type
                             ahNames[i] = xString.makeHandle(sName);
-                            ahTypes[i] = type.ensureTypeHandle(container);
+                            ahTypes[i] = (type == null ? pool().typeObject() : type).
+                                            ensureTypeHandle(container);
                             i++;
                             }
                         haNames = xArray.makeStringArrayHandle(ahNames);
