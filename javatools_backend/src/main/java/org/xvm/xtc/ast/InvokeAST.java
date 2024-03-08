@@ -153,7 +153,13 @@ public class InvokeAST extends AST {
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
-    _kids[0].jcode(sb).p(".");
+    // Print the instance before method - except for "this"
+    // which can be assumed
+    if( !(_kids[0] instanceof NarrowAST n &&
+          n._kids[0] instanceof RegAST reg &&
+          reg._reg== -5) )      // Special "this" register
+      _kids[0].jcode(sb).p(".");
+    
     // Service calls wrap
     if( _kids[0]._type instanceof XClz clz && clz.isa(XCons.SERVICE) &&
         // Except internal self-to-self

@@ -216,11 +216,11 @@ public class XClz extends XType {
     // Very specifically, generic parameterized AryXTC<XTC> means the
     // un-element-typed Array<VOID>, used to make both primitive arrays and
     // Object arrays.
-    if( proto == XCons.ARRAY ) {
+    if( proto == XCons.ARRAY || proto == XCons.ARRAY_RO ) {
       // A generified array needs to remain un-element-typed
       if( ptc._parms[0] instanceof TermTCon ttc && ttc.id() instanceof TParmCon )
-        return XCons.ARRAY;
-      proto = XCons.ARYXTC;
+        return proto;
+      proto = proto._ro ? XCons.ARYXTC_RO : XCons.ARYXTC;
     }
       
     XClz xclz = proto.malloc();
@@ -300,10 +300,16 @@ public class XClz extends XType {
     return null;
   }
 
-    @Override public XClz nullable() {
+  @Override public XClz nullable() {
     if( !_notNull ) return this;
     XClz clz = malloc();
     clz._notNull = false;
+    return clz._intern(this);
+  }
+  public XClz readOnly() {
+    if( _ro ) return this;
+    XClz clz = malloc();
+    clz._ro = true;
     return clz._intern(this);
   }
 
@@ -447,7 +453,7 @@ public class XClz extends XType {
     // No type parameters
     if( _xts.length==0 ) return true;
     // Print Array<void> as Array
-    if( ptc==null && this==XCons.ARRAY ) return print;
+    if( ptc==null && (this==XCons.ARRAY || this==XCons.ARRAY_RO) ) return print;
     // Print Other AryXTC with types
     if( _jname=="AryXTC" ) return false;
     // Some Java implementations already specify the XTC generic directly: Arylong
@@ -460,7 +466,9 @@ public class XClz extends XType {
     if( S.eq(_jpack,"java.lang") )
       return "java.lang."+_jname;
     String name = this==XCons.TUPLE0 ? "Tuple0" : name();
-    return (XEC.XCLZ + "." + pack() + (_nest.isEmpty() ? "" : "."+_nest) + "." + name).intern();
+    String pack = pack().isEmpty() ? "" : "."+pack();
+    String nest = _nest .isEmpty() ? "" : "."+_nest ;
+    return (XEC.XCLZ + pack + nest + "." + name).intern();
   }
 
   // "Foo<Value extends Hashable>"
@@ -498,10 +506,11 @@ public class XClz extends XType {
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;
     return Arrays.equals( _tns,clz._tns ) &&
-      S.eq( _name,clz. _name) && S.eq( _nest,clz. _nest) && S.eq( _pack,clz. _pack);
+      S.eq( _name,clz. _name) && S.eq( _nest,clz. _nest) && S.eq( _pack,clz. _pack) &&
+      _ro == clz._ro;
   }
   @Override int hash() {
-    int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode();
+    int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode() ^ (_ro ? 2048 : 0);
     if( _tns != null )
       for( String tname : _tns )
         if( tname != null )
