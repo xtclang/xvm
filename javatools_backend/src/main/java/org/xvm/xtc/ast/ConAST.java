@@ -13,7 +13,7 @@ public class ConAST extends AST {
   ConAST( ClzBuilder X, TCon tcon, String con, XType type ) {
     super(null);
     _tcon = tcon;
-    _con  = con .intern();
+    _con  = con.intern();
     _type = type;
     if( _tcon instanceof IntCon )
       _type = XCons.LONG;

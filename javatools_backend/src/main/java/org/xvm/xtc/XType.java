@@ -271,7 +271,7 @@ public abstract class XType {
     }
 
     case ImmutTCon itc ->
-      xtype(itc.icon(),boxed); // Ignore immutable for now
+      ((XClz)xtype(itc.icon(),boxed)).readOnly();
 
     // Generalized union types gonna wait awhile.
     // Right now, allow null unions only

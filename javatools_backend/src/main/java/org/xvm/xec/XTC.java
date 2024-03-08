@@ -54,6 +54,11 @@ public abstract class XTC {
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
 
+  // 'this' isa 'that' ?
+  public boolean isa(XTC that) {
+    return that.getClass().isInstance(that);
+  }
+  
   // Trace
   public static <X> X TRACE( X x ) { return x; }
   public static String TRACE(String x) { return x; }
