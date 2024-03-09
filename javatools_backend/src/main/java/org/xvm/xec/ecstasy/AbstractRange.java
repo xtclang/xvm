@@ -29,8 +29,7 @@ abstract public class AbstractRange extends XTC implements Iterable<Int64> {
     _incr = incr;
   }
 
-  @Override
-  public final String toString() {
+  @Override public final String toString() {
     return
       (_lx ? "("+(_start-_incr) : "["+_start ) +
       ".." +
