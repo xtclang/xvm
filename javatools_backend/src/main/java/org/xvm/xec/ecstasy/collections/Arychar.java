@@ -72,7 +72,6 @@ public class Arychar extends Array<Char> {
   /** Slice */
   public Arychar slice( AbstractRange r ) { throw XEC.TODO(); }
 
-  private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
     for( int i=0; i<_len; i++ )

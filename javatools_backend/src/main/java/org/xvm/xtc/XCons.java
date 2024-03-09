@@ -45,6 +45,7 @@ public abstract class XCons {
   // AND these take the default import path from "org.xvm.xec.ecstasy...".
   public static XClz APPENDERCHAR= make_java("ecstasy","Appenderchar","ecstasy","Appender",null,"Element",JCHAR);
   public static XClz CONSOLE     = make_java("ecstasy.io","Console",null);
+  public static XClz FREEZABLE   = make_java("ecstasy","Freezable",null);
   public static XClz HASHABLE    = make_java("ecstasy.collections","Hashable",null);
   public static XClz ILLARGX     = make_java("XTC","IllegalArgument","ecstasy","IllegalArgument",EXCEPTION);
   public static XClz ILLSTATEX   = make_java("XTC","IllegalState"   ,"ecstasy","IllegalState"   ,EXCEPTION);
