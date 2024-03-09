@@ -27,8 +27,7 @@ module tck.xtclang.org {
         new numbers.Decimals().run();
         new tuples.Basic().run();
         new services.Basic().run();
-        //new constructors.Basic().run();
-//        constructors.Medium m = new constructors.Medium();
-//        m.testFinalizerChain();
+        new constructors.Basic().run();
+        //new constructors.Medium().run();
     }
 }

@@ -99,6 +99,14 @@ public class AryUInt8 extends Array<UInt8> {
   /** @return an iterator */
   @Override public Iterator<UInt8> iterator() { throw XEC.TODO(); }
 
+  // --- Freezable
+  @Override public AryUInt8 freeze(boolean inPlace) {
+    if( _mut==Mutability.Constant ) return this;
+    if( !inPlace ) return construct(Mutability.Constant,this);
+    _mut = Mutability.Constant;
+    return this;
+  }
+
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*5; }
 

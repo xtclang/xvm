@@ -46,5 +46,8 @@ public class String extends Const {
   public long hashCode( java.lang.String s0 ) { return s0.hashCode(); }
   @Override public long hashCode( XTC s0 ) { return hashCode(((String)s0)._i); }
   public static long hashCode$String( XTC gold, java.lang.String s0 ) { return s0.hashCode(); }
-  
+
+  // --- Freezable
+  @Override public String freeze(boolean inPlace) { return this; }
+
 }

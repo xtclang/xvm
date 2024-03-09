@@ -13,9 +13,6 @@ class PropertyAST extends AST {
     XType type = XType.xtype(tc,false);
     // Property is class-local, no need for class name
     if( lhs._type==X._tmod ) lhs = null;
-    // LHS might be a "this.prop", and the "this." is redundant.
-    if( lhs instanceof RegAST reg && reg._reg==-10/*A_THIS*/ )
-      lhs = null;
     // Use Java primitives if we can
     type = type.unbox();
     return new PropertyAST( lhs, type, prop);

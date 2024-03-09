@@ -75,8 +75,6 @@ public abstract class XValue {
           ASB.p(meth._name).p('$');
         } else throw XEC.TODO();
       }
-      if( X._locals.find(prop._name)!= -1 )
-        ASB.p("this.");         // Name collision between this and a local
       yield ASB.p(prop._name).p("$get()");
     }
 

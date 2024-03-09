@@ -105,6 +105,15 @@ public class Arylong extends Array<Int64> {
     // --- Comparable
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
+
+  // --- Freezable
+  @Override public Arylong freeze(boolean inPlace) {
+    if( _mut==Constant ) return this;
+    if( !inPlace ) return construct(Constant,this);
+    _mut = Constant;
+    return this;
+  }
+
   
   private static final SB SBX = new SB();
   @Override public String toString() {
