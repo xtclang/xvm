@@ -61,7 +61,6 @@ public abstract class Const extends XTC
   public final Mutability mutability$get() { return Mutability.Constant; }
   public final int mutability$getOrd() { return Mutability.Constant.ordinal(); }
 
-  
   // Subclasses that use this must override
   @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
   
