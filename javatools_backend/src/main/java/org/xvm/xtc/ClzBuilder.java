@@ -364,7 +364,7 @@ public class ClzBuilder {
             _sb.ifmt("if( %0.mutability$getOrd()!=%1 ) {\n",prop._name,Mutability.Constant.ordinal()).ii();
             _sb.ifmt(  "if( %0 instanceof Freezable frz ) %0 = (%1)frz.freeze(false);\n",prop._name,xt.clz());
             _sb.ifmt(  "else throw new XTC.IllegalState(\"'%0' is neither frozen nor Freezable\");\n",prop._name);
-            _sb.di().p("}\n");
+            _sb.di().ip("}\n");
           }
         }
       _sb.ip("return this;").nl();
