@@ -10,6 +10,7 @@ import java.util.HashMap;
 
 public abstract class XCons {
   public static XClz XXTC    = make_java("","XTC",null);
+  public static XClz XXTC_RO = XXTC.readOnly();
   public static XClz CONST   = make_java("ecstasy","Const",XXTC);
   public static XClz ENUM    = make_java("ecstasy","Enum" ,CONST);
   public static XClz SERVICE = make_java("ecstasy","Service",XXTC);

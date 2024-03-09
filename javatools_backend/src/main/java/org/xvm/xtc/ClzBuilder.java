@@ -342,14 +342,19 @@ public class ClzBuilder {
         }
     }
   
-    // Check fields definitely assigned
+    // Check fields definitely assigned.
+    // Freeze if const.
     if( !is_iface ) {
       _sb.ip("private ").p(java_class_name).p(" $check() {").nl().ii();;
+      XType xt;
       for( Part part : _clz._name2kid.values() )
         if( part instanceof PropPart prop && 
             prop.isField() && 
-            XType.xtype(prop._con,false)._notNull )
+            (xt=XType.xtype(prop._con,false))._notNull ) {
           _sb.ifmt("if( %0==null ) throw new XTC.IllegalState(\"Did not initialize %0\");",prop._name).nl();
+          if( _clz._f == Part.Format.CONST && !xt.primeq() )
+            _sb.ifmt("%0 = (%1)%0.freeze(false);\n",prop._name,xt.clz());
+        }
       _sb.ip("return this;").nl();
       _sb.di().ip("}").nl();
     }
