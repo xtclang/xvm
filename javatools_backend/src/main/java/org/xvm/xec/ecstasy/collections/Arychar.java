@@ -43,7 +43,7 @@ public class Arychar extends Array<Char> {
   public static Arychar construct() { return new Arychar(); }
   public static Arychar construct( String s ) { return new Arychar(s); }
   public static Arychar construct( long len, LongUnaryOperator fcn ) { return new Arychar(len,fcn); }
-
+  public static Arychar construct( Mutability mut, Arychar as) { return new Arychar(mut,as); }
   
   // Fetch element
   public char at8(long idx) {
@@ -113,6 +113,14 @@ public class Arychar extends Array<Char> {
     @Override public boolean hasNext() { return _i<_len; }  
     @Override public final String toString() { return _i+".."+_len; }
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
+  }
+
+  // --- Freezable
+  @Override public Arychar freeze(boolean inPlace) {
+    if( _mut==Mutability.Constant ) return this;
+    if( !inPlace ) return construct(Mutability.Constant,this);
+    _mut = Mutability.Constant;
+    return this;
   }
 
   // --- text/Stringable

@@ -139,8 +139,11 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
   
   // --- Freezable
-  public AryString freeze(boolean inPlace) {
-    return _mut==Mutability.Constant ? this : construct(Mutability.Constant,this);
+  @Override public AryString freeze(boolean inPlace) {
+    if( _mut==Mutability.Constant ) return this;
+    if( !inPlace ) return construct(Mutability.Constant,this);
+    _mut = Mutability.Constant;
+    return this;
   }
   
   // --- text/Stringable

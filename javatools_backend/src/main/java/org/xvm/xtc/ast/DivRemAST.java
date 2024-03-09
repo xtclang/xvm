@@ -35,8 +35,12 @@ class DivRemAST extends AST {
   @Override public SB jcode(SB sb) {
     if( _op.equals("is") ) {
       if( _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ) {
-        _kids[1].jcode(sb).p(".isa(");
-        _kids[0].jcode(sb).p(")");
+        if( con._type==XCons.XXTC ) sb.p("true");
+        else {
+          if( con._type==XCons.XXTC_RO ) sb.p("XTC.isa_ro");
+          else _kids[1].jcode(sb).p(".isa");
+          _kids[0].jcode(sb.p("(")).p(")");
+        }
       } else {
         // TODO: check immutability
         _kids[0].jcode(sb).p(" instanceof ");
