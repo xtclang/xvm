@@ -120,7 +120,6 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   AryString clear() { _len=0; return this; }
 
   // --- Collections
-  private static final SB SBX = new SB();
   @Override public String toString() { return toString(", ","[","]",null,null,null); }
   
   public String toString(String sep, String pre, String post, Int64 limit, String trunc, Fun render) {

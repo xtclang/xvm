@@ -5,6 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.Boolean;
 import org.xvm.xec.ecstasy.Enum;
+import org.xvm.xec.ecstasy.Freezable;
 import org.xvm.xec.ecstasy.Iterable;
 import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.AbstractRange;
@@ -15,7 +16,7 @@ import org.xvm.xrun.Never;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, Stringable {
+public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, Stringable, Freezable {
   public static final Array GOLD = null;
   public Array(Never n) { _gold=null; _mut=null; } // No-arg-no-work constructor
 
@@ -63,6 +64,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
   abstract public Iterator<E> iterator();
 
   @Override public Mutability mutability$get() { return _mut; }
+  @Override public int mutability$getOrd() { return _mut.ordinal(); }
 
   public Array<E> toArray(Mutability mut, boolean inPlace) {
     if( inPlace && (mut == null || mut == _mut) ) return this;
@@ -73,13 +75,16 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
     return this;
   }
 
-  abstract public Array<E> freeze( boolean inPlace );
-  
   static final SB SBX = new SB();
   abstract public String toString();
-  
+
+  // --- Freezable
+  abstract public Array<E> freeze( boolean inPlace );
+
+  // --- Comparable
   abstract public boolean equals( Object o );
-  
+
+  // --- Hashable
   abstract public int hashCode( );
 
   // --- Mutability

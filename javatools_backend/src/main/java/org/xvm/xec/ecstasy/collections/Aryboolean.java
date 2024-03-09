@@ -77,7 +77,6 @@ public class Aryboolean extends Array<Boolean> {
     return (Aryboolean)super.toArray(mut,inPlace);
   }
 
-  private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
     for( int i=0; i<_len; i++ )

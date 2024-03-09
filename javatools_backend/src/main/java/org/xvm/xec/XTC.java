@@ -53,6 +53,7 @@ public abstract class XTC {
   
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
+  public int mutability$getOrd() { return Mutability.Constant.ordinal(); }
 
   // 'that' isa 'this' ?
   // 'this.getClass().isInstance(that)'

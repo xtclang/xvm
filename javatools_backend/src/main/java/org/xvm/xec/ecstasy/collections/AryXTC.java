@@ -81,13 +81,18 @@ public class AryXTC<E extends XTC> extends Array<E> {
         e.freeze(inPlace);
     return ary;
   }
-  
+
+  // Recusively used, optimistic
+  private static SB SBX = new SB();
   @Override public String toString() {
-    SB sb = SBX.p('[');
+    SB sb;
+    if( SBX==null ) sb = new SB();
+    else { sb=SBX; SBX=null; }
     for( int i=0; i<_len; i++ )
       sb.p(_es[i]==null ? "null" : _es[i].toString()).p(", ");
     String str = sb.unchar(2).p(']').toString();
-    SBX.clear();
+    sb.clear();
+    SBX=sb;                     // Free up for next call
     return str;
   }
 
