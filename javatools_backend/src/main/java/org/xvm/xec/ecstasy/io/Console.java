@@ -1,6 +1,7 @@
 package org.xvm.xec.ecstasy.io;
 
 import org.xvm.xec.ecstasy.Appenderchar;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.XTC;
 
 public interface Console {
@@ -35,4 +36,9 @@ public interface Console {
       System.out.println();
   }
 
+  default public void print( Mutability m, boolean no_newline ) {
+    System.out.print(m);
+    if( !no_newline )
+      System.out.println();
+  }
 }

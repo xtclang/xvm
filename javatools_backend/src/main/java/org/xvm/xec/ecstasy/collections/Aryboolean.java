@@ -121,6 +121,16 @@ public class Aryboolean extends Array<Boolean> {
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
 
+
+  // --- Freezable
+  @Override public Aryboolean freeze(boolean inPlace) {
+    if( _mut==Mutability.Constant ) return this;
+    if( !inPlace ) return construct(Mutability.Constant,this);
+    _mut = Mutability.Constant;
+    return this;
+  }
+
+  
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
 }

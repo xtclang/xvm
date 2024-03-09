@@ -54,9 +54,18 @@ public abstract class XTC {
   // Default mutability
   public Mutability mutability$get() { return Mutability.Constant; }
 
-  // 'this' isa 'that' ?
+  // 'that' isa 'this' ?
+  // 'this.getClass().isInstance(that)'
   public boolean isa(XTC that) {
-    return that.getClass().isInstance(that);
+    // TODO CHECK IMM
+    return getClass().isInstance(this);
+  }
+  // Test immutable
+  public static boolean isa_ro(XTC that) { return that.mutability$get() == Mutability.Constant; }
+
+  public XTC freeze( boolean inPlace ) {
+    if( mutability$get() == Mutability.Constant ) return this;
+    throw XEC.TODO();
   }
   
   // Trace

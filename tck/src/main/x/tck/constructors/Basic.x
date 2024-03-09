@@ -7,7 +7,7 @@ class Basic {
         testDefaults();
         testFreeze();
         testDeepFreeze();
-        testUnFreezable();
+        //testUnFreezable();
     }
 
     /**

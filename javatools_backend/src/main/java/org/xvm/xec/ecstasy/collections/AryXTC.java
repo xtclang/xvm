@@ -71,6 +71,17 @@ public class AryXTC<E extends XTC> extends Array<E> {
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
   }
 
+  @Override public AryXTC<E> freeze( boolean inPlace ) {
+    if( _mut == Constant ) return this;
+    // TODO: no need for array clone on Persistent
+    AryXTC<E> ary = inPlace ? this : new AryXTC(_gold,Constant,_es);
+    ary._mut = Constant;
+    for( E e : ary._es )
+      if( e!=null )
+        e.freeze(inPlace);
+    return ary;
+  }
+  
   @Override public String toString() {
     SB sb = SBX.p('[');
     for( int i=0; i<_len; i++ )

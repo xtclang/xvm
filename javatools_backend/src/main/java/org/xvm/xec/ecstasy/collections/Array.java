@@ -27,15 +27,18 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
 
   public static Array $new( XTC gold, Mutability mut, Array ary ) {
     if( ary._len==0 ) {
-      if( gold == Int64.GOLD )  return new Arylong(mut, Arylong.EMPTY);
-      if( gold == Char .GOLD )  return new Arychar(mut, Arychar.EMPTY);
       if( gold == Boolean.GOLD ) return new Aryboolean(mut, Aryboolean.EMPTY);
+      if( gold == Char   .GOLD ) return new Arychar   (mut, Arychar   .EMPTY);
+      if( gold == Int64  .GOLD ) return new Arylong   (mut, Arylong   .EMPTY);
       if( gold == org.xvm.xec.ecstasy.text.String.GOLD )  return new AryString(mut, AryString.EMPTY);
       throw XEC.TODO();
     }
     assert gold==ary._gold : "Given GOLD: " + gold + " and an ary.GOLD: " + ary._gold;
     
     if( gold == Boolean.GOLD ) return new Aryboolean(mut, (Aryboolean)ary);
+    if( gold == Char   .GOLD ) return new Arychar   (mut, (Arychar   )ary);
+    if( gold == Int64  .GOLD ) return new Arylong   (mut, (Arylong   )ary);
+    if( gold == org.xvm.xec.ecstasy.text.String.GOLD )  return new AryString(mut, (AryString)ary);
     throw XEC.TODO();
   }
   
@@ -70,8 +73,8 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
     return this;
   }
 
-  Array<E> freeze( boolean inPlace ) { throw XEC.TODO(); }
-
+  abstract public Array<E> freeze( boolean inPlace );
+  
   static final SB SBX = new SB();
   abstract public String toString();
   
