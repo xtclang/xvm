@@ -5,9 +5,10 @@ import org.xvm.util.Ary;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xec.ecstasy.Comparable;
-import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xec.ecstasy.Orderable;
 import org.xvm.xec.ecstasy.Service;
+import org.xvm.xec.ecstasy.collections.Array.Mutability;
+import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xtc.ast.*;
 import org.xvm.xtc.cons.*;
 
@@ -351,9 +352,20 @@ public class ClzBuilder {
         if( part instanceof PropPart prop && 
             prop.isField() && 
             (xt=XType.xtype(prop._con,false))._notNull ) {
+          // if( fld==null ) throw new IllegalState;
           _sb.ifmt("if( %0==null ) throw new XTC.IllegalState(\"Did not initialize %0\");",prop._name).nl();
-          if( _clz._f == Part.Format.CONST && !xt.primeq() )
-            _sb.ifmt("%0 = (%1)%0.freeze(false);\n",prop._name,xt.clz());
+          // If Const, freeze fields
+          if( _clz._f == Part.Format.CONST && !xt.primeq() ) {
+            // if( fld.mutability$getOrd()!=0 ) {
+            //   if( fld instanceof Freezable frz ) fld = (clz)frz.freeze(false);
+            //   else throw new IllegalState;
+            // }
+            add_import(XCons.FREEZABLE);
+            _sb.ifmt("if( %0.mutability$getOrd()!=%1 ) {\n",prop._name,Mutability.Constant.ordinal()).ii();
+            _sb.ifmt(  "if( %0 instanceof Freezable frz ) %0 = (%1)frz.freeze(false);\n",prop._name,xt.clz());
+            _sb.ifmt(  "else throw new XTC.IllegalState(\"'%0' is neither frozen nor Freezable\");\n",prop._name);
+            _sb.di().p("}\n");
+          }
         }
       _sb.ip("return this;").nl();
       _sb.di().ip("}").nl();
