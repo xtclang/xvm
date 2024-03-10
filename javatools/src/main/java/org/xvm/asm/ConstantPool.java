@@ -2310,6 +2310,7 @@ public class ConstantPool
     public ClassConstant     clzOuter()          {ClassConstant     c = m_clzOuter;          if (c == null) {m_clzOuter          = c = (ClassConstant) getImplicitlyImportedIdentity("Outer"           );} return c;}
     public ClassConstant     clzRef()            {ClassConstant     c = m_clzRef;            if (c == null) {m_clzRef            = c = (ClassConstant) getImplicitlyImportedIdentity("Ref"             );} return c;}
     public ClassConstant     clzVar()            {ClassConstant     c = m_clzVar;            if (c == null) {m_clzVar            = c = (ClassConstant) getImplicitlyImportedIdentity("Var"             );} return c;}
+    public ClassConstant     clzClass()          {ClassConstant     c = m_clzClass;          if (c == null) {m_clzClass          = c = (ClassConstant) getImplicitlyImportedIdentity("Class"           );} return c;}
     public ClassConstant     clzStruct()         {ClassConstant     c = m_clzStruct;         if (c == null) {m_clzStruct         = c = (ClassConstant) getImplicitlyImportedIdentity("Struct"          );} return c;}
     public ClassConstant     clzType()           {ClassConstant     c = m_clzType;           if (c == null) {m_clzType           = c = (ClassConstant) getImplicitlyImportedIdentity("Type"            );} return c;}
     public ClassConstant     clzConst()          {ClassConstant     c = m_clzConst;          if (c == null) {m_clzConst          = c = (ClassConstant) getImplicitlyImportedIdentity("Const"           );} return c;}
@@ -2463,7 +2464,6 @@ public class ConstantPool
 
     // ---- internal class helpers -----------------------------------------------------------------
 
-    protected ClassConstant  clzClass()         {return (ClassConstant) getImplicitlyImportedIdentity("Class"                    );}
     protected ClassConstant  clzParameter()     {return (ClassConstant) getImplicitlyImportedIdentity("Parameter"                );}
     protected ClassConstant  clzBoolean()       {return (ClassConstant) getImplicitlyImportedIdentity("Boolean"                  );}
     protected ClassConstant  clzFalse()         {return (ClassConstant) getImplicitlyImportedIdentity("False"                    );}
@@ -3905,8 +3905,9 @@ public class ConstantPool
     private transient ClassConstant     m_clzOuter;
     private transient ClassConstant     m_clzRef;
     private transient ClassConstant     m_clzVar;
-    private transient ClassConstant     m_clzType;
+    private transient ClassConstant     m_clzClass;
     private transient ClassConstant     m_clzStruct;
+    private transient ClassConstant     m_clzType;
     private transient ClassConstant     m_clzConst;
     private transient ClassConstant     m_clzService;
     private transient ClassConstant     m_clzModule;
@@ -4051,6 +4052,7 @@ public class ConstantPool
         m_clzOuter          = null;
         m_clzRef            = null;
         m_clzVar            = null;
+        m_clzClass          = null;
         m_clzStruct         = null;
         m_clzType           = null;
         m_clzCloseable      = null;

@@ -3417,7 +3417,7 @@ public abstract class Component
                     TypeConstant   type      = entry.getValue();
 
                     mapNew.put((StringConstant) pool.register(constName),
-                               (TypeConstant)   (type == null ? null : pool.register(type)));
+                               (TypeConstant) (type == null ? null : pool.register(type)));
                     }
                 m_mapParams = mapNew;
                 }
