@@ -4255,6 +4255,28 @@ public class ClassStructure
                     m_listActual = listActual = new ArrayList<>(listActual); // clone
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
+                    if (id.equals(pool.clzClass()) && cActual > 0)
+                        {
+                        TypeConstant typePublic = listActual.get(0);
+                        if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType())
+                            {
+                            // we know a bit more about the relationship between Class formal types;
+                            // prime them accordingly
+                            for (int i = cActual; i < cFormal; i++)
+                                {
+                                listActual.add(pool.ensureAccessTypeConstant(typePublic,
+                                    switch (i)
+                                        {
+                                        case 1  -> Access.PROTECTED;
+                                        case 2  -> Access.PRIVATE;
+                                        case 3  -> Access.STRUCT;
+                                        default -> throw new IllegalStateException();
+                                        }));
+                                }
+                            return;
+                            }
+                        }
+
                     // fill the missing actual parameters with the canonical constraint types
                     // Note: since there is a possibility of Tuple self-reference
                     // (e.g. Tuple<ElementTypes extends Tuple<ElementTypes...>>)

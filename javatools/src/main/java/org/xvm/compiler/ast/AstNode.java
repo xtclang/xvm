@@ -1067,7 +1067,8 @@ public abstract class AstNode
 
         if (setMethods.isEmpty())
             {
-            if (typeTarget.isSingleDefiningConstant() && typeTarget.getAccess() != Access.PRIVATE)
+            if (!typeTarget.isFormalType() && typeTarget.isSingleDefiningConstant() &&
+                    typeTarget.getAccess() != Access.PRIVATE)
                 {
                 // check if there are any potentially matching private methods
                 TypeConstant typePrivate = typeTarget.ensureAccess(Access.PRIVATE);

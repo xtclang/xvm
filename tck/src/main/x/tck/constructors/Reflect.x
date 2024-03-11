@@ -11,7 +11,7 @@ class Reflect {
         static class Test(Int a1, String a2);
 
         try {
-            Class<public Test, protected Test, private Test, struct Test> clz = Test;
+            Class<Test> clz = Test;
             assert (struct Test) structure := clz.allocate();
             structure.a1 = 4;
             // structure.a2  assignment is missing
@@ -35,8 +35,7 @@ class Reflect {
 
         try {
             Class<Test> clz = Test;
-            assert Struct structure := clz.allocate();
-            assert structure.is(struct Test);
+            assert (struct Test) structure := clz.allocate();
             structure.a1 = 4;
             structure.a2 = "hello";
             Test t = clz.instantiate(structure);
@@ -64,8 +63,7 @@ class Reflect {
         }
 
         Class<Derived> clz = Derived;
-        assert Struct structure := clz.allocate();
-        assert structure.is(struct Derived);
+        assert (struct Derived) structure := clz.allocate();
         structure.s = "Test";
         Derived d = clz.instantiate(structure);
         assert d.s == "Test-DA-BA";

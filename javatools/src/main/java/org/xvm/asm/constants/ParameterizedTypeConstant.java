@@ -533,7 +533,8 @@ public class ParameterizedTypeConstant
                     }
                 }
             }
-        return m_constType.adoptParameters(pool, atypeParams);        }
+        return m_constType.adoptParameters(pool, atypeParams);
+        }
 
     @Override
     public TypeConstant[] collectGenericParameters()

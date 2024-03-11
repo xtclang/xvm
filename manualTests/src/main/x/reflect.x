@@ -257,7 +257,7 @@ module TestReflection {
         for (val constructor : t.constructors) {
             switch (constructor.params.size) {
             case 1:
-                Class<public Point, protected Point, private Point, struct Point> clz = Point;
+                Class<Point> clz = Point;
                 assert (struct Point) structure := clz.allocate();
                 structure.x = Int:1;
                 structure.y = Int:2;
