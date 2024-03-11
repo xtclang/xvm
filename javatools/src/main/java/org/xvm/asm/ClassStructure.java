@@ -4258,8 +4258,10 @@ public class ClassStructure
                     if (id.equals(pool.clzClass()) && cActual > 0)
                         {
                         TypeConstant typePublic = listActual.get(0);
-                        if (!typePublic.isFormalType())
+                        if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType())
                             {
+                            // we know a bit more about the relationship between Class formal types;
+                            // prime them accordingly
                             for (int i = cActual; i < cFormal; i++)
                                 {
                                 listActual.add(pool.ensureAccessTypeConstant(typePublic,
