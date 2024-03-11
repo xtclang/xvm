@@ -391,6 +391,7 @@ public class ServiceContext
                 catch (Throwable e)
                     {
                     // must not happen
+                    terminateFiber(frame.f_fiber);
                     System.err.println("Unexpected service execution failure: " + f_sName);
                     e.printStackTrace(System.err);
                     }
