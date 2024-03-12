@@ -327,12 +327,12 @@ public class Proxy
                     switch (super.callNImpl(frame, hTarget, ahVar, aiStack))
                         {
                         case Op.R_NEXT:
-                            return convertResults(frame, hProxy, aiReturn);
+                            return convertResults(frame, getMethod(), hProxy, aiReturn);
 
                         case Op.R_CALL:
                             {
                             Frame.Continuation stepNext = frameCaller ->
-                                convertResults(frameCaller, hProxy, aiReturn);
+                                convertResults(frameCaller, getMethod(), hProxy, aiReturn);
                             frame.m_frameNext.addContinuation(stepNext);
                             return Op.R_CALL;
                             }
@@ -393,15 +393,16 @@ public class Proxy
              * Convert the results of the proxy target call (on the frame's stack), replacing the
              * target handle in the results (e.g.: "return True, this") with the proxy handle.
              */
-            private int convertResults(Frame frame, ProxyHandle hProxy, int[] aiReturn)
+            private int convertResults(Frame frame, MethodStructure method,
+                                       ProxyHandle hProxy, int[] aiReturn)
                 {
                 int            cReturns = aiReturn.length;
                 ObjectHandle[] ahReturn = new ObjectHandle[cReturns];
                 for (int i = cReturns - 1; i >= 0; i--)
                     {
                     ObjectHandle hReturn = frame.popStack();
-                    if (hReturn == xBoolean.FALSE && i == cReturns &&
-                            frame.f_function.isConditionalReturn())
+                    if (hReturn == xBoolean.FALSE && i == cReturns - 1 &&
+                            method.isConditionalReturn())
                         {
                         // conditional False
                         return frame.assignValue(aiReturn[0], hReturn);
