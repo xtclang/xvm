@@ -1,3 +1,7 @@
+Cliff-Notes for Cliff
+
+Mar 12, 2024: A random collection of design thinking.  At some future date these notes will all be outdated,
+but for now they're useful.
 
 Ignore packages for now?
 
