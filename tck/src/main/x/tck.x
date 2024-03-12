@@ -13,7 +13,9 @@ module tck.xtclang.org {
         new tuples.Basic().run();
         new services.Basic().run();
         new constructors.Basic().run();
+        //new comparison.Medium().run();
         //new constructors.Medium().run();
         //new constructors.Reflect().run();
+        //new inner.Basic().run();
     }
 }

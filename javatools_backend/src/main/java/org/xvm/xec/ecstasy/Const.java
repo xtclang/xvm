@@ -13,7 +13,6 @@ import org.xvm.xtc.*;
 
 /** The Java Const class, implementing an XTC hidden internal class.
     The XTC Const is an *XTC interface*, not an XTC class, but it has many class-like properties.
-
     The XTC Const interface is thus treated like this Java Class.
  */
 public abstract class Const extends XTC
