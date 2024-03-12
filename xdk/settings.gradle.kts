@@ -19,8 +19,9 @@ val xdkProjectPath = rootDir
  */
 listOf(
     "lib_ecstasy",
-    "lib_collections",
     "lib_aggregate",
+    "lib_collections",
+    "lib_cli",
     "lib_crypto",
     "lib_net",
     "lib_json",

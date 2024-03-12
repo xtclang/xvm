@@ -52,6 +52,7 @@ gradle-release = { id = "net.researchgate.gradle-release", version.ref = "gradle
 xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
 xdk-ecstasy = { group = "org.xtclang", name = "lib-ecstasy", version.ref = "xdk" }
 xdk-aggregate = { group = "org.xtclang", name = "lib-aggregate", version.ref = "xdk" }
+xdk-cli = { group = "org.xtclang", name = "lib-cli", version.ref = "xdk" }
 xdk-collections = { group = "org.xtclang", name = "lib-collections", version.ref = "xdk" }
 xdk-crypto = { group = "org.xtclang", name = "lib-crypto", version.ref = "xdk" }
 xdk-json = { group = "org.xtclang", name = "lib-json", version.ref = "xdk" }
