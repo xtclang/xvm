@@ -7,7 +7,6 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
-import org.gradle.api.provider.Provider
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path

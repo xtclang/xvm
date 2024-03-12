@@ -32,9 +32,10 @@ val installDist by tasks.registering {
     dependsOn(xdk.task(":$name"))
 }
 
-val installLocalDist by tasks.registering {
+val installDistPlatform by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
-    description = "Build and overwrite any local distribution with the new distribution produced by the build."
+    description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories, also creating launchers for the build platform."
+    dependsOn(installDist)
     dependsOn(xdk.task(":$name"))
 }
 

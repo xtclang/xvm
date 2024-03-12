@@ -7,7 +7,6 @@ import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
-import java.nio.file.Files
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -17,6 +16,7 @@ import java.nio.file.Files
 plugins {
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
+    alias(libs.plugins.jreleaser)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
     distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
@@ -274,41 +274,28 @@ val installDist by tasks.existing {
 }
 
 /**
- * Overwrite or install a local distribution of the XDK under rootProjectDir/build/dist, which
- * you could add to your path, for example
- *
- * TODO: @aalmiray recommends application plugin run script generation, and that makes sense to me.
- *   It should be possible to hook up JReleaser and/or something like launch4j to cross compile
- *   binary launchers for different platforms, if that is what we want instead of the current
- *   solution.
+ * Run installDist and create a platform specific launcher by running the config scripts.
  */
-val installLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Creates an XDK installation in root/build/dist, for the current platform."
-
-    val localDistDir = compositeRootBuildDirectory.dir("dist")
-
+val installDistPlatform by tasks.registering {
     dependsOn(installDist)
+
+    val binDir = layout.buildDirectory.dir("install/xdk/bin")
     inputs.files(installDist)
-    outputs.dir(localDistDir)
+    listOf("xcc", "xec").forEach { name -> outputs.file(binDir.map { it.files(name) }) }
 
     doLast {
-        // Sync, not copy, so we can do this declaratively, Gradle input/output style, without horrible file system logic.
-        sync {
-            from(project.layout.buildDirectory.dir("install/xdk"))
-            into(localDistDir)
+        val configScript = xdkDist.resolveConfigScript(binDir).asFile
+        if (!configScript.exists()) {
+            throw buildException("Could not find native binary configuration script for OS: '${configScript.absolutePath}")
         }
-
-        // Create symlinks for launcher.
-        val binDir = mkdir(localDistDir.get().dir("bin"))
-        val launcherExe = xdkDist.resolveLauncherFile(localDistDir)
-
-        // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
-        listOf("xcc", "xec", "xtc").forEach {
-            val symLink = File(binDir, it)
-            logger.info("$prefix Copying launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
-            Files.copy(launcherExe.asFile.toPath(), symLink.toPath())
+        val execOut = ByteArrayOutputStream()
+        val execResult = exec {
+            commandLine(configScript.absolutePath)
+            standardOutput = execOut
         }
+        logger.lifecycle("$prefix Configuration script output (result: $execResult):")
+        logger.lifecycle("$prefix   $execOut")
+        printTaskOutputs(LogLevel.INFO)
     }
 }
 
@@ -362,11 +349,68 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             into("javatools") // should just be one file with corrected dependencies, assert?
         }
         if (shouldPublishPluginToLocalDist()) {
-            val published = publishPluginToLocalDist.get().outputs.files
+            val published = publishPluginToLocalDist.map { it.outputs.files }
             from(published) {
                 into("repo")
             }
         }
         from(tasks.xtcVersionFile)
     }
+}
+
+val releaseVersion = project.version.toString()
+val releaseGroupId = project.group.toString()
+val releaseArtifactId = project.name
+
+// need variables for github token and project version
+// JRELEASER_ ...
+jreleaser {
+    //dependsOnAssemble = true
+
+    dryrun = true
+    gitRootSearch = true
+    strict = true
+    // These values are taken directly from the project in this DSL
+    // section values:
+    //   name, version, description, java.groupId, java.artifactId
+    //   multiProject is true by default if the project has children
+    //   java.version will be set to project.targetCompatiblity, or
+    //      compilerRelease, or JavaVersion.current(), if not specified
+    project {
+        description = "XDK for xtclang.org"
+        longDescription = "This is the XDK, tools and core libraries required to work with xtclang.org and the Ecstasy language."
+        website = "https://xtclang.org"
+        copyright = "2024 xtclang.org"
+        links {
+            homepage = "https://github.com/xtclang/xvm"
+        }
+        authors = listOf("info@xtclang.org")
+        java.version = "21"
+        inceptionYear = "2024"
+    }
+
+    release {
+        github {
+            repoUrl = "https://github.com/xtclang/xvm"
+            repoOwner = "xtclang"
+            sign = false  // TODO enable
+            overwrite = true
+        }
+    }
+
+    signing {
+        enabled = false
+        armored = false
+    }
+
+    distributions {
+
+    }
+
+    packagers {
+        brew {
+            enabled = false // TODO
+        }
+    }
+    // TODO publications and/or the plugin?
 }

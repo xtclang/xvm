@@ -455,15 +455,16 @@ If you would like to contribute to the Ecstasy Project, it might be an idea to u
 very latest version by invoking:
 
 ```
-./gradlew installLocalDist
+./gradlew installDistPlatform
 ```
 
-This copies the build from the xvm directory into the brew cellar, or other local installation,
-that is deduced from the location of the `xec` launcher on the system PATH.
+This will create a self-contained XDK distribution under `xdk/build/install/xdk`, including 
+launchers for the build host operating system. You can put this directory first on your
+system path, or set `XDK_HOME` to point at it, so that any XTC launcher will redirect its
+implementation to the libraries in the lcoal build.
 
-*Note*: this would be done after installing the XDK via `brew`, or through any other installation
-utility, depending on your platform. This will overwrite several libraries and files in any
-local installation.
+```
+```
 
 For more information about the XTC DSL, please see the README.md file in the "plugin" project.
 

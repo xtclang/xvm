@@ -48,6 +48,19 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
+    fun resolveConfigScript(installDir: Provider<Directory>): RegularFile {
+        val config = if (currentOs.isMacOsX) {
+            "cfg_macos.sh"
+        } else if (currentOs.isLinux) {
+            "cfg_linux.sh"
+        } else if (currentOs.isWindows) {
+            "cfg_windows.bat"
+        } else {
+            throw UnsupportedOperationException("Cannot find launcher config script for currentOs: $currentOs")
+        }
+        return installDir.get().file(config)
+    }
+
     fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
         val launcher = if (currentOs.isMacOsX) {
             "macos_launcher"

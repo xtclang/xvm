@@ -105,9 +105,9 @@ jobs:
       - name: Verify Gradle Install and Distribution Layout
         run: ./gradlew installDist --info --stacktrace
 
-      # 6. Run the Gradle installLocalDist task, and verify that its output works as expected.
+      # 6. Run the Gradle installDistPlatform task, and verify that its output works as expected.
       - name: Verify Gradle Install and Local Distribution Layout
-        run: ./gradlew installLocalDist --info --stacktrace
+        run: ./gradlew installDistPlatform --info --stacktrace
 
       # 7. Sanity check test run. XUnit will give us real successes or failures.
       - name: ManualTests Run Default

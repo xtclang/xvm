@@ -9,7 +9,11 @@ plugins {
  * Should we publish the plugin to a common build repository and copy it to any localDist?
  */
 private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
+    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false).also {
+        if (it) {
+            logger.warn("$prefix The plugin publication logic for local distribution is currently not maintained.")
+        }
+    }
 }
 
 /**
@@ -76,9 +80,12 @@ val publishLocal by tasks.registering {
     dependsOn(publishAllPublicationsToMavenLocalRepository)
 }
 
+// TODO: Remove this until we have figured out if and how we want the publication of the XTC Plugin as part of the distribution.
+//  It may be a good ide to have a local directory that is a maven repository for the plugin, at least until we have the
+//  full artifact work done.
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installLocalDist and remote publishing only."
+    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installPlatformDist and remote publishing only."
     if (shouldPublishPluginToLocalDist()) {
         logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
         delete(buildRepoDirectory)
@@ -109,7 +116,6 @@ val listAllLocalPublications by tasks.registering {
     description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
     doLast {
         logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
-        //private val localPublishTasks = provider { tasks.withType<PublishToMavenRepository>().filter{ it.name.contains("Local") }.toList() }
         tasks.withType<PublishToMavenRepository>().filter { it.name.contains("Local") }.forEach {
             with(it.publication) {
                 logger.lifecycle("$prefix     '${it.name}' (${artifacts.count()} artifacts):")
