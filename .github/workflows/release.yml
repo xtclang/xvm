@@ -1,0 +1,53 @@
+# Snapshot publication on push, manual dispatch etc. Should be triggered by every push to master.
+
+name: Snapshot Publication adn Release
+
+on:
+  # Allow manual triggering of this workflow
+  workflow_dispatch:
+  # Run this workflow on push (should)
+  push:
+    # We may want to do snapshots triggered by every push, not just master. TODO: decide
+    branches:
+      - master
+  # Run this workflow as a cron job
+  #schedule:
+  #  - cron: '0 10 1/6 * *'
+
+# Let this one do just master.
+
+jobs:
+  build-linux-installer:
+    name: Build Installer on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout-code
+        name: Check out code from branch
+        uses: actions/checkout@v4
+        #TODO Enable only for master.
+#        with:
+#          ref: master
+      - id: setup-jdk
+        name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      # BUILD FOR DISTRIBUTION
+      - id: build
+        name: Build distribution
+        run: |
+          gradle -v
+          gradle installDist
+          jpackage --verbose "@/gradle/jpackage.cfg" "@/gradle/jpackage-linux.cfg"
+
+      # SAVE INSTALLER
+      - id: upload-installer
+        name: Upload installer
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./consoleapp/build/distributions/consoleapp_0.0.1-1_amd64.deb
+          name: linux-installer
+          retention-days: 1
+
