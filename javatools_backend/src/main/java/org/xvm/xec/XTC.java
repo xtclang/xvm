@@ -19,7 +19,7 @@ import java.io.IOException;
 public abstract class XTC {
   public XTC( Never n ) {}      // No arg constructor
   public XTC() {}               // No arg constructor
-  
+
   // --------------------------------------------------------------------------
   // A bunch of classes and functions that are always available (e.g. TRACE
   // from asserts), or defined in ecstasy.x, or needed for the Java port.
@@ -29,7 +29,7 @@ public abstract class XTC {
   // constant.  This call is done in the Comparable interface, but it uses this
   // signature so can use a java virtual call instead of a java interface call.
   // This will only be called with two Comparables.
-  public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }  
+  public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
 
   // Ecstasy's normal "compare" call calls the "compare" from "clz" and not a
   // subclass implementation.  This requires a runtime lookup, unless clz is a
@@ -49,11 +49,11 @@ public abstract class XTC {
   // signature so can use a java virtual call instead of a java interface call.
   // This will only be called with a Hashable.
   public long hashCode( XTC x ) { throw XEC.TODO(); }
-  
-  
+
+
   // Default mutability
-  public Mutability mutability$get() { return Mutability.Constant; }
-  public int mutability$getOrd() { return Mutability.Constant.ordinal(); }
+  public Mutability mutability$get() { return Mutability.Mutable; }
+  public int mutability$getOrd() { return Mutability.Mutable.ordinal(); }
 
   // 'that' isa 'this' ?
   // 'this.getClass().isInstance(that)'
@@ -68,7 +68,7 @@ public abstract class XTC {
     if( mutability$get() == Mutability.Constant ) return this;
     throw XEC.TODO();
   }
-  
+
   // Trace
   public static <X> X TRACE( X x ) { return x; }
   public static String TRACE(String x) { return x; }
@@ -100,7 +100,7 @@ public abstract class XTC {
 
       <li>I DO see exactly 2 catches of IllegalState (in the JSONDB Catalog.x).
       I might expect more from users, used to catching close fails.</li>
-      
+
       <li>Since the exception throw by XTC {@code assert} and {@code close} are
       the same thing, and can be caught by the same thing, I need to force the
       matching Java exceptions to map to some same thing, so they can be caught
@@ -122,7 +122,7 @@ public abstract class XTC {
       <li>There's a lot less wrapping of exceptions going on, if we can
       unbundle XTC assert's {@code IllegalStateException} from XTC close's
       {@code IllegalStateException}.</li>
-      
+
       </ul>
       So I am Once Again, asking for a language change: make the XTC assert
       throw e.g. AssertionError instead of IllegalStateException.
@@ -134,7 +134,7 @@ public abstract class XTC {
     public static Exception construct(String s) { return new Exception(s); }
     public String message$get() { return getMessage(); };
   }
-  
+
 
   // XTC IllegalState mapped to Java
   public static class IllegalState extends Exception {
@@ -152,7 +152,7 @@ public abstract class XTC {
   public static class ReadOnlyException extends Exception { }
 
   public static class Unsupported extends Exception {}
-  
+
   // XTC NotImplemented mapped to Java
   public static class NotImplemented extends Unsupported {}
 }

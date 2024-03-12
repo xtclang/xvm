@@ -57,7 +57,7 @@ public final class SB {
         return false;
     return true;
   }
-  
+
   // Delete last char.  Useful when doing string-joins and JSON printing and an
   // extra separater char needs to be removed:
   //
@@ -103,5 +103,5 @@ public final class SB {
   public SB ifmt( String fmt, String a, String b ) { return i().p(fmt.replace("%0",a).replace("%1",b)); }
   public SB ifmt( String fmt, String a, long l ) { return i().fmt(fmt,a,Long.toString(l)); }
   public SB ifmt( String fmt, long l, String a, String b ) { return i().fmt(fmt,Long.toString(l),a,b); }
-  
+
 }

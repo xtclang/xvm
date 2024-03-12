@@ -14,5 +14,6 @@ module tck.xtclang.org {
         new services.Basic().run();
         new constructors.Basic().run();
         //new constructors.Medium().run();
+        //new constructors.Reflect().run();
     }
 }

@@ -15,8 +15,8 @@ class Basic {
         mutEmpty();
         mutFix();
         mutEmptyMutable();
-        mutImteralInts();
-        mutDefaultFixed();
+        mutConstInts();
+        mutDefaultInts();
         mutFixedInts();
         mutFixedStrings();
         mutFixedChars();

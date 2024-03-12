@@ -13,7 +13,7 @@ import org.xvm.xtc.*;
 
 /** The Java Const class, implementing an XTC hidden internal class.
     The XTC Const is an *XTC interface*, not an XTC class, but it has many class-like properties.
-    
+
     The XTC Const interface is thus treated like this Java Class.
  */
 public abstract class Const extends XTC
@@ -23,8 +23,8 @@ public abstract class Const extends XTC
 {
   public Const() {}             // Explicit no-arg-no-work constructor
   public Const(Never n) {}      // Forced   no-arg-no-work constructor
-  
-  
+
+
   /* Generate:
      @Override public String toString() {
        SB sb = new SB().p("(");
@@ -55,17 +55,22 @@ public abstract class Const extends XTC
   private static boolean xeq(PropPart p) {
     return XType.xtype(p._con,false).is_jdk();
   }
-  
+
   // --- Default Implementations ----------------------------------------------
+
+  // Default mutability
+  public Mutability mutability$get() { return Mutability.Constant; }
+  public int mutability$getOrd() { return Mutability.Constant.ordinal(); }
+
 
   // Subclasses that use this must override
   @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
-  
+
   public static boolean  equals$Const(XTC gold, char c0, char c1 ) { return c0==c1; }
   public static Ordered compare$Const(XTC gold, char c0, char c1 ) {
     throw XEC.TODO();
   }
-  
+
   public static boolean  equals$Const(org.xvm.xec.ecstasy.text.String gold, java.lang.String c0, java.lang.String c1 ) { throw XEC.TODO(); }
   public static Ordered compare$Const(org.xvm.xec.ecstasy.text.String gold, java.lang.String s0, java.lang.String s1 ) {
     return gold.compare(s0,s1);

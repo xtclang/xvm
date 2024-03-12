@@ -18,12 +18,12 @@ import java.util.HashSet;
 
 // Some kind of base class for a Java class that implements an XTC Module
 public class ClzBuilder {
-  
+
   // XTC Module, which is the base Java class
   public final ModPart _mod;
   public final XClz _tmod;      // Module XType
   public static ClassPart CMOD; // Compile unit module
-  
+
   // XTC class, which is also the top-level Java class
   public final ClassPart _clz;
   public final XClz _tclz;      // Class XType
@@ -31,7 +31,7 @@ public class ClzBuilder {
 
   // XTC Module vs XTC class
   public final boolean _is_module;
-  
+
   // Top level, vs e.g. nested inner class.
   // Controls adding "import blah"
   public final boolean _is_top;
@@ -39,15 +39,15 @@ public class ClzBuilder {
   // Java code emission for the java file header.
   // Includes imports discovered as we parse the XTC class
   public final SB _sbhead;
-  
+
   // Java code emission for the whole top-level class
   public final SB _sb;
-  
+
   // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
   public ExprAST _expr;         // True if AST is parse inside an ExprAST, similar to a nested method
   private CPool _pool;          // Parser for code buffer
-  
+
   public final Ary<String> _locals; // Virtual register numbers to java names
   public final Ary<XType>  _ltypes; // Virtual register numbers to java types
   public final int nlocals() { return _locals._len; }
@@ -57,10 +57,10 @@ public class ClzBuilder {
   // Import base names; collisions will require name munging
   static HashMap<String,String> BASE_IMPORTS;
   static HashSet<XClz> AMBIGUOUS_IMPORTS;
-  
+
   // Make a nested java class builder
   public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
-  
+
   // Make a (possible nested) java class builder
   public ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean is_top ) {
     _is_top = is_top;
@@ -82,7 +82,7 @@ public class ClzBuilder {
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
   }
-  
+
   // Fill in the body of the matching java class
   public void jclass( ) {
     assert _is_top;
@@ -112,7 +112,7 @@ public class ClzBuilder {
     CMOD = null;
     CCLZ = null;
   }
-  
+
   // Java Class body; can be nested (static inner class)
   @SuppressWarnings("fallthrough")
   private void jclass_body() {
@@ -158,17 +158,17 @@ public class ClzBuilder {
           add_import(iclz);
         }
     }
-    
+
     _sb.p(" {").nl().ii();
 
-    
+
     // Get a GOLDen instance for faster special dispatch rules.
     // Use the sentinel "Never" type to get a true Java no-arg constructor
     if( !is_iface ) {
       _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
       _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     }
-    
+
     // Force native methods to now appear, so signature matching can assume a
     // method always exists.
     for( Part part : _clz._name2kid.values() ) {
@@ -188,7 +188,7 @@ public class ClzBuilder {
         }
     }
 
-    
+
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
     if( mm != null &&
@@ -209,13 +209,13 @@ public class ClzBuilder {
       for( int i=0; i<_tclz._tns.length; i++ )
         _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
       _sb.di().ip("}\n");
-      
+
       // For all other constructors
       for( MethodPart meth = (MethodPart)mm.child(mm._name); meth != null; meth = meth._sibling ) {
         // To support XTC 'construct' I need a layer of indirection.  The Java
         // moral equivalent is calling 'this' in a constructor, but XTC allows
         // calling 'this' anywhere.
-        
+
         // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args).$check(); }"
         _sb.nl();
         keywords(meth,true);
@@ -246,7 +246,7 @@ public class ClzBuilder {
     // Output Java methods for all class methods
     for( Part part : _clz._name2kid.values() ) {
       switch( part ) {
-      case MMethodPart mmp: 
+      case MMethodPart mmp:
         // Output java methods.
         String mname = jname(mmp._name);
         for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
@@ -302,11 +302,11 @@ public class ClzBuilder {
         // Other imports
         add_import(ttc.clz());
         break;
-        
+
       case PropPart pp:
         PropBuilder.make_class(this,pp);
         break;
-        
+
       case ClassPart clz_nest:
         // Nested class.  Becomes a java static inner class
         ClzBuilder X = new ClzBuilder(this,clz_nest);
@@ -316,7 +316,7 @@ public class ClzBuilder {
       case TDefPart typedef:
         // TypeDef.  Hopefully already swallowed into XType/XClz
         break;
-        
+
       default:
         throw XEC.TODO();
       }
@@ -327,7 +327,7 @@ public class ClzBuilder {
     if( _clz._f == Part.Format.CONST &&
         _clz.child("toString")==null )
       org.xvm.xec.ecstasy.Const.make_toString(_clz,_sb);
-    
+
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
     // - make a main() which forwards to the arg-run
@@ -342,15 +342,15 @@ public class ClzBuilder {
           }
         }
     }
-  
+
     // Check fields definitely assigned.
     // Freeze if const.
     if( !is_iface ) {
       _sb.ip("private ").p(java_class_name).p(" $check() {").nl().ii();;
       XType xt;
       for( Part part : _clz._name2kid.values() )
-        if( part instanceof PropPart prop && 
-            prop.isField() && 
+        if( part instanceof PropPart prop &&
+            prop.isField() &&
             (xt=XType.xtype(prop._con,false))._notNull ) {
           // if( fld==null ) throw new IllegalState;
           _sb.ifmt("if( %0==null ) throw new XTC.IllegalState(\"Did not initialize %0\");",prop._name).nl();
@@ -364,7 +364,7 @@ public class ClzBuilder {
             _sb.ifmt("if( %0.mutability$getOrd()!=%1 ) {\n",prop._name,Mutability.Constant.ordinal()).ii();
             _sb.ifmt(  "if( %0 instanceof Freezable frz ) %0 = (%1)frz.freeze(false);\n",prop._name,xt.clz());
             _sb.ifmt(  "else throw new XTC.IllegalState(\"'%0' is neither frozen nor Freezable\");\n",prop._name);
-            _sb.di().p("}\n");
+            _sb.di().ip("}\n");
           }
         }
       _sb.ip("return this;").nl();
@@ -392,7 +392,7 @@ public class ClzBuilder {
       access = Part.ACCESS_PRIVATE;
     if( access==Part.ACCESS_PRIVATE   ) _sb.p("private "  );
     if( access==Part.ACCESS_PROTECTED ) _sb.p("protected ");
-    if( access==Part.ACCESS_PUBLIC &&  !_tclz.iface() ) _sb.p("public "   ); 
+    if( access==Part.ACCESS_PUBLIC &&  !_tclz.iface() ) _sb.p("public "   );
     if( m.isStatic() )      _sb.p("static ");
     if( m._ast.length==0 )  _sb.p("abstract ");
     else if( _tclz.iface() ) _sb.p("default ");
@@ -417,7 +417,7 @@ public class ClzBuilder {
           sb.p("$").p(ttc.name());
         else if( p._special )
           sb.p("$").p(p._name);
-        else 
+        else
           m._xargs[i].clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
 
         // Parameter name, and define it in scope
@@ -426,7 +426,7 @@ public class ClzBuilder {
       sb.unchar(2);
     }
   }
-  
+
   // Argument names "arg0, arg1, ..."
   static public void arg_names(MethodPart m, SB sb) {
     if( m._args!=null ) {
@@ -451,11 +451,11 @@ public class ClzBuilder {
         }
       sb.unchar(2).p("> ");
     }
-    
+
     // Return type
     if( m._xrets==null ) sb.p("void ");
     else {
-      XType xret = 
+      XType xret =
         m._xrets.length == 1 ?  m._xrets[0] :
         // Conditional return!  Passes the extra return in XRuntime$COND.
         // The m._rets[0] is the boolean
@@ -467,7 +467,7 @@ public class ClzBuilder {
 
     return sb;
   }
-  
+
   // Emit a Java string for this MethodPart.
   // Already _sb has the indent set.
   // "public static <G extends Generic> Ary<G> " ... jmethod_body()
@@ -476,10 +476,10 @@ public class ClzBuilder {
 
     // Print out the function header keywords
     keywords(m,false);
-    
+
     // Return signature; stuff like "long " or "<T extends BAZ> HashSet<T> "
     ret_sig(m, _sb);
-    
+
     jmethod_body(m,mname,false);
   }
 
@@ -498,12 +498,12 @@ public class ClzBuilder {
     if( m._xargs!=null )
       for( int i = 0; i < m._xargs.length; i++ )
         define(m._args[i]._name,m._xargs[i]);
-    
+
     // Abstract method, no body
     if( m._ast.length==0 ) {
       _sb.p(";").nl();
     } else {
-    
+
       // Parse the Body
       AST ast = ast(m);
       // If a constructor, move the super-call up front
@@ -565,7 +565,7 @@ public class ClzBuilder {
     // Must find super call
     throw XEC.TODO();
   }
-  
+
   // An inlinable method; turn into java Lambda syntax:
   // From: "{ return expr }"
   // To:   "         expr   "
@@ -618,7 +618,7 @@ public class ClzBuilder {
   public static void add_import( String s ) {
     IMPORTS.add(s);
   }
-  
+
   // --------------------------------------------------------------------------
 
   public AST ast( MethodPart m ) {
@@ -637,7 +637,7 @@ public class ClzBuilder {
     return ast;
   }
 
-  
+
   public int u8 () { return _pool.u8(); }  // Packed read
   public int u31() { return _pool.u31(); } // Packed read
   public long pack64() { return _pool.pack64(); }
@@ -654,7 +654,7 @@ public class ClzBuilder {
   public AST[] kids( int n ) { return _kids(n,0); }
   // Read an array of AST kid terminals, with a given bias (skipped elements are null).
   public AST[] kids_bias( int b ) { return _kids(u31(),b); }
-  
+
   private AST[] _kids( int n, int bias ) {
     if( n+bias==0 ) return null;
     AST[] kids = new AST[n+bias];
