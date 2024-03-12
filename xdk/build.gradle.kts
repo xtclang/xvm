@@ -306,8 +306,8 @@ val installLocalDist by tasks.registering {
         // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
         listOf("xcc", "xec", "xtc").forEach {
             val symLink = File(binDir, it)
-            logger.info("$prefix Creating symlink for launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
-            Files.createLink(symLink.toPath(), launcherExe.asFile.toPath())
+            logger.info("$prefix Copying launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
+            Files.copy(launcherExe.asFile.toPath(), symLink.toPath())
         }
     }
 }
