@@ -25,7 +25,12 @@ service BasicAuthenticator(Realm realm)
         for (String auth : request.header.valuesOf("Authorization")) {
             auth = auth.trim();
             if (CaseInsensitive.stringStartsWith(auth, "Basic ")) {
-                auth = Utf8Codec.decode(Base64Format.Instance.decode(auth.substring(6)));
+                try {
+                    auth = Utf8Codec.decode(Base64Format.Instance.decode(auth.substring(6)));
+                } catch (Exception e) {
+                    return new SimpleResponse(BadRequest);
+                }
+
                 if (Int colon := auth.indexOf(':')) {
                     String user = auth[0 ..< colon];
                     String pwd  = auth[colon >..< auth.size];

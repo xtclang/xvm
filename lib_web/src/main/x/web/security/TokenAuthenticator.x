@@ -1,6 +1,7 @@
 import ecstasy.collections.CaseInsensitive;
 
-import Realm.Hash;
+import codecs.Base64Format;
+import codecs.Utf8Codec;
 
 import responses.SimpleResponse;
 
@@ -15,33 +16,16 @@ service TokenAuthenticator
         implements Authenticator {
 
     /**
-     * Construct the `TokenAuthenticator` for the specified [Realm]. If the `apiName` is not
-     * specified, the realm name will be used instead to validate the "Authorization" header.
+     * Construct the `TokenAuthenticator` for the specified [Realm].
      */
-    construct(Realm realm, String? apiName = Null) {
+    construct(Realm realm) {
         this.realm   = realm;
-        this.apiName = apiName ?: realm.name;
-    }
-
-    assert() {
-        assert switch (apiName) {
-          case "Bearer",
-               "Basic",
-               "Digest": False;
-          default:       True;
-        } as $"Reserved name {apiName}";
     }
 
     /**
      * The Realm that contains the user/token information.
      */
     public/private Realm realm;
-
-    /**
-     * The api name used in the "Authorization" header. Cannot be one of the reserved names, such as
-     * "Bearer", "Basic" or "Digest".
-     */
-    String apiName;
 
 
     // ----- Authenticator interface ---------------------------------------------------------------
@@ -53,26 +37,33 @@ service TokenAuthenticator
 
         // first, check to see if the incoming request includes the necessary authentication
         // information, which will be in one or more "Authorization" header entries
-        NextAuthAttempt: for (String auth : request.header.valuesOf("Authorization")) {
+        for (String auth : request.header.valuesOf("Authorization")) {
             auth = auth.trim();
-            // "Authorization" header format: {apiName} {user}:{token}
-            Int userOffset = apiName.size;
-            if (CaseInsensitive.stringStartsWith(auth, apiName)) {
-                if (auth[userOffset] == ' ',
-                    Int tokenOffset := auth.indexOf(':', userOffset)) {
-
-                    String user  = auth[userOffset >..< tokenOffset];
-                    String token = auth.substring(tokenOffset + 1);
-
-                    // the token serves as a password
-                    if (Set<String> roles := realm.authenticate(user, token)) {
-                        session.authenticate(user, roles=roles);
-                        return Allowed;
-                    } else {
-                        return Forbidden;
-                    }
-                } else {
+            // "Authorization" header format: Bearer Base64([{user}:]{token})
+            if (CaseInsensitive.stringStartsWith(auth, "Bearer ")) {
+                try {
+                    auth = Utf8Codec.decode(Base64Format.Instance.decode(auth.substring(7)));
+                } catch (Exception e) {
                     return new SimpleResponse(BadRequest);
+                }
+
+                String user;
+                String token;
+                if (Int tokenOffset := auth.indexOf(':')) {
+                    // the token serves as a password
+                    user  = auth[0 ..< tokenOffset];
+                    token = auth.substring(tokenOffset + 1);
+                } else {
+                    // TODO CP: there is no user name, only a token; how to ask the Realm?
+                    user  = "";
+                    token = auth;
+                }
+
+                if (Set<String> roles := realm.authenticate(user, token)) {
+                    session.authenticate(user, roles=roles);
+                    return Allowed;
+                } else {
+                    return Forbidden;
                 }
             }
         }
