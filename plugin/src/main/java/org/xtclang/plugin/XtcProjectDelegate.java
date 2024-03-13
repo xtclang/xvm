@@ -296,7 +296,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         final var processResourcesTask = tasks.register(processResourcesTaskName, Copy.class);
         final var classesTaskName = getClassesTaskName(sourceSet);
         final var classesTask = tasks.getByName(classesTaskName);
-        final var forceRebuild = resolveXtcCompileExtension(project).getForceRebuild();
 
         // In Java, the classes task would depend on process resources. In XTC, it depends on the compile task, and the compile
         // task needs to work with the output of process resources, so for XTC we attach the process resources task for this source
@@ -311,17 +310,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 prefix, sourceSet.getName(), sourceSet.getResources().getSrcDirs(), outputDir.get()));
         });
 
+        // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
+        // the compile task at all, is something we do if any of its inputs have changed, and that effectively means
+        // "this is already a rebuild" in xcc land. If we want to rerun the compile task for any reason, we should
+        // use the "--rerun-tasks" Gradle options, which ignores up-to-date checks for all tasks.
         compileTask.configure(task -> {
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
-            // TODO Fix more exact processResources semantics so that we use the build as resource path, and not the src. This works for first merge.
-            if (forceRebuild.get()) {
-                logger.warn("{} WARNING: '{}' Force rebuild is true for this compile task. Task is flagged as always stale/non-cacheable.",
-                    prefix(projectName, compileTaskName), compileTaskName);
-                considerNeverUpToDate(task);
-            }
-            // Register this task as an XTC language compiler. Not a Java compiler.
-            task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME));
+            task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME)); // Register this task as an XTC language compiler. Not a Java compiler.
         });
 
         // Find the "classes" task in the Java build life cycle that we reuse, and set the dependency correctly. This should
@@ -434,8 +430,8 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void addJavaToolsContentsAttributes(final Configuration config) {
         config.attributes(it -> {
-            it.attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.class, Category.LIBRARY));
-            it.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
+            it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
+            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR));
         });
     }
 
@@ -483,10 +479,11 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
             });
         });
 
-        // Ensure that any produced XTC module files are publishable if we publish the xtcComponent.
-        // (symmetrical to e.g. jar files and the "java" component)
-        // List.of(XTC_COMPONENT_VARIANT_COMPILE, XTC_COMPONENT_VARIANT_RUNTIME).
-        // forEach(v -> component.addVariantsFromConfiguration(xtcModuleProvider.get(), new JavaConfigurationVariantMapping(v, true)));
+        // TODO:
+        //   Ensure that any produced XTC module files are publishable if we publish the xtcComponent.
+        //   There should also be an XTC SoftwareComponent that we know how to publish.
+        //   (symmetrical to e.g. jar files and the "java" component). This should be done by adding XTC_COMPONENT_VARIANT_COMPILE
+        //    and XTC_COMPONENT_VARIANT runtime, or something like that. With a JavaConfigurationVariantMapping for the xtcModuleProvider.
     }
 
     private void createXdkDependencyConfigs() {

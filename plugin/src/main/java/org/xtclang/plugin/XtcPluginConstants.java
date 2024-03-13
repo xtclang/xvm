@@ -55,9 +55,6 @@ public final class XtcPluginConstants {
     // Config artifacts from the XDK build:
     public static final String XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_FATJAR = "javatools-fatjar";
 
-    // Debugging (for example, adding significant events to output without increasing the log level)
-    public static final String XTC_PLUGIN_VERBOSE_PROPERTY = "ORG_XTCLANG_PLUGIN_VERBOSE";
-
     // Default "empty" values for collections and Gradle API classes.
     public static final Set<File> EMPTY_FILE_COLLECTION = Collections.emptySet();
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;

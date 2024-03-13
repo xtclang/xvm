@@ -1,5 +1,7 @@
 package org.xtclang.plugin;
 
+import static org.xtclang.plugin.XtcBuildException.resolveEllipsis;
+
 import java.io.Serial;
 
 import org.gradle.api.GradleException;
@@ -23,6 +25,6 @@ public class XtcBuildRuntimeException extends GradleException {
     }
 
     XtcBuildRuntimeException(final Throwable cause, final String msg, final Object... args) {
-        this(cause, XtcBuildException.resolveEllipsis(msg, args));
+        this(cause, resolveEllipsis(msg, args));
     }
 }

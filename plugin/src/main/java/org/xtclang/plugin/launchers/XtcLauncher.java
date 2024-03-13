@@ -22,10 +22,11 @@ public abstract class XtcLauncher<E extends XtcLauncherTaskExtension, T extends 
 
     @Override
     public String toString() {
-        return String.format("%s (launcher='%s', task='%s', fork=%s, native=%s).", prefix, getClass().getSimpleName(), taskName, isFork(), isNativeLauncher());
+        return String.format("%s (launcher='%s', task='%s', fork=%s, native=%s).",
+                prefix, getClass().getSimpleName(), taskName, shouldFork(), isNativeLauncher());
     }
 
-    protected boolean isFork() {
+    protected boolean shouldFork() {
         return task.getFork().get();
     }
 

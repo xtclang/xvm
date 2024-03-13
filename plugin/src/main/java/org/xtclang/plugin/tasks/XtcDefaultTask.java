@@ -38,7 +38,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
     private boolean isBeingExecuted;
 
     protected XtcDefaultTask(final Project project) {
-        this(project, ProjectDelegate.OVERRIDE_VERBOSE_LOGGING);
+        this(project, ProjectDelegate.hasVerboseLogging(project));
     }
 
     protected XtcDefaultTask(final Project project, final boolean overrideVerboseLogging) {

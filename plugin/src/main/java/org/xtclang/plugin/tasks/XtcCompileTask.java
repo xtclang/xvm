@@ -39,11 +39,11 @@ import org.xtclang.plugin.launchers.CommandLine;
 public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
     // Default values for inputs and outputs below are inherited from extension, can be reset per task
     protected final Property<Boolean> disableWarnings;
-    protected final Property<Boolean> isStrict;
+    protected final Property<Boolean> strict;
     protected final Property<Boolean> hasQualifiedOutputName;
     protected final Property<Boolean> hasVersionedOutputName;
     protected final Property<String> xtcVersion;
-    protected final Property<Boolean> shouldForceRebuild;
+    protected final Property<Boolean> rebuild;
 
     // Per-task configuration properties only.
     private final ListProperty<String> outputFilenames;
@@ -69,10 +69,10 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
 
         // Conventions inherited from extension; can be reset on a per-task basis, of course.
         this.disableWarnings = objects.property(Boolean.class).convention(ext.getDisableWarnings());
-        this.isStrict = objects.property(Boolean.class).convention(ext.getStrict());
+        this.strict = objects.property(Boolean.class).convention(ext.getStrict());
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(ext.getQualifiedOutputName());
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
-        this.shouldForceRebuild = objects.property(Boolean.class).convention(ext.getForceRebuild());
+        this.rebuild = objects.property(Boolean.class).convention(ext.getRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
     }
 
@@ -164,13 +164,13 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     @Input
     @Override
     public Property<Boolean> getStrict() {
-        return isStrict;
+        return strict;
     }
 
     @Input
     @Override
-    public Property<Boolean> getForceRebuild() {
-        return shouldForceRebuild;
+    public Property<Boolean> getRebuild() {
+        return rebuild;
     }
 
     @Input
@@ -202,12 +202,6 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         final var sourceSet = getCompileSourceSet();
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
-        if (getForceRebuild().get()) {
-            logger.warn("{} WARNING: Force Rebuild was set; touching everything in sourceSet '{}' and its resources.", prefix, sourceSet.getName());
-            // The source set remains the same, but hopefully doing this "touch" as the first executable action will still be before computation of changes.
-            touchAllSource();
-        }
-
         final File outputDir = getOutputDirectory().get().getAsFile();
         args.add("-o", outputDir.getAbsolutePath());
 
@@ -220,11 +214,12 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         }
 
         args.addBoolean("--version", getShowVersion().get());
-        args.addBoolean("--rebuild", getForceRebuild().get());
+        args.addBoolean("--rebuild", getRebuild().get());
         args.addBoolean("--nowarn", getDisableWarnings().get());
-        args.addBoolean("--verbose", getIsVerbose().get());
+        args.addBoolean("--verbose", getVerbose().get());
         args.addBoolean("--strict", getStrict().get());
         args.addBoolean("--qualify", getQualifiedOutputName().get());
+
         // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp as xcc version used to compile if not given?
         final String moduleVersion = resolveModuleVersion();
         if (moduleVersion != null) {
@@ -243,7 +238,6 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         final var launcher = createLauncher();
         handleExecResult(launcher.apply(args));
         finalizeOutputs();
-        // TODO outputFilename default task property?
     }
 
     private String resolveModuleVersion() {
@@ -271,8 +265,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
                 logger.info("{} Renaming and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
                 logger.info("{} File tree scan: {} should be renamed to {}", prefix, oldFile, newFile);
                 if (!oldFile.renameTo(newFile)) {
-                    // TODO does this update the output? Seems like it. Write a unit test.
-                    throw buildException("Failed to rename '{}' to '{}", oldFile, newFile);
+                    throw buildException("Failed to rename '{}' to '{}'", oldFile, newFile);
                 }
             }
         }
