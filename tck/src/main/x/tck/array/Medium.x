@@ -4,16 +4,23 @@
 class Medium {
 
     void run() {
+        mutableInts();
         fixedBooleans();
         persistentStrings();
         constantChars();
     }
 
     @Test
+    void mutableInts() {
+        Int[] array = create(Mutable);
+        array += 1;
+        array += 2;
+        checkElements(array, Int.as(Type));
+    }
+
+    @Test
     void fixedBooleans() {
-        Boolean[] array = create(Fixed);
-        array += True;
-        array += False;
+        Boolean[] array = new Boolean[2] (i -> i % 2 == 0);
         checkElements(array, Boolean);
     }
 
