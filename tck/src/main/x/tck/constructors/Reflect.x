@@ -3,6 +3,13 @@
  */
 class Reflect {
 
+    void run() {
+        testUnassigned();
+        testAssert();
+        testAssertChain();
+        testAnnotationChain();
+    }
+
     /**
      * At the end of reflection-based instantiation all properties must be assigned.
      */

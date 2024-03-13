@@ -4,8 +4,8 @@
 class Medium {
 
     public void run() {
-        //compareArraysFormal();
-        //compareComposite();
+        compareArraysFormal();
+        compareComposite();
     }
 
     @Test
