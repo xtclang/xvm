@@ -27,7 +27,7 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
         final var rebuildDefaultProperty = project.findProperty(REBUILD_FLAG_DEFAULT_PROPERTY);
         final var rebuildDefaultValue = rebuildDefaultProperty == null || Boolean.parseBoolean(rebuildDefaultProperty.toString());
         if (!rebuildDefaultValue) {
-            logger.warn("{} Project has global override for default value of rebuild flag: false", prefix);
+            logger.info("{} Project has global override for default value of rebuild flag: false", prefix);
         }
         this.rebuild = objects.property(Boolean.class).convention(rebuildDefaultValue);
 
