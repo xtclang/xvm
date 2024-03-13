@@ -9,7 +9,7 @@ class Medium {
         persistentStrings();
         constantChars();
     }
-    
+
     @Test
     void mutableInts() {
         Int[] array = create(Mutable);
@@ -20,9 +20,7 @@ class Medium {
 
     @Test
     void fixedBooleans() {
-        Boolean[] array = create(Fixed);
-        array += True;
-        array += False;
+        Boolean[] array = new Boolean[2] (i -> i % 2 == 0);
         checkElements(array, Boolean);
     }
 
