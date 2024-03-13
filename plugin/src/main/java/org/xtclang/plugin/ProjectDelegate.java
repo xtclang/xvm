@@ -1,6 +1,6 @@
 package org.xtclang.plugin;
 
-import static org.xtclang.plugin.XtcPluginConstants.XTC_PLUGIN_VERBOSE_PROPERTY;
+import static org.xtclang.plugin.XtcBuildException.resolveEllipsis;
 
 import java.net.URL;
 
@@ -22,8 +22,6 @@ import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
 
 public abstract class ProjectDelegate<T, R> {
-    public static final boolean OVERRIDE_VERBOSE_LOGGING = "true".equalsIgnoreCase(System.getenv(XTC_PLUGIN_VERBOSE_PROPERTY));
-
     protected final Project project;
     protected final String projectName;
     protected final String prefix;
@@ -84,10 +82,20 @@ public abstract class ProjectDelegate<T, R> {
         return hasVerboseLogging(project);
     }
 
+    /**
+     * To display "extra important" info messages on the lifecycle level, we can set the xtcPluginOverrideVerboseLogging property,
+     * or its System env equivalent, ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging, to true. "Extra important" means things
+     * like the JavaExec command lines executed by the plugin, and other information that we might frequently cut and paste for
+     * debugging.
+     * <p>
+     * @param project project for which to check if "extra important" logging should be enforced.
+     * @return true if "extra important" logging should always be displayed at lifecycle level, false otherwise
+     */
     public static boolean hasVerboseLogging(final Project project) {
+        final var overrideVerboseLogging = Boolean.parseBoolean(String.valueOf(project.findProperty("xtcPluginOverrideVerboseLogging")));
         return switch (getLogLevel(project)) {
         case DEBUG, INFO -> true;
-        default -> OVERRIDE_VERBOSE_LOGGING;
+        default -> overrideVerboseLogging;
         };
     }
 
@@ -105,7 +113,7 @@ public abstract class ProjectDelegate<T, R> {
 
     public static XtcBuildRuntimeException buildException(
         final Logger logger, final String prefix, final Throwable t, final String msg, final Object... args) {
-        logger.error(msg, t);
+        logger.error(resolveEllipsis(msg, args), t);
         return new XtcBuildRuntimeException(t, prefix + ": " + msg, args);
     }
 
@@ -167,14 +175,17 @@ public abstract class ProjectDelegate<T, R> {
     /**
      * Flag task as always needing to be re-run. Cached state will be ignored.
      * <p>
-     * Can be used to implement, e.g., forceRebuild, and other behaviors that require a task to run fresh every
-     * time. that absolutely need to be rerun every time. Note that it's easier to just flag a task implementation
-     * as @NonCacheable. This is intended for unit tested, extended existing tasks and finer granularity levels
-     * of dependencies. The implementation forbids the task to cache outputs, and it will never be reported as
+     * Can be used to implement, behaviors that require a task to run fresh every time.
+     * Note that it's easier to just flag a task implementation as @NonCacheable. This is intended for
+     * unit tested, extended existing tasks and finer granularity levels of dependencies.
+     * The implementation forbids the task to cache outputs, and it will never be reported as
      * up to date. Be aware that this totally removes most of the benefits of Gradle.
+     * <p>
+     * From the user side, it makes more sense to do --rerun-tasks when building the project.
      *
      * @param task Task to flag as perpetually not up to date.
      */
+    @SuppressWarnings("unused")
     public void considerNeverUpToDate(final Task task) {
         task.getOutputs().cacheIf(t -> false);
         task.getOutputs().upToDateWhen(t -> false);
@@ -183,8 +194,6 @@ public abstract class ProjectDelegate<T, R> {
 
     protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {
         final var exts = project.getExtensions();
-        // TODO: WARNING: there can be several run and compile extensions (one per source set), if I understand conventions correctly.
-        //    Or we cold just add the configuration inline to our source sets or have sections in the xtcXXX extensions or something.
         if (exts.findByType(clazz) == null) {
             return exts.create(name, clazz, project);
         }

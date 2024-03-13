@@ -13,5 +13,5 @@ public interface XtcCompilerExtension extends XtcLauncherTaskExtension {
 
     Property<String> getXtcVersion();
 
-    Property<Boolean> getForceRebuild();
+    Property<Boolean> getRebuild();
 }

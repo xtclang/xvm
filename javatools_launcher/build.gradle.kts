@@ -19,6 +19,8 @@ val launcherExecutableDir = layout.projectDirectory.dir("src/main/resources/exe"
 
 val processResources by tasks.registering(Copy::class) {
     from(files(launcherExecutableDir))
+    // TODO: This may cause a warning in IDEA with non-delegated compilation, but it is safe.
+    //   "Cannot resolve resource filtering of . IDEA may fail to build project. Consider using delegated build (enabled by default)."
     exclude("**/README.md")
     eachFile {
         relativePath = RelativePath(true, name)

@@ -28,8 +28,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<Boolean> debug;
     protected final Property<Integer> debugPort;
     protected final Property<Boolean> debugSuspend;
-    protected final Property<Boolean> isVerbose;
-    protected final Property<Boolean> isFork;
+    protected final Property<Boolean> verbose;
+    protected final Property<Boolean> fork;
     protected final Property<Boolean> showVersion;
     protected final Property<Boolean> useNativeLauncher;
     protected final Property<InputStream> stdin;
@@ -43,12 +43,16 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.logger = project.getLogger();
 
         final var env = System.getenv();
+
+        // TODO: Consider replacing the debug configuration with the debug flags inherited directly from its JavaExec extension
+        //   DSL, or at least reimplementing them so that they look the same for different kinds of launchers.
         this.debug = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG", "false")));
         this.debugPort = objects.property(Integer.class).convention(Integer.parseInt(env.getOrDefault("XTC_DEBUG_PORT", "4711")));
         this.debugSuspend = objects.property(Boolean.class).convention(Boolean.parseBoolean(env.getOrDefault("XTC_DEBUG_SUSPEND", "true")));
+
         this.jvmArgs = objects.listProperty(String.class).convention(DEFAULT_JVM_ARGS);
-        this.isVerbose = objects.property(Boolean.class).convention(false);
-        this.isFork = objects.property(Boolean.class).convention(true);
+        this.verbose = objects.property(Boolean.class).convention(false);
+        this.fork = objects.property(Boolean.class).convention(true);
         this.showVersion = objects.property(Boolean.class).convention(false);
         this.useNativeLauncher = objects.property(Boolean.class).convention(false);
         this.stdin = objects.property(InputStream.class);
@@ -75,7 +79,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public Property<Boolean> getFork() {
-        return isFork;
+        return fork;
     }
 
     @Override
@@ -90,7 +94,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public Property<Boolean> getVerbose() {
-        return isVerbose;
+        return verbose;
     }
 
     @Override

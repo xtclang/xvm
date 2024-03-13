@@ -205,13 +205,27 @@ xtcCompile {
     fork = true
 
     /*
-     * Should all compilations be forced to rerun every time this build is performed? This is NOT recommended,
-     * as it removes pretty much every advantage that Gradle with dynamic dependency management gives you. It
-     * should be used only for testing purposes, and never for anything else, in a typical build, distribution
-     * generation or execution of an XTC app. You should never have to enable forceRebuild unless you are doing
-     * something like functionality testing during XVM compiler development.
+     * Should all compilations be forced to rerun every time this build is performed? This is not
+     * the same thing as touching all source, and the default is "true". Rebuild means that if the
+     * compiler is called, XTC cannot ignore the compile request. XCC may chose to ignore a compile
+     * request when .x source code is unchanged, but the javatools.jar (i.e. the Compiler internals
+     * themselves) have been changed, unless the rebuild flag is set. This also means that for
+     * the default value "true", rebuild means that any change to the Launcher/javatools code will
+     * cause all xtc modules in the XDK to be rebuilt. For a lot of cases, an developer modding
+     * javatools does not need or what this, but at the moment we have no finer grained dependency
+     * mechanism to detect if any changes affect the compiler or runtime alone, or if it requires
+     * actually regenerating the XTC modules from unchanged source. For any one not working on the
+     * actual XDK, this is not a problem. For the XDK itself, the "true" default may cause longer
+     * rebuilds, but you can override the default value of the rebuild flag with the
+     * -PxtcDefaultRebuild=false" on the "gradlew" command line, or with the equivalent system
+     * variable ORG_GRADLE_PROJECT_xtcDefaultRebuild=false" exported or passed on the "gradlew"
+     * command line.
+     *
+     * Default is true (basically only meaning that if javatools.jar has changed, we need to
+     * rerun every job that depends on it, but NOT meaning that all .x source files are touched
+     * and updated, or anything like that).
      */
-    forceRebuild = false
+    rebuild = false
 
     /*
      * By default, a Gradle task swallows stdin, but it's possible to override standard input and

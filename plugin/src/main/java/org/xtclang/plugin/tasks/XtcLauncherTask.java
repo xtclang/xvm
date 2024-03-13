@@ -60,8 +60,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Property<Boolean> debug;
     protected final Property<Integer> debugPort;
     protected final Property<Boolean> debugSuspend;
-    protected final Property<Boolean> isVerbose;
-    protected final Property<Boolean> isFork;
+    protected final Property<Boolean> verbose;
+    protected final Property<Boolean> fork;
     protected final Property<Boolean> showVersion;
     protected final Property<Boolean> useNativeLauncher;
 
@@ -93,8 +93,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
 
-        this.isVerbose = objects.property(Boolean.class).convention(ext.getVerbose());
-        this.isFork = objects.property(Boolean.class).convention(ext.getFork());
+        this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
+        this.fork = objects.property(Boolean.class).convention(ext.getFork());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
         this.useNativeLauncher = objects.property(Boolean.class).convention(ext.getUseNativeLauncher());
     }
@@ -106,7 +106,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public boolean hasVerboseLogging() {
-        return super.hasVerboseLogging() || isVerbose.get();
+        return super.hasVerboseLogging() || verbose.get();
     }
 
     @Internal
@@ -205,12 +205,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Input
     public Property<Boolean> getVerbose() {
-        return isVerbose;
+        return verbose;
     }
 
     @Input
     public Property<Boolean> getFork() {
-        return isFork;
+        return fork;
     }
 
     @Input
@@ -227,11 +227,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Input
     public ListProperty<String> getJvmArgs() {
         return jvmArgs;
-    }
-
-    @Input
-    public Property<Boolean> getIsVerbose() {
-        return isVerbose;
     }
 
     @Internal

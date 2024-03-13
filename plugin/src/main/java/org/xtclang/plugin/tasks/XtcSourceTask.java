@@ -182,34 +182,6 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return this;
     }
 
-    /**
-     * Update the lastModified on all source files to 'now' in the epoch. This is probably overkill, as it is used
-     * only for "forceRebuild", which really making the compileXtc[SourceSetName] tasks non-cacheable and never up
-     * to date during configuration, should be enough to accomplish. TODO: Verify this.
-     */
-    public void touchAllSource() {
-        getSource().forEach(src -> {
-            final var before = src.lastModified();
-            final var after = touch(src);
-            logger.info("{} *** File: {} (before: {}, after: {})", prefix(), src.getAbsolutePath(), before, after);
-        });
-        logger.info("{} Updated lastModified of {}.getSource() and resources to 'now' in the epoch.", prefix(), getName());
-    }
-
-    private long touch(final File file) {
-        return touch(file, System.currentTimeMillis());
-    }
-
-    private long touch(final File file, final long now) {
-        final var oldLastModified = file.lastModified();
-        if (!file.setLastModified(now)) {
-            logger.warn("{} Failed to update modification time stamp for file: {}", prefix(), file.getAbsolutePath());
-        }
-        logger.info("{} Touch file: {} (timestamp: {} -> {})", prefix(), file.getAbsolutePath(), oldLastModified, now);
-        assert file.lastModified() == now;
-        return now;
-    }
-
     protected static boolean isXtcSourceFile(final File file) {
         // TODO: Previously we called a Launcher method to ensure this was a module, but all these files should be in the top
         //   level directory of a source set, and this means that xtc will assume they are all module definitions, and fail if this
