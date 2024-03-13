@@ -68,4 +68,31 @@ class Reflect {
         Derived d = clz.instantiate(structure);
         assert d.s == "Test-DA-BA";
     }
+
+    /**
+     * The annotation's default constructor and assert must be called before the base assert.
+     */
+    @Test
+    void testAnnotationChain() {
+        static class Base(String s) {
+            assert() {
+                this.s = s + "-BA";
+            }
+        }
+        static mixin M
+                into Base {
+            construct() {
+                this.s = s + "-MC";
+            }
+            assert() {
+                this.s = s + "-MA";
+            }
+        }
+
+        Class<Base> clz = @M Base;
+        assert (struct Base) structure := clz.allocate();
+        structure.s = "Test";
+        Base b = clz.instantiate(structure);
+        assert b.s == "Test-MC-MA-BA";
+    }
 }

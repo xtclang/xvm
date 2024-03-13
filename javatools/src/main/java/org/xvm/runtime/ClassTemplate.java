@@ -2471,8 +2471,11 @@ public abstract class ClassTemplate
             TypeComposition composition = hStruct.getComposition();
             assert composition.isStruct();
 
+            // if the structure is already initialized, there should be no constructor to call
+            assert fInitStruct || constructor == null;
+
             aAnnoMixin = composition.getBaseType().ensureTypeInfo().getMixinAnnotations();
-            ixStep     = fInitStruct ? 0 : 4;
+            ixStep     = fInitStruct ? 0 : 2;
             ixAnno     = 0;
             fAnonymous = constructor != null && constructor.isAnonymousClassWrapperConstructor();
             }
