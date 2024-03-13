@@ -4,7 +4,6 @@
 class Medium {
 
     void run() {
-        mutableInts();
         fixedBooleans();
         persistentStrings();
         constantChars();

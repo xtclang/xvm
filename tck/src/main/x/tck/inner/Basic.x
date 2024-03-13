@@ -3,6 +3,12 @@
  */
 class Basic {
 
+    void run() {
+        testBaseConstruct();
+        testDerivedConstruct();
+        testCallChain();
+    }
+
     static class Base {
         @Override
         String toString() = "B";
