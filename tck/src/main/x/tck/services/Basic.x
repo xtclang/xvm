@@ -2,6 +2,13 @@
  * Basic service tests.
  */
 class Basic {
+    @Inject Console console;
+    
+    void run() {
+        testSlowIO();
+        testLongCompute();
+    }
+    
     static service Tester(Journal journal) {
         void simulateSlowIO(Duration duration, String endMsg) {
             Utils.simulateSlowIO(duration);
@@ -28,10 +35,11 @@ class Basic {
         journal.add("A2");
         svc.sync();
 
-        // the scheduling of fibers is a prerogative of the run-time, so theoretically speaking
-        // there is a tiny chance that the scheduler doesn't "resume" A until after B is done;
-        // with our current implementation, however, that would be a 1:1_000_000_000_000 chance
-        assert journal.collect() == ["A0", "A2", "B1"];
+        // the scheduling of fibers is a prerogative of the run-time, so the
+        // scheduler might not "resume" A until after B is done.
+        var rez = journal.collect();
+        assert rez == ["A0", "A2", "B1"] ||
+               rez == ["A0", "B1", "A2"];
     }
 
     @Test
@@ -47,6 +55,8 @@ class Basic {
 
         // the scheduling of fibers is a prerogative of the run-time, so theoretically speaking
         // there is a tiny chance that the scheduler doesn't "resume" A until after B is done
-        assert journal.collect() == ["A0", "A2", "B1"];
+        var rez = journal.collect();
+        assert rez == ["A0", "A2", "B1"] ||
+               rez == ["A0", "B1", "A2"];
     }
 }

@@ -2,6 +2,14 @@
  * Medium complexity array tests.
  */
 class Medium {
+
+    void run() {
+        mutableInts();
+        fixedBooleans();
+        persistentStrings();
+        constantChars();
+    }
+    
     @Test
     void mutableInts() {
         Int[] array = create(Mutable);
@@ -12,7 +20,9 @@ class Medium {
 
     @Test
     void fixedBooleans() {
-        Boolean[] array = new Boolean[2] (i -> i % 2 == 0);
+        Boolean[] array = create(Fixed);
+        array += True;
+        array += False;
         checkElements(array, Boolean);
     }
 

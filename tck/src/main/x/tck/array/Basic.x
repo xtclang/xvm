@@ -3,6 +3,37 @@
  */
 class Basic {
 
+    void run() {
+        emptyLiteral();
+        emptyFixed();
+        emptyMutable();
+        literalInts();
+        defaultFixed();
+        fixedInts();
+        fixedStrings();
+        fixedChars();
+        mutEmpty();
+        mutFix();
+        mutEmptyMutable();
+        mutConstInts();
+        mutDefaultInts();
+        mutFixedInts();
+        mutFixedStrings();
+        mutFixedChars();
+        addStrings();
+        clonedMutableChars();
+        clonedConstantBytes();
+        elementAccess();
+        deleteMutable();
+        deleteConstant();
+        slice();
+        mutClonedMutableChars();
+        mutClonedConstantBytes();
+        mutDeleteMutable();
+        mutDeleteConstant();
+        deleteUnordered();
+    }
+
     // -----------------------------
     // Create; set; get; size
     @Test
@@ -176,6 +207,7 @@ class Basic {
         String[] slice = array[1 ..< 4];
         assert slice[2] == "four";
     }
+
 
     // -----------------------------
 
