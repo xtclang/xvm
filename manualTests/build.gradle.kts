@@ -111,6 +111,7 @@ sourceSets {
             exclude("**/multiModule/**")
             exclude("**/webTests/**")
             exclude(
+                "**/TestMisc2.x",
                 "**/TestSimple.x",
                 "**/ConstOrdinalListTest.x",
                 "**/NumericConversions.x",
