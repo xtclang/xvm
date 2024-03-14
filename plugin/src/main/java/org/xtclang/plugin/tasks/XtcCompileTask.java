@@ -249,26 +249,31 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         return null;
     }
 
+    /**
+     * Rename all valid XTC modules in the compile output to their final names, if such names are specified
+     * in the DSL for the compile task (the outputFilenames property with its value pairs).
+     */
     private void finalizeOutputs() {
-        // If any of the outputs aren't valid XTC modules, they are ignored. We should probably warn, or break the build instead?
-        final var prefix = prefix();
+        project.fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles().forEach(this::renameOutput);
+    }
 
-        // Do not keep iterating through the connection, updated life. Finalize it first.
-        final var xtcModuleFiles = project.fileTree(getOutputDirectory()).filter(FileUtils::isValidXtcModule).getFiles();
-        for (final var oldFile : xtcModuleFiles) {
-            final String oldName = oldFile.getName();
-            final String newName = resolveOutputFilename(oldName);
-            if (oldName.equals(newName)) {
-                logger.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
-            } else {
-                final File newFile = new File(oldFile.getParentFile(), newName);
-                logger.info("{} Renaming and finalizing compiler output XTC filename: '{}' to '{}'", prefix, oldName, newName);
-                logger.info("{} File tree scan: {} should be renamed to {}", prefix, oldFile, newFile);
-                if (!oldFile.renameTo(newFile)) {
-                    throw buildException("Failed to rename '{}' to '{}'", oldFile, newFile);
-                }
-            }
+    private void renameOutput(final File oldFile) {
+        final String prefix = prefix();
+        final String oldName = oldFile.getName();
+        final String newName = resolveOutputFilename(oldName);
+        if (oldName.equals(newName)) {
+            logger.info("{} Finalizing compiler output XTC binary filename: '{}'", prefix, oldName);
+            return;
         }
+        final File path = oldFile.getParentFile();
+        final File newFile = new File(path, newName);
+        if ((!newFile.exists() || newFile.delete()) && oldFile.renameTo(newFile)) {
+            logger.info("{} Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')",
+                    prefix, oldName, newName, path.getAbsolutePath());
+            return;
+        }
+        throw buildException("Failed to rename '{}' to '{}'. Output file already exists and could not be deleted: '{}'",
+                oldFile, newFile, newFile.getAbsoluteFile());
     }
 
     private Set<File> resolveXtcSourceFiles() {
