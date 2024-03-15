@@ -3,7 +3,7 @@
  *
  * To compile and run (assuming working directory is .../xvm/manualTests)
  *
- *      xcc -L build -o build src/main/x/multiModule/Main.x src/main/x/multiModule/Lib.x
+ *      xtc -L build -o build src/main/x/multiModule/Main.x src/main/x/multiModule/Lib.x
  *      xec -L build Main
  */
 module Main {
