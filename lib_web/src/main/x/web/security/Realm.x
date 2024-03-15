@@ -9,6 +9,42 @@ interface Realm {
     typedef immutable Byte[] as Hash;
 
     /**
+     * A group of hashes, one for each of the supported hash algorithms. If a hash algorithm is not
+     * configured to be used, then its hash will be a zero-length byte array.
+     */
+    static const HashInfo
+            (
+            Time created,
+            Hash md5,
+            Hash sha256,
+            Hash sha512_256,
+            ) {
+        conditional Hash hashFor(Signer hasher) {
+            Hash hash;
+            switch (hasher.algorithm.name) {
+            case "MD5":
+                hash = md5;
+                break;
+
+            case "SHA-256":
+                hash = sha256;
+                break;
+
+            case "SHA-512-256":
+                hash = sha512_256;
+                break;
+
+            default:
+                return False;
+            }
+
+            return hash.empty
+                    ? False
+                    : (True, hash);
+        }
+    }
+
+    /**
      * A `UserId` is either a plain text user name, or the hash specified in section 3.4.4 of the
      * [HTTP Digest Access Authentication](https://datatracker.ietf.org/doc/html/rfc7616) standard:
      *
@@ -123,6 +159,53 @@ interface Realm {
      */
     conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher) {
         TODO User identity and password hashing are not supported by this Realm
+    }
+
+    /**
+     * Hash the user and password data; this method is performing the same work as [userHash()]
+     * and [passwordHash()] for each of the (up to) three supported algorithms.
+     *
+     * @param userName  the user name
+     * @param password  (optional) password
+     */
+    (HashInfo userHashes, HashInfo pwdHashes) createHashes(String userName, String? password) {
+        Hash userBytes  = $"{userName}:{name}".utf8();
+        Hash pwdBytes   = $"{userName}:{name}:{password ?: ""}".utf8();
+
+        Signer[] hashers    = hashers;
+        Signer?  md5        = Null;
+        Signer?  sha256     = Null;
+        Signer?  sha512_256 = Null;
+        for (Signer signer : hashers) {
+            switch (signer.algorithm.name) {
+            case "MD5":
+                md5 = signer;
+                break;
+            case "SHA-256":
+                sha256 = signer;
+                break;
+            case "SHA-512-256":
+                sha512_256 = signer;
+                break;
+            }
+        }
+
+        @Inject Clock clock;
+        Time creation = clock.now;
+
+        HashInfo userHashes = new HashInfo(creation,
+                md5?       .sign(userBytes).bytes : [],
+                sha256?    .sign(userBytes).bytes : [],
+                sha512_256?.sign(userBytes).bytes : [],
+                );
+
+        HashInfo pwdHashes  = new HashInfo(creation,
+                md5?       .sign(pwdBytes).bytes : [],
+                sha256?    .sign(pwdBytes).bytes : [],
+                sha512_256?.sign(pwdBytes).bytes : [],
+                );
+
+        return (userHashes, pwdHashes);
     }
 
 

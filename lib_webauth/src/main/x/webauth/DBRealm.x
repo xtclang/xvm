@@ -6,9 +6,6 @@ import oodb.DBObject;
 import oodb.DBObjectInfo;
 import oodb.RootSchema;
 
-import User.HashInfo;
-
-
 /**
  * A DBRealm is a realm implementation on top of an [AuthSchema].
  */

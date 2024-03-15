@@ -25,6 +25,7 @@ module webauth.xtclang.org {
     import net.IPAddress;
     import web.security.Realm;
     import Realm.Hash;
+    import Realm.HashInfo;
 
     /**
      * Information about the use of a particular IP address.
