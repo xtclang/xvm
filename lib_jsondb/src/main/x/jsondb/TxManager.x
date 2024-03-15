@@ -454,7 +454,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * Information about a [DBObject.require] call during a transaction.
      */
-    static const Requirement<Result extends immutable Const>
+    const Requirement<Result extends immutable Const>
         (
         Int                           dboId,
         function Result(DBObjectImpl) test,

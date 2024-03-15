@@ -88,12 +88,16 @@ public class PropertyDeclarationStatement
                 annotations.add(anno);
 
                 // unlink the annotated type from the type expression chain, and relink the chain
-                typeNext = typeNext.unwrapIntroductoryType();
-                if (typePrev != null)
+                typeNext = typeAnno.unwrapIntroductoryType();
+                if (typePrev == null)
+                    {
+                    typeNext.setParent(typeAnno);
+                    }
+                else
                     {
                     typePrev.replaceIntroducedType(typeNext);
+                    typeNext.setParent(typePrev);
                     }
-                typeNext.setParent(typePrev);
                 }
             else
                 {
@@ -419,10 +423,8 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
-            if (clz.getFormat() == Format.INTERFACE && prop.getRefAnnotations().length > 0)
+            if (!validateRefAnnotations(prop.getRefAnnotations(), clz, prop, errs))
                 {
-                log(errs, Severity.ERROR, Constants.VE_INTERFACE_PROPERTY_ANNOTATED,
-                        clz.getIdentityConstant().getValueString(), prop.getName());
                 return;
                 }
 
@@ -592,6 +594,55 @@ public class PropertyDeclarationStatement
                     }
                 }
             }
+        }
+
+    /**
+     * Validate the specified property Ref annotations.
+     *
+     * @param aAnno  the annotations
+     * @param clz    the enclosing class
+     * @param prop   the property
+     * @param errs   the error listener
+     *
+     * @return false iff there any errors have been reported
+     */
+    private boolean validateRefAnnotations(Annotation[] aAnno, ClassStructure clz,
+                                           PropertyStructure prop, ErrorListener errs)
+        {
+        if (aAnno.length > 0)
+            {
+            if (clz.getFormat() == Format.INTERFACE)
+                {
+                log(errs, Severity.ERROR, Constants.VE_INTERFACE_PROPERTY_ANNOTATED,
+                        clz.getIdentityConstant().getValueString(), prop.getName());
+                return false;
+                }
+
+            ConstantPool pool = pool();
+            for (int iA = 0, c = aAnno.length; iA < c; iA++)
+                {
+                Annotation     anno    = aAnno[iA];
+                ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
+                ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
+                if (clzAnno.getFormat() != Component.Format.MIXIN)
+                    {
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                            anno.getValueString());
+                    return false;
+                    }
+                if (idAnno.equals(pool.clzVolatile()))
+                    {
+                    findAnnotationExpression(anno, annotations).
+                        log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                        idAnno.getName(),
+                        prop.getIdentityConstant().getValueString());
+                    return false;
+                    }
+                }
+            }
+
+        return true;
         }
 
     /**
@@ -781,6 +832,12 @@ public class PropertyDeclarationStatement
         return fCompletes;
         }
 
+        @Override
+        protected boolean canResolveNames()
+            {
+            return super.canResolveNames() || type.canResolveNames();
+            }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -827,15 +884,6 @@ public class PropertyDeclarationStatement
             for (Token token : modifiers)
                 {
                 sb.append(token.getId().TEXT)
-                  .append(' ');
-                }
-            }
-
-        if (annotations != null)
-            {
-            for (AnnotationExpression annotation : annotations)
-                {
-                sb.append(annotation)
                   .append(' ');
                 }
             }
