@@ -888,6 +888,16 @@ public class PropertyDeclarationStatement
                 }
             }
 
+        // this is not quite correct; if there were annotations extracted from the type, we will
+        // see them doubled in the string; very rare inconvenience, not worth any effort atm
+        if (annotations != null)
+            {
+            for (AnnotationExpression annotation : annotations)
+                {
+                sb.append(annotation)
+                  .append(' ');
+                }
+            }
         sb.append(type)
                 .append(' ')
           .append(name.getValueText());
