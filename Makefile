@@ -202,7 +202,7 @@ TCK = tck/src/main/x
 tck:	$(TCK)/tck.exe
 
 # Manual tests use an explicit list
-MANUAL_DIR = manualTests/src/main/x
+MANUAL_DIR = manualTests/src/main/x/new_backend
 #MANUAL_TESTS = annos.x array.x collections.x defasn.x exceptions.x generics.x innerOuter.x files.x IO.x lambda.x loop.x nesting.x numbers.x prop.x maps.x queues.x services.x reflect.x regex.x tuple.x TestMisc.x TestModIFace.x
 MANUAL_TESTS = TestMisc.x TestModIFace.x
 
