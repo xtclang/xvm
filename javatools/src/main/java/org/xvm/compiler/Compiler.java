@@ -295,6 +295,7 @@ public class Compiler
      */
     public boolean generateCode(boolean fLastAttempt)
         {
+        System.err.println("*** Compiling 7 " + m_structFile.getModuleName());
         validateCompiler();
         ensureReached(Stage.Validated);
 
