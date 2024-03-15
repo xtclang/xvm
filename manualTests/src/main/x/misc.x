@@ -5,8 +5,10 @@ module TestMisc {
         console.print("hello world!");
 
         testBools();
-        testAsciiDigit();
+        testChars();
         testInts();
+        testStrings();
+        testCast();
         testTernary();
         testSpaceship();
         testElvis();
@@ -31,6 +33,9 @@ module TestMisc {
         testBind();
         testConstants();
         testImport();
+        testRecursiveType();
+        testChild();
+        testSideEffects();
 
         countdown();
     }
@@ -84,12 +89,69 @@ module TestMisc {
         console.print("~b=" + ~b);
     }
 
-    void testAsciiDigit() {
-        console.print("\n** testAsciiDigit()");
+    void testChars() {
+        console.print("\n** testChars()");
+
         Char[] chars = "1aA!\n$£€".toCharArray();
+        for (Char ch : chars) {
+            String dec = "";
+            if (Int value := ch.decimalValue()) {
+                dec = $"\'{value}\'";
+            }
+
+            console.print($|char {ch.toSourceString()}, unicode={ch.unicode}, cat={ch.category},\
+                             | lower={ch.lowercase.toSourceString()}, upper={ch.uppercase.toSourceString()},\
+                             | title={ch.titlecase.toSourceString()}, dec={dec}, num={ch.numericValue}
+                             );
+        }
+
         // this also tests the conditional UInt8 to Int conversion
         assert Int n := chars[0].asciiDigit(), n == 1;
         assert !chars[1].asciiDigit();
+    }
+
+    void testStrings() {
+        console.print("\n** testStrings()");
+        assert "abcde"[2] == 'c';
+
+        assert "abcde".substring(0) == "abcde";
+        assert "abcde".substring(-5) == "abcde";
+        assert "abcde".substring(-99) == "abcde";
+        assert "abcde".substring(2) == "cde";
+        assert "abcde".substring(-3) == "cde";
+        assert "abcde".substring(4) == "e";
+        assert "abcde".substring(-1) == "e";
+        assert "abcde".substring(5) == "";
+        assert "abcde".substring(6) == "";
+        assert "abcde".substring(99) == "";
+
+        assert "abcde"[1..2] == "bc";
+        assert "abcde"[2..1] == "cb";
+        assert "abcde"[1..<2] == "b";
+        assert "abcde"[2..<1] == "c";
+        assert "abcde"[1>..<2] == "";
+        assert "abcde"[2>..<1] == "";
+        assert "abcde"[1>..2] == "c";
+        assert "abcde"[2>..1] == "b";
+    }
+
+    void testCast() {
+        console.print("\n** testCast()");
+
+        Int    i = 42;
+        Object o = i;
+        console.print("o=" + o);
+        Int    n = o.as(Int);
+        console.print("n=" + n);
+
+        Object o2 = Int:4;
+        console.print("o2=" + o2);
+
+        try {
+            console.print("i.as(String) should throw " + i.as(String));
+        } catch (Exception e) {
+            console.print("i.as(String) failed correctly: \"" + e.text + '"');
+        }
     }
 
     void testTernary() {
@@ -135,11 +197,32 @@ module TestMisc {
         IntLiteral? a = Null;
         Int b = 7;
         console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
+        // [11] VAR #-238, ecstasy:Int64 #2                             // create temp var "#2" to hold the result of the else expression (ok!)
+        // [12] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #3     // create temp var #3 to hold ... um ... wrong! (wasted)     TODO?
+        // [13] MOV #0, #3                                              // ... and here's proof: it's just a one-time-use, read-only copy
+        // [14] JMP_NULL #3 :else1                                      // here is the '?' operator (ok!)
+        // [15] NVOK_01 #3.to() -> #4                                   // here is the toInt64() (ok!)
+        // [16] MOV #4, #2                                              // here's the non-Null result (ok!)
+        // [17] JMP :end1                                               // all done; skip the else (ok!)
+        // [18] :else1: MOV #1, #2                                      // else: move int to int (ok!)
+        // [19] :end1: GP_ADD this:stack, #2, this:stack                // all done; do some string concat (ok!)
 
         if (b==7) {
             a = 4;
         }
         console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
+        // [28] VAR #-238, ecstasy:Int64 #5                             // create temp var "#5" to hold the result of the else expression (ok!)
+        // [29] VAR #-256, ecstasy:Nullable | ecstasy:IntLiteral #6     // create temp var #6 to hold ... um ... wrong! (wasted)
+        // [30] MOV #0, #6                                              // ... and here's proof: it's just a one-time-use, read-only copy
+        // [31] JMP_NULL #6 :else2                                      // here is the '?' operator (ok!)
+        // [32] NVOK_01 #6.to() -> #7                                   // here is the toInt64() (ok!)
+        // [33] MOV #7, #5                                              // here's the non-Null result (ok!)
+        // [34] JMP :end2                                               // all done; skip the else (ok!)
+        // [35] :else2: MOV #1, #5                                      // else: move int to int (ok!)
+        // [36] :end2: GP_ADD this:stack, #5, this:stack                // all done; do some string concat (ok!)
+        //
+        // Line [33] generates:
+        //      Suspicious assignment from: ecstasy:Int64 to: ecstasy:Nullable | ecstasy:IntLiteral
     }
 
     void testLoop() {
@@ -162,10 +245,10 @@ module TestMisc {
 
         case 4..5:
             console.print("4");
-            if (value != 4) {
-                break;
+            if (value == 4) {
+                continue;
             }
-            continue;           // TODO: Handle continue in the middle not at the end
+            break;
 
         case 7:
             console.print("7");
@@ -226,7 +309,6 @@ module TestMisc {
         }
     }
 
-    // Requires nested inner Point class, which is missing the BAST constructor
     void testSwitchNatural() {
         console.print("\n** testSwitchNatural()");
 
@@ -269,9 +351,7 @@ module TestMisc {
         try {
             assert True == False;
         } catch (IllegalState e) {
-            Int x = 3;
             console.print("(done)");
-            console.print(x);
         }
     }
 
@@ -445,7 +525,6 @@ module TestMisc {
         Point point3 = point2;
 
         assert point1 == point3;
-        assert point1.equals(point3);
         assert Point.equals(point1, point3);
         assert point1 <=> point3 == Equal;
         assert Point.compare(point1, point3) == Equal;
@@ -493,6 +572,166 @@ module TestMisc {
         import Int as Q;
         Q x = 42;
         console.print("x=" + x);
+    }
+
+    void testRecursiveType() {
+        console.print("\n** testRecursiveType()");
+
+        typedef (Nullable | Int | List<Manifold>) as Manifold;
+
+        Manifold m1 = 9;
+        Manifold m2 = [m1];
+        Manifold m3 = [m2];
+
+        console.print(m1);
+        console.print(m2);
+        console.print(m3);
+
+        console.print(report(m3));
+
+        static String report(Manifold m) {
+            if (m == Null) {
+                return "Null";
+            }
+            if (m.is(Int)) {
+                return "Integer";
+            }
+            return $"array of {report(m[0])}";
+        }
+    }
+
+    void testChild() {
+        console.print("\n** testChild()");
+
+        Order order = new Order("Order-17");
+        console.print("order=" + order);
+
+        Order.OrderLine line = order.addLine("item-5");
+        console.print("line=" + line);
+
+        order = new EnhancedOrder("Order-18");
+        line = order.addLine("item-6");
+        console.print("line=" + line);
+    }
+
+    class Order(String id) {
+        Int lineCount;
+
+        @Override
+        String toString() {
+            return id;
+        }
+
+        OrderLine addLine(String descr) {
+            return new OrderLine(++lineCount, descr);
+        }
+
+        class OrderLine(Int lineNumber, String descr) {
+            @Override
+            String toString() {
+                return this.Order.toString() + ": " + descr;
+            }
+        }
+    }
+
+    class EnhancedOrder(String id)
+            extends Order(id) {
+        @Override
+        class OrderLine(Int lineNumber, String descr) {
+            @Override
+            String toString() {
+                return this.EnhancedOrder.toString() +
+                    ": " + lineNumber + ") " + descr;
+            }
+        }
+    }
+
+    void testSideEffects() {
+        console.print("** testSideEffects()");
+
+        // tuple
+        {
+            @Volatile Int x = 3;
+            function Int() fn = () -> (x, ++x)[0];
+            assert fn() == 3 as "tuple side-effect";
+        }
+
+        // invoke
+        {
+            @Volatile Int x = 3;
+            function Int() fn = () -> x.minOf(++x);
+            assert fn() == 3 as "invoke side-effect";
+        }
+
+        // new
+        {
+            static const Point(Int x, Int y);
+
+            @Volatile Int x = 3;
+            function Int() fn = () -> (new Point(x, ++x)).x;
+            assert fn() == 3 as "new side-effect";
+        }
+
+        // cmp
+        {
+            @Volatile Int x = 3;
+            function Boolean() fn = () -> (x < ++x);
+            assert fn() as "cmp side-effect";
+        }
+
+        // cmp2
+        {
+            @Volatile Int x = 3;
+            function Boolean() fn = () -> (++x < ++x);
+            assert fn() as "cmp2 side-effect";
+        }
+
+        // cmp chain
+        {
+            @Volatile Int x = 3;
+            function Boolean() fn = () -> x <= 3 < ++x;
+            assert fn() as "cmpChain side-effect";
+        }
+
+        // relOp
+        {
+            @Volatile Int x = 3;
+            function Int() fn = () -> x + ++x;
+            assert fn() == 7 as "relOp side-effect";
+        }
+
+        // list
+        {
+            @Volatile Int x = 3;
+            function Int() fn = () -> [x, ++x, ++x][0];
+            assert fn() == 3 as "list side-effect";
+        }
+
+        // map
+        {
+            @Volatile Int x = 3;
+            function Int?() fn = () -> Map<String, Int>:["a"=x, "b"=++x, "c"=++x].getOrNull("a");
+            assert fn() == 3 as "map side-effect";
+        }
+
+        // unpack
+        {
+            @Volatile Int x = 3;
+            function (Int, Int)() fn = () -> (x, ++x);
+            assert fn() == 3 as "unpacked side-effect";
+        }
+
+        // return
+        {
+            static (Int, Int) fn() {
+                function void (Int) log = (Int v) -> {};
+
+                @Watch(log) Int x = 3;
+                return x, x++;
+            }
+            (Int x, Int y) = fn();
+            assert x == 3 as "return side-effect";
+        }
     }
 
     void countdown() {
