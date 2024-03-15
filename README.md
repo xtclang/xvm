@@ -455,13 +455,13 @@ If you would like to contribute to the Ecstasy Project, it might be an idea to u
 very latest version by invoking:
 
 ```
-./gradlew installDistPlatform
+./gradlew installDist
 ```
 
 This will create a self-contained XDK distribution under `xdk/build/install/xdk`, including 
 launchers for the build host operating system. You can put this directory first on your
 system path, or set `XDK_HOME` to point at it, so that any XTC launcher will redirect its
-implementation to the libraries in the lcoal build.
+implementation to the libraries in the local build.
 
 ```
 ```

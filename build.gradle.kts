@@ -11,6 +11,18 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
+// Hacky due to bootstrapping reasons. On the other hand, I realise we can probably very much
+// simplify the version catalog and project version logic. We could have a pre pass and turn a
+// libs.versions.toml.template (or something) into the real libs toml instead. That would simplify
+// quite a bit, so sadly it would still have to be done at the settings level, though.
+version = file("VERSION").readText().trim()
+group = file("GROUP").readText().trim()
+
+// we should probably just marshall a build jreleaser releases tasks here into the
+// publishable sub projects.
+//xdkBuildLogic.versions().assignSemanticVersionFromCatalog()
+//val semanticVersion: SemanticVersion by extra
+
 private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOf(xdk, plugin)
@@ -29,13 +41,6 @@ val installDist by tasks.registering {
     XdkDistribution.distributionTasks.forEach {
         dependsOn(xdk.task(":$it"))
     }
-    dependsOn(xdk.task(":$name"))
-}
-
-val installDistPlatform by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories, also creating launchers for the build platform."
-    dependsOn(installDist)
     dependsOn(xdk.task(":$name"))
 }
 

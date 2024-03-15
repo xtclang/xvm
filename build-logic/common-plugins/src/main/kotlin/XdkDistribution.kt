@@ -8,7 +8,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
         const val MAKENSIS = "makensis"
-        const val JAVATOOLS_JARFILE_PATTERN = "**/javatools*"
+        const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
+        const val JAVATOOLS_INSTALLATION_NAME : String = "javatools.jar"
 
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
@@ -61,8 +62,8 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         return installDir.get().file(config)
     }
 
-    fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
-        val launcher = if (currentOs.isMacOsX) {
+    fun launcherFileName(): String {
+        return if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {
             "linux_launcher"
@@ -71,7 +72,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         } else {
             throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
         }
-        return localDistDir.get().file("bin/$launcher")
+    }
+
+    fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
+        return localDistDir.get().file("bin/${launcherFileName()}")
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {

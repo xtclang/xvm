@@ -69,17 +69,17 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # 1. Checkout the repository under test.
+      # Checkout the repository under test.
       - uses: actions/checkout@v4
 
-      # 2. Set up the Java JDK. The JDK vendor should not matter, but we require Java 21.
+      # Set up the Java JDK. The JDK vendor should not matter, but we require Java 21.
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
       #
-      # 3. Configure a Gradle build action.
+      # Configure a Gradle build action.
       #
       # The current version of this GitHub action is v2.4.2, is at the time of writing still considered
       # secure, and has fixed previous issues with leaking secrets to the build cache in the GitHub runner
@@ -96,29 +96,30 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      # 4. Run the Gradle build, with verbose logs, and stack traces enabled to verify it works.
+      # Run the Gradle build, with verbose logs, and stack traces enabled to verify it works.
       - name: Verify Gradle Build
         run: ./gradlew build --info --stacktrace
 
-      # 5. Run the Gradle installation tasks to verify that we can create distributions, and that their
+      # Run the Gradle installation tasks to verify that we can create distributions, and that their
       # layouts are correct.
       - name: Verify Gradle Install and Distribution Layout
         run: ./gradlew installDist --info --stacktrace
 
-      # 6. Run the Gradle installDistPlatform task, and verify that its output works as expected.
-      - name: Verify Gradle Install and Local Distribution Layout
-        run: ./gradlew installDistPlatform --info --stacktrace
+      - name: Run host specific launcher, xcc
+        run: ./xdk/build/install/bin/xcc --version
 
-      # 7. Sanity check test run. XUnit will give us real successes or failures.
+      - name: Run host specific launcher, xec
+        run: ./xdk/build/install/bin/xec --version
+
+      # Sanity check test run. XUnit will give us real successes or failures.
       - name: ManualTests Run Default
         run: ./gradlew manualTests:runXtc
+
       - name: ManualTests Run One By Property
         run: ./gradlew manualTests:runOne -PtestName=TestMisc
+
       - name: ManualTests Run Two In Sequence
         run: ./gradlew manualTests:runTwoTestsInSequence
+
       - name: ManualTests parallel tests
         run: ./gradlew manualTests:runParallel
-
-      # TODO: We need to figure out how to communicate success or failure as long as the manual tests are
-      #   not integrated into test source sets / unit tests for XTC / XUnit, or whatever test harnesses
-      #   we may want to use.
