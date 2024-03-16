@@ -191,15 +191,15 @@ interface Realm {
         }
 
         @Inject Clock clock;
-        Time creation = clock.now;
+        Time created = clock.now;
 
-        HashInfo userHashes = new HashInfo(creation,
+        HashInfo userHashes = new HashInfo(created,
                 md5?       .sign(userBytes).bytes : [],
                 sha256?    .sign(userBytes).bytes : [],
                 sha512_256?.sign(userBytes).bytes : [],
                 );
 
-        HashInfo pwdHashes  = new HashInfo(creation,
+        HashInfo pwdHashes  = new HashInfo(created,
                 md5?       .sign(pwdBytes).bytes : [],
                 sha256?    .sign(pwdBytes).bytes : [],
                 sha512_256?.sign(pwdBytes).bytes : [],
