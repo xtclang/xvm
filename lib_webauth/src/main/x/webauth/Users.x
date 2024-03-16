@@ -4,7 +4,7 @@ import ecstasy.collections.CollectImmutableArray;
 
 import oodb.DBMap;
 
-import User.HashInfo;
+import DBRealm.HashInfo;
 
 /**
  * A DBMap of User objects. There are conceptually three "primary keys" for a User:
@@ -36,7 +36,7 @@ mixin Users
             return False;
         }
 
-        (HashInfo userHashes, HashInfo pwdHashes) = createHashes(realm, userName, password);
+        (HashInfo userHashes, HashInfo pwdHashes) = realm.createHashes(userName, password);
 
         // look up the role names and convert them to role IDs
         Int[]      roleIds;
@@ -53,51 +53,6 @@ mixin Users
         return putIfAbsent(userId, user)
                 ? (True, user)
                 : False;
-    }
-
-    /**
-     * Hash the user and password data; this method is performing the same work as [Realm.userHash()]
-     * and [Realm.passwordHash()] for each of the (up to) three supported algorithms
-     */
-    (HashInfo userHashes, HashInfo pwdHashes)
-            createHashes(Realm realm, String userName, String? password) {
-        Hash userBytes  = $"{userName}:{realm.name}".utf8();
-        Hash pwdBytes   = $"{userName}:{realm.name}:{password}".utf8();
-
-        Signer[] hashers    = realm.hashers;
-        Signer?  md5        = Null;
-        Signer?  sha256     = Null;
-        Signer?  sha512_256 = Null;
-        for (Signer signer : hashers) {
-            switch (signer.algorithm.name) {
-            case "MD5":
-                md5 = signer;
-                break;
-            case "SHA-256":
-                sha256 = signer;
-                break;
-            case "SHA-512-256":
-                sha512_256 = signer;
-                break;
-            }
-        }
-
-        @Inject Clock clock;
-        Time creation = clock.now;
-
-        HashInfo userHashes = new HashInfo(creation,
-                md5?       .sign(userBytes).bytes : [],
-                sha256?    .sign(userBytes).bytes : [],
-                sha512_256?.sign(userBytes).bytes : [],
-                );
-
-        HashInfo pwdHashes  = new HashInfo(creation,
-                md5?       .sign(pwdBytes).bytes : [],
-                sha256?    .sign(pwdBytes).bytes : [],
-                sha512_256?.sign(pwdBytes).bytes : [],
-                );
-
-        return (userHashes, pwdHashes);
     }
 
     /**

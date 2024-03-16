@@ -27,41 +27,6 @@ const User
         Int[]    roleIds = [],
         Boolean  enabled = True,
         ) {
-    /**
-     * A group of hashes, one for each of the supported hash algorithms. If a hash algorithm is not
-     * configured to be used, then its hash will be a zero-length byte array.
-     */
-    static const HashInfo
-            (
-            Time created,
-            Hash md5,
-            Hash sha256,
-            Hash sha512_256,
-            ) {
-        conditional Hash hashFor(Signer hasher) {
-            Hash hash;
-            switch (hasher.algorithm.name) {
-            case "MD5":
-                hash = md5;
-                break;
-
-            case "SHA-256":
-                hash = sha256;
-                break;
-
-            case "SHA-512-256":
-                hash = sha512_256;
-                break;
-
-            default:
-                return False;
-            }
-
-            return hash.empty
-                    ? False
-                    : (True, hash);
-        }
-    }
 
     /**
      * Create a new User object based on this User object, but with specific properties modified

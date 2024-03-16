@@ -8,7 +8,7 @@ const UserChange
         Time      timestamp,
         String?   desc     = Null,
         Int       byUserId = 0,
-        Details?  details  = Null,
+        HashInfo? details  = Null,
         ) {
     /**
      * The form of the user change record.
@@ -22,11 +22,6 @@ const UserChange
         ClearPassword,
         SetPassword,
     }
-
-    /**
-     * The form of the user change record.
-     */
-    typedef User.HashInfo as Details;
 
     /**
      * @param userId  the User key
