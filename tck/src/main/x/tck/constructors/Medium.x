@@ -3,6 +3,13 @@
  */
 class Medium {
 
+    void run() {
+        testAssert();
+        testAssertChain();
+        testFinalizer();
+        testFinalizerChain();
+    }
+    
     /**
      * At the end of construction the validator (assert function) must be invoked.
      */
