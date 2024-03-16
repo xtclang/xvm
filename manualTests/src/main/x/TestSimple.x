@@ -1,34 +1,10 @@
-@TerminalApp("Simple command tool test")
+// NOTE: THE COMPILATION OF THIS MODULE SHOULD PRODUCE TWO COMPILER ERRORS
 module TestSimple {
-    package cli import cli.xtclang.org;
-
-    import cli.*;
-
-    // ----- stateless API -------------------------------------------------------------------------
-
-    @Command("time", "Show current time")
-    Time showTime() {
-        @Inject Clock clock;
-        return clock.now;
+    void run() {
+        static const Point(@Volatile Int x, Int y); // @Volatile annotation used to NPE the compiler
     }
 
-    @Command("dirs", "Show home current and temp directories")
-    (Directory, Directory, Directory) showDirs() {
-        @Inject Directory curDir;
-        @Inject Directory homeDir;
-        @Inject Directory tmpDir;
-        return curDir, homeDir, tmpDir;
-    }
-
-    // ----- stateful API --------------------------------------------------------------------------
-
-    service Stateful {
-        Int count;
-
-        @Command("inc", "Increment the count")
-        Int addCount(@Desc("increment value") Int increment = 1) {
-            count += increment;
-            return count;
-        }
+    class C {
+        @Volatile Int x; // this used to compile without an error
     }
 }

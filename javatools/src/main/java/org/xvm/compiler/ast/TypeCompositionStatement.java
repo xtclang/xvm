@@ -1514,8 +1514,18 @@ public class TypeCompositionStatement
                             param.getStartPosition(), param.getEndPosition(), null, null, null,
                             param.getType(), param.getNameToken(), null, null, null, null);
                     prop.markSynthetic();
-                    prop.setParent(this);
-                    prop.registerStructures(mgr, errs);
+
+                    if (body == null)
+                        {
+                        // add a body and catch it up to the "Registered" stage
+                        body = this.adopt(new StatementBlock(new ArrayList<>(1)));
+                        new StageMgr(body, Stage.Registered, errs).fastForward(1);
+                        }
+
+                    // add the synthetic property declaration to the body and catch it up to the
+                    // "Registered" stage (it will create the property structure)
+                    body.addStatement(prop);
+                    new StageMgr(prop, Stage.Registered, errs).fastForward(1);
                     }
                 else if (!(child instanceof PropertyStructure))
                     {
