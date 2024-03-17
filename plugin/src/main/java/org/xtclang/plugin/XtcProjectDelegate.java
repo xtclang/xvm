@@ -30,12 +30,16 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 
+import java.text.SimpleDateFormat;
+
+import java.io.File;
 import java.io.IOException;
 
 import java.net.URL;
 
 import java.nio.file.Files;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -129,7 +133,15 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
         resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
         if (hasVerboseLogging()) {
-            logger.lifecycle("{} XTC plugin executing from location: '{}'", prefix, getPluginUrl());
+            final var url = getPluginUrl();
+            logger.lifecycle("{} XTC plugin executing from location: '{}' (protocol: '{}')", prefix, url, url.getProtocol());
+            if ("file".equals(url.getProtocol())) {
+                final var file = new File(url.getFile());
+                assert file.exists();
+                final var lastModified = new SimpleDateFormat("YYYY-MM-dd HH:mm").format(new Date(file.lastModified()));
+                final var length = file.length();
+                logger.lifecycle("{} XTC plugin file; lastModified='{}', length='{}' bytes", prefix, lastModified, length);
+            }
         }
     }
 
@@ -377,11 +389,18 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
         });
 
+        /*
+         * Task 'xtcVersionFile' creates a version file at the build root. This should be
+         * one json blob later, with key values, but before we change the version parser, including
+         * supporting SNAPSHOT and what not, and adding git commit hashes amd tags etc., we will
+         * write separate files just to have a way to discriminate.
+         */
         tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Generate a file containing the XDK/XTC semantic version under the build tree.");
             final var version = buildDir.file(XDK_VERSION_PATH);
-            task.getOutputs().file(version);
+            final var extraVersionInfo = buildDir.file(".xtc-version-info");
+            task.getOutputs().files(version, extraVersionInfo);
             task.doLast(t -> {
                 final var semanticVersion = getSemanticVersion();
                 final var file = version.get().getAsFile();

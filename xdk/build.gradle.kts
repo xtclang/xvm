@@ -8,10 +8,10 @@ import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.jreleaser.model.Active
 import org.jreleaser.model.Archive.Format
-import org.xtclang.plugin.tasks.XtcCompileTask
-import java.io.ByteArrayOutputStream
 import org.jreleaser.model.Stereotype
 import org.jreleaser.util.Algorithm
+import org.xtclang.plugin.tasks.XtcCompileTask
+import java.io.ByteArrayOutputStream
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -127,16 +127,16 @@ val publishPluginToLocalDist by tasks.registering {
 }
 
 distributions {
+    // Creates a main distribution (with the name 'xdk' that can be unpacked and used on any platform,
+    // but require the launcher config scripts to run.
     main {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
     }
-    // The contents logic is broken out so we can use it in multiple distributions, should we want
-    // to build e.g. linux/windows/mac zip files. It's still not perfectly aligned with any release
-    // pipeline, or tools like JReleaser, but its a potential way to create more than one distribution and
-    // use them as the basis for any framework that works with Gradle installs and distros.
-    //create("xdk-macos") {
-    //    contentSpec("xdk", xdkDist.distributionVersion, "macosx")
-    //}
+    // Creates a main distribution for the current platform, including copying the right binaries
+    // for the launchers to 'bin'.
+    val withLaunchers by registering {
+        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), installLaunchers = true)
+    }
 }
 
 val cleanXdk by tasks.registering(Delete::class) {
@@ -153,21 +153,26 @@ val clean by tasks.existing {
     }
 }
 
-val distTar by tasks.existing(Tar::class) {
+tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
+    // Add transitive dependency to the process resource tasks. There might be something brokemn with those dependencies,
+    // but it's more likely that since the processXtcResources task needs to be run before compileXtc, and the Java one does
+    // not, this somehow confuses the life cycle. TODO: This is another argument to remove and duplicate what is needed of the
+    // Java plugin functionality for the XTC Plugin, but we haven't had time to neither do that, nor work on build speedups
+    // through configuration caching and other dependencies.
+    it.dependsOn(tasks.compileXtc)
+}
+
+tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
-    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
-val distZip by tasks.existing(Zip::class) {
-    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
-}
-
+@Deprecated("The NSIS .exe installer we be moved to be part of a JReleaser flow.")
 val distExe by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Use an NSIS compatible plugin to create the Windows .exe installer."
 
-    dependsOn(distZip)
+    dependsOn(tasks.distZip)
 
     val nsi = file("src/main/nsi/xdkinstall.nsi")
     val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
@@ -194,7 +199,7 @@ val distExe by tasks.registering {
         val stdout = ByteArrayOutputStream()
         val distributionDir = layout.buildDirectory.dir("tmp-archives")
         copy {
-            from(zipTree(distZip.get().archiveFile))
+            from(zipTree(tasks.distZip.map { it.archiveFile }))
             into(distributionDir)
         }
         exec {
@@ -226,7 +231,7 @@ val test by tasks.existing {
  * and distributions with slightly different contents, for example, based o OS, and with
  * an OS specific launcher already in "bin".
  */
-private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "") {
+private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", installLaunchers: Boolean = false) {
     distributionBaseName = distName
     version = distVersion
     if (distClassifier.isNotEmpty()) {
@@ -242,14 +247,6 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         from(xdkTemplate) {
             eachFile {
                 includeEmptyDirs = false
-            }
-        }
-        listOf("xcc", "xec").forEach {
-            val launcher = xdkDist.launcherFileName()
-            from(xtcLauncherBinaries) {
-                include(launcher)
-                rename(launcher, it)
-                into("bin")
             }
         }
         from(xtcLauncherBinaries) {
@@ -274,6 +271,18 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             }
         }
         from(tasks.xtcVersionFile)
+        if (installLaunchers) {
+            // Do we want to install launchers that work on the host system?
+            assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
+            listOf("xcc", "xec").forEach {
+                val launcher = xdkDist.launcherFileName()
+                from(xtcLauncherBinaries) {
+                    include(launcher)
+                    rename(launcher, it)
+                    into("bin")
+                }
+            }
+        }
     }
 }
 
@@ -281,19 +290,15 @@ val releaseVersion = project.version.toString()
 val releaseGroupId = project.group.toString()
 val releaseArtifactId = project.name
 
-
-//val installDir = layout.buildDirectory.dir("install/xdk")
-//val distZipFile = distZip.map { it.outputs.files.singleFile.absolutePath }
-
+// TODO use layout property for this instead of hardcoding the path again.
 val installDirFile = file("build/install")
-System.err.println("Using installdir: " + installDirFile.absolutePath);
 
 val installDist by tasks.existing {
-   dependsOn(tasks.compileXtc)
+    dependsOn(tasks.compileXtc)
 }
 
 val jreleaserAssemble by tasks.existing {
-    dependsOn(distZip, tasks.installDist)
+    dependsOn(tasks.distZip, tasks.installDist)
     doFirst {
         logger.lifecycle("$prefix Executing jreleaser assemble doFirst")
     }
@@ -360,35 +365,35 @@ jreleaser {
     }
 }
 
-    /*
-    assemble {
-        this.
-        this.archive
-        directory = installDir.get().asFile
-        archiveFormats = setOf(Format.TAR, Format.ZIP)
-        checksum {
-            name = "checksums.txt"
-            individual = false
-            algorithms = setOf("SHA_256")
-            artifacts = true
-            files = true
-        }
+/*
+assemble {
+    this.
+    this.archive
+    directory = installDir.get().asFile
+    archiveFormats = setOf(Format.TAR, Format.ZIP)
+    checksum {
+        name = "checksums.txt"
+        individual = false
+        algorithms = setOf("SHA_256")
+        artifacts = true
+        files = true
     }
+}
 
-    // A binary distribution is basically just a directory tree with a bin/executable in it
-    // This is exactly what we want for the output of installDistForBuildHost
-    // The file structure needs to contain:
-    //    LICENSE and README in the root
-    //    bin directory in the root, and an executable (hopefully two) in it.
-    // The final distribution artifact is packaged as tar or zip. The archive must contain
-    // a root entry followed by the name of the archive. Thus, if the archive is named
-    // app-1.2.3.zip, the root entry should be app-1.2.3/.
-    //
-    // We can also use an archive assembler, to create an archive, e.g. Docker, Sdkman,
-    // Homebrew etc. We probably want to do that as part of the release.
-    /*val xdk by distributions.registering {
-        distributionType = DistributionType.BINARY
-        // We can also configure
-    }*/
+// A binary distribution is basically just a directory tree with a bin/executable in it
+// This is exactly what we want for the output of installDistForBuildHost
+// The file structure needs to contain:
+//    LICENSE and README in the root
+//    bin directory in the root, and an executable (hopefully two) in it.
+// The final distribution artifact is packaged as tar or zip. The archive must contain
+// a root entry followed by the name of the archive. Thus, if the archive is named
+// app-1.2.3.zip, the root entry should be app-1.2.3/.
+//
+// We can also use an archive assembler, to create an archive, e.g. Docker, Sdkman,
+// Homebrew etc. We probably want to do that as part of the release.
+/*val xdk by distributions.registering {
+    distributionType = DistributionType.BINARY
+    // We can also configure
+}*/
 }
 

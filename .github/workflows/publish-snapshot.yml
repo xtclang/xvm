@@ -1,0 +1,36 @@
+#
+# This is intended to run for every changed pushed to master.
+#
+# It triggers every time something is pushed to master.
+# It will only build SNAPSHOT publications
+# It will publish SNAPSHOT publications to the XTC Lang GitHub Maven package repository.
+# It will delete older SNAPSHOT publications if we have too many of them.
+# Any consumer can refer to a SNAPSHOT version, a version pattern like 'any version after this', and to 'latest.integration' to use these.
+#
+
+name: Publish Snapshot XDK
+
+on: push
+
+env:
+  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+#    branches:
+#      - master
+#      - publish-and-release-fixes  #TODO: Remove after testing.
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out XDK code
+        uses: actions/checkout@v4
+      - name: Setup Java Environment
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Public Snapshot
+        uses: ./gradlew installDist --info --stacktrace

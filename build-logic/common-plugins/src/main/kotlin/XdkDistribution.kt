@@ -1,4 +1,5 @@
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
@@ -14,10 +15,14 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
 
-        private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
 
-        val distributionTasks = listOf("distTar", "distZip", "distExe")
+        val currentOs: OperatingSystem = OperatingSystem.current()
+        val distributionTasks = listOf("distTar", "distZip", "distExe", "withLaunchersDistTar", "withLaunchersDistZip")
+
+        fun isDistributionArchiveTask(task: Task): Boolean {
+            return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
+        }
     }
 
     init {
@@ -40,16 +45,19 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
         if (isCiEnabled) {
             val buildNumber = System.getenv(BUILD_NUMBER) ?: ""
-            val gitCommitHash = project.executeCommand("git", "rev-parse", "HEAD")
-            if (buildNumber.isNotEmpty() || gitCommitHash.isNotEmpty()) {
-                logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$gitCommitHash')")
+            if (buildNumber.isNotEmpty() || distributionCommit.isNotEmpty()) {
+                logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$distributionCommit')")
                 return@buildString
             }
-            append("-ci-$buildNumber+$gitCommitHash")
+            append("-ci-$buildNumber+${distributionCommit}")
         }
     }
 
-    fun resolveConfigScript(installDir: Provider<Directory>): RegularFile {
+    val distributionCommit: String get() = buildString {
+        return project.executeCommand("git", "rev-parse", "HEAD")
+    }
+
+    fun configScriptFilename(installDir: Provider<Directory>): RegularFile {
         val config = if (currentOs.isMacOsX) {
             "cfg_macos.sh"
         } else if (currentOs.isLinux) {
@@ -62,6 +70,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         return installDir.get().file(config)
     }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun launcherFileName(): String {
         return if (currentOs.isMacOsX) {
             "macos_launcher"
@@ -76,6 +85,16 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
     fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
         return localDistDir.get().file("bin/${launcherFileName()}")
+    }
+
+    fun osClassifier(): String {
+        val arch = System.getProperty("os.arch")
+        return when {
+            currentOs.isMacOsX -> "macos_$arch"
+            currentOs.isLinux -> "linux_$arch"
+            currentOs.isWindows -> "windows_$arch"
+            else -> throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
+        }
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {
