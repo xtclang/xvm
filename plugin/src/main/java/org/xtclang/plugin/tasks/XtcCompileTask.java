@@ -226,8 +226,9 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             if (hasVerboseLogging()) {
                 logger.lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
             }
-            args.add("--set-version", moduleVersion);
+            args.add("--set-version", stripSnapshot(moduleVersion));
         }
+
         args.addRepeated("-L", resolveFullModulePath());
         final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).sorted().toList();
         if (sourceFiles.isEmpty()) {
@@ -240,12 +241,24 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         finalizeOutputs();
     }
 
+    private String stripSnapshot(final String version) {
+        if (version.endsWith("-SNAPSHOT")) {
+            // TODO: Fix this - we don't necessarily want to store the SNAPSHOT name as part of the version
+            //  encoding. It's enough if we can set a bit in the version tree, and have a getter that works
+            //  called "isSnapshot", or something like that.
+            logger.warn("{} WARNING: XTC module version is a SNAPSHOT. 'xcc' does not fully support semantic versioning. stripping suffix.", prefix());
+            return version.substring(0, version.indexOf("-SNAPSHOT"));
+        }
+        return version;
+    }
+
     private String resolveModuleVersion() {
         // TODO: We need to tell the plugin, when we build it, which version it has from the catalog.
         //    This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
         if (getXtcVersion().isPresent()) {
             return getXtcVersion().get();
         }
+        logger.warn("{} WARNING: No XTC version was resolved. Module will not be versioned.", prefix());
         return null;
     }
 

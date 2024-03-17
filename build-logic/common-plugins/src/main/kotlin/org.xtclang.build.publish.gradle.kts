@@ -35,7 +35,7 @@ publishing {
         }
 
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
-        with (xdkBuildLogic.github()) {
+        with(xdkBuildLogic.github()) {
             if (verifyGitHubConfig()) {
                 logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
                 maven {
@@ -70,6 +70,11 @@ publishing {
                 developerConnection = "scm:git:ssh://github.com/xtclang/xvm.git"
                 url = "https://github.com/xtclang/xvm/tree/master"
             }
+            withXml {
+                val propNode = asNode().appendNode("properties")
+                propNode.appendNode("gitCommit", project.executeCommand("git", "rev-parse", "HEAD"))
+                propNode.appendNode("xdkVersion", project.version)
+            }
         }
     }
 }
@@ -85,7 +90,8 @@ val publishLocal by tasks.registering {
 //  full artifact work done.
 val pruneBuildRepo by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installPlatformDist and remote publishing only."
+    description =
+        "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installPlatformDist and remote publishing only."
     if (shouldPublishPluginToLocalDist()) {
         logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
         delete(buildRepoDirectory)
@@ -161,7 +167,7 @@ val listAllRemotePublications by tasks.registering {
 
 val deleteAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description =  "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
+    description = "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
         val github = xdkBuildLogic.github()
         github.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
