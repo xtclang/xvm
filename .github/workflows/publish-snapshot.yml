@@ -8,14 +8,10 @@
 # Any consumer can refer to a SNAPSHOT version, a version pattern like 'any version after this', and to 'latest.integration' to use these.
 #
 
-name: Publish Snapshot XDK
-
+name: XDK Publish Snapshot
 on: push
-
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
-
 jobs:
   xdk-publish-snapshot:
     runs-on: ubuntu-latest
