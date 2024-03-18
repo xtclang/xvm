@@ -90,13 +90,17 @@ module cli.xtclang.org {
             }
 
             String head = command[0];
-            if (head == "quit") {
+            switch (head) {
+            case "":
+                return True;
+            case "quit":
                 return False;
+            case "help":
+                printHelp(parts == 1 ? "" : command[1], catalog);
+                return True;
             }
 
-            if (head == "help") {
-                printHelp(parts == 1 ? "" : command[1], catalog);
-            } else if (CmdInfo info := findCommand(head, catalog)) {
+            if (CmdInfo info := findCommand(head, catalog)) {
                 try {
                     Method      method = info.method;
                     Parameter[] params = method.params;
