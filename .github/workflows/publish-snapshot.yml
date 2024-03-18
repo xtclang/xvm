@@ -32,4 +32,4 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v3
-      - uses: ./gradlew installDist --info --stacktrace
+      - uses: ./gradlew tasks --info --stacktrace
