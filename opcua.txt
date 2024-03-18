@@ -1,0 +1,456 @@
+diff --git a/requirements.txt b/requirements.txt
+index 0028dcb..d3f5f9f 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -52,6 +52,7 @@ future==0.18.3
+ gin-config==0.5.0
+ gitdb==4.0.11
+ GitPython==3.1.41
++graphviz==0.20.1
+ google-api-core==2.15.0
+ googleapis-common-protos==1.62.0
+ google-auth==2.25.2
+@@ -129,7 +130,7 @@ Paste==3.7.1
+ pathspec==0.12.1
+ pexpect==4.9.0
+ pillow==10.2.0
+-pipenv==2023.11.15
++#pipenv==2023.11.15
+ platformdirs==4.1.0
+ plotly==5.18.0
+ pluggy==1.3.0
+@@ -144,6 +145,7 @@ pyasn1==0.5.1
+ pyasn1-modules==0.3.0
+ pycocotools==2.0.7
+ pycparser==2.21
++pydeps==1.12.19
+ Pygments==2.17.2
+ pyOpenSSL==24.0.0
+ pyparsing==3.1.1
+diff --git a/src/pap_rob/cognibotics/opcua_client.py b/src/pap_rob/cognibotics/opcua_client.py
+index 7e10ed5..2095c82 100644
+--- a/src/pap_rob/cognibotics/opcua_client.py
++++ b/src/pap_rob/cognibotics/opcua_client.py
+@@ -1,43 +1,82 @@
+ import asyncio
++from dataclasses import dataclass
+ import logging
+ import os
+ from pathlib import Path
+ from typing import Any, cast
++import json
++import time
+ 
+-import munch
++from munch import Munch, DefaultMunch
+ import toml
+ from asyncua import Client, Node
+-from asyncua.ua import NodeClass
++from asyncua.ua import NodeClass, DataChangeNotification, DataValue
+ from asyncua.ua.uaerrors import UaStatusCodeError
+ 
+ from utils.config import DEFAULT_CONFIG_DIR, get_config
+ from utils.utils import deep_merge_dict
+ 
+-logger = logging.getLogger(__name__)
++OPCUA_DEFAULT_NAMESPACE = 'Cognibotics'
++OPCUA_DEFAULT_CONTROLLER = ['2:DeviceSet', '8:HKM_Controller']
+ 
++#logging.basicConfig(level=logging.INFO)
++logger = logging.getLogger(__name__)
+ 
+ # Still working on how datachange and event notification works and what the input arguments and returns types
+ # really are. When we understand this better we should declare the types properly.
+ class _SubscriptionHandler:
+-    def datachange_notification(self, node, val, data):
+-        print(f"Datachange {node} {val} {data}")
++    events: int = 0
++    queue: asyncio.Queue
++
++    def __init__(self):
++        self.events = 0
++        self.queue = asyncio.Queue()
++
++    def datachange_notification(self, node: Node, val: DataValue, data: DataChangeNotification):
++        #print(f"Datachange {node} {val} {data}")
++        #timestamp_ns = int(data.MonitoredItemsdatamonitored_item.Value.SourceTimeStamp.timestamp() * 1e9)
++        self.queue.put_nowait(val)
++        self.events += 1
+ 
+     def event_notification(self, event):
+         print(f"Event {event}")
+ 
++    def status_change_notification(self, status):
++        print(f"Status change notification: {status}")
++
++# Class that is used for sample callback results.
++@dataclass
++class HkmSample:
++    pass
++
++@dataclass
++class HkmCoords:
++    degrees: tuple[float, float]
++    coords: tuple[float, float, float]
++#    degrees: tuple[float, float]
++#    coords: tuple[float, float, float]
++
++#    def __init__(self, a: float, b: float, x: float, y: float, z: float):
++#        self.degrees = (a, b)
++#        self.coords = (x, y, z)
++#        print(f"Inited: a={a}, b={b}, x={x}, y={y}, z={z}")
++   
+ 
+ class CogniboticsMetricsClient:
+     def __init__(self):
+         config = self.config = get_config()
+-        c = self.client = Client(url=f"opc.tcp://{config.cognibotics.opcua.server}")
++        url = f"opc.tcp://{config.cognibotics.opcua.server}"
++        logger.info(f"Attempting to connect to Cognibotics OPC UA server at '{url}'...")
++        c = self.client = Client(url=url)
+         c.set_user(config.cognibotics.opcua.user)
+         c.set_password(config.cognibotics.opcua.password)
++        self.namespace = config.cognibotics.opcua.get('namespace', OPCUA_DEFAULT_NAMESPACE)
+ 
+     async def connect(self) -> None:
+         c = self.client
+         config = self.config
+         cert_path = Path(config.cognibotics.opcua.cert)
+-        privkey_path = Path(config.cognibotics.opcua.private_key)
++        privkey_path = Path(config.cognibotics.opcua.private_key)                
+         if not cert_path.exists():
+             cert_path = Path(DEFAULT_CONFIG_DIR) / config.cognibotics.opcua.cert
+             privkey_path = Path(DEFAULT_CONFIG_DIR) / config.cognibotics.opcua.private_key
+@@ -45,55 +84,192 @@ class CogniboticsMetricsClient:
+                 raise FileNotFoundError(f"Could not find cert file {config.cognibotics.opcua.cert}")
+         await c.set_security_string(f"Basic256Sha256,SignAndEncrypt,{cert_path},{privkey_path}")
+         await c.connect()
+-        logger.info(f"Connected to Cognibobtics OPC UA server for metrics")
+-        self.sub = await c.create_subscription(1000, _SubscriptionHandler())
+-        self.objects = c.get_objects_node()
+-
+-    async def subscribe(self, node_path: list[str]) -> int:
+-        try:
+-            res = await self.objects.get_child(node_path)
+-        except UaStatusCodeError as e:
+-            logger.error(f"Failed to subscribe to {node_path} - the node does not exist: {e}")
+-            raise e
+-        assert isinstance(res, Node)
+-        res = await self.sub.subscribe_data_change(res)
+-        # we are doing a single node subscription so there should only be a single subscription id returned
+-        assert not isinstance(res, list)
+-        return res
++                
++        logger.info(f"Connected to Cognibobtics OPC UA server for metrics.")
++        #self.handler = _SubscriptionHandler()
++        #self.sub = await c.create_subscription(1000, self.handler)
++        self.root = c.get_root_node()
++        self.objects = c.get_objects_node()    
++        self.controller = await self.objects.get_child(OPCUA_DEFAULT_CONTROLLER)
++        
++        # Query for 
++
++    #async def subscribe(self, node_path: list[str]) -> int:
++    #    try:
++    #        node = await self.objects.get_child(node_path)
++    #    except UaStatusCodeError as e:
++    #        logger.error(f"Failed to subscribe to {node_path} - the node does not exist: {e}")
++    #        raise e
++    #    assert isinstance(node, Node)
++    #    value = await self.sub.subscribe_data_change(node)
++    #    # we are doing a single node subscription so there should only be a single subscription id returned
++    #    assert not isinstance(value, list)
++    #    return value
++    
++    # e.g. get_position(CarAcc)
++    # def _get_position(self, prefix: str) 
+ 
+-    async def get_subtree_as_dict(self, node_path: list[str]) -> dict[str, Any]:
++    async def query(self) -> tuple[HkmCoords, HkmCoords, HkmCoords]:
++        """
++        Queries the existing connection for HKM State
++        """
++        
++        """
++        Example of data we get back from the DeviceSet subtree.
++        We should be able to create adat
++        {
++        "2:DeviceFeatures": {},
++        "8:HKM_Controller": {
++            "8:BlowAir": false,
++            "8:CurrentAcc":
++            "8:CurrentTool": 0,
++            "8:CurrentToolName": "DefaultTool",                    
++            "8:RobotExecutionState": "WAIT_FOR_START",
++            "8:RobotPrepState": "INIT",
++            "8:VacuumEnabled": false,
++            "8:VacuumPressure": 38887
++        }
++        """
++        controller = await self.get_subtree_as_dict(OPCUA_DEFAULT_CONTROLLER)
++                
++        acc = controller.CurrentAcc
++        accelleration = HkmCoords((acc.CartAccA, acc.CartAccB), (acc.CartAccX, acc.CartAccY, acc.CartAccZ))
++        
++        pos = controller.CurrentPos
++        position = HkmCoords((pos.CartPosA, pos.CartPosB), (pos.CartPosX, pos.CartPosY, pos.CartPosZ))
++        
++        vel = controller.CurrentVel
++        velocity = HkmCoords((vel.CartVelA, vel.CartVelB), (vel.CartVelX, vel.CartVelY, vel.CartVelZ))
++
++        return position, accelleration, velocity
++        #for k in controller:
++        #    v = controller[k]
++        #    print(f'key: {k} = {v}')        
++
++    async def get_subtree_as_dict(self, node_path: list[str]) -> Munch: #dict[str, Any]:
++        """
++        Creates a dictionary from an OPC subtree. If no node_path is given, we will
++        compute the tree from the objects child, i.e. "0:Objects"
++        """
++        logger.info(f"get_subtree_as_dict: {node_path}")
+         node = await self.objects.get_child(node_path) if len(node_path) > 0 else self.objects
+         assert isinstance(node, Node)
+-        return await self.__build_subtree(node)
++        return Munch.fromDict(await self._build_subtree(node))
+ 
+-    async def __build_subtree(self, node: Node) -> dict[str, Any] | Any:
++    async def _build_subtree(self, node: Node, strip_namespace: bool = True, level: int = 0) -> dict[str, Any] | Any:
+         type = await node.read_node_class()
++        indent = '    ' * level
++
++        logger.info(f"{indent}build_subtree({node}): node_class {type}")
++
++        current_name = await node.read_display_name()
++
+         if type == NodeClass.Object:
+-            children = await node.get_children()
++            children = await node.get_children()            
+             tree = {}
+             for child in children:
+                 dname = await child.read_display_name()
+-                name = f'{child.nodeid.NamespaceIndex}:{dname.Text}'
+-                tree[name] = await self.__build_subtree(child)
++                name = f'{dname.Text}'                
++                if not strip_namespace:
++                    name = f'{child.nodeid.NamespaceIndex}:{name}'
++                logger.info(f"{indent}Node: current_name={current_name} name={name}")
++                value = await self._build_subtree(child, strip_namespace, level + 1)
++                #print(f"tree[{name}]={value}")
++                tree[name] = value
+             return tree
+-        elif type == NodeClass.Variable:
+-            res = await node.read_value()
+-            return res
+ 
++        if type == NodeClass.Variable:
++            value = await node.read_value()
++            logger.debug(f"Atomic node {current_name}, value={value}")
++            return value
+ 
+-if __name__ == "__main__":
+ 
+-    async def test_me():
++#@dataclass
++#lass Hkm
++
++if __name__ == "__main__":
++    async def main():
+         c = CogniboticsMetricsClient()
+         await c.connect()
+-        apa = await c.get_subtree_as_dict(["2:MyObject"])
+-        await c.subscribe(["2:DeviceSet", "8:SicsOpcUa", "8:TestString"])
+-        while True:
+-            await asyncio.sleep(10000)
++        (p ,a, v) = await c.query()
++        print(f"Position: {p}")
++        print(f"Accelleration: {a}")
++        print(f"Velocity: {v}")
++
++        # Collect X subscriptions and then exit
++        #await c.subscribe()
++        node_path = ["2:DeviceSet", "8:HKM_Controller", "8:VacuumPressure"]
++        var = await c.objects.get_child(node_path)        
++        handler = _SubscriptionHandler()
++        subscription = await c.client.create_subscription(10, handler)
++        await subscription.subscribe_data_change(var)
++        start = time.time()
++        # Sample for ten seconds, emptying the queue
++        while time.time() - start < 10:
++            data = await handler.queue.get()
++            event_count = handler.events
++            if event_count % 100 == 0:            
++                print(f"** {data}, events={handler.events}, time={time.time() - start}")
++            handler.queue.task_done()
++
++        print(f"Event loop done: Consumed {handler.events} events.")
++
++        #value = await self.sub.subscribe_data_change(node)
++        # we are doing a single node subscription so there should only be a single subscription id returned
++        #assert not isinstance(value, list)
++        #return value
++
++        #root = c.client.
++        # get_root_node()
++        #objects_node = c.objects
++        #deviceset_node = await root.get_child(["0:Objects", "2:DeviceSet"])
++        #robot_data = await root.get_child(
++        # Equivalent to c.client.get_root_node().get_child(get_child(["2:DeviceSet", "8:HKM_Controller"]) 
++        #hkm_node = await c.objects.get_child(["2:DeviceSet", "8:HKM_Controller"]) 
++        #dd = await c.get_subtree_as_dict(["2:DeviceSet", "8:HKM_Controller"])        
++        #nsidx = await c.client.get_namespace_index("Cognibotics")
++        #print("Index " + str(nsidx))
++        #print(hkm_node)
++        #print(json.dumps(dd, sort_keys=True, indent=4))
++        #ddj = json.dumps(dd, sort_keys=True, indent=4)
++        #print(ddj)
++
++        #browse = await c.browse_nodes(robot_data2)
++        #print(browse)
++
++#        logger.info(f"Root node: {root}")
++#        root_children = await root.get_children()
++#        obs = await root.get_child('Objects')        
++#        print(f"    Object child: {obs}, path: {await obs.read_display_name()} {await obs.read_browse_name()}")
++#        print(f"Root children: {root_children}")
++#        for child in root_children:
++#            cname = await child.read_display_name()            
++#            bname = await child.read_browse_name()            
++#            #desc = await child.read_()
++#            print(f"    Root child: {child}, path: {cname} {bname} {obs == child}")
++
++#        robot_data = await root.get_child(["0:Objects", "2:DeviceSet", "8:HKM_Controller"])
++#        robot_data_children = await robot_data.get_children()
++#        for child in robot_data_children:
++#            child_path = await child.read_display_name()            
++#            logger.info(f"    Object child: {child}, path: {child_path}")
++ #       print("***")
++ #       print(f"Building subtree from {robot_data}")
++ #       tree = await c.build_subtree(robot_data)
++ #       print(tree)
++ #       print("***")
++ #       with open("/tmp/apa.txt", "w") as text_file:
++ #           browse = await c.browse_nodes(root)
++ #           text_file.write(str(browse))
+ 
+-    l = asyncio.get_event_loop()
++        #tree = await c.build_subtree(root)
++        #logger.info(f"Build subtree: {tree}")
++ 
++       #apa = await c.get_subtree_as_dict(["2:MyObject"])
++        
++    loop = asyncio.get_event_loop()
+     try:
+         print("Running opcua client test")
+-        l.run_until_complete(test_me())
++        loop.run_until_complete(main())
+     finally:
+-        l.close()
++        loop.close()
+diff --git a/src/tests/utils.py b/src/tests/utils.py
+index 9cb5939..453146e 100644
+--- a/src/tests/utils.py
++++ b/src/tests/utils.py
+@@ -10,6 +10,7 @@ from time import sleep
+ from munch import Munch
+ 
+ import utils.config
++from utils.config import Config
+ from infra.api_server import DEFAULT_PORT, ApiServer
+ from infra.metrics_manager import ImageManager, MetricsManager
+ 
+@@ -29,6 +30,6 @@ def init_apiserver(port: int = DEFAULT_PORT, config=None):
+     while not apiserver.is_running:
+         sleep(0.1)
+     if config is not None:
+-        utils.config._loaded_config = Munch.fromDict(config)
++        utils.config._loaded_config = Config(Munch.fromDict(config), None, None)
+ 
+     return mm, im, apiserver
+diff --git a/src/utils/config.py b/src/utils/config.py
+index 91cba10..fa5a6ec 100644
+--- a/src/utils/config.py
++++ b/src/utils/config.py
+@@ -1,4 +1,5 @@
+ import argparse
++from dataclasses import dataclass
+ import importlib
+ import json
+ import logging
+@@ -17,7 +18,18 @@ logger = logging.getLogger(__name__)
+ 
+ DEFAULT_CONFIG_DIR = os.getenv('XDG_CONFIG_HOME', os.path.join(os.path.expanduser('~'), '.config', 'sicsai'))
+ 
+-_loaded_config: munch.Munch | None = None
++@dataclass
++class Config:
++    """
++    Represents the run configuration, retrieved from files, properties and the command line,
++    and meta data about its resolution.
++    """
++    config: munch.Munch
++    base_config_path: Path | None
++    local_config_path: Path | None
++    
++
++_loaded_config: Config | None = None
+ 
+ # If any of these keywords are used as values in the config file they will be interpreted as
+ # activating the group/section. For example if the config file contains:
+@@ -424,20 +436,26 @@ def _extend_config_with_commandline_args(
+ def get_config(args=None, base_config_file=None, require_valid_args=False) -> munch.Munch:
+     global _loaded_config
+     if _loaded_config is not None:
+-        return _loaded_config
++        return _loaded_config.config
+ 
+     # OK we need to load and merge the configuration here. There are three sources:
++    #
+     # 1. The default configuration file in the project (config/config.toml)
+     # 2. The local configuration file in the user's config directory (usually ~/.config/sicsai/config.local.toml)
+     # 3. Command line arguments
++    # TODO: 4. Overriding environment variables, e.g. SOME_VARIBLE=true sets some.variable=true
++    # 
+     # We will combine them in to a hierarchical structure with the command line arguments overriding the local
+     # configuration file which overrides the default configuration file.
+ 
+     # This will be the root of the project
+     if base_config_file is None:
+         project_dir = Path(os.path.realpath(__file__)).parent.parent.parent
+-        base_config_file = project_dir / "config" / "config.zombiesnack.toml"
+-    config = toml.load(base_config_file)
++        base_config_path = project_dir / "config" / "config.zombiesnack.toml"
++    else:
++        base_config_path = Path(base_config_file)
++
++    config = toml.load(base_config_path)
+     # Enforce - instead of _ in all keys
+     config = _dict_with_dashes(config)
+ 
+@@ -451,19 +469,21 @@ def get_config(args=None, base_config_file=None, require_valid_args=False) -> mu
+         local_config_path = Path(DEFAULT_CONFIG_DIR) / "config.local.toml"
+     else:
+         local_config_path = Path(config_args.config_file)
++
+     if local_config_path.exists():
+         logger.debug(f"Loading local config from {local_config_path}")
+         local_config = toml.load(local_config_path)
+         local_config = _dict_with_dashes(local_config)
+         deep_merge_dict(config, local_config)
+     elif config_args.config_file is not None:
+-        logger.info(f"Local config file {local_config_path} does not exist")
+-        raise IOError(f"Local config file {local_config_path} does not exist")
++        msg = f"Local config file {local_config_path} does not exist"
++        logger.info(msg)
++        raise IOError(msg)
+ 
+-    config = _extend_config_with_commandline_args(config, base_config_file, all_normal_args, require_valid_args)
++    config = _extend_config_with_commandline_args(config, base_config_path, all_normal_args, require_valid_args)
+ 
+-    _loaded_config = munch.munchify(config)
+-    return _loaded_config
++    _loaded_config = Config(munch.munchify(config), base_config_path, local_config_path)
++    return _loaded_config.config
+ 
+ 
+ def _remove_none_values(d: dict) -> dict:

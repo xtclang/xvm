@@ -1,0 +1,39 @@
+name: XVM Prune Old Snapshots
+on:
+  push:
+    branches:
+      - publish-and-release
+  schedule:
+    - cron: '0 0 * * *' # Run every day at midnight
+env:
+  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+  ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
+jobs:
+  xdk-prune-snapshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delete old snapshots of XTC Plugin
+        uses: joshdk/github-packages-delete@v5
+        with:
+          token: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
+          min-versions-to-keep: 10
+          package-type: maven
+          package-name: org.xtclang.xtc-plugin
+          package-version: SNAPSHOT
+      - name: Delete old snapshots of XTC Plugin Metainfo
+        uses: joshdk/github-packages-delete@v5
+        with:
+          token: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
+          min-versions-to-keep: 10
+          package-type: maven
+          package-name: org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin
+          package-version: SNAPSHOT
+      - name: Delete old snapshots of XDK
+        uses: joshdk/github-packages-delete@v5
+        with:
+          token: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
+          min-versions-to-keep: 10
+          package-type: maven
+          package-name: org.xtclang.xdk
+          package-version: SNAPSHOT

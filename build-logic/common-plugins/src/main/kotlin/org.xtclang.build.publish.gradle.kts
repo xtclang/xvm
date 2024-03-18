@@ -1,9 +1,19 @@
+import gradle.kotlin.dsl.accessors._dc4d05473e8224611f7ddf3b32129942.implementation
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
     id("maven-publish") // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication. We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or find a better way to add the default maven publication.
+    java
 }
+
+//dependencies {
+//    implementation("org.kohsuke:github-api:1.320")
+//}
+
+// Implement logic that checks the latest publication tag for master.
+// SNapshots don't need a tag.
+// If we push a non snapshot version, we should tag the commit
 
 /*
  * Should we publish the plugin to a common build repository and copy it to any localDist?
@@ -37,7 +47,7 @@ publishing {
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
         with(xdkBuildLogic.github()) {
             if (verifyGitHubConfig()) {
-                logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
+                logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization")
                 maven {
                     name = "GitHub"
                     description = "Publish all publications to the xtclang.org GitHub repository."

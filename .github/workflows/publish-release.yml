@@ -1,0 +1,31 @@
+# Always publish a release if it does not exist already.
+
+# TODO: Github variables, GitHub secrets and Github deployment keys can all be used from here.
+#
+
+name: XVM Publish Release
+on:
+  push:
+    branches:
+      - master
+      - publish-and-release
+env:
+  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+jobs:
+  xdk-publish-release:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v3
+      - name: XVM installDist as Publication Input
+        run: ./gradlew installDist
+      - name: XDK Publish Snapshot to xtclang.org GitHub Maven Packages.
+        run: ./gradlew publishRemoteSnapshot
+        env:
+          ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
+          ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}

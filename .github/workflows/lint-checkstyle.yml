@@ -1,0 +1,40 @@
+#
+# GitHub runner workflow for building, verifying and testing the XVM repo.
+#
+
+name: XVM Lint
+
+# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
+on: push
+
+env:
+  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+  ORG_GRADLE_PROJECT_includeBuildManualTests: true
+  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+
+  ORG_XTCLANG_JAVA_LINT: true
+  ORG_XTCLANG_JAVA_MAX_WARNINGS: 10000
+  ORG_XTCLANG_JAVA_MAX_ERRORS: 10000
+  ORG_XTCLANG_JAVA_WARNINGS_AS_ERRORS: true
+  ORG_XTCLANG_BUILD_CHECKSTYLE: false #TODO
+  ORG_XTCLANG_BUILD_CHECKSTYLE_FAIL_ON_ERROR: false
+
+  gradle_options: --stacktrace --warning-mode all --console verbose
+
+jobs:
+  lint:
+    if: ${{ false }}
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-disabled: true
+      - name: Ensure code standard and Java linting is correct.
+        run: ./gradlew ${{ env.gradle_options }} build | tee ${{ github.workspace }}/lint-checkstyle-build.log
+        # TODO Upload artifact of warnings.
+

@@ -1,0 +1,116 @@
+#
+# GitHub runner workflow for building, verifying and testing the XVM repo.
+#
+
+name: XVM Install and Check
+
+# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
+on: push
+
+env:
+  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+  ORG_GRADLE_PROJECT_includeBuildManualTests: true
+  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
+  gradle_options: --stacktrace --warning-mode all --console verbose
+
+jobs:
+  parse-semver:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+
+  gradle-install-dist:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+    needs:
+      parse-semver
+
+    steps:
+      - name: Checkout repository branch
+        uses: actions/checkout@v4
+        run: |
+          echo "XDK_VERSION=$(cat ${{ github.workspace }}/VERSION)" >> "$GITHUB_ENV"
+          echo "XDK_LATEST_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
+
+      - name: Check XDK version and tags
+        run: |
+          echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
+          if [[ "$XDK_VERSION" == *SNAPSHOT ]]; then
+            echo "*** XDK_VERSION is SNAPSHOT."
+            echo "XDK_SNAPSHOT=1" >> "$GITHUB_ENV"
+          else
+            echo "*** XDK_VERSION is RELEASE."          
+          fi
+          echo "*** XDK_VERSION GITHUB_REF: ${{ github.ref }} ${{ github.actor }}"
+          echo "*** XDK_VERSION GITHUB_REF: $GITHUB_REF $GITHUB_ACTOR"
+          echo "*** XDK_VERSION_LATEST_TAG: ${{ env.XDK_LATEST_TAG }}"
+
+      - name: Setup Java and system-wide caching
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Setup Gradle and Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: false
+
+      - name: Execute Gradle installDist
+        run: ./gradlew ${{ env.gradle_options }} installDist
+
+      - name: Execute Gradle manualTest sanity checks
+        run: |
+          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
+          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
+          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
+          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
+          
+        # TODO: Only on push to master
+      - name: XDK Publish Snapshot to xtclang.org GitHub Maven Packages.
+        if: ${{[[ "$XDK_VERSION" ] == *SNAPSHOT ]]}}
+        run: echo "*** XDK_VERSION Publishing SNAPSHOT" && ./gradlew publishRemoteSnapshot
+        env:
+          ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
+          ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
+#...
+#job:
+#  test_semver_parser:
+#    runs_on: ubuntu_latest
+#    steps:
+#      - name: Parse semver string
+#        id: semver_parser
+#        uses: booxmedialtd/ws-action-parse-semver@v1
+#        with:
+#          input_string: '1.0.4'
+#      - name: Use parsed semver
+#        run: |
+#          echo "v${{ steps.semver_parser.outputs.major }}"
+#          echo "v${{ steps.semver_parser.outputs.minor }}"
+#          echo "v${{ steps.semver_parser.outputs.patch }}"
+#          echo "v${{ steps.semver_parser.outputs.prerelease }}"
+#          echo "v${{ steps.semver_parser.outputs.build }}"
+#          echo "v${{ steps.semver_parser.outputs.fullversion }}"
+        # Fail with exit 1
+        # For a release - check if it is already tagged. If this is the case, warn or ignore.
+        # If it's not tagged, create a tag with VERSION (without the snapshot) and push it.
+        # Bump the VERSION and write it back to VERISON with a snapshot suffix.
+        # Release should be a separate workflow triggered by pushing a tag.
+        #
+        # Parse the VERSION file. If it's a snapshot version, just publish the snapshot and do nothing,
+        #
+        # If this is a release version x.y.z, check if the tag vx.y.z exists. If it does, fail. We cannot
+        # overwrite an existing release.
+        # If the tag does not exists, create it and push it. Also replace the contents of x.y.z with
+        # x.y.(z+1)-SNAPSHOT or with
+        #
+      #- name: XDK Publish release artifact
+      #  if: $${{[[ "$XDK_VERSION" ] != *SNAPSHOT ]]}}
+      # styfle/cancel-workflow-action@0.10.0

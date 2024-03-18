@@ -7,8 +7,6 @@ import io.github.rybalkinsd.kohttp.dsl.http
 import io.github.rybalkinsd.kohttp.jackson.ext.toJson
 import okhttp3.Response
 import org.gradle.api.Project
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Helper class to access GitHub packages for the "xtclang" org, and other build logic
@@ -25,12 +23,10 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
         private const val GITHUB_USER = "$GITHUB_PREFIX.user"
         private const val GITHUB_TOKEN = "$GITHUB_PREFIX.token"
         private const val GITHUB_URL = "$GITHUB_PREFIX.url"
-        private const val GITHUB_READONLY = "$GITHUB_PREFIX.readonly"
 
         private const val GITHUB_URL_DEFAULT_VALUE = "https://maven.pkg.github.com/xtclang"
         private const val GITHUB_ORG_DEFAULT_VALUE = "xtclang"
         private const val GITHUB_USER_RO_DEFAULT_VALUE = "xtclang-bot"
-        private const val GITHUB_TOKEN_RO_DEFAULT_VALUE = "Z2hwX0ZjNGRWeDhNYmxPcnZDYWZrRW96Q0NrQXAzaVZ5RjBUb0NheAo="
 
         val publishTaskPrefixes = listOf("list", "delete")
         val publishTaskSuffixesRemote = listOf("AllRemotePublications")
@@ -49,16 +45,10 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
     init {
         with(project) {
             val user = getXdkProperty(GITHUB_USER, GITHUB_USER_RO_DEFAULT_VALUE)
-            val ro = getXdkPropertyBoolean(GITHUB_READONLY) || user == GITHUB_USER_RO_DEFAULT_VALUE
-            credentials = user to (if (ro) decodeToken(GITHUB_TOKEN_RO_DEFAULT_VALUE) else getXdkProperty(GITHUB_TOKEN, ""))
+            credentials = user to getXdkProperty(GITHUB_TOKEN, "")
             packagesUrl = getXdkProperty(GITHUB_URL, GITHUB_URL_DEFAULT_VALUE)
             org = getXdkProperty(GITHUB_ORG, GITHUB_ORG_DEFAULT_VALUE)
         }
-    }
-
-    @OptIn(ExperimentalEncodingApi::class)
-    private fun decodeToken(str: String): String {
-        return runCatching { Base64.decode(str).toString(Charsets.UTF_8).trim() }.getOrDefault("")
     }
 
     val uri: String get() = packagesUrl
@@ -68,9 +58,6 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
     val token: String get() = credentials.second
 
     val organization: String get() = this.org
-
-    val isReadOnly: Boolean get() =
-        user == GITHUB_TOKEN_RO_DEFAULT_VALUE && token == decodeToken(GITHUB_TOKEN_RO_DEFAULT_VALUE)
 
     fun queryXtcLangPackageNames(): List<String> {
         return buildList {
@@ -122,7 +109,6 @@ class GitHubPackages(project: Project) : XdkProjectBuildLogic(project) {
                     $prefix   '$GITHUB_PREFIX.url'      [configured: $hasGitHubUrl ($uri)]
                     $prefix   '$GITHUB_PREFIX.user'     [configured: $hasGitHubUser ($user)]           
                     $prefix   '$GITHUB_PREFIX.token'    [configured: $hasGitHubToken ($REDACTED)]
-                    $prefix   '$GITHUB_PREFIX.readonly' [configured: ${isReadOnly}]
                     """.trimIndent()
             )
             return false
