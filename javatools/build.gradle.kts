@@ -1,4 +1,5 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /**
@@ -8,6 +9,7 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.tasktree)
+    alias(libs.plugins.shadow)
 }
 
 val semanticVersion: SemanticVersion by extra
@@ -42,6 +44,7 @@ dependencies {
     // Debugging use case: If we want IDE debugging, executing the Compiler or Runner manually, we need javatools-utils as an implementation dependency.
     implementation(libs.javatools.utils)
     testImplementation(libs.javatools.utils)
+    implementation(libs.jline)
 }
 
 /**
@@ -98,6 +101,23 @@ val jar by tasks.existing(Jar::class) {
     }
 }
 
+/**
+ * TODO: Marcus suggests that merging the jars is not a good way to go. Instead we simply need to
+ *       get the jline.jar into our distribution (installDist task) and point to it in the manifest
+ *       of the javatools.jar
+ */
+val shadowJar by tasks.existing(ShadowJar::class) {
+    dependsOn(jar)
+
+    archiveBaseName = "javatools"
+
+    from(tasks.jar.get().archiveFile)
+
+    dependencies {
+        include(dependency(libs.jline.get()))
+    }
+}
+
 val assemble by tasks.existing {
     dependsOn(sanityCheckJar) // "assemble" already depends on jar by default in the Java build life cycle
 }
@@ -107,12 +127,12 @@ val sanityCheckJar by tasks.registering {
     description =
         "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
 
-    dependsOn(jar)
+    dependsOn(shadowJar)
 
     val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
     val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
     inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
-    inputs.file(jar)
+    inputs.file(shadowJar)
 
     logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
 
