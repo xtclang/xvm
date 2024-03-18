@@ -37,7 +37,7 @@ publishing {
         logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
         with(xdkBuildLogic.github()) {
             if (verifyGitHubConfig()) {
-                logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization, read-only: $isReadOnly)")
+                logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization")
                 maven {
                     name = "GitHub"
                     description = "Publish all publications to the xtclang.org GitHub repository."
