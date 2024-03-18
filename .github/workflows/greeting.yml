@@ -13,6 +13,7 @@ env:
   DAY_OF_WEEK: Monday
 jobs:
   greeting_job:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     env:
       Greeting: Hello

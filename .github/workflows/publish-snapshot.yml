@@ -20,7 +20,7 @@ env:
 #      - master
 #      - publish-and-release-fixes  #TODO: Remove after testing.
 jobs:
-  gradle:
+  xdk-publish-snapshot:
     runs-on: ubuntu-latest
     steps:
       - name: Check out XDK code
