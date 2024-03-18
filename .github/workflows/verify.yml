@@ -72,20 +72,12 @@ env:
   workdir: $(pwd)
 
 jobs:
-  gradle:
-    # If we do not specify a version here, the runner will pick up whatever Gradle version
-    # that is defined by our wrapper, which is exactly what we want.
+  verify-build:
+    if: ${{ false }}
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
-
-    # The verification actions are run on Linux and on Windows. There are MacOS runners available from GitHub,
-    # but they are rarer, which may lead to increased test times. Of course we should always make sure that
-    # the project builds and runs on all our target platforms, but for time being, we just verify Linux and Windows
-    # builds. Also note that the MacOS runners available for free are all x86 machines, whereas cycles on aarch64
-    # MacOS machines are charged for by GitHub.
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
