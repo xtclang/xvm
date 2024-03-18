@@ -16,15 +16,9 @@ env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
-#    branches:
-#      - master
-#      - publish-and-release-fixes  #TODO: Remove after testing.
 jobs:
   xdk-publish-snapshot:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -32,4 +26,10 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v3
-      - uses: ./gradlew tasks --info --stacktrace
+      - name: XDK Install
+        run: ./gradlew installDist
+      - name: XDK Publish Snapshot to XtcLang GitHub Maven Packages.
+        run: ./gradlew publishRemoteSnapshot
+        env:
+          ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
+          ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}

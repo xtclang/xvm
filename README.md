@@ -420,7 +420,12 @@ To see the list of available tasks for the XDK build, use:
 
 * Use `publishLocal`to publish an XDK build to the local Maven repository and a build specific repository directory.
 * Use `publishRemote`to publish and XDK build to the xtclang organization package repo on GitHub (a GitHub token with
-  permissions is required).
+  permissions is required). This task will fail if you are trying to publish a SNAPSHOT release to a release repository,
+  or if the XDK version you are building is a SNAPSHOT version. 
+* Use `publishRemoteSnapshot` to publish a SNAPSHOT release to the release repository. Note that the code is identical,
+  and build will behave correctly, dependning only whether the VERSION file contains a SNAPSHOT suffixed version or not.
+  The reason that there are two different tasks, is to minimize accidental publishing of a SNAPSHOT as a release or
+  vice versa.
 * Use `publish` to run both of the above tasks.
 
 *Note*: At the moment some publish tasks may have some raciness in execution, due to Gradle issues. Should you 

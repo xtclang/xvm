@@ -191,29 +191,24 @@ fun Project.getXdkProperty(key: String, defaultValue: String? = null): String {
     return xdkBuildLogic.props().get(key, defaultValue)
 }
 
-private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
-    with(task) {
-        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
-    }
-    return value
-}
-
-fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
-    return registerXdkPropertyInput(this, key, project.getXdkPropertyBoolean(key, defaultValue))
-}
-
-fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
-    return registerXdkPropertyInput(this, key, project.getXdkPropertyInt(key, defaultValue))
-}
-
-fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
-    return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
-}
-
 fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable {
     val prefixed = "$prefix $msg"
     logger.log(level, prefixed)
     return GradleException(prefixed)
+}
+
+fun Project.isSnapshot(): Boolean {
+    if (version == Project.DEFAULT_VERSION) {
+        throw buildException("Project was not versioned. Cannot tell whether it's a snapshot or not.")
+    }
+    return version.toString().endsWith("SNAPSHOT");
+}
+
+fun Project.checkSnapshot(snapshot: Boolean): Boolean {
+    if (snapshot != isSnapshot()) {
+        throw buildException("Project '${project.name}' is not a snapshot. This operation is only allowed for snapshot builds.")
+    }
+    return true
 }
 
 /**
@@ -232,4 +227,23 @@ fun Task.considerNeverUpToDate() {
  */
 fun Task.considerAlwaysUpToDate() {
     outputs.upToDateWhen { true }
+}
+
+private fun <T> registerXdkPropertyInput(task: Task, key: String, value: T): T {
+    with(task) {
+        logger.info("$prefix Task tunneling property for $key to project. Can be set as input provider.")
+    }
+    return value
+}
+
+fun Task.getXdkPropertyBoolean(key: String, defaultValue: Boolean? = null): Boolean {
+    return registerXdkPropertyInput(this, key, project.getXdkPropertyBoolean(key, defaultValue))
+}
+
+fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
+    return registerXdkPropertyInput(this, key, project.getXdkPropertyInt(key, defaultValue))
+}
+
+fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
+    return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }

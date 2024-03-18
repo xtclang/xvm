@@ -57,9 +57,22 @@ val installDist by tasks.registering {
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
+    onlyIf {
+        checkSnapshot(false)
+    }
     includedBuildsWithPublications.forEach {
         dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
-        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately after plugin branch gets merged to master)
+    }
+}
+
+val publishRemoteSnapshot by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Publish (aggregate) all artifacts in the XDK to the remote snapshot repositories."
+    onlyIf {
+        checkSnapshot(true)
+    }
+    includedBuildsWithPublications.forEach {
+        dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
     }
 }
 
@@ -78,7 +91,8 @@ val publishLocal by tasks.registering {
 val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
-    dependsOn(publishLocal, publishRemote)
+    dependsOn(publishLocal)
+    dependsOn(if (isSnapshot()) publishRemoteSnapshot else publishRemote)
 }
 
 GitHubPackages.publishTaskPrefixes.forEach { prefix ->
