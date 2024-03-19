@@ -496,6 +496,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         });
 
         // Configuration for anyone needing a zipped artifact of the XDK, because apparently we can't have library elements.
+
+        for (final var dep : project.getConfigurations()) {
+            System.err.println("dep: " + dep + " " + dep.getClass().getName());
+        }
         configs.register(XDK_CONFIG_NAME_INCOMING_ZIP, config -> {
             config.setDescription("Configuration specifying dependencies on a particular XDK distribution.");
             config.setCanBeResolved(true);

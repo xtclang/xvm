@@ -32,6 +32,7 @@ public class Compiler
      */
     public Compiler(TypeCompositionStatement stmtModule, ErrorList errs)
         {
+            System.err.println("Compiler 3");
         if (stmtModule == null)
             {
             throw new IllegalArgumentException("AST node for module required");
