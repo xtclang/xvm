@@ -106,6 +106,9 @@ class SimpleResponse
 
     @Override
     String toString() {
-        return status.toString();
+        Body? body = this.body;
+        return body != Null && body.bytes.size > 0 && (mediaType == Json || mediaType == Text)
+            ? $"{status} : {body.bytes.unpackUtf8()}"
+            : status.toString();
     }
 }

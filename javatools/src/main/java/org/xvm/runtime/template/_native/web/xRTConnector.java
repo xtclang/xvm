@@ -315,8 +315,10 @@ public class xRTConnector
                     nResponseStatus = 206; // "Partial Content"
                     nContentLength  = cMaxSize;
                     }
-                InputStream in = conn.getInputStream();
-                byte[]      ab = new byte[nContentLength];
+                InputStream in = nResponseStatus >= 400
+                        ? conn.getErrorStream()
+                        : conn.getInputStream();
+                byte[] ab = new byte[nContentLength];
 
                 in.read(ab, 0, nContentLength);
                 abResponse = ab;
