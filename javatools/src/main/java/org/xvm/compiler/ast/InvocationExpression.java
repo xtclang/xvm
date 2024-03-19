@@ -36,6 +36,7 @@ import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
 import org.xvm.asm.ast.OuterExprAST;
 import org.xvm.asm.ast.RegisterAST;
+import org.xvm.asm.ast.TupleExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -1919,7 +1920,19 @@ public class InvocationExpression
                     throw new UnsupportedOperationException("invocation " + combine(chArgs, chRets));
                 }
 
-            m_astInvoke = new CallExprAST(astFn, getTypes(), aAsts, fAsync);
+            if (m_fPack)
+                {
+                TypeConstant typeTuple = getType();
+                assert typeTuple.isTuple();
+
+                ExprAST astCall = new CallExprAST(astFn,
+                                        typeTuple.getParamTypesArray().clone(), aAsts, fAsync);
+                m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astCall});
+                }
+            else
+                {
+                m_astInvoke = new CallExprAST(astFn, getTypes(), aAsts, fAsync);
+                }
             return;
             }
 
