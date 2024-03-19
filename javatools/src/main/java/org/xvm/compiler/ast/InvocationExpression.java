@@ -1623,7 +1623,20 @@ public class InvocationExpression
                                     throw new UnsupportedOperationException("invocation: " + combine(chArgs, chRets));
                                 }
 
-                            m_astInvoke = new InvokeExprAST(idMethod, getTypes(), m_astTarget, aAsts, fAsync);
+                            if (m_fPack)
+                                {
+                                TypeConstant typeTuple = getType();
+                                assert typeTuple.isTuple();
+
+                                ExprAST astInvoke = new InvokeExprAST(idMethod,
+                                        typeTuple.getParamTypesArray(), m_astTarget, aAsts, fAsync);
+                                m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astInvoke});
+                                }
+                            else
+                                {
+                                m_astInvoke = new InvokeExprAST(idMethod,
+                                        getTypes(), m_astTarget, aAsts, fAsync);
+                                }
                             return;
                             }
                         else // _NOT_ m_fCall
@@ -1925,8 +1938,7 @@ public class InvocationExpression
                 TypeConstant typeTuple = getType();
                 assert typeTuple.isTuple();
 
-                ExprAST astCall = new CallExprAST(astFn,
-                                        typeTuple.getParamTypesArray().clone(), aAsts, fAsync);
+                ExprAST astCall = new CallExprAST(astFn, typeTuple.getParamTypesArray(), aAsts, fAsync);
                 m_astInvoke = new TupleExprAST(typeTuple, new ExprAST[] {astCall});
                 }
             else
