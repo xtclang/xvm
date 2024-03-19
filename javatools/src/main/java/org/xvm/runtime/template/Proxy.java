@@ -457,10 +457,10 @@ public class Proxy
             }
 
         @Override
-        public TypeConstant getType()
+        protected TypeConstant augmentType(TypeConstant type)
             {
-            // don't augment the type
-            return super.getComposition().getType();
+            // don't augment the proxy type
+            return type;
             }
 
         @Override

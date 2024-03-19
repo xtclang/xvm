@@ -144,7 +144,14 @@ public abstract class ObjectHandle
      */
     public TypeConstant getType()
         {
-        TypeConstant type = getComposition().getType();
+        return augmentType(getComposition().getType());
+        }
+
+    /**
+     * Augment the type based on the handle immutability and serviceability.
+     */
+    protected TypeConstant augmentType(TypeConstant type)
+        {
         if (!isMutable())
             {
             type = type.freeze();
@@ -1051,10 +1058,7 @@ public abstract class ObjectHandle
         @Override
         public TypeConstant getType()
             {
-            TypeConstant type = f_clzArray.getType();
-            return isMutable()
-                    ? type
-                    : type.freeze();
+            return augmentType(f_clzArray.getType());
             }
 
         @Override
@@ -1190,6 +1194,13 @@ public abstract class ObjectHandle
         public TypeComposition getComposition()
             {
             return assertInitialized().getComposition();
+            }
+
+        @Override
+        public TypeConstant getType()
+            {
+            // we don't need to be to have a handle to answer the "type" question
+            return augmentType(f_constSingleton.getType());
             }
 
         @Override

@@ -389,20 +389,12 @@ public class xRTSignature
             f_nDepth   = nDepth;
             }
 
-        @Override
-        public boolean isNativeEqual()
-            {
-            return false;
-            }
-
         // ----- fields -----------------------------------------------------------------------
 
         @Override
         public TypeConstant getType()
             {
-            return isMutable()
-                    ? f_type
-                    : f_type.freeze();
+            return augmentType(f_type);
             }
 
         public MethodConstant getMethodId()
