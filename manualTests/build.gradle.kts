@@ -80,7 +80,7 @@ plugins {
  * understand how to build a project with XTC and Gradle.
  */
 dependencies {
-    xdk(libs.xdk)
+    xdkDistribution(libs.xdk)
 }
 
 /**

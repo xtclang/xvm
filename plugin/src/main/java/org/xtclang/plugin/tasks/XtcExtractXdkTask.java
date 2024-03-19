@@ -50,15 +50,16 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
         return XtcProjectDelegate.getXdkContentsDir(project);
     }
 
+    @Override
     @TaskAction
-    public void extractXdk() {
+    public void executeTask() {
         super.executeTask();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = filesFromConfigs(true, XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING).filter(XtcExtractXdkTask::isXdkArchive);
 
         if (archives.isEmpty()) {
-            logger.info("{} Project does NOT depend on the XDK; {} is a nop.", prefix(), getName());
+            logger.lifecycle("{} Project does NOT depend on the XDK; {} is a nop.", prefix(), getName());
             return;
         }
 
