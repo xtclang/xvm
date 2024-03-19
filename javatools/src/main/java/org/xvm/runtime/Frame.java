@@ -774,9 +774,10 @@ public class Frame
             //        {
             //        return bar();
             //        }
-            if (nVar < 0 && nVar != Op.A_IGNORE)
+            if (nVar == Op.A_STACK)
                 {
-                return raiseException(xException.unassignedValue(this, "@" + nVar));
+                // the caller should never ask for it; assert if it happens
+                pushStack(ObjectHandle.DEFAULT);
                 }
 
             return Op.R_NEXT;
@@ -1623,7 +1624,7 @@ public class Frame
         }
 
     /**
-     * Unlike getArgument(), this could return a non-completed FutureHandle, and it never throws
+     * Unlike getArgument(), this could return a non-completed FutureHandle.
      *
      * @return an ObjectHandle (could be DeferredCallHandle)
      *

@@ -401,7 +401,7 @@ public class Proxy
                 for (int i = cReturns - 1; i >= 0; i--)
                     {
                     ObjectHandle hReturn = frame.popStack();
-                    if (hReturn == xBoolean.FALSE && i == cReturns - 1 &&
+                    if (hReturn == xBoolean.FALSE && i == 0 &&
                             method.isConditionalReturn())
                         {
                         // conditional False
