@@ -30,4 +30,13 @@ class Medium {
         assert si1 != si2;
         assert !checkEquals(si1, si2);
     }
+
+    <T> Boolean checkEquals(T t1, T t2) {
+        return t1 == t2;
+    }
+
+    <T> Boolean checkArrayEquals(T[] a1, T[] a2) {
+        return a1 == a2;
+    }
+
 }
