@@ -125,9 +125,10 @@ class BinOpAST extends AST {
   @Override AST postwrite() {
 
     // LHS is some kind of wrapped int that did not unwrap in the prewrite
-    if( _kids[0]._type.isa(XCons.INTNUM) ) {
+    if( _kids[0]._type.isa(XCons.INTNUM) && _kids[1]._type != XCons.NULL ) {
       String op = switch( _op0 ) {
       case "==" -> "eq";
+      case "!=" -> "ne";
       case ">=" -> "ge";
       default -> throw XEC.TODO();
       };
