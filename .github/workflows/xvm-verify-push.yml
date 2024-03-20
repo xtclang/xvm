@@ -29,7 +29,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v3s
+      - uses: gradle/actions/setup-gradle@v3
       - uses: gradle/actions/setup-gradle@v3
       - run: echo ${{ env.workdir }}
       - run: ./gradlew ${{ env.gradle_options }} build
