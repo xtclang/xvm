@@ -31,7 +31,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v3s
       - uses: gradle/actions/setup-gradle@v3
       - name: Lint and shame users who don't use generics and stuff
         run: ./gradlew ${{ env.gradle_options }} build
