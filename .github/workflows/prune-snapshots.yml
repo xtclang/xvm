@@ -1,12 +1,16 @@
 name: XDK Prune Old Snapshots
 on:
+  push:
+    branches:
+      - master
+      - publish-and-release
   schedule:
     - cron: '0 0 * * *' # Run every day at midnight
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
 jobs:
-  xdk-prune-snapshot:
+  xdk-prune-snapshots:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

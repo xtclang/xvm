@@ -7,6 +7,11 @@
 # It will delete older SNAPSHOT publications if we have too many of them.
 # Any consumer can refer to a SNAPSHOT version, a version pattern like 'any version after this', and to 'latest.integration' to use these.
 #
+# On push to master - update the snapshot artifact
+# We also support manual release publication, which seems can't be triggred until merge to main
+# However, we will check if the current VERSION file number already exists, and warn/skip the release
+# action.
+#
 
 name: XDK Publish Snapshot
 on: push
@@ -24,7 +29,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
       - name: XDK Install
         run: ./gradlew installDist
-      - name: XDK Publish Snapshot to XtcLang GitHub Maven Packages.
+      - name: XDK Publish Snapshot to xtclang.org GitHub Maven Packages.
         run: ./gradlew publishRemoteSnapshot
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
