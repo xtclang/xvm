@@ -13,7 +13,7 @@
 # action.
 #
 
-name: XDK Publish Snapshot
+name: XVM Publish Snapshot
 on: push
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true

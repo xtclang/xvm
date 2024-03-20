@@ -9,12 +9,12 @@
 # the `language` matrix defined below to confirm you have the correct set of
 # supported CodeQL languages.
 #
-name: "CodeQL"
+name: "XVM CodeQL"
 
-on:
-  workflow_dispatch:
-  push:
-    branches: [ publish-and-release ]
+on: push
+#  workflow_dispatch:
+#  push:
+#    branches: [ publish-and-release ]
 #  pull_request:
 #    branches: [ "master" ]
 #  schedule:
@@ -34,11 +34,9 @@ jobs:
     permissions:
       # required for all workflows
       security-events: write
-
       # only required for workflows in private repositories
       actions: read
       contents: read
-
     strategy:
       fail-fast: false
       matrix:
@@ -56,8 +54,6 @@ jobs:
 
           # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
           # queries: security-extended,security-and-quality
-
-
       # Autobuild attempts to build any compiled languages (C/C++, C#, Go, Java, or Swift).
       # If this step fails, then you should remove it and run the build manually (see below)
       - name: Autobuild

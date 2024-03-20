@@ -2,7 +2,9 @@
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
 
-name: Verify XDK build
+## TODO INSTALLDIST SHOULD BE A COMMON JOB.
+
+name: XVM Verify Push
 
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
 on: push
@@ -11,10 +13,7 @@ env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
-
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
-
-  workdir: $(pwd)
   gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:
@@ -29,10 +28,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+          cache: 'gradle'
       - uses: gradle/actions/setup-gradle@v3
-      - uses: gradle/actions/setup-gradle@v3
-      - run: echo ${{ env.workdir }}
-      - run: ./gradlew ${{ env.gradle_options }} build
+        with:
+          cache-read-only: false
       - run: ./gradlew ${{ env.gradle_options }} installDist
       - run: ./gradlew ${{ env.gradle_options }} manualTests:runXtc
       - run: ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc

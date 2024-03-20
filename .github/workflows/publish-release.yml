@@ -3,7 +3,7 @@
 # TODO: Github variables, GitHub secrets and Github deployment keys can all be used from here.
 #
 
-name: XDK Publish Release
+name: XVM Publish Release
 on:
   push:
     branches:

@@ -2,7 +2,7 @@
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
 
-name: Verify XDK build
+name: XVM Lint
 
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
 on: push
@@ -23,7 +23,7 @@ env:
 
 jobs:
   lint:
-    #if: ${{ false }}
+    if: ${{ false }}
     runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v4
