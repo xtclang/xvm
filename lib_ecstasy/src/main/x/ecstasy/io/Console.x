@@ -14,10 +14,11 @@ interface Console {
     /**
      * Read a line of user input from the console.
      *
+     * @param prompt        (optional) the textual prompt to output to the console
      * @param suppressEcho  (optional) pass True to prevent the automatic display of typed input to
      *                      the console as it is typed
      *
      * @return the input string
      */
-    String readLine(Boolean suppressEcho = False);
+    String readLine(String prompt = "", Boolean suppressEcho = False);
 }

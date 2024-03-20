@@ -7,7 +7,7 @@ service TerminalConsole
     void print(Object object= "", Boolean suppressNewline = False);
 
     @Override
-    String readLine(Boolean suppressEcho = False);
+    String readLine(String prompt = "", Boolean suppressEcho = False);
 
     @Override
     String toString() {
