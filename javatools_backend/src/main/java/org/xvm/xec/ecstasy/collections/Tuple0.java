@@ -15,8 +15,8 @@ public class Tuple0 extends XTC implements Tuple {
 
   public Tuple0() { this(0); }
   public Tuple0(int n) { _len = (short)n; }
-  @Override public Object at(long i) { throw XEC.TODO(); }
-  @Override public void set(long i, Object e) { throw XEC.TODO(); }
+  @Override public XTC at(long i) { throw XEC.TODO(); }
+  @Override public void set(long i, XTC e) { throw XEC.TODO(); }
 
   public int size$get() { return _len; }
 
@@ -25,7 +25,7 @@ public class Tuple0 extends XTC implements Tuple {
   // Loses all Java compiler knowledge of the types.
   @Override public Tuple at( AbstractRange r) {
     if( r._incr != 1 ) throw XEC.TODO();
-    Object[] es = new Object[(int)r.span()];
+    XTC[] es = new XTC[(int)r.span()];
     for( int i=0; i<es.length; i++ )
       es[i] = at((int)(i+r._start));
     TupleN t = new TupleN(es);
@@ -37,11 +37,11 @@ public class Tuple0 extends XTC implements Tuple {
   public Mutability mutability$get() {
     if( _mut == -1 ) {          // Not cached?  Compute once
       for( int i=0; i<_len; i++ ) {
-        Object o = at(i);
-        // These things are all Constant mutability
-        if( o instanceof Number ) continue; // ints, longs, doubles
-        if( o instanceof String ) continue;
-        if( o instanceof Character ) continue;
+        XTC o = at(i);
+        //// These things are all Constant mutability
+        //if( o instanceof Number ) continue; // ints, longs, doubles
+        //if( o instanceof String ) continue;
+        //if( o instanceof Character ) continue;
         throw XEC.TODO();
       }
       _mut = (byte)Mutability.Constant.ordinal();
@@ -52,10 +52,10 @@ public class Tuple0 extends XTC implements Tuple {
   // Converts the underlying Tuple to a TupleN with the extra field.
   // Loses all Java compiler knowledge of the types.
   @Override
-  public Tuple add( Object x) {
+  public Tuple add( XTC x) {
     // TODO: if the underlying class is already a TupleN we can use
     // Arrays.copyOf instead of a manual copy.
-    Object[] es = new Object[_len+1];
+    XTC[] es = new XTC[_len+1];
     for( int i=0; i<_len; i++ )
       es[i] = at(i);
     es[_len] = x;
@@ -66,7 +66,7 @@ public class Tuple0 extends XTC implements Tuple {
   @Override
   public Tuple addAll( Tuple tup ) {
     int len = tup.size$get();
-    Object[] es = new Object[_len + len];
+    XTC[] es = new XTC[_len + len];
     for( int i=0; i<_len; i++ )
       es[i] = at(i);
     for( int i=0; i<len; i++ )
@@ -79,10 +79,10 @@ public class Tuple0 extends XTC implements Tuple {
   public  TupleN  add( XTC type, char   x ) { return _add(type,Char .make(x)); }
   public  TupleN  add( XTC type, long   x ) { return _add(type,Int64.make(x)); }
   public  TupleN  add( XTC type, String x ) { return _add(type,org.xvm.xec.ecstasy.text.String.make(x)); }
-  public  TupleN  add( XTC type, Object x ) { return _add(type,x); }
-  private TupleN _add( XTC type, Object x ) {
+  public  TupleN  add( XTC type, XTC x ) { return _add(type,x); }
+  private TupleN _add( XTC type, XTC x ) {
     int len = size$get();
-    Object[] es = new Object[len + 1];
+    XTC[] es = new XTC[len + 1];
     for( int i=0; i<_len; i++ )
       es[i] = at(i);
     es[len] = x;

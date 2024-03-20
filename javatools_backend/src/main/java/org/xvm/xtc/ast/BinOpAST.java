@@ -83,16 +83,6 @@ class BinOpAST extends AST {
       return this;
     }
 
-    if( _kids[0]._type == XCons.JINT128 || _kids[0]._type == XCons.JUINT128 ) {
-      String op = switch( _op0 ) {
-      case "==" -> "eq";
-      case ">=" -> "ge";
-      default -> throw XEC.TODO();
-      };
-      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
-    }
-
-
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
     if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
@@ -124,13 +114,28 @@ class BinOpAST extends AST {
     if( _op0.equals("?:") )
       return do_elvis(_kids[0],this);
 
-    // Near as I can tell, this is a way to convert a type name to a type
-    // value: e.g. "String.class".  Only seen as "Int64.GOLD as Type.GOLD"
-    if( _op0.equals("as") )
+    // Cast.  Since I treat XTC "Type" as a concrete instance XTC.GOLD,
+    // I do not need to cast to "Type".  Other casts can remain.
+    if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type<XTC,XTC>.GOLD") )
       return _kids[0];          // Types already as values
 
     return this;
   }
+
+  @Override AST postwrite() {
+
+    // LHS is some kind of wrapped int that did not unwrap in the prewrite
+    if( _kids[0]._type.isa(XCons.INTNUM) ) {
+      String op = switch( _op0 ) {
+      case "==" -> "eq";
+      case ">=" -> "ge";
+      default -> throw XEC.TODO();
+      };
+      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
+    }
+    return this;
+  }
+
 
   private AST do_elvis( AST pred0, AST elvis ) {
     XType type = pred0._type;
@@ -151,10 +156,10 @@ class BinOpAST extends AST {
   }
 
   @Override public SB jcode( SB sb ) {
-    //if( _op0.equals("as") ) {
-    //  sb.p("((").p(((XClz)_kids[1]._type).clz_bare()).p(")");
-    //  return _kids[0].jcode(sb).p(")");
-    //}
+    if( _op0.equals("as") ) {
+      sb.p("((").p(((XClz)_kids[1]._type).clz_bare()).p(")");
+      return _kids[0].jcode(sb).p(")");
+    }
     expr(sb,_kids[0]).p(_op0);
     expr(sb,_kids[1]).p(_op1);
     return sb;

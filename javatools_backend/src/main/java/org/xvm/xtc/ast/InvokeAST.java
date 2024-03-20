@@ -79,6 +79,9 @@ public class InvokeAST extends AST {
       case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL" ));
       case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL" ));
       case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL" ));
+      case "eq"  ->
+              this;
+        //new BinOpAST( "==","", XCons.LONG, _kids );
       case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "mul" -> new BinOpAST( "*", "", XCons.LONG, _kids );

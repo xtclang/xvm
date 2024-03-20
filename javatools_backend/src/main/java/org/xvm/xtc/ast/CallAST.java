@@ -37,7 +37,7 @@ public class CallAST extends AST {
     return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_rets));
   }
 
-  @Override AST postwrite() {
+  @Override AST prewrite() {
     // Try to rewrite constant calls to the XTC special equals.
     if( _kids[0] instanceof ConAST con ) {
       if( con._type instanceof XFun fun && fun.nargs()>0 && fun.arg(0) instanceof XClz clz ) {

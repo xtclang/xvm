@@ -10,8 +10,8 @@ import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
 public interface Tuple extends Cloneable {
   // Array-like interface
-  abstract public Object at(long i); // At an index
-  abstract public void set(long i, Object o); // Set an index
+  abstract public XTC at(long i); // At an index
+  abstract public void set(long i, XTC o); // Set an index
 
   public abstract int size$get();
 
@@ -22,7 +22,7 @@ public interface Tuple extends Cloneable {
 
   public abstract Mutability mutability$get();
 
-  public abstract Tuple add( Object x );
+  public abstract Tuple add( XTC x );
 
   public abstract Tuple addAll( Tuple tup );
 
@@ -57,9 +57,9 @@ public interface Tuple extends Cloneable {
          public Int64  f0() { return Int64.make(_f0); }
          public org.xvm.xec.ecstasy.text.String f1() { return org.xvm.xec.ecstasy.text.String.make(_f1); }
          public Char   f2() { return Char.make(_f2); }
-         public void f0(Object e) { _f0= ((Int64)e)._x; }
-         public void f1(Object e) { _f1= ((org.xvm.xec.ecstasy.text.String)e)._x; }
-         public void f2(Object e) { _f2= ((Char)e)._x; }
+         public void f0(XTC e) { _f0= ((Int64)e)._x; }
+         public void f1(XTC e) { _f1= ((org.xvm.xec.ecstasy.text.String)e)._x; }
+         public void f2(XTC e) { _f2= ((Char)e)._x; }
          public long   at80() { return _f0; }
          public String at81() { return _f1; }
          public char   at82() { return _f2; }
@@ -98,7 +98,7 @@ public interface Tuple extends Cloneable {
     for( int i=0; i<N; i++ ) {
       XType xt = xtt.typeParm(i);
       XType box = xt.box();
-      sb.ifmt("public void f%0(Object e) { _f%0= ((%1)e)%2; }\n",i,box.clz(),xt==box?"":"._i");
+      sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box.clz(),xt==box?"":"._i");
     }
 
     // public static boolean equals$Tuple3$...(XTC gold, Tuple0, t0, Tuple0 t1)...
