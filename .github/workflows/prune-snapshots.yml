@@ -2,7 +2,6 @@ name: XVM Prune Old Snapshots
 on:
   push:
     branches:
-      - master
       - publish-and-release
   schedule:
     - cron: '0 0 * * *' # Run every day at midnight
@@ -18,7 +17,7 @@ jobs:
         uses: joshdk/github-packages-delete@v5
         with:
           token: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
-          min-versions-to-keep: 5
+          min-versions-to-keep: 10
           package-type: maven
           package-name: org.xtclang.xtc-plugin
           package-version: SNAPSHOT
@@ -26,7 +25,7 @@ jobs:
         uses: joshdk/github-packages-delete@v5
         with:
           token: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
-          min-versions-to-keep: 5
+          min-versions-to-keep: 10
           package-type: maven
           package-name: org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin
           package-version: SNAPSHOT
@@ -34,7 +33,7 @@ jobs:
         uses: joshdk/github-packages-delete@v5
         with:
           token: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
-          min-versions-to-keep: 5
+          min-versions-to-keep: 10
           package-type: maven
           package-name: org.xtclang.xdk
           package-version: SNAPSHOT

@@ -30,6 +30,8 @@ rewrite = "6.8.4"
 rewrite-lib = "1.3.1"
 jreleaser = "1.11.0"
 kordamp = "0.54.0"
+semver = "2.0.0"
+github-api = "1.320"
 
 # TODO: There is nothing like "group-ref". Might want to just generate this from a template?
 [plugins]
@@ -49,6 +51,7 @@ gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradl
 gradle-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradle-nexus-publish" }
 # TODO: Enable GitHub releases, and this seems to be both the most popular plugin and the one closest to the right version / process semantics.
 gradle-release = { id = "net.researchgate.gradle-release", version.ref = "gradle-release" }
+#gradle-git-publish = { id = "org.ajoberstar.gradle-git-p
 jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
 kordamp = { id = "org.kordamp.gradle.checkstyle", version.ref = "kordamp" }
 
@@ -73,6 +76,8 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
+semver = { module = "net.swiftzer.semver:semver", version.ref = "semver" }
+github-api = { module = "org.kohsuke:github-api", version.ref = "github-api" }
 rewrite = { module = "org.openrewrite.recipe:rewrite-static-analysis", version.ref = "rewrite-lib" }
 kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
 kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }

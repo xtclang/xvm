@@ -3,12 +3,27 @@
 org="$1"
 repo="$2"
 
+# TODO: Package house keeping
+#   works: curl -L -H "Accept: application/vnd.github+json"  -H "Authorization: Bearer $GITHUB_TOKEN"  -H "X-GitHub-Api-Version: 2022-11-28"  "https://api.github.com/orgs/xtclang/packages?package_type=maven"
+#   works: gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "/orgs/xtclang/packages?package_type=maven"
+#   also works:  gh api "/orgs/xtclang/packages?package_type=maven"
+#  Package names.
+#  gh api "/orgs/xtclang/packages?package_type=maven" | jq -r '.[] | .name'
+# README:
+#  How to use the snapshots.
+#  Get tag, compare with latest tag, if different then add a new tag.
+#  Check if packages last version is different from the current version.
+#
+# SEMVER
+# https://github.com/swiftzer/semver/blob/main/.github/workflows/check.yml
+#
+
 echo "Deleting workflow runs for $org/$repo"
 
 workflows_temp=$(mktemp) # Creates a temporary file to store workflow data.
 gh api repos/$org/$repo/actions/workflows | jq -r '.workflows[] | [.id, .path] | @tsv' > $workflows_temp # Lookup workflow
 cat "$workflows_temp"
-workflows_names=$(awk '{print $2}' $workflows_temp | grep -v "main" | grep -v "verify")
+workflows_names=$(awk '{print $2}' $workflows_temp | grep -v "main" | grep -v "master")
 echo $workflows_names
 
 if [ -z "$workflows_names" ]; then
