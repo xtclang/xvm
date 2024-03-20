@@ -19,7 +19,7 @@ env:
   ORG_XTCLANG_BUILD_CHECKSTYLE: false #TODO
   ORG_XTCLANG_BUILD_CHECKSTYLE_FAIL_ON_ERROR: false
 
-  gradle_options: --stacktrace --info --scan --warning-mode all --console verbose
+  gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:
   lint:

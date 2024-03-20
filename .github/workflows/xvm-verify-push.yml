@@ -15,7 +15,7 @@ env:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
   workdir: $(pwd)
-  gradle_options: --stacktrace --info --scan --warning-mode all --console verbose
+  gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:
   verify-build:
