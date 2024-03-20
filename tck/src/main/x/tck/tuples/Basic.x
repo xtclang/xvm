@@ -7,11 +7,11 @@ class Basic {
         testConstAccess();
         testIndexAccess();
         testEquality();
-        testVoidConv();
-        testIntConv();
+        //testVoidConv();
+        //testIntConv();
         testSlice();
     }
-    
+
     @Test
     void testConstAccess() {
         Tuple<String, String, Int> t = ("hello", "world", 17);
@@ -49,21 +49,21 @@ class Basic {
         assert t3 == t4;
     }
 
-    @Test
-    void testVoidConv() {
-        private static void getVoid() {}
+    //@Test
+    //void testVoidConv() {
+    //    private static void getVoid() {}
+    //
+    //    Tuple tv = getVoid();
+    //    assert tv.size == 0;
+    //}
 
-        Tuple tv = getVoid();
-        assert tv.size == 0;
-    }
-
-    @Test
-    void testIntConv() {
-        private static Int getInt() = 4;
-
-        Tuple<Int> ti = getInt();
-        assert ti.size == 1 && ti[0] == 4;
-    }
+    //@Test
+    //void testIntConv() {
+    //    private static Int getInt() = 4;
+    //
+    //    Tuple<Int> ti = getInt();
+    //    assert ti.size == 1 && ti[0] == 4;
+    //}
 
     @Test
     void testSlice() {

@@ -14,7 +14,7 @@ public abstract class XCons {
   public static XClz CONST   = make_java("ecstasy","Const",XXTC);
   public static XClz ENUM    = make_java("ecstasy","Enum" ,CONST);
   public static XClz SERVICE = make_java("ecstasy","Service",XXTC);
-  
+
   // Java non-primitive classes
   public static XClz JBOOL  = make_java("ecstasy","Boolean",ENUM);
   public static XClz JCHAR  = make_java("ecstasy.text","Char",CONST);
@@ -32,7 +32,7 @@ public abstract class XCons {
   public static XBase DOUBLE = XBase.make("double",false);
   public static XBase STRING = XBase.make("String",true);
   public static XBase STRINGN= XBase.make("String",false);
-  
+
   public static XBase VOID = XBase.make("void",false);
   public static XBase TRUE = XBase.make("true",false);
   public static XClz JTRUE = make_java("ecstasy.Boolean","True" ,JBOOL);
@@ -40,7 +40,7 @@ public abstract class XCons {
   public static XClz JFALSE= make_java("ecstasy.Boolean","False",JBOOL);
   public static XBase NULL = XBase.make("null",false);
   public static XClz JNULL = make_java("ecstasy","Nullable",ENUM);
-  
+
   // A set of common XTC classes, and their Java replacements...
   // AND these take the default import path from "org.xvm.xec.ecstasy...".
   public static XClz APPENDERCHAR= make_java("ecstasy","Appenderchar","ecstasy","Appender",null,"Element",JCHAR);
@@ -56,16 +56,12 @@ public abstract class XCons {
   public static XClz MUTABILITY  = make_java("ecstasy.collections.Array","Mutability",ENUM);
   public static XClz ORDERABLE   = make_java("ecstasy","Orderable",null);
   public static XClz ORDERED     = make_java("ecstasy","Ordered",ENUM);
-  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy","Range",CONST,"Element",ORDERABLE);
-  public static XClz RANGEEE     = make_java("ecstasy","RangeEE",RANGE); // No Ecstasy matching class
-  public static XClz RANGEIE     = make_java("ecstasy","RangeIE",RANGE); // No Ecstasy matching class
-  public static XClz RANGEII     = make_java("ecstasy","RangeII",RANGE); // No Ecstasy matching class
   public static XClz STRINGBUFFER= make_java("ecstasy.text","StringBuffer",null);
   public static XClz TYPE        = make_java("ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
   public static XClz BIT     = make_java("ecstasy.numbers","Bit",CONST);
-  
+
   public static XClz INTNUM  = make_java("ecstasy.numbers","IntNumber" ,NUMBER);
   public static XClz JBYTE   = make_java("ecstasy.numbers","Int8"      ,INTNUM);
   public static XClz JINT16  = make_java("ecstasy.numbers","Int16"     ,INTNUM);
@@ -80,22 +76,27 @@ public abstract class XCons {
   public static XClz JUINT64 = make_java("ecstasy.numbers","UInt64"   ,UINTNUM);
   public static XClz JUINT128= make_java("ecstasy.numbers","UInt128"  ,UINTNUM);
   public static XClz JUINTN  = make_java("ecstasy.numbers","UIntN"    ,UINTNUM);
-  
-  public static XClz FPNUM       = make_java("ecstasy.numbers","FPNumber",NUMBER);  
+
+  public static XClz FPNUM       = make_java("ecstasy.numbers","FPNumber",NUMBER);
   public static XClz BINARYFP    = make_java("ecstasy.numbers","BinaryFPNumber",FPNUM);
   public static XClz JDOUBLE     = make_java("ecstasy.numbers","Float64" ,BINARYFP);
   public static XClz FLOAT128    = make_java("ecstasy.numbers","Float128",BINARYFP);
-  
+
   public static XClz DECIMALFP   = make_java("ecstasy.numbers","DecimalFPNumber",FPNUM);
   public static XClz DEC64       = make_java("ecstasy.numbers","Dec64" ,DECIMALFP);
   public static XClz DEC128      = make_java("ecstasy.numbers","Dec128",DECIMALFP);
-  
+
   public static XClz ROUNDING    = make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
+
+  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy","Range"  ,CONST,"Element",CONST);
+  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","RangeEE",RANGE,"Element",JLONG    ); // No Ecstasy matching class
+  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","RangeIE",RANGE,"Element",JLONG    ); // No Ecstasy matching class
+  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","RangeII",RANGE,"Element",JLONG    ); // No Ecstasy matching class
 
   // This is a mixin type
   public static XClz VOLATILEVAR = make_java("","","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
   public static XClz FUTUREVAR   = make_java("ecstasy.annotations","FutureVar","ecstasy.annotations","FutureVar",VOLATILEVAR,"Referent",XXTC);
-  
+
   // Convert a Java primitive to the Java object version.
   static final HashMap<XBase, XClz> XBOX = new HashMap<>() {{
       put(NULL ,JNULL );
@@ -150,12 +151,15 @@ public abstract class XCons {
   public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);
   public static XClz  FPLITERAL = make_java("ecstasy.numbers", "FPLiteral","ecstasy.numbers", "FPLiteral",CONST);
 
+
+  public static XClz MAP = make_java("ecstasy.collections","Map","ecstasy.collections","Map",null,"Key",XXTC,"Value",XXTC);
+
   // Some tuples
   public static XClz TUPLE0 = make_tuple();
   public static XClz COND_CHAR = make_tuple(BOOL,CHAR);
 
 
-  
+
   private static final XClz[] XCLZS = new XClz[] {
     null,                     // IntLiteral
     null,                     // Bit
@@ -175,7 +179,7 @@ public abstract class XCons {
   };
   public static XClz format_clz(Const.Format f) { return XCLZS[f.ordinal()]; }
 
-  
+
   // Made from a Java class directly; the XTC class shows up later.
   // Fields are hand-added and need to match the ClazzPart later.
   public static XClz make_java( String pack, String name, XClz supr, Object... flds ) {
@@ -231,7 +235,7 @@ public abstract class XCons {
     return clz;
   }
 
-  
+
   public static XClz make_tuple( XType... clzs ) {
     XClz clz = XClz.malloc(true,"ecstasy.collections","","Tuple",clzs.length);
     for( int i=0; i<clzs.length; i++ )

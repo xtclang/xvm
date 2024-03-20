@@ -7,7 +7,7 @@ import org.xvm.xtc.*;
 
 class ListAST extends AST {
   final boolean _tuple;
-  
+
   static ListAST make( ClzBuilder X, boolean tuple ) {
     Const type = X.con();
     return new ListAST(X.kids(),type,tuple);
@@ -18,10 +18,10 @@ class ListAST extends AST {
     _tuple = tuple;
   }
   @Override XType _type() { return _type; }
-  
+
   @Override void jpre( SB sb ) {
     if( !_tuple ) throw XEC.TODO();
-    _type.str(sb.p("new ")).p("(");
+    _type.clz(sb.p("new ")).p("(");
   }
   @Override void jmid( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) { sb.unchar(2).p(")"); }

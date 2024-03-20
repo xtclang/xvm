@@ -20,11 +20,11 @@ public class XUnion extends XType {
     _xts[1].str(sb,visit,dups).p("]");
     return sb;
   }
-  @Override SB _clz( SB sb, ParamTCon ptc ) {
+  @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) {
     if( ptc != null ) throw XEC.TODO();
     sb.p("Union[");
-    _xts[0]._clz(sb,ptc).p(",");
-    _xts[1]._clz(sb,ptc).p("]");
+    _xts[0]._clz(sb,ptc,print).p(",");
+    _xts[1]._clz(sb,ptc,print).p("]");
     return sb;
   }
   @Override boolean eq(XType xt) { return true; }
@@ -33,4 +33,3 @@ public class XUnion extends XType {
     throw XEC.TODO();
   }
 }
-

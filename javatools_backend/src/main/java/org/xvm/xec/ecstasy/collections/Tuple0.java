@@ -4,21 +4,23 @@ import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.util.SB;
 import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.numbers.Int64;
+import org.xvm.xec.ecstasy.text.Char;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
 public class Tuple0 extends XTC implements Tuple {
   public static final Tuple0 GOLD = new Tuple0();
   byte _mut = -1;
   final short _len; // 0-32767 length limit
-  
+
   public Tuple0() { this(0); }
   public Tuple0(int n) { _len = (short)n; }
-  public Object at(int i) { throw XEC.TODO(); }
-  public void set(int i, Object e) { throw XEC.TODO(); }
+  @Override public Object at(long i) { throw XEC.TODO(); }
+  @Override public void set(long i, Object e) { throw XEC.TODO(); }
 
   public int size$get() { return _len; }
 
-    
+
   // Select a range using array syntax.
   // Loses all Java compiler knowledge of the types.
   @Override public Tuple at( AbstractRange r) {
@@ -61,7 +63,7 @@ public class Tuple0 extends XTC implements Tuple {
   }
 
   // Loses all Java compiler knowledge of the types.
-  @Override 
+  @Override
   public Tuple addAll( Tuple tup ) {
     int len = tup.size$get();
     Object[] es = new Object[_len + len];
@@ -72,7 +74,22 @@ public class Tuple0 extends XTC implements Tuple {
     // TODO: Complex default mutability
     return new TupleN(es);
   }
-  
+
+  // Extends the tuple, loses all type knowledge
+  public  TupleN  add( XTC type, char   x ) { return _add(type,Char .make(x)); }
+  public  TupleN  add( XTC type, long   x ) { return _add(type,Int64.make(x)); }
+  public  TupleN  add( XTC type, String x ) { return _add(type,org.xvm.xec.ecstasy.text.String.make(x)); }
+  public  TupleN  add( XTC type, Object x ) { return _add(type,x); }
+  private TupleN _add( XTC type, Object x ) {
+    int len = size$get();
+    Object[] es = new Object[len + 1];
+    for( int i=0; i<_len; i++ )
+      es[i] = at(i);
+    es[len] = x;
+    return new TupleN(es);
+  }
+
+
   // Crazy contract... copied from XTC Tuple.x comments
   public Tuple ensureMutability(Mutability mut0, boolean inPlace) {
     Mutability mut = mutability$get();
@@ -89,11 +106,20 @@ public class Tuple0 extends XTC implements Tuple {
   }
 
 
-  
+  @Override public boolean equals( XTC x0, XTC x1 ) {
+    Tuple0 t0 = (Tuple0)x0;     // Contract
+    Tuple0 t1 = (Tuple0)x1;     // Contract
+    if( t0._len != t1._len ) return false;
+    for( int i=0; i<t0._len; i++ )
+      if( !t0.at(i).equals(t1.at(i)) )
+        return false;
+    return true;
+  }
+
   @Override public String toString() {
     SB sb = new SB().p("( ");
     for( int i=0; i<_len; i++ )
-      sb.p(at(i).toString()).p(", ");
+      sb.p(at(i)==null ? "null" : at(i).toString()).p(", ");
     return sb.unchar(2).p(")").toString();
   }
 }

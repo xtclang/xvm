@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.Arrays;
 
 // Concrete java types from XTC types.  All instances are interned so deep
-// compares are free/shallow.  
+// compares are free/shallow.
 @SuppressWarnings("StaticInitializerReferencesSubClass")
 public abstract class XType {
   // The intern table
@@ -20,7 +20,7 @@ public abstract class XType {
 
   private static int CNT=1;
   final int _uid = CNT++;       // Unique id, for cycle printing
-  
+
   // Children, if any
   public XType[] _xts;
 
@@ -29,7 +29,7 @@ public abstract class XType {
   // XBase.STRING is not-nullable, despite being a XBase.
   // XClzs go both ways, depends on if they got unioned with Null or not.
   public boolean _notNull;
-  
+
   // Interning support
   static XType intern( XType free ) {
     free._hash = 0;
@@ -74,31 +74,36 @@ public abstract class XType {
   abstract SB str( SB sb, VBitSet visit, VBitSet dups );
 
     // Alternative Class flavored fancy print
-  public final String clz() { return _clz(new SB(),null).toString(); }
-  public final SB clz( SB sb ) { return _clz(sb,null); }
-  public final SB clz( SB sb, ParamTCon ptc ) { return _clz(sb,ptc); }
-  abstract SB _clz( SB sb, ParamTCon ptc );
+  public final String clz() { return _clz(new SB(),null,true).toString(); }
+  public final SB clz( SB sb ) { return _clz(sb,null,true); }
+  public final SB clz( SB sb, ParamTCon ptc ) { return _clz(sb,ptc,true); }
+  abstract SB _clz( SB sb, ParamTCon ptc, boolean print );
 
   // --------------------------------------------------------------------------
 
   public boolean needs_import(boolean self) { return false; }
 
-  public static void makeImports( SB sb, XType[] xts, int N ) {
+  public void makeImports( SB sb ) {
     HashSet<String> imports = new HashSet<>();
-    for( int i=0; i<N; i++ ) {
-      XClz box = xts[i].box();
+    _makeImports(sb,imports);
+    sb.nl();
+  }
+  void _makeImports( SB sb, HashSet<String> imports ) {
+    if( _xts==null ) return;
+    for( XType xt : _xts ) {
+      XClz box = xt.box();
       if( box.needs_import(false) ) {
         String tqual = box.qualified_name();
         if( !imports.contains(tqual) ) {
           imports.add(tqual);
           sb.fmt("import %0;\n",tqual);
+          box._makeImports(sb,imports);
         }
       }
     }
-    sb.nl();
   }
 
-  
+
   abstract boolean eq( XType xt ); // Subclass specialized eq check
   @Override public final boolean equals(Object o) {
     if( this==o ) return true;
@@ -108,7 +113,7 @@ public abstract class XType {
     if( _notNull != xt._notNull ) return false;
     return eq(xt);
   }
-    
+
   private int _hash;            // Hash cache, never 0
   abstract int hash();
   @Override final public int hashCode() {
@@ -126,7 +131,7 @@ public abstract class XType {
   public XClz box() {
     if( this instanceof XClz clz ) return clz;
     return XBOX.get(this);
-  } 
+  }
   public XType unbox() {
     XBase jt = UNBOX.get(this);
     return jt==null ? this : jt;
@@ -139,16 +144,16 @@ public abstract class XType {
     if( !_notNull ) return this;
     throw XEC.TODO();
   }
-  
+
   static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
   public boolean primeq() { return XBOX.containsKey(this); }
   public boolean zero() { return primeq() && this!=STRING; }
   public String ztype() { return zero() ? "0" : "null"; }
   public boolean is_jdk() { return primeq() || this==JNULL; }
-  
+
   // Either "==name" or ".equals(name)"
   public SB do_eq(SB sb, String name) {
-    return zero() ? sb.p("==").p(name) : sb.p(".equals(").p(name).p(")");
+    return sb.fmt(zero() ? "==%0" : ".equals(%0)", name);
   }
 
   // Only valid for Ary, Clz (Tuple???).
@@ -156,7 +161,7 @@ public abstract class XType {
   // Clzs mostly have 0, sometimes have 1 (e.g. Hashable<Value>), rarely have 2 or more (e.g. Map<Key,Value>)
   public XType typeParm(int i) { return _xts[i]; }
 
-  
+
   public final boolean isa( XType xt ) { return this==xt || (getClass() == xt.getClass() && _isa(xt)); }
   abstract boolean _isa( XType xt );
   public boolean isVar() { return false; }
@@ -165,10 +170,10 @@ public abstract class XType {
   public boolean generic_ary() { return false;  }
   public boolean isTuple() { return false;  }
   public XType e() { throw XEC.TODO(); }
-  
+
   // --------------------------------------------------------------------------
 
-  
+
   // Convert an array of Const to an array of XType
   public static XType[] xtypes( Const[] cons   ) {
     if( cons==null ) return null;
@@ -177,7 +182,7 @@ public abstract class XType {
       xts[i] = xtype(cons[i],false);
     return xts;
   }
-  
+
   // Convert an array of Parameter._con to an array of XType
   public static XType[] xtypes( Parameter[] parms  ) {
     if( parms==null ) return null;
@@ -186,9 +191,11 @@ public abstract class XType {
       xts[i] = parms[i].type();
     return xts;
   }
-  
+
+  public static XType xtype( Const tc, boolean boxed ) { return xtype(tc,boxed,null); }
+
   // Produce a java type from a TermTCon
-  public static XType xtype( Const tc, boolean boxed ) {
+  static XType xtype( Const tc, boolean boxed, XClz self ) {
     return switch( tc ) {
     case TermTCon ttc -> {
       if( ttc.part() instanceof ClassPart clz ) {
@@ -199,24 +206,24 @@ public abstract class XType {
         XClz xclz = XClz.make(clz);
         yield boxed ? xclz.box() : xclz.unbox();
       }
-      
+
       if( ttc.part() instanceof ParmPart parm ) {
         if( ttc.id() instanceof TParmCon tpc ) {
           // Generic parameter name
-          yield ((XClz)xtype(parm.parm().tcon(),boxed));
+          yield ((XClz)xtype(parm.parm().tcon(),boxed,self));
         } else if( ttc.id() instanceof DynFormalCon dfc ) {
           // Generic parameter name
           String dynt = ((TermTCon)((ParamTCon)dfc.type())._parms[0]).name();
           yield XBase.make("$"+dynt,true);
-        } else 
+        } else
           throw XEC.TODO();
       }
 
       // Hidden extra XTC type argument (GOLD instance of the class whos hash
       // implementation to use)
       if( ttc.part() instanceof PropPart prop )
-        yield XType.xtype(prop._con,false);
-      
+        yield xtype(prop._con,false,self);
+
       throw XEC.TODO();
     }
 
@@ -233,8 +240,8 @@ public abstract class XType {
         yield XFun.make(args, rets).make_class();
       }
 
-      XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true);
-      
+      XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true,self);
+
       // All the long-based ranges, intervals and iterators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
@@ -252,7 +259,7 @@ public abstract class XType {
         int N = ptc._parms==null ? 0 : ptc._parms.length;
         XType[] clzs = new XType[N];
         for( int i=0; i<N; i++ )
-          clzs[i] = XType.xtype(ptc._parms[i],false);
+          clzs[i] = xtype(ptc._parms[i],false,self);
         yield org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(clzs));
       }
 
@@ -271,15 +278,15 @@ public abstract class XType {
     }
 
     case ImmutTCon itc ->
-      ((XClz)xtype(itc.icon(),boxed)).readOnly();
+      ((XClz)xtype(itc.icon(),boxed,self)).readOnly();
 
     // Generalized union types gonna wait awhile.
     // Right now, allow null unions only
     case UnionTCon utc -> {
-      XType u2 = xtype(utc._con2,false);
+      XType u2 = xtype(utc._con2,false,self);
       if( ((ClzCon)utc._con1).clz()._name.equals("Nullable") )
         yield (u2.zero() ? u2.box() : u2).nullable();
-      XType u1 = xtype(utc._con1,false);
+      XType u1 = xtype(utc._con1,false,self);
       yield XUnion.make(u1,u2);
     }
 
@@ -287,7 +294,7 @@ public abstract class XType {
     case CharCon cc -> JCHAR.box(boxed);
     case ByteCon cc -> JBYTE.box(boxed);
     case Flt64Con fc -> JDOUBLE.box(boxed);
-    
+
     case StringCon sc -> STRING;
 
     case EnumCon econ -> {
@@ -306,14 +313,14 @@ public abstract class XType {
     }
 
     case AryCon ac ->
-      xtype(ac.type(),false);
+      xtype(ac.type(),false,self);
 
     case MethodCon mcon ->
       XFun.make((MethodPart)mcon.part());
 
     // Property constant
     case PropCon prop ->
-      xtype(((PropPart)prop.part())._con,false);
+      xtype(((PropPart)prop.part())._con,false,self);
 
     case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
@@ -335,17 +342,20 @@ public abstract class XType {
 
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
-      case "InjectedRef" -> xtype(acon.con().is_generic(),true);
+      case "InjectedRef" -> xtype(acon.con().is_generic(),true,self);
       case "FutureVar" ->
-        XClz.wrapFuture(xtype(((ParamTCon)acon.con())._parms[0],true));
+        XClz.wrapFuture(xtype(((ParamTCon)acon.con())._parms[0],true,self));
       case "VolatileVar" ->
-        xtype(acon.con(),false);
+        xtype(acon.con(),false,self);
       default ->  throw XEC.TODO();
       };
 
     case AccessTCon acon ->
-      xtype(acon._con,boxed);
-    
+      xtype(acon._con,boxed,self);
+
+    // Self recursive type
+    case TSeqTCon tseq -> self;
+
     default -> throw XEC.TODO();
     };
   }

@@ -23,7 +23,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
     // But this is the generic orderables compare.
     throw XEC.TODO();
   }
-  
+
   // Require implementations define this, which can typically be done with a
   // default implementation.  This same signature appears in the XTC base
   // class, so we can do a v-call instead of an i-call.
@@ -34,6 +34,9 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
   default boolean CompLt(Orderable ord) {
     return compare((XTC)this,(XTC)ord) == Ordered.Lesser;
   }
+  default boolean CompEq(Orderable ord) {
+    return compare((XTC)this,(XTC)ord) == Ordered.Equal;
+  }
 
   /** Each implementation will define the above abstract equals as:
    *  {@code public Ordered compare(XTC x0, XTC x1) { return compare$CLZ((CLZ)x0,(CLZ)x1) } }
@@ -43,12 +46,12 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
    *  The default implementation never uses the gold argument, but user-defined
    *  equals have access to it.
   */
-  
+
   /* Generate:
      public Ordered compare( XTC x0, XTC x1 ) { // Called by the fully dynamic lookup
        return compare$CLZ(GOLD,(CLZ)x0,(CLZ)x1);
      }
-     public static Ordered compare$CLZ( XTC gold, CLZ x0, CLZ x1 ) { 
+     public static Ordered compare$CLZ( XTC gold, CLZ x0, CLZ x1 ) {
        if( x0==x1 ) return Equal;
        Ordered x;
        if( (x=x0.fld0.compare(x1.fld0)) != Equal ) return x;
@@ -103,7 +106,7 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
       : Ordered.Equal;
   }
 
-  
+
   public static boolean lesser ( Ordered x ) { return x==Ordered.Lesser ; }
   public static boolean greater( Ordered x ) { return x==Ordered.Greater; }
 }

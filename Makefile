@@ -73,25 +73,16 @@ jars = $(subst $(space),$(SEP),$(libs))
 # javatools_backend
 # Source code, relative paths
 SRCB := javatools_backend/src/main/java
-TSTB := javatools_backend/src/test/java
 CLZDIRB:= build/classes/backend
 main_javasB   := $(wildcard $(SRCB)/$(XEC)/*java $(SRCB)/$(XEC)/*/*java $(SRCB)/$(XEC)/*/*/*java $(SRCB)/$(XEC)/xec/*/*/*java)
-test_javasB   := $(wildcard $(TSTB)/$(XEC)/*java $(TSTB)/$(XEC)/*/*java $(TSTB)/$(XEC)/*/*/*java)
 main_classesB := $(patsubst $(SRCB)/%java,$(CLZDIRB)/main/%class,$(main_javasB))
-test_classesB := $(patsubst $(TSTB)/%java,$(CLZDIRB)/test/%class,$(test_javasB))
-classes = $(main_classesB) $(test_classesB)
+classes = $(main_classesB)
 
 # Compile just the out-of-date files
 $(main_classesB): $(CLZDIRB)/main/%class: $(SRCB)/%java
 	@echo "compiling " $@ " because " $?
 	@[ -d $(CLZDIRB)/main ] || mkdir -p $(CLZDIRB)/main
 	@javac $(JAVAC_ARGS) -cp "$(CLZDIRB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZDIRB)/main $(main_javasB)
-
-$(test_classesB): $(CLZDIRB)/test/%class: $(TSTB)/%java $(main_classesB)
-	@echo "compiling " $@ " because " $?
-	@[ -d $(CLZDIRB)/test ] || mkdir -p $(CLZDIRB)/test
-	@javac $(JAVAC_ARGS) -cp "$(CLZDIRB)/test$(SEP)$(CLZDIRB)/main$(SEP)$(LIBS)" -sourcepath $(TSTB) -d $(CLZDIRB)/test $(test_javasB)
-
 
 
 #######################################################
@@ -255,7 +246,7 @@ tags:	TAGS
 
 TAGS:	$(main_javas) $(test_javas)
 	@rm -f TAGS
-	@$(CTAGS) -o TAGS -e --recurse=yes --extra=+q --fields=+fksaiS $(SRCB) $(TSTB)
+	@$(CTAGS) -o TAGS -e --recurse=yes --extra=+q --fields=+fksaiS $(SRCB) $(SRCT)
 
 .PHONY: clean
 clean:

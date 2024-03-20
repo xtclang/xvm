@@ -600,7 +600,7 @@ public class ClzBuilder {
       // Check for colliding on the base names; means we have to use the fully
       // qualified name everywhere.
       String tqual = tclz.qualified_name();
-      String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.name(),tqual);
+      String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
       if( old!=null && !S.eq(old,tqual) ) {
         tclz._ambiguous=true;   // Use fully qualified name
         ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation

@@ -22,23 +22,17 @@ class BinOpAST extends AST {
       : (op==BinOp.CompOrd ? XCons.ORDERED : XCons.BOOL ); // Must be one of the ordering operators
     return new BinOpAST(op.text,"",type,kids);
   }
-  
+
   static BinOpAST make( ClzBuilder X, String op0, String op1 ) {
     AST[] kids = X.kids(2);
     return new BinOpAST(op0,op1,null,kids);
   }
-  
+
   BinOpAST( String op0, String op1, XType type, AST... kids ) {
     super(kids);
     _op0 = op0;
     _op1 = op1;
     _type = type;
-  }
-  
-  private NumCon isTuple() {
-    // Tuple at fixed field offset is a NumCon.
-    // Something else (PropCon?) means get the collections' element type
-    return _kids[1] instanceof ConAST con && con._tcon instanceof NumCon num ? num : null;
   }
 
   @Override XType _type() {
@@ -47,16 +41,29 @@ class BinOpAST extends AST {
       XType tk = _kids[0]._type;
       if( tk.isAry()  )
         return tk.e();
-      // Tuple at fixed field offset is a NumCon.
       // Something else (PropCon?) means get the collections' element type
-      NumCon num = isTuple();
-      int idx = num==null ? 0 : (int)num._x;
-      return tk._xts[idx];
+      int idx = 0;              // Default for non-Tuple
+      // Tuple at fixed field offset
+      if( tk.isTuple() &&
+          (idx = isFixedOffset()) == -1 )
+        return XCons.XXTC;   // Unknown field (not a fixed number)
+      return idx < tk._xts.length ? tk._xts[idx] : XCons.XXTC;
     }
+
+    // Cast to sharper
+    if( _op0.equals("as") )
+      return _type = _kids[1]._type;
+
     return _type;
   }
 
+  // Fixed positive offset in _kids[1], or -1
+  private int isFixedOffset() {
+    return _kids[1] instanceof ConAST con && con._tcon instanceof NumCon num ? (int)num._x : -1;
+  }
+
   @Override AST prewrite() {
+    int idx;
     // Java primitive fetch instead of boxed fetch.
     // ary_expr ".at(" idx ")"
     // ary_expr.at8(idx) -- and the expression is primitive, not boxed
@@ -66,19 +73,17 @@ class BinOpAST extends AST {
         _op0 = ".charAt((int)";
       } else if( _kids[0]._type.isAry() ) {
         _op0 = ".at8(";         // Use primitive 'at' instead of generic
-      } else if( isTuple()==null ) {
-        // Use generic at for generic collection
-        _op0 = ".getElement(";
-      } else {
+      } else if( _kids[0]._type.isTuple() && (idx=isFixedOffset()) != -1 ) {
         // Tuple at fixed field offset
-        _op0 = "._f";           // Field load at fixed offset
-        _op1 = "";
-        castInt(1);             // Cast RHS constant to an int
+        return new PropertyAST(_kids[0],_type,"_f"+idx);
+      } else {
+        // Use generic at for generic collection
+        _op0 = ".at(";
       }
       return this;
     }
 
-    if( _kids[0]._type == XCons.JINT128 ||_kids[0]._type == XCons.JUINT128 ) {
+    if( _kids[0]._type == XCons.JINT128 || _kids[0]._type == XCons.JUINT128 ) {
       String op = switch( _op0 ) {
       case "==" -> "eq";
       case ">=" -> "ge";
@@ -87,7 +92,7 @@ class BinOpAST extends AST {
       return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
     }
 
-    
+
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
     if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
@@ -107,7 +112,7 @@ class BinOpAST extends AST {
         elvis = pred;
       if( !(elvis instanceof InvokeAST) )
         // Elvis use not recognized
-        throw XEC.TODO();       // TODO: Elvis for loads & stores      
+        throw XEC.TODO();       // TODO: Elvis for loads & stores
       return do_elvis(pred._kids[0],elvis);
     }
 
@@ -144,8 +149,12 @@ class BinOpAST extends AST {
   static AST do_range( AST[] kids, XClz rng ) {
     return new NewAST(kids,ClzBuilder.add_import(rng));
   }
-  
+
   @Override public SB jcode( SB sb ) {
+    //if( _op0.equals("as") ) {
+    //  sb.p("((").p(((XClz)_kids[1]._type).clz_bare()).p(")");
+    //  return _kids[0].jcode(sb).p(")");
+    //}
     expr(sb,_kids[0]).p(_op0);
     expr(sb,_kids[1]).p(_op1);
     return sb;
@@ -172,15 +181,15 @@ class BinOpAST extends AST {
   // Java precedence table
   private static final HashMap<String,Integer> PRECS = new HashMap<>(){{
       put("._f",17); // Primitive tuple field loads
-      
+
       put("[" ,16);
 
       // java unary ops go here
-      
+
       put("*" ,12);
       put("/" ,12);
       put("%" ,12);
-      
+
       put("+" ,11);
       put("-" ,11);
 
@@ -192,19 +201,19 @@ class BinOpAST extends AST {
       put(">" , 9);
       put("<=", 9);
       put(">=", 9);
-      
+
       put("==", 8);
       put("!=", 8);
-      
+
       put("&" , 7);
       put("^" , 6);
       put("|" , 5);
 
       put("&&" ,4);
       put("||" ,3);
-      
+
       put("?:" ,2);
-      
+
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);
