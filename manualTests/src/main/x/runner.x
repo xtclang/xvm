@@ -60,7 +60,7 @@ module Runner {
         }
 
         @Override
-        String readLine(Boolean suppressEcho = False) {
+        String readLine(String prompt = "", Boolean suppressEcho = False) {
             throw new Unsupported();
         }
     }

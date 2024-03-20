@@ -61,43 +61,6 @@ public class xTerminalConsole
         return pool().ensureEcstasyTypeConstant("io.Console");
         }
 
-    @Override
-    public int invokeNative1(Frame frame, MethodStructure method,
-                             ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
-        {
-        switch (method.getName())
-            {
-            case "readLine": // Boolean suppressEcho = False
-                {
-                boolean fEcho = hArg != xBoolean.TRUE;
-
-                try
-                    {
-                    StringHandle hLine;
-                    if (fEcho || CONSOLE == null)
-                        {
-                        String sLine = CONSOLE_IN.readLine();
-                        hLine = sLine == null
-                            ? xString.EMPTY_STRING
-                            : xString.makeHandle(sLine);
-                        }
-                    else
-                        {
-                        char[] achLine = CONSOLE.readPassword();
-                        hLine = achLine == null
-                            ? xString.EMPTY_STRING
-                            : xString.makeHandle(achLine);
-                        }
-                    return frame.assignValue(iReturn, hLine);
-                    }
-                catch (IOException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
-                }
-            }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
-        }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
@@ -132,6 +95,43 @@ public class xTerminalConsole
                         // fall through
                     case Op.R_EXCEPTION:
                         return iResult;
+                    }
+                }
+
+            case "readLine": // String prompt = "", Boolean suppressEcho = False
+                {
+                char[] achPrompt = ahArg[0] instanceof StringHandle hString
+                                    ? hString.getValue() : null;
+                boolean fEcho    = ahArg[1] != xBoolean.TRUE;
+
+                try
+                    {
+                    if (achPrompt != null)
+                        {
+                        CONSOLE_OUT.print(achPrompt);
+                        CONSOLE_OUT.flush();
+                        }
+
+                    StringHandle hLine;
+                    if (fEcho || CONSOLE == null)
+                        {
+                        String sLine = CONSOLE_IN.readLine();
+                        hLine = sLine == null
+                            ? xString.EMPTY_STRING
+                            : xString.makeHandle(sLine);
+                        }
+                    else
+                        {
+                        char[] achLine = CONSOLE.readPassword();
+                        hLine = achLine == null
+                            ? xString.EMPTY_STRING
+                            : xString.makeHandle(achLine);
+                        }
+                    return frame.assignValue(iReturn, hLine);
+                    }
+                catch (IOException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
                 }
             }

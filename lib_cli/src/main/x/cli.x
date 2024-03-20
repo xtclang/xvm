@@ -56,9 +56,7 @@ module cli.xtclang.org {
          */
         void runLoop(Catalog catalog) {
             while (True) {
-                console.print(commandPrompt, suppressNewline=True);
-
-                String command = console.readLine();
+                String command = console.readLine(commandPrompt);
 
                 if (!runCommand(command.split(' ', trim=True), catalog)) {
                     return;

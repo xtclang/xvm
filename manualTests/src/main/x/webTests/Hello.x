@@ -38,8 +38,7 @@ module Hello
         File   store = /resources/hello/https.p12;
         String password;
         if (args.size == 0) {
-            console.print("Enter password:", suppressNewline=True);
-            password = console.readLine(suppressEcho=True);
+            password = console.readLine("Enter password:", suppressEcho=True);
         } else {
             password = args[0];
         }

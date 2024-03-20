@@ -31,11 +31,8 @@ module Curl {
         Client.PasswordCallback callback = realm ->
             {
             console.print($"Realm: {realm}");
-            console.print("User name: ", suppressNewline=True);
-            String name = console.readLine();
-
-            console.print("Password: ", suppressNewline=True);
-            String password = console.readLine(suppressEcho = True);
+            String name     = console.readLine("User name: ");
+            String password = console.readLine("Password: ", suppressEcho = True);
 
             return name, password;
             };
