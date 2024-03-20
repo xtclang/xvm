@@ -1,0 +1,76 @@
+#
+# GitHub runner workflow for building, verifying and testing the XVM repo.
+#
+
+name: XVM Install and Check
+
+# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
+on: push
+
+env:
+  ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+  ORG_GRADLE_PROJECT_includeBuildManualTests: true
+  ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
+  gradle_options: --stacktrace --warning-mode all --console verbose
+
+jobs:
+
+  gradle-install-dist:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository branch
+        uses: actions/checkout@v4
+        run: |
+          echo "XDK_VERSION=$(cat ${{ github.workspace }}/VERSION)" >> "$GITHUB_ENV"
+          echo "XDK_LATEST_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
+
+      - name: Check XDK version and tags
+        run: |
+          echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
+          if [[ "$XDK_VERSION" == *SNAPSHOT ]]; then
+            echo "*** XDK_VERSION is SNAPSHOT."
+            echo "XDK_SNAPSHOT=1" >> "$GITHUB_ENV"
+          else
+            echo "*** XDK_VERSION is RELEASE."          
+          fi
+          echo "*** XDK_VERSION GITHUB_REF: ${{ github.ref }} ${{ github.actor }}"
+          echo "*** XDK_VERSION GITHUB_REF: $GITHUB_REF $GITHUB_ACTOR"
+          echo "*** XDK_VERSION_LATEST_TAG: ${{ env.XDK_LATEST_TAG }}"
+
+      - name: Setup Java and system-wide caching
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Setup Gradle and Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: false
+
+      - name: Execute Gradle installDist
+        run: ./gradlew ${{ env.gradle_options }} installDist
+
+      - name: Execute Gradle manualTest sanity checks
+        run: |
+          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
+          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
+          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
+          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
+          
+        # TODO: Only on push to master
+      - name: XDK Publish Snapshot to xtclang.org GitHub Maven Packages.
+        if: ${{[[ "$XDK_VERSION" ] == *SNAPSHOT ]]}}
+        run: echo "*** XDK_VERSION Publishing SNAPSHOT" && ./gradlew publishRemoteSnapshot
+        env:
+          ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
+          ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
+
+      - name: XDK Publish release artifact
+        if: $${{[[ "$XDK_VERSION" ] != *SNAPSHOT ]]}}

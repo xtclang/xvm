@@ -44,7 +44,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v3
-      - uses: .github/workflows/gradle-installdist.yml
+      - uses: .github/workflows/install-and-check.yml
       - name: XDK Publish Snapshot to xtclang.org GitHub Maven Packages.
         if: ${{[[ "$XDK_VERSION" ] == *SNAPSHOT ]]}}
         run: echo "*** XDK_VERSION Publishing SNAPSHOT" && ./gradlew publishRemoteSnapshot
