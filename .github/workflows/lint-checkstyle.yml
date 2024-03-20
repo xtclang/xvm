@@ -15,7 +15,7 @@ env:
   ORG_XTCLANG_JAVA_LINT: true
   ORG_XTCLANG_JAVA_MAX_WARNINGS: 10000
   ORG_XTCLANG_JAVA_MAX_ERRORS: 10000
-  ORG_XTCLANG_JAVA_WARNINGS_AS_ERRORS: true
+  ORG_XTCLANG_JAVA_WARNINGS_AS_ERRORS: false
   ORG_XTCLANG_BUILD_CHECKSTYLE: false #TODO
   ORG_XTCLANG_BUILD_CHECKSTYLE_FAIL_ON_ERROR: false
 
@@ -23,7 +23,7 @@ env:
 
 jobs:
   lint:
-    if: ${{ false }}
+    #if: ${{ false }}
     runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v4
@@ -32,5 +32,5 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v3
-      - name: Lint and shame users who don't use generics and stuff
+      - name: Ensure code standard and Java linting is correct.
         run: ./gradlew ${{ env.gradle_options }} build

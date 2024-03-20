@@ -13,7 +13,7 @@ env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
   gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:

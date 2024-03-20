@@ -21,7 +21,22 @@ jobs:
   xdk-publish-snapshot:
     runs-on: ubuntu-latest
     steps:
+      # TODO: We should just run a publish github no matter what the version is.
+      # If this is a snapshot, it's working already, just do it on master only.
+      # If it's a release, fail if the release exists, if not, publish the artifact, and update the VERSION file to next version + SNAPSHOT
       - uses: actions/checkout@v4
+      - run: |
+          echo "XDK_VERSION=$(cat ${{ github.workspace }}/VERSION)" >> "$GITHUB_ENV"
+      - run: |      
+          echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
+          if [[ "$XDK_VERSION" == *SNAPSHOT ]]; then
+            echo "*** XDK_VERSION is SNAPSHOT."
+            echo "XDK_SNAPSHOT=1" >> "$GITHUB_ENV"
+          else
+            echo "*** XDK_VERSION is RELEASE."
+          fi
+          echo "*** XDK_VERSION GITHUB_REF: ${{ github.ref }} ${{ github.actor }}"
+          echo "*** XDK_VERSION GITHUB_REF: $GITHUB_REF $GITHUB_ACTOR"
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
