@@ -15,12 +15,21 @@ env:
   gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:
+  parse-semver:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+
 
   gradle-install-dist:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
+
+    needs:
+      parse-semver
 
     steps:
       - name: Checkout repository branch
@@ -71,6 +80,37 @@ jobs:
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
           ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
-
-      - name: XDK Publish release artifact
-        if: $${{[[ "$XDK_VERSION" ] != *SNAPSHOT ]]}}
+#...
+#job:
+#  test_semver_parser:
+#    runs_on: ubuntu_latest
+#    steps:
+#      - name: Parse semver string
+#        id: semver_parser
+#        uses: booxmedialtd/ws-action-parse-semver@v1
+#        with:
+#          input_string: '1.0.4'
+#      - name: Use parsed semver
+#        run: |
+#          echo "v${{ steps.semver_parser.outputs.major }}"
+#          echo "v${{ steps.semver_parser.outputs.minor }}"
+#          echo "v${{ steps.semver_parser.outputs.patch }}"
+#          echo "v${{ steps.semver_parser.outputs.prerelease }}"
+#          echo "v${{ steps.semver_parser.outputs.build }}"
+#          echo "v${{ steps.semver_parser.outputs.fullversion }}"
+        # Fail with exit 1
+        # For a release - check if it is already tagged. If this is the case, warn or ignore.
+        # If it's not tagged, create a tag with VERSION (without the snapshot) and push it.
+        # Bump the VERSION and write it back to VERISON with a snapshot suffix.
+        # Release should be a separate workflow triggered by pushing a tag.
+        #
+        # Parse the VERSION file. If it's a snapshot version, just publish the snapshot and do nothing,
+        #
+        # If this is a release version x.y.z, check if the tag vx.y.z exists. If it does, fail. We cannot
+        # overwrite an existing release.
+        # If the tag does not exists, create it and push it. Also replace the contents of x.y.z with
+        # x.y.(z+1)-SNAPSHOT or with
+        #
+      #- name: XDK Publish release artifact
+      #  if: $${{[[ "$XDK_VERSION" ] != *SNAPSHOT ]]}}
+      # styfle/cancel-workflow-action@0.10.0

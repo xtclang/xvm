@@ -1,0 +1,10 @@
+{
+  "project": "xdk",
+  "version": "0.4.44-SNAPSHOT",
+  "group": "org.xtclang"
+},
+{
+  "project": "plugin",
+  "version": "0.4.44-SNAPSHOT",
+  "group": "org.xtclang"
+}
