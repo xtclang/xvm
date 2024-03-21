@@ -38,7 +38,7 @@ class NewAST extends AST {
   // "new RegAST".
   private static AST[] kids_plus_clz(AST[] kids, XClz xt, ClzBuilder X, Const type) {
     // See if there are any type parameters needing adding
-    if( xt.noTypeParms(null,false) )
+    if( xt.noTypeParms(null,false) || type==null )
       return kids;
 
     // Type parameters can be constants or can be function arguments passed in.

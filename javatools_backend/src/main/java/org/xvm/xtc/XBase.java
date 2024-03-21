@@ -5,7 +5,7 @@ import org.xvm.util.SB;
 import org.xvm.util.VBitSet;
 import org.xvm.xtc.cons.ParamTCon;
 
-// Shallow Java class name, or type. 
+// Shallow Java class name, or type.
 public class XBase extends XType {
   private static XBase FREE = new XBase();
   public String _jtype;
@@ -22,13 +22,13 @@ public class XBase extends XType {
   @Override public boolean isAry() { return this==XCons.STRING; }
 
   @Override XBase nullable() { return make(_jtype,false); }
-  
+
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {
     sb.p(_jtype);
     if( S.eq(_jtype,"String") && !_notNull ) sb.p("?");
     return sb;
   }
-  @Override SB _clz( SB sb, ParamTCon ptc ) { return sb.p(_jtype); }
+  @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) { return sb.p(_jtype); }
   @Override boolean eq(XType xt) { return _jtype.equals(((XBase)xt)._jtype);  }
   @Override int hash() { return _jtype.hashCode(); }
   @Override public XType e() {

@@ -30,7 +30,7 @@ class SwitchAST extends AST {
   // How we encode this switch in Java
   enum Flavor { ComplexTern, SimpleTern, IntRange, Pattern };
   final Flavor _flavor;
-  
+
   static SwitchAST make( ClzBuilder X, boolean expr ) {
     int nlocals = X.nlocals();  // Count of locals
     Flavor flavor;
@@ -69,7 +69,7 @@ class SwitchAST extends AST {
         if( !valid_range( c ) )
           throw XEC.TODO();
     }
-    
+
     // Parse result types
     Const[] rezs = expr ? X.consts() : null;
     boolean cond_defines = nlocals != X.nlocals();
@@ -79,7 +79,7 @@ class SwitchAST extends AST {
   private static boolean valid_range( Const c ) {
     return c == null || c instanceof IntCon || c instanceof CharCon || (c instanceof RangeCon rcon && valid_range(rcon._lo));
   }
-  
+
   private SwitchAST( ClzBuilder X, Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
     super(kids);
     _flavor = flavor;
@@ -89,7 +89,7 @@ class SwitchAST extends AST {
     _rezs = rezs;
     _cond_defines = cond_defines;
 
-    // Pre-cook the match parts.    
+    // Pre-cook the match parts.
     // Each pattern match has the same count of arms
     int clen = cases.length;
     _armss = new String[clen][];
@@ -105,9 +105,9 @@ class SwitchAST extends AST {
       break;
 
     case IntRange: // Here each arm has 1 part, an exact integer check, or a constant range check
-      for( int i=0, j=0; i<clen-1; i++, j++ ) {
+      for( int i=0; i<clen-1; i++ ) {
         String arm;
-        if( _cases[j] instanceof RangeCon rcon ) {
+        if( _cases[i] instanceof RangeCon rcon ) {
           long lo = AbstractRange.start(rcon); // Insert the range now
           long hi = AbstractRange.end  (rcon);
           SB sb = new SB();
@@ -115,7 +115,7 @@ class SwitchAST extends AST {
             sb.p(k).p(", ");
           arm = sb.unchar(2).toString();
         } else {
-          arm = ""+((NumCon)_cases[j])._x;
+          arm = ""+((NumCon)_cases[i])._x;
         }
         _armss[i] = new String[]{arm};
       }
@@ -138,14 +138,14 @@ class SwitchAST extends AST {
       for( int i=0; i<clen-1; i++ )
         _armss[i] = new String[]{XValue.val(X,cases[i])};
       break;
-      
+
     }
   }
 
   @Override boolean is_loopswitch() { return true; }
-  
+
   @Override XType _type() { return XCons.VOID; }
-  
+
   // Pre-cook the temps
   @Override AST prewrite() {
     BlockAST blk = enclosing_block();
@@ -167,7 +167,7 @@ class SwitchAST extends AST {
 
     if( _cond_defines )
       hoist_defs(_kids[0],blk);
-    
+
     return this;
   }
 
@@ -184,7 +184,7 @@ class SwitchAST extends AST {
     }
   }
 
-  
+
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
 
@@ -213,7 +213,7 @@ class SwitchAST extends AST {
       sb.p(") &");
     }
     sb.nl().ii();
-    
+
     // for each case label
     for( int i=0; i<_armss.length-1; i++ ) {
       sb.i();
@@ -251,7 +251,7 @@ class SwitchAST extends AST {
     return sb;
   }
 
-  
+
   // Series of exact tests
   // $t($tmp=e0) &
   // $tmp==con0 ? arm0 :
@@ -318,7 +318,7 @@ class SwitchAST extends AST {
     sb.p("switch( ");
     _kids[0].jcode(sb);
     sb.p(" ) {").nl().ii();
-    
+
     for( int i=0; i<_armss.length; i++ ) {
       if( _armss[i][0]==null ) sb.ip("default"); else sb.ip("case ").p(_armss[i][0]);
       sb.p(case_sep);

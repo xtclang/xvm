@@ -17,7 +17,7 @@ import static org.xvm.xec.ecstasy.collections.Array.Mutability.*;
 public class Aryboolean extends Array<Boolean> {
   public static final Aryboolean GOLD = new Aryboolean();
   public static final Aryboolean EMPTY= new Aryboolean();
-  
+
   public boolean[] _es;
   private Aryboolean(Mutability mut, boolean[] es) { super(Boolean.GOLD,mut,es.length); _es = es; }
   public  Aryboolean(                       ) { this(Mutable , new boolean[ 0 ]); }
@@ -25,7 +25,7 @@ public class Aryboolean extends Array<Boolean> {
   public  Aryboolean(double x, boolean... es) { this(Constant, es); }
   public  Aryboolean(Mutability mut, Aryboolean as) { this(mut,as._es.clone()); }
   public  Aryboolean(Aryboolean as) { this(as._mut,as); }
-  
+
   public interface IntBooleanOper { boolean apply(int i); }
   public Aryboolean( long len, IntBooleanOper fcn ) {
     this((int)len);
@@ -36,7 +36,8 @@ public class Aryboolean extends Array<Boolean> {
 
   public static Aryboolean construct(Mutability mut, Aryboolean as) { return new Aryboolean(mut,as); }
   public static Aryboolean construct(long len) { return new Aryboolean(len); }
-  
+  public static Aryboolean construct( long len, IntBooleanOper fcn ) { return new Aryboolean(len,fcn); }
+
   // Fetch element
   public boolean at8(long idx) {
     if( 0 <= idx && idx < _len )
@@ -44,7 +45,7 @@ public class Aryboolean extends Array<Boolean> {
     throw new ArrayIndexOutOfBoundsException( idx+" >= "+_len );
   }
   public boolean getElement(long idx ) { return at8(idx); }
-    
+
   // Fetch element
   @Override public Boolean at(long idx) { return Boolean.make(at8(idx)); }
 
@@ -67,7 +68,7 @@ public class Aryboolean extends Array<Boolean> {
 
   /** Slice */
   public Aryboolean slice( AbstractRange r ) { throw XEC.TODO(); }
-  
+
   public Aryboolean delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;
@@ -85,7 +86,7 @@ public class Aryboolean extends Array<Boolean> {
     SBX.clear();
     return str;
   }
-  
+
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.
@@ -114,10 +115,10 @@ public class Aryboolean extends Array<Boolean> {
     private int _i;
     @Override public Boolean next() { return Boolean.make(next8()); }
     public boolean next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
-    @Override public boolean hasNext() { return _i<_len; }  
+    @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return _i+".."+_len; }
     // --- Comparable
-    @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
+    @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }
   }
 
 
@@ -129,7 +130,7 @@ public class Aryboolean extends Array<Boolean> {
     return this;
   }
 
-  
+
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
 }

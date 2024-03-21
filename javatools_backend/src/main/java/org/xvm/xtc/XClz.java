@@ -41,10 +41,10 @@ import java.util.Arrays;
 
 public class XClz extends XType {
   private static final String[] STR0 = new String[0];
-    
+
   // Force XCons to fill the XTpe INTERNs
   public static XClz _FORCE = XCons.JNULL;
-  
+
   // The uniqueness is on these things: package, name, and all type parms.
   public String _pack, _nest, _name; // Package name, nested class name, short name
   public String[] _tns;         // Type names, matching _xts
@@ -60,17 +60,17 @@ public class XClz extends XType {
   // also directly encodes the parameter.
   // Example: XTC Array<Char> vs Java Arychar
   //          XTC Array<Int>  vs Java Arylong
-  public  String _jpack, _jname; 
+  public  String _jpack, _jname;
 
   // This is a tempory field; set and cleared per-compilation unit
   transient public boolean _ambiguous;
-  
+
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _pack = "0xDEADBEEF"; }
 
   // Free list of XClzs to recycle
   private static XClz FREE;
-  
+
   private static XClz malloc( boolean notNull, String pack, String nest, String name ) {
     XClz clz = FREE==null ? new XClz() : FREE;
     if( clz==FREE ) FREE=null;
@@ -115,7 +115,7 @@ public class XClz extends XType {
     if( clz!=this ) { FREE = this; _pack = "0xDEADBEEF"; }
     return clz;
   }
-    
+
   // Intern and fill out a parameterized class from the prototype
   XClz _intern( XClz proto ) {
     // See if already exists
@@ -133,7 +133,7 @@ public class XClz extends XType {
     _jname = proto._jname;
     return clz;
   }
-  
+
 
 
   // Fill in common fields.  Not interned yet.
@@ -160,7 +160,7 @@ public class XClz extends XType {
       cnest = ("M$"+cnest).intern();
       cname = S.java_class_name(clz.name());
     }
-    
+
     XClz xclz = malloc( true, pack(clz,mod), cnest, cname, clz._tnames.length );
     xclz._mod = mod;  // Self module
     xclz._clz = clz;
@@ -180,7 +180,7 @@ public class XClz extends XType {
     // Load the type parameters, part of the uniqueness
     for( int i=0; i<clz._tnames.length; i++ ) {
       xclz._tns[i] = clz._tnames[i];
-      xclz._xts[i] = xtype(clz._tcons[i],true);
+      xclz._xts[i] = xtype(clz._tcons[i],true,xclz);
     }
     xclz._super = get_super(clz);
     XClz xclz2 = xclz._intern();
@@ -189,30 +189,30 @@ public class XClz extends XType {
     return xclz;
   }
 
-  
+
   // Make from a parameterized class: like a
   // normal class but the type parms from the PTC.
-  
+
   // Example class usage with a concrete type, not a type-variable:
   //   class Nums extends List<Int> { ... }
   //   XClz: Nums{_=Int}
   //   No field name, since Int is a Type not a TypeVar
-  
+
   //Example class usage:
   //   class MyList<Q> extends List<Q> { ... }
   //   XClz: MyList{Q=XTC}
   //   Name is valid in local scope and NOT in List's scope
-  
+
   //Example class usage:
   //   class MyList<H extends Hashable> extends List<H> { ... }
   //   XClz: MyList{H=Hashable}
   //   Name and constraint are valid in local scope.
-  
+
   public static XClz make( ParamTCon ptc ) {
     // Get the UNparameterized class
     ClassPart clz = ptc.clz();
     XClz proto = make(clz);
-    
+
     // Very specifically, generic parameterized AryXTC<XTC> means the
     // un-element-typed Array<VOID>, used to make both primitive arrays and
     // Object arrays.
@@ -222,7 +222,7 @@ public class XClz extends XType {
         return proto;
       proto = proto._ro ? XCons.ARYXTC_RO : XCons.ARYXTC;
     }
-      
+
     XClz xclz = proto.malloc();
     xclz._xts = ptc._parms==null ? EMPTY : new XType [ptc._parms.length];
     xclz._tns = ptc._parms==null ? STR0  : new String[ptc._parms.length];
@@ -234,7 +234,7 @@ public class XClz extends XType {
       xclz._tns[i] = isType ? null : clz._tnames[i];
       xclz._xts[i] = xtype(ptc._parms[i],true);
     }
-    
+
     return xclz._intern(proto);
   }
 
@@ -277,7 +277,7 @@ public class XClz extends XType {
     xclz._xts[0] = xt;
     return xclz._intern(XCons.FUTUREVAR);
   }
-  
+
   // You'd think the clz._super would be it, but not for enums
   static XClz get_super( ClassPart clz ) {
     if( clz==null ) return null;
@@ -328,15 +328,15 @@ public class XClz extends XType {
     return _xts[0];
   }
   public final boolean iface() { return _clz!=null && _clz._f==Part.Format.INTERFACE; }
-  
-  
+
+
   // Class & package names.
 
   // Example: tck_module (the module itself)
   // _pack: ""
   // _nest: ""
   // _name: tck_module
-  
+
   // Example:  tck_module.comparison.Compare.AnyValue
   // _pack: tck_module.comparison
   // _nest: ""
@@ -346,7 +346,7 @@ public class XClz extends XType {
   // _pack: ecstasy
   // _nest: ""
   // _name: Enum
-  
+
   // Example:  nQueens.Board
   // _pack: nQueens
   // _nest: M$nQueens
@@ -378,7 +378,7 @@ public class XClz extends XType {
   }
   // No java name means needs a build
   public boolean needs_build() { return _jname.isEmpty(); }
-  
+
   // Find a type name in the superclass chain
   XType find(String tname) {
     XClz clz = this;
@@ -404,7 +404,7 @@ public class XClz extends XType {
         sb.p("  ");
         if( _tns[i]!=null ) sb.p( _tns[i]);
         sb.p(":");
-        if( _xts[i] != null )  _xts[i].str(sb,visit,dups);
+        if( _xts[i] != null )  _xts[i]._str(sb,visit,dups);
         sb.p(";").nl();
       }
     sb.p("}");
@@ -415,7 +415,7 @@ public class XClz extends XType {
   // Walk and print Java class name, including generics.  If XTC is providing
   // e.g. method-specific generic names, use them instead.  Using "T" here
   // instead of "XTC": "<T extends XTC> void bar( T gold, AryXTC<T> ary )"
-  @Override SB _clz( SB sb, ParamTCon ptc ) {
+  @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) {
     // Specifically JSTRING uses the fully qualified name, to not be confused
     // with java.lang.String.
     if( this==XCons.JSTRING || this==XCons.JOBJECT )
@@ -428,13 +428,13 @@ public class XClz extends XType {
     sb.p(clz_bare());
 
     // Print generic parameters?
-    if( noTypeParms( ptc,true ) ) return sb;
-    
+    if( !print || noTypeParms( ptc,true ) ) return sb;
+
     // Printing generic type parameters
     sb.p("<");
     for( int i=0; i<_xts.length; i++ ) {
       // No ParamTCon provided, using the generic class as-is
-      if( ptc==null )  _xts[i]._clz(sb,ptc);
+      if( ptc==null )  _xts[i]._clz(sb,ptc,print);
       // ParamTCon has a different name, it's not a type, it's a generic name.
       else if( ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm )
         sb.p("$").p(parm._name);
@@ -449,17 +449,17 @@ public class XClz extends XType {
   public String pack( ) { return _jpack.isEmpty() ? _pack : _jpack; }
 
   public boolean noTypeParms() { return noTypeParms( null, true ); }
-  public boolean noTypeParms( ParamTCon ptc, boolean print) {
+  public boolean noTypeParms( ParamTCon ptc, boolean print ) {
     // No type parameters
     if( _xts.length==0 ) return true;
     // Print Array<void> as Array
     if( ptc==null && (this==XCons.ARRAY || this==XCons.ARRAY_RO) ) return print;
     // Print Other AryXTC with types
-    if( _jname=="AryXTC" ) return false;
+    if( _jname.equals( "AryXTC" ) ) return false;
     // Some Java implementations already specify the XTC generic directly: Arylong
     return !_jname.isEmpty() && !S.eq( _name, _jname );
   }
-  
+
   // Module: Lib  as  org.xv.xec.X$Lib
   // Class : tck_module.comparison.Compare.AnyValue  as  org.xv.xec.tck_module.comparison.Compare.AnyValue
   public String qualified_name() {
@@ -475,10 +475,10 @@ public class XClz extends XType {
   public SB clz_generic( SB sb, boolean do_name, boolean generic_def ) {
     if( _ambiguous ) throw XEC.TODO();
     if( do_name )  sb.p(name());
-    
+
     // Do not print generic parameters
     if( noTypeParms() ) return sb;
-    
+
     // Printing generic type parameters
     sb.p("<");
     for( int i=0; i<_xts.length; i++ ) {
@@ -494,14 +494,14 @@ public class XClz extends XType {
     }
     return sb.unchar().p("> ");
   }
-  
+
   private SB strTuple( SB sb ) {
     sb.p("Tuple").p(_xts.length).p("$");
     for( XType xt : _xts )
-      xt._clz(sb,null).p("$");
+      xt._clz(sb,null,false).p("$");
     return sb.unchar();
   }
-  
+
   // Using shallow equals, hashCode, not deep, because the parts are already interned
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;

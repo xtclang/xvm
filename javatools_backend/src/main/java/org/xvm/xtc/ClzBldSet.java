@@ -13,7 +13,7 @@ public abstract class ClzBldSet {
   // All sources to be javac'd at once.  Includes some sources generated
   // outside ClzBuilder (e.g. generified functional interfaces or tuples)
   public static final ArrayList<JavaC.JavaSrc> SRCS = new ArrayList<>();
-  
+
   // We know we are starting a new gen set here
   public static void do_compile( ClassPart clz ) {
     assert clz._header==null && clz._body==null;
@@ -51,7 +51,7 @@ public abstract class ClzBldSet {
       return;
     if( CLZS.find(clz)!= -1 ) return; // Already on the to-do list
     assert clz._header==null && clz._body==null;
-    CLZS.push(clz);    
+    CLZS.push(clz);
   }
 
   // Add Java file (as a String), to the current compilation step.

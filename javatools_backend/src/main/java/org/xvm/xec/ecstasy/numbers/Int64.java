@@ -25,21 +25,24 @@ public class Int64 extends IntNumber {
     return new Int64(x);
   }
   public Int64(Never n ) { this(0); } // No-arg constructor
-  
+
   public final long _i;
-  
+
   public Int64(String s) { this(Long.valueOf(s)); }
   public Int64(org.xvm.xec.ecstasy.text.String s) { this(s._i); }
   public Int64( long i ) { _i = i; }
 
   public static Int64 construct( String s ) { return new Int64(s); }
   public static Int64 construct( long i ) { return new Int64(i); }
-  
+
+  public boolean eq( long x ) { return _i==x; }
+
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
 
   // All the XTC types here are guaranteed to be Int64
-  @Override public long hashCode(XTC x) { return ((Int64)x)._i; }
   @Override public boolean equals ( XTC x0, XTC x1 ) { return ((Int64)x0)._i == ((Int64)x1)._i; }
+  public static <E extends Int64> boolean equals$Int64(XTC gold, E i0, long i1 ) { return i0._i==i1; }
+  @Override public long hashCode(XTC x) { return ((Int64)x)._i; }
   @Override public Ordered compare( XTC x0, XTC x1 ) {
     long i0 = ((Int64)x0)._i;
     long i1 = ((Int64)x1)._i;

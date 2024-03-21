@@ -7,17 +7,18 @@ import org.xvm.util.SB;
 
 public abstract class AST {
   public static int _uid;       // Private counter for temp names
-  
+
   public final AST[] _kids;     // Kids
   AST _par;                     // Parent
   XType _type;                  // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
   boolean _cond;                // True if passing the hidden condition flag
-  
+
   // Simple all-fields constructor
   AST( AST[] kids ) { _kids = kids; }
 
   @Override public String toString() { return jcode(new SB() ).toString(); }
 
+  public XType getType() { return _type; }
 
   // Use the _par parent to find nearest enclosing Block for tmps
   BlockAST enclosing_block() {
@@ -39,7 +40,7 @@ public abstract class AST {
 
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
-  
+
   // Auto-box/unblock Int64 (vs Long)
   void autobox( int basex, XType tbox) {
     if( tbox==XCons.VOID ) return;
@@ -71,7 +72,7 @@ public abstract class AST {
     }
     throw XEC.TODO();
   }
-  
+
   // Recursively walk the AST, setting the _type field.
   public final void type( ) {
     if( _kids != null )
@@ -92,7 +93,7 @@ public abstract class AST {
     _cond = _cond();
     return this;
   }
-  
+
   // AST elements rewrite themselves
   public final AST doRewrite(AST par) {
     _par = par;
@@ -108,7 +109,7 @@ public abstract class AST {
   // Rewrite some AST bits before Java
   AST prewrite () { return this; }
   AST postwrite() { return this; }
-  
+
   /**
    * Dump indented pretty java code from AST.
    *
@@ -126,14 +127,14 @@ public abstract class AST {
     jpost(sb);
     return sb;
   }
-  
+
   // Pretty-print in Java overrides.  Returns a flag to do a visit over all
   // children (with jmid in between kids), or just allow jpre to do the entire
   // print.
   void jpre ( SB sb ) {}
   void jmid ( SB sb, int i ) {}
   void jpost( SB sb ) {}
-  
+
   public static AST parse( ClzBuilder X ) { return ast(X); }
 
   // Magic constant for indexing into the constant pool.
@@ -148,9 +149,9 @@ public abstract class AST {
     // Constants from the limited method constant pool
     return new ConAST( X, X.con(CONSTANT_OFFSET-iop) );
   }
-  
+
   static AST ast( ClzBuilder X ) { return _ast(X,X.u8()); }
-  
+
   private static AST _ast( ClzBuilder X, int iop ) {
     NodeType op = NodeType.NODES[iop];
     return switch( op ) {
@@ -180,6 +181,7 @@ public abstract class AST {
     case InvokeExpr   ->   InvokeAST.make(X,false);
     case InvokeAsyncExpr-> InvokeAST.make(X,true );
     case Less         ->    OrderAST.make(X,"<");
+    case MapExpr      ->      MapAST.make(X);
     case MultiExpr    ->    MultiAST.make(X,true);
     case MultiStmt    ->    MultiAST.make(X,false);
     case NamedRegAlloc->   DefRegAST.make(X,true ,false);
@@ -214,7 +216,7 @@ public abstract class AST {
     case VarOfExpr    ->    UniOpAST.make(X,"&","");
     case WhileDoStmt  ->    WhileAST.make(X);
     case UnpackExpr   ->    throw XEC.TODO();
-    
+
     default -> throw XEC.TODO();
     };
   }

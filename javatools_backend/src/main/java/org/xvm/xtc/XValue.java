@@ -40,13 +40,13 @@ public abstract class XValue {
     // String constants
     case StringCon sc ->
       ASB.quote(sc._str);
-       
+
     // Literal constants
     case LitCon lit ->
       lit._f==Const.Format.IntLiteral
       ? ASB.p("IntLiteral.construct(\"").p(lit._str).p("\")")
       : ASB.quote(lit._str);
-    
+
     // Method constants
     case MethodCon mcon -> {
       MethodPart meth = (MethodPart)mcon.part();
@@ -94,7 +94,7 @@ public abstract class XValue {
       yield ASB.p("org.xvm.xec.ecstasy.reflect.Type.GOLD");
       //throw XEC.TODO();
     }
-    
+
     // Enums
     case EnumCon econ -> {
       ClassPart clz = (ClassPart)econ.part();
@@ -103,7 +103,7 @@ public abstract class XValue {
       if( sup_clz.equals("Nullable") )
         yield ASB.p("null");
       // XTC Booleans rewrite as Java booleans
-      if( sup_clz.equals("Boolean") ) 
+      if( sup_clz.equals("Boolean") )
         yield ASB.p(clz._name.equals("False") ? "false" : "true");
       // Use the enum name directly
       ClzBuilder.add_import(clz._super);
@@ -129,7 +129,7 @@ public abstract class XValue {
       _val(X,rcon._hi).p(")");
       yield ASB;
     }
-    
+
     // Array constants
     case AryCon ac -> {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
@@ -140,11 +140,11 @@ public abstract class XValue {
         ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.AryXTC");
         yield ASB.p("AryXTC.EMPTY"); // Untyped array creation; cannot hold elements
       }
-      
+
       // new Ary<String>( "abc", "def");
       // new Arylong( 0, 1, 2 );
       // new AryXTC<Arylong>( new Arylong(0) )
-      ary.clz(ASB.p("new ")).p("(  ");
+      ary.clz   (ASB.p("new ")).p("(  ");
       if( ary.generic_ary() )
         ary.e().clz(ASB).p(".GOLD, ");
       else if( !ary.isTuple() )
@@ -158,7 +158,7 @@ public abstract class XValue {
     // Map constants
     case MapCon mc -> {
       XType type = XType.xtype(mc._t,false);
-      type.str(ASB.p("new ")).p("() {{ ");
+      type.clz(ASB.p("new ")).p("() {{ ");
       for( int i=0; i<mc._keys.length; i++ ) {
         ASB.p("put(");
         _val(X, mc._keys[i] ).p(",");
@@ -175,13 +175,13 @@ public abstract class XValue {
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".console()");
       if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
         yield ASB.p(NativeTimer.make_timer(XClz.make(clz)));
-      throw XEC.TODO();      
+      throw XEC.TODO();
     }
 
-    case Dec64Con dcon -> 
+    case Dec64Con dcon ->
       ASB.p("new Dec64(\"").p(dcon.asStr()).p("\")");
-    
-    case Dec128Con dcon -> 
+
+    case Dec128Con dcon ->
       ASB.p("new Dec128(\"").p(dcon.asStr()).p("\")");
 
     case ClassCon ccon -> {
@@ -201,7 +201,7 @@ public abstract class XValue {
       default -> throw XEC.TODO();
       };
 
-    
+
     default -> throw XEC.TODO();
     };
   }

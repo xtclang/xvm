@@ -17,8 +17,8 @@ class PropertyAST extends AST {
     type = type.unbox();
     return new PropertyAST( lhs, type, prop);
   }
-  
-  private PropertyAST( AST lhs, XType type, String prop ) {
+
+  PropertyAST( AST lhs, XType type, String prop ) {
     super(new AST[]{lhs});
     _prop = prop;
     _type = type;
@@ -26,7 +26,7 @@ class PropertyAST extends AST {
 
   @Override XType _type() { return _type; } // Already set
   @Override String name() { return _prop; }
-  
+
   @Override AST prewrite() {
     // Java strings do not have any properties, just rewrite to the java name
     if( _prop.equals("size") || _prop.equals("size$get()")) {
@@ -42,7 +42,7 @@ class PropertyAST extends AST {
     }
     return this;
   }
-  
+
   @Override void jpost( SB sb ) {
     if( _kids[0]!=null ) sb.p('.');
     sb.p(_prop);

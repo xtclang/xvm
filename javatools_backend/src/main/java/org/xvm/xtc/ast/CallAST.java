@@ -30,7 +30,7 @@ public class CallAST extends AST {
     _rets = rets;
     _type = _type();
   }
-  
+
   @Override XType _type() {
     if( _rets==null ) return XCons.VOID;
     if( _rets.length == 1 ) return _rets[0];
@@ -43,13 +43,16 @@ public class CallAST extends AST {
       if( con._type instanceof XFun fun && fun.nargs()>0 && fun.arg(0) instanceof XClz clz ) {
         // Hard force Int64/IntNumber "funky dispatch" to Java primitive
         if( clz.isa(XCons.INTNUM) ) {
-          if( con._con.endsWith(".equals"  ) ) return new BinOpAST("==","",XCons.BOOL,_kids[2],_kids[3]);
-          if( con._con.endsWith(".compare" ) ) return new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
+          if( con._con.endsWith(".equals"  ) ) return new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
+          if( con._con.endsWith(".compare" ) ) return new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]).prewrite();
           if( con._con.endsWith(".hashCode") ) return _kids[2];
         }
         // Hard force "funky dispatch" to Java primitive
         if( clz.isa(XCons.JSTRING) ) {
-          if( con._con.equals("String.equals") ) return new BinOpAST("==","",XCons.BOOL,_kids[2],_kids[3]);
+          // CNC 3/20/2024 - why?  need an "equals" call for Strings, not "=="
+          if( con._con.equals("String.equals") )
+            throw XEC.TODO();
+            //return new BinOpAST("==","",XCons.BOOL,_kids[2],_kids[3]);
         }
       }
 
@@ -65,7 +68,7 @@ public class CallAST extends AST {
         };
         if( nargs != 0 ) {
           assert _kids.length==nargs+2;
-          if( _kids[1] instanceof ConAST ) { 
+          if( _kids[1] instanceof ConAST ) {
             // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name
             if( clz.equals("org.xvm.xec.ecstasy.text.String") ) clz = "String";
             if( clz.equals("org.xvm.xec.ecstasy.Object"     ) ) clz = "Object";
@@ -93,12 +96,12 @@ public class CallAST extends AST {
   // XTC  : "Foo<Int> foo = create(stuff);"
   // BAST : "Assign(DefReg Foo<Int> is = Call("create",Int,stuff)"
   // The Java expects a strongly typed result:
-  // Java : "Foo<Int> foo = create(INT64.GOLD,stuff)" 
+  // Java : "Foo<Int> foo = create(INT64.GOLD,stuff)"
   // However, the create call returns generic Foos:
   // XTC: "<T> Foo create( stuff ) { ... }"
   // So the Java has to return a generic Foo
   // Java: "Foo create( int len )"
-  // 
+  //
   @Override void jpre( SB sb ) {
     // Assume we need a (self!) cast, from some abstract type to a more
     // specificed local type.
@@ -106,7 +109,7 @@ public class CallAST extends AST {
         _kids.length>1 && _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ptc )
       _type.clz(sb.p("(")).p(")");
   }
-  
+
   @Override void jmid ( SB sb, int i ) {
     sb.p( i==0 ? (_kids[0] instanceof RegAST ? ".call(": "(") : ", " );
   }

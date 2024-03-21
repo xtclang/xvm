@@ -11,7 +11,7 @@ class Basic {
         testIntConv();
         testSlice();
     }
-    
+
     @Test
     void testConstAccess() {
         Tuple<String, String, Int> t = ("hello", "world", 17);
