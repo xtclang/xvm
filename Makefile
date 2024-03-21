@@ -123,7 +123,7 @@ test_classesT := $(patsubst $(TSTT)/%java,$(CLZDIRT)/test/%class,$(test_javasT))
 # Compile just the out-of-date files
 $(main_classesT): $(CLZDIRT)/main/%class: $(SRCT)/%java $(main_classesU)
 	$(file > .args.txt, $(filter-out %class, $?))
-	@echo -ne "compiling " $@ " because "; cat .args.txt
+	@echo -e "compiling " $@ " because " $< " and " `wc -w < .args.txt` " more files"
 	@[ -d $(CLZDIRT)/main ] || mkdir -p $(CLZDIRT)/main
 	@javac $(JAVAC_ARGS) -cp "$(CLZDIRT)/main$(SEP)$(CLZDIRU)/main$(SEP)$(LIBS)" -sourcepath $(SRCT) -d $(CLZDIRT)/main @.args.txt
 	@rm -f .args.txt
@@ -134,13 +134,25 @@ $(test_classesT): $(CLZDIRT)/test/%class: $(TSTT)/%java $(main_classesT)
 	@javac $(JAVAC_ARGS) -cp "$(CLZDIRT)/test$(SEP)$(CLZDIRT)/main$(SEP)$(LIBS)" -sourcepath $(TSTT) -d $(CLZDIRT)/test $(test_javasT)
 
 # Build a jar from all the class files in $(CLZDIRT)/main and $(CLZDIRU)/main
-build/classes/javatools/javatools.jar: $(main_classesT) $(main_classesU) javatools_backend/MANIFEST.MF javatools_backend/errors.properties
+build/classes/javatools/javatools.jar: $(main_classesT) $(main_classesU) build/classes/javatools/MANIFEST.MF javatools/src/main/resources/errors.properties
 	@$(file > .args.txt, $? )
-	@echo -ne "  jarring " $@ " because "; cat .args.txt
+	@echo -e "  jarring " $@ " because " $< " and " `wc -w < .args.txt` " more files"
 	@rm -f .args.txt
-	@jar -cfm $@ javatools_backend/MANIFEST.MF -C $(CLZDIRT)/main . -C $(CLZDIRU)/main . -C javatools_backend errors.properties
+	@jar -cfm $@ build/classes/javatools/MANIFEST.MF -C $(CLZDIRT)/main . -C $(CLZDIRU)/main . -C javatools/src/main/resources errors.properties
 
-
+# Build the manifest
+build/classes/javatools/MANIFEST.MF: VERSION
+	@echo Manifest-Version: 1.0 > $@
+	@echo Xdk-Version: org.xtclang:javatools:`cat VERSION` >> $@
+	@echo Sealed: true  >> $@
+	@echo Main-Class: org.xvm.tool.Launcher  >> $@
+	@echo Name: /org/xvm/  >> $@
+	@echo Specification-Title: xvm  >> $@
+	@echo Specification-Version: `cat VERSION` >> $@
+	@echo Specification-Vendor: xtclang.org  >> $@
+	@echo Implementation-Title: xvm-prototype >> $@
+	@echo Implementation-Version: `cat VERSION`  >> $@
+	@echo Implementation-Vendor: xtclang.org  >> $@
 
 #######################################################
 # Compiling XTC files from X files via XCC
@@ -188,9 +200,8 @@ examples_exe:	$(examples_x:x=exe) $(classesB)
 
 
 # Build TCK
-TCK = tck/src/main/x
-
-tck:	$(TCK)/tck.exe
+.PHONY:	tck
+tck:	tck/src/main/x/tck.exe
 
 # Manual tests use an explicit list
 MANUAL_DIR = manualTests/src/main/x/new_backend
@@ -210,23 +221,12 @@ manuals_exe:	$(manuals_x:x=exe) $(classesB)
 	@echo -ne $@ $*.xtc ":\t" > $@
 	@([ $* ] && /usr/bin/find $* -name *.x | xargs echo) >> $@
 
-## Pick up any make-depends files for each desired XTC file.
-## Useful to pick up updates in top-level XTC modules from deep child X files.
-#ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
-#qprint:
-#	@echo $(filter-out clean tags,$(MAKECMDGOALS))
-#ifeq (,$(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d))
-#rprint:
-#	@echo NOD $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)
-#else
-#sprint:
-#	@echo HASD $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)
-#include $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)
-#endif
-#else
-#xprint:
-#	@echo $(filter-out clean tags,$(MAKECMDGOALS))
-#endif
+# Pick up any make-depends files for each desired XTC file.
+# Useful to pick up updates in top-level XTC modules from deep child X files.
+ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
+MAKE_DEPS = $(filter %.d,$(sort $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)))
+include $(MAKE_DEPS)
+endif
 
 
 #MULTI = multiModule/Lib.x multiModule/Main.x
