@@ -1,8 +1,12 @@
-# Are your paths correct?
 #
 # Makefile expects to run at the project root, and not nested inside anywhere
 #
 #  cd $DESK/xvm; make
+
+#######################################################
+#
+# Boilerplate because make syntax isn't the best
+#
 
 # Use bash for recipes
 SHELL := /bin/bash
@@ -37,6 +41,7 @@ JAVAC_ARGS = -source 21 -target 21 -XDignore.symbol.file -Xlint:-deprecation
 
 XEC := org/xvm
 
+#######################################################
 default:
 	@echo "Need to pass some make options"
 	@echo "  init - one-time init; requires a good internet connection"
@@ -67,7 +72,6 @@ $(LIBS)/apiguardian-api-1.1.2.jar:
 	@(cd $(LIBS); wget https://repo1.maven.org/maven2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar)
 
 libs = $(wildcard $(LIBS)/*jar)
-jars = $(subst $(space),$(SEP),$(libs))
 
 
 
@@ -86,7 +90,6 @@ $(main_classesB): $(CLZDIRB)/main/%class: $(SRCB)/%java
 	@echo "compiling " $@ " because " $?
 	@[ -d $(CLZDIRB)/main ] || mkdir -p $(CLZDIRB)/main
 	@javac $(JAVAC_ARGS) -cp "$(CLZDIRB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZDIRB)/main $(main_javasB)
-
 
 #######################################################
 # javatools_utils
@@ -146,6 +149,7 @@ $(test_classesT): $(CLZDIRT)/test/%class: $(TSTT)/%java $(main_classesT)
 # Make XDK
 XDK_DIR = build/xdk
 XDK_JAR = $(XDK_DIR)/javatools/javatools.jar
+XDK_LIB = $(XDK_DIR)/lib
 
 $(XDK_JAR): $(main_classesT) $(main_classesU) $(XDK_DIR)/MANIFEST.MF javatools/src/main/resources/errors.properties lib_ecstasy/src/main/resources/implicit.x
 	@$(file > .args.txt, $? )
@@ -172,15 +176,38 @@ $(XDK_DIR)/MANIFEST.MF: VERSION
 # Compiling XTC files from X files via XCC
 
 JVM = java -ea -cp "$(CLZDIRB)/main"
-XTC = java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib --rebuild
-XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
-COM = java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
+XTC = java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild
+XEC = $(JVM) org.xvm.XEC -L $(XDK_LIB)
+COM = java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_LIB)
+
+
+#######################################################
+# Build the library XDK.
+
+# Build ecstasy.xtc.  This one is special, because it needs mack.x and makes a turtle.xtc.
+# the make-depend .d file is next to the generated XTC instead of next to the sources.
+SRCX = lib_ecstasy/src/main/x/ecstasy
+MACK = javatools_turtle/src/main/resources/mack
+TURTLE = $(XDK_DIR)/javatools/javatools_turtle.xtc
+XDKX = $(XDK_LIB)/ecstasy
+$(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x
+	@echo "compiling " $@ " because " $?
+	@[ -d $(XDK_LIB) ] || mkdir -p $(XDK_LIB)
+	@rm -f $(XDKX).d;  echo -ne $(XDKX).d $(XDKX).xtc ":\t" > $(XDKX).d; (/usr/bin/find $(SRCX) -name *.x | xargs echo) >> $(XDKX).d; echo >> $(XDKX).d
+	@java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild $(SRCX).x $(MACK).x
+	@mv $(MACK).xtc $(TURTLE)
+	@mv lib_ecstasy/build/ecstasy.xtc $(XDKX).xtc
 
 
 # General recipe for making an XTC from a X file
-%.xtc:	%.x $(XDK_JAR)
+# Automatic X-file dependency generation; .d file is next to both the XTC and sources.
+%.xtc:	%.x %.d $(XDK_JAR) $(XDK_LIB)/ecstasy.xtc
 	@echo "compiling " $@ " because " $?
-	$(XTC) $< -o $@
+	@rm -f $*.d;  echo -ne $*.d $*.xtc ":\t" > $*.d;  ((test -d $* && (/usr/bin/find $* -name *.x | xargs echo)) >> $*.d ) || true;  echo >> $*.d
+	@$(XTC) $< -o $@
+
+# No complaints if these do not exist, just go make them
+%.d:	;
 
 
 #######################################################
@@ -202,13 +229,6 @@ COM = java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
 
 
 #######################################################
-# General recipe for making a make-depend file from an XTC file
-# Automatic X-file dependency generation
-%.d:	%.xtc
-	@rm -f $@
-	@echo -ne $@ $*.xtc ":\t" $*.x " "> $@
-	@((test -d $* && (/usr/bin/find $* -name *.x | xargs echo)) >> $@ ) || true
-	@echo >> $@
 
 # Pick up any make-depends files for each desired XTC file.
 # Useful to pick up updates in top-level XTC modules from deep child X files.
