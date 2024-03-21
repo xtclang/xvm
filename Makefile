@@ -45,7 +45,7 @@ XEC := org/xvm
 default:
 	@echo "Need to pass some make options"
 	@echo "  init - one-time init; requires a good internet connection"
-	@echo "  build/classes/javatools/javatools.jar"
+	@echo "  build/xdk/javatools/javatools.jar"
 	@echo "  *.xtc - will build from the matching *.x"
 	@echo "  *.exe - will execute new backend from the matching *.x"
 	@echo "  *.com - will execute old backend from the matching *.x"
@@ -121,7 +121,7 @@ $(test_classesU): $(CLZDIRU)/test/%class: $(TSTU)/%java $(main_classesU)
 SRCT := javatools/src/main/java
 TSTT := javatools/src/test/java
 CLZDIRT:= build/classes/javatools
-main_javasT   := $(wildcard $(SRCT)/$(XEC)/*java $(SRCT)/$(XEC)/*/*java $(SRCT)/$(XEC)/*/*/*java)
+main_javasT   := $(wildcard $(SRCT)/$(XEC)/*java $(SRCT)/$(XEC)/*/*java $(SRCT)/$(XEC)/*/*/*java $(SRCT)/$(XEC)/*/*/*/*java)
 test_javasT   := $(wildcard $(TSTT)/$(XEC)/*java $(TSTT)/$(XEC)/*/*java $(TSTT)/$(XEC)/*/*/*java)
 main_classesT := $(patsubst $(SRCT)/%java,$(CLZDIRT)/main/%class,$(main_javasT))
 test_classesT := $(patsubst $(TSTT)/%java,$(CLZDIRT)/test/%class,$(test_javasT))
@@ -193,17 +193,68 @@ XDKX = $(XDK_LIB)/ecstasy
 $(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x
 	@echo "compiling " $@ " because " $?
 	@[ -d $(XDK_LIB) ] || mkdir -p $(XDK_LIB)
-	@rm -f $(XDKX).d;  echo -ne $(XDKX).d $(XDKX).xtc ":\t" > $(XDKX).d; (/usr/bin/find $(SRCX) -name *.x | xargs echo) >> $(XDKX).d; echo >> $(XDKX).d
+	@bin/makedepends.sh $(SRCX) $(XDKX)
 	@java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild $(SRCX).x $(MACK).x
 	@mv $(MACK).xtc $(TURTLE)
 	@mv lib_ecstasy/build/ecstasy.xtc $(XDKX).xtc
 
 
+SRCCRY = lib_crypto/src/main/x/crypto
+LIBCRY = $(XDK_LIB)/crypto
+$(LIBCRY).xtc:	$(SRCCRY).x $(LIBCRY).d $(XDK_JAR) $(XDKX).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCCRY) $(LIBCRY)
+	@$(XTC) $< -o $@
+
+SRCNET = lib_net/src/main/x/net
+LIBNET = $(XDK_LIB)/net
+$(LIBNET).xtc:	$(SRCNET).x $(LIBNET).d $(XDK_JAR) $(CRYPTO).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCNET) $(LIBNET)
+	@$(XTC) $< -o $@
+
+
+SRCAGG = lib_aggregate/src/main/x/aggregate
+LIBAGG = $(XDK_LIB)/aggregate
+$(LIBAGG).xtc:	$(SRCAGG).x $(LIBAGG).d $(XDK_JAR) $(XDKX).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCAGG) $(LIBAGG)
+	@$(XTC) $< -o $@
+
+SRCCOL = lib_collections/src/main/x/collections
+LIBCOL = $(XDK_LIB)/collections
+$(LIBCOL).xtc:	$(SRCCOL).x $(LIBCOL).d $(XDK_JAR) $(XDKX).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCCOL) $(LIBCOL)
+	@$(XTC) $< -o $@
+
+SRCJSN = lib_json/src/main/x/json
+LIBJSN = $(XDK_LIB)/json
+$(LIBJSN).xtc:	$(SRCJSN).x $(LIBJSN).d $(XDK_JAR) $(XDKX).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCJSN) $(LIBJSN)
+	@$(XTC) $< -o $@
+
+
+SRCWEB = lib_web/src/main/x/web
+LIBWEB = $(XDK_LIB)/web
+$(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(CRYPTO).xtc $(LIBJSN).xtc $(LIBNET).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCWEB) $(LIBWEB)
+	@$(XTC) $< -o $@
+
+SRCNAT = javatools_bridge/src/main/x/_native
+LIBNAT = $(XDK_DIR)/javatools/javatools_bridge
+$(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc
+	@echo "compiling " $@ " because " $?
+	@bin/makedepends.sh $(SRCNAT) $(LIBNAT)
+	@$(XTC) $< -o $@
+
 # General recipe for making an XTC from a X file
 # Automatic X-file dependency generation; .d file is next to both the XTC and sources.
 %.xtc:	%.x %.d $(XDK_JAR) $(XDK_LIB)/ecstasy.xtc
 	@echo "compiling " $@ " because " $?
-	@rm -f $*.d;  echo -ne $*.d $*.xtc ":\t" > $*.d;  ((test -d $* && (/usr/bin/find $* -name *.x | xargs echo)) >> $*.d ) || true;  echo >> $*.d
+	@bin/makedepends.sh $* $*
 	@$(XTC) $< -o $@
 
 # No complaints if these do not exist, just go make them
@@ -223,7 +274,7 @@ $(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x
 # General recpie for executing an XTC with the existing interpreter-based backend.
 # Since no "EXE" is ever made, this just always runs the module.
 # Additional arguments can be passed from the command line via "ARG=arg"
-%.com:	%.xtc $(XDK_JAR)
+%.com:	%.xtc $(XDK_JAR) $(LIBNAT).xtc
 	@echo "running " $@
 	@$(COM) $< $(ARG)
 
