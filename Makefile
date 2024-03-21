@@ -44,6 +44,9 @@ default:
 	@echo "  *.xtc - will build from the matching *.x"
 	@echo "  *.exe - will execute new backend from the matching *.x"
 	@echo "  *.com - will execute old backend from the matching *.x"
+	@echo "  tck          - run the tcks with new backend"
+	@echo "  examples_exe - run the doc/examples with new backend"
+	@echo "  manuals_exe  - run the manualTests/src/main/x/new_backend with new backend"
 
 #######################################################
 # Download libs from maven
@@ -133,15 +136,26 @@ $(test_classesT): $(CLZDIRT)/test/%class: $(TSTT)/%java $(main_classesT)
 	@[ -d $(CLZDIRT)/test ] || mkdir -p $(CLZDIRT)/test
 	@javac $(JAVAC_ARGS) -cp "$(CLZDIRT)/test$(SEP)$(CLZDIRT)/main$(SEP)$(LIBS)" -sourcepath $(TSTT) -d $(CLZDIRT)/test $(test_javasT)
 
+
+#######################################################
 # Build a jar from all the class files in $(CLZDIRT)/main and $(CLZDIRU)/main
-build/classes/javatools/javatools.jar: $(main_classesT) $(main_classesU) build/classes/javatools/MANIFEST.MF javatools/src/main/resources/errors.properties
+
+# XDK setup
+# Gradle XDK
+#XDK_DIR = xdk/build/install/xdk
+# Make XDK
+XDK_DIR = build/xdk
+XDK_JAR = $(XDK_DIR)/javatools/javatools.jar
+
+$(XDK_JAR): $(main_classesT) $(main_classesU) $(XDK_DIR)/MANIFEST.MF javatools/src/main/resources/errors.properties lib_ecstasy/src/main/resources/implicit.x
 	@$(file > .args.txt, $? )
 	@echo -e "  jarring " $@ " because " $< " and " `wc -w < .args.txt` " more files"
 	@rm -f .args.txt
-	@jar -cfm $@ build/classes/javatools/MANIFEST.MF -C $(CLZDIRT)/main . -C $(CLZDIRU)/main . -C javatools/src/main/resources errors.properties
+	@jar -cfm $@ $(XDK_DIR)/MANIFEST.MF -C $(CLZDIRT)/main . -C $(CLZDIRU)/main . -C javatools/src/main/resources errors.properties -C lib_ecstasy/src/main/resources implicit.x
 
 # Build the manifest
-build/classes/javatools/MANIFEST.MF: VERSION
+$(XDK_DIR)/MANIFEST.MF: VERSION
+	@[ -d $(XDK_DIR) ] || mkdir -p $(XDK_DIR)
 	@echo Manifest-Version: 1.0 > $@
 	@echo Xdk-Version: org.xtclang:javatools:`cat VERSION` >> $@
 	@echo Sealed: true  >> $@
@@ -156,20 +170,17 @@ build/classes/javatools/MANIFEST.MF: VERSION
 
 #######################################################
 # Compiling XTC files from X files via XCC
-JVM=java -ea -cp "$(CLZDIRB)/main"
 
-# XDK setup
-XDK_DIR = xdk/build/install/xdk
-XDK = $(XDK_DIR)/javatools/javatools.jar
-XTC = java -jar $(XDK) xcc -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib --rebuild
+JVM = java -ea -cp "$(CLZDIRB)/main"
+XTC = java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib --rebuild
 XEC = $(JVM) org.xvm.XEC -L $(XDK_DIR)/lib
-COM = java -jar $(XDK) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
+COM = java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
 
 
 # General recipe for making an XTC from a X file
-%.xtc:	%.x $(XDK)
+%.xtc:	%.x $(XDK_JAR)
 	@echo "compiling " $@ " because " $?
-	@$(XTC) $< -o $@
+	$(XTC) $< -o $@
 
 
 #######################################################
@@ -178,23 +189,41 @@ COM = java -jar $(XDK) xec -L $(XDK_DIR)/javatools -L $(XDK_DIR)/lib
 # General recipe for executing an XTC, by making an "EXE" file from an XTC -
 # since no "EXE" is ever made, this just always runs the module.
 # Additional arguments can be passed from the command line via "ARG=arg"
-%.exe:	%.xtc $(main_classesB) $(XDK)
+%.exe:	%.xtc $(main_classesB) $(XDK_JAR)
 	@echo "running " $@
 	@$(XEC) $< $(ARG)
 
 # General recpie for executing an XTC with the existing interpreter-based backend.
 # Since no "EXE" is ever made, this just always runs the module.
 # Additional arguments can be passed from the command line via "ARG=arg"
-%.com:	%.xtc $(XDK)
+%.com:	%.xtc $(XDK_JAR)
 	@echo "running " $@
 	@$(COM) $< $(ARG)
+
+
+#######################################################
+# General recipe for making a make-depend file from an XTC file
+# Automatic X-file dependency generation
+%.d:	%.xtc
+	@rm -f $@
+	@echo -ne $@ $*.xtc ":\t" $*.x " "> $@
+	@((test -d $* && (/usr/bin/find $* -name *.x | xargs echo)) >> $@ ) || true
+	@echo >> $@
+
+# Pick up any make-depends files for each desired XTC file.
+# Useful to pick up updates in top-level XTC modules from deep child X files.
+ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
+MAKE_DEPS = $(filter %.d,$(sort $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)))
+include $(MAKE_DEPS)
+endif
+
 
 #######################################################
 # Common build targets when testing the new backend
 #
 examples_x = $(wildcard doc/examples/*.x)
 
-examples_xtc:	$(examples_x:x=xtc) $(XDK)
+examples_xtc:	$(examples_x:x=xtc) $(XDK_JAR)
 
 examples_exe:	$(examples_x:x=exe) $(classesB)
 
@@ -210,33 +239,19 @@ MANUAL_TESTS = TestMisc.x TestModIFace.x
 
 manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 
-manuals_xtc:	$(manuals_x:x=xtc) $(XDK)
+manuals_xtc:	$(manuals_x:x=xtc) $(XDK_JAR)
 
 manuals_exe:	$(manuals_x:x=exe) $(classesB)
 
 
-# General recipe for making a make-depend file from an XTC file
-%.d:	%.xtc
-	@rm -f $@
-	@echo -ne $@ $*.xtc ":\t" > $@
-	@([ $* ] && /usr/bin/find $* -name *.x | xargs echo) >> $@
-
-# Pick up any make-depends files for each desired XTC file.
-# Useful to pick up updates in top-level XTC modules from deep child X files.
-ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
-MAKE_DEPS = $(filter %.d,$(sort $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)))
-include $(MAKE_DEPS)
-endif
-
-
 #MULTI = multiModule/Lib.x multiModule/Main.x
 #multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
-#$(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK)
+#$(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK_JAR)
 #	@echo "compiling " $@ " because " $?
-#	@$(XTC) $(filter-out $(XDK),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
+#	@$(XTC) $(filter-out $(XDK_JAR),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 #
 #
-#multi_exe:	$(XDK) $(classesB) $(multi_x:x=xtc)
+#multi_exe:	$(XDK_JAR) $(classesB) $(multi_x:x=xtc)
 #	@echo "Running test" $?
 #	@$(XEC) -L $(MANUAL_DIR)/multiModule $(MANUAL_DIR)/multiModule/Main.xtc
 
