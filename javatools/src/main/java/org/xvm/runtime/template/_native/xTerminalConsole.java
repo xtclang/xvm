@@ -203,13 +203,16 @@ public class xTerminalConsole
         LineReader reader = null;
         try
             {
-            Terminal terminal = TerminalBuilder.builder().build();
-            History  history  = new DefaultHistory();
+            if (CONSOLE != null)
+                {
+                Terminal terminal = TerminalBuilder.builder().build();
+                History  history  = new DefaultHistory();
 
-            reader = LineReaderBuilder.builder()
-                    .terminal(terminal)
-                    .history(history)
-                    .build();
+                reader = LineReaderBuilder.builder()
+                        .terminal(terminal)
+                        .history(history)
+                        .build();
+                }
             }
         catch (IOException ignore) {}
 
