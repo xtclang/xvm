@@ -1,5 +1,4 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 
 /**
@@ -9,20 +8,9 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.tasktree)
-    alias(libs.plugins.shadow)
 }
 
 val semanticVersion: SemanticVersion by extra
-
-val xdkJavaToolsUtils by configurations.registering {
-    description = "Consumer configuration of the classes for the XVM Java Tools Utils project (version $version)"
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.CLASSES))
-    }
-}
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {
@@ -37,14 +25,10 @@ val xdkJavaToolsProvider by configurations.registering {
 }
 
 dependencies {
-    @Suppress("UnstableApiUsage")
-    xdkJavaToolsUtils(libs.javatools.utils)
-    // Normal use case: The javatools-utils is included in the Javatools uber-jar, so we need it only as compile only.
-    // compileOnly(libs.javatools.utils)
-    // Debugging use case: If we want IDE debugging, executing the Compiler or Runner manually, we need javatools-utils as an implementation dependency.
     implementation(libs.javatools.utils)
-    testImplementation(libs.javatools.utils)
+    implementation(libs.javatools.utils)
     implementation(libs.jline)
+    testImplementation(libs.javatools.utils)
 }
 
 /**
@@ -71,6 +55,18 @@ sourceSets {
     }
 }
 
+val copyDependencies by tasks.registering(Copy::class) {
+    from(configurations.compileClasspath) {
+        include("**/*.jar")
+    }
+    into(layout.buildDirectory.dir("javatools-dependencies"))
+    doLast {
+        outputs.files.asFileTree.forEach {
+            logger.info("$prefix Resolved javatools dependency file: $it")
+        }
+    }
+}
+
 val jar by tasks.existing(Jar::class) {
     inputs.property("manifestSemanticVersion") {
         semanticVersion.toString()
@@ -78,11 +74,25 @@ val jar by tasks.existing(Jar::class) {
     inputs.property("manifestVersion") {
         version
     }
-    archiveBaseName = "javatools"
 
-    // TODO: It may be fewer special cases if we just add to the source sets from these dependencies, but it's not
-    //  apparent how to get that correct for includedBuilds.
-    from(xdkJavaToolsUtils)
+    /*
+     * This from statement will copy everything in the dependencies section, and our resources
+     * to the javatools-<version>.jar. In that respect it's a fat jar.
+     *
+     * The copyDependencies task will output a build directory containing all our dependencies,
+     * which are currently just javatools-utils-<version>.jar and jline.
+     *
+     * Map semantics guarantee that we resolve the from input only during the execution phase.
+     * We take the destination directory, known to e an output of copyDependencies, and a
+     * single directory. This is implicit from the "into" configuration of that task.
+     * Then, we lazily (with map), assume that every file in the destination tree is a jar/zip file
+     * (we will break if it isn't) and unpack that into the javatools jar that is being built.
+     * Please study this pattern, and understand why it's important with lazy evaluation in
+     * Gradle.
+     */
+    from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) }})
+
+    archiveBaseName = "javatools"
 
     manifest {
         attributes(
@@ -90,6 +100,7 @@ val jar by tasks.existing(Jar::class) {
             "Xdk-Version" to semanticVersion.toString(),
             "Sealed" to "true",
             "Main-Class" to "org.xvm.tool.Launcher",
+            // TODO: Later "Class-Path" to "./deps",
             "Name" to "/org/xvm/",
             "Specification-Title" to "xvm",
             "Specification-Version" to version,
@@ -98,23 +109,6 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Version" to version,
             "Implementation-Vendor" to "xtclang.org"
         )
-    }
-}
-
-/**
- * TODO: Marcus suggests that merging the jars is not a good way to go. Instead we simply need to
- *       get the jline.jar into our distribution (installDist task) and point to it in the manifest
- *       of the javatools.jar
- */
-val shadowJar by tasks.existing(ShadowJar::class) {
-    dependsOn(jar)
-
-    archiveBaseName = "javatools"
-
-    from(tasks.jar.get().archiveFile)
-
-    dependencies {
-        include(dependency(libs.jline.get()))
     }
 }
 
@@ -127,12 +121,12 @@ val sanityCheckJar by tasks.registering {
     description =
         "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
 
-    dependsOn(shadowJar)
+    dependsOn(jar)
 
     val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
     val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
     inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)
-    inputs.file(shadowJar)
+    inputs.file(jar.map { it.archiveFile })
 
     logger.info("$prefix Configuring sanityCheckJar task (enabled: $checkJar, expected entry count: $expectedEntryCount)")
 
@@ -141,18 +135,33 @@ val sanityCheckJar by tasks.registering {
     }
     doLast {
         logger.info("$prefix Sanity checking integrity of generated jar file.")
-
-        DebugBuild.verifyJarFileContents(
+        val size = DebugBuild.verifyJarFileContents(
             project,
             listOf(
-                "implicit.x", // verify the implicits are in the jar
+                "implicit.x",            // verify the implicits are in the jar
                 "org/xvm/tool/Compiler", // verify the javatools package is in there, including Compiler and Runner
                 "org/xvm/tool/Runner",
-                "org/xvm/util/Severity" // verify the
+                "org/xvm/util/Severity",  // verify the javatools_utils package is in there, including Severity
+                "org/jline/console/ConsoleEngine" // verify the jline library is in there.
             ),
             expectedEntryCount
-        ) // Check for files in both javatools_utils and javatools + implicit.x
-
-        logger.info("$prefix Sanity check of javatools.jar completed successfully.")
+        )
+        logger.lifecycle("$prefix Sanity check of javatools.jar completed successfully ($size elements found).")
     }
 }
+
+// TODO: This configuration exports the dependencies of the javatools.jar, so that we can consume and package them sepearatly,
+//   should we want to do this. I think we may want to provide a "thin" javatools.jar with javatools utils and  jline and other
+//   dependencies on the classpath in the manifest, and have them, together with licenses, in a subfolder to javatools in the
+//   XDK installation.
+/*
+val xdkJavaToolsDependencyProvider by configurations.registering {
+    isCanBeResolved = false
+    isCanBeConsumed = true
+    outgoing.artifact(copyDependencies)
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("javatools-dependencies-dir"))
+    }
+}
+*/

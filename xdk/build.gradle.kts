@@ -19,7 +19,7 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
-    distribution // TODO: Create our own XDK distribution plugin, or put it in the XTC plugin
+    distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
 }
 
 val xtcLauncherBinaries by configurations.registering {
@@ -118,49 +118,6 @@ val publishPluginToLocalDist by tasks.registering {
         doLast {
             logger.info("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
         }
-    }
-}
-
-/**
- * Set up the distribution layout. This is executed during the config phase, which means that we can't
- * resolve outputs to other tasks to their explicit destination files yet, unless they have run.
- * However, we _can_ use a from spec that refers to a task, which then becomes a dependency.
- */
-
-private fun distContents(): CopySpec {
-    return copySpec {
-        val resources = tasks.processResources.get().outputs.files.asFileTree
-        logger.info("$prefix Distribution contents need to use lazy resources.")
-        from(resources) {
-            eachFile {
-                includeEmptyDirs = false
-            }
-        }
-        from(xtcLauncherBinaries) {
-            into("bin")
-        }
-        from(configurations.xtcModule) {
-            into("lib")
-            exclude("**/javatools*")
-        }
-        from(configurations.xtcModule) {
-            into("javatools")
-            include("**/javatools*")
-        }
-        from(configurations.xdkJavaTools) {
-            rename {
-                assert(it.endsWith(".jar"))
-                it.replace(Regex("-.*.jar"), ".jar")
-            }
-            into("javatools") // should just be one file with corrected dependencies, assert?
-        }
-        if (shouldPublishPluginToLocalDist()) {
-            val published = publishPluginToLocalDist.get().outputs.files
-            from(published) {
-                into("repo")
-            }
-        }
-        from(tasks.xtcVersionFile)
     }
 }
 
@@ -362,7 +319,7 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             into("javatools") // should just be one file with corrected dependencies, assert?
         }
         if (shouldPublishPluginToLocalDist()) {
-            val published = publishPluginToLocalDist.get().outputs.files
+            val published = publishPluginToLocalDist.map { it.outputs.files }
             from(published) {
                 into("repo")
             }

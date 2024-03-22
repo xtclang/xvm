@@ -4,16 +4,5 @@
 
 plugins {
     alias(libs.plugins.xdk.build.java)
-    alias(libs.plugins.tasktree)
 }
 
-val xdkJavaToolsUtilsProvider by configurations.registering {
-    description = "Provider configuration of the XVM javatools_utils classes."
-    isCanBeResolved = false
-    isCanBeConsumed = true
-    // TODO: We may want to categorize this configuration. Do we need to?
-/*    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.CLASSES))
-    }*/
-}

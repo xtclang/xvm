@@ -22,16 +22,15 @@ download = "5.5.0"
 versions = "0.50.0"
 tasktree = "2.1.1"
 gradle-portal-publish = "1.2.1"
-gradle-nexus-publish = "1.3.0"
-gradle-release = "3.0.2"
+#gradle-nexus-publish = "1.3.0"
+#gradle-release = "3.0.2"
 kohttp = "0.12.0"
 jakarta = "2.3.2"
-rewrite = "6.8.4"
+#rewrite = "6.8.4"
 rewrite-lib = "1.3.1"
 jline="3.25.1"
-shadow="8.1.1"
+#shadow="8.1.1"
 
-# TODO: There is nothing like "group-ref". Might want to just generate this from a template?
 [plugins]
 xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc-plugin" }
 xdk-build-aggregator = { id = "org.xtclang.build.aggregator", version.ref = "xdk" }
@@ -43,13 +42,17 @@ download = { id = "de.undercouch.download", version.ref = "download" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
-# TODO: Enable rewrite for automatic checkstyle correction on build, but need to verify that it supports all checkstyle.xml rules.
+
+# TODO: Will be use for the relase flow.
 #rewrite = { id = "org.openrewrite.rewrite", version.ref = "rewrite" }
-# TODO: Enable mavenCentral publication through this plugin: https://github.com/gradle-nexus/publish-plugin
-gradle-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradle-nexus-publish" }
-# TODO: Enable GitHub releases, and this seems to be both the most popular plugin and the one closest to the right version / process semantics.
-gradle-release = { id = "net.researchgate.gradle-release", version.ref = "gradle-release" }
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+#gradle-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradle-nexus-publish" }
+#gradle-release = { id = "net.researchgate.gradle-release", version.ref = "gradle-release" }
+#shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+# TODO: Future libraries that may make it into the build pipeline, one way or another.
+#spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
+#nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
+#maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
+#version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version = "0.8.1" }
 
 [libraries]
 xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
@@ -82,9 +85,3 @@ jline = { module = "org.jline:jline", version.ref = "jline" }
 
 [bundles]
 unicode = ["javax-activation", "jakarta-xml-bind-api", "jaxb-runtime"]
-
-# TODO: Future libraries that may make it into the build pipeline, one way or another.
-#spotless = { id = "com.diffplug.spotless", version = "6.22.0" }
-#nsis = { id = "io.github.androxyde.gradlensis", version = "0.2.0" }
-#maven-plugin-development = { id = "de.benediktritter.maven-plugin-development", version = "0.4.2" }
-#version-catalog-update = { id = "nl.littlerobots.version-catalog-update", version = "0.8.1" }

@@ -188,7 +188,7 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
  */
 class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
-        fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1) {
+        fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1): Int {
             val jar = project.tasks.getByName("jar").outputs.files.singleFile
             val contents = jarContents(jar)
 
@@ -206,6 +206,8 @@ class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
                     throw project.buildException("ERROR: Corrupted jar file; needs to contain entry matching '$it'")
                 }
             }
+
+            return contents.size
         }
 
         private fun jarContents(jarFile: File): Set<String> {
