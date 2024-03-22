@@ -1,10 +1,17 @@
 module TestSimple {
-
     @Inject Console console;
 
     void run() {
-        Map<Int, String> m = [1="a", 2="b"];
+        import ecstasy.mgmt.*;
+        import ecstasy.mgmt.Container.InjectionKey;
+        import ecstasy.reflect.*;
 
-        console.print(m.toString(pre="", post="", sep =",\n"));
+        @Inject ModuleRepository repository;
+        @Inject Container.Linker linker;
+
+        ModuleTemplate template = repository.getResolvedModule("TestSimple");
+        InjectionKey[] injects  = linker.collectInjections(template);
+
+        console.print(injects.toString(pre="", post="", sep="\n"));
     }
 }

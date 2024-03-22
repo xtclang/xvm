@@ -177,9 +177,25 @@ service Container
     }
 
     /**
+     * An injection key.
+     */
+    static const InjectionKey(String name, Type type);
+
+    /**
      * The module linker.
      */
     static interface Linker {
+        /**
+         * Collect all the injections required by the specified module.
+         *
+         * @param template      the module to collect the injections for
+         * @param definedNames  the link-time condition names to use, such as "test" or "debug"
+         *
+         * @return the array of injection keys
+         */
+         InjectionKey[] collectInjections(ModuleTemplate template,
+                                          String[]       definedNames = []);
+
         /**
          * Load and link the specified modules together to form a type system.
          * Construct an Ecstasy `Container`. As part of the construction of the container, a new
