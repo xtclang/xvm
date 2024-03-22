@@ -2747,19 +2747,9 @@ public abstract class TypeConstant
             listProcess.add(struct.new Contribution(Composition.Implements, pool.typeInner()));
             }
 
-        // the last three contributions to get processed are the "re-basing", the "extends" and the
-        // "into" (which we also use for filling out the implied methods under interfaces, i.e.
-        // "into Object")
-        if (typeRebase != null)
-            {
-            listProcess.add(struct.new Contribution(Composition.RebasesOnto,
-                    pool.ensureAccessTypeConstant(typeRebase, Access.PROTECTED)));
-            }
-        if (typeExtends != null)
-            {
-            listProcess.add(struct.new Contribution(Composition.Extends,
-                    pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
-            }
+        // the last three contributions to get processed are the "into" (which we also use for
+        // filling out the implied methods under interfaces, i.e. "into Object"),  the "extends",
+        // and the "re-base", which should be added at the bottom (and processed first)
         if (typeInto != null)
             {
             if (!typeInto.equals(pool.typeObject()) && !typeInto.isAccessSpecified() &&
@@ -2772,6 +2762,16 @@ public abstract class TypeConstant
                 typeInto = pool.ensureAccessTypeConstant(typeInto, access);
                 }
             listProcess.add(struct.new Contribution(Composition.Into, typeInto));
+            }
+        if (typeExtends != null)
+            {
+            listProcess.add(struct.new Contribution(Composition.Extends,
+                    pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
+            }
+        if (typeRebase != null)
+            {
+            listProcess.add(struct.new Contribution(Composition.RebasesOnto,
+                    pool.ensureAccessTypeConstant(typeRebase, Access.PROTECTED)));
             }
 
         return new TypeConstant[] {typeInto, typeExtends, typeRebase};
@@ -4206,7 +4206,7 @@ public abstract class TypeConstant
                                 // the "super" method we found is capped, but the cap itself apparently
                                 // didn't match; this means that the attempted override is illegal
                                 MethodConstant id = methodBase.getIdentity();
-                                id.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
+                                log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_ILLEGAL,
                                         idContrib.getNamespace().getValueString(),
                                         id.getSignature().getValueString(),
                                         id.getNamespace().getValueString());
@@ -4314,7 +4314,7 @@ public abstract class TypeConstant
                         if (methodMatch != null && !methodMatch.containsBody(methodContrib.getIdentity()))
                             {
                             MethodConstant idMethod = methodMatch.getIdentity();
-                            idMethod.log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
+                            log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                     constId.getValueString(),
                                     idMethod.getSignature().getValueString(),
                                     idMethod.getNamespace().getValueString()
@@ -4364,7 +4364,11 @@ public abstract class TypeConstant
                     {
                     // nidContrib directly points to a "super" method, so it must be in the list
                     // unless the contributing method is already capped
-                    assert methodContrib.isCapped() || listMatches.contains(nidContrib);
+                    if (!methodContrib.isCapped() && !listMatches.contains(nidContrib))
+                        {
+                        log(errs, Severity.ERROR, VE_SUPER_AMBIGUOUS,
+                                methodContrib.getIdentity().getValueString());
+                        }
                     }
 
                 if (methodBase != null)
