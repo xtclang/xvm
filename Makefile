@@ -43,15 +43,16 @@ XEC := org/xvm
 
 #######################################################
 default:
-	@echo "Need to pass some make options"
+	@echo "Need to pass some make options, here are some suggestions"
 	@echo "  init - one-time init; requires a good internet connection"
 	@echo "  build/xdk/javatools/javatools.jar"
+	@echo "  xlib  - all lib_*.xtc libraries"
 	@echo "  *.xtc - will build from the matching *.x"
 	@echo "  *.exe - will execute new backend from the matching *.x"
 	@echo "  *.com - will execute old backend from the matching *.x"
 	@echo "  tck          - run the tcks with new backend"
 	@echo "  examples_exe - run the doc/examples with new backend"
-	@echo "  manuals_exe  - run the manualTests/src/main/x/new_backend with new backend"
+	@echo "  manuals_exe  - run the manualTests/src/main/x/new_backend"
 
 #######################################################
 # Download libs from maven
@@ -76,72 +77,78 @@ libs = $(wildcard $(LIBS)/*jar)
 
 
 #######################################################
-# New Backend
 # javatools_backend
-# Source code, relative paths
 SRCB := javatools_backend/src/main/java
-CLZDIRB:= build/classes/backend
-main_javasB   := $(wildcard $(SRCB)/$(XEC)/*java $(SRCB)/$(XEC)/*/*java $(SRCB)/$(XEC)/*/*/*java $(SRCB)/$(XEC)/xec/*/*/*java)
-main_classesB := $(patsubst $(SRCB)/%java,$(CLZDIRB)/main/%class,$(main_javasB))
-classes = $(main_classesB)
+CLZB:= build/classes/backend
+javasB := $(wildcard $(SRCB)/$(XEC)/*java $(SRCB)/$(XEC)/*/*java $(SRCB)/$(XEC)/*/*/*java $(SRCB)/$(XEC)/xec/*/*/*java)
+clzesB := $(patsubst $(SRCB)/%java,$(CLZB)/main/%class,$(javasB))
 
-# Compile just the out-of-date files
-$(main_classesB): $(CLZDIRB)/main/%class: $(SRCB)/%java
-	@echo "compiling " $@ " because " $?
-	@[ -d $(CLZDIRB)/main ] || mkdir -p $(CLZDIRB)/main
-	@javac $(JAVAC_ARGS) -cp "$(CLZDIRB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZDIRB)/main $(main_javasB)
+## Compile just the out-of-date files
+#$(clzesB): $(CLZB)/main/%class: $(SRCB)/%java
+#	@echo "compiling " $@ " because " $?
+#	@[ -d $(CLZB)/main ] || mkdir -p $(CLZB)/main
+#	@javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(javasB)
+
+OODB :=
+$(CLZB)/.tag: $(clzesB) $(javasB)
+	@[ -d $(CLZB)/main ] || mkdir -p $(CLZB)/main
+	@if [ ! -z "$(OODB)" ] ; then \
+	  echo -e "compiling backend because " $(OODB) ; \
+	  javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(OODB) ; \
+	fi
+	@touch $(CLZB)/.tag
+
+# Collect just the out-of-date files
+$(clzesB): $(CLZB)/main/%class: $(SRCB)/%java
+	$(eval OODB += $$<)
 
 #######################################################
 # javatools_utils
-# Source code, relative paths
 SRCU := javatools_utils/src/main/java
-TSTU := javatools_utils/src/test/java
-CLZDIRU:= build/classes/utils
-main_javasU   := $(wildcard $(SRCU)/$(XEC)/*java $(SRCU)/$(XEC)/*/*java $(SRCU)/$(XEC)/*/*/*java)
-test_javasU   := $(wildcard $(TSTU)/$(XEC)/*java $(TSTU)/$(XEC)/*/*java $(TSTU)/$(XEC)/*/*/*java)
-main_classesU := $(patsubst $(SRCU)/%java,$(CLZDIRU)/main/%class,$(main_javasU))
-test_classesU := $(patsubst $(TSTU)/%java,$(CLZDIRU)/test/%class,$(test_javasU))
+CLZU := build/classes/utils
+javasU := $(wildcard $(SRCU)/$(XEC)/*java $(SRCU)/$(XEC)/*/*java $(SRCU)/$(XEC)/*/*/*java)
+clzesU := $(patsubst $(SRCU)/%java,$(CLZU)/main/%class,$(javasU))
 
-# Compile just the out-of-date files
-$(main_classesU): $(CLZDIRU)/main/%class: $(SRCU)/%java
-	@echo "compiling " $@ " because " $?
-	@[ -d $(CLZDIRU)/main ] || mkdir -p $(CLZDIRU)/main
-	@javac $(JAVAC_ARGS) -cp "$(CLZDIRU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZDIRU)/main $(main_javasU)
+OODU :=
+$(CLZU)/.tag: $(clzesU) $(javasU)
+	@[ -d $(CLZU)/main ] || mkdir -p $(CLZU)/main
+	$(file > .argsU.txt, $(OODU))
+	@if [ ! -z "$(OODU)" ] ; then \
+	  echo -e "compiling javatools_utils because " $< " and " `wc -w < .argsU.txt` " more files" ; \
+	  javac $(JAVAC_ARGS) -cp "$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZU)/main @.argsU.txt ; \
+	fi
+	@touch $(CLZU)/.tag
+	@rm -f .argsU.txt
 
-$(test_classesU): $(CLZDIRU)/test/%class: $(TSTU)/%java $(main_classesU)
-	@echo "compiling " $@ " because " $?
-	@[ -d $(CLZDIRU)/test ] || mkdir -p $(CLZDIRU)/test
-	@javac $(JAVAC_ARGS) -cp "$(CLZDIRU)/test$(SEP)$(CLZDIRU)/main$(SEP)$(LIBS)" -sourcepath $(TSTU) -d $(CLZDIRU)/test $(test_javasU)
-
-
+# Collect just the out-of-date files
+$(clzesU): $(CLZU)/main/%class: $(SRCU)/%java
+	$(eval OODU += $$<)
 
 #######################################################
-# javatools_launcher
-# Source code, relative paths
+# javatools
 SRCT := javatools/src/main/java
-TSTT := javatools/src/test/java
-CLZDIRT:= build/classes/javatools
-main_javasT   := $(wildcard $(SRCT)/$(XEC)/*java $(SRCT)/$(XEC)/*/*java $(SRCT)/$(XEC)/*/*/*java $(SRCT)/$(XEC)/*/*/*/*java)
-test_javasT   := $(wildcard $(TSTT)/$(XEC)/*java $(TSTT)/$(XEC)/*/*java $(TSTT)/$(XEC)/*/*/*java)
-main_classesT := $(patsubst $(SRCT)/%java,$(CLZDIRT)/main/%class,$(main_javasT))
-test_classesT := $(patsubst $(TSTT)/%java,$(CLZDIRT)/test/%class,$(test_javasT))
+CLZT:= build/classes/javatools
+javasT := $(wildcard $(SRCT)/$(XEC)/*java $(SRCT)/$(XEC)/*/*java $(SRCT)/$(XEC)/*/*/*java $(SRCT)/$(XEC)/*/*/*/*java)
+clzesT := $(patsubst $(SRCT)/%java,$(CLZT)/main/%class,$(javasT))
 
-# Compile just the out-of-date files
-$(main_classesT): $(CLZDIRT)/main/%class: $(SRCT)/%java $(main_classesU)
-	$(file > .args.txt, $(filter-out %class, $?))
-	@echo -e "compiling " $@ " because " $< " and " `wc -w < .args.txt` " more files"
-	@[ -d $(CLZDIRT)/main ] || mkdir -p $(CLZDIRT)/main
-	@javac $(JAVAC_ARGS) -cp "$(CLZDIRT)/main$(SEP)$(CLZDIRU)/main$(SEP)$(LIBS)" -sourcepath $(SRCT) -d $(CLZDIRT)/main @.args.txt
-	@rm -f .args.txt
+OODT :=
+$(CLZT)/.tag: $(clzesT)  $(javasT)
+	@[ -d $(CLZT)/main ] || mkdir -p $(CLZT)/main
+	$(file > .argsT.txt, $(OODT))
+	@if [ ! -z "$(OODT)" ] ; then \
+	  echo -e "compiling javatools because " $< " and " `wc -w < .argsT.txt` " more files" ; \
+	  javac $(JAVAC_ARGS) -cp "$(CLZT)/main$(SEP)$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCT) -d $(CLZT)/main @.argsT.txt ; \
+	fi
+	@touch $(CLZT)/.tag
+	@rm -f .argsT.txt
 
-$(test_classesT): $(CLZDIRT)/test/%class: $(TSTT)/%java $(main_classesT)
-	@echo "compiling " $@ " because " $?
-	@[ -d $(CLZDIRT)/test ] || mkdir -p $(CLZDIRT)/test
-	@javac $(JAVAC_ARGS) -cp "$(CLZDIRT)/test$(SEP)$(CLZDIRT)/main$(SEP)$(LIBS)" -sourcepath $(TSTT) -d $(CLZDIRT)/test $(test_javasT)
+# Collect just the out-of-date files
+$(clzesT): $(CLZT)/main/%class: $(SRCT)/%java
+	$(eval OODT += $$<)
 
 
 #######################################################
-# Build a jar from all the class files in $(CLZDIRT)/main and $(CLZDIRU)/main
+# Build a jar from all the class files in $(CLZT)/main and $(CLZU)/main
 
 # XDK setup
 # Gradle XDK
@@ -151,11 +158,11 @@ XDK_DIR = build/xdk
 XDK_JAR = $(XDK_DIR)/javatools/javatools.jar
 XDK_LIB = $(XDK_DIR)/lib
 
-$(XDK_JAR): $(main_classesT) $(main_classesU) $(XDK_DIR)/MANIFEST.MF javatools/src/main/resources/errors.properties lib_ecstasy/src/main/resources/implicit.x
+$(XDK_JAR): $(clzesT) $(clzesU) $(CLZT)/.tag $(CLZU)/.tag $(XDK_DIR)/MANIFEST.MF javatools/src/main/resources/errors.properties lib_ecstasy/src/main/resources/implicit.x
 	@$(file > .args.txt, $? )
 	@echo -e "  jarring " $@ " because " $< " and " `wc -w < .args.txt` " more files"
 	@rm -f .args.txt
-	@jar -cfm $@ $(XDK_DIR)/MANIFEST.MF -C $(CLZDIRT)/main . -C $(CLZDIRU)/main . -C javatools/src/main/resources errors.properties -C lib_ecstasy/src/main/resources implicit.x
+	@jar -cfm $@ $(XDK_DIR)/MANIFEST.MF -C $(CLZT)/main . -C $(CLZU)/main . -C javatools/src/main/resources errors.properties -C lib_ecstasy/src/main/resources implicit.x
 
 # Build the manifest
 $(XDK_DIR)/MANIFEST.MF: VERSION
@@ -172,17 +179,11 @@ $(XDK_DIR)/MANIFEST.MF: VERSION
 	@echo Implementation-Version: `cat VERSION`  >> $@
 	@echo Implementation-Vendor: xtclang.org  >> $@
 
-#######################################################
-# Compiling XTC files from X files via XCC
-
-JVM = java -ea -cp "$(CLZDIRB)/main"
-XTC = java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild
-XEC = $(JVM) org.xvm.XEC -L $(XDK_LIB)
-COM = java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_LIB)
-
 
 #######################################################
 # Build the library XDK.
+
+XCC = java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild
 
 # Build ecstasy.xtc.  This one is special, because it needs mack.x and makes a turtle.xtc.
 # the make-depend .d file is next to the generated XTC instead of next to the sources.
@@ -204,14 +205,14 @@ LIBCRY = $(XDK_LIB)/crypto
 $(LIBCRY).xtc:	$(SRCCRY).x $(LIBCRY).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCCRY) $(LIBCRY)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 SRCNET = lib_net/src/main/x/net
 LIBNET = $(XDK_LIB)/net
-$(LIBNET).xtc:	$(SRCNET).x $(LIBNET).d $(XDK_JAR) $(CRYPTO).xtc
+$(LIBNET).xtc:	$(SRCNET).x $(LIBNET).d $(XDK_JAR) $(LIBCRY).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCNET) $(LIBNET)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 
 SRCAGG = lib_aggregate/src/main/x/aggregate
@@ -219,43 +220,46 @@ LIBAGG = $(XDK_LIB)/aggregate
 $(LIBAGG).xtc:	$(SRCAGG).x $(LIBAGG).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCAGG) $(LIBAGG)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 SRCCOL = lib_collections/src/main/x/collections
 LIBCOL = $(XDK_LIB)/collections
 $(LIBCOL).xtc:	$(SRCCOL).x $(LIBCOL).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCCOL) $(LIBCOL)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 SRCJSN = lib_json/src/main/x/json
 LIBJSN = $(XDK_LIB)/json
 $(LIBJSN).xtc:	$(SRCJSN).x $(LIBJSN).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCJSN) $(LIBJSN)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 
 SRCWEB = lib_web/src/main/x/web
 LIBWEB = $(XDK_LIB)/web
-$(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(CRYPTO).xtc $(LIBJSN).xtc $(LIBNET).xtc
+$(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCWEB) $(LIBWEB)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 SRCNAT = javatools_bridge/src/main/x/_native
 LIBNAT = $(XDK_DIR)/javatools/javatools_bridge
 $(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCNAT) $(LIBNAT)
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
+
+
+xlib:	$(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJSN).xtc $(LIBWEB).xtc $(LIBNAT).xtc
 
 # General recipe for making an XTC from a X file
 # Automatic X-file dependency generation; .d file is next to both the XTC and sources.
 %.xtc:	%.x %.d $(XDK_JAR) $(XDK_LIB)/ecstasy.xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $* $*
-	@$(XTC) $< -o $@
+	@$(XCC) $< -o $@
 
 # No complaints if these do not exist, just go make them
 %.d:	;
@@ -267,16 +271,16 @@ $(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc
 # General recipe for executing an XTC, by making an "EXE" file from an XTC -
 # since no "EXE" is ever made, this just always runs the module.
 # Additional arguments can be passed from the command line via "ARG=arg"
-%.exe:	%.xtc $(main_classesB) $(XDK_JAR)
-	@echo "running " $@
-	@$(XEC) $< $(ARG)
+%.exe:	%.xtc $(clzesB) $(CLZB)/.tag $(XDKX).xtc
+	@echo "  running " $@
+	@java -ea -cp "$(CLZB)/main" org.xvm.XEC -L $(XDK_LIB) $< $(ARG)
 
-# General recpie for executing an XTC with the existing interpreter-based backend.
-# Since no "EXE" is ever made, this just always runs the module.
+# General recipe for executing an XTC with the existing interpreter-based backend.
+# Since no "COM" is ever made, this just always runs the module.
 # Additional arguments can be passed from the command line via "ARG=arg"
-%.com:	%.xtc $(XDK_JAR) $(LIBNAT).xtc
-	@echo "running " $@
-	@$(COM) $< $(ARG)
+%.com:	%.xtc $(XDK_JAR) $(XDKX).xtc $(LIBNAT).xtc
+	@echo "  running " $@
+	@java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_LIB) $< $(ARG)
 
 
 #######################################################
@@ -296,7 +300,7 @@ examples_x = $(wildcard doc/examples/*.x)
 
 examples_xtc:	$(examples_x:x=xtc) $(XDK_JAR)
 
-examples_exe:	$(examples_x:x=exe) $(classesB)
+examples_exe:	$(examples_x:x=exe) $(clazesB)
 
 
 # Build TCK
@@ -319,18 +323,18 @@ manuals_exe:	$(manuals_x:x=exe) $(classesB)
 #multi_x = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MULTI))
 #$(multi_x:x=xtc): $(MANUAL_DIR)/%.xtc: $(MANUAL_DIR)/%.x $(XDK_JAR)
 #	@echo "compiling " $@ " because " $?
-#	@$(XTC) $(filter-out $(XDK_JAR),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
+#	@$(XCC) $(filter-out $(XDK_JAR),$^) -L $(MANUAL_DIR)/multiModule -o $(MANUAL_DIR)/multiModule
 #
 #
 #multi_exe:	$(XDK_JAR) $(classesB) $(multi_x:x=xtc)
 #	@echo "Running test" $?
-#	@$(XEC) -L $(MANUAL_DIR)/multiModule $(MANUAL_DIR)/multiModule/Main.xtc
+#	@$(JVM) org.xvm.XEC -L $(XDK_LIB) -L $(MANUAL_DIR)/multiModule $(MANUAL_DIR)/multiModule/Main.xtc
 
 
 # TAGS
 tags:	TAGS
 
-TAGS:	$(main_javas) $(test_javas)
+TAGS:	$(javasB) $(javasT) $(javasU)
 	@rm -f TAGS
 	@$(CTAGS) -o TAGS -e --recurse=yes --extra=+q --fields=+fksaiS $(SRCB) $(SRCT)
 
@@ -341,5 +345,5 @@ clean:
 	rm -f TAGS
 	rm -f tck/src/main/x/*.xtc
 	rm -f doc/examples/*.xtc
-	rm -f manualTests/src/main/x/*.xtc $(XVM_ROOT)/manualTests/src/main/x/*/*.xtc
+	rm -f manualTests/src/main/x/new_backend/*.xtc manualTests/src/main/x/new_backend/*/*.xtc
 	(find . -name "*~" -exec rm {} \; 2>/dev/null; exit 0)
