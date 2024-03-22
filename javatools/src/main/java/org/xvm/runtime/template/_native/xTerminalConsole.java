@@ -7,6 +7,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
+import org.jline.reader.History;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.history.DefaultHistory;
+
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -61,6 +70,19 @@ public class xTerminalConsole
         return pool().ensureEcstasyTypeConstant("io.Console");
         }
 
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureConsole(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hConsole = m_hConsole;
+        if (hConsole == null)
+            {
+            hConsole = m_hConsole = createServiceHandle(f_container.createServiceContext("Console"),
+                    getCanonicalClass(), getCanonicalType());
+            }
+        return hConsole;
+        }
 
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
@@ -100,39 +122,7 @@ public class xTerminalConsole
 
             case "readLine": // String prompt = "", Boolean suppressEcho = False
                 {
-                char[] achPrompt = ahArg[0] instanceof StringHandle hString
-                                    ? hString.getValue() : null;
-                boolean fEcho    = ahArg[1] != xBoolean.TRUE;
-
-                try
-                    {
-                    if (achPrompt != null)
-                        {
-                        CONSOLE_OUT.print(achPrompt);
-                        CONSOLE_OUT.flush();
-                        }
-
-                    StringHandle hLine;
-                    if (fEcho || CONSOLE == null)
-                        {
-                        String sLine = CONSOLE_IN.readLine();
-                        hLine = sLine == null
-                            ? xString.EMPTY_STRING
-                            : xString.makeHandle(sLine);
-                        }
-                    else
-                        {
-                        char[] achLine = CONSOLE.readPassword();
-                        hLine = achLine == null
-                            ? xString.EMPTY_STRING
-                            : xString.makeHandle(achLine);
-                        }
-                    return frame.assignValue(iReturn, hLine);
-                    }
-                catch (IOException e)
-                    {
-                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
-                    }
+                return invokeReadLine(frame, ahArg, iReturn);
                 }
             }
 
@@ -140,17 +130,57 @@ public class xTerminalConsole
         }
 
     /**
-     * Injection support.
+     * Native implementation of "String readLine(String prompt = "", Boolean suppressEcho = False)"
      */
-    public ObjectHandle ensureConsole(Frame frame, ObjectHandle hOpts)
+    protected int invokeReadLine(Frame frame, ObjectHandle[] ahArg, int iReturn)
         {
-        ObjectHandle hConsole = m_hConsole;
-        if (hConsole == null)
+        String  sPrompt = ahArg[0] instanceof StringHandle hString ? hString.getStringValue() : "";
+        boolean fEcho   = ahArg[1] != xBoolean.TRUE;
+
+        StringHandle hLine;
+        if (READER == null)
             {
-            hConsole = m_hConsole = createServiceHandle(f_container.createServiceContext("Console"),
-                    getCanonicalClass(), getCanonicalType());
+            try
+                {
+                if (!sPrompt.isEmpty())
+                    {
+                    CONSOLE_OUT.print(sPrompt);
+                    CONSOLE_OUT.flush();
+                    }
+
+                if (fEcho || CONSOLE == null)
+                    {
+                    String sLine = CONSOLE_IN.readLine();
+                    hLine = sLine == null
+                        ? xString.EMPTY_STRING
+                        : xString.makeHandle(sLine);
+                    }
+                else
+                    {
+                    char[] achLine = CONSOLE.readPassword();
+                    hLine = achLine == null
+                        ? xString.EMPTY_STRING
+                        : xString.makeHandle(achLine);
+                    }
+                }
+            catch (IOException e)
+                {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                }
             }
-        return hConsole;
+        else
+            {
+            try
+                {
+                hLine = xString.makeHandle(READER.readLine(sPrompt, fEcho ? null : '\0'));
+                }
+            catch (UserInterruptException e)
+                {
+                System.exit(0);
+                return 0; // not reachable
+                }
+            }
+        return frame.assignValue(iReturn, hLine);
         }
 
 
@@ -160,6 +190,7 @@ public class xTerminalConsole
     public static final BufferedReader CONSOLE_IN;
     public static final PrintWriter    CONSOLE_OUT;
     public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
+    public static final LineReader     READER;
     static
         {
         CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
@@ -168,6 +199,21 @@ public class xTerminalConsole
         CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null
                 ? new PrintWriter(System.out, true)
                 : CONSOLE.writer();
+
+        LineReader reader = null;
+        try
+            {
+            Terminal terminal = TerminalBuilder.builder().build();
+            History  history  = new DefaultHistory();
+
+            reader = LineReaderBuilder.builder()
+                    .terminal(terminal)
+                    .history(history)
+                    .build();
+            }
+        catch (IOException ignore) {}
+
+        READER = reader;
         }
 
     private static final Frame.Continuation PRINT = frameCaller ->

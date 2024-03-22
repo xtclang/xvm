@@ -101,20 +101,26 @@ fun Project.printResolvedConfigFiles(level: LogLevel = LIFECYCLE, configName: St
     }
 }
 
-fun Project.printTaskInputs(level: LogLevel = LIFECYCLE, taskName: String) {
+fun Project.printTaskInputs(level: LogLevel = LIFECYCLE, taskName: String, asFileTree: Boolean = false) {
     val task = tasks.getByName(taskName)
     val inputs = task.inputs.files
     logger.log(level, "$prefix Task '$taskName' has ${inputs.count()} inputs:")
-    inputs.forEach { logger.log(level, "$prefix     input: '$it' (type: ${it.javaClass.name})") }
-    //inputs.asFileTree.forEach { logger.log(level, "$prefix   input : '$it'") }
+    if (asFileTree) {
+        inputs.forEach { logger.log(level, "$prefix     input: '$it' (type: ${it.javaClass.name})") }
+    } else {
+        inputs.asFileTree.forEach { logger.log(level, "$prefix   input : '$it'") }
+    }
 }
 
-fun Project.printTaskOutputs(level: LogLevel = LIFECYCLE, taskName: String) {
+fun Project.printTaskOutputs(level: LogLevel = LIFECYCLE, taskName: String, asFileTree: Boolean = false) {
     val task = tasks.getByName(taskName)
     val outputs = task.outputs.files
     logger.log(level, "$prefix Task '$taskName' has ${outputs.count()} outputs:")
-    outputs.forEach { logger.log(level, "$prefix     output: '$it' (type: ${it.javaClass.name})") }
-    //outputs.asFileTree.forEach { logger.log(level, "$prefix   output: '$it'") }
+    if (asFileTree) {
+        outputs.asFileTree.forEach { logger.log(level, "$prefix   output: '$it'") }
+    } else {
+        outputs.forEach { logger.log(level, "$prefix     output: '$it' (type: ${it.javaClass.name})") }
+    }
 }
 
 fun Project.printResolvedConfigFile(level: LogLevel = LIFECYCLE, configName: String) {
@@ -188,7 +194,7 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
  */
 class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
     companion object {
-        fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1) {
+        fun verifyJarFileContents(project: Project, required: List<String>, size: Int = -1): Int {
             val jar = project.tasks.getByName("jar").outputs.files.singleFile
             val contents = jarContents(jar)
 
@@ -206,6 +212,8 @@ class DebugBuild(project: Project) : XdkProjectBuildLogic(project) {
                     throw project.buildException("ERROR: Corrupted jar file; needs to contain entry matching '$it'")
                 }
             }
+
+            return contents.size
         }
 
         private fun jarContents(jarFile: File): Set<String> {
