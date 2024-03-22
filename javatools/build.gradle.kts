@@ -26,7 +26,6 @@ val xdkJavaToolsProvider by configurations.registering {
 
 dependencies {
     implementation(libs.javatools.utils)
-    implementation(libs.javatools.utils)
     implementation(libs.jline)
     testImplementation(libs.javatools.utils)
 }
@@ -93,7 +92,7 @@ val jar by tasks.existing(Jar::class) {
      * TODO: an alternative solution would be to leave the run-time dependent libraries "as is" and
      *      use the "Class-Path" attribute of the manifest to point to them.
      */
-    from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) }})
+    from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) } })
 
     archiveBaseName = "javatools"
 
@@ -108,7 +107,8 @@ val jar by tasks.existing(Jar::class) {
             "Implementation-Title" to "xvm-prototype",
             "Implementation-Version" to version,
             "Implementation-Vendor" to "xtclang.org",
-            "Sealed" to "true"
+            "Sealed" to "true",
+            "Xdk-Version" to semanticVersion.toString(),
         )
     }
 }
@@ -119,9 +119,10 @@ val assemble by tasks.existing {
 
 val sanityCheckJar by tasks.registering {
     group = VERIFICATION_GROUP
-    description =
-        "If the properties are enabled, verify that the javatools.jar file is sane " +
-        "(contains expected packages and files), and optionally, that it has a certain number of entries."
+    description = """
+            If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), 
+            and optionally, that it has a certain number of entries.
+        """.trimIndent()
 
     dependsOn(jar)
 
