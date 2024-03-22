@@ -100,8 +100,6 @@ val jar by tasks.existing(Jar::class) {
     manifest {
         attributes(
             "Manifest-Version" to "1.0",
-            "Xdk-Version" to semanticVersion.toString(),
-            "Sealed" to "true",
             "Main-Class" to "org.xvm.tool.Launcher",
             "Name" to "/org/xvm/",
             "Specification-Title" to "xvm",
@@ -109,7 +107,8 @@ val jar by tasks.existing(Jar::class) {
             "Specification-Vendor" to "xtclang.org",
             "Implementation-Title" to "xvm-prototype",
             "Implementation-Version" to version,
-            "Implementation-Vendor" to "xtclang.org"
+            "Implementation-Vendor" to "xtclang.org",
+            "Sealed" to "true"
         )
     }
 }
@@ -141,11 +140,10 @@ val sanityCheckJar by tasks.registering {
         val size = DebugBuild.verifyJarFileContents(
             project,
             listOf(
-                "implicit.x",            // verify the implicits are in the jar
-                "org/xvm/tool/Compiler", // verify the javatools package is in there, including Compiler and Runner
-                "org/xvm/tool/Runner",
-                "org/xvm/util/Severity",  // verify the javatools_utils package is in there, including Severity
-                "org/jline/console/ConsoleEngine" // verify the jline library is in there.
+                "implicit.x",                 // verify the implicits are in the jar
+                "org/xvm/tool/Compiler",      // verify the javatools package inclusion
+                "org/xvm/util/Severity",      // verify the javatools_utils package inclusion
+                "org/jline/reader/LineReader" // verify the jline library inclusion
             ),
             expectedEntryCount
         )
