@@ -34,7 +34,7 @@ dependencies {
 /**
  * TODO: Someone please determine if this is something we should fix or not:
  *
- * We add the implicits.x file to the resource set, to both make it part of the javatools.jar + available.
+ * We add the implicits.x file to the resource set, to both make it a part of the javatools.jar + available.
  * IntelliJ may warn that we have a "duplicate resource folder" if this is executed by a Run/Debug configuration.
  * This is because lib_ecstasy is the place where these resources are originally placed. I'm not sure if
  * they need to be there to be compiled into the ecstasy.xtc binary, in order for the launchers to work, or
@@ -50,7 +50,9 @@ dependencies {
 sourceSets {
     main {
         resources {
-            srcDir(file(xdkImplicitsFile.parent)) // May trigger a warning in your IDE, since we are referencing someone else's (javatools_turtle) main resource path. IDEs like to have one.
+            // May trigger a warning in your IDE, since we are referencing someone else's
+            // (javatools_turtle) main resource path. IDEs like to have one.
+            srcDir(file(xdkImplicitsFile.parent))
         }
     }
 }
@@ -76,19 +78,20 @@ val jar by tasks.existing(Jar::class) {
     }
 
     /*
-     * This from statement will copy everything in the dependencies section, and our resources
+     * This "from" statement will copy everything in the dependencies section, and our resources
      * to the javatools-<version>.jar. In that respect it's a fat jar.
      *
-     * The copyDependencies task will output a build directory containing all our dependencies,
+     * The "copyDependencies" task will output a build directory containing all our dependencies,
      * which are currently just javatools-utils-<version>.jar and jline.
      *
-     * Map semantics guarantee that we resolve the from input only during the execution phase.
-     * We take the destination directory, known to e an output of copyDependencies, and a
+     * Map semantics guarantee that we resolve the "from" input only during the execution phase.
+     * We take the destination directory, known to be an output of copyDependencies, and a
      * single directory. This is implicit from the "into" configuration of that task.
-     * Then, we lazily (with map), assume that every file in the destination tree is a jar/zip file
+     * Then we lazily (with "map") assume that every file in the destination tree is a jar/zip file
      * (we will break if it isn't) and unpack that into the javatools jar that is being built.
-     * Please study this pattern, and understand why it's important with lazy evaluation in
-     * Gradle.
+     *
+     * TODO: a better solution would be to leave the run-time dependent libraries "as is" and use
+     *      the "Class-Path" attribute of the manifest to point to them.
      */
     from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) }})
 
@@ -100,7 +103,6 @@ val jar by tasks.existing(Jar::class) {
             "Xdk-Version" to semanticVersion.toString(),
             "Sealed" to "true",
             "Main-Class" to "org.xvm.tool.Launcher",
-            // TODO: Later "Class-Path" to "./deps",
             "Name" to "/org/xvm/",
             "Specification-Title" to "xvm",
             "Specification-Version" to version,
@@ -119,7 +121,8 @@ val assemble by tasks.existing {
 val sanityCheckJar by tasks.registering {
     group = VERIFICATION_GROUP
     description =
-        "If the properties are enabled, verify that the javatools.jar file is sane (contains expected packages and files), and optionally, that it has a certain number of entries."
+        "If the properties are enabled, verify that the javatools.jar file is sane " +
+        "(contains expected packages and files), and optionally, that it has a certain number of entries."
 
     dependsOn(jar)
 
@@ -150,10 +153,14 @@ val sanityCheckJar by tasks.registering {
     }
 }
 
-// TODO: This configuration exports the dependencies of the javatools.jar, so that we can consume and package them sepearatly,
-//   should we want to do this. I think we may want to provide a "thin" javatools.jar with javatools utils and  jline and other
-//   dependencies on the classpath in the manifest, and have them, together with licenses, in a subfolder to javatools in the
-//   XDK installation.
+/*
+ * We may want to provide a "thin" javatools.jar with javatools utils, jline and other dependencies
+ * on the classpath in the manifest, and have them, together with licenses, in a sub-folder to
+ * javatools in the XDK installation.
+ *
+ * TODO: This configuration exports the dependencies of the javatools.jar, so that we can consume
+ *       and package them separately.
+ */
 /*
 val xdkJavaToolsDependencyProvider by configurations.registering {
     isCanBeResolved = false

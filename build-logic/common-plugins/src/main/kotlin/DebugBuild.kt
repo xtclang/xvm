@@ -97,7 +97,7 @@ fun Project.printResolvedConfigFiles(level: LogLevel = LIFECYCLE, configName: St
     val files = config.resolvedConfiguration.resolvedArtifacts.map { it.file }
     logger.log(level, "$prefix Configuration '$configName' has ${files.size} files:")
     files.forEach {
-        logger.log(level, "$prefix    file: '$it'")
+        logger.log(level, "$prefix file: '$it'")
     }
 }
 
@@ -105,16 +105,14 @@ fun Project.printTaskInputs(level: LogLevel = LIFECYCLE, taskName: String) {
     val task = tasks.getByName(taskName)
     val inputs = task.inputs.files
     logger.log(level, "$prefix Task '$taskName' has ${inputs.count()} inputs:")
-    inputs.forEach { logger.log(level, "$prefix     input: '$it' (type: ${it.javaClass.name})") }
-    //inputs.asFileTree.forEach { logger.log(level, "$prefix   input : '$it'") }
+    inputs.forEach { logger.log(level, "$prefix input: '$it' (type: ${it.javaClass.name})") }
 }
 
 fun Project.printTaskOutputs(level: LogLevel = LIFECYCLE, taskName: String) {
     val task = tasks.getByName(taskName)
     val outputs = task.outputs.files
     logger.log(level, "$prefix Task '$taskName' has ${outputs.count()} outputs:")
-    outputs.forEach { logger.log(level, "$prefix     output: '$it' (type: ${it.javaClass.name})") }
-    //outputs.asFileTree.forEach { logger.log(level, "$prefix   output: '$it'") }
+    outputs.forEach { logger.log(level, "$prefix output: '$it' (type: ${it.javaClass.name})") }
 }
 
 fun Project.printResolvedConfigFile(level: LogLevel = LIFECYCLE, configName: String) {
@@ -123,7 +121,7 @@ fun Project.printResolvedConfigFile(level: LogLevel = LIFECYCLE, configName: Str
     files?.resolvedConfiguration?.resolvedArtifacts?.map { it.file }?.also { f ->
         logger.log(level, "$prefix Configuration '$configName' has ${f.size} files:")
         f.forEach {
-            logger.log(level, "$prefix    Path: '${it.absolutePath}'")
+            logger.log(level, "$prefix Path: '${it.absolutePath}'")
         }
     }
 }
@@ -136,9 +134,9 @@ fun Project.printTaskDependencies(level: LogLevel = LIFECYCLE, taskName: String)
     logger.log(level, "$prefix $projectName.printTaskDependencies('$taskName'):")
 
     val parents = task.taskDependencies.getDependencies(task).toSet()
-    logger.log(level, "$prefix     Task '$projectName:$taskName' depends on ${parents.size} other tasks.")
+    logger.log(level, "$prefix Task '$projectName:$taskName' depends on ${parents.size} other tasks.")
     parents.forEach {
-        logger.log(level, "$prefix             Task '$projectName:$taskName' <- dependsOn: '${it.project.name}:${it.name}'")
+        logger.log(level, "$prefix Task '$projectName:$taskName' <- dependsOn: '${it.project.name}:${it.name}'")
     }
     val children = project.tasks.filter {
         var match = false // TODO: Better kotlin.
@@ -150,9 +148,9 @@ fun Project.printTaskDependencies(level: LogLevel = LIFECYCLE, taskName: String)
         }
         match
     }.toSet()
-    logger.log(level, "$prefix     Task '$projectName:$taskName' is a dependency of ${children.size} other tasks.")
+    logger.log(level, "$prefix Task '$projectName:$taskName' is a dependency of ${children.size} other tasks.")
     children.forEach {
-        logger.log(level, "$prefix         Task '$projectName:$taskName' -> isDependencyOf: '$projectName:${it.name}'")
+        logger.log(level, "$prefix Task '$projectName:$taskName' -> isDependencyOf: '$projectName:${it.name}'")
     }
 }
 
@@ -171,11 +169,11 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
     val count = publications.size
     logger.log(level, "$prefix Project '$projectName' has $count publications.")
     publications.forEachIndexed { i, it ->
-        logger.log(level, "$prefix     (${i + 1} / $count) Publication: '$projectName:${it.name}' (type: ${it::class}")
+        logger.log(level, "$prefix (${i + 1} / $count) Publication: '$projectName:${it.name}' (type: ${it::class}")
         if (it is MavenPublication) {
-            logger.log(level, "$prefix     Publication '${projectName}.${it.name}' has ${it.artifacts.size} artifacts.")
+            logger.log(level, "$prefix Publication '${projectName}.${it.name}' has ${it.artifacts.size} artifacts.")
             it.artifacts.forEachIndexed { j, artifact ->
-                logger.log(level, "$prefix         (${j + 1} / ${it.artifacts.size}) Artifact: '$artifact'")
+                logger.log(level, "$prefix (${j + 1} / ${it.artifacts.size}) Artifact: '$artifact'")
             }
         }
     }
