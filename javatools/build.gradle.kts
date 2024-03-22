@@ -90,8 +90,8 @@ val jar by tasks.existing(Jar::class) {
      * Then we lazily (with "map") assume that every file in the destination tree is a jar/zip file
      * (we will break if it isn't) and unpack that into the javatools jar that is being built.
      *
-     * TODO: a better solution would be to leave the run-time dependent libraries "as is" and use
-     *      the "Class-Path" attribute of the manifest to point to them.
+     * TODO: an alternative solution would be to leave the run-time dependent libraries "as is" and
+     *      use the "Class-Path" attribute of the manifest to point to them.
      */
     from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) }})
 
