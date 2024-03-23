@@ -725,6 +725,22 @@ interface Map<Key, Value>
         return buf;
     }
 
+    @Override
+    String toString(
+            String?                 sep         = ", ",
+            String?                 pre         = "[",
+            String?                 post        = "]",
+            String?                 keySep      = "=",
+            Int?                    limit       = Null,
+            String?                 trunc       = "...",
+            function String(Key)?   keyRender   = Null,
+            function String(Value)? valueRender = Null) {
+
+        StringBuffer buf = new StringBuffer(
+            estimateStringLength(sep, pre, post, keySep, limit, trunc, keyRender, valueRender));
+        return appendTo(buf, sep, pre, post, keySep, limit, trunc, keyRender, valueRender).toString();
+    }
+
 
     // ----- equality ------------------------------------------------------------------------------
 
