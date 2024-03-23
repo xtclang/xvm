@@ -25,6 +25,10 @@ class SimpleResponse
         }
     }
 
+    construct(HttpStatus status, String message) {
+        construct SimpleResponse(status, Text, message.utf8());
+    }
+
 
     // ----- HttpMessage interface -----------------------------------------------------------------
 
