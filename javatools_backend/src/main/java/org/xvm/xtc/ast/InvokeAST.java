@@ -25,7 +25,7 @@ public class InvokeAST extends AST {
   private InvokeAST( AST[] kids, Const[] retTypes, Const methcon, boolean async ) {
     super(kids);
     // Calling target.method(args)
-    MethodPart meth = (MethodPart)((MethodCon)methcon).part();
+    MethodPart meth = (MethodPart)methcon.part();
     _meth = meth.jname();
     _async = async;
     if( meth._args != null && meth._xargs==null )   meth._xargs = XType.xtypes(meth._args);

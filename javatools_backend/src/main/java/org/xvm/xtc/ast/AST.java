@@ -198,6 +198,7 @@ public abstract class AST {
     case PreDecExpr   ->    UniOpAST.make(X,"--",null);
     case PreIncExpr   ->    UniOpAST.make(X,"++",null);
     case PropertyExpr -> PropertyAST.make(X);
+    case RefOfExpr    ->    UniOpAST.make(X,"&",null);
     case RegAlloc     ->   DefRegAST.make(X,true ,true );
     case RelOpExpr    ->    BinOpAST.make(X,true );
     case Return0Stmt  ->   ReturnAST.make(X,0);

@@ -121,8 +121,8 @@ public abstract class XType {
     long hash = hash() ^ (_notNull ? 1024 : 0);
     if( _xts!=null )
       for( XType xt : _xts )
-        hash = (hash<<25) | (hash>>(64-25)) ^ xt._uid;
-    int ihash = (int)(hash ^ (hash>>32));
+        hash = (hash<<25) | (hash>>>(64-25)) ^ xt._uid;
+    int ihash = (int)(hash ^ (hash>>>32));
     if( ihash==0 ) ihash = 0xdeadbeef;
     return (_hash=ihash);
   }
@@ -288,6 +288,14 @@ public abstract class XType {
         yield (u2.zero() ? u2.box() : u2).nullable();
       XType u1 = xtype(utc._con1,false,self);
       yield XUnion.make(u1,u2);
+    }
+
+    // Generalized union types gonna wait awhile.
+    // Right now, allow null unions only
+    case InterTCon utc -> {
+      XType u2 = xtype(utc._con2,false,self);
+      XType u1 = xtype(utc._con1,false,self);
+      yield XInter.make(u1,u2);
     }
 
     case IntCon itc -> XCons.format_clz(itc._f).box(boxed);

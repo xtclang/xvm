@@ -3,12 +3,13 @@ package org.xvm.xec.ecstasy.collections;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
+import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Appender;
 import org.xvm.xec.ecstasy.Boolean;
 import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.Freezable;
 import org.xvm.xec.ecstasy.Iterable;
 import org.xvm.xec.ecstasy.Iterator;
-import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xec.ecstasy.text.Char;
 import org.xvm.xec.ecstasy.text.Stringable;
@@ -16,7 +17,8 @@ import org.xvm.xrun.Never;
 
 // ArrayList with a saner syntax and an exposed API for direct use by code-gen.
 // Not intended for hand use.
-public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, Stringable, Freezable {
+public abstract class Array<E extends XTC> extends XTC
+  implements Appender<E>, Iterable<E>, Stringable, Freezable {
   public static final Array GOLD = null;
   public Array(Never n) { _gold=null; _mut=null; } // No-arg-no-work constructor
 
@@ -35,31 +37,31 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
       throw XEC.TODO();
     }
     assert gold==ary._gold : "Given GOLD: " + gold + " and an ary.GOLD: " + ary._gold;
-    
+
     if( gold == Boolean.GOLD ) return new Aryboolean(mut, (Aryboolean)ary);
     if( gold == Char   .GOLD ) return new Arychar   (mut, (Arychar   )ary);
     if( gold == Int64  .GOLD ) return new Arylong   (mut, (Arylong   )ary);
     if( gold == org.xvm.xec.ecstasy.text.String.GOLD )  return new AryString(mut, (AryString)ary);
     throw XEC.TODO();
   }
-  
+
   /** Empty, as encoded as a size property read */
   public final boolean empty$get() { return _len==0; }
-  
+
   /** Length, as encoded as a size property read */
   public final int size$get() { return _len; }
 
   public final E Element$get() { return _gold; }
-      
+
   /** Element at */
   abstract public E at( long idx );
-  
+
   /** Add an element, doubling base array as needed */
   abstract public Array<E> add( E e );
 
   /** Slice */
   abstract public Array<E> slice( AbstractRange r );
-  
+
   /** @return an iterator */
   abstract public Iterator<E> iterator();
 
@@ -92,7 +94,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
     Constant,                   // Deeply immutable
     Persistent,                 // Odd name, but shallow immutable.  Deeper elements can change.
     Fixed,                      // Tuples and arrays are fixed length, but mutable array contents
-    Mutable;                    // Classic mutable    
+    Mutable;                    // Classic mutable
     public static final Mutability[] VALUES = values();
     public static final Enum GOLD = Enum.GOLD; // Dispatch against Ordered class same as Enum class
   }
@@ -102,7 +104,7 @@ public abstract class Array<E extends XTC> extends XTC implements Iterable<E>, S
 
   // --- Comparable
   public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }
-  
+
   public static <E extends XTC> boolean equals$Array(Array<E> gold, Array<E> a0, Array<E> a1) {
     if( a0 == a1 ) return true;
     if( a0._len != a1._len ) return false;

@@ -15,7 +15,7 @@ public class StringBuffer extends Arychar
 
   public static StringBuffer construct(long estSize) { return new StringBuffer(estSize); }
   public static StringBuffer construct() { return new StringBuffer(8); }
-  
+
   public StringBuffer add(char v) {
     return (StringBuffer)super.add(v);
   }
@@ -34,6 +34,8 @@ public class StringBuffer extends Arychar
   public StringBuffer append( java.lang.String s) { return appendTo(s); }
 
   public StringBuffer appendTo(long x) { return appendTo(Long.toString(x)); }
+
+  @Override public StringBuffer appendTo(Char x) { return add(x._i); }
 
   @Override public java.lang.String toString() { return new java.lang.String(_es,0,_len); }
 }
