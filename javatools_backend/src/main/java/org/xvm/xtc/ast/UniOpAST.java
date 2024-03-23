@@ -24,7 +24,7 @@ class UniOpAST extends AST {
     UniOp op = UniOp.OPS[X.u31()]; // Post op by default
     return new UniOpAST(kids,null,op.text,type);
   }
-  
+
   static UniOpAST make( ClzBuilder X, String pre, String post ) {
     AST[] kids = X.kids(1);     // One expr
     Const type = X.con();
@@ -33,7 +33,7 @@ class UniOpAST extends AST {
       pre = "!";                // Use Java bang instead
     return new UniOpAST(kids,pre,post,type);
   }
-  
+
   UniOpAST( AST[] kids, String pre, String post, Const type ) {
     this(kids,pre,post,
          // TRACE is given a type in BAST, but it's not the full type - its
@@ -47,7 +47,7 @@ class UniOpAST extends AST {
     _post = post;
     _type = type;
   }
-  
+
   static boolean is_elvis(String pre) { return S.eq("ELVIS",pre); }
   boolean is_elvis() { return is_elvis(_pre); }
   static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern.is_elvis(); }
@@ -72,10 +72,11 @@ class UniOpAST extends AST {
     // boolean).
     if( S.eq("!",_pre) )  return _type;
     if( is_elvis() )      return _type;
+    if( S.eq("&",_pre) )  return _type;
     // Other operators carry through from the child
     return _kids[0]._type;
   }
-  
+
   @Override boolean _cond() {
     // Pass-through on conditional
     return is_trace() && _kids[0]._cond;
@@ -88,8 +89,8 @@ class UniOpAST extends AST {
       return new BinOpAST("!=","",_type,_kids[0],new ConAST(null,null,"null",XCons.NULL));
 
 
+    // Invert the bang directly and remove from AST
     if( S.eq("!",_pre) && _kids[0] instanceof OrderAST ord ) {
-      // Invert the bang directly
       ord._op = switch( ord._op ) {
       case ">" -> "<=";
       case "<" -> ">=";
@@ -101,9 +102,10 @@ class UniOpAST extends AST {
       if( S.eq("!=",bin._op0) ) { bin._op0="=="; return bin; }
       if( S.eq("==",bin._op0) ) { bin._op0="!="; return bin; }
     }
+
     return this;
   }
-  
+
   @Override public SB jcode( SB sb ) {
     // Bang "eats" the test part of {test,value} conditionals and drops the
     // value part.
@@ -114,7 +116,7 @@ class UniOpAST extends AST {
       } else
         return sb.p("throw XEC.TODO()");
     }
-    
+
     if( _pre !=null ) {
       if( sb.was_nl() ) sb.i();
       else sb.p(" ");

@@ -83,20 +83,16 @@ CLZB:= build/classes/backend
 javasB := $(wildcard $(SRCB)/$(XEC)/*java $(SRCB)/$(XEC)/*/*java $(SRCB)/$(XEC)/*/*/*java $(SRCB)/$(XEC)/xec/*/*/*java)
 clzesB := $(patsubst $(SRCB)/%java,$(CLZB)/main/%class,$(javasB))
 
-## Compile just the out-of-date files
-#$(clzesB): $(CLZB)/main/%class: $(SRCB)/%java
-#	@echo "compiling " $@ " because " $?
-#	@[ -d $(CLZB)/main ] || mkdir -p $(CLZB)/main
-#	@javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(javasB)
-
 OODB :=
 $(CLZB)/.tag: $(clzesB) $(javasB)
 	@[ -d $(CLZB)/main ] || mkdir -p $(CLZB)/main
+	$(file > .argsB.txt, $(OODB))
 	@if [ ! -z "$(OODB)" ] ; then \
-	  echo -e "compiling backend because " $(OODB) ; \
+	  echo -e "compiling backend because " $< " and " `wc -w < .argsB.txt` " more files" ; \
 	  javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(OODB) ; \
 	fi
 	@touch $(CLZB)/.tag
+	@rm -f .argsB.txt
 
 # Collect just the out-of-date files
 $(clzesB): $(CLZB)/main/%class: $(SRCB)/%java
@@ -132,7 +128,7 @@ javasT := $(wildcard $(SRCT)/$(XEC)/*java $(SRCT)/$(XEC)/*/*java $(SRCT)/$(XEC)/
 clzesT := $(patsubst $(SRCT)/%java,$(CLZT)/main/%class,$(javasT))
 
 OODT :=
-$(CLZT)/.tag: $(clzesT)  $(javasT)
+$(CLZT)/.tag: $(clzesT)  $(javasT) $(CLZU)/.tag
 	@[ -d $(CLZT)/main ] || mkdir -p $(CLZT)/main
 	$(file > .argsT.txt, $(OODT))
 	@if [ ! -z "$(OODT)" ] ; then \

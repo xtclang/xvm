@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
@@ -12,10 +13,12 @@ class TernaryAST extends AST {
     XType s2 = _kids[2]._type;
     if( s1==s2 ) return s1;
     // Allow equals modulo boxing and nullable
+    if( s1.unbox() == s2.unbox() )
+      return s1.unbox();
     assert s1.box().nullable()==s2.box().nullable();
-    return s1;
+    return s1.box().nullable();
   }
-  
+
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p(" ? ");
     if( i==1 ) sb.p(" : ");

@@ -14,7 +14,7 @@ import java.util.Arrays;
 // Not intended for hand use.
 public class AryUInt8 extends Array<UInt8> {
   public static final AryUInt8 GOLD = new AryUInt8();
-  
+
   public byte[] _es;
   public  AryUInt8(Mutability mut, byte[] es) { super(UInt8.GOLD,mut,es.length); _es = es; }
   public  AryUInt8(                    ) { this(Mutable , new byte[ 0 ]); }
@@ -25,7 +25,7 @@ public class AryUInt8 extends Array<UInt8> {
 
   public static AryUInt8 construct() { return new AryUInt8(); }
   public static AryUInt8 construct(Mutability mut, AryUInt8 as) { return new AryUInt8(mut,as); }
-  
+
   // Fetch element; cannot specify an "unsigned" get at the java level
   public int at8(long idx) {
     if( 0 <= idx && idx < _len )
@@ -64,7 +64,7 @@ public class AryUInt8 extends Array<UInt8> {
     return this;
   }
 
-  
+
   private static final SB SBX = new SB();
   @Override public String toString() {
     SBX.p('[');
@@ -74,7 +74,7 @@ public class AryUInt8 extends Array<UInt8> {
     SBX.clear();
     return str;
   }
-  
+
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.
@@ -95,7 +95,7 @@ public class AryUInt8 extends Array<UInt8> {
     return (int)(sum ^ (sum>>32));
   }
 
-     
+
   /** @return an iterator */
   @Override public Iterator<UInt8> iterator() { throw XEC.TODO(); }
 
@@ -106,6 +106,9 @@ public class AryUInt8 extends Array<UInt8> {
     _mut = Mutability.Constant;
     return this;
   }
+
+  // --- Appender
+  @Override public AryUInt8 appendTo( UInt8 s ) { return add(s); }
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*5; }

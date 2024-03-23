@@ -122,6 +122,9 @@ public class Arychar extends Array<Char> {
     return this;
   }
 
+  // --- Appender
+  @Override public Arychar appendTo( Char s ) { return add(s); }
+
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
 }

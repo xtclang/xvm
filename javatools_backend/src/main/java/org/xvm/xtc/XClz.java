@@ -121,7 +121,7 @@ public class XClz extends XType {
     // See if already exists
     XClz clz = _intern();
     if( clz != this ) {
-      assert proto._super==clz._super && proto._clz  ==clz._clz;
+      assert proto._super==clz._super && (proto._clz==clz._clz || clz._clz==null);
       return clz;
     }
     assert _ro || (_super==null || !_super._ro);  // Set if super is set

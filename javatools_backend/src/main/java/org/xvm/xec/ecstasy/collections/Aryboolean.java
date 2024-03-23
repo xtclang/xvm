@@ -130,6 +130,8 @@ public class Aryboolean extends Array<Boolean> {
     return this;
   }
 
+  // --- Appender
+  @Override public Aryboolean appendTo( Boolean s ) { return add(s); }
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len; }
