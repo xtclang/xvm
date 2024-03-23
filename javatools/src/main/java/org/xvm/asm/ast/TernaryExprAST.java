@@ -14,17 +14,19 @@ import org.xvm.asm.constants.TypeConstant;
 public class TernaryExprAST
         extends ExprAST {
 
-    private ExprAST cond;
-    private ExprAST exprThen;
-    private ExprAST exprElse;
+    private ExprAST        cond;
+    private ExprAST        exprThen;
+    private ExprAST        exprElse;
+    private TypeConstant[] types;
 
     TernaryExprAST() {}
 
-    public TernaryExprAST(ExprAST cond, ExprAST exprThen, ExprAST exprElse) {
-        assert cond != null && exprThen != null && exprElse != null;
+    public TernaryExprAST(ExprAST cond, ExprAST exprThen, ExprAST exprElse, TypeConstant[] types) {
+        assert cond != null && exprThen != null && exprElse != null && types != null && types.length > 0;
         this.cond     = cond;
         this.exprThen = exprThen;
         this.exprElse = exprElse;
+        this.types    = types;
     }
 
     public ExprAST getCond() {
@@ -55,7 +57,7 @@ public class TernaryExprAST
 
     @Override
     public TypeConstant getType(int i) {
-        return i < exprThen.getCount() ? exprThen.getType(i) : exprElse.getType(i);
+        return types[i];
     }
 
     @Override
@@ -69,6 +71,7 @@ public class TernaryExprAST
         cond     = readExprAST(in, res);
         exprThen = readExprAST(in, res);
         exprElse = readExprAST(in, res);
+        types    = readTypeArray(in, res);
     }
 
     @Override
@@ -76,6 +79,7 @@ public class TernaryExprAST
         cond    .prepareWrite(res);
         exprThen.prepareWrite(res);
         exprElse.prepareWrite(res);
+        prepareConstArray(types, res);
     }
 
     @Override
@@ -84,6 +88,7 @@ public class TernaryExprAST
         cond    .writeExpr(out, res);
         exprThen.writeExpr(out, res);
         exprElse.writeExpr(out, res);
+        writeConstArray(types, out, res);
     }
 
     @Override

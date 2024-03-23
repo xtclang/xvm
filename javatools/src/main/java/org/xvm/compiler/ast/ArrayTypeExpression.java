@@ -13,10 +13,6 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.Compiler;
-
-import org.xvm.util.Severity;
-
 
 /**
  * An array type expression is a type expression followed by an array indicator. Because an array
