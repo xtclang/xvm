@@ -309,6 +309,14 @@ public abstract class XType {
       yield XInter.make(u1,u2);
     }
 
+    // Generalized union types gonna wait awhile.
+    // Right now, allow null unions only
+    case InterTCon utc -> {
+      XType u2 = xtype(utc._con2,false,self);
+      XType u1 = xtype(utc._con1,false,self);
+      yield XInter.make(u1,u2);
+    }
+
     case IntCon itc -> XCons.format_clz(itc._f).box(boxed);
     case CharCon cc -> JCHAR.box(boxed);
     case ByteCon cc -> JBYTE.box(boxed);

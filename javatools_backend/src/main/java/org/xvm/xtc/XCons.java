@@ -147,7 +147,7 @@ public abstract class XCons {
   // Type sig for Iterator<Int64>, which returns a non-XTC type "Iteratorlong"
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
-  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,null,JLONG);
+  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,"Element",JLONG);
 
   // These are always expanded to some Java constant
   public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);
