@@ -449,7 +449,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                                         serviceTls, serviceTrust,
                                         serviceProduces, serviceConsumes, serviceSubjects,
                                         serviceStreamRequest, serviceStreamResponse);
-                    if (templates.addIfAbsent(info.template.toString())) {
+                    if (templates.addIfAbsent($"{info.httpMethod.name} {info.template}")) {
                         endpoints.add(info);
                     } else {
                         throw new IllegalState($|WebService "{clz}": a duplicate use of template \
