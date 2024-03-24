@@ -11,33 +11,22 @@ env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+  ORG_XTCLANG_JAVATOOLS_SANITY_CHECK_JAR: true
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
   gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:
-  parse-semver:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest ]
-    runs-on: ${{ matrix.os }}
-
-
   gradle-install-dist:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
-
-    needs:
-      parse-semver
-
     steps:
       - name: Checkout repository branch
         uses: actions/checkout@v4
         run: |
           echo "XDK_VERSION=$(cat ${{ github.workspace }}/VERSION)" >> "$GITHUB_ENV"
           echo "XDK_LATEST_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
-
       - name: Check XDK version and tags
         run: |
           echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
@@ -47,10 +36,28 @@ jobs:
           else
             echo "*** XDK_VERSION is RELEASE."          
           fi
+          _version="$XDK_VERSION"
+          echo "_version: $_version"
+          _version=${_version%"-SNAPSHOT"}
+          echo "_version: $_version"
+          _version="${_version#[vV]}"
+          echo "_version: $_version"
+          _version_major="${_version%%\.*}"
+          _version_minor="${_version#*.}"
+          _version_minor="${_version_minor%.*}"
+          _version_patch="${_version##*.}"
+          echo "XDK_VERSION_MAJOR=$_version_major" >> "GITHUB_ENV"
+          echo "XDK_VERSION_MINOR=$_version_minor" >> "GITHUB_ENV"
+          echo "XDK_VERSION_PATCH=$_version_patch" >> "GITHUB_ENV"
+      - name: Dump variables
+        run: |
           echo "*** XDK_VERSION GITHUB_REF: ${{ github.ref }} ${{ github.actor }}"
           echo "*** XDK_VERSION GITHUB_REF: $GITHUB_REF $GITHUB_ACTOR"
           echo "*** XDK_VERSION_LATEST_TAG: ${{ env.XDK_LATEST_TAG }}"
-
+          echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
+          echo "*** XDK_MAJOR: ${{ env.XDK_VERSION_MAJOR }}"
+          echo "*** XDK_MINOR: ${{ env.XDK_VERSION_MINOR }}"
+          echo "*** XDK_PATCH: ${{ env.XDK_VERSION_PATCH }}"
       - name: Setup Java and system-wide caching
         uses: actions/setup-java@v4
         with:

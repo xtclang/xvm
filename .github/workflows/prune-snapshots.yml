@@ -10,6 +10,7 @@ env:
   ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
 jobs:
   xdk-prune-snapshots:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
