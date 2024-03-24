@@ -26,12 +26,21 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 
+    fun trimmed(file: File): String {
+        val str = file.readText()
+        val trimmed = str.trim()
+        if (str != trimmed) {
+            throw GradleException("${file.absolutePath} must not contain extra whitespace.")
+        }
+        return trimmed
+    }
+
     // For bootstrapping reasons, we manually load the properties file, instead of falling back to the build logic automatic property handler.
     val xdkVersionInfo = compositeRootRelativeFile("GROUP")!! to compositeRootRelativeFile("VERSION")!!
     val pluginDir = xdkVersionInfo.first.parentFile.resolve("plugin")
     val xdkPluginVersionInfo = pluginDir.resolve("GROUP").let { if (it.isFile) it else xdkVersionInfo.first } to pluginDir.resolve("VERSION").let { if (it.isFile) it else xdkVersionInfo.second }
-    val (xdkGroup, xdkVersion) = xdkVersionInfo.toList().map { it.readText().trim() }
-    val (xtcPluginGroup, xtcPluginVersion) = xdkPluginVersionInfo.toList().map { it.readText().trim() }
+    val (xdkGroup, xdkVersion) = xdkVersionInfo.toList().map { trimmed(it) }
+    val (xtcPluginGroup, xtcPluginVersion) = xdkPluginVersionInfo.toList().map { trimmed(it) }
     val prefix = "[${rootProject.name}]"
     logger.info("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
     logger.info(
