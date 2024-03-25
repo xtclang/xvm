@@ -484,9 +484,24 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 }
             }
 
+            // sort the endpoints based on their UriTemplates in such a way, that:
+            //    1) the one with more parts goes first
+            //    2) otherwise, the one with a longer prefix goes first
+            function Ordered (EndpointInfo, EndpointInfo) order = (ep1, ep2) -> {
+                        UriTemplate t1  = ep1.template;
+                        UriTemplate t2  = ep2.template;
+                        Ordered     cmp = t2.parts.size <=> t1.parts.size;
+                        return cmp == Equal
+                            ? t2.literalPrefix <=> t1.literalPrefix
+                            : cmp;
+                    };
+
             // we never use the endpoint id as an index, so we can sort them in-place
-            endpoints.sorted((ep1, ep2) ->
-                    ep2.template.literalPrefix <=> ep1.template.literalPrefix, inPlace=True);
+            endpoints.sorted(order, inPlace=True);
+
+            endpoints   .freeze(inPlace=True);
+            interceptors.freeze(inPlace=True);
+            observers   .freeze(inPlace=True);
 
             webServiceInfos += new WebServiceInfo(wsid++,
                     classInfo.path, constructor,
