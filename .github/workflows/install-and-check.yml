@@ -15,57 +15,99 @@ env:
   GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: false
   gradle_options: --stacktrace --warning-mode all --console verbose
 
+#concurrency:
+  #group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  #cancel-in-progress: true
+
 jobs:
-  gradle-install-dist:
+  setup:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    # Declare outputs for one of the steps in the job.
+    outputs:
+      version: ${{ steps.properties.outputs.version }}
+      major: ${{ steps.properties.outputs.major }}
+      minor: ${{ steps.properties.outputs.minor }}
+      patch: ${{ steps.properties.outputs.patch }}
+      snapshot: ${{ steps.properties.outputs.snapshot }}
+      tag_new: $${ steps.properties.outputs.tag_new }}
+      tag_last: $${ steps.properties.outputs.tag_last }}
+      changelog: ${{ steps.properties.outputs.changelog }}
+
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - name: Export Properties
+        id: properties
+        shell: bash
+        run: |
+          function parse_version() {
+            local _re='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
+            local _match="s#$_re#\\$1#"
+            echo $xdk_version | sed -e $_match
+          }
+
+          xdk_version="$(cat ./VERSION)"
+          if [[ "$xdk_version" == *SNAPSHOT ]]; then
+            echo "snapshot=true" >> $GITHUB_OUTPUT
+          fi          
+          xdk_version="${xdk_version%-SNAPSHOT}"
+          
+          major="$(parse_version 1)"
+          minor="$(parse_version 2)"
+          patch="$(parse_version 3)"
+          tag_last="$(git describe --tags --abbrev=0)"          
+
+          echo "version=$xdk_version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
+          echo "tag_new=v$xdk_version" >> $GITHUB_OUTPUT
+          echo "tag_last=$tag_last" >> $GITHUB_OUTPUT          
+          # TODO: changelog          
+
+  build:
+    name: Build installDist
+    needs: [ setup ]
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository branch
+      - name: Fetch Sources
         uses: actions/checkout@v4
-      - name: Add version to environment
-        run: |
-          echo "XDK_VERSION=$(cat ${{ github.workspace }}/VERSION)" >> "$GITHUB_ENV"
-          echo "XDK_LATEST_TAG=$(git describe --tags --abbrev=0)" >> "$GITHUB_ENV"
-      - name: Check XDK version and tags
-        run: |
-          echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
-          if [[ "$XDK_VERSION" == *SNAPSHOT ]]; then
-            echo "*** XDK_VERSION is SNAPSHOT."
-            echo "XDK_SNAPSHOT=1" >> "$GITHUB_ENV"
-          else
-            echo "*** XDK_VERSION is RELEASE."          
-          fi
-          _re='[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)'
-          _major=$(echo ${{ env.XDK_VERSION }} | sed -e "s#$_re#\1#")
-          _minor=$(echo ${{ env.XDK_VERSION }} | sed -e "s#$_re#\2#")
-          _patch=$(echo ${{ env.XDK_VERSION }} | sed -e "s#$_re#\3#")
-          echo "XDK_VERSION_MAJOR=$_major" >> "$GITHUB_ENV"
-          echo "XDK_VERSION_MINOR=$_minor" >> "$GITHUB_ENV"
-          echo "XDK_VERSION_PATCH=$_patch" >> "$GITHUB_ENV"
-          echo "XDK_VERSION_NEW_TAG=v$_major.$_minor.$_patch" >> "$GITHUB_ENV"
-      - name: Dump variables
-        run: |
-          echo "*** XDK_VERSION GITHUB_REF: ${{ github.ref }} ${{ github.actor }}"
-          echo "*** XDK_VERSION GITHUB_REF: $GITHUB_REF $GITHUB_ACTOR"
-          echo "*** XDK_VERSION_LATEST_TAG: ${{ env.XDK_LATEST_TAG }}"
-          echo "*** XDK_VERSION_NEW_TAG: ${{ env.XDK_VERSION_NEW_TAG }}"
-          echo "*** XDK_VERSION: ${{ env.XDK_VERSION }}"
-          echo "*** XDK_MAJOR: ${{ env.XDK_VERSION_MAJOR }}"
-          echo "*** XDK_MINOR: ${{ env.XDK_VERSION_MINOR }}"
-          echo "*** XDK_PATCH: ${{ env.XDK_VERSION_PATCH }}"
+        with:
+          fetch-tags: true # fetch tags even if fetch-depth == 0
+          show-progress: true
+
       - name: Setup Java and system-wide caching
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: zulu
           java-version: '21'
           cache: 'gradle'
 
-      - name: Setup Gradle and Gradle cache
+      - name: Setup Gradle and Gradle Cache
         uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-home-cache-cleanup: true
           cache-read-only: false
+
+      - name: Gradle Wrapper Validation
+        uses: gradle/wrapper-validation-action@v2.1.2
+
+      - name: Check XDK version and tags
+        run: |
+          echo "*** XDK_VERSION: ${{ needs.setup.outputs.version }}"
+          echo "*** XDK_SNAPSHOT: ${{ needs.setup.outputs.snapshot }}"  
+          echo "*** XDK_VERSION_MAJOR: ${{ needs.setup.outputs.major }}"
+          echo "*** XDK_VERSION_MINOR: ${{ needs.setup.outputs.minor }}"
+          echo "*** XDK_VERSION_PATCH: ${{ needs.setup.outputs.patch }}"
+          echo "*** XDK_VERSION_TAG: $$${{ needs.setup.outputs.tag_new }}"
+          echo "*** XDK_VERSION_TAG_LAST: ${{ needs.setup.outputs.tag_last }}"
 
       - name: Execute Gradle installDist
         run: ./gradlew ${{ env.gradle_options }} installDist
@@ -76,45 +118,27 @@ jobs:
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
-          
-        # TODO: Only on push to master
+
+      # Always publish a snapshot on push (TODO: change to push to master, not just push)
       - name: XDK Publish Snapshot to xtclang.org GitHub Maven Packages.
-        if: ${{[[ "$XDK_VERSION" ] == *SNAPSHOT ]]}}
+        if: ${{ needs.setup.output.snapshot == 'true' }}
         run: echo "*** XDK_VERSION Publishing SNAPSHOT" && ./gradlew publishRemoteSnapshot
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
           ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
-#...
-#job:
-#  test_semver_parser:
-#    runs_on: ubuntu_latest
-#    steps:
-#      - name: Parse semver string
-#        id: semver_parser
-#        uses: booxmedialtd/ws-action-parse-semver@v1
-#        with:
-#          input_string: '1.0.4'
-#      - name: Use parsed semver
-#        run: |
-#          echo "v${{ steps.semver_parser.outputs.major }}"
-#          echo "v${{ steps.semver_parser.outputs.minor }}"
-#          echo "v${{ steps.semver_parser.outputs.patch }}"
-#          echo "v${{ steps.semver_parser.outputs.prerelease }}"
-#          echo "v${{ steps.semver_parser.outputs.build }}"
-#          echo "v${{ steps.semver_parser.outputs.fullversion }}"
-        # Fail with exit 1
-        # For a release - check if it is already tagged. If this is the case, warn or ignore.
-        # If it's not tagged, create a tag with VERSION (without the snapshot) and push it.
-        # Bump the VERSION and write it back to VERISON with a snapshot suffix.
-        # Release should be a separate workflow triggered by pushing a tag.
-        #
-        # Parse the VERSION file. If it's a snapshot version, just publish the snapshot and do nothing,
-        #
-        # If this is a release version x.y.z, check if the tag vx.y.z exists. If it does, fail. We cannot
-        # overwrite an existing release.
-        # If the tag does not exists, create it and push it. Also replace the contents of x.y.z with
-        # x.y.(z+1)-SNAPSHOT or with
-        #
-      #- name: XDK Publish release artifact
-      #  if: $${{[[ "$XDK_VERSION" ] != *SNAPSHOT ]]}}
-      # styfle/cancel-workflow-action@0.10.0
+
+      - name: Check Existing Tag
+        uses: mukunku/tag-exists-action@v1.4.0
+        id: checkTag
+        with:
+          tag: ${{ env.needs.setup.outputs.tag_new }}
+
+      # Publish a release if non snapshot, and we don't already have the tag. If we have the tag, we fail.
+      - name: XDK Publish Release Publication for non-snapshot and tag source
+        if: ${{ needs.setup.output.snapshot != 'true' }}
+        run: |
+          echo "TAG:" ${{ steps.checkTag.outputs.exists }}
+          if [ ${{ steps.checkTag.outputs.exists }} ]; then
+            echo "FAILURE. Tag exists."
+            exit 1
+          fi
