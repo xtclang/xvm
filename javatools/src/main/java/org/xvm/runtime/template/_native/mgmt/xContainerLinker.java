@@ -5,6 +5,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.FileStructure;
@@ -25,6 +27,7 @@ import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.text.xString;
@@ -35,6 +38,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTemplateHandle;
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
+import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 
@@ -63,6 +67,7 @@ public class xContainerLinker
                 pool().ensureEcstasyClassConstant("mgmt.ResourceProvider").getComponent();
         GET_RESOURCE = clz.findMethod("getResource", 2).getIdentityConstant().getSignature();
 
+        markNativeMethod("collectInjectionsImpl", null, null);
         markNativeMethod("loadFileTemplate", BYTES, null);
         markNativeMethod("resolveAndLink", null, null);
 
@@ -73,6 +78,22 @@ public class xContainerLinker
     public TypeConstant getCanonicalType()
         {
         return pool().ensureEcstasyTypeConstant("mgmt.Container.Linker");
+        }
+
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hLinker = m_hLinker;
+        if (hLinker == null)
+            {
+            m_hLinker = hLinker = createServiceHandle(
+                    f_container.createServiceContext("Linker"),
+                        getCanonicalClass(), getCanonicalType());
+            }
+
+        return hLinker;
         }
 
     @Override
@@ -114,16 +135,59 @@ public class xContainerLinker
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        switch (method.getName())
+            {
+            case "collectInjectionsImpl":
+                return invokeCollectInjections(frame, ahArg, aiReturn);
+            }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
+        }
+
     /**
      * Native implementation of <code><pre>
-     * "(TypeSystem, Control) resolveAndLink(
+     *   (String[], Type[]) collectInjectionsImpl(
+     *      ModuleTemplate template,
+     *      String[]       definedNames = [])
+     * </pre></code>
+     */
+    private int invokeCollectInjections(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        ComponentTemplateHandle hModule    = (ComponentTemplateHandle) ahArg[0];
+        ObjectHandle            hCondNames = ahArg[1];
+
+        ModuleStructure   module        = (ModuleStructure) hModule.getComponent();
+        Set<InjectionKey> setInjections = new HashSet<>();
+        module.getFileStructure().visitChildren(
+            component -> component.collectInjections(setInjections), false, true);
+
+        Container      container = frame.f_context.f_container;
+        int            cInjects  = setInjections.size();
+        StringHandle[] ahName    = new StringHandle[cInjects];
+        TypeHandle[]   ahType    = new TypeHandle[cInjects];
+        int            ix        = 0;
+        for (InjectionKey key : setInjections)
+            {
+            ahName[ix  ] = xString.makeHandle(key.f_sName);
+            ahType[ix++] = key.f_type.ensureTypeHandle(container);
+            }
+        ArrayHandle haNames = xArray.makeStringArrayHandle(ahName);
+        ArrayHandle haTypes = xArray.makeArrayHandle(xRTType.ensureTypeArrayComposition(container),
+                                    cInjects, ahType, xArray.Mutability.Constant);
+        return frame.assignValues(aiReturn, haNames, haTypes);
+        }
+
+    /**
+     * Native implementation of <code><pre>
+     *   (TypeSystem, Control) resolveAndLink(
      *      ModuleTemplate    primaryModule, Model             model,
      *      ModuleRepository? repository,    ResourceProvider? provider,
      *      Module[]          sharedModules, ModuleTemplate[]  additionalModules,
-     *      String[]          namedConditions)"
-     * </pre></></code>
-     *
-     *  method.
+     *      String[]          definedNames)
+     * </pre></code>
      */
     private int invokeResolveAndLink(Frame frame, ObjectHandle[] ahArg, int iReturn)
         {
@@ -133,7 +197,7 @@ public class xContainerLinker
         ObjectHandle            hProvider   = ahArg[3]; // mgmt.ResourceProvider
         ObjectHandle            hShared     = ahArg[4];
         ObjectHandle            hAdditional = ahArg[5];
-        ObjectHandle            hConditions = ahArg[6];
+        ObjectHandle            hCondNames  = ahArg[6];
 
         if (!hProvider.isService())
             {
@@ -164,6 +228,9 @@ public class xContainerLinker
             }
         }
 
+
+    // ----- helpers -------------------------------------------------------------------------------
+
     private ModuleStructure popModule(Frame frame)
         {
         ComponentTemplateHandle hFile = (ComponentTemplateHandle) frame.popStack();
@@ -176,22 +243,6 @@ public class xContainerLinker
         NestedContainer containerNested = new NestedContainer(container,
                 moduleApp.getIdentityConstant(), Collections.emptyList());
         return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
-        }
-
-    /**
-     * Injection support.
-     */
-    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hLinker = m_hLinker;
-        if (hLinker == null)
-            {
-            m_hLinker = hLinker = createServiceHandle(
-                    f_container.createServiceContext("Linker"),
-                        getCanonicalClass(), getCanonicalType());
-            }
-
-        return hLinker;
         }
 
     public static class CollectResources

@@ -1,5 +1,6 @@
 import ecstasy.mgmt.Container;
 import ecstasy.mgmt.Container.Control;
+import ecstasy.mgmt.Container.InjectionKey;
 import ecstasy.mgmt.Container.Model;
 import ecstasy.mgmt.Container.ModuleSpec;
 import ecstasy.mgmt.ModuleRepository;
@@ -12,6 +13,12 @@ service ContainerLinker
         implements Container.Linker {
 
     @Override
+    InjectionKey[] collectInjections(ModuleTemplate template, String[] definedNames = []) {
+        (String[] names, Type[] types) = collectInjectionsImpl(template, definedNames);
+        return new InjectionKey[names.size](i -> new InjectionKey(names[i], types[i])).freeze(True);
+    }
+
+    @Override
     Control loadAndLink(
             ModuleSpec        primarySpec,
             Model             model           = Secure,
@@ -19,7 +26,7 @@ service ContainerLinker
             ResourceProvider? provider        = Null,
             Module[]          sharedModules   = [],
             ModuleSpec[]      additionalSpecs = [],
-            String[]          namedConditions = []) {
+            String[]          definedNames    = []) {
         ModuleTemplate primaryModule;
         if (primarySpec.is(ModuleTemplate)) {
             primaryModule = primarySpec;
@@ -40,7 +47,7 @@ service ContainerLinker
         });
 
         return resolveAndLink(primaryModule, model, repository, provider,
-            sharedModules, additionalModules, namedConditions);
+            sharedModules, additionalModules, definedNames);
     }
 
     @Override
@@ -53,6 +60,11 @@ service ContainerLinker
         return "Linker";
     }
 
+    // ----- native helpers ------------------------------------------------------------------------
+
+    (String[], Type[]) collectInjectionsImpl(ModuleTemplate template, String[] definedNames = [])
+        {TODO("Native");}
+
     Control resolveAndLink(
             ModuleTemplate    primaryModule,
             Model             model,
@@ -60,7 +72,7 @@ service ContainerLinker
             ResourceProvider? provider,
             Module[]          sharedModules,
             ModuleTemplate[]  additionalModules,
-            String[]          namedConditions) {TODO("Native");}
+            String[]          definedNames) {TODO("Native");}
 
     FileTemplate loadFileTemplate(Byte[] contents) {TODO("Native");}
 }
