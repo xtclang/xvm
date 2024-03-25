@@ -30,7 +30,7 @@ dependencyResolutionManagement {
         val str = file.readText()
         val trimmed = str.trim()
         if (str != trimmed) {
-            throw GradleException("${file.absolutePath} must not contain extra whitespace.")
+            throw GradleException("${file.absolutePath} must not contain extra whitespace (${str.length} != ${trimmed.length}).")
         }
         return trimmed
     }

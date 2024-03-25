@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: zulu
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v3
         with:
@@ -37,4 +37,3 @@ jobs:
       - name: Ensure code standard and Java linting is correct.
         run: ./gradlew ${{ env.gradle_options }} build | tee ${{ github.workspace }}/lint-checkstyle-build.log
         # TODO Upload artifact of warnings.
-

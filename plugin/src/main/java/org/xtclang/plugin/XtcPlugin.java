@@ -12,6 +12,9 @@ import org.gradle.api.plugins.JavaBasePlugin;
 
 import org.jetbrains.annotations.NotNull;
 
+// TODO: Now with Gradle 8.7 we should be able to use shared build services.
+//   Probably the best place to keep the work queue and project state so we can go to the configuration cache.
+
 @SuppressWarnings("unused")
 public class XtcPlugin implements Plugin<Project> {
     /** Software component for an XTC project, equivalent to components["java"], used e.g. for publishing */
