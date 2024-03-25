@@ -80,6 +80,22 @@ public class xContainerLinker
         return pool().ensureEcstasyTypeConstant("mgmt.Container.Linker");
         }
 
+    /**
+     * Injection support.
+     */
+    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
+        {
+        ObjectHandle hLinker = m_hLinker;
+        if (hLinker == null)
+            {
+            m_hLinker = hLinker = createServiceHandle(
+                    f_container.createServiceContext("Linker"),
+                        getCanonicalClass(), getCanonicalType());
+            }
+
+        return hLinker;
+        }
+
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
@@ -131,7 +147,7 @@ public class xContainerLinker
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
-        /**
+    /**
      * Native implementation of <code><pre>
      *   (String[], Type[]) collectInjectionsImpl(
      *      ModuleTemplate template,
@@ -212,6 +228,9 @@ public class xContainerLinker
             }
         }
 
+
+    // ----- helpers -------------------------------------------------------------------------------
+
     private ModuleStructure popModule(Frame frame)
         {
         ComponentTemplateHandle hFile = (ComponentTemplateHandle) frame.popStack();
@@ -224,22 +243,6 @@ public class xContainerLinker
         NestedContainer containerNested = new NestedContainer(container,
                 moduleApp.getIdentityConstant(), Collections.emptyList());
         return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
-        }
-
-    /**
-     * Injection support.
-     */
-    public ObjectHandle ensureLinker(Frame frame, ObjectHandle hOpts)
-        {
-        ObjectHandle hLinker = m_hLinker;
-        if (hLinker == null)
-            {
-            m_hLinker = hLinker = createServiceHandle(
-                    f_container.createServiceContext("Linker"),
-                        getCanonicalClass(), getCanonicalType());
-            }
-
-        return hLinker;
         }
 
     public static class CollectResources
