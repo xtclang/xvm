@@ -1512,7 +1512,7 @@ public class TypeCompositionStatement
                     // create the property and get it caught up to where we are
                     PropertyDeclarationStatement prop = new PropertyDeclarationStatement(
                             param.getStartPosition(), param.getEndPosition(), null, null, null,
-                            param.getType(), param.getNameToken(), null, null, null, null);
+                            param.getType(), param.getNameToken(), null, param.getValue(), null, null);
                     prop.markSynthetic();
 
                     if (body == null)

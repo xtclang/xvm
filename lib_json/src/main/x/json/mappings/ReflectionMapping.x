@@ -32,12 +32,17 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
         using (FieldInput fieldInput = in.openObject()) {
             for (PropertyMapping<StructType> field : fields) {
                 field.Value value;
-                if (fieldInput.isNull(field.name)) {
-                    if (!(value := field.hasDefault())) {
-                        assert Type type := StructType.modifying(); // remove "struct" access
-                        throw new IllegalJSON($|Missing value for the "{field.name}" field at "{type}"
-                                             );
-                    }
+                if (fieldInput.isNull(field.name), !(value := field.hasDefault())) {
+                    // check if the structure has a default value (which can throw an
+                    // "uninitialized field" exception)
+                    try {
+                        value = field.property.get(structure);
+                        continue; // the field is already assigned; go to the next one
+                    } catch (Exception ignore) {}
+
+                    assert Type type := StructType.modifying(); // remove "struct" access
+                    throw new IllegalJSON($|Missing value for the "{field.name}" field at "{type}"
+                                         );
                 } else {
                     using (ElementInput elementInput = fieldInput.openField(field.name)) {
                         Mapping<field.Value> mapping = field.mapping;

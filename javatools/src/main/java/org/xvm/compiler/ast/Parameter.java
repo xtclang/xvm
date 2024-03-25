@@ -49,6 +49,11 @@ public class Parameter
         return name;
         }
 
+    public Expression getValue()
+        {
+        return value;
+        }
+
     @Override
     public long getStartPosition()
         {
