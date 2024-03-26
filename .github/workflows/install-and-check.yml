@@ -175,6 +175,9 @@ jobs:
         
       - name: Gradle manualTests:runParallel
         if: ${{ inputs.skip_manual_tests == false }}
+        # TODO: Sometimes the parallel runner hangs, and we reset the timeout from 360 to 15 minutes to have it killed,
+        #   and hopefully a build scan uploaded after the timeout has triggered, so that we can gather more forensics.
+        timeout-minutes: 15
         run: |
           echo "Running manualTests:runParallel (WARNING: Sometimes this does not complete, and the job may be restarted.)"
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
@@ -189,6 +192,10 @@ jobs:
             echo "RELEASE identified. Proceeding with RELEASE publication."
           fi
 
+      # TODO: This should only be done on master.
+      # TODO: This should also only be done in Linux, since the publications are platform agnostic.
+      #  Releases, however, aren't, but that is a separate job with binary launcher creating and
+      #  JReleaser used for the packaging.
       - name: Publish XDK Snapshot
         if: ${{ needs.setup.outputs.snapshot == 'true' }}
         env:

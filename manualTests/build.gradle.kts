@@ -318,6 +318,7 @@ val runOne by tasks.registering(XtcRunTask::class) {
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
+    verbose = true // TODO: sometimes hangs during run, and should be attached to / thread dumped with jcmd when that reproduces. Also adding verbose output.
     module {
         moduleName = "Runner"
         verbose = false
