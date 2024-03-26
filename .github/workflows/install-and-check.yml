@@ -5,7 +5,20 @@
 name: XVM Install and Check
 
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
-on: push
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      skip-manual-tests:
+        description: 'Skip manual tests'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
 
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
@@ -146,11 +159,12 @@ jobs:
         run: ./gradlew ${{ env.gradle_options }} installDist
 
       - name: Execute Gradle manualTest sanity checks
+        if: ${{ inputs.skip }}
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runXtc
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-          #./gradlew ${{ env.gradle_options }} manualTests:runParallel
+          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
       - name: Print release type
         run: |
