@@ -24,6 +24,7 @@ env:
 
 jobs:
   setup:
+    name: Resolve versions, release type and build state.
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
@@ -36,7 +37,7 @@ jobs:
       patch: ${{ steps.properties.outputs.patch }}
       snapshot: ${{ steps.properties.outputs.snapshot }}
       tag_last_release: ${{ steps.properties.outputs.tag_last_release }}
-      tag_new_release: ${{ steps.properties.outputs.tag_new_release }}
+      tag_this_release: ${{ steps.properties.outputs.tag_this_release }}
       tag_next_release: ${{ steps.properties.outputs.tag_next_release }}
       #changelog: ${{ steps.properties.outputs.changelog }}
 
@@ -60,6 +61,9 @@ jobs:
           if [[ "$xdk_version" == *SNAPSHOT ]]; then
             echo "snapshot identified"
             echo "snapshot=true" >> $GITHUB_OUTPUT
+          else
+            echo "release identified"
+            echo "snapshot=false" >> $GITHUB_OUTPUT 
           fi
 
           # Strip version string suffix (i.e. remove -SNAPSHOT, -M1, etc)          
@@ -92,7 +96,7 @@ jobs:
           # TODO: changelog          
 
   build:
-    name: Build 'installDist'
+    name: Build / install distribution + sanity checks
     needs: setup
     strategy:
       matrix:
@@ -134,17 +138,6 @@ jobs:
           echo "*** XDK_VERSION_THIS_TAG: ${{ needs.setup.outputs.tag_this_release }}"
           echo "*** XDK_VERSION_NEXT_TAG: ${{ needs.setup.outputs.tag_next_release }}"
 
-      - name: Check for Tag
-        run: |          
-          echo "Checking for tag ${{ needs.setup.outputs.tag_this_release }}"
-          git tag -l ${{ needs.setup.outputs.tag_this_release }}
-          existing_tags=$?        
-          if [[ $existing_tags -eq 0 ]]; then
-            echo "ERROR: Tag for this release already exists $tag"
-            exit 1
-          fi
-          echo "*** Tag ${{ needs.setup.outputs.tag_this_release }} does not exist yet; proceeding with buuild."
-
       - name: Forbid merges
         run: |
           echo "TODO: Here we need to check whether someone has added merges since we last tagged the release."
@@ -159,6 +152,15 @@ jobs:
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
           #./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
+      - name: Print release type
+        run: |
+          echo "SNAPSHOT check: ${{ needs.setup.outputs.snapshot }}"
+          if [ ${{ needs.setup.outputs.snapshot == 'true' }} ]; then
+            echo "SNAPSHOT identified. Proceeding with SNAPSHOT publication: ${{ needs.setup.outputs.snapshot }}"
+          else
+            echo "RELEASE identified. Proceeding with RELEASE publication."
+          fi
+
       - name: Publish XDK Snapshot
         if: ${{ needs.setup.output.snapshot == 'true' }}
         env:
@@ -169,15 +171,25 @@ jobs:
           ./gradlew ${{ env.gradle_options }} publishRemoteSnapshot
 
       - name: Publish XDK Release Artifact
-        if: ${{ needs.setup.output.snapshot != 'true' }}
+        if: ${{ needs.setup.output.snapshot == 'false' }}
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
           ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
         run: |
           echo "******************* XCK_VERSION PUBLISHING RELEASE"
-          all_tags=$(git tag --list)
-          echo "ALL TAGS: $all_tags"
-          echo "NEW TAG: $tagnew"
+          echo "Checking for tag ${{ needs.setup.outputs.tag_this_release }}"
+          git tag -l | grep ${{ needs.setup.outputs.tag_this_release }}
+          existing_tags=$?        
+          if [[ $existing_tags -eq 0 ]]; then
+            echo "ERROR: Tag for this release already exists $tag"
+            exit 1
+          fi
+          echo "*** Tag ${{ needs.setup.outputs.tag_this_release }} does not exist yet; proceeding with buuild."
+          echo "NEW TAG: ${{ needs.setup.outputs.tag_this_release }}"
+          
+          # Create a release branch, update version file, commit and push itg
+          
+          echo "./gradlew ${{ env.gradle_options }} publishRemoteRelease"
 #          if [ ${{ steps.check-tag.outputs.exists }} ]; then
 #            echo "FAILURE. Tag exists; tag '$tagnew' created from version ${{ needs.setup.outputs.version }} as already in use."
 #            exit 1
