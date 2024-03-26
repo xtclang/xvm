@@ -129,13 +129,16 @@ jobs:
         with:
           distribution: zulu
           java-version: '21'
-          cache: 'gradle'
+          # Should be avoided with the new Gradle build action:
+          #cache: 'gradle'
 
       - name: Setup Gradle and Gradle Cache
         uses: gradle/actions/setup-gradle@v3
         with:
-          #gradle-home-cache-cleanup: true
+          gradle-home-cache-cleanup: true
           cache-read-only: false
+          # TODO: Constrain cache? This idiom can be used to set read only for branches that are not "main" or "release":
+          # cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
 
       - name: Gradle Wrapper Validation
         uses: gradle/wrapper-validation-action@v2.1.2
@@ -158,12 +161,22 @@ jobs:
       - name: Execute Gradle installDist
         run: ./gradlew ${{ env.gradle_options }} installDist
 
-      - name: Execute Gradle manualTest sanity checks
+      - name: Gradle manualTests:runXtc
+        if: ${{ inputs.skip_manual_tests == false }}
+        run: ./gradlew ${{ env.gradle_options }} manualTests:runXtc
+
+      - name: Gradle manualTests:runOne -PtestName=TestMisc
+        if: ${{ inputs.skip_manual_tests == false }}
+        run: ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
+          
+      - name: Gradle manualTests:runTwoTestsInSequence
+        if: ${{ inputs.skip_manual_tests == false }}
+        run: ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
+        
+      - name: Gradle manualTests:runParallel
         if: ${{ inputs.skip_manual_tests == false }}
         run: |
-          ./gradlew ${{ env.gradle_options }} manualTests:runXtc
-          ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
-          ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
+          echo "Running manualTests:runParallel (WARNING: Sometimes this does not complete, and the job may be restarted.)"
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
       - name: Print release type
