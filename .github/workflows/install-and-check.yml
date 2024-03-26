@@ -50,7 +50,7 @@ jobs:
 
       - name: Export Properties
         id: properties
-        #shell: bash
+        shell: bash # Use bash on Windows for [[ comparisons ]]
         run: |
           # Parse XDK version from VERSION file in repo root
           xdk_version="$(cat ./VERSION)"
@@ -72,7 +72,6 @@ jobs:
           patch=$(echo "$xdk_version" | sed -e "s#$_re#\3#")
 
           # Set up tags, where applicable 
-          #tag_last_release=$(git describe --tags `git rev-list --tags --max-count=1`)
           tag_last_release=$(git describe --tags --abbrev=0 HEAD~)          
           tag_this_release="v$xdk_version"
           tag_next_release="v$major.$minor.$((patch + 1))-SNAPSHOT"
@@ -149,18 +148,16 @@ jobs:
       - name: Forbid merges
         run: |
           echo "TODO: Here we need to check whether someone has added merges since we last tagged the release."
-          # (and fail)
 
       - name: Execute Gradle installDist
         run: ./gradlew ${{ env.gradle_options }} installDist
 
       - name: Execute Gradle manualTest sanity checks
-        if: ${{ false }}
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runXtc
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
           ./gradlew ${{ env.gradle_options }} manualTests:runTwoTestsInSequence
-          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
+          #./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
       - name: Publish XDK Snapshot
         if: ${{ needs.setup.output.snapshot == 'true' }}
