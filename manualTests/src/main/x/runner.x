@@ -17,12 +17,16 @@ module Runner {
             Tuple<FutureVar, ConsoleBuffer>? resultTuple = results[index++];
             if (resultTuple != Null) {
                 resultTuple[0].whenComplete((_, e) -> {
-                    if (e == Null) {
-                        console.print(resultTuple[1].backService.toString());
-                    } else {
-                        console.print(e);
+                    try {
+                        if (e == Null) {
+                            console.print(resultTuple[1].backService.toString());
+                        } else {
+                            console.print(e);
+                        }
+                        reportResults(results, index);
+                    } catch (Exception e2) {
+                        console.print($"Failure to report results for module #{index}: {e2}");
                     }
-                    reportResults(results, index);
                 });
                 return;
             }
