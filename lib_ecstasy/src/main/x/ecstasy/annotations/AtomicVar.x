@@ -13,51 +13,43 @@
  *
  * Consider the following example that illustrates the first two use cases:
  *
- *   service LongRunningTask(WorkItem[] work)
- *       {
+ *   service LongRunningTask(WorkItem[] work) {
  *       // Even while the processBatch() method is running, other services can query
  *       // the percentDone value, and monitor its progress from 0% to 100%
  *       @Atomic Int percentDone;
  *
- *       void processBatch()
- *           {
+ *       void processBatch() {
  *           Int lastPercent = 0;
- *           for (Int i : 0..work.length)
- *               {
+ *           for (Int i : 0..work.length) {
  *               Int percent = i * 100 / work.length;
- *               if (percent != lastPercent)
- *                   {
+ *               if (percent != lastPercent) {
  *                   percentDone = percent;
  *                   lastPercent = percent;
- *                   }
+ *               }
  *
  *               // actually do the work ...
  *               WorkItem work = work[i];
  *               // ...
- *               }
  *           }
  *       }
+ *   }
  *
  * Consider the following example that illustrates the second and third use cases
  * (also see AtomicIntNumber for the specifics of the Int operation overrides):
  *
- *   static service Statistics
- *       {
+ *   static service Statistics {
  *       @Atomic Int hits;
  *       @Atomic Int misses;
- *       }
+ *   }
  *
  *   // somewhere else in various other services
- *   if (cache.contains(key))
- *       {
+ *   if (cache.contains(key)) {
  *       // atomically increment the hit count
  *       ++Statistics.hits;
- *       }
- *   else
- *       {
+ *   } else {
  *       // atomically increment the miss count
  *       ++Statistics.misses;
- *       }
+ *   }
  */
 mixin AtomicVar<Referent>
         extends VolatileVar<Referent>

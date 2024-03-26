@@ -36,8 +36,7 @@ module xenia.xtclang.org {
      * A function that is able to both pre- **and** post-process a request is called an
      * `Interceptor`. Conceptually, its form is something like:
      *
-     *     ResponseOut intercept(Handler handle, RequestIn request)
-     *         {
+     *     ResponseOut intercept(Handler handle, RequestIn request) {
      *         // pre-processing here
      *         // ...
      *
@@ -51,7 +50,7 @@ module xenia.xtclang.org {
      *         // return the response (returning either the original response from the Handler,
      *         // or one that this method chooses to substitute for the original)
      *         return response;
-     *         }
+     *     }
      */
     typedef function ResponseOut(Session, RequestIn, Handler) as Interceptor;
 

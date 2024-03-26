@@ -2,19 +2,16 @@
  * A FutureVar represents a result that may be asynchronously provided, allowing the caller to
  * indicate a response to the result.
  *
- *   service Pi
- *       {
- *       String calc(Int digits)
- *           {
+ *   service Pi {
+ *       String calc(Int digits) {
  *           String value;
  *           // some calculation code goes here
  *           // ...
  *           return value;
- *           }
  *       }
+ *   }
  *
- *   void test()
- *       {
+ *   void test() {
  *       @Inject Console console;
  *       Pi pi = new Pi();
  *
@@ -29,20 +26,20 @@
  *       // completed" to be expressed in a series of simple steps.
  *       &fs.handle(e -> e.toString())
  *          .passTo(s -> console.print(s));
- *       }
+ *   }
  *
  * The FutureVar does override the behavior of the Ref interface in a few specific ways:
- * * The {@link assigned} property on a FutureVar indicates whether the future has completed, either
+ * * The [assigned] property on a FutureVar indicates whether the future has completed, either
  *   successfully or exceptionally.
- * * The {@link peek} method performs a non-blocking examination of the future:
+ * * The [peek] method performs a non-blocking examination of the future:
  * * * `peek` returns negatively iff the future has not completed.
  * * * `peek` throws an exception iff the future completed exceptionally.
  * * * `peek` returns positively with the result iff the future has completed successfully.
- * * The {@link get} method performs a blocking examination of the future:
+ * * The [get] method performs a blocking examination of the future:
  * * * `get` blocks until the future completes.
  * * * `get` throws an exception iff the future completed exceptionally.
  * * * `get` returns the result iff the future has completed successfully.
- * * The {@link set} method can only be invoked by completing the future; the future's value cannot
+ * * The [set] method can only be invoked by completing the future; the future's value cannot
  *   be modified once it is set.
  */
 mixin FutureVar<Referent>
@@ -383,12 +380,12 @@ mixin FutureVar<Referent>
     /**
      * For futures that complete with an exception, this allows a caller to obtain that exception.
      *
-     * An exceptional completion causes both the {@link peek} and {@link get} methods to re-throw
-     * the exception that the future completed with. This method provides a means to obtain that
-     * exception without having to `catch` it.
+     * An exceptional completion causes both the [peek] and [get] methods to re-throw the exception
+     * that the future completed with. This method provides a means to obtain that exception without
+     * having to `catch` it.
      *
-     * In much the same way that {@link peek} corresponds to {@link complete}, this {@code
-     * peekException} method corresponds to {@link completeExceptionally}.
+     * In much the same way that [peek] corresponds to [complete], this `peekException` method
+     * corresponds to [completeExceptionally].
      */
     conditional Exception peekException() {
         if (completion == Error) {
@@ -410,8 +407,8 @@ mixin FutureVar<Referent>
 
     /**
      * Add a DependentFuture to the list of things that this future must notify when it completes.
-     * The DependentFuture contains a {@link DependentFuture.parentCompleted} method that is used as
-     * a {@link NotifyDependent} function, allowing one or more FutureVar instances to notify it of
+     * The DependentFuture contains a [DependentFuture.parentCompleted()] method that is used as
+     * a [NotifyDependent] function, allowing one or more FutureVar instances to notify it of
      * their completion. The FutureVar can chain to any number of DependentFuture instances.
      */
     <NewType> FutureVar!<NewType> chain(DependentFuture<NewType> nextFuture) {
@@ -455,7 +452,7 @@ mixin FutureVar<Referent>
 
     /**
      * A DependentFuture is the base class for making simple futures that are dependent on the
-     * result of another future. Specifically, a future invokes the {@link parentCompleted} method
+     * result of another future. Specifically, a future invokes the [parentCompleted()] method
      * of the DependentFuture, which in turn completes the future, which in turn invokes the next in
      * the chain.
      */
@@ -527,7 +524,7 @@ mixin FutureVar<Referent>
      * its parent.
      *
      * If the parent completed exceptionally, or if the parent completed successfully but the
-     * {@link run} function throws an exception, then this future completes exceptionally.
+     * `run` function throws an exception, then this future completes exceptionally.
      */
     static class ThenDoStep<Referent>(function void () run)
             extends DependentFuture<Referent, Referent> {
@@ -552,7 +549,7 @@ mixin FutureVar<Referent>
      * completes with the same value as its parent.
      *
      * If the parent completed exceptionally, or if the parent completed successfully but the
-     * {@link consume} function throws an exception, then this future completes exceptionally.
+     * `consume` function throws an exception, then this future completes exceptionally.
      */
     static class PassToStep<Referent>(function void (Referent) consume)
             extends DependentFuture<Referent, Referent> {
@@ -580,7 +577,7 @@ mixin FutureVar<Referent>
      * If the parent completed successfully, then this future completes successfully with the same
      * result.
      *
-     * If the parent completed exceptionally and the {@link convert} function throws an exception,
+     * If the parent completed exceptionally and the `convert` function throws an exception,
      * then this future completes exceptionally.
      */
     static class HandleStep<Referent>(function Referent (Exception) convert)
@@ -604,11 +601,11 @@ mixin FutureVar<Referent>
      * function with the result if the parent completed successfully, and the exception if the
      * parent completed exceptionally.
      *
-     * If the parent completed successfully, and the {@link notify} function does not throw an
+     * If the parent completed successfully, and the `notify` function does not throw an
      * exception, then this future completes successfully with the same result.
      *
      * If the parent completed exceptionally, or if the parent completed successfully but the
-     * {@link notify} function throws an exception, then this future completes exceptionally.
+     * `notify` function throws an exception, then this future completes exceptionally.
      */
     static class WhenCompleteStep<Referent>(function void (Referent?, Exception?) notifyComplete)
             extends DependentFuture<Referent, Referent> {
@@ -718,12 +715,12 @@ mixin FutureVar<Referent>
     }
 
     /**
-     * A dependent future that uses a provided {@link convert} function to convert the result of the
-     * parent future from {@link InputType} to {@link Referent}, and then use the result value from
+     * A dependent future that uses a provided `convert` function to convert the result of the
+     * parent future from `InputType` to `Referent`, and then use the result value from
      * the conversion as the completion value for this future.
      *
      * If the parent completed exceptionally, or if the parent completed successfully but the
-     * {@link convert} function throws an exception, then this future completes exceptionally.
+     * `convert` function throws an exception, then this future completes exceptionally.
      */
     static class TransformStep<Referent, InputType>(function Referent (InputType) convert)
             extends DependentFuture<Referent, InputType> {
@@ -744,12 +741,12 @@ mixin FutureVar<Referent>
     }
 
     /**
-     * A dependent future that uses a provided {@link convert} function to convert the result of the
-     * parent future from {@link InputType} to {@link Referent}, and then use the result value from
-     * the conversion as the completion value for this future.
+     * A dependent future that uses a provided `convert` function to convert the result of the
+     * parent future from `InputType` to `Referent`, and then use the result value from the
+     * conversion as the completion value for this future.
      *
      * If the parent completed exceptionally, or if the parent completed successfully but the
-     * {@link convert} function throws an exception, then this future completes exceptionally.
+     * `convert` function throws an exception, then this future completes exceptionally.
      */
     static class Transform2Step<Referent, InputType>(function Referent (InputType?, Exception?) convert)
             extends DependentFuture<Referent, InputType> {
@@ -767,11 +764,11 @@ mixin FutureVar<Referent>
     }
 
     /**
-     * A dependent future that uses a provided {@link async} function, which is then executed to
+     * A dependent future that uses a provided `invokeAsync` function, which is then executed to
      * obtain a future result, which upon completion will complete this future with its result.
      *
      * If the parent completed exceptionally, or if the parent completed successfully but the
-     * {@link async} function throws an exception, then this future completes exceptionally.
+     * `invokeAsync` function throws an exception, then this future completes exceptionally.
      */
     static class ContinuationStep<Referent, InputType>(function Referent (InputType) invokeAsync)
             extends DependentFuture<Referent, InputType> {

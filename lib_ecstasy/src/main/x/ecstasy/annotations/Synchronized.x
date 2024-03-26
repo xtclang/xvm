@@ -5,17 +5,15 @@
  *
  * Imagine a demonstrably concurrent-unsafe implementation of a counter:
  *
- *     @Concurrent class Counter
- *         {
+ *     @Concurrent class Counter {
  *         private Int counter = 0;
- *         Int next()
- *             {
+ *         Int next() {
  *             Int n = counter + 1;
  *             this:service.yield(); // allows other fibers to execute before this line completes
  *             counter = n;          // possible corruption: storing a stale value
  *             return n;
- *             }
  *         }
+ *     }
  *
  * Any one of the following three actions would disallow the `yield()` call in the above example
  * from executing other fibers:

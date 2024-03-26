@@ -12,9 +12,9 @@
  * persistent storage system or network communication with a remote system -- takes an unexpectedly
  * long period of time.
  *
- * The timeout is stored on the current service and exposed as {@link Service.timeout}. When a new
- * timeout is created, it automatically registers itself with the current service using the {@link
- * Service.registerTimeout} method. Employing either a `using` or `try`-with-resources
+ * The timeout is stored on the current service and exposed as [Service.timeout]. When a new
+ * timeout is created, it automatically registers itself with the current service using the
+ * [Service.registerTimeout] method. Employing either a `using` or `try`-with-resources
  * block will automatically unregister the timeout at the conclusion of the block, causing all
  * of the potentially-asynchronous service invocations that occurred within the block to be infected
  * by the timeout. When the timeout unregisters itself, it re-registers whatever previous timeout it
@@ -34,17 +34,15 @@
  *   @Future Ad   ad2;
  *
  *   // async request for the page body, but don't wait more than 1000ms for it
- *   using (new Timeout(Duration:1S))
- *       {
+ *   using (new Timeout(Duration:1S)) {
  *       body = contentSvc.genBody();
  *
  *       // async request for two advertisements, but don't wait more than 500ms for either
- *       using (new Timeout(Duration:.5S))
- *           {
+ *       using (new Timeout(Duration:.5S)) {
  *           ad1 = adSvc1.selectAd();
  *           ad2 = adSvc2.selectAd();
- *           }
  *       }
+ *   }
  *
  *   // handle time-outs and other exceptions using some default content
  *   ad1  = &ad1.handle(e -> blankAd);
@@ -59,10 +57,9 @@
  * If a service needs to begin a long-running task that is independent of the timeout that the
  * service is currently constrained by, construct an _independent_ timeout:
  *
- *   using (new Timeout(Duration:5H, True))
- *       {
+ *   using (new Timeout(Duration:5H, True)) {
  *       new LongRunningReports().begin();
- *       }
+ *   }
  */
 const Timeout
         implements Closeable {

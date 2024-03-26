@@ -2,8 +2,7 @@
  * BasicResourceProvider is a minimal `ResourceProvider` implementation that is necessary to
  * load an Ecstasy module dynamically into a lightweight container. The example use:
  *
- *   void runModule(String moduleName)
- *       {
+ *   void runModule(String moduleName) {
  *       import ecstasy.mgmt.*;
  *       import ecstasy.reflect.ModuleTemplate;
  *
@@ -14,7 +13,7 @@
  *
  *       Container container = new Container(template, Lightweight, repository, injector);
  *       container.invoke("run", Tuple:());
- *       }
+ *   }
  */
 service BasicResourceProvider
              implements ResourceProvider {

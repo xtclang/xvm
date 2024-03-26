@@ -65,14 +65,14 @@ interface Ref<Referent> {
      *
      * A small number of references cannot be blindly dereferenced without risking a runtime
      * exception:
-     * * `@Lazy` references ({@link annotations.LazyVar}) are allowed to be unassigned,
+     * * `@Lazy` references ([annotations.LazyVar]) are allowed to be unassigned,
      *   because they will lazily assign themselves on the first dereference attempt.
-     * * `@Future` references ({@link annotations.FutureVar}) are allowed to be unassigned,
+     * * `@Future` references ([annotations.FutureVar]) are allowed to be unassigned,
      *   because they assigned only on completion of the future, and an attempt to dereference
      *   before that point in time will block until that completion occurs.
-     * * `@Soft` and `@Weak` references ({@link annotations.SoftVar} and {@link
-     *   annotations.WeakRef}) are allowed to be unassigned, because the garbage collector is
-     *   allowed under specific conditions to clear the reference.
+     * * `@Soft` and `@Weak` references ([annotations.SoftVar] and [annotations.WeakRef]) are
+     *   allowed to be unassigned, because the garbage collector is allowed under specific
+     *   conditions to clear the reference.
      */
     conditional Referent peek() {
         if (assigned) {
@@ -118,7 +118,7 @@ interface Ref<Referent> {
 
     /**
      * Obtain a new reference to the referent such that the reference contains only the methods and
-     * properties in the specified {@link Type}. The members of the requested type must be satisfied
+     * properties in the specified [Type]. The members of the requested type must be satisfied
      * by the members defined by the object's class. The requested type must be a subset of the
      * referent's [actualType].
      *
@@ -133,9 +133,9 @@ interface Ref<Referent> {
 
     /**
      * Obtain a new reference to the referent such that the reference contains the methods and
-     * properties in the specified {@link Type}. The members of the requested type must be satisfied
-     * by the members defined by the object's class. The requested type may be a superset of the
-     * referent's {@link actualType}.
+     * properties in the specified [Type]. The members of the requested type must be satisfied by
+     * the members defined by the object's class. The requested type may be a superset of the
+     * referent's [actualType].
      *
      * For a reference to an object instantiated within the `Current` or `Inner` [zone], this method
      * will return a reference of the requested type, iff the underlying object is actually of that

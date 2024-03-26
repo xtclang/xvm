@@ -4,21 +4,18 @@
  * Example:
  *
  *     @web.WebModule
- *     module HelloWorld
- *         {
+ *     module HelloWorld {
  *         package web import web.xtclang.org;
  *
  *         @web.WebService("/")
- *         service Hello
- *             {
+ *         service Hello {
  *             @web.Get("hello")
  *             @web.Produces(Text)
- *             String sayHello()
- *                 {
+ *             String sayHello() {
  *                 return "Hello World";
- *                 }
  *             }
  *         }
+ *     }
  */
 mixin WebService(String path)
         into service {

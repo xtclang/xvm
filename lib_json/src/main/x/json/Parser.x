@@ -493,19 +493,16 @@ class Parser
      *
      * This method is intended to be used with a `using` statement, such as:
      *
-     *     if (ArrayParser arrayParser = parser.matchArray())
-     *         {
-     *         using (arrayParser)
-     *             {
+     *     if (ArrayParser arrayParser = parser.matchArray()) {
+     *         using (arrayParser) {
      *             console.print("Array contents:");
-     *             while (!arrayParser.eof)
-     *                 {
+     *             while (!arrayParser.eof) {
      *                 Int index = arrayParser.index;
      *                 Doc doc   = arrayParser.parseDoc();
      *                 console.print($"[{index}] = {doc}");
-     *                 }
      *             }
      *         }
+     *     }
      *
      * While the ArrayParser is not yet closed, the parser from which it came must not be used,
      * or the parse stream may be corrupted. Always make sure to close the returned ArrayParser.
@@ -525,16 +522,14 @@ class Parser
      *
      * This method is intended to be used within a `using` statement, such as:
      *
-     *     using (ArrayParser arrayParser = parser.expectArray())
-     *         {
+     *     using (ArrayParser arrayParser = parser.expectArray()) {
      *         console.print("Array contents:");
-     *         while (!arrayParser.eof)
-     *             {
+     *         while (!arrayParser.eof) {
      *             Int index = arrayParser.index;
      *             Doc doc   = arrayParser.parseDoc();
      *             console.print($"[{index}] = {doc}");
-     *             }
      *         }
+     *     }
      *
      * While the ArrayParser is not yet closed, the parser from which it came must not be used,
      * or the parse stream may be corrupted. Always make sure to close the returned ArrayParser.

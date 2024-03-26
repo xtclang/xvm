@@ -2,9 +2,9 @@
  * An AsyncSection is used to control the behavior of asynchronous "fire and forget" calls issues
  * from within current execution thread (a.k.a. fiber).
  *
- * The AsyncSection is stored on the current service and exposed as {@link Service.asyncSection}.
+ * The AsyncSection is stored on the current service and exposed as [Service.asyncSection].
  * When a new AsyncSection is created, it automatically registers itself with the current service
- * using the {@link Service.registerAsyncSection} method, storing off the previously registered
+ * using the [Service.registerAsyncSection] method, storing off the previously registered
  * AsyncSection.
  *
  * Employing either a `using` or `try`-with-resources block will automatically re-register whatever
@@ -17,18 +17,16 @@
  *
  *   Exception[] unguarded = new Exception[];
  *
- *   using (new AsyncSection(unguarded.add))
- *       {
+ *   using (new AsyncSection(unguarded.add)) {
  *       svc1.asyncCall1^();
  *       svc2.asyncCall2^();
  *       svc3.asyncCall3^();
- *       }
+ *   }
  *
  *   // by now all the unguarded async calls must have completed
- *   if (!unguarded.empty)
- *       {
+ *   if (!unguarded.empty) {
  *       console.out("some operations failed");
- *       }
+ *   }
  */
 class AsyncSection
         implements Closeable {

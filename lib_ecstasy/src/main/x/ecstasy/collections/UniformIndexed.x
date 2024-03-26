@@ -45,7 +45,7 @@ interface UniformIndexed<Index, Element> {
 
         /**
          * An implementation of Var that delegates all of the complicated Ref responsibilities to
-         * the return value from the {@link UniformIndexed.get} method.
+         * the return value from the [UniformIndexed.get] method.
          */
         class SimpleVar<Index, Element>(UniformIndexed<Index, Element> indexed, Index index)
                 delegates Var<Element>(ref) {

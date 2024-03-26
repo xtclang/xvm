@@ -18,8 +18,8 @@
  *
  * The expected implementation pattern with Hasher is that a hashed data structure will accept a
  * Hasher that supports the type of the hashed value that the data structure is managing, and that
- * a sub-class of the data structure will narrow the supported type of value to an
- * `immutable Hashable` or `const` type, simply by internally utilizing a {@link NaturalHasher}.
+ * a sub-class of the data structure will narrow the supported type of value to an `immutable
+ * Hashable` or `const` type, simply by internally utilizing a [NaturalHasher].
  *
  * @see NaturalHasher
  */

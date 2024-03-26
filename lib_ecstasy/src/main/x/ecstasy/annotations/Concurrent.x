@@ -5,17 +5,15 @@
  * Imagine a simple, provably reentrant- and concurrent-safe counter implementation, with silly
  * calls to `yield()` added, for purposes of this example:
  *
- *     class Counter
- *         {
+ *     class Counter {
  *         private Int counter = 0;
- *         Int next()
- *             {
+ *         Int next() {
  *             this:service.yield();
  *             Int n = ++counter; // read, modify, and write the value without interruption
  *             this:service.yield();
  *             return n;
- *             }
  *         }
+ *     }
  *
  * In most cases, one would expect that an instance of this class is mutable. As such, the class
  * (and thus the method) are implicitly `@Synchronized`, and thus the call to `yield()` does not

@@ -143,18 +143,16 @@ import net.IPAddress;
  * that capability into a session mix-in:
  *
  *     mixin AppSession
- *             into Session
- *         {
+ *             into Session {
  *         Resource? resource;
  *
  *         @Override
- *         void sessionDeauthenticated()
- *             {
+ *         void sessionDeauthenticated() {
  *             resource?.close();
  *             resource = Null;
  *             super();
- *             }
  *         }
+ *     }
  *
  * The _presence_ of a session mix-in is enough; the server will automatically incorporate each
  * present session mix-in into each session object.

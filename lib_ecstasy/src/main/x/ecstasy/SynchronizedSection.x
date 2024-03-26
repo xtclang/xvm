@@ -5,7 +5,7 @@
  *
  * The SynchronizedSection is stored on the current service and exposed as the property {@link
  * Service.synchronizedSection}. When a new SynchronizedSection is created, it automatically
- * registers itself with the current service using the {@link Service.registerSynchronizedSection}
+ * registers itself with the current service using the [Service.registerSynchronizedSection]
  * method. Employing either a `using` or `try`-with-resources block will automatically
  * unregister the SynchronizedSection at the conclusion of the block, restoring the previous
  * SynchronizedSection that it replaced (if any).
@@ -18,16 +18,14 @@
  *
  *   // lock down concurrency such that other fibers in this service will only be permitted to
  *   // execute concurrent-safe code
- *   using (new SynchronizedSection())
- *       {
+ *   using (new SynchronizedSection()) {
  *       prepare();
  *
  *       // lock down concurrent reentrancy completely; no other fiber will be permitted to execute
- *       using (new SynchronizedSection(critical=True))
- *           {
+ *       using (new SynchronizedSection(critical=True)) {
  *           commit();
- *           }
  *       }
+ *   }
  *
  * @see Service.Synchronicity
  */

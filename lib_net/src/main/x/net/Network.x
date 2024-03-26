@@ -97,22 +97,18 @@ interface Network {
      * interface could be used, the selection criteria used to choose one is undefined.
      *
      *     // a conditional tuple is returned
-     *     network.connect^(addr).passTo(tuple ->
-     *         {
-     *         if (Socket socket := tuple)
-     *             {
+     *     network.connect^(addr).passTo(tuple -> {
+     *         if (Socket socket := tuple) {
      *             ...
-     *             }
-     *         });
+     *         }
+     *     });
      *
      *     @Future @Conditional Tuple<Boolean, Socket> result = network.connect(addr);
-     *     &result.passTo(t ->
-     *         {
-     *         if (Socket socket := t)
-     *             {
+     *     &result.passTo(t -> {
+     *         if (Socket socket := t) {
      *             ...
-     *             }
-     *         });
+     *         }
+     *     });
      *
      * @param remoteAddress  the [SocketAddress] to connect to
      * @param localAddress   (optional) the local [SocketAddress] to connect from; `Null` implies "any"
@@ -126,13 +122,11 @@ interface Network {
      * Create a [ServerSocket] that can accept incoming socket connections.
      *
      *     @Future @Conditional Tuple<Boolean, ServerSocket> result = network.listen(addr);
-     *     &result.passTo(t ->
-     *         {
-     *         if (Socket socket := t)
-     *             {
+     *     &result.passTo(t -> {
+     *         if (Socket socket := t) {
      *             ...
-     *             }
-     *         });
+     *         }
+     *     });
      *
      * @param localAddress  the [SocketAddress] to listen for connections on
      *

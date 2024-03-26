@@ -44,15 +44,12 @@ interface Queue<Element>
      * Blocking `take()` example:
      *
      *   Message? msg = Null;
-     *   try
-     *     {
-     *     // if the Queue is empty, this method call may block indefinitely
-     *     msg = queue.take();
-     *     }
-     *   catch (Exception e)
-     *     {
-     *     handleMessage(Null, e);
-     *     }
+     *   try {
+     *       // if the Queue is empty, this method call may block indefinitely
+     *       msg = queue.take();
+     *   } catch (Exception e) {
+     *       handleMessage(Null, e);
+     *   }
      *   handleMessage(msg?, Null);
      *
      * Non-blocking `take()` example:

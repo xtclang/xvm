@@ -4,14 +4,12 @@
  * For example:
  *
  *   Person[] people = [new Person("Bob"), new Person("Sue"), new Person("Amit")];
- *   eachPerson: for (Person person : people)
- *       {
- *       if (!eachPerson.first)
- *           {
+ *   eachPerson: for (Person person : people) {
+ *       if (!eachPerson.first) {
  *           console.print(", ", suppressNewline=True);
- *           }
- *       console.print($"{eachPerson.count}={person.name}", suppressNewline=True);
  *       }
+ *       console.print($"{eachPerson.count}={person.name}", suppressNewline=True);
+ *   }
  *
  * Produces the output:
  *

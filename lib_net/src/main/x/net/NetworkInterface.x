@@ -54,13 +54,11 @@ interface NetworkInterface {
      * Create a stream-based socket that connects to the specified address.
      *
      *     @Future @Conditional Tuple<Boolean, Socket> result = iface.connect(addr);
-     *     &result.passTo(t ->
-     *         {
-     *         if (Socket socket := t)
-     *             {
+     *     &result.passTo(t -> {
+     *         if (Socket socket := t) {
      *             ...
-     *             }
-     *         });
+     *         }
+     *     });
      *
      * @param remoteAddress  the [SocketAddress] to connect to
      * @param localAddress   (optional) the local [SocketAddress] to connect from; `Null` implies
@@ -75,13 +73,11 @@ interface NetworkInterface {
      * Create a [ServerSocket] that can accept incoming socket connections.
      *
      *     @Future @Conditional Tuple<Boolean, ServerSocket> result = iface.listen(addr);
-     *     &result.passTo(t ->
-     *         {
-     *         if (Socket socket := t)
-     *             {
+     *     &result.passTo(t -> {
+     *         if (Socket socket := t) {
      *             ...
-     *             }
-     *         });
+     *         }
+     *     });
      *
      * @param localAddress  the [SocketAddress] to listen for connections on
      *

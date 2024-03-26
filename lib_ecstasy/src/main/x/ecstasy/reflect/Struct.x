@@ -41,7 +41,7 @@ interface Struct {
      * object's header (if any) and any padding for memory alignment. The calculated size will
      * include the memory required to hold all of the underlying property references of this
      * structure. Additionally, the size will include the sizes of all of the
-     * {@link Ref.selfContained self-contained} property references, but explicitly does not include
+     * [self-contained](Ref.selfContained) property references, but explicitly does not include
      * the sizes of the referents for references that are <b>not</b> self-contained.
      *
      * @return the size of this structure, in bytes

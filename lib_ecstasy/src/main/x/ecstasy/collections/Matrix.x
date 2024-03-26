@@ -51,8 +51,8 @@ interface Matrix<Element> {
     /**
      * Returns a sub-matrix of this Matrix. The new Matrix will likely be backed by this Matrix,
      * which means that if this Matrix is mutable, changes made to this Matrix may be visible
-     * through the new Matrix, and vice versa; if that behavior is not desired, {@link reify} the
-     * value returned from this method.
+     * through the new Matrix, and vice versa; if that behavior is not desired, [reify] the value
+     * returned from this method.
      *
      * @param colRange  the range of columns of this Matrix to obtain a slice for; note that the
      *                  top end of the interval is _inclusive_, such that the interval `0..cols-1`

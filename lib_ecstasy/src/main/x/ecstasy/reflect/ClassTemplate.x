@@ -618,17 +618,15 @@ interface ClassTemplate
      *
      * Consider the following example:
      *
-     *     class BaseParent
-     *         {
+     *     class BaseParent {
      *         class Child {}
-     *         }
+     *     }
      *
      *     class DerivedParent
-     *             extends BaseParent
-     *         {
+     *             extends BaseParent {
      *         @Override
      *         class Child {}
-     *         }
+     *     }
      *
      *     BaseParent       parent1 = new BaseParent();
      *     BaseParent.Child child1  = new parent1.Child();       // creates a BaseParent.Child

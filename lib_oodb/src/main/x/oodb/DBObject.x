@@ -14,39 +14,33 @@
  * that schema:
  *
  *     module Bank
- *             incorporates oodb.Database           // <- this marks the module as a database module
- *         {
+ *             incorporates oodb.Database {         // <- this marks the module as a database module
  *         package oodb import oodb.xtclang.org;    // <- this is the OODB API
  *
  *         // this defines a custom database schema
  *         interface BankSchema
- *                 extends oodb.RootSchema
- *             {
+ *                 extends oodb.RootSchema {
  *             // this declares a database object within the schema
  *             @RO Accounts accounts;
- *             }
+ *         }
  *
  *         // this "customizes" the DBMap interface for holding Account objects
  *         interface Accounts
- *                 extends oodb.DBMap<Int, Account>
- *             {
- *             void transfer(Int fromId, Int toId, Dec amount)
- *                 {
+ *                 extends oodb.DBMap<Int, Account> {
+ *             void transfer(Int fromId, Int toId, Dec amount) {
  *                 assert Account from := accounts.get(fromId), Account to := accounts.get(toId);
  *                 accounts.put(fromId, from.adjust(-amount));
  *                 accounts.put(toId, to.adjust(amount));
- *                 }
- *             }
- *
- *         // this is just a value that can be stored in the database
- *         const Account(Int id, Dec balance)
- *             {
- *             Account adjust(Dec amount)
- *                 {
- *                 return new Account(id, this.balance + amount);
- *                 }
  *             }
  *         }
+ *
+ *         // this is just a value that can be stored in the database
+ *         const Account(Int id, Dec balance) {
+ *             Account adjust(Dec amount) {
+ *                 return new Account(id, this.balance + amount);
+ *             }
+ *         }
+ *     }
  *
  * That is an entire database schema, although obviously a very simple one. There are restrictions
  * defined for the names used within a schema, but primarily those restrictions are:

@@ -18,10 +18,9 @@ interface DBQueue<Element extends immutable Const>
      * This is roughly the equivalent of:
      *
      *     List<Element> list = new Element[];
-     *     while (Element e := next())
-     *         {
+     *     while (Element e := next()) {
      *         list.add(e);
-     *         }
+     *     }
      *     return list;
      *
      * @return a `List` with all of the elements in the `Queue`

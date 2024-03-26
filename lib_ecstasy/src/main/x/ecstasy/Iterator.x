@@ -5,10 +5,9 @@
  * its supply of elements, then the code should be structured so that the iterator is _closed_. This
  * is automatically performed by either the `using` or the `try`-with-resources statements, such as:
  *
- *    using (val iter = list.iterator())
- *        {
+ *    using (val iter = list.iterator()) {
  *        // ...
- *        }
+ *    }
  */
 interface Iterator<Element> {
     /**

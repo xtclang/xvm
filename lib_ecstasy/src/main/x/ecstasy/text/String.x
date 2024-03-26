@@ -223,14 +223,11 @@ const String
      * for an index beyond the range of indexes in the delimited String. The behavior is the same as
      * if the following code were executed:
      *
-     *     try
-     *         {
+     *     try {
      *         return split(separator)[index];
-     *         }
-     *     catch (OutOfBounds exception)
-     *         {
+     *     } catch (OutOfBounds exception) {
      *         return "";
-     *         }
+     *     }
      *
      * @param separator     the character that separates the items in the String
      * @param index         specifies the _n_-th item in the delimited String

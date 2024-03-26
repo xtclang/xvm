@@ -63,15 +63,14 @@ import TxManager.Status;
  *      onto the Scheduler)
  *
  * TODO need a way to track stats by dbo id
- *      class DboStats
- *          {
+ *      class DboStats {
  *          Int inFlight;
  *          Int completed;
  *          retries
  *          failure by types (by commit result or exception -- and maybe which exception(s)?)
  *          Int totalFailed;
  *          Int exceptionCount;
- *          }
+ *      }
  *
  * TODO currently, the message processing is sequential, and not done in parallel across multiple
  *      clients, which is a temporary implementation (for simplification)

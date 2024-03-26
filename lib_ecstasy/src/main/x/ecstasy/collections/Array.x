@@ -307,7 +307,7 @@ class Array<Element>
      *                 to protect any object that already has a reference to the unfrozen array
      *
      * @throws Exception if any of the values in the array are not `service`, not `const`, and not
-     *         {@link Freezable}
+     *         [Freezable]
      */
     @Override
     immutable Array freeze(Boolean inPlace = False) {

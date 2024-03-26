@@ -10,20 +10,17 @@
  *
  * Consider the following example of a "hash" property being calculated lazily:
  *
- *   const Point(Int x, Int y)
- *       {
+ *   const Point(Int x, Int y) {
  *       @Lazy(() -> x ^ y) Int hash;
- *       }
+ *   }
  *
  * Alternatively, the `calc()` method can be overridden:
  *
- *   const Point(Int x, Int y)
- *       {
- *       @Lazy Int64 hash.calc()
- *           {
+ *   const Point(Int x, Int y) {
+ *       @Lazy Int64 hash.calc() {
  *           return x ^ y;
- *           }
  *       }
+ *   }
  *
  * (Note that the above examples are for illustrative purposes only; it is not necessary to
  * implement the hash code calculation for a `const` class, as a default implementation is
