@@ -6,13 +6,13 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 abstract class XdkProjectBuildLogic(protected val project: Project) {
     protected val logger = project.logger
@@ -24,10 +24,6 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
-    private val xdkGitHub: GitHubPackages by lazy {
-        GitHubPackages(project)
-    }
-
     private val xdkVersions: XdkVersionHandler by lazy {
         XdkVersionHandler(project)
     }
@@ -51,10 +47,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
 
     fun distro(): XdkDistribution {
         return xdkDistributions
-    }
-
-    fun github(): GitHubPackages {
-        return xdkGitHub
     }
 
     fun resolveLocalXdkInstallation(): File {
@@ -82,11 +74,12 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
             val instance = XdkBuildLogic(project)
             singletonCache[project] = instance
             project.logger.info(
-                    """
+                """
                     ${project.prefix} Creating new XdkBuildLogic for project '${project.name}'
                     ${project.prefix} (singletonCache)      ${System.identityHashCode(singletonCache)}
                     ${project.prefix} (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
-                """.trimIndent())
+                """.trimIndent()
+            )
             return instance
         }
 
@@ -142,8 +135,6 @@ val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLa
 
 val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
 
-val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
-
 val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
 
 val Project.prefix: String get() = "[$name]"
@@ -159,18 +150,46 @@ val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib
 
 val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
 
-fun Project.executeCommand(vararg args: String): String = project.run {
-    val output = ByteArrayOutputStream()
-    val result = project.exec {
-        commandLine(*args)
-        standardOutput = output
-        isIgnoreExitValue = false
+fun Project.executeCommand(throwOnError: Boolean = false, vararg args: String): Pair<Int, String> = project.run {
+    logger.lifecycle("$prefix executeCommand: '${args.joinToString(" ")}'")
+    return executeCommand(LIFECYCLE, emptyMap(), throwOnError, args.toList())
+}
+
+private fun Project.executeCommand(
+    logLevel: LogLevel = INFO,
+    env: Map<String, String> = emptyMap(),
+    throwOnError: Boolean = false,
+    args: List<String>
+): Pair<Int, String> = project.run {
+
+    val cmd = args.joinToString(" ")
+    val executable = args.first()
+    val cmdPrefix = "$prefix [$executable]"
+    val cmdOutputPrefix = "$cmdPrefix [output]"
+
+    logger.log(logLevel, "$cmdPrefix executeCommand (throwOnError=$throwOnError, env=$env): '$cmd'")
+
+    val os = ByteArrayOutputStream()
+    val execResult = exec {
+        standardOutput = os
+        isIgnoreExitValue = !throwOnError
+        environment(env)
+        commandLine(args)
     }
-    if (result.exitValue != 0) {
-        logger.error("$prefix ERROR: Command '${args.joinToString(" ")}' failed with exit code ${result.exitValue}")
-        return ""
+
+    val result = execResult.exitValue to os.toString().trim()
+    val (exitValue, output) = result
+    if (exitValue != 0) {
+        logger.error("$prefix ERROR: Command '$cmd' failed with exit code $exitValue")
+        return result
     }
-    return output.toString().trim()
+
+    logger.log(logLevel, "$cmdPrefix Command: '$cmd' executed successfully.")
+    if (output.isEmpty()) {
+        logger.log(logLevel, "$cmdOutputPrefix [no output]")
+    }
+    output.lines().forEach { logger.log(logLevel, "$cmdOutputPrefix $it") }
+    return result
 }
 
 // TODO these should probably be lazy for input purposes
@@ -197,18 +216,25 @@ fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable 
     return GradleException(prefixed)
 }
 
+fun Project.isRelease(): Boolean {
+    return !isSnapshot()
+}
+
 fun Project.isSnapshot(): Boolean {
+    val versionOverride = findProperty("XDK_OVERRIDE_VERSION") ?: version
+    if (versionOverride != version) {
+        logger.warn("$prefix WARNING: Version for project was overridden: $versionOverride (project version resolved to $version)")
+    }
     if (version == Project.DEFAULT_VERSION) {
         throw buildException("Project was not versioned. Cannot tell whether it's a snapshot or not.")
     }
-    return version.toString().endsWith("SNAPSHOT");
+    return version.toString().endsWith("SNAPSHOT")
 }
 
-fun Project.checkSnapshot(snapshot: Boolean): Boolean {
-    if (snapshot != isSnapshot()) {
-        throw buildException("Project '${project.name}' is not a snapshot. This operation is only allowed for snapshot builds.")
-    }
-    return true
+fun Project.checkSnapshot(): Boolean {
+    val snapshot = project.getXdkPropertyBoolean("org.xtclang.publish.snapshot", true)
+    val versionMismatch = snapshot != isSnapshot()
+    return !versionMismatch
 }
 
 /**
@@ -247,3 +273,56 @@ fun Task.getXdkPropertyInt(key: String, defaultValue: Int? = null): Int {
 fun Task.getXdkProperty(key: String, defaultValue: String? = null): String {
     return registerXdkPropertyInput(this, key, project.getXdkProperty(key, defaultValue))
 }
+
+/*
+fun spawn(vararg args: String): String {
+    System.err.println("SPAWN: " + args.joinToString(" "))
+    val process = ProcessBuilder(*args).redirectErrorStream(true).start()
+    val exitValue = process.waitFor()
+    val output = process.inputStream.bufferedReader().use { reader ->
+        reader.readText().trim()
+    }
+    //val output = process.inputReader().useLines { lines ->
+    //    buildString {
+    //        lines.forEach { appendLine(it) }
+    //    }
+    //}.trim()
+    assert(process.exitValue() == exitValue) {
+        "Illegal state: spawn exit value: ${process.exitValue()} != waitFor: $exitValue"
+    }
+    System.err.println("exitValue: $exitValue")
+    System.err.println("OUTPUT: $output")
+    if (exitValue != 0) {
+        throw IllegalStateException("Failed to execute command: '${args.joinToString(" ")}' (exit value: $exitValue)")
+    }
+    return output
+}*/
+
+/**
+ *
+ *     // snapshot and failOnError=true should just skip the task
+ *     // All other version mismatches throw an exception
+ *     /*
+ *     val failOnError = getXdkPropertyBoolean("org.xtclang.repo.github.failOnError", true)
+ *
+ *     logger.warn("""
+ *             $prefix Version mismatch for project '${project.name}': snapshot=$snapshot, isSnapshot=${isSnapshot()}
+ *             $prefix The project VERSION is ${project.version}
+ *             $prefix Fail on error: $failOnError
+ *         """.trimIndent())
+ *
+ *     if (project.isRelease()) {
+ *         // publishSnapshot for a release build should either throw error or skip the task.
+ *         val msg = "Project '${project.name}' is not a snapshot. This operation is only allowed for snapshot builds."
+ *         if (failOnError) {
+ *             logger.warn("$prefix Failing on error, throwing build exception.")
+ *             throw buildException(msg)
+ *         }
+ *         logger.warn("$prefix WARNING: Skipping publication task (reason: '$msg')")
+ *         return false
+ *     }
+ *
+ *     // project is a snapshot, but we have been told to build a release
+ *     throw buildException("Project '${project.name}' is a snapshot, but we have been told to build a release.")
+ * }
+ */

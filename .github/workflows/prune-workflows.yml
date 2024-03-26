@@ -1,17 +1,18 @@
 name: XVM Prune Old Workflows
+
 on:
-  schedule: [{ cron: "30 1 * * *" }] # Schedule to run the workflow every day at 1:30 AM
+  #schedule: [{ cron: "30 1 * * *" }] # Schedule to run the workflow every day at 1:30 AM
   workflow_dispatch: # Allow manual workflow trigger
+
 jobs:
   clean:
-    if: ${{ false }}
+    #if: ${{ false }}
     name: Delete Expired Workflow Runs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Action Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run Delete Script
-        # run: sh ./delete.sh (your org or github name) (your repo name)
         run: sh ./delete.sh ${ env.github_org }} ${{ env.repo_name }}
         working-directory: .github/actions
         env:

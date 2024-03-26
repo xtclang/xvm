@@ -17,6 +17,9 @@ private class XdkBuildAggregator(project: Project) : Runnable {
     private val prefix = "[${project.name}]"
 
     override fun run() {
+        // We call this for the root project. We should actually assign the root project versions here, accordingly.
+        logger.info("$prefix Running build aggregate for project ${project.name}.")
+
         gradle.includedBuilds.forEachIndexed { i, includedBuild ->
             logger.info("$prefix     Included build #$i: ${includedBuild.name} [project dir: ${includedBuild.projectDir}]")
         }
@@ -25,7 +28,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
             val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
             if (!attach) {
-                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: $attach).")
+                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
             }
             !attach
         }.toSet()

@@ -61,9 +61,16 @@ val copyDependencies by tasks.registering(Copy::class) {
         include("**/*.jar")
     }
     into(layout.buildDirectory.dir("javatools-dependencies"))
+}
+
+val extractDependencies by tasks.registering {
+    dependsOn(copyDependencies)
+    val dependencyJars = copyDependencies.map { fileTree(it.destinationDir) }
+    inputs.files(dependencyJars)
     doLast {
-        outputs.files.asFileTree.forEach {
-            logger.info("$prefix Resolved javatools dependency file: $it")
+        // Add every extracted jar as an output.
+        dependencyJars.get().forEach { jarFile ->
+            logger.lifecycle("$prefix Extracting classes from: ${jarFile.name}")
         }
     }
 }
@@ -92,7 +99,19 @@ val jar by tasks.existing(Jar::class) {
      * TODO: an alternative solution would be to leave the run-time dependent libraries "as is" and
      *      use the "Class-Path" attribute of the manifest to point to them.
      */
-    from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) } })
+    logger.warn("$prefix TODO: Figure out why the copy task dependencies map is not lazy and why it's called twice")
+    from(copyDependencies.map {
+        val deps = fileTree(it.destinationDir)
+        logger.lifecycle("Dependencies: ${deps.toList()}")
+        deps.map { jarFile ->
+            logger.lifecycle("$prefix (executing: ${state.executing}); adding classes from : ${jarFile.name}")
+            val tree = zipTree(jarFile)
+            tree.forEach { zippedClass ->
+                logger.info("$prefix    ${jarFile.name} -> ${zippedClass.name}")
+            }
+            tree
+        }
+    })
 
     archiveBaseName = "javatools"
 
@@ -136,15 +155,19 @@ val sanityCheckJar by tasks.registering {
     onlyIf {
         checkJar
     }
+
     doLast {
+        if (!checkJar && System.getenv("CI") == "true") {
+            throw buildException("$prefix CI runs should execute with org.xtclang.javatools.sanityCheckJar=true.")
+        }
         logger.info("$prefix Sanity checking integrity of generated jar file.")
         val size = DebugBuild.verifyJarFileContents(
             project,
             listOf(
-                "implicit.x",                 // verify the implicits are in the jar
-                "org/xvm/tool/Compiler",      // verify the javatools package inclusion
-                "org/xvm/util/Severity",      // verify the javatools_utils package inclusion
-                "org/jline/reader/LineReader" // verify the jline library inclusion
+                "implicit.x",                       // verify the implicits are in the jar
+                "org/xvm/tool/Compiler.class",      // verify the javatools package inclusion
+                "org/xvm/util/Severity.class",      // verify the javatools_utils package inclusion
+                "org/jline/reader/LineReader.class" // verify the jline library inclusion
             ),
             expectedEntryCount
         )

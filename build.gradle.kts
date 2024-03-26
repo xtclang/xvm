@@ -17,7 +17,6 @@ plugins {
 // quite a bit, so sadly it would still have to be done at the settings level, though.
 version = file("VERSION").readText().trim()
 group = file("GROUP").readText().trim()
-
 // we should probably just marshall a build jreleaser releases tasks here into the
 // publishable sub projects.
 //xdkBuildLogic.versions().assignSemanticVersionFromCatalog()
@@ -50,29 +49,26 @@ val installDist by tasks.registering {
  * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
  * in local repositories.
  *
- * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
- * output directory, which should be the case here. If not, we will have to put back the
- * parallel check/task failure condition.
+ * If the snapshot=true property is set, we will build a snapshot release.
+ *   However, if the VERSION file does not contain a snapshot version, we either fail or skip depending on another property
+ *
+ * If the snapshot=false property is set, we will build a normal release. Requires a tag.
+ *   We should never attempt to build an existing release, it will fail on the GitHub side.
  */
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
+    val versionMatches = checkSnapshot()
+    if (versionMatches) {
+        includedBuildsWithPublications.forEach {
+            dependsOn(it.task(":$name"))
+        }
+    }
     onlyIf {
-        checkSnapshot(false)
-    }
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
-    }
-}
-
-val publishRemoteSnapshot by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Publish (aggregate) all artifacts in the XDK to the remote snapshot repositories."
-    onlyIf {
-        checkSnapshot(true)
-    }
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
+        if (!versionMatches) {
+            logger.warn("$prefix Skipping snapshot publication. VERSION is not a snapshot.");
+        }
+        versionMatches
     }
 }
 
@@ -83,8 +79,14 @@ val publishRemoteSnapshot by tasks.registering {
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregated) all artifacts in the XDK to the local Maven repository."
-    includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":$name"))
+    val versionMatches = checkSnapshot()
+    if (versionMatches) {
+        includedBuildsWithPublications.forEach {
+            dependsOn(it.task(":publishAllPublicationsToMavenLocalRepository"))
+        }
+    }
+    onlyIf {
+        versionMatches
     }
 }
 
@@ -92,14 +94,11 @@ val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal)
-    dependsOn(if (isSnapshot()) publishRemoteSnapshot else publishRemote)
+    dependsOn(publishRemote)
 }
 
-GitHubPackages.publishTaskPrefixes.forEach { prefix ->
-    buildList {
-        addAll(GitHubPackages.publishTaskSuffixesLocal)
-        addAll(GitHubPackages.publishTaskSuffixesRemote)
-    }.forEach { suffix ->
+listOf("list", "delete").forEach { prefix ->
+    listOf("AllLocalPublications", "AllRemotePublications").forEach { suffix ->
         val taskName = "$prefix$suffix"
         tasks.register(taskName) {
             group = PUBLISH_TASK_GROUP
@@ -110,3 +109,4 @@ GitHubPackages.publishTaskPrefixes.forEach { prefix ->
         }
     }
 }
+

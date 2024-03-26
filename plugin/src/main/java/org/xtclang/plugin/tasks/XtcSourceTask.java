@@ -73,7 +73,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     @InputFiles
     @SkipWhenEmpty
     @IgnoreEmptyDirectories
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     public FileTree getSource() {
         return sourceFiles.getAsFileTree().matching(patternSet);
     }

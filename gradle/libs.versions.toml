@@ -79,15 +79,15 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
-semver = { module = "net.swiftzer.semver:semver", version.ref = "semver" }
-github-api = { module = "org.kohsuke:github-api", version.ref = "github-api" }
-rewrite = { module = "org.openrewrite.recipe:rewrite-static-analysis", version.ref = "rewrite-lib" }
 kohttp = { module = "io.github.rybalkinsd:kohttp", version.ref = "kohttp" }
 kohttp-jackson = { module = "io.github.rybalkinsd:kohttp-jackson", version.ref = "kohttp" }
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jakarta" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
+#semver = { module = "net.swiftzer.semver:semver", version.ref = "semver" }
+#github-api = { module = "org.kohsuke:github-api", version.ref = "github-api" }
+#rewrite = { module = "org.openrewrite.recipe:rewrite-static-analysis", version.ref = "rewrite-lib" }
 
 [bundles]
 unicode = ["javax-activation", "jakarta-xml-bind-api", "jaxb-runtime"]

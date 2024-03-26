@@ -110,22 +110,6 @@ publishing {
     }
 }
 
-private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
-}
-
-val publishPluginToLocalDist by tasks.registering {
-    group = BUILD_GROUP
-    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
-    if (shouldPublishPluginToLocalDist()) {
-        dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
-        outputs.dir(buildRepoDirectory)
-        doLast {
-            logger.info("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
-        }
-    }
-}
-
 distributions {
     // Creates a main distribution (with the name 'xdk' that can be unpacked and used on any platform,
     // but require the launcher config scripts to run.
@@ -263,12 +247,6 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         from(configurations.xdkJavaTools) {
             rename("javatools-${project.version}.jar", JAVATOOLS_INSTALLATION_NAME)
             into("javatools")
-        }
-        if (shouldPublishPluginToLocalDist()) {
-            val published = publishPluginToLocalDist.map { it.outputs.files }
-            from(published) {
-                into("repo")
-            }
         }
         from(tasks.xtcVersionFile)
         if (installLaunchers) {

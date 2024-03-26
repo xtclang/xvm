@@ -41,9 +41,9 @@ public class JavaExecLauncher<E extends XtcLauncherTaskExtension, T extends XtcL
 
         logger.info("{} {} (launcher: {}); Using '{}' in classpath from: {}", prefix, cmd.getIdentifier(), cmd.getClass(), JAVATOOLS_JAR_NAME, javaToolsJar);
 
+        logger.info("{} JavaExec command (launcher {}):", prefix, getClass().getSimpleName());
         if (task.hasVerboseLogging()) {
             final var launchLine = cmd.toString(javaToolsJar);
-            logger.lifecycle("{} JavaExec command (launcher {}):", prefix, getClass().getSimpleName());
             logger.lifecycle("{}     {}", prefix, launchLine);
         }
 

@@ -180,7 +180,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     }
 
     @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
@@ -226,7 +226,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             if (hasVerboseLogging()) {
                 logger.lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
             }
-            args.add("--set-version", stripSnapshot(moduleVersion));
+            args.add("--set-version", semanticVersion(moduleVersion));
         }
 
         args.addRepeated("-L", resolveFullModulePath());
@@ -241,15 +241,8 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         finalizeOutputs();
     }
 
-    private String stripSnapshot(final String version) {
-        if (version.endsWith("-SNAPSHOT")) {
-            // TODO: Fix this - we don't necessarily want to store the SNAPSHOT name as part of the version
-            //  encoding. It's enough if we can set a bit in the version tree, and have a getter that works
-            //  called "isSnapshot", or something like that.
-            logger.warn("{} WARNING: XTC module version is a SNAPSHOT. 'xcc' does not fully support semantic versioning. stripping suffix.", prefix());
-            return version.substring(0, version.indexOf("-SNAPSHOT"));
-        }
-        return version;
+    private static String semanticVersion(final String version) {
+        return version.endsWith("-SNAPSHOT") ? version.replace("-SNAPSHOT", "+SNAPSHOT") : version;
     }
 
     private String resolveModuleVersion() {

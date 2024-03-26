@@ -2,28 +2,32 @@
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
 
-name: XVM Lint
+name: XDK Lint
 
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
-on: push
+on:
+  #push:
+  #pull_request: [ master ]
+  workflow_dispatch:
+    inputs:
+      lint-enabled:
+        description: "Enable lint action."
+        type: boolean
+        default: false
+      checkstyle-enabled:
+        description: "Enable checkstyle action."
+        type: boolean
+        default: false
 
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
-
-  ORG_XTCLANG_JAVA_LINT: true
-  ORG_XTCLANG_JAVA_MAX_WARNINGS: 10000
-  ORG_XTCLANG_JAVA_MAX_ERRORS: 10000
-  ORG_XTCLANG_JAVA_WARNINGS_AS_ERRORS: true
-  ORG_XTCLANG_BUILD_CHECKSTYLE: false #TODO
-  ORG_XTCLANG_BUILD_CHECKSTYLE_FAIL_ON_ERROR: false
-
   gradle_options: --stacktrace --warning-mode all --console verbose
 
 jobs:
   lint:
-    if: ${{ false }}
+    if: ${{ false }} # TODO Why does this run even though there is just workflow_dispatch?
     runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +37,14 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v3
         with:
-          cache-disabled: true
       - name: Ensure code standard and Java linting is correct.
+        env:
+          ORG_XTCLANG_JAVA_LINT: false
+          ORG_XTCLANG_JAVA_MAX_WARNINGS: 10000
+          ORG_XTCLANG_JAVA_MAX_ERRORS: 10000
+          ORG_XTCLANG_JAVA_WARNINGS_AS_ERRORS: true
+          ORG_XTCLANG_BUILD_CHECKSTYLE: false #TODO
+          ORG_XTCLANG_BUILD_CHECKSTYLE_FAIL_ON_ERROR: false
         run: ./gradlew ${{ env.gradle_options }} build | tee ${{ github.workspace }}/lint-checkstyle-build.log
+
         # TODO Upload artifact of warnings.

@@ -21,6 +21,7 @@ val libsVersionCatalog = compositeRootRelativeFile("gradle/libs.versions.toml")!
 
 // If we can read properties here, we can also patch the catalog files.
 dependencyResolutionManagement {
+    // Hook up mavenCentral, so we can load the third party artifacts declared in libs.versions.toml
     @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
@@ -36,29 +37,26 @@ dependencyResolutionManagement {
     }
 
     // For bootstrapping reasons, we manually load the properties file, instead of falling back to the build logic automatic property handler.
-    val xdkVersionInfo = compositeRootRelativeFile("GROUP")!! to compositeRootRelativeFile("VERSION")!!
-    val pluginDir = xdkVersionInfo.first.parentFile.resolve("plugin")
-    val xdkPluginVersionInfo = pluginDir.resolve("GROUP").let { if (it.isFile) it else xdkVersionInfo.first } to pluginDir.resolve("VERSION").let { if (it.isFile) it else xdkVersionInfo.second }
-    val (xdkGroup, xdkVersion) = xdkVersionInfo.toList().map { trimmed(it) }
-    val (xtcPluginGroup, xtcPluginVersion) = xdkPluginVersionInfo.toList().map { trimmed(it) }
+    val xdkGroup = System.getenv("XTC_OVERRIDE_GROUP") ?: trimmed(compositeRootRelativeFile("GROUP")!!)
+    val xdkVersion = System.getenv("XTC_OVERRIDE_VERSION") ?: trimmed(compositeRootRelativeFile("VERSION")!!)
     val prefix = "[${rootProject.name}]"
     logger.info("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
     logger.info(
         """
         $prefix XDK VERSION INFO:
         $prefix     Project : '${rootProject.name}' 
-        $prefix     Group   : '$xdkGroup' (plugin: '$xtcPluginGroup')
-        $prefix     Version : '$xdkVersion' (plugin: '$xtcPluginVersion')
+        $prefix     Group   : '$xdkGroup'
+        $prefix     Version : '$xdkVersion'
     """.trimIndent()
     )
 
     versionCatalogs {
         val libs by creating {
-            from(files(libsVersionCatalog)) // load versions
+            from(files(libsVersionCatalog))
             version("xdk", xdkVersion)
-            version("xtc-plugin", xtcPluginVersion)
+            version("xtc-plugin", xdkVersion)
             version("group-xdk", xdkGroup)
-            version("group-xtc-plugin", xtcPluginGroup)
+            version("group-xtc-plugin", xdkGroup)
         }
     }
 }

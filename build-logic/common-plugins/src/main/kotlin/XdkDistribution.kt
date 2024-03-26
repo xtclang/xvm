@@ -3,7 +3,10 @@ import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.kotlin.dsl.assign
+import org.gradle.kotlin.dsl.extra
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
@@ -54,7 +57,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     }
 
     val distributionCommit: String get() = buildString {
-        return project.executeCommand("git", "rev-parse", "HEAD")
+        val last = project.executeCommand(throwOnError = true, "git", "rev-parse", "HEAD")
+        logger.lifecycle("$prefix distributionCommit info: $last")
+        assert(last.first == 0)
+        return last.second
     }
 
     fun configScriptFilename(installDir: Provider<Directory>): RegularFile {
@@ -98,6 +104,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     }
 
     fun shouldCreateWindowsDistribution(): Boolean {
+        System.err.println("Remove the windows distribution thing.")
         val runDistExe = project.getXdkPropertyBoolean("org.xtclang.install.distExe", false)
         if (runDistExe) {
             logger.info("$prefix 'distExe' task is enabled; will attempt to build Windows installer.")
@@ -108,6 +115,33 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
         logger.info("$prefix 'distExe' is disabled for building distributions. Only 'tar.gz' and 'zip' are allowed.")
         return false
+    }
+
+    fun configureMavenPublications(publication: MavenPublication) = publication.run {
+        pom {
+            licenses {
+                license {
+                    name = "The XDK License"
+                    url = "https://github.com/xtclang/xvm/tree/master/license"
+                }
+            }
+            developers {
+                developer {
+                    name = "The XTC Language Organization"
+                    email = "info@xtclang.org"
+                }
+            }
+            scm {
+                connection = "scm:git:git://github.com/xtclang/xvm.git"
+                developerConnection = "scm:git:ssh://github.com/xtclang/xvm.git"
+                url = "https://github.com/xtclang/xvm/tree/master"
+            }
+            withXml {
+                val propNode = asNode().appendNode("properties")
+                propNode.appendNode("gitCommit", project.executeCommand(throwOnError = true, "git", "rev-parse", "HEAD"))
+                propNode.appendNode("xdkVersion", project.version)
+            }
+        }
     }
 
     override fun toString(): String {

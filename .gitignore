@@ -67,6 +67,9 @@ prj/
 *.ipr
 *.iws
 
+# Act .secrets file for local testing of GitHub Actions
+.secrets
+
 # Gradle profiler output
 gradle-user-home/
 profile-out/

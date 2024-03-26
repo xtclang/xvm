@@ -1,4 +1,3 @@
-import gradle.kotlin.dsl.accessors._dc4d05473e8224611f7ddf3b32129942.implementation
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
@@ -7,119 +6,132 @@ plugins {
     java
 }
 
-//dependencies {
-//    implementation("org.kohsuke:github-api:1.320")
-//}
+val semanticVersion: SemanticVersion by extra
 
-// Implement logic that checks the latest publication tag for master.
-// SNapshots don't need a tag.
-// If we push a non snapshot version, we should tag the commit
-
-/*
- * Should we publish the plugin to a common build repository and copy it to any localDist?
- */
-private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false).also {
-        if (it) {
-            logger.warn("$prefix The plugin publication logic for local distribution is currently not maintained.")
-        }
-    }
-}
-
-/**
- * Configure repositories for XDK artifact publication. Currently, we publish the XDK zip "xdkArchive", and
- * the XTC plugin, "xtcPlugin".
- */
 publishing {
     repositories {
-        logger.info("$prefix Configuring publications for repository mavenLocal().")
         mavenLocal()
-
-        if (shouldPublishPluginToLocalDist()) {
-            logger.info("$prefix Configuring publications for repository local flat dir: '$buildRepoDirectory'")
-            maven {
-                name = "build"
-                description = "Publish all publications to the local build directory repository."
-                url = uri(buildRepoDirectory)
-            }
-        }
-
-        logger.info("$prefix Configuring publications for xtclang.org GitHub repository.")
-        with(xdkBuildLogic.github()) {
-            if (verifyGitHubConfig()) {
-                logger.info("$prefix Found GitHub package credentials for XTC (url: $uri, user: $user, org: $organization")
-                maven {
-                    name = "GitHub"
-                    description = "Publish all publications to the xtclang.org GitHub repository."
-                    url = uri(uri)
-                    credentials {
-                        username = user
-                        password = token
-                    }
-                }
+        maven {
+            name = "GitHub"
+            url = uri(project.getXdkProperty("org.xtclang.repo.github.url"))
+            credentials {
+                username = project.getXdkProperty("org.xtclang.repo.github.user", "xtclang-bot")
+                password = project.getXdkProperty("org.xtclang.repo.github.token", System.getenv("GITHUB_TOKEN"))
             }
         }
     }
 
     publications.withType<MavenPublication>().configureEach {
-        pom {
-            licenses {
-                license {
-                    name = "The XDK License"
-                    url = "https://github.com/xtclang/xvm/tree/master/license"
-                }
+        xdkBuildLogic.distro().configureMavenPublications(this)
+    }
+}
+
+val publishAllPublicationsToMavenLocalRepository by tasks.existing {
+    doLast {
+        logger.lifecycle("$prefix Publishing project ${if (project.isSnapshot()) "snapshot" else "release"} artifacts to the mavenLocal repository.")
+    }
+}
+
+val ensureTag by tasks.registering {
+    doLast {
+        fun output(vararg args: String) = project.executeCommand(throwOnError = true, *args).second
+
+        fun execute(throwOnError: Boolean = false, vararg args: String): Pair<Int, String> {
+            val result = project.executeCommand(throwOnError, *args)
+            if (result.first != 0) {
+                logger.error("$prefix Git returned non zero value: $result")
             }
-            developers {
-                developer {
-                    name = "The XTC Language Organization"
-                    email = "info@xtclang.org"
-                }
-            }
-            scm {
-                connection = "scm:git:git://github.com/xtclang/xvm.git"
-                developerConnection = "scm:git:ssh://github.com/xtclang/xvm.git"
-                url = "https://github.com/xtclang/xvm/tree/master"
-            }
-            withXml {
-                val propNode = asNode().appendNode("properties")
-                propNode.appendNode("gitCommit", project.executeCommand("git", "rev-parse", "HEAD"))
-                propNode.appendNode("xdkVersion", project.version)
-            }
+            return result
         }
+
+        fun remoteTag(localTag: String): String {
+            return "refs/tag/$localTag"
+        }
+
+        fun deleteTag(throwOnError: Boolean = false, localTag: String): Boolean {
+            // only if tag exists
+            val remoteTag = remoteTag(localTag)
+            //execute(throwOnError = throwOnError, "git", "tag", "-d", localTag)
+            // 1) Delete the tag on any remote before pushing
+            execute(throwOnError = throwOnError, "git", "push", "origin", ":${remoteTag(localTag)}")
+            logger.lifecycle("$prefix Deleted tags: (local: $localTag, remote: $remoteTag)")
+            return true
+        }
+
+        fun existingCommits(localTag: String): Pair<String, String> {
+            val (localTagValue, localTagCommit) = execute(throwOnError = false, "git", "rev-list", "-n", "1", localTag)
+            val (remoteTagValue, remoteTagCommitAndName) = execute(throwOnError = false, "git", "ls-remote", "--tags", "origin", remoteTag(localTag))
+            val local = if (localTagValue == 0) localTagCommit else ""
+            val remote = if (remoteTagValue == 0) remoteTagCommitAndName.removeSuffix(remoteTag(localTag)).trim() else ""
+            return local to remote
+        }
+
+        val parsedVersion = File(compositeRootProjectDirectory.asFile, "VERSION").readText().trim()
+        if (parsedVersion != version.toString()) {
+            throw buildException("$prefix Version mismatch: parsed version '$parsedVersion' does not match project version '$version'")
+        }
+        val baseVersion = parsedVersion.removeSuffix("-SNAPSHOT")
+        val isSnapshot = project.isSnapshot()
+
+        val localTag = buildString {
+            append(if (isSnapshot) "snapshot/v" else "v")
+            append(baseVersion)
+        }
+
+        val remoteTag = remoteTag(localTag)
+        execute(throwOnError = true, "git", "fetch", "--force", "--tags") // TODO P options?
+        val localBranchName = output("git", "branch", "--show-current")
+        val remoteBranchName = "remotes/origin/$localBranchName"
+        val localLastCommit = output("git", "rev-parse", "HEAD")
+        val remoteLastCommit = output("git", "ls-remote", "origin", "HEAD").removeSuffix("HEAD").trim()
+        val (localTagCommit, remoteTagCommit) = existingCommits(localTag)
+        val hasLocalTag = localTagCommit.isNotEmpty()
+        val hasRemoteTag = remoteTagCommit.isNotEmpty()
+        val hasTag = hasLocalTag || hasRemoteTag
+
+        logger.lifecycle("""
+            $prefix createTag for version $version (base version: $baseVersion)
+            $prefix   isSnapshot: $isSnapshot
+            $prefix   hasLocalTag: $hasLocalTag, hasRemoteTag: $hasRemoteTag
+            $prefix   Local branch: '$localBranchName'
+            $prefix       last commit: '$localLastCommit'   
+            $prefix       tag : '$localTag'
+            $prefix       tag place at local commit: '$localTagCommit'
+            $prefix   Remote branch: '$remoteBranchName'
+            $prefix       last: '$remoteLastCommit'
+            $prefix       tag : '$remoteTag'
+            $prefix       tag placed at remote commit: '$remoteTagCommit'
+        """.trimIndent())
+
+        if (hasTag) {
+            logger.warn("$prefix Tag $localTag already exists ($hasLocalTag, $hasRemoteTag).")
+            if (!isSnapshot) {
+                throw buildException("FATAL ERROR: Cannot tag non-snapshot release with an existing tag: $localTag")
+            }
+            // delete on any remote before push.
+            //execute(throwOnError = true, "git", "push", "origin", ":${remoteTag(localTag)}")
+        }
+
+        if (isSnapshot) {
+            execute(throwOnError = false, "git", "tag", "-d", localTag)
+            execute(throwOnError = false, "git", "push", "origin", ":refs/tags/$localTag")
+        }
+        execute(throwOnError = true, "git", "tag", localTag, localLastCommit)
+        execute(throwOnError = true, "git", "push", "origin", "--tags")
+        // Alternatively git push origin --tags to push all local tag changes or git push origin <tagname>
     }
 }
 
-val publishLocal by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Task that publishes project publications to local repositories (e.g. build and mavenLocal)."
-    dependsOn(publishAllPublicationsToMavenLocalRepository)
-}
-
-// TODO: Remove this until we have figured out if and how we want the publication of the XTC Plugin as part of the distribution.
-//  It may be a good ide to have a local directory that is a maven repository for the plugin, at least until we have the
-//  full artifact work done.
-val pruneBuildRepo by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description =
-        "Helper task called internally to make sure the build repo is wiped out before republishing. Used by installPlatformDist and remote publishing only."
-    if (shouldPublishPluginToLocalDist()) {
-        logger.lifecycle("$prefix Installing copy of the plugin to local distribution when it exists.")
-        delete(buildRepoDirectory)
+val publishAllPublicationsToGitHubRepository by tasks.existing {
+    dependsOn(ensureTag)
+    doLast {
+        logger.lifecycle("$prefix Publishing project ${if (project.isSnapshot()) "snapshot" else "release"} artifacts to the GitHub repository.")
     }
 }
 
-if (shouldPublishPluginToLocalDist()) {
-    logger.warn("$prefix Configuring local distribution plugin publication.")
-    val publishAllPublicationsToBuildRepository by tasks.existing {
-        dependsOn(pruneBuildRepo)
-        mustRunAfter(pruneBuildRepo)
-    }
-    publishLocal {
-        dependsOn(publishAllPublicationsToBuildRepository)
-    }
+val publishRemote by tasks.registering {
+    dependsOn(publishAllPublicationsToGitHubRepository)
 }
-
-val publishAllPublicationsToMavenLocalRepository by tasks.existing
 
 val deleteAllLocalPublications by tasks.registering {
     doLast {
@@ -156,22 +168,7 @@ val listAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
-        val github = xdkBuildLogic.github()
-        logger.lifecycle("$prefix '$name' Listing remote publications for project '${project.group}:${project.name}':")
-        val packageNames = github.queryXtcLangPackageNames()
-        if (packageNames.isEmpty()) {
-            logger.lifecycle("$prefix   No Maven packages found.")
-            return@doLast
-        }
-        packageNames.forEach { pkg ->
-            logger.lifecycle("$prefix    Maven package: '$pkg':")
-            val versions = github.queryXtcLangPackageVersions(pkg)
-            if (versions.isEmpty()) {
-                logger.warn("$prefix        WARNING: No versions found for this package. Corrupted package repo?")
-                return@forEach
-            }
-            versions.forEach { logger.lifecycle("$prefix        version: '$it'") }
-        }
+        TODO("Use gh") // gh api "/orgs/xtclang/packages?package_type=maven" | jq -r '.[] | .name'
     }
 }
 
@@ -179,8 +176,9 @@ val deleteAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
-        val github = xdkBuildLogic.github()
-        github.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
-        logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
+        listOf("org.xtclang.xdk", "org.xtclang.xtc-plugin", "org.xtclang.xtc-plugin.org.xtclang.xtc-plugin.gradle.plugin").forEach {
+            logger.lifecycle("$prefix Deleting all versions of package '$it' from the GitHub package repository.")
+            TODO("Use gh - implement me") //spawn("gh", "api", "--method", "DELETE", "/orgs/xtclang/packages/maven/$it")
+        }
     }
 }

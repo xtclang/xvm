@@ -132,16 +132,14 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
         //   from doing that isn't 100% compatible with our builds.
 
         resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
-        if (hasVerboseLogging()) {
-            final var url = getPluginUrl();
-            logger.lifecycle("{} XTC plugin executing from location: '{}' (protocol: '{}')", prefix, url, url.getProtocol());
-            if ("file".equals(url.getProtocol())) {
-                final var file = new File(url.getFile());
-                assert file.exists();
-                final var lastModified = new SimpleDateFormat("YYYY-MM-dd HH:mm").format(new Date(file.lastModified()));
-                final var length = file.length();
-                logger.lifecycle("{} XTC plugin file; lastModified='{}', length='{}' bytes", prefix, lastModified, length);
-            }
+        final var url = getPluginUrl();
+        logger.info("{} XTC plugin executing from location: '{}' (protocol: '{}')", prefix, url, url.getProtocol());
+        if ("file".equalsIgnoreCase(url.getProtocol())) {
+            final var file = new File(url.getFile());
+            assert file.exists();
+            final var lastModified = new SimpleDateFormat("YYYY-MM-dd HH:mm").format(new Date(file.lastModified()));
+            final var length = file.length();
+            logger.info("{} XTC plugin file; lastModified: {}, length: {} bytes", prefix, lastModified, length);
         }
     }
 
@@ -456,8 +454,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void createXtcDependencyConfigs(final SourceSet sourceSet) {
         final var compileTask = createCompileTask(sourceSet);
-        //final var runAllTask = createRunTask(sourceSet, XtcRunAllTask.class);
-
         logger.info("{} Created compile task for sourceSet '{}' -> '{}'.", prefix, sourceSet.getName(), compileTask.getName());
 
         final var xtcModuleConsumerConfig = incomingXtcModuleDependencies(sourceSet);
