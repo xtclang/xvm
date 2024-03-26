@@ -301,9 +301,13 @@ public class ResourceDir
         long timestamp = dirOrFile.lastModified();
         if (dirOrFile.isDirectory())
             {
-            for (File file : dirOrFile.listFiles())
+            File[] files = dirOrFile.listFiles();
+            if (files != null)
                 {
-                timestamp = Math.max(timestamp, calcTimestamp(file));
+                for (File file : files)
+                    {
+                    timestamp = Math.max(timestamp, calcTimestamp(file));
+                    }
                 }
             }
         return timestamp;
