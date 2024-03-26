@@ -4,6 +4,7 @@
 #
 
 name: XVM Publish Release
+
 on:
   push:
     branches:
@@ -11,8 +12,9 @@ on:
       - publish-and-release
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+
 jobs:
-  xdk-publish-release:
+  publish-packages-release:
     if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +22,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: '21'
 
       - uses: gradle/actions/setup-gradle@v3

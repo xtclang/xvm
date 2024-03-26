@@ -5,6 +5,8 @@ on:
       - publish-and-release
   schedule:
     - cron: '0 0 * * *' # Run every day at midnight
+      #TODO Also prune caches
+
 env:
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
   ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
