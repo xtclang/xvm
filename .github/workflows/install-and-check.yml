@@ -9,7 +9,7 @@ on:
   push:
   workflow_dispatch:
     inputs:
-      skip-manual-tests:
+      skip_manual_tests:
         description: 'Skip manual tests'
         type: boolean
         required: false
@@ -159,7 +159,7 @@ jobs:
         run: ./gradlew ${{ env.gradle_options }} installDist
 
       - name: Execute Gradle manualTest sanity checks
-        if: ${{ inputs.skip }}
+        if: ${{ inputs.skip_manual_tests == false }}
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runXtc
           ./gradlew ${{ env.gradle_options }} manualTests:runOne -PtestName=TestMisc
@@ -176,17 +176,17 @@ jobs:
           fi
 
       - name: Publish XDK Snapshot
-        #if: ${{ needs.setup.output.snapshot == 'true' }}
+        if: ${{ needs.setup.outputs.snapshot == 'true' }}
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
           ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
         run: |
-          echo "******************** ${{ needs.setup.output.snapshot }}"
+          echo "******************** ${{ needs.setup.outputs.snapshot }}"
           echo "******************** XDK_VERSION Publishing SNAPSHOT: ${{ needs.setup.outputs.version }}"
           ./gradlew ${{ env.gradle_options }} publishRemoteSnapshot
 
       - name: Publish XDK Release Artifact
-        if: ${{ needs.setup.output.snapshot == 'false' }}
+        if: ${{ needs.setup.outputs.snapshot == 'false' }}
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
           ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
