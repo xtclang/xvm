@@ -456,8 +456,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
     private void createXtcDependencyConfigs(final SourceSet sourceSet) {
         final var compileTask = createCompileTask(sourceSet);
-        //final var runAllTask = createRunTask(sourceSet, XtcRunAllTask.class);
-
         logger.info("{} Created compile task for sourceSet '{}' -> '{}'.", prefix, sourceSet.getName(), compileTask.getName());
 
         final var xtcModuleConsumerConfig = incomingXtcModuleDependencies(sourceSet);
