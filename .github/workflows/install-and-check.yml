@@ -213,7 +213,7 @@ jobs:
             echo "ERROR: Tag for this release already exists $tag"
             exit 1
           fi
-          echo "*** Tag ${{ needs.setup.outputs.tag_this_release }} does not exist yet; proceeding with buuild."
+          echo "*** Tag ${{ needs.setup.outputs.tag_this_release }} does not exist yet; proceeding with build."
           echo "NEW TAG: ${{ needs.setup.outputs.tag_this_release }}"
           
           # Create a release branch, update version file, commit and push itg

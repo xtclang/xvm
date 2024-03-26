@@ -140,7 +140,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 assert file.exists();
                 final var lastModified = new SimpleDateFormat("YYYY-MM-dd HH:mm").format(new Date(file.lastModified()));
                 final var length = file.length();
-                logger.lifecycle("{} XTC plugin file; lastModified='{}', length='{}' bytes", prefix, lastModified, length);
+                logger.lifecycle("{} XTC plugin file; lastModified: {}, length: {} bytes", prefix, lastModified, length);
             }
         }
     }
