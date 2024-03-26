@@ -313,20 +313,24 @@ interface Service {
     enum Synchronicity {Concurrent, Synchronized, Critical}
 
     /**
-     * The Timeout that was used when the service was invoked, if any. This is the timeout that this
-     * service is subject to.
+     * The Timeout that was used when the current fiber on this service was created (i.e. when the
+     * service was invoked).
      *
-     * The default value for the _incomingTimeout_ is determined based on the remaining timeout
-     * value of the calling execution thread (a.k.a. fiber) and could be changed via the
-     * [registerTimeout] method.
+     * The default value for the _incomingTimeout_ is determined based on the remaining timeout of
+     * the calling fiber (i.e. the [timeout] property of the calling service).
+     *
+     * Accessing this property from the outside of the service is not allowed.
      */
     @RO Timeout? incomingTimeout;
 
     /**
-     * The current Timeout that will be used by the service when it invokes other services.
+     * The Timeout that both applies to this service' execution, and is used by this service when it
+     * invokes other services.
      *
-     * By default, this is the same as the incoming Timeout, but can be overridden by registering
-     * a new Timeout via the [registerTimeout] method.
+     * If no timeout is currently registered on this service, then the [incomingTimeout] value will
+     * be used.
+     *
+     * Accessing this property from the outside of the service is not allowed.
      */
     @RO Timeout? timeout;
 
@@ -369,9 +373,7 @@ interface Service {
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
      *
-     * If the call is made from within this service, then it only affects the [timeout]
-     * of the current execution thread (a.k.a. fiber). Otherwise, the timeout of the service
-     * itself will be changed.
+     * Calling this method from the outside of the service is not allowed.
      */
     void registerTimeout(Timeout? timeout);
 

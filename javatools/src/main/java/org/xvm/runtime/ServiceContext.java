@@ -111,28 +111,6 @@ public class ServiceContext
         }
 
     /**
-     * Supporting method for natural Service.registerTimeout() API.
-     *
-     * @return the current Timeout? handle
-     */
-    public ObjectHandle getTimeoutHandle()
-        {
-        return m_hTimeout;
-        }
-
-    /**
-     * Supporting method for natural Service.registerTimeout() API.
-     *
-     * @param hTimeout  the new Timeout? handle
-     */
-    public void setTimeoutHandle(ObjectHandle hTimeout)
-        {
-        assert hTimeout != null;
-
-        m_hTimeout = hTimeout;
-        }
-
-    /**
      * Supporting method for Service.synchronizedSection.get().
      *
      * @return the current SynchronizedSection? handle
@@ -1455,16 +1433,15 @@ public class ServiceContext
 
         boolean fOverwhelmed = addRequest(request, false);
 
-        Fiber fiber = frame.f_fiber;
         if (cReturns == 0)
             {
-            fiber.registerUncapturedRequest(request);
+            frame.f_fiber.registerUncapturedRequest(request);
             return fOverwhelmed || future.isDone()
                 ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
                 : Op.R_NEXT;
             }
 
-        fiber.registerRequest(request);
+        frame.f_fiber.registerRequest(request);
         if (cReturns == 1)
             {
             CompletableFuture<ObjectHandle> cfReturn =
@@ -1769,6 +1746,11 @@ public class ServiceContext
         abstract public int getCallDepth();
 
         /**
+         * @return the caller's timeout stamp
+         */
+        abstract public long getTimeoutStamp();
+
+        /**
          * Create a new frame based on this message at the specified service
          */
         abstract Frame createFrame(ServiceContext context);
@@ -1880,12 +1862,19 @@ public class ServiceContext
             f_cReturns    = cReturns;
             f_supplierRet = supplierRet;
             f_nDepth      = frameCaller.f_nDepth;
+            f_ldtTimeout  = frameCaller.f_fiber.getTimeoutStamp();
             }
 
         @Override
         public int getCallDepth()
             {
             return f_nDepth;
+            }
+
+        @Override
+        public long getTimeoutStamp()
+            {
+            return f_ldtTimeout;
             }
 
         @Override
@@ -2038,6 +2027,7 @@ public class ServiceContext
         private final int                      f_cReturns;
         private final Supplier<TypeConstant[]> f_supplierRet;
         private final int                      f_nDepth;
+        private final long                     f_ldtTimeout;
         }
 
     /**
@@ -2066,6 +2056,12 @@ public class ServiceContext
         public int getCallDepth()
             {
             return 0;
+            }
+
+        @Override
+        public long getTimeoutStamp()
+            {
+            return 0L;
             }
 
         @Override
@@ -2240,11 +2236,6 @@ public class ServiceContext
      * The counter used to create Frame ids
      */
     protected int m_iFrameCounter;
-
-    /**
-     * The current Timeout that will be used by the service when it invokes other services.
-     */
-    private ObjectHandle m_hTimeout = xNullable.NULL;
 
     /**
      * The current SynchronizedSection for the service.

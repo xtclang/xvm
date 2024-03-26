@@ -42,41 +42,24 @@ public class Fiber
     {
     public Fiber(ServiceContext context, Message msgCall)
         {
-        f_lId       = s_counter.getAndIncrement();
-        f_context   = context;
-        f_iCallerId = msgCall.f_iCallerId;
-        f_fnCaller  = msgCall.f_fnCaller;
-        m_status    = FiberStatus.Initial;
+        f_lId        = s_counter.getAndIncrement();
+        f_context    = context;
+        f_iCallerId  = msgCall.f_iCallerId;
+        f_fnCaller   = msgCall.f_fnCaller;
+        m_status     = FiberStatus.Initial;
 
         Fiber fiberCaller = msgCall.f_fiberCaller;
         if (fiberCaller == null)
             {
-            // an independent or asynchronous (e.g. created by "callLater") fiber is only limited
-            // by the timeout of the parent service and in general has no timeout
-            f_nDepth    = 0;
-            f_refCaller = null;
+            f_nDepth     = 0;
+            f_refCaller  = null;
+            m_ldtTimeout = 0L;
             }
         else
             {
-            long ldtTimeoutFiber = fiberCaller.m_ldtTimeout;
-            if (ldtTimeoutFiber > 0)
-                {
-                // inherit the caller's fiber timeout stamp,
-                // but stagger it a bit to have the callee to time-out first
-                // TODO: what if it's already timed out or below the staggered amount?
-                m_ldtTimeout = ldtTimeoutFiber - 20;
-                }
-            else
-                {
-                // inherit the caller's service timeout
-                long cTimeoutMillis = millisFromTimeout(context.getTimeoutHandle());
-                if (cTimeoutMillis > 0)
-                    {
-                    m_ldtTimeout = System.currentTimeMillis() + cTimeoutMillis;
-                    }
-                }
-            f_nDepth    = msgCall.getCallDepth() + 1;
-            f_refCaller = new WeakReference<>(fiberCaller);
+            f_nDepth     = msgCall.getCallDepth() + 1;
+            f_refCaller  = new WeakReference<>(fiberCaller);
+            m_ldtTimeout = msgCall.getTimeoutStamp();
             }
         }
 

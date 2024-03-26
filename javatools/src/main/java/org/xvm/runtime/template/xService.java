@@ -240,12 +240,9 @@ public class xService
                 if (frame.f_context == hService.f_context)
                     {
                     frame.f_fiber.setTimeoutHandle(hArg);
+                    return Op.R_NEXT;
                     }
-                else
-                    {
-                    hService.f_context.setTimeoutHandle(hArg);
-                    }
-                return Op.R_NEXT;
+                return frame.raiseException("Call out of context");
 
             case "registerSynchronizedSection":
                 return frame.f_context == hService.f_context
@@ -305,12 +302,9 @@ public class xService
                 return frame.assignValue(iReturn, xRTServiceControl.makeHandle(hService.f_context));
 
             case "timeout":
-                {
-                ObjectHandle  hTimeout = frame.f_context == hService.f_context
-                    ? frame.f_fiber.getTimeoutHandle()
-                    : hService.f_context.getTimeoutHandle();
-                return frame.assignValue(iReturn, hTimeout);
-                }
+                return frame.f_context == hService.f_context
+                        ? frame.assignValue(iReturn, frame.f_fiber.getTimeoutHandle())
+                        : frame.raiseException("Call out of context");
 
             case "asyncSection":
                 return frame.assignValue(iReturn, frame.f_fiber.getAsyncSection());

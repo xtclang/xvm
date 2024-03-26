@@ -1,8 +1,10 @@
 /**
- * A Timeout is used to constrain the wall-clock time limit for calls made to other services
- * from this service. Specifically, once a timeout is put in place, all service invocations that
- * originate from this service will carry the timeout, such that those service invocations will
- * need to complete within the remainder of that timeout, or risk a TimedOut exception being raised.
+ * A Timeout is used to constrain the wall-clock time limit for both remaining execution within the
+ * current service and any calls made to other services. Specifically, while a timeout is
+ * registered, all service invocations that originate from this service will automatically begin
+ * with a timeout corresponding to the remaining portion of the caller's timeout, such that those
+ * service invocations will need to complete within that period of time, or risk a TimedOut
+ * exception being raised.
  *
  * The Timeout mechanism is a cooperative mechanism, and is not intended to be used as a strict
  * resource management mechanism. Rather, it is intended for uses in which returning with a bad
@@ -18,7 +20,7 @@
  * block will automatically unregister the timeout at the conclusion of the block, causing all
  * of the potentially-asynchronous service invocations that occurred within the block to be infected
  * by the timeout. When the timeout unregisters itself, it re-registers whatever previous timeout it
- * replaced (if any).
+ * replaced (if any), such that the previous timeout's expiry time remains unchanged.
  *
  * Timeouts _nest_. When a new timeout is created, it configures itself to use no more time than
  * remains on the current timeout. This allows the developer to create a new timeout without
@@ -67,6 +69,8 @@ const Timeout
     construct(Duration remainingTime, Boolean independent = False) {
         assert remainingTime > Duration:0S;
 
+        appliesTo = this:service;
+
         // store off the previous timeout; it will be replaced by this timeout, and restored when
         // this timeout is closed
         previousTimeout = this:service.timeout;
@@ -89,6 +93,11 @@ const Timeout
      * The timer selected by the runtime to manage timeouts.
      */
     @Inject Timer timer;
+
+    /**
+     * The service that this timeout applies to.
+     */
+    Service appliesTo;
 
     /**
      * The `Timeout` that this timeout replaced, if any.
@@ -126,7 +135,7 @@ const Timeout
      * Determine whether this timeout is the active timeout for the current service.
      */
     Boolean active.get() {
-        return this:service.timeout == this;
+        return this:service.&timeout == &this;
     }
 
     /**
@@ -134,9 +143,13 @@ const Timeout
      * it is the currently-active timeout.
      */
     Boolean registered.get() {
+        if (&appliesTo != &this:service) {
+            return False;
+        }
+
         Timeout? timeout = this:service.timeout;
         while (timeout != Null) {
-            if (this == timeout) {
+            if (&this == &timeout) {
                 return True;
             }
 
