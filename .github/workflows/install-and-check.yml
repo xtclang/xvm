@@ -99,6 +99,7 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           fetch-tags: true # fetch tags even if fetch-depth == 0
           show-progress: true
 
