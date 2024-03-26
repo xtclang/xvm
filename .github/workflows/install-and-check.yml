@@ -167,9 +167,10 @@ jobs:
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
       - name: Print release type
+        shell: bash # Use bash on Windows for [[ comparisons ]]
         run: |
           echo "SNAPSHOT check: ${{ needs.setup.outputs.snapshot }}"
-          if [ ${{ needs.setup.outputs.snapshot == 'true' }} ]; then
+          if [[ ${{ needs.setup.outputs.snapshot }} == 'true' ]]; then
             echo "SNAPSHOT identified. Proceeding with SNAPSHOT publication: ${{ needs.setup.outputs.snapshot }}"
           else
             echo "RELEASE identified. Proceeding with RELEASE publication."
