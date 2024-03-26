@@ -72,8 +72,8 @@ jobs:
           patch=$(echo "$xdk_version" | sed -e "s#$_re#\3#")
 
           # Set up tags, where applicable 
-          tag_last_release=$(git describe --tags `git rev-list --tags --max-count=1`)
-          #tag_last_release=$(git describe --tags --abbrev=0 HEAD~)          
+          #tag_last_release=$(git describe --tags `git rev-list --tags --max-count=1`)
+          tag_last_release=$(git describe --tags --abbrev=0 HEAD~)          
           tag_this_release="v$xdk_version"
           tag_next_release="v$major.$minor.$((patch + 1))-SNAPSHOT"
           echo "tag:"
