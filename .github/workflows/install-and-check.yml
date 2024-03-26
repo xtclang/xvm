@@ -176,12 +176,13 @@ jobs:
           fi
 
       - name: Publish XDK Snapshot
-        if: ${{ needs.setup.output.snapshot == 'true' }}
+        #if: ${{ needs.setup.output.snapshot == 'true' }}
         env:
           ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
           ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
         run: |
-          echo "******************** XDK_VERSION Publishing SNAPSHOT: ${{ needs.setup.outputs.xdk_version  }}"
+          echo "******************** ${{ needs.setup.output.snapshot }}"
+          echo "******************** XDK_VERSION Publishing SNAPSHOT: ${{ needs.setup.outputs.version }}"
           ./gradlew ${{ env.gradle_options }} publishRemoteSnapshot
 
       - name: Publish XDK Release Artifact
