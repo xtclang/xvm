@@ -615,39 +615,6 @@ const Duration(Int128 picoseconds)
     }
 
     /**
-     * Calculate an Int value to use as the number to follow a decimal point to represent a
-     * picosecond fraction of a second.
-     *
-     * @param picos a positive number of picoseconds
-     *
-     * @return leadingZeroes the number of leading zeros after the decimal point
-     * @return value the digits of the picoseconds, with the trailing zeros removed
-     */
-    private static (Int leadingZeroes, Int value) picosFractional(Int picos) {
-        assert picos > 0;
-        Int chopped = 0;
-
-        // drop any trailing zeros
-        if (picos % 100_000_000 == 0) {
-            picos   /= 100_000_000;
-            chopped += 8;
-        }
-        if (picos % 10_000 == 0) {
-            picos   /= 10_000;
-            chopped += 4;
-        }
-        if (picos % 100 == 0) {
-            picos /= 100;
-            chopped += 2;
-        }
-        if (picos % 10 == 0) {
-            picos /= 10;
-            ++chopped;
-        }
-        return 12 - picos.estimateStringLength() - chopped, picos;
-    }
-
-    /**
      * Add the fractional picoseconds value to the buffer as a decimal string. If the picoseconds
      * value is zero, the buffer is returned unchanged; otherwise, a decimal point is added, and the
      * fractional picoseconds value is appended with no trailing zeroes.
@@ -662,10 +629,32 @@ const Duration(Int128 picoseconds)
             return buf;
         }
 
-        // TODO GG - moving picosFractional function into here results in a compiler error
+        private static (Int leadingZeroes, Int value) picosFractional(Int picos) {
+            assert picos > 0;
+            Int chopped = 0;
+
+            // drop any trailing zeros
+            if (picos % 100_000_000 == 0) {
+                picos   /= 100_000_000;
+                chopped += 8;
+            }
+            if (picos % 10_000 == 0) {
+                picos   /= 10_000;
+                chopped += 4;
+            }
+            if (picos % 100 == 0) {
+                picos /= 100;
+                chopped += 2;
+            }
+            if (picos % 10 == 0) {
+                picos /= 10;
+                ++chopped;
+            }
+            return 12 - picos.estimateStringLength() - chopped, picos;
+        }
 
         buf.add('.');
-        (Int leadingZeroes, Int digits) = Duration.picosFractional(picos);
+        (Int leadingZeroes, Int digits) = picosFractional(picos);
         while (leadingZeroes-- > 0) {
             buf.add('0');
         }
