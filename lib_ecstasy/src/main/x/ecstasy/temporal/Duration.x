@@ -397,8 +397,9 @@ const Duration(Int128 picoseconds)
     Int picosecondsPart.get() = (picoseconds.abs() % PicosPerSecond).toInt();
 
     /**
-     * The Sign of the number. The case of [Zero] is special, in that some numeric formats have an
-     * explicitly signed zero value; in that case, using the
+     * The Sign of the Duration. The [None] Duration has a [Signum] of `Zero`. Most Durations have a
+     * `Positive Signum`, but a Duration with `Negative Signum` indicates that something occurred in
+     * the past, such as a timeout that has expired.
      */
     @RO Signum sign.get() = picoseconds.sign;
 
@@ -499,9 +500,9 @@ const Duration(Int128 picoseconds)
         // format: ...###:00:00.###...
         // format:        ##:00.###...
         // format:           ##.###...
-        Int length = picoseconds >= PicosPerHour   ? hours  .estimateStringLength() + 6 :
-                     picoseconds >= PicosPerMinute ? minutes.estimateStringLength() + 3 :
-                                                     seconds.estimateStringLength();
+        Int length = picoseconds.abs() >= PicosPerHour   ? hours  .estimateStringLength() + 6 :
+                     picoseconds.abs() >= PicosPerMinute ? minutes.estimateStringLength() + 3 :
+                                                           seconds.estimateStringLength();
 
         Int picos = picosecondsPart;
         if (picos != 0) {
@@ -512,6 +513,10 @@ const Duration(Int128 picoseconds)
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False) {
+        if (picoseconds < 0) {
+            return magnitude.appendTo(buf.add('-'), iso8601);
+        }
+
         if (iso8601) {                                          // PnDTnHnMn.nS
             if (picoseconds == 0) {
                 return "PT0S".appendTo(buf);
