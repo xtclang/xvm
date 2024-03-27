@@ -222,9 +222,6 @@ public abstract class BaseInt128
         {
         switch (method.getName())
             {
-            case "abs":
-                return invokeAbs(frame, hTarget, iReturn);
-
             case "add":
                 return invokeAdd(frame, hTarget, hArg, iReturn);
 
@@ -336,6 +333,9 @@ public abstract class BaseInt128
         {
         switch (method.getName())
             {
+            case "abs":
+                return invokeAbs(frame, hTarget, iReturn);
+
             case "toInt8":
             case "toInt16":
             case "toInt32":
