@@ -35,15 +35,20 @@ const Duration(Int128 picoseconds)
         //     P   nD  T   nH  nM  n.  nS
         //   0   1   2   3   4   5   6   7
 
-        Int128  total   = 0;
-        Int     index   = 0;
-        Int     length  = duration.size;
-        Int     last    = length -1;
-        Int     stage   = 0;
-        Boolean any     = False;    // set to True if any data has been encountered
-        Boolean iso     = False;    // set to True if any of the ISO indicators are encountered
-        Int     colons  = 0;        // count of the ':' characters encountered
-        Int128  seconds = 0;        // only used for ':' delimited string
+        Int128  total    = 0;
+        Int     index    = 0;
+        Int     length   = duration.size;
+        Int     last     = length -1;
+        Int     stage    = 0;
+        Boolean any      = False;    // set to True if any data has been encountered
+        Boolean iso      = False;    // set to True if any of the ISO indicators are encountered
+        Int     colons   = 0;        // count of the ':' characters encountered
+        Int128  seconds  = 0;        // only used for ':' delimited string
+        Boolean negative = False;
+        if (length > 0 && duration[0] == '-') {
+            negative = True;
+            index    = 1;
+        }
 
         Loop: while (index < length) {
             switch (Char ch = duration[index++]) {
@@ -171,7 +176,7 @@ const Duration(Int128 picoseconds)
         assert:arg any                 as $"No duration information provided: {duration.quoted()}";
         assert:arg !iso || colons == 0 as $"Invalid ISO format: {duration.quoted()}";
 
-        construct Duration(total);
+        construct Duration(negative ? -total : total);
     }
 
     /**
@@ -241,16 +246,6 @@ const Duration(Int128 picoseconds)
     /**
      * Construct a Duration based on a total number of picoseconds.
      *
-     * @param picoseconds  the total number of picoseconds in the Duration
-     */
-    construct(Int128 picoseconds) {
-        assert picoseconds >= 0;
-        this.picoseconds = picoseconds;
-    }
-
-    /**
-     * Construct a Duration based on a total number of picoseconds.
-     *
      * @param days     a number of days to add to the duration
      * @param hours    a number of hours to add to the duration
      * @param minutes  a number of minutes to add to the duration
@@ -277,21 +272,21 @@ const Duration(Int128 picoseconds)
      *
      *   hours / 24.
      */
-    UInt32 days.get() = (picoseconds / PicosPerDay).toUInt32(checkBounds=True);
+    Int days.get() = (picoseconds / PicosPerDay).toInt(checkBounds=True);
 
     /**
      * The total number of hours, rounded down. This is the same as:
      *
      *   minutes / 60.
      */
-    UInt32 hours.get() = (picoseconds / PicosPerHour).toUInt32(checkBounds=True);
+    Int hours.get() = (picoseconds / PicosPerHour).toInt(checkBounds=True);
 
     /**
      * The total number of minutes, rounded down. This is the same as:
      *
      *   seconds / 60
      */
-    Int minutes.get() = (picoseconds / PicosPerMinute).toInt();
+    Int minutes.get() = (picoseconds / PicosPerMinute).toInt(checkBounds=True);
 
     /**
      * The total number of seconds, rounded down. This is the same as:
@@ -302,28 +297,28 @@ const Duration(Int128 picoseconds)
      *
      *   picoseconds / 1000000000000
      */
-    Int seconds.get() = (picoseconds / PicosPerSecond).toInt();
+    Int seconds.get() = (picoseconds / PicosPerSecond).toInt(checkBounds=True);
 
     /**
      * The total number of milliseconds, rounded down. This is the same as:
      *
      *   microseconds / 1000
      */
-    Int milliseconds.get() = (picoseconds / PicosPerMilli).toInt();
+    Int milliseconds.get() = (picoseconds / PicosPerMilli).toInt(checkBounds=True);
 
     /**
      * The total number of microseconds, rounded down. This is the same as:
      *
      *   nanoseconds / 1000
      */
-    Int microseconds.get() = (picoseconds / PicosPerMicro).toInt();
+    Int microseconds.get() = (picoseconds / PicosPerMicro).toInt(checkBounds=True);
 
     /**
      * The total number of nanoseconds, rounded down. This is the same as:
      *
      *   picoseconds / 1000
      */
-    Int nanoseconds.get() = (picoseconds / PicosPerNano).toInt();
+    Int nanoseconds.get() = (picoseconds / PicosPerNano).toInt(checkBounds=True);
 
     /**
      * The total number of picoseconds.
@@ -337,25 +332,25 @@ const Duration(Int128 picoseconds)
      * Exclusive of the time represented by days, the number of hours, rounded down. This is
      * the same as:
      *
-     *   hours - (days * 24)
+     *   hours.abs() - (days.abs() * 24)
      */
-    UInt8 hoursPart.get() = (hours % 24).toUInt8();
+    UInt8 hoursPart.get() = (hours.abs() % 24).toUInt8();
 
     /**
      * Exclusive of the time represented by hours, the number of minutes, rounded down. This is
      * the same as:
      *
-     *   minutes - (hours * 60)
+     *   minutes.abs() - (hours.abs() * 60)
      */
-    UInt8 minutesPart.get() = (minutes % 60).toUInt8();
+    UInt8 minutesPart.get() = (minutes.abs() % 60).toUInt8();
 
     /**
      * Exclusive of the time represented by minutes, the number of seconds, rounded down. This
      * is the same as:
      *
-     *   seconds - (minutes * 60)
+     *   seconds.abs() - (minutes.abs() * 60)
      */
-    UInt8 secondsPart.get() = (seconds % 60).toUInt8();
+    UInt8 secondsPart.get() = (seconds.abs() % 60).toUInt8();
 
     /**
      * Exclusive of the time represented by seconds, the number of milliseconds, rounded down.
@@ -367,7 +362,7 @@ const Duration(Int128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt16 millisecondsPart.get() = (picosecondsPart / PicosPerMilli).toUInt16();
+    UInt16 millisecondsPart.get() = (picosecondsPart.abs() / PicosPerMilli).toUInt16();
 
     /**
      * Exclusive of the time represented by seconds, the number of microseconds, rounded down.
@@ -379,7 +374,7 @@ const Duration(Int128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt32 microsecondsPart.get() = (picosecondsPart / PicosPerMicro).toUInt32();
+    UInt32 microsecondsPart.get() = (picosecondsPart.abs() / PicosPerMicro).toUInt32();
 
     /**
      * Exclusive of the time represented by seconds, the number of nanoseconds, rounded down.
@@ -391,15 +386,39 @@ const Duration(Int128 picoseconds)
      * the Duration's precision thrown away. As such, it can be useful for rending human-readable
      * information when higher precision is not required.
      */
-    UInt32 nanosecondsPart.get()= (picosecondsPart / PicosPerNano).toUInt32();
+    UInt32 nanosecondsPart.get()= (picosecondsPart.abs() / PicosPerNano).toUInt32();
 
     /**
      * Exclusive of the time represented by seconds, the number of picoseconds, rounded down.
      * This is the same as:
      *
-     *   picoseconds - (seconds * 1000000000000)
+     *   picoseconds.abs() - (seconds.abs() * 1000000000000)
      */
-    Int picosecondsPart.get() = (picoseconds % PicosPerSecond).toInt();
+    Int picosecondsPart.get() = (picoseconds.abs() % PicosPerSecond).toInt();
+
+    /**
+     * The Sign of the Duration. The [None] Duration has a [Signum] of `Zero`. Most Durations have a
+     * `Positive Signum`, but a Duration with `Negative Signum` indicates that something occurred in
+     * the past, such as a timeout that has expired.
+     */
+    @RO Signum sign.get() = picoseconds.sign;
+
+    /**
+     * True iff the duration is negative (less than zero picoseconds).
+     */
+    @RO Boolean negative.get() = picoseconds < 0;
+
+    /**
+     * The magnitude of this duration (its distance from zero).
+     */
+    @RO Duration magnitude.get() = picoseconds < 0 ? new Duration(-picoseconds) : this;
+
+    /**
+     * Calculate the negative of this Duration.
+     *
+     * @return the negative of this Duration, equal to `None-this`
+     */
+    @Op("-#") Duration neg() = new Duration(-picoseconds);
 
     /**
      * Addition: return a sum of durations.
@@ -427,7 +446,6 @@ const Duration(Int128 picoseconds)
      * Division: return a fraction of this duration.
      */
     @Op("/") Duration div(Int divisor) {
-        assert:bounds divisor >= 1;
         return new Duration(this.picoseconds / divisor.toInt128());
     }
 
@@ -446,7 +464,7 @@ const Duration(Int128 picoseconds)
                 return 4; // PT0S
             }
 
-            Int size = 1;                                       // P
+            Int size = picoseconds < 0 ? 2 : 1;                 // -P or P
 
             Int days = this.days;
             if (days != 0) {
@@ -482,9 +500,9 @@ const Duration(Int128 picoseconds)
         // format: ...###:00:00.###...
         // format:        ##:00.###...
         // format:           ##.###...
-        Int length = picoseconds >= PicosPerHour   ? hours  .estimateStringLength() + 6 :
-                     picoseconds >= PicosPerMinute ? minutes.estimateStringLength() + 3 :
-                                                     seconds.estimateStringLength();
+        Int length = picoseconds.abs() >= PicosPerHour   ? hours  .estimateStringLength() + 6 :
+                     picoseconds.abs() >= PicosPerMinute ? minutes.estimateStringLength() + 3 :
+                                                           seconds.estimateStringLength();
 
         Int picos = picosecondsPart;
         if (picos != 0) {
@@ -495,6 +513,10 @@ const Duration(Int128 picoseconds)
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf, Boolean iso8601 = False) {
+        if (picoseconds < 0) {
+            return magnitude.appendTo(buf.add('-'), iso8601);
+        }
+
         if (iso8601) {                                          // PnDTnHnMn.nS
             if (picoseconds == 0) {
                 return "PT0S".appendTo(buf);
@@ -595,10 +617,14 @@ const Duration(Int128 picoseconds)
     /**
      * Calculate an Int value to use as the number to follow a decimal point to represent a
      * picosecond fraction of a second.
+     *
+     * @param picos a positive number of picoseconds
+     *
+     * @return leadingZeroes the number of leading zeros after the decimal point
+     * @return value the digits of the picoseconds, with the trailing zeros removed
      */
-    static (Int leadingZeroes, Int value) picosFractional(Int picos) {
+    private static (Int leadingZeroes, Int value) picosFractional(Int picos) {
         assert picos > 0;
-
         Int chopped = 0;
 
         // drop any trailing zeros
@@ -618,14 +644,25 @@ const Duration(Int128 picoseconds)
             picos /= 10;
             ++chopped;
         }
-
         return 12 - picos.estimateStringLength() - chopped, picos;
     }
 
+    /**
+     * Add the fractional picoseconds value to the buffer as a decimal string. If the picoseconds
+     * value is zero, the buffer is returned unchanged; otherwise, a decimal point is added, and the
+     * fractional picoseconds value is appended with no trailing zeroes.
+     *
+     * @param buf    the buffer to render the fractional value into
+     * @param picos  a non-negative number of picoseconds
+     *
+     * @return the buffer
+     */
     static Appender<Char> appendPicosFractional(Appender<Char> buf, Int picos) {
         if (picos == 0) {
             return buf;
         }
+
+        // TODO GG - moving picosFractional function into here results in a compiler error
 
         buf.add('.');
         (Int leadingZeroes, Int digits) = Duration.picosFractional(picos);
