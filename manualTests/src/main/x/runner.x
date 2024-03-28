@@ -13,23 +13,22 @@ module Runner {
     }
 
     void reportResults(Tuple<FutureVar, ConsoleBuffer>?[] results, Int index) {
-        while (index < results.size) {
-            Tuple<FutureVar, ConsoleBuffer>? resultTuple = results[index++];
-            if (resultTuple != Null) {
-                resultTuple[0].whenComplete((_, e) -> {
-                    try {
-                        if (e == Null) {
-                            console.print(resultTuple[1].backService.toString());
-                        } else {
-                            console.print(e);
+        try {
+            while (index < results.size) {
+                Tuple<FutureVar, ConsoleBuffer>? resultTuple = results[index++];
+                if (resultTuple != Null) {
+                    resultTuple[0].whenComplete((_, e) -> {
+                        console.print(resultTuple[1].backService.toString());
+                        if (e != Null) {
+                            console.print($"Exception during execution of module #{index}: {e}");
                         }
                         reportResults(results, index);
-                    } catch (Exception e2) {
-                        console.print($"Failure to report results for module #{index}: {e2}");
-                    }
-                });
+                    });
                 return;
+                }
             }
+        } catch (Exception e) {
+            console.print($"Failure to report results for module #{index}: {e}");
         }
     }
 
@@ -45,9 +44,10 @@ module Runner {
                 new Container(template, Lightweight, repository, injector);
 
             buffer.print($"++++++ Loading module: {moduleName} +++++++\n");
-
-            @Future Tuple result = container.invoke("run", Tuple:());
-            return (&result, buffer);
+            using (new Timeout(Duration:1m)) {
+                @Future Tuple result = container.invoke("run", Tuple:());
+                return (&result, buffer);
+            }
         } catch (Exception e) {
             console.print($"Failed to run module {moduleName.quoted()}: {e.text}");
             return Null;
