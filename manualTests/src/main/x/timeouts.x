@@ -109,9 +109,9 @@ module TestTimeouts {
 
         Tester t = new Tester();
         try {
-            using (val v1 = new Timeout(RUN_TIME)) {
+            using (new Timeout(RUN_TIME)) {
                 try {
-                    using (val v2 = new Timeout(TIMEOUT)) {
+                    using (new Timeout(TIMEOUT)) {
                         t.simulateSlowIO(RUN_TIME);
                         console.print("Failed timeout");
                     }
@@ -120,7 +120,7 @@ module TestTimeouts {
                 }
 
                 console.print("testNestedSlowIO #2: ", True);
-                using (val v2 = new Timeout(TIMEOUT)) {
+                using (new Timeout(TIMEOUT)) {
                     t.simulateSlowIO(RUN_TIME);
                     console.print("Failed timeout");
                 }

@@ -2,16 +2,16 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        import ecstasy.mgmt.*;
-        import ecstasy.mgmt.Container.InjectionKey;
-        import ecstasy.reflect.*;
+        using (new Resource(1)) {
+            using (new Resource(2)) { // this used to fail to compile
+            }
+        }
+    }
 
-        @Inject ModuleRepository repository;
-        @Inject Container.Linker linker;
-
-        ModuleTemplate template = repository.getResolvedModule("TestSimple");
-        InjectionKey[] injects  = linker.collectInjections(template);
-
-        console.print(injects.toString(pre="", post="", sep="\n"));
+    const Resource(Int value) implements Closeable {
+        @Override
+        void close(Exception? cause = Null) {
+            console.print($"Close {this}");
+        }
     }
 }

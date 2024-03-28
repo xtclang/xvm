@@ -1219,7 +1219,7 @@ public class Context
      */
     public boolean isVarHideable(String sName)
         {
-        if ("$".equals(sName))
+        if ("$".equals(sName) || "_".equals(sName)) // template or ANY
             {
             return true;
             }
