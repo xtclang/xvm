@@ -61,7 +61,7 @@ default:
 init:	lib
 
 LIBS := build/lib
-lib:	$(LIBS)/junit-jupiter-api-5.10.2.jar $(LIBS)/apiguardian-api-1.1.2.jar
+lib:	$(LIBS)/junit-jupiter-api-5.10.2.jar $(LIBS)/apiguardian-api-1.1.2.jar $(LIBS)/jline-3.25.1.jar
 
 # Unit testing
 $(LIBS)/junit-jupiter-api-5.10.2.jar:
@@ -71,6 +71,10 @@ $(LIBS)/junit-jupiter-api-5.10.2.jar:
 $(LIBS)/apiguardian-api-1.1.2.jar:
 	@[ -d $(LIBS) ] || mkdir -p $(LIBS)
 	@(cd $(LIBS); wget https://repo1.maven.org/maven2/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar)
+
+$(LIBS)/jline-3.25.1.jar:
+	@[ -d $(LIBS) ] || mkdir -p $(LIBS)
+	@(cd $(LIBS); wget https://repo1.maven.org/maven2/org/jline/jline/3.25.1/jline-3.25.1.jar)
 
 libs = $(wildcard $(LIBS)/*jar)
 
@@ -133,7 +137,7 @@ $(CLZT)/.tag: $(clzesT)  $(javasT) $(CLZU)/.tag
 	$(file > .argsT.txt, $(OODT))
 	@if [ ! -z "$(OODT)" ] ; then \
 	  echo -e "compiling javatools because " $< " and " `wc -w < .argsT.txt` " more files" ; \
-	  javac $(JAVAC_ARGS) -cp "$(CLZT)/main$(SEP)$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCT) -d $(CLZT)/main @.argsT.txt ; \
+	  javac $(JAVAC_ARGS) -cp "$(CLZT)/main$(SEP)$(CLZU)/main$(SEP)$(LIBS)/*" -sourcepath $(SRCT) -d $(CLZT)/main @.argsT.txt ; \
 	fi
 	@touch $(CLZT)/.tag
 	@rm -f .argsT.txt
@@ -242,7 +246,7 @@ $(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LI
 
 SRCNAT = javatools_bridge/src/main/x/_native
 LIBNAT = $(XDK_DIR)/javatools/javatools_bridge
-$(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc
+$(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBWEB).xtc
 	@echo "compiling " $@ " because " $?
 	@bin/makedepends.sh $(SRCNAT) $(LIBNAT)
 	@$(XCC) $< -o $@
@@ -276,7 +280,7 @@ xlib:	$(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJ
 # Additional arguments can be passed from the command line via "ARG=arg"
 %.com:	%.xtc $(XDK_JAR) $(XDKX).xtc $(LIBNAT).xtc
 	@echo "  running " $@
-	@java -jar $(XDK_JAR) xec -L $(XDK_DIR)/javatools -L $(XDK_LIB) $< $(ARG)
+	@java -cp "$(XDK_JAR)$(SEP)$(LIBS)/jline-3.25.1.jar" org.xvm.tool.Launcher xec -L $(XDK_DIR)/javatools -L $(XDK_LIB) $< $(ARG)
 
 
 #######################################################
@@ -337,6 +341,7 @@ TAGS:	$(javasB) $(javasT) $(javasU)
 .PHONY: clean
 clean:
 	rm -rf build/classes
+	rm -rf build/xdk
 	rm -rf out
 	rm -f TAGS
 	rm -f tck/src/main/x/*.xtc
