@@ -24,8 +24,6 @@ import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
-import static org.xvm.runtime.template._native.temporal.xNanosTimer.millisFromTimeout;
-
 
 /**
  * The Fiber represents a single execution thread for a give ServiceContext.
@@ -54,12 +52,14 @@ public class Fiber
             f_nDepth     = 0;
             f_refCaller  = null;
             m_ldtTimeout = 0L;
+            m_hTimeout   = xNullable.NULL;
             }
         else
             {
             f_nDepth     = msgCall.getCallDepth() + 1;
             f_refCaller  = new WeakReference<>(fiberCaller);
             m_ldtTimeout = msgCall.getTimeoutStamp();
+            m_hTimeout   = msgCall.getTimeoutHandle();
             }
         }
 
@@ -76,28 +76,35 @@ public class Fiber
      */
     public ObjectHandle getTimeoutHandle()
         {
-        return m_hTimeout == null ? xNullable.NULL : m_hTimeout;
+        return m_hTimeout;
         }
 
     /**
-     * Set the fiber's timeout based on the specified Timeout? handle.
+     * Set the fiber's timeout based on the specified Timeout? handle and the timeout timestamp.
      */
-    public void setTimeoutHandle(ObjectHandle hTimeout)
+    public void setTimeoutHandle(ObjectHandle hTimeout, long ldtTimeout)
         {
         assert hTimeout != null;
 
-        long cDelayMillis = millisFromTimeout(hTimeout);
-
         m_hTimeout   = hTimeout;
-        m_ldtTimeout = cDelayMillis <= 0 ? 0 : System.currentTimeMillis() + cDelayMillis;
+        m_ldtTimeout = ldtTimeout;
         }
 
     /**
-     * @return the current timeout timestamp in milliseconds (using System.currentTimeMillis())
+     * @return the current timeout timestamp in milliseconds (using System.currentTimeMillis());
+     *         zero if there is no timeout
      */
     public long getTimeoutStamp()
         {
         return m_ldtTimeout;
+        }
+
+    /**
+     * Clear the timeout stamp. This must be called when a TimedOut exception is thrown or re-thrown.
+     */
+    public void clearTimeout()
+        {
+        m_ldtTimeout = 0L;
         }
 
     /**
@@ -264,14 +271,16 @@ public class Fiber
      */
     public int prepareRun(Frame frame)
         {
-        int iResult = Op.R_NEXT;
+        int iResult;
         if (isTimedOut())
             {
-            m_ldtTimeout = 0; // reset the timeout value
-            iResult      = frame.raiseException(xException.timedOut(frame, "The service has timed-out"));
+            iResult = frame.raiseException(
+                        xException.timedOut(frame, "The service has timed-out", getTimeoutHandle()));
+            clearTimeout();
             }
         else
             {
+            iResult = Op.R_NEXT;
             switch (getStatus())
                 {
                 case Waiting:

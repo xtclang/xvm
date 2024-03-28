@@ -10,6 +10,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -35,6 +36,8 @@ import org.xvm.runtime.template._native.xRTServiceControl;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
 
 
 /**
@@ -79,7 +82,9 @@ public class xService
             setAtomic.add("timeout");
             s_setAtomicProperties = setAtomic;
 
-            invalidateTypeInfo();
+            IdentityConstant idTimeout  = pool().getImplicitlyImportedIdentity("Timeout");
+            ClassStructure   clzTimeout = (ClassStructure) idTimeout.getComponent();
+            REMAINING_TIME = (PropertyConstant) clzTimeout.getChild("remainingTime").getIdentityConstant();
             }
         }
 
@@ -237,12 +242,42 @@ public class xService
                         : frame.raiseException("Call out of context");
 
             case "registerTimeout":
-                if (frame.f_context == hService.f_context)
+                if (frame.f_context != hService.f_context)
                     {
-                    frame.f_fiber.setTimeoutHandle(hArg);
+                    return frame.raiseException("Call out of context");
+                    }
+
+                if (hArg == xNullable.NULL)
+                    {
+                    frame.f_fiber.setTimeoutHandle(hArg, 0L);
                     return Op.R_NEXT;
                     }
-                return frame.raiseException("Call out of context");
+
+                switch (hArg.getTemplate().getPropertyValue(frame, hArg, REMAINING_TIME, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        {
+                        long cRemains = xNanosTimer.millisFromDuration(frame.popStack());
+                        frame.f_fiber.setTimeoutHandle(hArg,
+                                System.currentTimeMillis() + cRemains);
+                        return Op.R_NEXT;
+                        }
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            long cRemains = xNanosTimer.millisFromDuration(frameCaller.popStack());
+                            frameCaller.f_fiber.setTimeoutHandle(hArg,
+                                    System.currentTimeMillis() + cRemains);
+                            return Op.R_NEXT;
+                            });
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
 
             case "registerSynchronizedSection":
                 return frame.f_context == hService.f_context
@@ -549,4 +584,9 @@ public class xService
      * Names of atomic properties.
      */
     private static Set<String> s_setAtomicProperties;
+
+    /**
+     * Property constant for "Timeout.remainingTime".
+     */
+    private static PropertyConstant REMAINING_TIME;
     }

@@ -1746,6 +1746,11 @@ public class ServiceContext
         abstract public int getCallDepth();
 
         /**
+         * @return the caller's timeout
+         */
+        abstract public ObjectHandle getTimeoutHandle();
+
+        /**
          * @return the caller's timeout stamp
          */
         abstract public long getTimeoutStamp();
@@ -1862,6 +1867,7 @@ public class ServiceContext
             f_cReturns    = cReturns;
             f_supplierRet = supplierRet;
             f_nDepth      = frameCaller.f_nDepth;
+            f_hTimeout    = frameCaller.f_fiber.getTimeoutHandle();
             f_ldtTimeout  = frameCaller.f_fiber.getTimeoutStamp();
             }
 
@@ -1869,6 +1875,12 @@ public class ServiceContext
         public int getCallDepth()
             {
             return f_nDepth;
+            }
+
+        @Override
+        public ObjectHandle getTimeoutHandle()
+            {
+            return f_hTimeout;
             }
 
         @Override
@@ -2027,6 +2039,7 @@ public class ServiceContext
         private final int                      f_cReturns;
         private final Supplier<TypeConstant[]> f_supplierRet;
         private final int                      f_nDepth;
+        private final ObjectHandle             f_hTimeout;
         private final long                     f_ldtTimeout;
         }
 
@@ -2056,6 +2069,12 @@ public class ServiceContext
         public int getCallDepth()
             {
             return 0;
+            }
+
+        @Override
+        public ObjectHandle getTimeoutHandle()
+            {
+            return xNullable.NULL;
             }
 
         @Override
@@ -2152,6 +2171,10 @@ public class ServiceContext
             else
                 {
                 f_future.completeExceptionally(f_hException.getException());
+                if (xException.isTimedOut(f_hException))
+                    {
+                    f_fiberCaller.clearTimeout();
+                    }
                 }
             }
         }

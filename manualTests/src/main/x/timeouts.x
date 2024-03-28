@@ -11,6 +11,7 @@ module TestTimeouts {
         testSyncSlowIO();
         testAsyncLongCompute();
         testAsyncSlowIO();
+        testNestedSlowIO();
     }
 
     void testCurrentLongCompute() {
@@ -21,7 +22,7 @@ module TestTimeouts {
                 console.print("Failed timeout");
             }
         } catch (TimedOut expected) {
-            console.print("Successfully timed out");
+            console.print($"Successfully timed out after {expected.timeout.duration}s");
         }
     }
 
@@ -33,7 +34,7 @@ module TestTimeouts {
                 console.print("Failed timeout");
             }
         } catch (TimedOut expected) {
-            console.print("Successfully timed out");
+            console.print($"Successfully timed out after {expected.timeout.duration}s");
         }
     }
 
@@ -47,7 +48,7 @@ module TestTimeouts {
                 console.print("Failed timeout");
             }
         } catch (TimedOut expected) {
-            console.print("Successfully timed out");
+            console.print($"Successfully timed out after {expected.timeout.duration}s");
         }
     }
 
@@ -61,7 +62,7 @@ module TestTimeouts {
                 console.print("Failed timeout");
             }
         } catch (TimedOut expected) {
-            console.print("Successfully timed out");
+            console.print($"Successfully timed out after {expected.timeout.duration}s");
         }
     }
 
@@ -73,10 +74,10 @@ module TestTimeouts {
             @Future Tuple done;
             @Future Int r = t.simulateLongCompute^(RUN_TIME);
             &r.whenComplete((_, e) -> {
-                if (e == Null) {
-                    console.print("Failed to timeout");
+                if (e.is(TimedOut)) {
+                    console.print($"Successfully timed out after {e.timeout.duration}s");
                 } else {
-                    console.print("Successfully timed out");
+                    console.print("Failed to timeout");
                 }
                 done = Tuple:();
             });
@@ -92,14 +93,40 @@ module TestTimeouts {
             @Future Tuple done;
             @Future Tuple r = t.simulateSlowIO^(RUN_TIME);
             &r.whenComplete((_, e) -> {
-                if (e == Null) {
-                    console.print("Failed to timeout");
+                if (e.is(TimedOut)) {
+                    console.print($"Successfully timed out after {e.timeout.duration}s");
                 } else {
-                    console.print("Successfully timed out");
+                    console.print("Failed to timeout");
                 }
                 done = Tuple:();
             });
             return done;
+        }
+    }
+
+    void testNestedSlowIO() {
+        console.print("testNestedSlowIO: ", True);
+
+        Tester t = new Tester();
+        try {
+            using (val v1 = new Timeout(RUN_TIME)) {
+                try {
+                    using (val v2 = new Timeout(TIMEOUT)) {
+                        t.simulateSlowIO(RUN_TIME);
+                        console.print("Failed timeout");
+                    }
+                } catch (TimedOut expected) {
+                    console.print($"Successfully timed out after {expected.timeout.duration}s");
+                }
+
+                console.print("testNestedSlowIO #2: ", True);
+                using (val v2 = new Timeout(TIMEOUT)) {
+                    t.simulateSlowIO(RUN_TIME);
+                    console.print("Failed timeout");
+                }
+            }
+        } catch (TimedOut expected) {
+            console.print($"Successfully timed out after {expected.timeout.duration}s");
         }
     }
 

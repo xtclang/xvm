@@ -19,7 +19,6 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.WeakCallback;
 
-import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.numbers.LongLong;
@@ -125,22 +124,6 @@ public class xNanosTimer
         }
 
     /**
-     * Helper method to convert Timeout? handle into a "delay" milliseconds.
-     */
-    public static long millisFromTimeout(ObjectHandle hTimeout)
-        {
-        if (hTimeout == xNullable.NULL)
-            {
-            return 0;
-            }
-
-        ObjectHandle hRemaining = ((GenericHandle) hTimeout).getField(null, "duration");
-        ObjectHandle hPicos     = ((GenericHandle) hRemaining).getField(null, "picoseconds");
-
-        return ((LongLongHandle) hPicos).getValue().div(PICOS_PER_MILLI_LL).getLowValue();
-        }
-
-    /**
      * Injection support.
      */
     public ObjectHandle ensureTimer(Frame frame, ObjectHandle hOpts)
@@ -148,6 +131,15 @@ public class xNanosTimer
         return createServiceHandle(
                 f_container.createServiceContext("Timer"),
                     getCanonicalClass(), getCanonicalType());
+        }
+
+    /**
+     * Helper method to get a "milliseconds" value from the Duration handle.
+     */
+    public static long millisFromDuration(ObjectHandle hDuration)
+        {
+        ObjectHandle hPicos = ((GenericHandle) hDuration).getField(null, "picoseconds");
+        return ((LongLongHandle) hPicos).getValue().div(PICOS_PER_MILLI_LL).getLowValue();
         }
 
 

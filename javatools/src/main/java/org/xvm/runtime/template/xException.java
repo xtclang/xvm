@@ -197,9 +197,16 @@ public class xException
         return makeHandle(frame, s_clzSizeLimited, sMsg);
         }
 
-    public static ExceptionHandle timedOut(Frame frame, String sMs)
+    public static ExceptionHandle timedOut(Frame frame, String sMsg, ObjectHandle hTimeout)
         {
-        return makeHandle(frame, s_clzTimedOut, sMs);
+        ExceptionHandle hEx = makeHandle(frame, s_clzTimedOut, sMsg);
+        hEx.setField(frame, "timeout", hTimeout);
+        return hEx;
+        }
+
+    public static boolean isTimedOut(ExceptionHandle e)
+        {
+        return e.getComposition() == s_clzTimedOut;
         }
 
     public static ExceptionHandle unassignedValue(Frame frame, String sName)
