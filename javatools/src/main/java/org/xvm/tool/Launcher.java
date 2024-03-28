@@ -40,6 +40,7 @@ import org.xvm.util.Severity;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 
 import static org.xvm.util.Handy.parseDelimitedString;
+import static org.xvm.util.Handy.parseStringMap;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Handy.toPathString;
@@ -726,6 +727,32 @@ public abstract class Launcher
             }
 
         /**
+         * Register a value for the specified option of the Pair Form (key/value).
+         *
+         * @param sName  the name of the option
+         * @param pairs  the key/value pairs
+         *
+         * @return true if the value is accepted; false if the value represents an error
+         */
+        public boolean specify(String sName, Map<String,String> pairs)
+            {
+            boolean fMulti;
+            if (formOf(sName) == Form.Pair &&
+                ((fMulti = allowMultiple(sName)) || !values().containsKey(sName) && pairs.size() <= 1))
+                {
+                if (!pairs.isEmpty())
+                    {
+                    store(sName, fMulti, pairs);
+                    }
+                return true;
+                }
+            else
+                {
+                return false;
+                }
+            }
+
+        /**
          * @return true if a "show version" option has been specified
          */
         boolean isShowVersion()
@@ -770,10 +797,12 @@ public abstract class Launcher
                         //    -arg                      // no value ("specified" for Name form)
                         //    -arg=value                // '=' delimiter between arg and value
                         //    -arg value                // value is in the next arg
+                        //    -arg key=value            // pair is the next arg (for Form=Pair)
                         // 2) for any single "linux" argument:
                         //    --arg                     // no value ("specified" for Name form)
                         //    --arg=value               // '=' delimiter between arg and value
                         //    --arg value               // value is in the next arg
+                        //    --arg key=value           // pair is the next arg (for Form=Pair)
                         // 3) for multiple "posix" arguments (imagine that -A -B -C are all legal)
                         //    -ABC                      // no value ("specified" for Name form)
                         int     cch    = sArg.length();
@@ -1037,6 +1066,13 @@ public abstract class Launcher
                                 oVal = repo;
                                 }
                             break;
+
+                        case Pair:
+                            if (!sArg.isEmpty())
+                                {
+                                oVal = parseStringMap(sArg);
+                                }
+                            break;
                         }
 
                     if (oVal == null)
@@ -1122,7 +1158,21 @@ public abstract class Launcher
                       .append(sName);
                     }
 
-                if (fMulti || oVal instanceof List)
+                if (oVal instanceof Map)
+                    {
+                    sb.append(":\n");
+                    Map<String, String> map = (Map) oVal;
+                    for (Map.Entry<String, String> e : map.entrySet())
+                        {
+                        sb.append(sIndent)
+                          .append("   ")
+                          .append(entry.getKey())
+                          .append("=")
+                          .append(quotedString(String.valueOf(entry.getValue())))
+                          .append('\n');
+                        }
+                    }
+                else if (fMulti || oVal instanceof List)
                     {
                     sb.append(":\n");
                     List list = (List) oVal;
@@ -1158,7 +1208,6 @@ public abstract class Launcher
          * @param sName   the option name
          * @param fMulti  true if the option can have multiple value
          * @param value   the value to store, or append to the ArrayList for that option name
-         *
          */
         protected void store(String sName, boolean fMulti, Object value)
             {
@@ -1169,6 +1218,15 @@ public abstract class Launcher
                     ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
                     list.addAll((List) value);
                     return list;
+                    });
+                }
+            else if (value instanceof Map)
+                {
+                values().compute(sName, (k, v) ->
+                    {
+                    Map map = v == null ? new ListMap() : (ListMap) v;
+                    map.putAll((Map) value);
+                    return map;
                     });
                 }
             else if (fMulti)
@@ -1777,8 +1835,14 @@ public abstract class Launcher
      *                              e.g. "{@code --name="Bob"}" or "{@code --name "Bob"}"
      * </li><li><tt>File</tt>     - a File valued option;
      *                              e.g. "{@code --src=./My.x}" or "{@code --src ./My.x}"
-     * </li><li><tt>FileList</tt> - a colon-delimited search path valued option;
+     * </li><li><tt>Repo</tt>     - a colon-delimited search path valued option;
      *                              e.g. "{@code -L ~/lib:./lib:./}" or "{@code -L~/lib:./}"
+     * </li><li><tt>Pair</tt>     - an equal-sign-delimited key/value pairing, comma-delimited for
+     *                              multi; e.g. "{@code -I x=0,y=1,s="'Hello, = World!'"} (and note
+     *                              that the use of spaces requires the value to be
+     *                              quoted, and the occurrence of ',' or '=' within a value requires
+     *                              the value to be quoted again using single quotes, because the
+     *                              Java command line removes the double quotes)
      * </li><li><tt>AsIs</tt>     - an AsIs valued option is a String that is not modified, useful
      *                              when being passed on to a further "argv-aware" program
      *                              e.g. "{@code xec MyApp.xtc -o=7 -X="q"} -> {@code -o=7 -X="q"}"
@@ -1792,6 +1856,7 @@ public abstract class Launcher
         String,
         File,
         Repo('\"' + java.io.File.pathSeparator + "\"-delimited File list"),
+        Pair("\"key=value\" Pair"),
         AsIs;
 
         Form()

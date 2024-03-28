@@ -22,8 +22,10 @@ import java.nio.charset.Charset;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Map;
 
 
 /**
@@ -636,6 +638,120 @@ public final class Handy
         }
 
     /**
+     * Parse a comma-delimited string containing "key=value" pairs. Key and or value strings can be
+     * quoted, and if quoted, can contain escape characters.
+     *
+     * @param s  the comma-delimited string containing "key=value" pairs
+     *
+     * @return null iff the passed string was not parseable; otherwise a map from string keys to
+     *         string values
+     */
+    public static Map<String, String> parseStringMap(String s)
+        {
+        if (s == null || s.isEmpty())
+            {
+            return Collections.emptyMap();
+            }
+
+        ListMap<String, String> map = new ListMap<>();
+        int     of    = 0;
+        int     cch   = s.length();
+        boolean doKey = true;       // either "parsing key" or "parsing value"
+        String  key   = "";
+        String  val   = "";
+        while (of < cch)
+            {
+            if (doKey)
+                {
+                if (!key.isEmpty())
+                    {
+                    // note: later pairs can override earlier pairs
+                    map.put(key, val);
+                    }
+                else if (!val.isEmpty())
+                    {
+                    return null;
+                    }
+                key = "";
+                val = "";
+                }
+
+            String cur = null;
+            switch (s.charAt(of))
+                {
+                case '\"':
+                case '\'':
+                case '`':
+                    // appears to be a quoted string
+                    int close = closingQuote(s, of);
+                    if (close > of)
+                        {
+                        cur = unquotedString(s.substring(of, close+1));
+                        of = close + 1;
+                        break;
+                        }
+                    // fall through
+                default:
+                    int next = s.indexOf(',', of);
+                    if (next < 0)
+                        {
+                        next = cch;
+                        }
+                    if (doKey)
+                        {
+                        int ofVal = s.indexOf('=', of);
+                        if (ofVal >= 0 && ofVal < next)
+                            {
+                            next = ofVal;
+                            }
+                        }
+                    cur = s.substring(of, next);
+                    of  = next;
+                    break;
+                }
+
+            if (doKey)
+                {
+                key = cur;
+                }
+            else
+                {
+                val = cur;
+                }
+
+            if (of < cch)
+                {
+                char delim = s.charAt(of++);
+                if (doKey && delim == '=')
+                    {
+                    doKey = false;
+                    }
+                else if (delim == ',')
+                    {
+                    doKey = true;
+                    }
+                else
+                    {
+                    // garbage
+                    return null;
+                    }
+                }
+            }
+
+        if (!key.isEmpty())
+            {
+            // note: later pairs can override earlier pairs
+            map.put(key, val);
+            }
+        else if (!val.isEmpty())
+            {
+            return null;
+            }
+
+        return map;
+        }
+
+    /**
      * Create a string containing the specified number of the specified character.
      *
      * @param ch   the character to duplicate
@@ -800,6 +916,172 @@ public final class Handy
         {
         return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append(
                 '\"').toString();
+        }
+
+    /**
+     * Find the closing quote corresponding to the opening quote at the specified offset.
+     *
+     * @param s   the String to search within
+     * @param of  the offset in the String of the opening quote
+     *
+     * @return the offset of the closing quote, or -1 if no closing quote could be found
+     */
+    public static int closingQuote(String s, int of)
+        {
+        if (s == null || of < 0)
+            {
+            throw new IllegalArgumentException();
+            }
+
+        int cch = s.length();
+        if (cch <= of + 1)
+            {
+            // string is not long enough to contain a closing quote
+            return -1;
+            }
+
+        char quote = s.charAt(of);
+        if (quote != '\"' && quote != '\'' && quote != '`')
+            {
+            // unknown quote character
+            return -1;
+            }
+
+        ++of;
+        while (of < cch)
+            {
+            char ch = s.charAt(of);
+            switch (ch)
+                {
+                case '\"':
+                case '\'':
+                case '`':
+                    if (ch == quote)
+                        {
+                        return of;
+                        }
+                    break;
+
+                case '\\':
+                    {
+                    if (cch <= of + 2)
+                        {
+                        // string is not long enough to contain an escaped char and a closing quote
+                        return -1;
+                        }
+
+                    switch (s.charAt(of+1))
+                        {
+                        case '\\':
+                        case '\'':
+                        case '\"':
+                        case '0':
+                        case 'b':
+                        case 'd':
+                        case 'e':
+                        case 'f':
+                        case 'n':
+                        case 'r':
+                        case 't':
+                        case 'v':
+                        case 'z':
+                            // valid escape
+                            ++of;
+                        }
+                    }
+                }
+
+            ++of;
+            }
+
+        // no closing quote
+        return -1;
+        }
+
+    /**
+     * Convert a quoted string to a string value. This implementation allows the string to be quoted
+     * inside of single, double, or backtick quotes, but requires the begin and end quotes to both
+     * be present, and to match. The legal character escapes defined by Ecstasy are decoded as part
+     * of unquoting the String; illegal escapes are ignored.
+     *
+     * @param s  the quoted String, such as it could appear in Ecstasy source code
+     *
+     * @return the String value that was present in the quoted String,
+     */
+    public static String unquotedString(String s)
+        {
+        int cch = s.length();
+        if (cch < 2 || s.charAt(0) != s.charAt(cch-1) || "\"\'`".indexOf(s.charAt(0)) < 0)
+            {
+            // it's not a quoted string
+            return s;
+            }
+
+        StringBuilder buf = new StringBuilder(cch-2);
+        --cch;                              // don't process the closing quote
+        for (int of = 1; of < cch; ++of)    // don't process the opening quote
+            {
+            char ch = s.charAt(of);
+            if (ch == '\\' && of + 1 < cch)
+                {
+                char escaped = s.charAt(++of);
+                switch (escaped)
+                    {
+                    case '\\':
+                        buf.append('\\');
+                        break;
+                    case '\'':
+                        buf.append('\'');
+                        break;
+                    case '\"':
+                        buf.append('\"');
+                        break;
+                    case '0':
+                        buf.append('\000');
+                        break;
+                    case 'b':
+                        buf.append('\b');
+                        break;
+                    case 'd':
+                        buf.append('\177');
+                        break;
+                    case 'e':
+                        buf.append('\033');
+                        break;
+                    case 'f':
+                        buf.append('\f');
+                        break;
+                    case 'n':
+                        buf.append('\n');
+                        break;
+                    case 'r':
+                        buf.append('\r');
+                        break;
+                    case 't':
+                        buf.append('\t');
+                        break;
+                    case 'v':
+                        buf.append('\013');
+                        break;
+                    case 'z':
+                        buf.append('\032');
+                        break;
+
+                    default:
+                        // do not treat the slash as an escape (it's an error, but we choose to
+                        // ignore it here)
+                        --of;
+                        buf.append('\\');
+                        break;
+                    }
+                }
+            else
+                {
+                buf.append(ch);
+                }
+            }
+
+        return buf.toString();
         }
 
     /**

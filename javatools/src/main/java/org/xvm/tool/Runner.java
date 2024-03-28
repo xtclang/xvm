@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.api.Connector;
@@ -476,12 +477,13 @@ public class Runner
             {
             super();
 
-            addOption("L" ,     null,           Form.Repo,    true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption("M",      "method",       Form.String,  false, "Method name; defaults to \"run\"");
-            addOption(null,     "no-recompile", Form.Name,    false, "Disable automatic compilation");
-            addOption("o",      null,           Form.File,    false, "If compilation is necessary, the file or directory to write compiler output to");
-            addOption(Trailing, null,           Form.File,    false, "Module file name (.xtc) to execute");
-            addOption(ArgV,     null,           Form.AsIs,    true,  "Arguments to pass to the method");
+            addOption("I" ,     "inject",       Form.Pair,   true,  "Specifies name/value pairs for injection; the format is \"name1=value1,name2=value2\"");
+            addOption("L" ,     null,           Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
+            addOption("M",      "method",       Form.String, false, "Method name; defaults to \"run\"");
+            addOption(null,     "no-recompile", Form.Name,   false, "Disable automatic compilation");
+            addOption("o",      null,           Form.File,   false, "If compilation is necessary, the file or directory to write compiler output to");
+            addOption(Trailing, null,           Form.File,   false, "Module file name (.xtc) to execute");
+            addOption(ArgV,     null,           Form.AsIs,   true,  "Arguments to pass to the method");
             }
 
         /**
@@ -525,6 +527,14 @@ public class Runner
             return listArgs == null
                     ? null
                     : listArgs.toArray(Handy.NO_ARGS);
+            }
+
+        /**
+         * @return the map of specified injection keys and values
+         */
+        public Map<String, String> getInjections()
+            {
+            return (Map<String, String>) values().getOrDefault("I", Collections.emptyMap());
             }
 
         @Override
