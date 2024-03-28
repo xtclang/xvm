@@ -67,29 +67,29 @@ public class ReturnAST extends AST {
   }
 
   @Override public SB jcode( SB sb ) {
-    if( _kids==null ) return sb.ip("return");
-    // Boxed return
-    if( _ztype!=null ) {
+    sb.ip("return ");
+    if( _kids==null ) return sb;
+    // Conditional return:
+    if( _ztype!=null && !_kids[0]._cond ) {
       if( _kids.length==1 ) {
         // The only two returns allowed are: MultiAST (Boolean,T) or False
-        if( _kids[0] instanceof ConAST ) {
-          return sb.ip("return XRuntime.SET$COND(false,").p(_ztype).p(")");
-        } 
+        if( _kids[0] instanceof ConAST )
+          return sb.p("XRuntime.SET$COND(false,").p(_ztype).p(")");
         assert _kids[0] instanceof MultiAST && _kids[0]._kids.length==2;
-        sb.ip("return XRuntime.SET$COND(true,");
+        sb.p("XRuntime.SET$COND(true,");
         _kids[0]._kids[1].jcode(sb);
         return sb.p(")");
       }
+      // Returning two parts: (bar,isValid)
       assert _kids.length==2;
-      sb.ip("return XRuntime.SET$COND(");
+      sb.p("XRuntime.SET$COND(");
       _kids[0].jcode(sb);
       sb.p(",");
       _kids[1].jcode(sb);
       sb.p(")");
       return sb;
     }
-    
-    sb.ip("return ");
+
     if( _kids.length==1 )
       return _kids[0].jcode(sb);
 

@@ -36,5 +36,7 @@ public class XBase extends XType {
     return XCons.CHAR;
   }
 
+  // Because interning, if not "==" then never structurally equals and
+  // because simple fully expanded types, never "isa" unless "==".
   @Override boolean _isa( XType xt ) { return false; }
 }

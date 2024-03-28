@@ -14,7 +14,7 @@ public class MultiAST extends AST {
     return new MultiAST(expr,kids);
   }
   MultiAST( boolean expr, AST... kids ) { super(kids); _expr = expr; }
-  
+
   @Override XType _type() {
     XType kid0 = _kids[0]._type;
     if( _kids.length==1 ) return kid0;
@@ -36,22 +36,23 @@ public class MultiAST extends AST {
     AST elvis = UniOpAST.find_elvis(this);
     if( elvis != null ) {
       AST par_elvis = elvis._par;
-      assert par_elvis._kids[0] == elvis;
+      int idx = S.find(par_elvis._kids,elvis);
+      assert idx >= 0;
       // Make 'e0==null'
       AST vsnull = elvis._kids[0];
       BinOpAST eq0 = new BinOpAST("==","",XCons.BOOL,new ConAST("null"),vsnull);
       BinOpAST or  = new BinOpAST("||","",XCons.BOOL,eq0,_kids[0]);
       _kids[0] = or;
       // Drop the elvis buried inside the expression
-      par_elvis._kids[0] = vsnull;
+      par_elvis._kids[idx] = vsnull;
     }
-    
+
     return this;
   }
 
   @Override public void jpre(SB sb) {
     if( _kids.length > 1 )
-      if( _expr ) 
+      if( _expr )
         sb.p("(");
   }
   @Override public void jmid(SB sb, int i) {
@@ -64,6 +65,6 @@ public class MultiAST extends AST {
   }
   @Override public void jpost(SB sb) {
     if( _kids.length > 1 )
-      if( _expr ) sb.unchar(5); // Undo ") && ("    
+      if( _expr ) sb.unchar(5); // Undo ") && ("
   }
 }

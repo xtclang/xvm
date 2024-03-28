@@ -36,19 +36,19 @@ public class FilePart extends Part {
    * will be displayed if there is a version mismatch, which should save some frustration -- since
    * otherwise the resulting error(s) can be very hard to diagnose.
    */
-  static final int VERSION_MINOR_CUR = 2024_02_18;
+  static final int VERSION_MINOR_CUR = 2024_03_23;
   final int _minor;
 
   // Main module
   public final ModPart _mod;
-  
+
   static final int NFLAGS =
     (Part.Format.FILE.ordinal() << Part.Format.FORMAT_SHIFT) |
     (Const.Access.PUBLIC.ordinal() << ACCESS_SHIFT) |
-    ABSTRACT_BIT | 
-    STATIC_BIT | 
+    ABSTRACT_BIT |
+    STATIC_BIT |
     SYNTHETIC_BIT;
-  
+
 
   // Constructor parses byte array, builds FileComponent
   public FilePart( File f ) throws IOException {
@@ -61,7 +61,7 @@ public class FilePart extends Part {
 
     if( pool._magic!=FILE_MAGIC )
       throw new IllegalArgumentException("not an .xtc format file; invalid magic header: " + String.format("0x%x",pool._magic));
-    
+
     _major = pool._major;
     _minor = pool._minor;
     if( !isFileVersionSupported(_major,_minor) )

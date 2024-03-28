@@ -33,7 +33,7 @@ public class ConAST extends AST {
         return bind;
       }
       
-      MethodPart lam = (MethodPart)((MethodCon)_tcon).part();
+      MethodPart lam = (MethodPart) _tcon.part();
       // A builder for the lambda method
       ClzBuilder X2 = new ClzBuilder(_X,null);
       // All the args from the current scope visible in the lambda body, as

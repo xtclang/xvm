@@ -62,7 +62,7 @@ public class XFun extends XType {
 
   // Make a callable interface with a particular signature
   public XFun make_class( ) {
-    String tclz = clz();
+    String tclz = _clz(new SB(),null,false).toString();
     String qual = (XEC.XCLZ+"."+tclz).intern();
     ClzBuilder.add_import(qual);
     if( ClzBldSet.find(qual) )
@@ -86,7 +86,7 @@ public class XFun extends XType {
     // Return
     int nrets = nrets();
     if( nrets==0 ) sb.p("void");
-    else if( nrets==1 ) _xts[nargs()].str(sb);
+    else if( nrets==1 ) _xts[nargs()].clz(sb);
     else throw XEC.TODO();
     sb.p(" call( ");
     int nargs = nargs();

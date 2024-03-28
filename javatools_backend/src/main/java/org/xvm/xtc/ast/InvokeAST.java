@@ -140,14 +140,15 @@ public class InvokeAST extends AST {
     }
 
     if( k0t instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
-      if( _meth.equals( "next" ) ) {
-        _meth = "next8";        // Use the primitive long iterator
-        return this;
-      }
-      throw XEC.TODO();
+      switch( _meth ) {
+      case "next":  _meth = "next8"; break;  // Use the primitive iterator
+      case "whileEach", "untilAny", "limit", "take", "forEach": break;
+      default: throw XEC.TODO();
+      };
+      return this;
     }
 
-    if( _type instanceof XClz clz && clz.isTuple() ) {
+    if( k0t instanceof XClz clz && clz.isTuple() ) {
       switch( _meth ) {
       case "slice":
         BlockAST blk = enclosing_block();

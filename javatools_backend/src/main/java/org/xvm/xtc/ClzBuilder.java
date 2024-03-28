@@ -544,6 +544,9 @@ public class ClzBuilder {
           ClzBuilder X = new ClzBuilder(this,clz_nest);
           X.jclass_body();
           break;
+        case TDefPart tdef:
+          System.out.println("TypeDef "+tdef._name);
+          break;
         default: throw XEC.TODO();
         }
       }

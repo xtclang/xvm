@@ -2,6 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.XEC;
 import org.xvm.util.SB;
+import org.xvm.util.S;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const.BinOp;
 import org.xvm.xtc.cons.NumCon;
@@ -97,13 +98,14 @@ class BinOpAST extends AST {
     // into this tree:
     //   (?: ((tmp=pred)!=null) (invokes...(  tmp  , args)) alt)
     if( _op0.equals(":") ) {
-      AST elvis = _kids[0], pred=null;
-      while( elvis instanceof InvokeAST && !UniOpAST.is_elvis(pred=elvis._kids[0]) )
-        elvis = pred;
-      if( !(elvis instanceof InvokeAST) )
-        // Elvis use not recognized
-        throw XEC.TODO();       // TODO: Elvis for loads & stores
-      return do_elvis(pred._kids[0],elvis);
+      AST elvis2 = findElvis(_kids[0]);
+      //AST elvis = _kids[0], pred=null;
+      //while( (elvis instanceof InvokeAST ) && !UniOpAST.is_elvis(pred=elvis._kids[0]) )
+      //  elvis = pred;
+      //if( !(elvis instanceof InvokeAST) )
+      //  // Elvis use not recognized
+      //  throw XEC.TODO();       // TODO: Elvis for loads & stores
+      return do_elvis(elvis2);
     }
 
     // This is a ternary null-check or elvis operator.  _kids[0] is
@@ -112,7 +114,7 @@ class BinOpAST extends AST {
     // into this tree:
     //   (?: ((tmp=pred)!=null) pred alt)
     if( _op0.equals("?:") )
-      return do_elvis(_kids[0],this);
+      return do_elvis(this);
 
     // Cast.  Since I treat XTC "Type" as a concrete instance XTC.GOLD,
     // I do not need to cast to "Type".  Other casts can remain.
@@ -130,6 +132,8 @@ class BinOpAST extends AST {
       case "==" -> "eq";
       case "!=" -> "ne";
       case ">=" -> "ge";
+      case "<"  -> "lt";
+      case ">"  -> "gt";
       default -> throw XEC.TODO();
       };
       return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
@@ -137,11 +141,32 @@ class BinOpAST extends AST {
     return this;
   }
 
+  private static AST findElvis( AST ast ) {
+    if( UniOpAST.is_elvis(ast) ) return ast;
+    if( ast._kids != null )
+      for( AST kid : ast._kids ) {
+        AST elvis = findElvis(kid);
+        if( elvis != null ) {
+          kid._par = ast;
+          return elvis;
+        }
+      }
+    return null;
+  }
 
-  private AST do_elvis( AST pred0, AST elvis ) {
+  // Original:
+  //   BinOp [good-tree [Elvis elvis]] [default-tree]
+  // Rewrite as:
+  //   Assign Type TMP = elvis; // TMP at block head
+  //   ...
+  //   (TMP!=null) ? [good-tree [TMP]] : [default-tree]
+  private AST do_elvis( AST elvis ) {
+    AST pred0 = elvis._kids[0];
     XType type = pred0._type;
     String tmp = enclosing_block().add_tmp(type);
-    elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
+    AST par = elvis._par;
+    par._kids[S.find(par._kids,elvis)] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
+    //elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
     // Assign the tmp to predicate
     AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0).do_type();
     // Zero/null if primitive (if boxing changes type)
@@ -149,7 +174,7 @@ class BinOpAST extends AST {
     // Null check it
     AST nchk = new BinOpAST("!=","",XCons.BOOL,asgn, zero );
     // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
-    return new TernaryAST( nchk, _kids[0], _kids[1]).do_type();
+    return new TernaryAST( new AST[]{nchk, _kids[0], _kids[1]}, _kids[0]._type).do_type();
   }
 
   static AST do_range( AST[] kids, XClz rng ) {

@@ -174,6 +174,7 @@ public abstract class AST {
     case DoWhileStmt  ->  DoWhileAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
+    case ForIterableStmt -> ForStmtAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
     case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);
@@ -216,7 +217,7 @@ public abstract class AST {
     case UnaryOpExpr  ->    UniOpAST.make(X);
     case VarOfExpr    ->    UniOpAST.make(X,"&","");
     case WhileDoStmt  ->    WhileAST.make(X);
-    case UnpackExpr   ->    throw XEC.TODO();
+    case UnpackExpr   ->   UnpackAST.make(X);
 
     default -> throw XEC.TODO();
     };

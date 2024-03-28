@@ -162,7 +162,11 @@ public abstract class XType {
   public XType typeParm(int i) { return _xts[i]; }
 
 
-  public final boolean isa( XType xt ) { return this==xt || (getClass() == xt.getClass() && _isa(xt)); }
+  public final boolean isa( XType xt ) {
+    return this==xt
+      || (getClass() == xt.getClass() && _isa(xt))
+      || xt instanceof XUnion union && union._reverse_isa(this);
+  }
   abstract boolean _isa( XType xt );
   public boolean isVar() { return false; }
 
@@ -197,20 +201,23 @@ public abstract class XType {
   // Produce a java type from a TermTCon
   static XType xtype( Const tc, boolean boxed, XClz self ) {
     return switch( tc ) {
-    case TermTCon ttc -> {
-      if( ttc.part() instanceof ClassPart clz ) {
+    case TermTCon ttc ->
+      switch( ttc.part() ) {
+      case ClassPart clz -> {
         if( clz._path !=null && S.eq(clz._path._str,"ecstasy/Object.x") )
           yield XCons.XXTC;
         if( S.eq("Null",clz._name) )
           yield XCons.NULL;     // Primitive null
         XClz xclz = XClz.make(clz);
+        if( ttc.id() instanceof FormalTChildCon ftcc )
+          yield xclz.find(ftcc._name);
         yield boxed ? xclz.box() : xclz.unbox();
       }
 
-      if( ttc.part() instanceof ParmPart parm ) {
+      case ParmPart parm -> {
         if( ttc.id() instanceof TParmCon tpc ) {
           // Generic parameter name
-          yield ((XClz)xtype(parm.parm().tcon(),boxed,self));
+          yield xtype(parm.parm().tcon(),boxed,self);
         } else if( ttc.id() instanceof DynFormalCon dfc ) {
           // Generic parameter name
           String dynt = ((TermTCon)((ParamTCon)dfc.type())._parms[0]).name();
@@ -221,11 +228,13 @@ public abstract class XType {
 
       // Hidden extra XTC type argument (GOLD instance of the class whos hash
       // implementation to use)
-      if( ttc.part() instanceof PropPart prop )
-        yield xtype(prop._con,false,self);
+      case PropPart prop -> xtype(prop._con,false,self);
 
-      throw XEC.TODO();
-    }
+      case null ->
+        throw XEC.TODO();
+
+      default -> throw XEC.TODO();
+      };
 
     case ParamTCon ptc -> {
       ClassPart clz = ptc.clz();
@@ -325,6 +334,9 @@ public abstract class XType {
 
     case MethodCon mcon ->
       XFun.make((MethodPart)mcon.part());
+
+    case FormalTChildCon ftcc ->
+      ftcc.clz()._tclz.find(ftcc._name);
 
     // Property constant
     case PropCon prop ->

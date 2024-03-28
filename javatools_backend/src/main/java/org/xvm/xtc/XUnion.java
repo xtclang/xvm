@@ -32,4 +32,7 @@ public class XUnion extends XType {
   @Override boolean _isa( XType xt ) {
     throw XEC.TODO();
   }
+  boolean _reverse_isa(XType xt) {
+    return xt.isa(_xts[0]) || xt.isa(_xts[1]);
+  }
 }

@@ -241,31 +241,29 @@ public class XClz extends XType {
   // An inner class, which gets the outer class Type variables
   public static XClz make( VirtDepTCon virt ) {
     ClassPart iclz = virt.part(); // Inner clz
-    //XClz xclz = _malloc(iclz);    // Inner xclz
-    //ParamTCon ptc = (ParamTCon)virt._par;
-    //TCon[] parms = ptc._parms;
-    //if( parms != null ) {
-    //  ClassPart oclz = ptc.clz(); // Outer class
-    //  XType [] xts = xclz._xts;
-    //  String[] tns = xclz._tns;
-    //  int len = xts==null ? 0 : xts.length;
-    //  xclz._xts    = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
-    //  xclz._tns = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
-    //  for( int i=0; i<parms.length; i++ ) {
-    //    boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
-    //    tns[len+i] = isType ? null : oclz._tnames[i];
-    //    xts[len+i] = xtype(parms[i],true);
-    //  }
-    //  xclz._nTypeParms = xts.length;
-    //}
-    //xclz._super = get_super(iclz);
-    //xclz._jpack = "";
-    //xclz._jname = "";
-    //XClz xclz2 = xclz._intern();
-    //if( xclz2 != xclz ) return xclz2;
-    //iclz._tclz = xclz;
-    //return xclz;
-    throw TODO();
+    XClz xclz = _malloc(iclz);    // Inner xclz
+    ParamTCon ptc = (ParamTCon)virt._par;
+    TCon[] parms = ptc._parms;
+    if( parms != null ) {
+      ClassPart oclz = ptc.clz(); // Outer class
+      XType [] xts = xclz._xts;
+      String[] tns = xclz._tns;
+      int len = xts==null ? 0 : xts.length;
+      xclz._xts    = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
+      xclz._tns = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
+      for( int i=0; i<parms.length; i++ ) {
+        boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
+        tns[len+i] = isType ? null : oclz._tnames[i];
+        xts[len+i] = xtype(parms[i],true);
+      }
+    }
+    xclz._super = get_super(iclz);
+    xclz._jpack = "";
+    xclz._jname = "";
+    XClz xclz2 = xclz._intern();
+    if( xclz2 != xclz ) return xclz2;
+    iclz._tclz = xclz;
+    return xclz;
   }
 
   // Make a specialized FutureVar type
@@ -380,7 +378,7 @@ public class XClz extends XType {
   public boolean needs_build() { return _jname.isEmpty(); }
 
   // Find a type name in the superclass chain
-  XType find(String tname) {
+  public XType find(String tname) {
     XClz clz = this;
     for( ; clz!=null; clz = clz._super ) {
       int idx = S.find(clz._tns,tname);

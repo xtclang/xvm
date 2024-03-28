@@ -37,8 +37,8 @@ class PropertyAST extends AST {
     }
     // Prop READS use prop$get, but assigns keep the plain name
     if( _par instanceof AssignAST && _par._kids[0]==this ) {
-      assert _prop.endsWith("$get()");
-      _prop = _prop.substring(0,_prop.length()-6);
+      if( _prop.endsWith("$get()") )
+        _prop = _prop.substring(0,_prop.length()-6);
     }
     return this;
   }
