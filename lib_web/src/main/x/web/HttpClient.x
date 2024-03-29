@@ -327,6 +327,10 @@ const HttpClient
         }
 
         @Override
-        String toString() = status.toString();
+        String toString() {
+            return bytes.size > 0 && (mediaType == Json || mediaType == Text)
+                ? $"{status}: {body.bytes.unpackUtf8()}"
+                : status.toString();
+        }
     }
 }
