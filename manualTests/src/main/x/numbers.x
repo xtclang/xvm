@@ -246,13 +246,13 @@ module TestNumbers {
         while (True) {
             console.print($"f={f} d={d}");
             if (f.infinity) {
-                console.print($"++: {f + f)}\t{d + d}");
-                console.print($"--: {f - f)}\t{d - d}");
-                console.print($"**: {f * f)}\t{d * d}");
-                console.print($"//: {f / f)}\t{d / d}");
-                console.print($"+1: {f + 1)}\t{d + 1}");
-                console.print($"-1: {f - 1)}\t{d - 1}");
-                console.print($"1/: {1 / f)}\t{1 / d}");
+                console.print($"++: {f + f}\t{d + d}");
+                console.print($"--: {f - f}\t{d - d}");
+                console.print($"**: {f * f}\t{d * d}");
+                console.print($"//: {f / f}\t{d / d}");
+                console.print($"+1: {f + 1}\t{d + 1}");
+                console.print($"-1: {f - 1}\t{d - 1}");
+                console.print($"1/: {1 / f}\t{1 / d}");
 
                 console.print($"ln: {f.log()}\t{d.log()}");
                 break;
