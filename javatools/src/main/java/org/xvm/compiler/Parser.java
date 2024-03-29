@@ -6152,7 +6152,13 @@ public class Parser
      */
     protected boolean eof()
         {
-        return !m_lexer.hasNext();
+        return !(m_lexer.hasNext() || notEof(m_token) || notEof(m_tokenPutBack));
+        }
+
+    private boolean notEof(Token token)
+        {
+        return token != null
+            && !(token.getStartPosition() == token.getEndPosition() && token.getId() == Id.R_CURLY);
         }
 
     /**
