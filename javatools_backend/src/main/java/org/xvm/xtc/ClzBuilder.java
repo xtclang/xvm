@@ -632,10 +632,14 @@ public class ClzBuilder {
     _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
     AST ast = AST.parse(this);
     // Set types in every AST
-    ast.type();
+    ast.doType(null);
+    // Unbox everything we can
+    ast = ast.visit(AST::unBox,null);
     // Do any trivial restructuring
-    ast.doRewrite(null);
+    ast = ast.visit(AST::rewrite,null);
     AST._uid=0;                        // Reset temps for next go-round
+    // Insert boxing if we have box/unbox conflicts
+    ast = ast.visit(AST::reBox,null);
     // Final AST ready to print as Java
     return ast;
   }

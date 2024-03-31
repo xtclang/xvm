@@ -1,6 +1,7 @@
 package org.xvm.xtc.ast;
 
 import org.xvm.util.SB;
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 
@@ -17,11 +18,17 @@ public class ConAST extends AST {
     _type = type;
     if( _tcon instanceof IntCon )
       _type = XCons.LONG;
-      
+
     _X = X;
   }
-  
-  @Override AST prewrite() {
+
+  @Override public AST unBox() {
+    if( _con.endsWith(".GOLD") )
+      return this;              // No unboxing gold instances
+    return super.unBox();
+  }
+
+  @Override public AST rewrite() {
     // Embedded Lambda
     if( _con.equals("->") ) {
       // If the parent started as a BindFunc, the BindFunc will print the
@@ -29,10 +36,10 @@ public class ConAST extends AST {
       // but we still need a header
       if( !(_par instanceof BindFuncAST && _par._kids[0]==this) ) {
         BindFuncAST bind = new BindFuncAST(null,new AST[]{this},null,null);
-        bind.do_type();
+        bind.doType();
         return bind;
       }
-      
+
       MethodPart lam = (MethodPart) _tcon.part();
       // A builder for the lambda method
       ClzBuilder X2 = new ClzBuilder(_X,null);
@@ -44,7 +51,7 @@ public class ConAST extends AST {
         XType atype = XType.xtype(lam._args[i].tcon(),false);
         X2.define(aname,atype);
       }
-      
+
       // Build the lambda AST body
       AST body = X2.ast(lam);
       // Shortcut: if the body is a Block of a Return of 1 return value,
@@ -52,7 +59,7 @@ public class ConAST extends AST {
       if( body instanceof BlockAST && body._kids.length==1 &&
           body._kids[0] instanceof ReturnAST ret && ret._kids!=null && ret._kids.length==1 )
         body = ret._kids[0];
-      
+
       // Swap out the method constant for the AST body
       return body;
     }

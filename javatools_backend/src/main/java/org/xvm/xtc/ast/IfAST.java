@@ -15,23 +15,10 @@ class IfAST extends AST {
       kids[2] = ast(X);
     X.pop_locals(nlocals0);     // Pop scope-locals at end of scope
     return new IfAST(kids);
-  }  
-  private IfAST( AST[] kids ) { super(kids); }
-  
-  @Override XType _type() { return XCons.VOID; }
-
-  BlockAST true_blk() {
-    BlockAST blk;
-    if( _kids[1] instanceof BlockAST blk0 ) {
-      AST[] kids = new AST[blk0._kids.length+1];
-      System.arraycopy(blk0._kids,0,kids,1,blk0._kids.length);
-      blk = new BlockAST(kids);
-    } else {
-      blk = new BlockAST(null,_kids[1]);
-    }
-    return (BlockAST)(_kids[1] = blk);
   }
+  private IfAST( AST[] kids ) { super(kids); }
 
+  @Override XType _type() { return XCons.VOID; }
 
   @Override public SB jcode( SB sb ) {
     _kids[0].jcode(sb.ip("if( ")).p(") ");
@@ -57,9 +44,9 @@ class IfAST extends AST {
       // <<<---- Cursor here
       sb.p(";").nl().i();
     }
-    
+
     sb.p("else ");
-    
+
     if( _kids[2] instanceof BlockAST ) {
       _kids[2].jcode(sb);
     } else {

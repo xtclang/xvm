@@ -19,6 +19,8 @@ class NarrowAST extends AST {
     super(kids);
     XType xt = XType.xtype(type,false);
     _type = xt.zero() ? xt.box() : xt;
+    if( _kids[0]._type instanceof XUnion )
+      _type = _kids[0]._type; // Lose all type knowledge in unions
   }
   @Override XType _type() { return _type; }
   @Override String name() { return _kids[0].name(); }

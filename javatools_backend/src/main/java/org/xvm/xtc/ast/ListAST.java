@@ -19,7 +19,7 @@ class ListAST extends AST {
   }
   @Override XType _type() { return _type; }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     if( _type == XCons.TUPLE0 && _kids!=null && _kids.length>0 && _kids[0]._type == XCons.VOID )
       return new ListAST(null,_type,_tuple); // Replace void with no-kids
     return this;

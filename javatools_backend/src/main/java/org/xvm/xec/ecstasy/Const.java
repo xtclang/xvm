@@ -66,14 +66,16 @@ public abstract class Const extends XTC
   @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
 
   public static boolean  equals$Const(XTC gold, char c0, char c1 ) { return c0==c1; }
-  public static Ordered compare$Const(XTC gold, char c0, char c1 ) {
-    throw XEC.TODO();
+  public static Ordered compare$Const(XTC gold, char c0, char c1 ) { throw XEC.TODO(); }
+  public static <E extends Const> boolean equals$Const(XTC gold, E c0, E c1 ) {
+    // Lost all type info, need to make sure same subclass
+    return c0.getClass() == c1.getClass() && c0.equals(c1);
   }
 
   public static boolean  equals$Const(org.xvm.xec.ecstasy.text.String gold, java.lang.String c0, java.lang.String c1 ) { throw XEC.TODO(); }
-  public static Ordered compare$Const(org.xvm.xec.ecstasy.text.String gold, java.lang.String s0, java.lang.String s1 ) {
-    return gold.compare(s0,s1);
-  }
+  public static Ordered compare$Const(org.xvm.xec.ecstasy.text.String gold, java.lang.String s0, java.lang.String s1 ) { return gold.compare(s0,s1); }
+
+  public static boolean  equals$Const(XTC gold, XTC c0, XTC c1 ) { return equals$Const(gold,(Const)c0,(Const)c1); }
 
   @Override public Const freeze( boolean inPlace ) { assert mutability$get() == Mutability.Constant; return this; }
 }

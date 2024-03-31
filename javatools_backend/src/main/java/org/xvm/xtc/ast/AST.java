@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const.NodeType;
 import org.xvm.util.SB;
+import org.xvm.util.S;
 
 public abstract class AST {
   public static int _uid;       // Private counter for temp names
@@ -41,24 +42,6 @@ public abstract class AST {
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }
 
-  // Auto-box/unblock Int64 (vs Long)
-  void autobox( int basex, XType tbox) {
-    if( tbox==XCons.VOID ) return;
-    XType tbase = _kids[basex]._type;
-    if( tbase==XCons.VOID ) return;
-    if( tbase==tbox ) return;
-    // If base is a Base and subclasses any of the box hierarchy, needs a box
-    if( tbase.is_jdk() &&
-        (tbase.box().isa(tbox) ||
-         (tbox instanceof XClz xclz && xclz.iface())) ) {
-      _kids[basex] = new NewAST(new AST[]{_kids[basex]},tbase.box());
-
-      // Reverse situation: the box is unboxed and boxing it subclasses the base.  Unbox the base.
-    } else if( tbox.is_jdk() && tbox.box().isa(tbase) ) {
-      _kids[basex] = new UniOpAST(new AST[]{_kids[basex]},null,"._i",tbox);
-    }
-  }
-
   // Cast nth child from a long to an int
   AST castInt(int n) {
     AST kid = _kids[n];
@@ -73,42 +56,101 @@ public abstract class AST {
     throw XEC.TODO();
   }
 
-  // Recursively walk the AST, setting the _type field.
-  public final void type( ) {
+
+  // Set parent and first cut types in the AST
+  public void doType(AST par) {
+    _par = par;
     if( _kids != null )
       for( AST kid : _kids )
-        if( kid!=null )
-          kid.type();
-    do_type();
+        if( kid != null )
+          kid.doType( this );
+    doType();                   // Non-recursive
   }
-  // Subclasses must override
-  abstract XType _type();
-  boolean _cond() { return false; }
-
-  // Called after a rewrite to set the type again
-  AST do_type() {
+  AST doType() {
     XType type = _type();
     assert _type==null || _type==type;
     _type = type;
     _cond = _cond();
     return this;
   }
+  // Subclasses must override
+  abstract XType _type();
+  boolean _cond() { return false; }
 
-  // AST elements rewrite themselves
-  public final AST doRewrite(AST par) {
-    _par = par;
-    AST ast = prewrite();
-    if( ast != this )
-      return ast.doRewrite(par);
-    if( _kids!=null )
+  // Generic visitor pattern, allowing updates
+  public AST visit(java.util.function.UnaryOperator<AST> F, AST par) {
+    assert _par==par;
+    if( _kids != null )
       for( int i=0; i<_kids.length; i++ )
         if( _kids[i] != null )
-          _kids[i] = _kids[i].doRewrite(this);
-    return postwrite();
+          _kids[i] = _kids[i].visit(F,this);
+    // Apply op to AST.  Correct _par field amongst self and kids.
+    // Repeat until stable.
+    AST old = this, x;
+    while( (x=F.apply(old)) != old && x != null ) {
+      x._par = par;
+      if( x._kids != null )
+        for( AST kid : x._kids )
+          if( kid != null )
+            kid._par = x;
+      old = x;
+    }
+    assert x==null || x.check_par(par,3);
+    return x;
   }
+
+  private boolean check_par( AST par, int d ) {
+    if( _par!=par )
+      return false;
+    if( d==0 ) return true;
+    if( _kids != null )
+      for( AST kid : _kids )
+        if( kid != null && !kid.check_par(this,d-1) )
+          return false;
+    return true;
+  }
+
+  // Auto-unbox e.g. Int64 to a long or xtc.String to j.l.String
+  public AST unBox() {
+    XType unbox = _type.unbox();
+    if( unbox == _type ||       // Already unboxed
+        unbox == XCons.NULL ||  // Unboxes to a "null" (TODO: use constant null)
+        !_type._notNull  ||     // Maybe-null
+        // LHS of assignment; BAD: "n._i = boxed_thing";
+        _par instanceof AssignAST asgn0 && asgn0._kids[0] == this ||
+        // Assign with no uses; BAD: "{ ...; (n = boxed)._i; ... }
+        this instanceof AssignAST asgn1 && asgn1._par instanceof BlockAST ||
+        this instanceof MultiAST
+        )
+      return this;              // Do not unbox
+    return new UniOpAST(new AST[]{this},null,"._i",unbox);
+  }
+
+  // Auto-box e.g. long to Int64 or j.l.String to xtc.String
+  public AST reBox() {
+    if( _par != null &&                   // Must have a parent that cares
+        _par._type != XCons.VOID &&       // No boxing around VOID
+        !(_par._type instanceof XFun) &&  // No boxing issues around functions
+        // Assigns RHS and Returns LHS might need to box
+        ((_par instanceof AssignAST asgn && asgn._kids[1]==this) ||
+         (_par instanceof ReturnAST ret  && ret ._kids[0]==this)) &&
+        // Fails ISA test
+        !_type.isa(_par._type)
+        ) {
+      // There exists a box which maps the from/to types?
+      XClz box = _type.box();
+      if( box != null && box != _type ) {
+        assert box.isa(_par._type);
+        // Box 'em up!
+        return new NewAST(new AST[]{this},box);
+      }
+    }
+    return this;
+  }
+
   // Rewrite some AST bits before Java
-  AST prewrite () { return this; }
-  AST postwrite() { return this; }
+  public AST rewrite() { return this; }
+
 
   /**
    * Dump indented pretty java code from AST.

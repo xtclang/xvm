@@ -3,6 +3,7 @@ package org.xvm.xtc.ast;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
+import org.xvm.XEC;
 
 public class MultiAST extends AST {
   final boolean _expr;
@@ -26,28 +27,14 @@ public class MultiAST extends AST {
     return XCons.BOOL;
   }
 
-  @Override AST prewrite() {
-    // When finding a BinOp ":", I search the _kids[0] slot for an elvis.
-    //   ( ...e0 ?. e1 ... : alt)  ==>>
-    //   (e0==null ? alt : (... e0.e1 ...))
-    // When finding a Multi, I search the _kids[0] slot for an elvis
-    //   ( ...e0 ?. e1 ... , more)  ==>>
-    //   ((e0==null || (...e0.e1...)) && more)
-    AST elvis = UniOpAST.find_elvis(this);
-    if( elvis != null ) {
-      AST par_elvis = elvis._par;
-      int idx = S.find(par_elvis._kids,elvis);
-      assert idx >= 0;
-      // Make 'e0==null'
-      AST vsnull = elvis._kids[0];
-      BinOpAST eq0 = new BinOpAST("==","",XCons.BOOL,new ConAST("null"),vsnull);
-      BinOpAST or  = new BinOpAST("||","",XCons.BOOL,eq0,_kids[0]);
-      _kids[0] = or;
-      // Drop the elvis buried inside the expression
-      par_elvis._kids[idx] = vsnull;
-    }
-
-    return this;
+  // THIS:    ( ...e0 ?. e1..., more);
+  // MAPS TO: ((e0==null || (...e0.e1...)) && more)
+  AST doElvis(AST elvis, int idx) {
+    BinOpAST eq0 = new BinOpAST("==","",XCons.BOOL,new ConAST("null"),elvis);
+    BinOpAST or  = new BinOpAST("||","",XCons.BOOL,eq0,_kids[0]);
+    _kids[idx] = or;
+    // Drop the elvis buried inside the expression
+    return elvis;
   }
 
   @Override public void jpre(SB sb) {

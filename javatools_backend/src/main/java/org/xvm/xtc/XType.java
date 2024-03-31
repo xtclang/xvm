@@ -147,7 +147,7 @@ public abstract class XType {
 
   static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
   public boolean primeq() { return XBOX.containsKey(this); }
-  public boolean zero() { return primeq() && this!=STRING; }
+  public boolean zero() { return primeq() && this!=STRING && this!=TRUE && this!=FALSE; }
   public String ztype() { return zero() ? "0" : "null"; }
   public boolean is_jdk() { return primeq() || this==JNULL; }
 
@@ -165,6 +165,7 @@ public abstract class XType {
   public final boolean isa( XType xt ) {
     return this==xt
       || (getClass() == xt.getClass() && _isa(xt))
+      || (this==XCons.NULL && !xt._notNull)
       || xt instanceof XUnion union && union._reverse_isa(this);
   }
   abstract boolean _isa( XType xt );
@@ -325,7 +326,7 @@ public abstract class XType {
 
     case LitCon lit -> {
       if( lit._f==Const.Format.IntLiteral )
-        yield boxed ? JLONG : LONG;
+        yield XCons.INTLITERAL;
       throw XEC.TODO();
     }
 

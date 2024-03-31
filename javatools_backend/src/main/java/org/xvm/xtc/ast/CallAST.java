@@ -37,14 +37,14 @@ public class CallAST extends AST {
     return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_rets));
   }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     // Try to rewrite constant calls to the XTC special equals.
     if( _kids[0] instanceof ConAST con ) {
       if( con._type instanceof XFun fun && fun.nargs()>0 && fun.arg(0) instanceof XClz clz ) {
         // Hard force Int64/IntNumber "funky dispatch" to Java primitive
         if( clz.isa(XCons.INTNUM) ) {
           if( con._con.endsWith(".equals"  ) ) return new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
-          if( con._con.endsWith(".compare" ) ) return new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]).prewrite();
+          if( con._con.endsWith(".compare" ) ) return new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
           if( con._con.endsWith(".hashCode") ) return _kids[2];
         }
         // Hard force "funky dispatch" to Java primitive

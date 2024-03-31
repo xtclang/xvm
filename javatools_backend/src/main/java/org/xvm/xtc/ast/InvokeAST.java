@@ -67,12 +67,12 @@ public class InvokeAST extends AST {
     return _rets!=null && _rets.length == 2 && _rets[0]==XCons.BOOL;
   }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     XType k0t = _kids[0]._type;
     // Handle all the Int/Int64/Intliteral to "long" calls
     if( k0t == XCons.JLONG || k0t == XCons.LONG ) {
       return switch( _meth ) {
-      case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long"),_kids[0]).do_type();
+      case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long"),_kids[0]).doType();
       case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
@@ -159,11 +159,6 @@ public class InvokeAST extends AST {
       default: throw XEC.TODO();
       }
     }
-
-    // Auto-box arguments for non-internal calls
-    if( _args!=null && (k0t==XCons.XXTC || !(k0t instanceof XClz clz) || clz._jname.isEmpty()) )
-      for( int i=0; i<_args.length; i++ )
-        autobox(i+1, _args[i]);
 
     return this;
   }

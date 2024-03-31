@@ -54,7 +54,7 @@ class NewAST extends AST {
         // Do a name lookup.
         int reg = X._locals.find(parm._name);
         kids2[i] = new RegAST(reg,parm._name,X._ltypes.at(reg));
-        
+
       } else {
         // Type parameter is a constant; get the golden instance ".GOLD" from
         // the types boxed variant.
@@ -66,10 +66,10 @@ class NewAST extends AST {
     }
     return kids2;
   }
-  
+
   @Override XType _type() { return _type; }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     // Array of XTC requires reflection; type in _kids[0]
     if( _type == XCons.ARRAY ) {
       // Array needs reflection
@@ -80,11 +80,11 @@ class NewAST extends AST {
     }
     return this;
   }
-  
-  
+
+
   @Override void jpre ( SB sb ) { sb.p(((XClz)_type).clz_bare()).p(".construct("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }
-  @Override void jpost( SB sb ) {    
+  @Override void jpost( SB sb ) {
     if( _kids!=null )  sb.unchar(2);
     sb.p(")");
   }

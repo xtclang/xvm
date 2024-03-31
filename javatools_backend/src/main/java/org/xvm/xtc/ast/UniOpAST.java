@@ -48,22 +48,9 @@ class UniOpAST extends AST {
     _type = type;
   }
 
-  static boolean is_elvis(String pre) { return S.eq("ELVIS",pre); }
-  boolean is_elvis() { return is_elvis(_pre); }
-  static boolean is_elvis(AST tern) { return tern instanceof UniOpAST btern && btern.is_elvis(); }
-  static AST find_elvis(AST ast) {
-    if( is_elvis(ast) ) return ast;
-    if( ast._kids==null ) return null;
-    for( AST kid : ast._kids ) {
-      if( kid != null ) {
-        kid._par = ast;
-        AST elvis = find_elvis(kid);
-        if( elvis!=null ) return elvis;
-      }
-    }
-    return null;
-  }
+  boolean is_elvis() { return is_elvis(_pre ); }
   boolean is_trace() { return is_trace(_post); }
+  static boolean is_elvis(String s) { return S.eq("ELVIS"   ,s); }
   static boolean is_trace(String s) { return S.eq(".TRACE()",s); }
 
   @Override XType _type() {
@@ -82,11 +69,20 @@ class UniOpAST extends AST {
     return is_trace() && _kids[0]._cond;
   }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     if( is_trace() )
-      return new InvokeAST("TRACE",_type,new ConAST("XTC"),_kids[0]).do_type();
-    if( is_elvis() )
-      return new BinOpAST("!=","",_type,_kids[0],new ConAST(null,null,"null",XCons.NULL));
+      return new InvokeAST("TRACE",_type,new ConAST("XTC"),_kids[0]).doType();
+    if( is_elvis() ) {
+      // Find the "elvis top" - the point where we make the subexpression
+      // conditional on the "elvis" existing.
+      for( AST par = _par, old = this; true; old = par, par = par._par )
+        switch( par ) {
+        case TernaryAST ttop: return ttop.doElvis(_kids[0]);
+        case MultiAST   mtop: return mtop.doElvis(_kids[0],S.find(mtop._kids,old));
+        case AssertAST  asrt: return asrt.doElvis(_kids[0]);
+        default: break;
+        }
+    } // End of Elvis
 
 
     // Invert the bang directly and remove from AST

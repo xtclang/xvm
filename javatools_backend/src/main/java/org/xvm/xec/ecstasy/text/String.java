@@ -28,6 +28,7 @@ public class String extends Const {
   public static <E extends String> boolean equals$String( XTC gold, E ord0, E ord1 ) { return ord0._i.equals(ord1._i); }
   public static <E extends String> boolean equals$String( XTC gold, E ord0, java.lang.String s1 ) { return ord0._i.equals(s1); }
   public static boolean equals$String( XTC gold, java.lang.String s0, java.lang.String s1 ) { return s0.equals(s1); }
+  public static boolean equals$String( XTC gold, XTC c0, XTC c1 ) { return equals$String(gold,(String)c0,(String)c1); }
 
   @Override public boolean equals( XTC s0, XTC s1 ) {
     return equals(((String)s0)._i,((String)s1)._i);

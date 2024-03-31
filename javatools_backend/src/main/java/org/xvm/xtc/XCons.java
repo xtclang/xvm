@@ -88,13 +88,13 @@ public abstract class XCons {
 
   public static XClz ROUNDING    = make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
 
-  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy","Range"  ,CONST,"Element",CONST);
-  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","RangeEE",RANGE,"Element",JLONG    ); // No Ecstasy matching class
-  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","RangeIE",RANGE,"Element",JLONG    ); // No Ecstasy matching class
-  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","RangeII",RANGE,"Element",JLONG    ); // No Ecstasy matching class
+  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy", "Range"  ,CONST,"Element",CONST);
+  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",CONST,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",CONST,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",CONST,"Element",JLONG); // No Ecstasy matching class
 
   // This is a mixin type
-  public static XClz VOLATILEVAR = make_java("","","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
+  public static XClz VOLATILEVAR = make_java("ecstasy.annotations","VolatileVar","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
   public static XClz FUTUREVAR   = make_java("ecstasy.annotations","FutureVar","ecstasy.annotations","FutureVar",VOLATILEVAR,"Referent",XXTC);
 
   // Convert a Java primitive to the Java object version.
@@ -145,7 +145,7 @@ public abstract class XCons {
   // Type sig for Iterator<Int64>, which returns a non-XTC type "Iteratorlong"
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
-  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,"Element",JLONG);
+  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,null,JLONG);
 
   // These are always expanded to some Java constant
   public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);
@@ -217,7 +217,8 @@ public abstract class XCons {
       // Set mod and clz
       clz._mod = pclz.mod();
       clz._clz = pclz;
-      pclz._tclz = clz;         // Fill in class cache
+      if( S.eq(jname,name) )
+        pclz._tclz = clz;         // Fill in class cache
     }
     XClz clz2 = clz._intern();
     assert clz==clz2;           // No prior versions of these java-based XClzs

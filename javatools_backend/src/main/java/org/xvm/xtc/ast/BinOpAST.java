@@ -13,7 +13,7 @@ import java.util.HashMap;
 class BinOpAST extends AST {
   String _op0, _op1;
 
-  static BinOpAST make( ClzBuilder X, boolean has_type ) {
+  static AST make( ClzBuilder X, boolean has_type ) {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
     BinOp op = BinOp.OPS[X.u31()];
@@ -21,6 +21,8 @@ class BinOpAST extends AST {
     XType type = has_type
       ? XType.xtype(X.con(),false) // Type from the AST file
       : (op==BinOp.CompOrd ? XCons.ORDERED : XCons.BOOL ); // Must be one of the ordering operators
+    if( op==BinOp.Else )        // This becomes a ternary op
+      return new TernaryAST(new AST[]{null,kids[0],kids[1]},type);
     return new BinOpAST(op.text,"",type,kids);
   }
 
@@ -63,7 +65,7 @@ class BinOpAST extends AST {
     return _kids[1] instanceof ConAST con && con._tcon instanceof NumCon num ? (int)num._x : -1;
   }
 
-  @Override AST prewrite() {
+  @Override public AST unBox() {
     int idx;
     // Java primitive fetch instead of boxed fetch.
     // ary_expr ".at(" idx ")"
@@ -79,43 +81,34 @@ class BinOpAST extends AST {
         return new PropertyAST(_kids[0],_type,"_f"+idx);
       } else {
         // Use generic at for generic collection
-        _op0 = ".at(";
       }
-      return this;
     }
+    return this;
+  }
+
+
+  @Override public AST rewrite() {
 
     // Range is not a valid Java operator, so need to change everything here
     if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
     if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
     if( _op0.equals("<=>") ) {
       ClzBuilder.add_import(XCons.ORDERABLE);
-      return new InvokeAST("spaceship",XCons.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).do_type();
-    }
-
-    // This is a ternary null-check or elvis operator.  _kids[0] has, deep
-    // within it, the matching predicate test.  I need to restructure this tree:
-    //   ( :                    (invokes...(?(pred), args)) alt)
-    // into this tree:
-    //   (?: ((tmp=pred)!=null) (invokes...(  tmp  , args)) alt)
-    if( _op0.equals(":") ) {
-      AST elvis2 = findElvis(_kids[0]);
-      //AST elvis = _kids[0], pred=null;
-      //while( (elvis instanceof InvokeAST ) && !UniOpAST.is_elvis(pred=elvis._kids[0]) )
-      //  elvis = pred;
-      //if( !(elvis instanceof InvokeAST) )
-      //  // Elvis use not recognized
-      //  throw XEC.TODO();       // TODO: Elvis for loads & stores
-      return do_elvis(elvis2);
+      return new InvokeAST("spaceship",XCons.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).doType();
     }
 
     // This is a ternary null-check or elvis operator.  _kids[0] is
     // directly the predicate test.  I need to restructure this tree:
-    //   ( :                    pred alt)
+    //   (  "?:"                pred  alt)
     // into this tree:
-    //   (?: ((tmp=pred)!=null) pred alt)
-    if( _op0.equals("?:") )
-      return do_elvis(this);
-
+    //   ( ((tmp=pred)!=null) ? tmp : alt)
+    if( _op0.equals("?:") ) {
+      TernaryAST tern = new TernaryAST(new AST[]{null,null, _kids[1]},_kids[0]._type);
+      tern._par = _par;
+      tern._kids[1] = tern.doElvis(_kids[0]);
+      return tern;
+    }
+s!
     // Cast.  Since I treat XTC "Type" as a concrete instance XTC.GOLD,
     // I do not need to cast to "Type".  Other casts can remain.
     if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type<XTC,XTC>.GOLD") )
@@ -124,7 +117,7 @@ class BinOpAST extends AST {
     return this;
   }
 
-  @Override AST postwrite() {
+  AST postwrite() {
 
     // LHS is some kind of wrapped int that did not unwrap in the prewrite
     if( _kids[0]._type.isa(XCons.INTNUM) && _kids[1]._type != XCons.NULL ) {
@@ -136,46 +129,44 @@ class BinOpAST extends AST {
       case ">"  -> "gt";
       default -> throw XEC.TODO();
       };
-      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).do_type();
+      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).doType();
     }
     return this;
   }
 
-  private static AST findElvis( AST ast ) {
-    if( UniOpAST.is_elvis(ast) ) return ast;
-    if( ast._kids != null )
-      for( AST kid : ast._kids ) {
-        AST elvis = findElvis(kid);
-        if( elvis != null ) {
-          kid._par = ast;
-          return elvis;
-        }
-      }
-    return null;
-  }
-
-  // Original:
-  //   BinOp [good-tree [Elvis elvis]] [default-tree]
-  // Rewrite as:
-  //   Assign Type TMP = elvis; // TMP at block head
-  //   ...
-  //   (TMP!=null) ? [good-tree [TMP]] : [default-tree]
-  private AST do_elvis( AST elvis ) {
-    AST pred0 = elvis._kids[0];
-    XType type = pred0._type;
-    String tmp = enclosing_block().add_tmp(type);
-    AST par = elvis._par;
-    par._kids[S.find(par._kids,elvis)] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
-    //elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
-    // Assign the tmp to predicate
-    AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0).do_type();
-    // Zero/null if primitive (if boxing changes type)
-    AST zero = new ConAST(type.ztype());
-    // Null check it
-    AST nchk = new BinOpAST("!=","",XCons.BOOL,asgn, zero );
-    // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
-    return new TernaryAST( new AST[]{nchk, _kids[0], _kids[1]}, _kids[0]._type).do_type();
-  }
+  //private static AST findElvis( AST ast ) {
+  //  if( UniOpAST.is_elvis(ast) ) return ast;
+  //  if( ast._kids != null )
+  //    for( AST kid : ast._kids ) {
+  //      AST elvis = findElvis(kid);
+  //      if( elvis != null )
+  //        return elvis;
+  //    }
+  //  return null;
+  //}
+  //
+  //// Original:
+  ////   BinOp [good-tree [Elvis elvis]] [default-tree]
+  //// Rewrite as:
+  ////   Type TMP; // TMP at block head
+  ////   ...
+  ////   ((TMP=elvis)!=null) ? [good-tree [TMP]] : [default-tree]
+  //private AST do_elvis( AST elvis ) {
+  //  AST pred0 = elvis._kids[0];
+  //  XType type = pred0._type;
+  //  String tmp = enclosing_block().add_tmp(type);
+  //  AST par = elvis._par;
+  //  par._kids[S.find(par._kids,elvis)] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
+  //  //elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
+  //  // Assign the tmp to predicate
+  //  AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0).doType();
+  //  // Zero/null if primitive (if boxing changes type)
+  //  AST zero = new ConAST(type.ztype());
+  //  // Null check it
+  //  AST nchk = new BinOpAST("!=","",XCons.BOOL,asgn, zero );
+  //  // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
+  //  return new TernaryAST( new AST[]{nchk, _kids[0], _kids[1]}, _kids[0]._type).doType();
+  //}
 
   static AST do_range( AST[] kids, XClz rng ) {
     return new NewAST(kids,ClzBuilder.add_import(rng));

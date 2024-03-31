@@ -21,11 +21,12 @@ public class XUnion extends XType {
     return sb;
   }
   @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) {
-    if( ptc != null ) throw XEC.TODO();
-    sb.p("Union[");
-    _xts[0]._clz(sb,ptc,print).p(",");
-    _xts[1]._clz(sb,ptc,print).p("]");
-    return sb;
+    //if( ptc != null ) throw XEC.TODO();
+    //sb.p("Union[");
+    //_xts[0]._clz(sb,ptc,print).p(",");
+    //_xts[1]._clz(sb,ptc,print).p("]");
+    //return sb;
+    return sb.p("XTC");
   }
   @Override boolean eq(XType xt) { return true; }
   @Override int hash() { return 0; }

@@ -147,7 +147,7 @@ class SwitchAST extends AST {
   @Override XType _type() { return XCons.VOID; }
 
   // Pre-cook the temps
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     BlockAST blk = enclosing_block();
     switch( _flavor ) {
     case ComplexTern:

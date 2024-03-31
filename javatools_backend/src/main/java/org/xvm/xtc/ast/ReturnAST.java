@@ -58,8 +58,7 @@ public class ReturnAST extends AST {
     return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_meth._xrets));
   }
 
-  @Override AST postwrite() {
-    autobox(0,_type);
+  @Override public AST rewrite() {
     // Void return functions execute the return for side effects only
     if( _meth._xrets==null && _expr==null )
       return _kids==null ? null : _kids[0];

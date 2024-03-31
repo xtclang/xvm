@@ -132,7 +132,7 @@ public class MethodPart extends MMethodPart {
     assert sig._name.equals(_name);
     boolean rez = match_sig(_args,sig._args);
     if( !rez ) return false;
-    assert match_sig(_rets,sig._rets); // No selection based on return, it just needs to match
+    //assert match_sig(_rets,sig._rets); // No selection based on return, it just needs to match
     return true;
   }
   private boolean match_sig(Parameter[] ps, TCon[] ts) {
