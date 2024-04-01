@@ -2206,7 +2206,7 @@ public class ServiceContext
                 {
                 public void run()
                     {
-                    ensureScheduled(false);
+                    ensureScheduled(true); // don't use this thread - schedule async
                     }
                 };
 

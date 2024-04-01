@@ -12,7 +12,7 @@ module TestServices {
         console.print($|{tag()} calling service async/wait-style\
                          | {svc.serviceName} {svc.serviceControl.statusIndicator}
                          );
-        Int n = svc.calcSomethingBig(new Duration(0));
+        Int n = svc.calcSomethingBig(Duration.None);
         console.print($"{tag()} async/wait-style result={n}");
 
         Int n0 = svc.terminateExceptionally^("n0");
@@ -60,7 +60,7 @@ module TestServices {
         import ecstasy.Timeout;
         try {
             using (Timeout timeout = new Timeout(Duration:0.5S, True)) {
-                svc.calcSomethingBig(Duration:30M);
+                svc.calcSomethingBig(Duration:30S);
                 assert;
             }
         } catch (TimedOut e) {}
@@ -83,7 +83,7 @@ module TestServices {
         console.print($"{tag()} done={done}; shutting down");
 
         // without the left side an exception would be reported by the default handler
-        Int ignoreException = svc.calcSomethingBig^(Duration.ofMinutes(10));
+        Int ignoreException = svc.calcSomethingBig^(Duration:45S);
         svc.serviceControl.shutdown();
 
         try {
