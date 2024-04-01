@@ -739,7 +739,8 @@ public class Register
         @Override
         public void specifyRegType(TypeConstant typeReg)
             {
-            throw new UnsupportedOperationException();
+            // the "inflated" register for the narrowed type
+            super.specifyRegType(typeReg);
             }
 
         @Override

@@ -2,16 +2,16 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        using (new Resource(1)) {
-            using (new Resource(2)) { // this used to fail to compile
-            }
-        }
+        console.print(test(Int:17));
     }
 
-    const Resource(Int value) implements Closeable {
-        @Override
-        void close(Exception? cause = Null) {
-            console.print($"Close {this}");
+    Int test(String|Int si) {
+        if (si.is(Int)) {
+            si = f^(si); // this used to throw in the compiler
+            return si;
         }
+        TODO
     }
+
+    Int f(Int i) = i;
 }
