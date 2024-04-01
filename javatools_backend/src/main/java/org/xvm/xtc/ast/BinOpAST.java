@@ -70,7 +70,7 @@ class BinOpAST extends AST {
     // Java primitive fetch instead of boxed fetch.
     // ary_expr ".at(" idx ")"
     // ary_expr.at8(idx) -- and the expression is primitive, not boxed
-    if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG && !(_par instanceof InvokeAST && _par._kids[0]==this) ) {
+    if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG ) {
       _type = _type.unbox();
       if( _kids[0]._type == XCons.STRING ) {
         _op0 = ".charAt((int)";
@@ -108,7 +108,7 @@ class BinOpAST extends AST {
       tern._kids[1] = tern.doElvis(_kids[0]);
       return tern;
     }
-s!
+
     // Cast.  Since I treat XTC "Type" as a concrete instance XTC.GOLD,
     // I do not need to cast to "Type".  Other casts can remain.
     if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type<XTC,XTC>.GOLD") )

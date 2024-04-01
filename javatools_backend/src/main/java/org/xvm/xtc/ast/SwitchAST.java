@@ -178,6 +178,7 @@ class SwitchAST extends AST {
       AST kid = ast._kids[i];
       if( kid instanceof DefRegAST def ) {
         ast._kids[i] = new RegAST(-1,def._name,def._type);
+        ast._kids[i]._par = ast;
         blk.add_tmp(def._type,def._name);
       } else if( kid != null )
         hoist_defs(kid,blk);

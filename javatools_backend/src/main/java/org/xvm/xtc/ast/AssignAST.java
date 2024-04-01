@@ -62,12 +62,17 @@ class AssignAST extends AST {
       MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
       System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
       String tmp = blk.add_tmp(_kids[1]._type);
-      mm._kids[0] = new AssignAST(new RegAST(-1,tmp,_kids[1]._type),_kids[1]);
+      AST reg = new RegAST(-1,tmp,_kids[1]._type), con;
+      mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
+      reg._par = _kids[1]._par = mm._kids[0];
       for( int i=0; i<m._kids.length; i++ ) {
         AST kid = m._kids[i];
-        mm._kids[i+1] = new AssignAST(new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type),new ConAST(tmp+"._f"+i));
+        reg = new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type);
+        con = new ConAST(tmp+"._f"+i);
+        mm._kids[i+1] = new AssignAST(reg,con).doType();
+        con._par = reg._par = mm._kids[i+1];
       }
-      return mm;
+      return mm.doType();
     }
 
 

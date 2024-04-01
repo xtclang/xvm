@@ -41,21 +41,26 @@ class BindFuncAST extends AST {
       ? (MethodPart) con._tcon.part()
       : null;
   }
+  BindFuncAST( AST body, MethodPart lam ) {
+    super(new AST[]{body});
+    _idxs = null;
+    _X = null;
+    _lam = lam;
+  }
 
   @Override XType _type() {
     int nargs = _kids.length-1;
-    if( _kids[0] instanceof ConAST con && con._con.equals("->") ) {
-      MethodPart lam = (MethodPart)(con._tcon).part();
+    if( _lam != null ) {
       // All the explicit lambda args
-      _args = new String[lam._args.length-nargs];
-      XType[] xargs = new XType[lam._args.length-nargs];
-      for( int i=nargs; i<lam._args.length; i++ ) {
-        String name = lam._args[i]._name;
-        XType atype = XType.xtype(lam._args[i].tcon(),false);
+      _args = new String[_lam._args.length-nargs];
+      XType[] xargs = new XType[_lam._args.length-nargs];
+      for( int i=nargs; i<_lam._args.length; i++ ) {
+        String name = _lam._args[i]._name;
+        XType atype = XType.xtype(_lam._args[i].tcon(),false);
         _args[i-nargs] = name;
         xargs[i-nargs] = atype;
       }
-      return XFun.make(xargs,XType.xtypes(lam._rets));
+      return XFun.make(xargs,XType.xtypes(_lam._rets));
 
       // Currying: pre-binding some method args
     } else {

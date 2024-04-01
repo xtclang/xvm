@@ -128,24 +128,25 @@ public abstract class AST {
 
   // Auto-box e.g. long to Int64 or j.l.String to xtc.String
   public AST reBox() {
-    if( _par != null &&                   // Must have a parent that cares
-        _par._type != XCons.VOID &&       // No boxing around VOID
-        !(_par._type instanceof XFun) &&  // No boxing issues around functions
-        // Assigns RHS and Returns LHS might need to box
-        ((_par instanceof AssignAST asgn && asgn._kids[1]==this) ||
-         (_par instanceof ReturnAST ret  && ret ._kids[0]==this)) &&
-        // Fails ISA test
-        !_type.isa(_par._type)
-        ) {
-      // There exists a box which maps the from/to types?
-      XClz box = _type.box();
-      if( box != null && box != _type ) {
-        assert box.isa(_par._type);
-        // Box 'em up!
-        return new NewAST(new AST[]{this},box);
-      }
-    }
-    return this;
+    if( _par == null ) return this; // Must have a parent that cares
+    if( _par._type == XCons.VOID   ) return this; // No boxing around VOID
+    if( _par._type instanceof XFun ) return this; // No boxing issues around functions
+    //if( _par._type instanceof XBase && _type instanceof XBase )
+    //  return this; // Auto-conversions from char to int: "'a'+i"
+    if( _type.isa(_par._type) ) return this;      // Already ISA
+    // Assigns RHS and Returns LHS might need to box
+    boolean doBox = switch( _par ) {
+    case AssignAST asgn -> asgn._kids[1]==this;
+    case ReturnAST ret  -> ret ._kids[0]==this;
+    case InvokeAST invk -> invk.reBox(this);
+    default -> false;
+    };
+    if( !doBox ) return this;
+    // There exists a box which maps the from/to types?
+    XClz box = _type.box();
+    if( box == null || box == _type ) return this;
+    // Box 'em up!
+    return new NewAST(new AST[]{this},box);
   }
 
   // Rewrite some AST bits before Java

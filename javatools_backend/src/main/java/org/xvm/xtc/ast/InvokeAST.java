@@ -106,8 +106,8 @@ public class InvokeAST extends AST {
     // Handle all the Int/Int64/Intliteral to "long" calls
     if( k0t == XCons.JCHAR || k0t == XCons.CHAR ) {
       return switch( _meth ) {
-      case "add" -> new BinOpAST( "+", "", XCons.INT, _kids );
-      case "sub" -> new BinOpAST( "-", "", XCons.INT, _kids );
+      case "add" -> new BinOpAST( "+", "", XCons.CHAR, _kids );
+      case "sub" -> new BinOpAST( "-", "", XCons.CHAR, _kids );
       case "asciiDigit", "decimalValue" -> this;
       case "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char"),_kids[0]);
       default -> throw XEC.TODO(_meth);
@@ -163,6 +163,14 @@ public class InvokeAST extends AST {
     return this;
   }
 
+  boolean reBox( AST kid ) {
+    if( _args==null ) return false;
+    if( kid instanceof NewAST ) return false; // Already boxed
+    if( !((XClz)_kids[0]._type)._jname.isEmpty() ) return false; // "this" ptr is a Java special, will have primitive arg version
+    int idx = S.find(_kids,kid);
+    if( idx==0 ) return false; // The "this" ptr never boxes
+    return !kid._type.isa( _args[idx-1] );
+  }
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();

@@ -66,7 +66,9 @@ public abstract class Const extends XTC
   @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
 
   public static boolean  equals$Const(XTC gold, char c0, char c1 ) { return c0==c1; }
-  public static Ordered compare$Const(XTC gold, char c0, char c1 ) { throw XEC.TODO(); }
+  public static Ordered compare$Const(XTC gold, char c0, char c1 ) {
+    return c0==c1 ? Ordered.Equal : (c0 < c1 ? Ordered.Lesser : Ordered.Greater);
+  }
   public static <E extends Const> boolean equals$Const(XTC gold, E c0, E c1 ) {
     // Lost all type info, need to make sure same subclass
     return c0.getClass() == c1.getClass() && c0.equals(c1);

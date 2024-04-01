@@ -89,9 +89,9 @@ public abstract class XCons {
   public static XClz ROUNDING    = make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
 
   public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy", "Range"  ,CONST,"Element",CONST);
-  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",CONST,"Element",JLONG); // No Ecstasy matching class
-  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",CONST,"Element",JLONG); // No Ecstasy matching class
-  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",CONST,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",RANGE,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",RANGE,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,"Element",JLONG); // No Ecstasy matching class
 
   // This is a mixin type
   public static XClz VOLATILEVAR = make_java("ecstasy.annotations","VolatileVar","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
