@@ -871,12 +871,12 @@ public class InvocationExpression
                 int             cReturns    = atypeReturn == null ? 0 : atypeReturn.length;
                 boolean         fCondReturn = method.isConditionalReturn() && cReturns > 1;
 
-                if (cTypeParams > 0)
+                if (cParams > 0)
                     {
-                    // purge the type parameters and resolve the method signature
-                    // against all the types we know by now (marking unresolved as "pending")
-                    if (cParams > 0)
+                    if (cTypeParams > 0)
                         {
+                        // purge the type parameters and resolve the method signature
+                        // against all the types we know by now (marking unresolved as "pending")
                         GenericTypeResolver resolver = makeTypeParameterResolver(ctx, method, true,
                                 typeLeft,
                                 fCall || cReturns == 0
@@ -894,7 +894,22 @@ public class InvocationExpression
                         }
                     else
                         {
-                        atypeParams = TypeConstant.NO_TYPES;
+                        atypeParams = atypeParams.clone();
+                        }
+                    }
+                else
+                    {
+                    atypeParams = TypeConstant.NO_TYPES;
+                    }
+
+                // now try to resolve the formal types for parameters validation
+                for (int i = 0, c = atypeParams.length; i < c; i++)
+                    {
+                    TypeConstant type = atypeParams[i];
+                    if (type.containsFormalType(true))
+                        {
+                        // choose the wider type between the original and resolved ones
+                        atypeParams[i] = type.union(pool, ctx.resolveFormalType(type));
                         }
                     }
 

@@ -9,6 +9,7 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BiExprAST;
 import org.xvm.asm.ast.CallExprAST;
@@ -184,7 +185,20 @@ public class CmpExpression
             ctx = ctx.exit();
             }
 
-        TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type2);
+        TypeConstant type1Orig = type1;
+        TypeConstant type2Orig = type2;
+        if (expr1 instanceof NameExpression exprName &&
+                ctx.getVar(exprName.getName()) instanceof Register reg)
+            {
+            type1Orig = reg.getOriginalType();
+            }
+        if (expr2 instanceof NameExpression exprName &&
+                ctx.getVar(exprName.getName()) instanceof Register reg)
+            {
+            type2Orig = reg.getOriginalType();
+            }
+
+        TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, type2, type2Orig);
         Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null)
             {
@@ -235,6 +249,11 @@ public class CmpExpression
 
                 // make sure that we can compare the left value to the right value
                 TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, true);
+                if (typeCommon == null)
+                    {
+                    // try to use the original types
+                    typeCommon = chooseCommonType(pool, fEqual, type1, type1Orig, type2, type2Orig);
+                    }
                 if (typeCommon == null)
                     {
                     // try to resolve the types using the current context
@@ -335,11 +354,44 @@ public class CmpExpression
         }
 
     /**
-     * Choose a common type for the specified types without checking for a required function.
+     * Choose a common type for the specified types and corresponding original types without
+     * checking for a required comparison function.
      *
-     * @param fEqual  true if we need the equality comparison; false for ordering comparison
-     * @param type1   the first type
-     * @param type2   the second type
+     * @return the common type; null if there is no common type
+     */
+    protected static TypeConstant chooseCommonType(
+            ConstantPool pool, boolean fEqual,
+            TypeConstant type1, TypeConstant type1Orig,
+            TypeConstant type2, TypeConstant type2Orig
+            )
+        {
+        // start with the inferred types and go down to original types if that fails
+        TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, false, type2, false, false);
+        if (typeCommon == null)
+            {
+            if (type1.equals(type1Orig))
+                {
+                if (!type2.equals(type2Orig))
+                    {
+                    typeCommon = chooseCommonType(pool, fEqual, type1, false, type2Orig, false, true);
+                    }
+                }
+            else
+                {
+                typeCommon = chooseCommonType(pool, fEqual, type1Orig, false, type2, false, true);
+
+                if (typeCommon == null && !type2.equals(type2Orig))
+                    {
+                    typeCommon = chooseCommonType(pool, fEqual, type1Orig, false, type2Orig, false, true);
+                    }
+                }
+            }
+        return typeCommon;
+        }
+
+    /**
+     * Choose a common type for the specified types without checking for a required comparison
+     * function.
      *
      * @return the common type; null if there is no common type
      */
@@ -357,7 +409,7 @@ public class CmpExpression
      * @param fConst1  specifies if the first expression is a constant; used only if fCheck is true
      * @param type2    the second type
      * @param fConst2  specifies if the second expression is a constant; used only if fCheck is true
-     * @param fCheck   if true, ensure the common type has the required function
+     * @param fCheck   if true, ensure the common type has the required comparison function
      *
      * @return the common type; null if there is no common type
      */

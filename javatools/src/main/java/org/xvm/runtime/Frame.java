@@ -885,8 +885,8 @@ public class Frame
                             break;
 
                         default:
-                            System.err.println("WARNING: suspicious assignment from: " +
-                                typeFrom.getValueString() + " to: " + typeTo.getValueString());
+                            System.err.println("WARNING: suspicious assignment at " + this +
+                                " from: " + typeFrom.getValueString() + " to: " + typeTo.getValueString());
                             break;
                         }
                     break;
@@ -1523,7 +1523,7 @@ public class Frame
         ConstantPool pool = poolContext();
         if (type.containsFormalType(true))
             {
-            type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType(null)));
+            type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType()));
 
             if (type.containsFormalType(true))
                 {
@@ -2638,7 +2638,7 @@ public class Frame
                     }
 
                 // don't cache dynamic types
-                boolean fDynamic = type.containsDynamicType(null);
+                boolean fDynamic = type.containsDynamicType();
 
                 type = type.resolveGenerics(poolContext(), getGenericsResolver(fDynamic));
 

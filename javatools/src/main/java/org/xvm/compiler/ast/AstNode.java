@@ -464,7 +464,7 @@ public abstract class AstNode
         }
 
     /**
-     * Code Container method: TODO
+     * (Code Container method.)
      *
      * @return the required return types from the code container, which comes from the signature if
      *         is specified, or from the specified required type during validation, or from the
@@ -476,7 +476,7 @@ public abstract class AstNode
         }
 
     /**
-     * Code Container method: Determine if the code container represents a method or function with
+     * (Code Container method.) Determine if the code container represents a method or function with
      * a conditional return.
      *
      * @return true iff the code container has a conditional return
@@ -487,7 +487,7 @@ public abstract class AstNode
         }
 
     /**
-     * Code Container method: TODO
+     * (Code Container method.) Collect the return types into the specified array.
      *
      * @param atypeRet  the types being returned
      */
@@ -510,7 +510,7 @@ public abstract class AstNode
         }
 
     /**
-     * (LValue method)
+     * (LValue method.)
      *
      * @return true iff this AstNode is syntactically capable of being an L-Value
      */
@@ -520,7 +520,7 @@ public abstract class AstNode
         }
 
     /**
-     * (LValue method)
+     * (LValue method.)
      *
      * @return the syntactically-capable LValue expression, iff {@link #isLValueSyntax()} returns
      *         true
@@ -531,7 +531,7 @@ public abstract class AstNode
         }
 
     /**
-     * (LValue method)
+     * (LValue method.) Update the LValue based on the RValue types.
      *
      * @param ctx     the compiler context
      * @param branch  the branch to apply the inference to
@@ -540,6 +540,17 @@ public abstract class AstNode
      */
     public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, boolean fCond,
                                             TypeConstant[] aTypes)
+        {
+        throw notLValue();
+        }
+
+    /**
+     * (LValue method.) Reset any inferences for the LValue types (usually due to a compilation
+     * failure).
+     *
+     * @param ctx the compiler context
+     */
+    public void resetLValueTypes(Context ctx)
         {
         throw notLValue();
         }
@@ -1797,7 +1808,7 @@ public abstract class AstNode
     /**
      * @return true iff all the specified types are equal to the "void" tuple
      */
-    protected boolean isVoid(TypeConstant... atype)
+    protected static boolean isVoid(TypeConstant... atype)
         {
         for (TypeConstant type : atype)
             {
@@ -2028,9 +2039,7 @@ public abstract class AstNode
         }
 
     /**
-     * TODO doc
-     *
-     * @return
+     * Used for debugging only.
      */
     public String getDumpDesc()
         {

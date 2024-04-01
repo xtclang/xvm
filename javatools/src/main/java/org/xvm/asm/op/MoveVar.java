@@ -5,13 +5,12 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.Frame.VarInfo;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
@@ -58,36 +57,35 @@ public class MoveVar
     @Override
     public int process(Frame frame, int iPC)
         {
-        int          nFrom   = m_nFromValue;
-        VarInfo      infoSrc = frame.getVarInfo(nFrom);
-        TypeConstant typeSrc = infoSrc.getType();
-
-        if (infoSrc.isDynamicVar())
-            {
-            // the "dynamic ref" register must contain a RefHandle itself
-           int       nTo  = m_nToValue;
-           RefHandle hRef = (RefHandle) frame.f_ahVar[nFrom];
-
-            if (frame.isNextRegister(nTo))
-                {
-                frame.introduceResolvedVar(nTo, typeSrc);
-                }
-
-            // the destination type must be the same as the source
-            return frame.assignValue(nTo, hRef);
-            }
-
         try
             {
+            int nFrom = m_nFromValue;
+            if (frame.isDynamicVar(nFrom))
+                {
+                // the "dynamic ref" register must contain a RefHandle itself
+                int       nTo  = m_nToValue;
+                RefHandle hRef = (RefHandle) frame.f_ahVar[nFrom];
+
+                if (frame.isNextRegister(nTo))
+                    {
+                    frame.introduceResolvedVar(nTo, hRef.getType());
+                    }
+
+                // the destination type must be the same as the source
+                return frame.assignValue(nTo, hRef);
+                }
+
+            ObjectHandle hReferent = null;
             if (frame.isAssigned(nFrom))
                 {
-                ObjectHandle hReferent = frame.getArgument(nFrom);
+                hReferent = frame.getArgument(nFrom);
                 if (isDeferred(hReferent))
                     {
-                    return hReferent.proceed(frame, frameCaller -> complete(frameCaller, typeSrc));
+                    return hReferent.proceed(frame, frameCaller ->
+                            complete(frameCaller, frameCaller.popStack()));
                     }
                 }
-            return complete(frame, typeSrc);
+            return complete(frame, hReferent);
             }
        catch (ExceptionHandle.WrapperException e)
            {
@@ -95,16 +93,29 @@ public class MoveVar
            }
         }
 
-    protected int complete(Frame frame, TypeConstant typeSrc)
+    protected int complete(Frame frame, ObjectHandle hReferent)
         {
-        TypeComposition clzRef = xVar.INSTANCE.ensureParameterizedClass(frame.f_context.f_container, typeSrc);
+        int     nTo      = m_nToValue;
+        boolean fNextReg = frame.isNextRegister(nTo);
 
-        int       nTo  = m_nToValue;
-        RefHandle hRef = new RefHandle(clzRef, frame, m_nFromValue);
-
-        if (frame.isNextRegister(nTo))
+        RefHandle hRef;
+        if (fNextReg || nTo == Op.A_STACK)
             {
-            frame.introduceResolvedVar(nTo, hRef.getType());
+            TypeConstant typeReferent = hReferent == null
+                    ? frame.poolContext().typeObject()
+                    : hReferent.getType();
+            TypeComposition clzRef = xVar.INSTANCE.
+                    ensureParameterizedClass(frame.f_context.f_container, typeReferent);
+            hRef = new RefHandle(clzRef, frame, m_nFromValue);
+            if (fNextReg)
+                {
+                frame.introduceResolvedVar(nTo, hRef.getType());
+                }
+            }
+        else
+            {
+            TypeComposition clzRef = frame.getVarInfo(nTo).getType().ensureClass(frame);
+            hRef = new RefHandle(clzRef, frame, m_nFromValue);
             }
 
         // the destination type must be the same as the source

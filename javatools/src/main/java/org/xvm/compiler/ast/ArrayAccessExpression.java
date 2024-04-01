@@ -132,6 +132,10 @@ public class ArrayAccessExpression
         {
         }
 
+    @Override
+    public void resetLValueTypes(Context ctx)
+        {
+        }
 
     // ----- compilation ---------------------------------------------------------------------------
 

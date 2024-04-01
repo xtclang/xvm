@@ -165,7 +165,7 @@ public class DynamicFormalConstant
                 {
                 }
             }
-        return null;
+        return resolver.resolveFormalType(this);
         }
 
     @Override
@@ -244,10 +244,7 @@ public class DynamicFormalConstant
     @Override
     public String getValueString()
         {
-        int nReg = getRegisterIndex();
-
-        return (nReg >= Register.UNKNOWN ? "?" : String.valueOf(nReg)) +
-               "=>" + m_constFormal.getValueString();
+        return getName() + '.' + m_constFormal.getName();
         }
 
     @Override

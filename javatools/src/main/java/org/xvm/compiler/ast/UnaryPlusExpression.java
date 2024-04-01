@@ -59,6 +59,7 @@ public class UnaryPlusExpression
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_OPERATOR,
                         operator.getValueText(), typeRight.getValueString());
+                return null;
                 }
             }
 

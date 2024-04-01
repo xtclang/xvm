@@ -128,7 +128,7 @@ class PartitionedCollection<Element>
                   }
                 : instantiateEmptyReified();
 
-            if (DeferredCollection<FromElement> nextDeferred := original.is(DeferredCollection<Element>)){
+            if (DeferredCollection<Element> nextDeferred := original.is(DeferredCollection<Element>)){
                 // provide an accumulator to the deferred collection so that it gives us all of its
                 // data, and we'll collect the data (for the other partition) that our buddy needs,
                 // while all the data that is in our partition will get piped straight through to

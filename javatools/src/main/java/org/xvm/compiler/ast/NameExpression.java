@@ -532,21 +532,24 @@ public class NameExpression
         {
         assert aTypes != null && aTypes.length >= 1;
 
-        TypeConstant typeThis = getType();
-        TypeConstant typeNew  = aTypes[0];
-        Argument     arg      = ctx.getVar(getName());
-        TypeConstant typeOld  = arg == null ? typeThis : arg.getType();
-
-        if (!typeOld.equals(typeNew))
+        if (m_arg instanceof Register reg)
             {
-            typeNew = typeNew.combine(pool(), typeThis);
+            TypeConstant typeOld = reg.getType();
+            TypeConstant typeNew = aTypes[0];
 
             if (fCond)
                 {
                 typeNew = typeNew.union(pool(), typeOld);
                 }
-            narrowType(ctx, branch, typeNew);
+
+            ctx.narrowLocalRegister(getName(), reg, branch, typeNew);
             }
+        }
+
+    @Override
+    public void resetLValueTypes(Context ctx)
+        {
+        ctx.restoreOriginalType(getName());
         }
 
 
@@ -2253,6 +2256,7 @@ public class NameExpression
                 TypeConstant typeLeft = left.getImplicitType(ctx);
                 if (typeLeft == null || typeLeft.containsUnresolved())
                     {
+                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
                     return null;
                     }
 
@@ -2907,7 +2911,7 @@ public class NameExpression
                             // the desired type, but the implications of that are quite significant,
                             // so we leave it to be dealt with as a part of the much wider "dynamic
                             // type support" project
-                            if (typeDesired != null && typeDesired.containsDynamicType(null))
+                            if (typeDesired != null && typeDesired.containsDynamicType())
                                 {
                                 typeResolved = resolveDynamicType(ctx, typeLeft, type, typeResolved);
                                 }

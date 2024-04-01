@@ -345,8 +345,6 @@ public class ForStatement
         Map<String, Assignment> mapLoopAsn = new HashMap<>();
         Map<String, Argument>   mapLoopArg = new HashMap<>();
 
-        ctxOrig.prepareJump(ctxOrig, mapLoopAsn, mapLoopArg);
-
         // the validated conditions and update statements will end up in this temporary array;
         // each will be a clone of the original in "conds" and "update"
         int             cConds     = getConditionCount();
@@ -360,8 +358,7 @@ public class ForStatement
 
         while (true)
             {
-            boolean fValid  = true;
-            boolean fRepeat = false;
+            boolean fValid = true;
 
             // clone the condition(s), updates and the body
             conds = new ArrayList<>(cConds);
@@ -534,70 +531,67 @@ public class ForStatement
 
             if (!mapAsnAfter.equals(mapLoopAsn))
                 {
-                mapLoopAsn = mapAsnAfter;
-                mapLoopArg = mapArgAfter;
-                fRepeat    = true;
+                // don't let this repeat forever
+                if (++cTries < 10)
+                    {
+                    mapLoopAsn = mapAsnAfter;
+                    mapLoopArg = mapArgAfter;
+
+                    // discard the clones created in this pass
+                    for (AstNode cond : conds)
+                        {
+                        cond.discard(true);
+                        }
+                    for (Statement stmt : update)
+                        {
+                        stmt.discard(true);
+                        }
+                    block.discard(true);
+                    continue; // repeat
+                    }
+
+                if (!errs.hasSeriousErrors())
+                    {
+                    log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
+                    }
+                fValid = false;
                 }
 
-            // don't let this repeat forever
-            if (++cTries > 10 && fRepeat)
+            // discard the original nodes (we cloned them already)
+            for (AstNode cond : condsOrig)
                 {
-                log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
-                fValid  = false;
-                fRepeat = false;
+                cond.discard(true);
                 }
-
-            if (fRepeat)
+            for (Statement stmt : updateOrig)
                 {
-                // discard the clones created in this pass
-                for (AstNode cond : conds)
-                    {
-                    cond.discard(true);
-                    }
-                for (Statement stmt : update)
-                    {
-                    stmt.discard(true);
-                    }
-                block.discard(true);
+                stmt.discard(true);
                 }
-            else
+            blockOrig.discard(true);
+
+            // leaving the Fork,
+            ctx = ctx.exit();
+
+            // leaving the IfContext
+            ctx = ctx.exit();
+
+            // leaving the assumption collector
+            ctx = ctx.exit();
+
+            // leaving the scope of the for() statement
+            ctx = ctx.exit();
+
+            if (fAlwaysTrue)
                 {
-                // discard the original nodes (we cloned them already)
-                for (AstNode cond : condsOrig)
-                    {
-                    cond.discard(true);
-                    }
-                for (Statement stmt : updateOrig)
-                    {
-                    stmt.discard(true);
-                    }
-                blockOrig.discard(true);
-
-                // leaving the Fork,
-                ctx = ctx.exit();
-
-                // leaving the IfContext
-                ctx = ctx.exit();
-
-                // leaving the assumption collector
-                ctx = ctx.exit();
-
-                // leaving the scope of the for() statement
-                ctx = ctx.exit();
-
-                if (fAlwaysTrue)
-                    {
-                    // doesn't complete normally; the breaks will be processed by Statement.validate()
-                    ctx.setReachable(false);
-                    }
-
-                // lazily created loop vars are only created inside the validation of this statement
-                m_ctxLabelVars  = null;
-                m_errsLabelVars = null;
-
-                errs.merge();
-                return fValidInit && fValid ? this : null;
+                // doesn't complete normally; the breaks will be processed by Statement.validate()
+                ctx.setReachable(false);
                 }
+
+            // lazily created loop vars are only created inside the validation of this statement
+            m_ctxLabelVars  = null;
+            m_errsLabelVars = null;
+
+            errs.merge();
+            return fValidInit && fValid ? this : null;
             }
         }
 

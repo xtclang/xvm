@@ -145,19 +145,26 @@ public class VariableDeclarationStatement
     public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, boolean fCond,
                                             TypeConstant[] aTypes)
         {
-        if (aTypes != null && aTypes.length >= 1)
-            {
-            TypeExpression exprType = this.type;
-            if (exprType instanceof VariableTypeExpression)
-                {
-                exprType.setTypeConstant(aTypes[0]);
+        assert aTypes != null && aTypes.length >= 1;
 
-                if (m_reg != null)
-                    {
-                    m_reg.specifyActualType(aTypes[0]);
-                    }
+        TypeExpression exprType = this.type;
+        if (exprType instanceof VariableTypeExpression)
+            {
+            TypeConstant type = aTypes[0];
+            exprType.setTypeConstant(type);
+
+            if (m_reg != null)
+                {
+                m_reg.specifyActualType(type);
                 }
             }
+        getLValueExpression().updateLValueFromRValueTypes(ctx, branch, fCond, aTypes);
+        }
+
+    @Override
+    public void resetLValueTypes(Context ctx)
+        {
+        getLValueExpression().resetLValueTypes(ctx);
         }
 
 

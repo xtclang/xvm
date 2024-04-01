@@ -130,7 +130,7 @@ public class ElseExpression
         if (!expr1New.isShortCircuiting())
             {
             expr1New.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_REQUIRED);
-            return replaceThisWith(expr1New);
+            return null;
             }
 
         // the only allowed type mismatch is a conditional result on the left (expr1) and the value

@@ -1471,6 +1471,7 @@ service Client<Schema extends RootSchema> {
                 DBObjectImpl dbo = deferred.dbo;
                 if (dbo != prevDbo) {
                     dbo.dboResetDeferred_();
+                    prevDbo = dbo;
                 }
 
                 if (!failure, function Boolean(DBObjectImpl) adjust ?= deferred.adjust) {

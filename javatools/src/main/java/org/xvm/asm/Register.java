@@ -217,7 +217,20 @@ public class Register
     public Register narrowType(TypeConstant typeNarrowed)
         {
         // even when the types are the same, the shadow carries "not-in-place" flag
-        return new ShadowRegister(typeNarrowed, m_sName, f_nOrigIndex);
+        ShadowRegister regShadow = new ShadowRegister(typeNarrowed, m_sName, f_nOrigIndex);
+        TypeConstant   typeReg   = m_typeReg;
+        if (typeReg != null)
+            {
+            if (typeReg.isAnnotated() && !typeNarrowed.equals(m_type))
+                {
+                ConstantPool pool = typeReg.getConstantPool();
+                TypeConstant typeNarrowedReg = pool.ensureParameterizedTypeConstant(
+                        isVar() ? pool.typeVar() : pool.typeRef(), typeNarrowed);
+                typeReg = typeNarrowedReg.adoptAnnotations(pool, typeReg);
+                }
+            regShadow.specifyRegType(typeReg);
+            }
+        return regShadow;
         }
 
     /**
@@ -859,6 +872,10 @@ public class Register
         @Override
         public RegAllocAST getRegAllocAST()
             {
+            if (isInPlace())
+                {
+                return Register.this.getRegAllocAST();
+                }
             // shadow doens't have an "alloc" register
             throw new IllegalStateException();
             }

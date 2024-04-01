@@ -55,7 +55,7 @@ public class xListMap
             if (typeMap.containsFormalType(true))
                 {
                 typeMap = typeMap.resolveGenerics(frame.poolContext(),
-                        frame.getGenericsResolver(typeMap.containsDynamicType(null)));
+                        frame.getGenericsResolver(typeMap.containsDynamicType()));
                 }
 
             Map<Constant, Constant> mapValues = constMap.getValue();
