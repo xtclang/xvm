@@ -40,7 +40,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     }
 
     @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXdkArchive() {
         return filesFromConfigs(XDK_CONFIG_NAME_INCOMING_ZIP, XDK_CONFIG_NAME_INCOMING);
     }

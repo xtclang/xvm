@@ -101,7 +101,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
     @InputDirectory
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkModules() {
         return XtcProjectDelegate.getXdkContentsDir(project); // Modules in the XDK directory, if one exists.
     }
@@ -109,7 +109,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
     @Optional
     @InputFiles // should really be enough with an "inputdirectories" but that doesn't exist in gradle.
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
         FileCollection fc = objects.fileCollection();
         for (final var sourceSet : getDependentSourceSets()) {
