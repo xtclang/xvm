@@ -1,4 +1,4 @@
-#
+  #
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
 # TODO: Add periodic workflows (that can be manually triggered /w workflow_disspatch and also run through a cron file)
@@ -8,6 +8,8 @@
 #
 
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
+# gh auth switch --hostname enterprise.internal --user monalisa  (switch auth)
+
 on:
   push:
   workflow_dispatch:
@@ -23,36 +25,51 @@ on:
         required: false
 
 env:
+  # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
+  always_publish_snapshot: false
+
+  # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
   ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
-  ORG_XTCLANG_JAVATOOLS_SANITY_CHECK_JAR: true
-  ORG_XTCLANG_REPO_GITHUB_USER: xtclang-bot
-  ORG_XTCLANG_REPO_GITHUB_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_MAVEN_PACKAGE_REPOSITORY_READ_WRITE }}
-  #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  gradle_options: -Dorg.gradle.jvmargs=-Xmx4G -Dorg.gradle.caching.debug=true -Dorg.gradle.vfs.verbose=true --warning-mode=all --console=plain --profile ${{ inputs.extra_gradle_options }}
-  skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'true' }}
-  skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'true' }}
-  # Debug flags
-  DEBUG_GITHUB_CONTEXT: ${{ toJson(github) }}
   ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
-  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
-  ACTIONS_RUNNER_DEBUG: true
-  ACTIONS_STEP_DEBUG: true
 
-#concurrency:
-#  group: ${{ github.workflow }}-${{ github.ref }}
-#  cancel-in-progress: true  # Cancel any running workflows if the repo is updated.
+  # Add sanity checks that the javatools fatjar contains appropriate classes and dependencies
+  ORG_XTCLANG_JAVATOOLS_SANITY_CHECK_JAR: true
+
+  # Secrets (TODO: Verify plugin portal and maven central/sonatype credentials)
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
+  GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
+  GPG_SIGNING_KEY: ${{ secrets.ORG_XTCLANG_GPG_SIGNING_KEY }}
+  GPG_SIGNING_PASSWORD: ${{ secrets.ORG_XTCLANG_GPG_SIGNING_PASSWORD }}
+  MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
+  MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
+
+  gradle_options: "-Dorg.gradle.jvmargs=-Xmx8G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain --profile ${{ inputs.extra_gradle_options }}"
+
+  # Optional flags to skip manual tests, or at least some of them.
+  skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'false' }}
+  skip_manual_tests_parallel: ${{ github.event.inputs.skip_manual_tests_parallel || 'false' }}
+
+  # Build environment and build workflow debug flags.
+  # ACTIONS_RUNNER_DEBUG: true
+  # ACTIONS_STEP_DEBUG: true
+  # GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+
+# Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  # Run Gradle installDist and manual tests for sanity checking.
-  install-dist:
-    # The tag action should run independently,
-    if: ${{ false }}
+  build-verify:
+
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
-        #os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest, windows-latest ]
+
     runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,35 +77,36 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
+          java-version: '21'
           distribution: temurin
-          java-version: 21
 
       - uses: gradle/actions/setup-gradle@v3
         with:
-          cache-read-only: false  # TODO: Let this be read only in master.
+          cache-read-only: false
 
-      - uses: gradle/wrapper-validation-action@v2.1.2
+      - uses: gradle/actions/wrapper-validation@v3
 
-      - name: List purgeable xtclang.org caches
-        uses: easimon/wipe-cache@main
-        with:
-          dry-run: true
-
-      - name: Gradle installDist
+      - name: Build the XDK and create a distribution layout
         shell: bash
         run: |
-          echo "Executing gradlew installDist in ${pwd}"
+          cwd_path=$(pwd)
+          echo "Executing Gradle 'installDist' task from path: '$cwd_path'"
           ./gradlew ${{ env.gradle_options }} installDist 
-          gradle --status
 
-      - name: Upload build profile (and things like JFR runs, gradle-profiler etc)
-        uses: actions/upload-artifact@v4
-        with:
-          name: xdk-build-profile
-          path: build/reports/profile
-
-      - name: Rerun manual tests to verify caching strategy
-        run: ./gradlew ${{ env.gradle_options }} installDist
+      - name: Build a machine specific XDK installation with native launchers, test run launchers on native platform
+        shell: bash
+        run: |
+          ./gradlew ${{ env.gradle_options }} xdk:installWithLaunchersDist
+          xcc_path=$(find xdk/build/install/ -name xcc)
+          xec_path=$(find xdk/build/install/ -name xec)
+          echo "Location of native launcher (xcc): $xcc_path"
+          echo "Location of native launcher (xec): $xec_path"
+          echo ">>> Testing native launchers, verifying their binary format and that they run on this platform..."
+          file $xcc_path
+          file $xec_path
+          $xcc_path --version
+          $xec_path --version
+          echo "<<< Native launchers work."
 
       - name: Default manualTest tasks
         if: ${{ env.skip_manual_tests != 'true' }}
@@ -103,289 +121,19 @@ jobs:
       - name: Parallel manualTest task
         timeout-minutes: 5
         if: ${{ env.skip_manual_tests_parallel != 'true' }}
-        run: ./gradlew ${{ env.gradle_options }} manualTests:runParallel
-
-  #
-  # JOB: 'tag'
-  #
-  # Compute the named tag for this snapshot or release publication.
-  #
-  #  1) If this is a snapshot release, if the tag already exists, delete it from its current commit
-  #  2) If this is a non-snapshot release, if the tag already exists, fail the build pipeline.
-  #  3) Tag the last commit and update
-  #
-  # TODO: This only needs to be done one one platform, and actually doesn't work if it's rerun on two
-  # platforms, but if we don't include windows in its run matrix it will run if it builds clean on
-  # ubuntu but not on windows. I'm pretty sure this can be done with concurrency groups or something,¨
-  # but right now we have those runner.os checks everywhere on the step level, as they can't be on the
-  # run level.
-  #
-  new-tag:
-    if: ${{ false }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Checkout tagged code
-        uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-          show-progress: true
-
-      - name: Get XDK version from VERSION file.
-        run: |
-          ls -l
-          full_version=$(cat ./VERSION)
-          version=${full_version%"-SNAPSHOT"}
-          if [[ "$full_version" == *SNAPSHOT ]]; then
-            set +e
-            git tag -d "${tag_local}"
-            git push origin --delete "refs/tags/${tag_remote}"
-            prefix="snapshot/"
-          fi
-          
-          remote_tag="refs/tags/${local_tag}v${version}"
-          echo "tag_prefix: $tag_prefix"
-          echo "tag: $tag"
-          set +e
-          remote=$(git ls-remote --exit-code --tags origin "ref/tags/${tag}")
-          tag_exists=$?
-          echo "remote: $remote"
-          echo "tag_exists: $tag_exists"
-          if [ $tag_exists -eq 0 ]; then
-            commit=$(echo $remote | awk '{print $1}')
-            echo "Tag '${tag}' exists at remote commit: $commit"
-            git ls-remote --tags origin "ref/tags/${tag}"
-          fi
-
-  tag:
-    if: ${{ false }}
-    #needs: install-dist
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    outputs:
-      XDK_TAG_LATEST: ${{ steps.create_tag.outputs.XDK_TAG_LATEST }}
-    steps:
-      - name: Checkout tagged code
-        if: ${{ runner.os == 'Linux' }}
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # TODO: Do we need to fetch the entire world.
-          fetch-tags: true
-          show-progress: true
-
-      - name: Detect Release or Snapshot
-        if: ${{ runner.os == 'Linux' }}
-        id: detect
         shell: bash
         run: |
-          echo "TAG: 'git fetch --tags' with remote URL ${{ env.git_remote_url }} ..."
-          git tag --list && echo "Tags after fetch."
-          git fetch --tags
-          git tag --list && echo "Tags after fetch."
-          XDK_FULL_VERSION=$(cat ./VERSION)
-          XDK_VERSION=${XDK_FULL_VERSION%"-SNAPSHOT"}
-          if [[ "$XDK_FULL_VERSION" == *SNAPSHOT ]]; then
-            XDK_TAG_PREFIX="snapshot/"
-          fi
-          xdk_tag=${XDK_TAG_PREFIX}v${XDK_VERSION}
-          XDK_TAG_EXISTS=false
-          tags=$(git tag -l | grep ^$xdk_tag) && echo "Matching tag:\n    '$tags'"
-          if [ ! -z "$tags" ]; then
-            XDK_TAG_EXISTS=true
-            echo "Tag '${xdk_tag}' exists."
-          else
-            echo "Tag '${xdk_tag}' does not exist:\n${tags}"
-          fi
-          echo "XDK_FULL_VERSION=$XDK_FULL_VERSION" >> $GITHUB_OUTPUT
-          echo "XDK_VERSION=$XDK_VERSION" >> $GITHUB_OUTPUT
-          echo "XDK_TAG_EXISTS=$XDK_TAG_EXISTS" >> $GITHUB_OUTPUT
-          echo "XDK_TAG_PREFIX=$XDK_TAG_PREFIX" >> $GITHUB_OUTPUT
-          echo "xdk_tag=$xdk_tag" >> $GITHUB_OUTPUT
-          echo "XDK_LATEST_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
-      - name: Delete existing snapshot tag
-        if: ${{ runner.os == 'Linux' && steps.detect.outputs.XDK_TAG_PREFIX == 'snapshot/' && steps.detect.outputs.XDK_TAG_EXISTS == 'true' }}
+      - name: Dump environment info
         shell: bash
         run: |
-          xdk_tag=${{ steps.detect.outputs.xdk_tag }}
-          git tag -d "${xdk_tag}" 
-          #|| echo "Delete tag (if exists): '${xdk_tag}' (local)"
-          git push origin --delete "${xdk_tag}" || echo "Deleted tag: '${xdk_tag}' (remote)"
-          echo "*** Tags after delete:"; echo "Local:"; git tag --list; echo "Remote:"; git ls-remote --tags origin
+          echo "Branch (github.ref): ${{ github.ref }}"
+          echo "Runner OS          : ${{ runner.os }}"
 
-      - name: Verify tag does not exist
-        if: ${{ runner.os == 'Linux' }}
+      - name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
+        if: ${{ ((env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) && (runner.os == 'Linux') }}
         shell: bash
         run: |
-          xdk_tag=${{ steps.detect.outputs.xdk_tag }}          
-          tags=$(git tag -l | grep ^$xdk_tag) && echo "Matching tag:\n    '$tags'"
-          if [ ! -z "$tags" ]; then
-            echo "ERROR: Tag '${xdk_tag}' already exists. Illegal build state."
-            exit 1
-          fi
-
-      - name: Create new tag
-        if: ${{ runner.os == 'Linux' }}
-        id: create_tag
-        shell: bash
-        run: |
-          xdk_tag=${{ steps.detect.outputs.xdk_tag }}          
-          XDK_LATEST_COMMIT=${{ steps.detect.outputs.XDK_LATEST_COMMIT }}
-          echo "Create (lightweight) tag: (tag=$xdk_tag, exists=$XDK_TAG_EXISTS, branch=${{ github.ref }}, commit=$XDK_LATEST_COMMIT)"
-          echo "*** Tags before create:"; echo "Local:"; git tag --list; echo "Remote:"; git ls-remote --tags origin
-          git tag "${xdk_tag}" || echo "Created tag: '${xdk_tag}' (local)"
-          git push --tags origin || echo "Created tag: '${xdk_tag}' (remote)"  
-          echo "*** Tags after create:"; echo "Local:"; git tag --list; echo "Remote:"; git ls-remote --tags origin
-          echo "Verifying tag, and adding it to environment."
-          git show-ref -d --tags && echo "Tag verified: '${xdk_tag}'"
-          echo "XDK_TAG_LATEST=$xdk_tag" >> $GITHUB_OUTPUT
-
-  # The publish task expects to always find a tag at the last commit.
-  # This is a requirement for the publish task. It doesn't matter if it's a snapshot or release tag, they use the
-  # same gradle action.
-  publish:
-    if: ${{ false }}
-    needs: tag
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ENV_TAG: ${{ needs.tag.outputs.XDK_TAG_LATEST }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-          show-progress: true
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-      #      - uses: gradle/actions/setup-gradle@v3
-      - name: Verify latest tag
-        id: verify_latest_tag
-        shell: bash
-        run: |
-          echo "ENV TAG: ${{ env.ENV_TAG }}"
-          echo "NEEDS TAG: ${{ needs.tag.outputs.XDK_TAG_LATEST }}"
-          echo "Workspace dir: ${{ github.workspace }}"
-          find ${{ github.workspace }}
-          XDK_TAG_LATEST=${{ needs.tag.outputs.XDK_TAG_LATEST }}
-          if [ -z "$XDK_TAG_LATEST" ]; then
-            echo "ERROR: Missing tag for publish."
-            exit 1
-          fi
-          git show-ref -d --tags && echo "Tag verified: '${XDK_TAG_LATEST}'"
-          echo "Latest tag: '${XDK_TAG_LATEST}"
-          echo "XDK_TAG_LATEST=$XDK_TAG_LATEST" >> $GITHUB_OUTPUT
-      - name: Checkout tagged code
-        uses: actions/checkout@v4
-        with:
-          #          fetch-depth: 0
-          fetch-tags: true
-          show-progress: true
-      - name: Publish packages
-        run: |
-          XDK_TAG_LATEST=${{ steps.verify_latest_tag.outputs.XDK_TAG_LATEST }}
-          echo "Running Gradle publish (tag: $XDK_TAG_LATEST)"
-          ./gradlew ${{ env.gradle_options }} publishRemote --info --stacktrace
-
-  # Useful git commands:
-  #
-  # git tag --list (list local tags)
-  # git ls-remote --tags origin (list remote tags)
-  # git tag -d name (delete local tag)
-  # git push origin --delete name (delete remote tag)
-  #
-  # We can also delete locally and propagate like:
-  #   git tag -d name
-  #   git push origin :refs/tags/name
-  #
-  # Delete all local tags:
-  #   git tag | xargs git tag -d
-  # Delete all local tags:
-  #  git tag -l | xargs -n 1 git push --delete origin
-  # Confirm that all tags have been deleted:
-  #  git tag
-  #  git ls-remote --tags origin
-  #
-  # Tags that reappear after deletion:
-  #  * pulling remote, and getting tags back - locally deleted tags will be restored on pull
-  #
-  # So this is what we should do.
-  #
-  #  1) tag exists
-  #    Inspect it:
-  #      git show name (inspect tag)
-  #      git tags --list (show local tags)
-  #      git ls-remote --tags origin (show remote tags)
-  #      git for-each-ref | grep tag
-  #      git show-ref -d --tags (lightweight tags show up only once, annotated twice and wiht ^{} suffix
-  #
-  #    Delete it:
-  #      git tag -d name (delete local tag, should exist)
-  #      git push origin --delete name (delete remote tag; may have to handle does not exist)
-  #
-  #    Create new tag:
-  #       git tag name
-  #
-  #  2) tag does not exist.
-  #    git tag
-  #
-  # 3) Verify tag: git show name
-  #  For 1),
-
-
-  # This is an example of a simple followup action that reuses the Gradle cache from setup gradle.
-  # TODO: I want to figure out why the xtc modules aren't cached and treated as "without history" in the rerunning scan.
-
-  #  test-gradle-reuse:
-  #    runs-on: ubuntu-latest
-  #    needs: build-and-verify
-  #    steps:
-  #      - uses: actions/checkout@v4
-  #        with:
-  #          show-progress: true
-  #      - uses: actions/setup-java@v4
-  #        with:
-  #          distribution: temurin
-  #          java-version: 21
-  #      - uses: gradle/actions/setup-gradle@v3
-  #        with:
-  #          cache-read-only: false
-  #      - run: find . >/tmp/before_reuse.log
-  #      - run: cat /tmp/before_reuse.log
-  #      - uses: actions/download-artifact@v4
-  #        with:
-  #          name: installDistOutput
-  #          path: /tmp/artifacts
-  #      - run: |
-  #          echo "**** Artifacts from previous run."
-  #          ls -Rlart /tmp/artifacts
-  #      - uses: actions/upload-artifact@v4
-  #        with:
-  #          path: /tmp/before_reuse.log
-  #          retention-days: 1
-  #          overwrite: true
-  #
-  #      - name: Reuse gradle cache from another job.
-  #        shell: bash
-  #        run: |
-  #          ./gradlew ${{ env.gradle_options }} build --info
-
-
-#      - run: find . >/tmp/after_install.log
-#      - run: cat /tmp/after_install.log
-#      - uses: actions/upload-artifact@v4
-#        with:
-#          name: installDistOutput
-#          path: /tmp/after_install.log
-#          retention-days: 1
-#          overwrite: true
+          ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
+          ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true

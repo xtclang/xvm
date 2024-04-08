@@ -27,19 +27,20 @@ dependencyResolutionManagement {
     }
 
     // For bootstrapping reasons, we manually load the properties file, instead of falling back to the build logic automatic property handler.
-    val xdkVersionInfo = compositeRootRelativeFile("GROUP")!! to compositeRootRelativeFile("VERSION")!!
-    val pluginDir = xdkVersionInfo.first.parentFile.resolve("plugin")
-    val xdkPluginVersionInfo = pluginDir.resolve("GROUP").let { if (it.isFile) it else xdkVersionInfo.first } to pluginDir.resolve("VERSION").let { if (it.isFile) it else xdkVersionInfo.second }
-    val (xdkGroup, xdkVersion) = xdkVersionInfo.toList().map { it.readText().trim() }
-    val (xtcPluginGroup, xtcPluginVersion) = xdkPluginVersionInfo.toList().map { it.readText().trim() }
     val prefix = "[${rootProject.name}]"
+    val xdkGroup = compositeRootRelativeFile("GROUP")!!.readText().trim()
+    val xdkVersionFromFile = compositeRootRelativeFile("VERSION")!!.readText().trim()
+    val xdkVersion = System.getenv("XDK_OVERRIDE_VERSION") ?: xdkVersionFromFile
+    if (xdkVersion != xdkVersionFromFile) {
+        logger.warn("$prefix WARNING: XDK_OVERRIDE_VERSION found. Using '$xdkVersion' (VERSION file specifies: '$xdkVersionFromFile').")
+    }
     logger.info("$prefix Configuring and versioning artifact: '$xdkGroup:${rootProject.name}:$xdkVersion'")
     logger.info(
         """
         $prefix XDK VERSION INFO:
         $prefix     Project : '${rootProject.name}' 
-        $prefix     Group   : '$xdkGroup' (plugin: '$xtcPluginGroup')
-        $prefix     Version : '$xdkVersion' (plugin: '$xtcPluginVersion')
+        $prefix     Group   : '$xdkGroup' (plugin: '$xdkGroup)')
+        $prefix     Version : '$xdkVersion' (plugin: '$xdkVersion') ${if (xdkVersion != xdkVersionFromFile) "[OVERRIDDEN VERSION]" else ""}
     """.trimIndent()
     )
 
@@ -47,9 +48,9 @@ dependencyResolutionManagement {
         val libs by creating {
             from(files(libsVersionCatalog)) // load versions
             version("xdk", xdkVersion)
-            version("xtc-plugin", xtcPluginVersion)
+            version("xtc-plugin", xdkVersion)
             version("group-xdk", xdkGroup)
-            version("group-xtc-plugin", xtcPluginGroup)
+            version("group-xtc-plugin", xdkGroup)
         }
     }
 }

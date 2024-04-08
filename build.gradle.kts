@@ -11,10 +11,6 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-private val xdk = gradle.includedBuild("xdk")
-private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOf(xdk, plugin)
-
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
  * build projects. The aggregator proper should be as small as possible, and only contains
@@ -26,19 +22,10 @@ private val includedBuildsWithPublications = listOf(xdk, plugin)
 val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
-    XdkDistribution.distributionTasks.forEach {
-        dependsOn(xdk.task(":$it"))
-    }
     dependsOn(xdk.task(":$name"))
 }
 
-val installLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Build and overwrite any local distribution with the new distribution produced by the build."
-    dependsOn(xdk.task(":$name"))
-}
-
-/*
+/**
  * Register aggregated publication tasks to the top level project, to ensure we can publish both
  * the XDK and the XTC plugin (and other future artifacts) with './gradlew publish' or
  * './gradlew publishToMavenLocal'.  Snapshot builds should only be allowed to be published
@@ -47,19 +34,24 @@ val installLocalDist by tasks.registering {
  * Publishing tasks can be racy, but it seems that Gradle serializes tasks that have a common
  * output directory, which should be the case here. If not, we will have to put back the
  * parallel check/task failure condition.
+ *
+ * Publish remote - one way to do it is to only allow snapshot publications in GitHub, otherwise
+ * we need to do it manually. "publishRemoteRelease", in which case we will also feed into
+ * jreleaser.
  */
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
+    // Call publishRemote in xdk and plugin projects.
     includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
-        // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately after plugin branch gets merged to master)
+        dependsOn(it.task(":$name"))
     }
 }
 
-/*
- * Publish local publications, which are the mavenLocal repositry, and the build repo, as part of
- * an XTC distribution archive. The former is on by default, the latter is off.
+/**
+ * Publish local publications to the mavenLocal repository. This is useful for testing
+ * that a dependency to a particular XDK version of an XDK or XTC package works with
+ * another application before you push it, and cause a "remote" publication to be made.
  */
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
@@ -69,22 +61,35 @@ val publishLocal by tasks.registering {
     }
 }
 
+/**
+ * Publish both local (mavenLocal) and remote (GitHub, and potentially mavenCentral, gradlePluginPortal)
+ * packages for the current code.
+ */
 val publish by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that aggregates publish tasks for builds with publications."
     dependsOn(publishLocal, publishRemote)
 }
 
-GitHubPackages.publishTaskPrefixes.forEach { prefix ->
+private val xdk = gradle.includedBuild("xdk")
+private val plugin = gradle.includedBuild("plugin")
+private val includedBuildsWithPublications = listOf(xdk, plugin)
+private val distributionTaskNames = XdkDistribution.distributionTasks
+private val publishTaskPrefixes = listOf("list", "delete")
+private val publishTaskSuffixesRemote = listOf("RemotePublications")
+private val publishTaskSuffixesLocal = listOf("LocalPublications")
+
+// list|deleteLocalPublicatiopns/remotePublications.
+publishTaskPrefixes.forEach { prefix ->
     buildList {
-        addAll(GitHubPackages.publishTaskSuffixesLocal)
-        addAll(GitHubPackages.publishTaskSuffixesRemote)
+        addAll(publishTaskSuffixesLocal)
+        addAll(publishTaskSuffixesRemote)
     }.forEach { suffix ->
         val taskName = "$prefix$suffix"
         tasks.register(taskName) {
             group = PUBLISH_TASK_GROUP
             description = "Task that aggregates '$taskName' tasks for builds with publications."
-            includedBuildsWithPublications.forEach {
+            includedBuildsWithPublications.forEach { it ->
                 dependsOn(it.task(":$taskName"))
             }
         }

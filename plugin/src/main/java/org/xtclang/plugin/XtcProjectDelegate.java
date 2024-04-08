@@ -129,7 +129,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
 
         resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
         if (hasVerboseLogging()) {
-            logger.lifecycle("{} XTC plugin executing from location: '{}'", prefix, getPluginUrl());
+            logger.info("{} XTC plugin executing from location: '{}'", prefix, getPluginUrl());
         }
     }
 
