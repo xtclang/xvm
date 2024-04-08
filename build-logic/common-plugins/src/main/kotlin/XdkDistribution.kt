@@ -2,6 +2,7 @@ import org.gradle.api.Project
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
@@ -39,7 +40,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
         if (isCiEnabled) {
             val buildNumber = System.getenv(BUILD_NUMBER) ?: ""
-            val gitCommitHash = project.executeCommand("git", "rev-parse", "HEAD")
+            val gitCommitHash = project.executeCommand(throwOnError = true, "git", "rev-parse", "HEAD").second
             if (buildNumber.isNotEmpty() || gitCommitHash.isNotEmpty()) {
                 logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$gitCommitHash')")
                 return@buildString

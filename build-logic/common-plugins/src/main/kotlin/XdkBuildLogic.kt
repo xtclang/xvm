@@ -6,8 +6,8 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.api.logging.LogLevel.LIFECYCLE
-import org.gradle.api.provider.Provider
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
@@ -160,20 +160,47 @@ val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib
 
 val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
 
-fun Project.executeCommand(vararg args: String): String = project.run {
-    val output = ByteArrayOutputStream()
-    val result = project.exec {
-        commandLine(*args)
-        standardOutput = output
-        isIgnoreExitValue = false
-    }
-    if (result.exitValue != 0) {
-        logger.error("$prefix ERROR: Command '${args.joinToString(" ")}' failed with exit code ${result.exitValue}")
-        return ""
-    }
-    return output.toString().trim()
+fun Project.executeCommand(throwOnError: Boolean = false, vararg args: String): Pair<Int, String> = project.run {
+    logger.lifecycle("$prefix executeCommand: '${args.joinToString(" ")}'")
+    return executeCommand(LIFECYCLE, emptyMap(), throwOnError, args.toList())
 }
 
+private fun Project.executeCommand(
+    logLevel: LogLevel = INFO,
+    env: Map<String, String> = emptyMap(),
+    throwOnError: Boolean = false,
+    args: List<String>
+): Pair<Int, String> = project.run {
+
+    val cmd = args.joinToString(" ")
+    val executable = args.first()
+    val cmdPrefix = "$prefix [$executable]"
+    val cmdOutputPrefix = "$cmdPrefix [output]"
+
+    logger.log(logLevel, "$cmdPrefix executeCommand (throwOnError=$throwOnError, env=$env): '$cmd'")
+
+    val os = ByteArrayOutputStream()
+    val execResult = exec {
+        standardOutput = os
+        isIgnoreExitValue = !throwOnError
+        environment(env)
+        commandLine(args)
+    }
+
+    val result = execResult.exitValue to os.toString().trim()
+    val (exitValue, output) = result
+    if (exitValue != 0) {
+        logger.error("$prefix ERROR: Command '$cmd' failed with exit code $exitValue")
+        return result
+    }
+
+    logger.log(logLevel, "$cmdPrefix Command: '$cmd' executed successfully.")
+    if (output.isEmpty()) {
+        logger.log(logLevel, "$cmdOutputPrefix [no output]")
+    }
+    output.lines().forEach { logger.log(logLevel, "$cmdOutputPrefix $it") }
+    return result
+}
 // TODO these should probably be lazy for input purposes
 
 fun Project.isXdkPropertySet(key: String): Boolean {
@@ -233,4 +260,8 @@ fun Task.considerNeverUpToDate() {
  */
 fun Task.considerAlwaysUpToDate() {
     outputs.upToDateWhen { true }
+}
+
+fun Project.isSnapshot(): Boolean {
+    return project.version.toString().endsWith("-SNAPSHOT")
 }

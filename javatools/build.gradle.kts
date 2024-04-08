@@ -141,10 +141,10 @@ val sanityCheckJar by tasks.registering {
         val size = DebugBuild.verifyJarFileContents(
             project,
             listOf(
-                "implicit.x",                 // verify the implicits are in the jar
-                "org/xvm/tool/Compiler",      // verify the javatools package inclusion
-                "org/xvm/util/Severity",      // verify the javatools_utils package inclusion
-                "org/jline/reader/LineReader" // verify the jline library inclusion
+                "implicit.x",                       // verify the implicits are in the jar
+                "org/xvm/tool/Compiler.class",      // verify the javatools package inclusion
+                "org/xvm/util/Severity.class",      // verify the javatools_utils package inclusion
+                "org/jline/reader/LineReader.class" // verify the jline library inclusion
             ),
             expectedEntryCount
         )

@@ -105,22 +105,6 @@ publishing {
     }
 }
 
-private fun shouldPublishPluginToLocalDist(): Boolean {
-    return project.getXdkPropertyBoolean("org.xtclang.publish.localDist", false)
-}
-
-val publishPluginToLocalDist by tasks.registering {
-    group = BUILD_GROUP
-    // TODO: includeBuild dependency; Slightly hacky - use a configuration from the plugin project instead.
-    if (shouldPublishPluginToLocalDist()) {
-        dependsOn(gradle.includedBuild("plugin").task(":publishAllPublicationsToBuildRepository"))
-        outputs.dir(buildRepoDirectory)
-        doLast {
-            logger.info("$prefix Published plugin to build repository: ${buildRepoDirectory.get()}")
-        }
-    }
-}
-
 distributions {
     main {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
@@ -148,21 +132,21 @@ val clean by tasks.existing {
     }
 }
 
-val distTar by tasks.existing(Tar::class) {
+tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
-    dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
 val distZip by tasks.existing(Zip::class) {
     dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
+@Deprecated("The NSIS .exe installer we be moved to be part of a JReleaser flow.")
 val distExe by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Use an NSIS compatible plugin to create the Windows .exe installer."
 
-    dependsOn(distZip)
+    dependsOn(tasks.distZip)
 
     val nsi = file("src/main/nsi/xdkinstall.nsi")
     val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
@@ -189,7 +173,8 @@ val distExe by tasks.registering {
         val stdout = ByteArrayOutputStream()
         val distributionDir = layout.buildDirectory.dir("tmp-archives")
         copy {
-            from(zipTree(distZip.get().archiveFile))
+            from(zipTree(tasks.distZip.map { it.archiveFile }))
+            //from(zipTree(distZip.get().archiveFile))
             into(distributionDir)
         }
         exec {
@@ -205,67 +190,6 @@ val distExe by tasks.registering {
         makensis.toFile().setExecutable(true)
         logger.info("$prefix Finished building distribution: '$name'")
         stdout.toString().lines().forEach { logger.info("$prefix     $it") }
-    }
-}
-
-
-val assembleDist by tasks.existing {
-    // Implicitly depends on distTar and distZip. Should also depend on distExe where relevant:
-    if (xdkDist.shouldCreateWindowsDistribution()) {
-        logger.warn("$prefix Task '$name' is configured to build a Windows installer. Environment needs '${XdkDistribution.MAKENSIS}' and the EnVar plugin.")
-        dependsOn(distExe)
-    }
-}
-
-/**
- * Take the output of assembleDist and put it in an installation directory.
- */
-val installDist by tasks.existing {
-    inputs.files(tasks.processXtcResources, tasks.processResources)
-    dependsOn(tasks.assembleDist)
-    doLast {
-        logger.info("$prefix '$name' Installed distribution to '${project.layout.buildDirectory.get()}/install/' directory.")
-        logger.info("$prefix Installation files:")
-        printTaskOutputs(LogLevel.INFO)
-    }
-}
-
-/**
- * Overwrite or install a local distribution of the XDK under rootProjectDir/build/dist, which
- * you could add to your path, for example
- *
- * TODO: @aalmiray recommends application plugin run script generation, and that makes sense to me.
- *   It should be possible to hook up JReleaser and/or something like launch4j to cross compile
- *   binary launchers for different platforms, if that is what we want instead of the current
- *   solution.
- */
-val installLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Creates an XDK installation in root/build/dist, for the current platform."
-
-    val localDistDir = compositeRootBuildDirectory.dir("dist")
-
-    dependsOn(installDist)
-    inputs.files(installDist)
-    outputs.dir(localDistDir)
-
-    doLast {
-        // Sync, not copy, so we can do this declaratively, Gradle input/output style, without horrible file system logic.
-        sync {
-            from(project.layout.buildDirectory.dir("install/xdk"))
-            into(localDistDir)
-        }
-
-        // Create symlinks for launcher.
-        val binDir = mkdir(localDistDir.get().dir("bin"))
-        val launcherExe = xdkDist.resolveLauncherFile(localDistDir)
-
-        // TODO: The launchers should just be application plugin scripts, this is kind of ridiculous.
-        listOf("xcc", "xec", "xtc").forEach {
-            val symLink = File(binDir, it)
-            logger.info("$prefix Copying launcher '$it' -> '${launcherExe.asFile}' (on Windows, this may require developer mode settings).")
-            Files.copy(launcherExe.asFile.toPath(), symLink.toPath())
-        }
     }
 }
 
@@ -317,12 +241,6 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
                 it.replace(Regex("-.*.jar"), ".jar")
             }
             into("javatools") // should just be one file with corrected dependencies, assert?
-        }
-        if (shouldPublishPluginToLocalDist()) {
-            val published = publishPluginToLocalDist.map { it.outputs.files }
-            from(published) {
-                into("repo")
-            }
         }
         from(tasks.xtcVersionFile)
     }

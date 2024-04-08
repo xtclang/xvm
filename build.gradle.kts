@@ -52,7 +52,7 @@ val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Publish (aggregate) all artifacts in the XDK to the remote repositories."
     includedBuildsWithPublications.forEach {
-        dependsOn(it.task(":publishAllPublicationsToGitHubRepository"))
+        dependsOn(it.task(":$name"))
         // TODO: Add gradlePluginPortal() and mavenCentral() here, when we have an official release to publish (will be done immediately after plugin branch gets merged to master)
     }
 }
