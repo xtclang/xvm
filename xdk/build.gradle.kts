@@ -4,10 +4,8 @@ import XdkDistribution.Companion.JAVATOOLS_JARFILE_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
-import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.ByteArrayOutputStream
-import java.nio.file.Files
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -116,6 +114,15 @@ distributions {
     //create("xdk-macos") {
     //    contentSpec("xdk", xdkDist.distributionVersion, "macosx")
     //}
+}
+
+tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
+    // Add transitive dependency to the process resource tasks. There might be something brokemn with those dependencies,
+    // but it's more likely that since the processXtcResources task needs to be run before compileXtc, and the Java one does
+    // not, this somehow confuses the life cycle. TODO: This is another argument to remove and duplicate what is needed of the
+    // Java plugin functionality for the XTC Plugin, but we haven't had time to neither do that, nor work on build speedups
+    // through configuration caching and other dependencies.
+    it.dependsOn(tasks.compileXtc)
 }
 
 val cleanXdk by tasks.registering(Delete::class) {

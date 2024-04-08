@@ -1,8 +1,8 @@
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.internal.os.OperatingSystem
 
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
@@ -18,6 +18,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         private val isCiEnabled = System.getenv(CI) == "true"
 
         val distributionTasks = listOf("distTar", "distZip", "distExe")
+
+        fun isDistributionArchiveTask(task: Task): Boolean {
+            return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
+        }
     }
 
     init {

@@ -3,7 +3,6 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 plugins {
     id("org.xtclang.build.xdk.versioning")
     id("maven-publish") // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication. We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or find a better way to add the default maven publication.
-    java
 }
 
 val semanticVersion: SemanticVersion by extra
