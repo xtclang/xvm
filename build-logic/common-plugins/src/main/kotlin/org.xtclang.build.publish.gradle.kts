@@ -134,6 +134,79 @@ val deleteAllRemotePublications by tasks.registering {
     }
 }
 
+
+class GitHubTag {
+    val prefix = "GitHubTag"
+    val tagPrefix = "v"
+    val tagSuffix = "-SNAPSHOT"
+    val tagSuffixLength = tagSuffix.length
+
+    fun tagExistsLocal(tag: String): Boolean {
+        val (exitCode, _) = project.executeCommand(throwOnError = false, "git", "rev-parse", tag)
+        return exitCode == 0
+    }
+
+    fun tagExistsRemote(tag: String): Boolean {
+        val (exitCode, _) = project.executeCommand(throwOnError = false, "git", "ls-remote", "--tags", "origin", tag)
+        return exitCode == 0
+    }
+
+    fun deleteTag(tag: String, localOnly: Boolean = true) {
+        if (tagExistsLocal(tag)) {
+            project.executeCommand(throwOnError = true, "git", "tag", "-d", tag)
+            logger.lifecycle("$prefix Deleted local tag: $tag")
+        }
+        if (!localOnly && tagExistsRemote(tag)) {
+            project.executeCommand(throwOnError = true, "git", "push", "origin", ":refs/tags/$tag")
+            logger.lifecycle("$prefix Deleted remote tag: $tag")
+        }
+    }
+
+    fun createTag(tag: String, commit: String) {
+        project.executeCommand(throwOnError = true, "git", "tag", tag, commit)
+        project.executeCommand(throwOnError = true, "git", "push", "origin", "--tags")
+        logger.lifecycle("$prefix Created tag: $tag")
+    }
+
+    fun ensureTag() {
+        val parsedVersion = File(compositeRootProjectDirectory.asFile, "VERSION").readText().trim()
+        if (parsedVersion != version.toString()) {
+            throw buildException("$prefix Version mismatch: parsed version '$parsedVersion' does not match project version '$version'")
+        }
+        val baseVersion = parsedVersion.removeSuffix(tagSuffix)
+        val isSnapshot = project.isSnapshot()
+        val localTag = buildString {
+            append(tagPrefix)
+            append(baseVersion)
+            if (isSnapshot) {
+                append(tagSuffix)
+            }
+        }
+        val remoteTag = "$tagPrefix$baseVersion"
+        project.executeCommand(throwOnError = true, "git", "fetch", "--force", "--tags")
+        val localBranchName = project.executeCommand(throwOnError = true, "git", "branch", "--show-current").second
+        val remote
+}
+
+val deleteTag by tasks.registering {
+    fun tagExistsLocal(tag: String): String {
+
+    }
+    fun deleteTag(tag: String, localOnly: Boolean=true) {
+
+    }
+
+
+    onlyIf {
+        logger.lifecycle("$prefix Delete tag is only used for SNAPSHOT versions.")
+        project.isSnapshot()
+    }
+    doLast {
+        TODO("deleter")
+    }
+}
+
+
 val ensureTag by tasks.registering {
     doLast {
         fun output(vararg args: String) = project.executeCommand(throwOnError = true, *args).second

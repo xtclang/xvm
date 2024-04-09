@@ -160,16 +160,16 @@ val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib
 
 val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
 
+/*
 fun Project.executeCommand(throwOnError: Boolean = false, vararg args: String): Pair<Int, String> = project.run {
-    logger.lifecycle("$prefix executeCommand: '${args.joinToString(" ")}'")
     return executeCommand(LIFECYCLE, emptyMap(), throwOnError, args.toList())
-}
+}*/
 
-private fun Project.executeCommand(
-    logLevel: LogLevel = INFO,
-    env: Map<String, String> = emptyMap(),
+fun Project.executeCommand(
+    args: List<String>,
     throwOnError: Boolean = false,
-    args: List<String>
+    env: Map<String, String> = emptyMap(),
+    logLevel: LogLevel = LIFECYCLE
 ): Pair<Int, String> = project.run {
 
     val cmd = args.joinToString(" ")

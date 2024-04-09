@@ -1,9 +1,14 @@
 import kotlin.IllegalArgumentException
+import org.gradle.api.Project
 
 data class SemanticVersion(val artifactGroup: String, val artifactId: String, val artifactVersion: String) {
 
     override fun toString(): String {
         return "$artifactGroup:$artifactId:$artifactVersion"
+    }
+
+    fun getGitHubLabel(project: Project): GitLabel {
+        return GitLabel(project, this)
     }
 
     /**
