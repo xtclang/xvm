@@ -456,6 +456,11 @@ public class CmpExpression
             return false;
             }
 
+        if (typeTarget.isOnlyNullable())
+            {
+            log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS, exprTarget, typeNull, typeNull);
+            }
+
         switch (operator.getId())
             {
             case COMP_EQ:
