@@ -574,7 +574,7 @@ public class ForEachStatement
                                     }
                                 }
                             }
-                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, atypeRVals);
+                        exprLVal.updateLValueFromRValueTypes(ctx, Branch.Always, false, atypeRVals);
                         }
                     }
                 }

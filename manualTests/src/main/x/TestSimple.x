@@ -2,16 +2,13 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        console.print(test(Int:17));
-    }
+        String|Int x;
+        x = "";
+        x := f();
+        Int size = x.size; // this should not compile; x is not guaranteed to be String
 
-    Int test(String|Int si) {
-        if (si.is(Int)) {
-            si = f^(si); // this used to throw in the compiler
-            return si;
+        (Boolean, Int) f() {
+            return False, 5;
         }
-        TODO
     }
-
-    Int f(Int i) = i;
 }

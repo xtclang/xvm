@@ -127,7 +127,8 @@ public class ArrayAccessExpression
         }
 
     @Override
-    public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, boolean fCond,
+                                            TypeConstant[] aTypes)
         {
         }
 

@@ -649,25 +649,20 @@ public class AssignmentStatement
                         {
                         return null;
                         }
-                    else
+
+                    // conditional expressions can update the LVal type from the RVal type,
+                    // but the initial boolean is discarded
+                    merge(ctxRValue, ctxLValue);
+
+                    exprLeft.markAssignment(ctxRValue,
+                        fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
+
+                    TypeConstant[] atypeAll = exprRightNew.getTypes();
+                    int            cTypes   = atypeAll.length - 1;
+                    if (cTypes >= 1)
                         {
-                        // conditional expressions can update the LVal type from the RVal type,
-                        // but the initial boolean is discarded
-                        merge(ctxRValue, ctxLValue);
-
-                        exprLeft.markAssignment(ctxRValue,
-                            fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
-
-                        if (fConditional)
-                            {
-                            TypeConstant[] atypeAll = exprRightNew.getTypes();
-                            int            cTypes   = atypeAll.length - 1;
-                            if (cTypes >= 1)
-                                {
-                                atypeRight = new TypeConstant[cTypes];
-                                System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
-                                }
-                            }
+                        atypeRight = new TypeConstant[cTypes];
+                        System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
                         }
                     }
 
@@ -736,12 +731,14 @@ public class AssignmentStatement
 
         if (atypeRight != null)
             {
-             // AssertStatement handles the assignment inference itself
-            Branch branch = getCategory() == Category.CondRight
-                            && !(getParent() instanceof AssertStatement)
-                ? Branch.WhenTrue
-                : Branch.Always;
-            nodeLeft.updateLValueFromRValueTypes(ctxRValue, branch, atypeRight);
+            // AssertStatement handles the assignment inference itself
+            boolean fCondRight = getCategory() == Category.CondRight
+                            && !(getParent() instanceof AssertStatement);
+            Branch branch = fCondRight && fConditional
+                    ? Branch.WhenTrue
+                    : Branch.Always;
+            nodeLeft.updateLValueFromRValueTypes(ctxRValue, branch,
+                    fCondRight && !fConditional, atypeRight);
             }
 
         return this;

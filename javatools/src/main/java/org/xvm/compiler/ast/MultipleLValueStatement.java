@@ -102,14 +102,16 @@ public class MultipleLValueStatement
         }
 
     @Override
-    public void updateLValueFromRValueTypes(Context ctx, Branch branch, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Branch branch, boolean fCond,
+                                            TypeConstant[] aTypes)
         {
         assert aTypes != null && aTypes.length >= 1;
 
         List<AstNode>  listLVals = LVals;
         for (int i = 0, c = Math.min(aTypes.length, listLVals.size()); i < c; ++i)
             {
-            listLVals.get(i).updateLValueFromRValueTypes(ctx, branch, new TypeConstant[] {aTypes[i]});
+            listLVals.get(i).updateLValueFromRValueTypes(ctx, branch, fCond,
+                    new TypeConstant[] {aTypes[i]});
             }
         }
 
@@ -338,9 +340,10 @@ public class MultipleLValueStatement
             }
 
         @Override
-        public void updateLValueFromRValueTypes(Context ctx, Branch branch, TypeConstant[] aTypes)
+        public void updateLValueFromRValueTypes(Context ctx, Branch branch, boolean fCond,
+                                                TypeConstant[] aTypes)
             {
-            getParent().updateLValueFromRValueTypes(ctx, branch, aTypes);
+            getParent().updateLValueFromRValueTypes(ctx, branch, fCond, aTypes);
             }
 
         @Override

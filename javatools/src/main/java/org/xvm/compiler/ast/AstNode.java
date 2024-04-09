@@ -535,9 +535,11 @@ public abstract class AstNode
      *
      * @param ctx     the compiler context
      * @param branch  the branch to apply the inference to
+     * @param fCond   true if the LValue is conditionally assigned on the specified branch
      * @param aTypes  the type of the RValue
      */
-    public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Context.Branch branch, boolean fCond,
+                                            TypeConstant[] aTypes)
         {
         throw notLValue();
         }

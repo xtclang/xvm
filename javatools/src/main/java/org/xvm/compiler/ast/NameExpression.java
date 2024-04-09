@@ -527,7 +527,8 @@ public class NameExpression
         }
 
     @Override
-    public void updateLValueFromRValueTypes(Context ctx, Branch branch, TypeConstant[] aTypes)
+    public void updateLValueFromRValueTypes(Context ctx, Branch branch, boolean fCond,
+                                            TypeConstant[] aTypes)
         {
         assert aTypes != null && aTypes.length >= 1;
 
@@ -540,6 +541,10 @@ public class NameExpression
             {
             typeNew = typeNew.combine(pool(), typeThis);
 
+            if (fCond)
+                {
+                typeNew = typeNew.union(pool(), typeOld);
+                }
             narrowType(ctx, branch, typeNew);
             }
         }
