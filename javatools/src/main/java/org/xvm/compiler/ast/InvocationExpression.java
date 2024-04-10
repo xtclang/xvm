@@ -936,7 +936,7 @@ public class InvocationExpression
                     int          iArg           = 0;
                     for (TypeConstant typeArg : mapTypeParams.values())
                         {
-                        if (typeArg.containsUnresolved() || typeArg.equals(pool.typeObject()))
+                        if (typeArg.containsUnresolved())
                             {
                             if (listUnresolved == null)
                                 {
