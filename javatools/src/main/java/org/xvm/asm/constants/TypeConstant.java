@@ -5918,7 +5918,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                return clzRight.calculateRelation(typeLeft, typeRight);
+                return clzRight.calculateRelation(getConstantPool(), typeLeft, typeRight);
                 }
 
             case Property:
@@ -6024,7 +6024,7 @@ public abstract class TypeConstant
 
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.calculateRelation(typeLeft, typeRight);
+                return clzRight.calculateRelation(getConstantPool(), typeLeft, typeRight);
                 }
 
             case Typedef:
@@ -6182,6 +6182,7 @@ public abstract class TypeConstant
         {
         assert !(this instanceof UnionTypeConstant);
 
+        ConstantPool pool      = getConstantPool();
         TypeConstant typeRight = this;
 
         // this method is overridden by relational types, so by the time we come here.
@@ -6206,7 +6207,7 @@ public abstract class TypeConstant
                     ((IdentityConstant) constIdRight).getComponent();
 
                 // continue recursively with the right side analysis
-                return clzRight.findUnionContribution(typeLeft, typeRight.getParamTypes());
+                return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
                 }
 
             case ThisClass:
@@ -6216,7 +6217,7 @@ public abstract class TypeConstant
                 PseudoConstant idRight  = (PseudoConstant) constIdRight;
                 ClassStructure clzRight = (ClassStructure)
                         idRight.getDeclarationLevelClass().getComponent();
-                return clzRight.findUnionContribution(typeLeft, typeRight.getParamTypes());
+                return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
                 }
 
             case Typedef:
@@ -6232,7 +6233,7 @@ public abstract class TypeConstant
                 TypeConstant   typeBase = ((KeywordConstant) constIdRight).getBaseType();
                 ClassStructure clzRight = (ClassStructure)
                         typeBase.getSingleUnderlyingClass(true).getComponent();
-                return clzRight.findUnionContribution(typeLeft, typeRight.getParamTypes());
+                return clzRight.findUnionContribution(pool, typeLeft, typeRight.getParamTypes());
                 }
 
             default:

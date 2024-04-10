@@ -2279,27 +2279,29 @@ public class ClassStructure
      * For this class structure representing an R-Value, find the best "isA" relation among all its
      * contributions to the specified L-Value type.
      *
+     * @param pool        the ConstantPool to use
      * @param typeLeft    the L-Value type
      * @param typeRight   the R-Value type that this ClassStructure is for
      *
      * @return the best "isA" relation
      */
-    public Relation calculateRelation(TypeConstant typeLeft, TypeConstant typeRight)
+    public Relation calculateRelation(ConstantPool pool,
+                                      TypeConstant typeLeft, TypeConstant typeRight)
         {
-        return calculateRelationImpl(typeLeft, typeRight, true);
+        return calculateRelationImpl(pool, typeLeft, typeRight, true);
         }
 
     /**
      * The implementation of the {@link #calculateRelation} method above.
      *
-     * @param fAllowInto  specifies whether the "Into" contribution is to be skipped
+     * @param fAllowInto specifies whether the "Into" contribution is to be skipped
      */
-    protected Relation calculateRelationImpl(TypeConstant typeLeft, TypeConstant typeRight,
+    protected Relation calculateRelationImpl(ConstantPool pool,
+                                             TypeConstant typeLeft, TypeConstant typeRight,
                                              boolean fAllowInto)
         {
         assert typeLeft.isSingleDefiningConstant();
 
-        ConstantPool     pool        = typeLeft.getConstantPool();
         Constant         constIdLeft = typeLeft.getDefiningConstant();
         IdentityConstant idClzRight  = getIdentityConstant();
 
@@ -2387,7 +2389,7 @@ public class ClassStructure
                         typeRebase.getSingleUnderlyingClass(true).getComponent();
 
                     // rebase types are never parameterized and therefore cannot be "weak"
-                    if (clzRebase.calculateRelationImpl(typeLeft,
+                    if (clzRebase.calculateRelationImpl(pool, typeLeft,
                             clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A)
                         {
                         return Relation.IS_A;
@@ -2407,7 +2409,7 @@ public class ClassStructure
             case ChildClass:
                 {
                 assert typeLeft.containsAutoNarrowing(false);
-                Relation relation = calculateRelationImpl(
+                Relation relation = calculateRelationImpl(pool,
                         typeLeft.removeAutoNarrowing(), typeRight, fAllowInto);
                 if (relation != Relation.INCOMPATIBLE)
                     {
@@ -2418,7 +2420,7 @@ public class ClassStructure
                 }
 
             case Typedef:
-                return calculateRelationImpl(
+                return calculateRelationImpl(pool,
                         ((TypedefConstant) constIdLeft).getReferredToType(), typeRight, fAllowInto);
 
             case IsConst:
@@ -2426,7 +2428,7 @@ public class ClassStructure
             case IsModule:
             case IsPackage:
             case IsClass:
-                return calculateRelationImpl(
+                return calculateRelationImpl(pool,
                         ((KeywordConstant) constIdLeft).getBaseType(), typeRight, fAllowInto);
 
             default:
@@ -2511,7 +2513,7 @@ public class ClassStructure
                             }
                         }
                     relation = relation.bestOf(
-                                    clzBase.calculateRelationImpl(typeLeft, typeContrib, fAllowInto));
+                                    clzBase.calculateRelationImpl(pool, typeLeft, typeContrib, fAllowInto));
                     if (relation == Relation.IS_A)
                         {
                         return Relation.IS_A;
@@ -2535,16 +2537,16 @@ public class ClassStructure
      * For this class structure representing an R-Value, find a contribution assignable to the
      * specified L-Value union type.
      *
+     * @param pool        the ConstantPool to use
      * @param typeLeft    the L-Value union type
      * @param listRight   the list of actual generic parameters for this class
      *
      * @return the relation
      */
-    public Relation findUnionContribution(UnionTypeConstant typeLeft,
+    public Relation findUnionContribution(ConstantPool pool, UnionTypeConstant typeLeft,
                                           List<TypeConstant> listRight)
         {
-        ConstantPool pool     = typeLeft.getConstantPool();
-        Relation     relation = Relation.INCOMPATIBLE;
+        Relation relation = Relation.INCOMPATIBLE;
 
         for (Contribution contrib : getContributionsAsList())
             {
@@ -2562,7 +2564,7 @@ public class ClassStructure
                     TypeConstant typeResolved = contrib.resolveType(pool, this, listRight);
 
                     relation = relation.bestOf(((ClassStructure) constContrib.getComponent()).
-                            findUnionContribution(typeLeft, typeResolved.getParamTypes()));
+                            findUnionContribution(pool, typeLeft, typeResolved.getParamTypes()));
                     if (relation == Relation.IS_A)
                         {
                         return Relation.IS_A;
