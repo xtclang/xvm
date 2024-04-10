@@ -544,7 +544,7 @@ public class Compiler
                         return;
                         }
                     }
-                catch (RuntimeException e)
+                catch (Throwable e)
                     {
                     System.err.println("Failed to generate code for " + compiler);
                     e.printStackTrace(System.err);
