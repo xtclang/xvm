@@ -6455,10 +6455,7 @@ public abstract class TypeConstant
      */
     public MethodConstant getConverterTo(TypeConstant that)
         {
-        // formal types are not convertible to anything
-        return containsFormalType(true)
-            ? null
-            : ensureTypeInfo().findConversion(that);
+        return ensureTypeInfo().findConversion(that);
         }
 
     /**
