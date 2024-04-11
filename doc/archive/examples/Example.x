@@ -919,6 +919,26 @@ if (&o1 == &o2)
 if (&p1 == &o2)
 if (((Object) p1) == o2)
 
+const L0 {}
+class L1 extends L0{}
+class L2 extends L1{}
+class L3 extends L1{}
+
+L0 a = new L2();
+L0 b = new L3();
+
+a == b; // use L0.equals()
+
+L0 c = new L0();
+L1 d = new L1();
+
+c == d; // CTE!!!
+
+L0 e = new L1();
+L1 f = new L1();
+
+e == f; // use L1.equals()
+
 // --- function as dynamic proxy
 
 // let's say we have a function
