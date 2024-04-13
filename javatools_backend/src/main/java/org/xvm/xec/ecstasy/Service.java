@@ -9,7 +9,7 @@ import org.xvm.xtc.MethodPart;
 import org.xvm.xrun.Container;
 
 import static org.xvm.XEC.TODO;
-  
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 /** The Java Service class, implementing an XTC hidden internal class.
     The XTC Service is an *XTC interface*, not an XTC class, but it has many class-like properties.
-    
+
     The XTC Service interface is thus treated like this Java Class.
 
 First cut Service impl comments:
@@ -89,7 +89,7 @@ public abstract class Service extends XTC
 
   // Self container, has to be the same as the allocating thread
   final Container C = XEC.CONTAINER.get();
-  
+
   private class SvcThread extends Thread {
     SvcThread() {
       setName(getClass().getSimpleName());
@@ -101,7 +101,7 @@ public abstract class Service extends XTC
         try {
           XFT xft = Q.poll(1000,TimeUnit.MILLISECONDS);
           if( xft==null )       // Idle queue
-            synchronized(this) { 
+            synchronized(this) {
               xft = Q.poll();   // Check again under lock
               if( xft==null ) { // Queue is idle, kill queue and thread
                 Q = null;
@@ -118,7 +118,7 @@ public abstract class Service extends XTC
     }
   }
 
-  
+
   // Run by current thread, not service thread
   public <V> XFT<V> $enqueue(Callable<V> call) {
     XFT<V> xft = new XFT<>(call);
@@ -130,7 +130,7 @@ public abstract class Service extends XTC
           T.start();
         }
       };
-    
+
     try {  Q.put(xft); }
     catch( InterruptedException ee ) { System.err.println(ee); throw new RuntimeException(ee); }
     return xft;
@@ -155,7 +155,7 @@ public abstract class Service extends XTC
     public XCall(String name) { _name=name; }
     @Override public String toString() { return _name; }
   }
-  
+
   static public void make_methods(MethodPart meth, String java_class_name, SB sb ) {
     ClzBuilder.add_import("java.util.concurrent.FutureTask");
     ClzBuilder.add_import("java.util.concurrent.Callable");
@@ -168,17 +168,17 @@ public abstract class Service extends XTC
     sb.p("$").p(meth._name).p("( ");
     ClzBuilder.args(meth,sb);
     sb.p(" ) { ");
-    if( meth._xrets!=null ) sb.p("return ");
+    if( meth.xrets()!=null ) sb.p("return ");
     sb.p("$$").p(meth._name).p("(");
     ClzBuilder.arg_names(meth,sb);
     sb.p(").xget(); }").nl();
 
 
     SB gsb = new SB().p("XFT");
-    if( meth._xrets!=null )
+    if( meth.xrets()!=null )
       ClzBuilder.ret_sig(meth,gsb.p("<")).p(">");
     String gen_ft = gsb.toString();
-    
+
     // Non-blocking double-$ version
     // Run by current thread, not service thread
     //XFT<RET> $$MNAME(ARGS) { return $enqueue(new Call$MNAME(ARGS)) }
@@ -202,30 +202,30 @@ public abstract class Service extends XTC
 
     sb.ifmt("private class Call$%0 extends XCall implements Callable {\n",meth._name).ii();
     // Final fields for args
-    if( meth._xargs != null )
-      for( int i=0; i<meth._xargs.length; i++ )
-        sb.ifmt("private final %0 %1;\n",meth._xargs[i].clz(),meth._args[i]._name);
+    if( meth.xargs() != null )
+      for( int i=0; i<meth.xargs().length; i++ )
+        sb.ifmt("private final %0 %1;\n",meth.xarg(i).clz(),meth._args[i]._name);
     // Constructor
     sb.ifmt("Call$%0( ",meth._name);
     ClzBuilder.args(meth,sb);
     sb.p(") {").nl().ii();
     sb.ifmt("super(\"%0.%1\");\n",java_class_name,meth._name);
-    if( meth._xargs != null )
-      for( int i=0; i<meth._xargs.length; i++ )
+    if( meth.xargs() != null )
+      for( int i=0; i<meth.xargs().length; i++ )
         sb.ifmt("this.%0 = %0;\n",meth._args[i]._name);
     sb.di().ip("}\n");          // End of constructor
     // Call
     sb.ip("public ");
-    if( meth._xrets!=null ) ClzBuilder.ret_sig(meth,sb);
+    if( meth.xrets()!=null ) ClzBuilder.ret_sig(meth,sb);
     else sb.p("Object");
     sb.p(" call() { ");
-    if( meth._xrets!=null ) sb.p("return ");
+    if( meth.xrets()!=null ) sb.p("return ");
     sb.p(meth._name).p("(");
     ClzBuilder.arg_names(meth,sb);
     sb.p("); ");
-    if( meth._xrets==null ) sb.p("return null; ");
+    if( meth.xrets()==null ) sb.p("return null; ");
     sb.p("}\n");                // End of call
     sb.di().ip("}\n");          // End of class
   }
-  
+
 }

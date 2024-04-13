@@ -10,13 +10,14 @@ public class ConAST extends AST {
   private final ClzBuilder _X;
   ConAST( ClzBuilder X, Const con ) { this(X,(TCon)con, XValue.val(X,con), XType.xtype(con,false)); }
   ConAST( String con ) { this(null,null,con, XBase.make(con,false)); }
+  ConAST( String con, XType type ) { this(null,null,con,type); }
   ConAST( ClzBuilder X, TCon tcon, String con, XType type ) {
     super(null);
     _tcon = tcon;
     _con  = con.intern();
     _type = type;
-    if( _tcon instanceof IntCon )
-      _type = XCons.LONG;
+    if( _tcon instanceof IntCon itc && XCons.format_iprims(itc._f) )
+      _type = XCons.LONG;       // Can be Java long
 
     _X = X;
   }

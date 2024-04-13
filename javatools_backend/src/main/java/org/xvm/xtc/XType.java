@@ -140,7 +140,7 @@ public abstract class XType {
     return boxed ? this : unbox();
   }
 
-  XType nullable() {
+  public XType nullable() {
     if( !_notNull ) return this;
     throw XEC.TODO();
   }
@@ -180,7 +180,7 @@ public abstract class XType {
 
 
   // Convert an array of Const to an array of XType
-  public static XType[] xtypes( Const[] cons   ) {
+  public static XType[] xtypes( Const[] cons ) {
     if( cons==null ) return null;
     XType[] xts = new XType[cons.length];
     for( int i=0; i<cons.length; i++ )
@@ -189,7 +189,7 @@ public abstract class XType {
   }
 
   // Convert an array of Parameter._con to an array of XType
-  public static XType[] xtypes( Parameter[] parms  ) {
+  public static XType[] xtypes( Parameter[] parms ) {
     if( parms==null ) return null;
     XType[] xts = new XType[parms.length];
     for( int i=0; i<parms.length; i++ )
@@ -255,7 +255,7 @@ public abstract class XType {
       // All the long-based ranges, intervals and iterators are just Ranges now.
       if( clz._name.equals("Range"   ) && clz._path._str.equals("ecstasy/Range.x"   ) ||
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
-        if( telem== LONG || telem== JLONG )
+        if( telem== JLONG )
           yield RANGE;          // Shortcut class
         throw XEC.TODO();
       }
@@ -278,7 +278,7 @@ public abstract class XType {
         yield telem;
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
-        if( telem == CHAR || telem== JCHAR )
+        if( telem== JCHAR )
           yield APPENDERCHAR;
         yield XClz.make(ptc);
       }
@@ -294,7 +294,8 @@ public abstract class XType {
     // Right now, allow null unions only
     case UnionTCon utc -> {
       XType u2 = xtype(utc._con2,false,self);
-      if( ((ClzCon)utc._con1).clz()._name.equals("Nullable") )
+      ClassPart clz1 = ((ClzCon)utc._con1).clz();
+      if( clz1 !=null && clz1._name.equals("Nullable") )
         yield (u2.zero() ? u2.box() : u2).nullable();
       XType u1 = xtype(utc._con1,false,self);
       yield XUnion.make(u1,u2);

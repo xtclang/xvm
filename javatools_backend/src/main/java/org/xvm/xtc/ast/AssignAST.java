@@ -36,7 +36,6 @@ class AssignAST extends AST {
 
 
   @Override XType _type() { return _kids[0]._type; }
-  @Override boolean _cond() { return _op==AsnOp.AsnIfNotFalse; }
 
   @Override public AST rewrite() {
     // Assign of a non-primitive array
@@ -45,7 +44,7 @@ class AssignAST extends AST {
         bin._op0.equals(".at(") )
       return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
 
-    // Add/push element to array
+    // Add/push element to array; or op-assign "x+=y"
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz ) {
       RegAST reg0 = (RegAST)_kids[0];
       AST op = new InvokeAST( _meth.name(), clz, _kids );
@@ -68,7 +67,7 @@ class AssignAST extends AST {
       for( int i=0; i<m._kids.length; i++ ) {
         AST kid = m._kids[i];
         reg = new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type);
-        con = new ConAST(tmp+"._f"+i);
+        con = new ConAST(tmp+"._f"+i,kid._type);
         mm._kids[i+1] = new AssignAST(reg,con).doType();
         con._par = reg._par = mm._kids[i+1];
       }
@@ -129,6 +128,13 @@ class AssignAST extends AST {
     return this;
   }
 
+  // Box as needed
+  @Override XType reBox( AST kid ) {
+    if( _kids[1]!=kid ) return null;
+    if( _op == AsnOp.AsnIfNotNull )
+      return _type.nullable();
+    return _type;
+  }
 
   @Override public SB jcode( SB sb ) {
     return switch( _op ) {

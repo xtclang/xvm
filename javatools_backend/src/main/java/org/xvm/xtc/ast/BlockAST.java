@@ -64,7 +64,7 @@ public class BlockAST extends AST {
     }
     if( _finals!=null )
       for( RegAST reg : _finals )
-        sb.ifmt("var f$%0 = %0;\n",reg._name);
+        sb.ifmt("var f$%0 = %0;",reg._name).nl();
   }
   @Override void jmid( SB sb, int i ) { if( !sb.was_nl() ) sb.p(";").nl(); }
   @Override void jpost  ( SB sb ) { sb.di().ip("}"); }

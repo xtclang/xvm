@@ -14,13 +14,10 @@ class NarrowAST extends AST {
     Const type = X.con();
     return new NarrowAST(kids,type);
   }
-  
+
   private NarrowAST( AST[] kids, Const type ) {
     super(kids);
-    XType xt = XType.xtype(type,false);
-    _type = xt.zero() ? xt.box() : xt;
-    if( _kids[0]._type instanceof XUnion )
-      _type = _kids[0]._type; // Lose all type knowledge in unions
+    _type = XType.xtype(type,false);
   }
   @Override XType _type() { return _type; }
   @Override String name() { return _kids[0].name(); }

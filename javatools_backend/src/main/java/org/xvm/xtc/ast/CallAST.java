@@ -38,57 +38,59 @@ public class CallAST extends AST {
   }
 
   @Override public AST rewrite() {
-    // Try to rewrite constant calls to the XTC special equals.
-    if( _kids[0] instanceof ConAST con ) {
-      if( con._type instanceof XFun fun && fun.nargs()>0 && fun.arg(0) instanceof XClz clz ) {
-        // Hard force Int64/IntNumber "funky dispatch" to Java primitive
-        if( clz.isa(XCons.INTNUM) ) {
-          if( con._con.endsWith(".equals"  ) ) return new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
-          if( con._con.endsWith(".compare" ) ) return new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
-          if( con._con.endsWith(".hashCode") ) return _kids[2];
-        }
-        // Hard force "funky dispatch" to Java primitive
-        if( clz.isa(XCons.JSTRING) ) {
-          // CNC 3/20/2024 - why?  need an "equals" call for Strings, not "=="
-          if( con._con.equals("String.equals") )
-            throw XEC.TODO();
-            //return new BinOpAST("==","",XCons.BOOL,_kids[2],_kids[3]);
-        }
-      }
+    // Try to rewrite constant calls.  This is required for e.g. "funky
+    // dispatch" calls - virtual calls off of a type argument.
+    if( !(_kids[0] instanceof ConAST con) ) return this; // Not a constant call, take as-is
+    assert _kids[0]._type instanceof XFun;
 
-      // Convert "funky dispatch" calls:
-      int lidx = con._con.lastIndexOf('.');
-      if( lidx != -1 ) {
-        String clz = con._con.substring(0,lidx);
-        String base = con._con.substring(lidx+1);
-        int nargs = switch( base ) {
-          case "hashCode" -> 1;
-          case "equals", "compare" -> 2;
-          default -> 0;
-        };
-        if( nargs != 0 ) {
-          assert _kids.length==nargs+2;
-          if( _kids[1] instanceof ConAST ) {
-            // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name
-            if( clz.equals("org.xvm.xec.ecstasy.text.String") ) clz = "String";
-            if( clz.equals("org.xvm.xec.ecstasy.Object"     ) ) clz = "Object";
-            // Convert CLZ.equal/cmp(GOLD,arg1,arg2) to their static variant: CLZ.equal/cmp$CLZ(GOLD,arg1,arg2);
-            // Convert CLZ.hashCode (GOLD,arg1     ) to their static variant: CLZ.hashCode$CLZ (GOLD,arg1,arg2);
-            con._con += "$"+clz;
-            return this;
-          } else {              // Dynamic variant
-            // Convert CLZ.equal/cmp(arg1,arg2) to Java dynamic: GOLD.equal/cmp(arg1,arg2);
-            // Convert CLZ.hashCode (arg1     ) to Java dynamic: GOLD.hashCode (arg1     );
-            MethodPart meth = (MethodPart)((MethodCon)con._tcon).part();
-            ClassPart clazz = meth.clz();
-            ClzBuilder.add_import(clazz);
-            return new InvokeAST(base,_rets,Arrays.copyOfRange(_kids,1,_kids.length));
-          }
-        }
-      }
+    // Convert "funky dispatch" calls; something like "Class.equals"
+    int lidx = con._con.lastIndexOf('.');
+    if( lidx == -1 ) return this; // Normal call, take as-is
+
+    // Filter for the special names
+    String clz  = con._con.substring(0,lidx);
+    String base = con._con.substring(lidx+1);
+    AST ast = switch( base ) {
+    case "hashCode" ->  _kids[2];
+    case "equals"   ->  new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
+    case "compare"  ->  new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
+    default -> null;
+    };
+    if( ast==null ) return this; // Not a funky dispatch
+
+    // Primitive funky dispatch goes to Java operators
+    AST k1 = _kids[1];
+    AST k2 = _kids[2];
+    if( k2._type instanceof XBase && k2._type != XCons.STRING )
+      return ast;
+
+    if( k1 instanceof ConAST ) {
+      // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name
+      if( clz.equals("org.xvm.xec.ecstasy.text.String") ) clz = "String";
+      if( clz.equals("org.xvm.xec.ecstasy.Object"     ) ) clz = "Object";
+      // Convert CLZ.equal/cmp(GOLD,arg1,arg2) to their static variant: CLZ.equal/cmp$CLZ(GOLD,arg1,arg2);
+      // Convert CLZ.hashCode (GOLD,arg1     ) to their static variant: CLZ.hashCode$CLZ (GOLD,arg1,arg2);
+      con._con += "$"+clz;
+      // Sharpen the function type
+      XType[] args = base.equals("hashCode") ? new XType[]{k1._type,k2._type} : new XType[]{k1._type,k2._type,_kids[3]._type};
+      con._type = XFun.make(args,new XType[]{_type});
+      return this;
     }
 
-    return this;
+    // Dynamic variant
+    // Convert CLZ.equal/cmp(arg1,arg2) to Java dynamic: GOLD.equal/cmp(arg1,arg2);
+    // Convert CLZ.hashCode (arg1     ) to Java dynamic: GOLD.hashCode (arg1     );
+    MethodPart meth = (MethodPart) con._tcon.part();
+    ClassPart clazz = meth.clz();
+    ClzBuilder.add_import(clazz);
+    return new InvokeAST(base,_rets,Arrays.copyOfRange(_kids,1,_kids.length));
+  }
+
+  // Box as needed
+  @Override XType reBox( AST kid ) {
+    if( _kids[0]==kid ) return null; // Called method not boxed
+    XFun fun = (XFun)_kids[0]._type;
+    return fun.arg(S.find(_kids,kid)-1);
   }
 
   // If the called function takes a type parameter, its return type can be as

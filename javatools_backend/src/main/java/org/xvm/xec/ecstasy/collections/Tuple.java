@@ -80,6 +80,7 @@ public interface Tuple extends Cloneable {
     // N field declares
     for( int i=0; i<N; i++ )
       sb.ifmt("public %0 _f%1;\n",xtt.typeParm(i).clz(),i);
+
     // Constructor, taking N arguments
     sb.ifmt("public %0(",tclz);
     for( int i=0; i<N; i++ )
@@ -89,6 +90,18 @@ public interface Tuple extends Cloneable {
     for( int i=0; i<N; i++ )
       sb.fmt("_f%0=f%0; ",i);
     sb.nl().di().ip("}\n");
+
+    // Factory, taking N arguments and passing them along
+    sb.ifmt("public static %0 construct(",tclz);
+    for( int i=0; i<N; i++ )
+      sb.fmt("%0 f%1, ",xtt.typeParm(i).clz(),i);
+    sb.unchar(2).p(") {\n").ii();
+    sb.ifmt("return new %0(",tclz);
+    // N arg to field assigns
+    for( int i=0; i<N; i++ )
+      sb.fmt("f%0, ",i);
+    sb.unchar(2).p(" );").nl().di().ip("}\n");
+
     // Abstract accessors
     for( int i=0; i<N; i++ ) {
       XClz clz = xtt.typeParm(i).box();

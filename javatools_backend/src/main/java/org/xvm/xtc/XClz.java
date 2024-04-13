@@ -388,9 +388,13 @@ public class XClz extends XType {
     return null;
   }
 
-  // Bare name
+  // Bare name, no generics
   public String clz_bare( ) {
-    return this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ? qualified_name() : name();
+    // Tuples have a mangled class name without generics
+    if( isTuple() ) return strTuple(new SB()).toString();
+    // These guys need a fully qualified name to avoid name conflicts
+    if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ) return qualified_name();
+    return name();
   }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups  ) {

@@ -21,7 +21,7 @@ public class XBase extends XType {
   // Oddly, String is treated as an "array of Char"
   @Override public boolean isAry() { return this==XCons.STRING; }
 
-  @Override XBase nullable() { return make(_jtype,false); }
+  @Override public XBase nullable() { return make(_jtype,false); }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {
     sb.p(_jtype);

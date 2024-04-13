@@ -83,7 +83,7 @@ class BinOpAST extends AST {
         // Use generic at for generic collection
       }
     }
-    return this;
+    return super.unBox();
   }
 
 
@@ -116,57 +116,6 @@ class BinOpAST extends AST {
 
     return this;
   }
-
-  AST postwrite() {
-
-    // LHS is some kind of wrapped int that did not unwrap in the prewrite
-    if( _kids[0]._type.isa(XCons.INTNUM) && _kids[1]._type != XCons.NULL ) {
-      String op = switch( _op0 ) {
-      case "==" -> "eq";
-      case "!=" -> "ne";
-      case ">=" -> "ge";
-      case "<"  -> "lt";
-      case ">"  -> "gt";
-      default -> throw XEC.TODO();
-      };
-      return new InvokeAST(op,_kids[0]._type,_kids[0],_kids[1]).doType();
-    }
-    return this;
-  }
-
-  //private static AST findElvis( AST ast ) {
-  //  if( UniOpAST.is_elvis(ast) ) return ast;
-  //  if( ast._kids != null )
-  //    for( AST kid : ast._kids ) {
-  //      AST elvis = findElvis(kid);
-  //      if( elvis != null )
-  //        return elvis;
-  //    }
-  //  return null;
-  //}
-  //
-  //// Original:
-  ////   BinOp [good-tree [Elvis elvis]] [default-tree]
-  //// Rewrite as:
-  ////   Type TMP; // TMP at block head
-  ////   ...
-  ////   ((TMP=elvis)!=null) ? [good-tree [TMP]] : [default-tree]
-  //private AST do_elvis( AST elvis ) {
-  //  AST pred0 = elvis._kids[0];
-  //  XType type = pred0._type;
-  //  String tmp = enclosing_block().add_tmp(type);
-  //  AST par = elvis._par;
-  //  par._kids[S.find(par._kids,elvis)] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
-  //  //elvis._kids[0] = new RegAST(-1,tmp,type); // Read the non-null temp instead of pred
-  //  // Assign the tmp to predicate
-  //  AST asgn = new AssignAST(new RegAST(-1,tmp,type),pred0).doType();
-  //  // Zero/null if primitive (if boxing changes type)
-  //  AST zero = new ConAST(type.ztype());
-  //  // Null check it
-  //  AST nchk = new BinOpAST("!=","",XCons.BOOL,asgn, zero );
-  //  // ((tmp=pred)!=null) ? alt : (invokes...(tmp,args))
-  //  return new TernaryAST( new AST[]{nchk, _kids[0], _kids[1]}, _kids[0]._type).doType();
-  //}
 
   static AST do_range( AST[] kids, XClz rng ) {
     return new NewAST(kids,ClzBuilder.add_import(rng));

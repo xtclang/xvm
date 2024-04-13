@@ -66,7 +66,8 @@ class UniOpAST extends AST {
 
   @Override boolean _cond() {
     // Pass-through on conditional
-    return is_trace() && _kids[0]._cond;
+    return _kids[0]._cond &&
+      (S.eq("!",_pre)  || is_trace());
   }
 
   @Override public AST rewrite() {
@@ -110,7 +111,7 @@ class UniOpAST extends AST {
         _kids[0].jcode(sb.p("$t("));
         return sb.p(") && !XRuntime.GET$COND()");
       } else
-        return sb.p("throw XEC.TODO()");
+        return _kids[0].jcode(sb.p("COND(")).p(")");
     }
 
     if( _pre !=null ) {

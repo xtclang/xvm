@@ -23,7 +23,7 @@ public class AryXTC<E extends XTC> extends Array<E> {
   public E[] _es;
   private AryXTC(E gold, Mutability mut, E[] es) { super(gold,mut,es.length); _es = es; }
   public  AryXTC(E gold         ) { this(gold , Mutable , EMPTY); }
-  public  AryXTC(E gold, int len) { this(gold , Fixed   , (E[]) java.lang.reflect.Array.newInstance(gold.getClass(), len)); }
+  public  AryXTC(E gold, int len) { this(gold , Mutable , (E[]) java.lang.reflect.Array.newInstance(gold.getClass(), len)); }
   public  AryXTC(E gold, E[] es ) { this(gold , Constant, es); }
   public  AryXTC(E... es        ) { this(es[0], Constant, Arrays.copyOfRange(es,1,es.length)); }
   public  AryXTC(E gold, Mutability mut, AryXTC<E> as) { this(gold,mut,as._es.clone()); }
@@ -33,7 +33,7 @@ public class AryXTC<E extends XTC> extends Array<E> {
 
 
   public AryXTC(E gold, long len, LongFunction<E> fcn ) {
-    this(gold,(int)len);
+    this(gold, Fixed, (E[]) java.lang.reflect.Array.newInstance(gold.getClass(), (int)len));
     if( _len != len ) throw XEC.TODO(); // Too Big
     for( int i=0; i<_len; i++ )
       _es[i] = fcn.apply(i);

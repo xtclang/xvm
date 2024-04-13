@@ -14,10 +14,9 @@ public class ReturnAST extends AST {
   private final MethodPart _meth;
   private final ExprAST _expr;
   static ReturnAST make( ClzBuilder X, int n ) {
-
     String ztype=null;
     if( X._expr==null && X._meth.is_cond_ret() )
-      ztype = X._meth._xrets[1].ztype();
+      ztype = X._meth.xret(1).ztype();
     return new ReturnAST(ztype, X._meth, X._expr, X.kids(n) );
   }
   public ReturnAST( String ztype, MethodPart meth, ExprAST expr, AST... kids) {
@@ -33,7 +32,7 @@ public class ReturnAST extends AST {
     if( _expr !=null )
       return _expr._type;
     // No returns
-    if( _meth._xrets==null )
+    if( _meth.xrets()==null )
       return XCons.VOID;
     // Conditional returns.  The Java flavor takes the from the 2nd tuple argument.
     // Note the method might be flagged as having only 1 return type.
@@ -51,19 +50,30 @@ public class ReturnAST extends AST {
     }
 
     // Single normal return
-    if( _meth._xrets.length==1 )
-      return _meth._xrets[0];
+    if( _meth.xrets().length==1 )
+      return _meth.xret(0);
 
     // Make a Tuple return
-    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_meth._xrets));
+    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_meth.xrets()));
   }
 
   @Override public AST rewrite() {
     // Void return functions execute the return for side effects only
-    if( _meth._xrets==null && _expr==null )
+    if( _meth.xrets()==null && _expr==null )
       return _kids==null ? null : _kids[0];
+    // Flip multi-return into a tuple return
+    if( !_meth.is_cond_ret() && _kids.length>1 ) {
+      AST nnn = new NewAST(_kids,(XClz)_type);
+      for( AST kid : _kids ) kid._par = nnn;
+      AST ret = new ReturnAST(_ztype,_meth,_expr,nnn);
+      ret._type = _type;
+      return ret;
+    }
     return this;
   }
+
+  // Box as needed
+  @Override XType reBox( AST kid ) { return _kids[0]==kid ? _type : null; }
 
   @Override public SB jcode( SB sb ) {
     sb.ip("return ");
@@ -89,13 +99,7 @@ public class ReturnAST extends AST {
       return sb;
     }
 
-    if( _kids.length==1 )
-      return _kids[0].jcode(sb);
-
-    XClz tup = (XClz)_type;
-    tup.clz(sb.p("new ")).p("( ");
-    for( AST kid : _kids )
-      kid.jcode(sb).p(",");
-    return sb.unchar().p(")");
+    assert _kids.length==1;
+    return _kids[0].jcode(sb);
   }
 }

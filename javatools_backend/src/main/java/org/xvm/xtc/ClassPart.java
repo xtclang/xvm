@@ -18,7 +18,7 @@ interface, delegates - defined as an open-struct with methods as fields
 interface abstract method is a leaf (or a lambda leaf with arg counts).  No FIDX.
 interface concrete method is a full lambda with FIDX.
 "class implements iface" - unify the open iface struct against closed class struct
-"class extends class" - chain thru a special field " super".  
+"class extends class" - chain thru a special field " super".
 Special type constructor "isa X".
 Can drop the env lookup I think.
 
@@ -32,13 +32,13 @@ public class ClassPart extends Part {
   // Parameterized types, e.g. "Map<Key extends String, Value extends Person>"
   public final String[] _tnames; // String->TCon mapping
   public final TCon  [] _tcons ; // String->TCon mapping
-    
+
   // A list of "extra" features about Classes: extends, implements, delegates
   public final Contrib[] _contribs;
 
   public SB _header, _body;     // Java source code
   public XClz _tclz;            // XType class
-  
+
   ClassPart( Part par, int nFlags, Const id, CondCon cond, CPool X, Part.Format f ) {
     super(par,nFlags,id,null,cond,X);
 
@@ -55,10 +55,10 @@ public class ClassPart extends Part {
       _tnames[i] = ((StringCon)X.xget())._str;
       _tcons[i] =   (     TCon)X.xget();
     }
-    
+
     _path  = (LitCon)X.xget();
   }
-   
+
   // Constructed class parts
   ClassPart( Part par, String name, Part.Format f ) {
     super(par,name);
@@ -79,7 +79,7 @@ public class ClassPart extends Part {
           _super = ((ClzCon)c._tContrib).clz();
   }
 
-  
+
   // Hunt this clz for name, plus recursively any Implements/Extends/Delegates
   // contribs.  "Into" contribs are search 1 level deep only.  Order matters on
   // the contribs, as the most specific hit should come first - but there may
@@ -125,7 +125,7 @@ public class ClassPart extends Part {
   // I am using the file name as a Java file name... which is also the Java package.
   // XTC classes can use their given name, and this will be prefixed with the module as needed.
   String name() { return _name; }
-  
+
   // Module for this class
   public ModPart mod() {
     Part clz = this;

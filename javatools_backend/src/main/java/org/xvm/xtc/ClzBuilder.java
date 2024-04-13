@@ -230,7 +230,7 @@ public class ClzBuilder {
           _sb.fmt("%0,",_tclz._tns[i]);
         _sb.unchar().p(").$construct(");
         arg_names(meth,_sb);
-        if( !is_iface ) _sb.p(").$check(); }").nl();
+        _sb.p(").$check(); }").nl();
 
         // "private Foo $construct(args) { ..."
         _sb.ip("private ").p(java_class_name).p(" ");
@@ -396,20 +396,17 @@ public class ClzBuilder {
     if( m.isStatic() )      _sb.p("static ");
     if( m._ast.length==0 )  _sb.p("abstract ");
     else if( _tclz.iface() ) _sb.p("default ");
-
-    // XType the args and rets
-    m._xargs = XType.xtypes(m._args);
-    m._xrets = XType.xtypes(m._rets);
   }
 
   // Argument with types "( int arg0, String arg1, ... )"
   static public void args(MethodPart m, SB sb) {
     // Argument list
-    if( m._xargs!=null ) {
-      for( int i = 0; i < m._xargs.length; i++ ) {
+    if( m._args !=null ) {
+      int delta = m.xargs().length - m._args.length;
+      for( int i = 0; i < m._args.length; i++ ) {
         // Unbox boxed args
-        m._xargs[i] = m._xargs[i].unbox();
-        if( m._xargs[i] instanceof XClz xclz )
+        XType xt = m.xarg(i+delta);
+        if( xt instanceof XClz xclz )
           add_import(xclz);
         // Parameter class, using local generic parameters
         Parameter p = m._args[i];
@@ -418,7 +415,7 @@ public class ClzBuilder {
         else if( p._special )
           sb.p("$").p(p._name);
         else
-          m._xargs[i].clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
+          xt.clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
 
         // Parameter name, and define it in scope
         sb.p(' ').p(p._name).p(", ");
@@ -446,22 +443,22 @@ public class ClzBuilder {
       for( int i=0; i<m._args.length; i++ )
         if( m._args[i]._special ) {
           sb.p("$").p(m._args[i]._name).p(" extends ");
-          if( ((XClz)m._xargs[i]).iface() ) sb.p("XTC & ");
-          m._xargs[i].clz(sb).p(", ");
+          if( ((XClz)m.xarg(i)).iface() ) sb.p("XTC & ");
+          m.xarg(i).clz(sb).p(", ");
         }
       sb.unchar(2).p("> ");
     }
 
     // Return type
-    if( m._xrets==null ) sb.p("void ");
+    if( m.xrets()==null ) sb.p("void ");
     else {
       XType xret =
-        m._xrets.length == 1 ?  m._xrets[0] :
+        m.xrets().length == 1 ?  m.xret(0) :
         // Conditional return!  Passes the extra return in XRuntime$COND.
         // The m._rets[0] is the boolean
-        m.is_cond_ret() ? m._xrets[1] :
+        m.is_cond_ret() ? m.xret(1) :
         // Tuple multi-return
-        XCons.make_tuple(m._xrets);
+        XCons.make_tuple(m.xrets());
       xret.clz(sb).p(' ');
     }
 
@@ -495,9 +492,9 @@ public class ClzBuilder {
     args(m,_sb);
     _sb.p(" ) ");
     // Define argument names
-    if( m._xargs!=null )
-      for( int i = 0; i < m._xargs.length; i++ )
-        define(m._args[i]._name,m._xargs[i]);
+    if( m.xargs()!=null )
+      for( int i = 0; i < m.xargs().length; i++ )
+        define(m._args[i]._name,m.xarg(i));
 
     // Abstract method, no body
     if( m._ast.length==0 ) {
@@ -625,8 +622,6 @@ public class ClzBuilder {
   // --------------------------------------------------------------------------
 
   public AST ast( MethodPart m ) {
-    // Pre-cook XType returns
-    if( m._xrets==null ) m._xrets = XType.xtypes(m._rets);
     // Build the AST from bytes
     _meth = m;
     _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser

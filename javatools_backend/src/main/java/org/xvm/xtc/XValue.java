@@ -80,7 +80,7 @@ public abstract class XValue {
 
     // A class Type as a value
     case ParamTCon ptc -> {
-      XType xt = XType.xtype(ptc,false);
+      XType xt = XType.xtype(ptc,true);
       // TParmCon is a parameterized type, just use generic
       if( ptc._parms[0] instanceof TermTCon ttc && ttc.id() instanceof TParmCon tpc )
         yield ASB.p(tpc._name);

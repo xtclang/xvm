@@ -14,15 +14,10 @@ class OrderAST extends AST {
   @Override XType _type() { return XCons.BOOL; }
 
   @Override public AST rewrite() {
-    // Check for the integer special case
-    if( _kids[0] instanceof CallAST call &&
-        call._kids[0] instanceof ConAST con &&
-        con._con.endsWith("compare") &&
-        con._type instanceof XFun fun &&
-        fun.nargs()==3 &&
-        (XCons.JLONG.isa(fun.arg(0)) ||
-         XCons.JCHAR.isa(fun.arg(0))) )
-      return new BinOpAST(_op,"",XCons.BOOL,call._kids[2],call._kids[3]);
+    if( _kids[0] instanceof InvokeAST inv && inv._meth.equals("spaceship") &&
+        inv._kids[1]._type instanceof XBase &&
+        inv._kids[2]._type instanceof XBase )
+      return new BinOpAST(_op,"",XCons.BOOL,inv._kids[1],inv._kids[2]);
 
     // Order < or > converts an Ordered to a Boolean
     String s = switch(_op) {
@@ -30,7 +25,10 @@ class OrderAST extends AST {
     case "<" -> "lesser";
     default -> throw XEC.TODO();
     };
-    CallAST call = new CallAST(null,s,new ConAST("Orderable."+s),_kids[0]);
+    // TODO: BAST bug Call to compare is currently returning a Boolean and not an Ordered
+    XType arg = _kids[0]._type;
+    ConAST con = new ConAST("Orderable."+s,XFun.make(new XType[]{arg},new XType[]{XCons.BOOL}));
+    CallAST call = new CallAST(null,s,con,_kids[0]);
     call._type = XCons.BOOL;
     ClzBuilder.add_import(XCons.ORDERABLE);
     return call;

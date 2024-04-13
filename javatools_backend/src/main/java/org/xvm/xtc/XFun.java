@@ -45,11 +45,12 @@ public class XFun extends XType {
     if( ptc != null ) {
       XClz xargs = (XClz)xtype(ptc._parms[0],true);
       if( xargs._xts.length!=_nargs ) throw XEC.TODO();
-      //if( _nargs!=0 ) throw XEC.TODO();
     }
     sb.p("Fun").p(_nargs);
-    for( int i=0; i<_nargs; i++ )
-      _xts[i]._clz(sb,ptc,print).p("$");
+    for( int i=0; i<_nargs; i++ ) {
+      if( _xts[i]==XCons.JSTRING )   sb.p("XString$");
+      else          _xts[i]._clz(sb,ptc,print).p("$");
+    }
     return sb.unchar();
   }
 
@@ -57,7 +58,13 @@ public class XFun extends XType {
   @Override boolean eq(XType xt) { return _nargs == ((XFun)xt)._nargs; }
   @Override int hash() { return _nargs; }
   @Override boolean _isa( XType xt ) {
-    throw XEC.TODO();
+    XFun fun = (XFun)xt;        // Invariant
+    if( _nargs !=  fun._nargs ) return false;
+    for( int i=0; i<_nargs; i++ )
+      if( !_xts[i].isa(fun._xts[i]) )
+        return false;
+    // TODO: Need to check covariant returns?
+    return true;
   }
 
   // Make a callable interface with a particular signature

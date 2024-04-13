@@ -112,6 +112,12 @@ public abstract class AST {
 
   // Auto-unbox e.g. Int64 to a long or xtc.String to j.l.String
   public AST unBox() {
+    // Parent is narrowed, removes not-null and allows unboxing
+    if( _par instanceof NarrowAST nar && !(nar._par instanceof AssignAST) &&
+        _par._type instanceof XBase && _type instanceof XClz )
+      return new UniOpAST(new AST[]{this},null,"._i",_par._type);
+
+    // Otherwise unbox if type is boxed and not immediately demanded boxed
     XType unbox = _type.unbox();
     if( unbox == _type ||       // Already unboxed
         unbox == XCons.NULL ||  // Unboxes to a "null" (TODO: use constant null)
@@ -123,35 +129,39 @@ public abstract class AST {
         this instanceof MultiAST
         )
       return this;              // Do not unbox
+    // Unbox
     return new UniOpAST(new AST[]{this},null,"._i",unbox);
-  }
-
-  // Auto-box e.g. long to Int64 or j.l.String to xtc.String
-  public AST reBox() {
-    if( _par == null ) return this; // Must have a parent that cares
-    if( _par._type == XCons.VOID   ) return this; // No boxing around VOID
-    if( _par._type instanceof XFun ) return this; // No boxing issues around functions
-    //if( _par._type instanceof XBase && _type instanceof XBase )
-    //  return this; // Auto-conversions from char to int: "'a'+i"
-    if( _type.isa(_par._type) ) return this;      // Already ISA
-    // Assigns RHS and Returns LHS might need to box
-    boolean doBox = switch( _par ) {
-    case AssignAST asgn -> asgn._kids[1]==this;
-    case ReturnAST ret  -> ret ._kids[0]==this;
-    case InvokeAST invk -> invk.reBox(this);
-    default -> false;
-    };
-    if( !doBox ) return this;
-    // There exists a box which maps the from/to types?
-    XClz box = _type.box();
-    if( box == null || box == _type ) return this;
-    // Box 'em up!
-    return new NewAST(new AST[]{this},box);
   }
 
   // Rewrite some AST bits before Java
   public AST rewrite() { return this; }
 
+  // Auto-box e.g. long to Int64 or j.l.String to xtc.String
+  public AST reBox() {
+    if( _par == null )              return this; // Must have a parent that cares
+    if( _par._type == XCons.VOID )  return this; // No boxing around VOID
+    if(      _type == XCons.VOID )  return this;
+    if( _par._type instanceof XFun) return this; // No boxing issues around functions
+    // Assigns RHS and Returns LHS might need to box
+    XType lhs = _par.reBox(this);
+    // Desired flavor is no-change or not-boxed or already isa
+    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) ) return this;
+    XClz rhs = _type.box();
+    if( _type == rhs ) return this; // Always going to the box, so this is a noop
+    // Never box to an interface, caller had already better be a boxed implementer
+    XClz lhsc = (XClz)lhs;
+    if( lhsc.iface() ) lhsc = XCons.XXTC;
+    // RHS is not isa desired LHS flavor
+    if( !rhs.isa(lhsc) ) {
+      assert rhs != _type;
+      rhs = lhsc;               // Force RHS to desired
+    }
+
+    // Box 'em up!
+    return (_par._kids[S.find(_par._kids,this)] = new NewAST(new AST[]{this},rhs));
+  }
+
+  XType reBox( AST par ) { return null; }
 
   /**
    * Dump indented pretty java code from AST.

@@ -12,7 +12,13 @@ class AssertAST extends AST {
     return new AssertAST(new ConAST("XTC"), cond,intv,mesg);
   }
   private AssertAST( AST... kids ) { super(kids); }
-  @Override XType _type() { return XCons.VOID; }
+  @Override XType _type() {
+    // If I have a conditional child, I want the conditional from the child.
+    // So: `assert string.indexOf("sub")` tests the presence of "sub" in "string"
+    if( _kids[1] != null && _kids[1]._cond )
+      _kids[1]._type = XCons.BOOL;
+    return XCons.VOID;
+  }
 
   // THIS:    (assert (elvis e0) )
   // MAPS TO: (assert (e0 != null) )

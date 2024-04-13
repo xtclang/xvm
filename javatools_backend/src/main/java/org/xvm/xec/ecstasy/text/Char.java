@@ -26,11 +26,20 @@ public class Char extends Const {
     if( c0._i==c1._i ) return Ordered.Equal;
     return c0._i < c1._i ? Ordered.Lesser : Ordered.Greater;
   }
+  public static Ordered compare$Char(Char gold, char c0, char c1 ) {
+    if( c0==c1 ) return Ordered.Equal;
+    return c0 < c1 ? Ordered.Lesser : Ordered.Greater;
+  }
 
 
   // ASCII digit check
   public long asciiDigit() {
     long x = _i-'0';
+    return XRuntime.SET$COND(0 <= x && x <= 9,x);
+  }
+  // ASCII digit check
+  public static long asciiDigit(char c) {
+    long x = c-'0';
     return XRuntime.SET$COND(0 <= x && x <= 9,x);
   }
   // Unicode version of ASCII digit check

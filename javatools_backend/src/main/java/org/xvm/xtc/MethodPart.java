@@ -2,33 +2,35 @@ package org.xvm.xtc;
 
 import org.xvm.XEC;
 import org.xvm.xtc.cons.*;
+import org.xvm.util.S;
+import java.util.Arrays;
 
 public class MethodPart extends MMethodPart {
   // Linked list of siblings at the same DAG level with the same name
   public MethodPart _sibling;
-  
+
   // Method's "super"
   private final MethodCon  _supercon;
-  
+
   public final PartCon[] _supers;
   public final Part[] _super_parts;
-  
+
   // Optional "finally" block
   public final MethodCon _finally;
 
   public final MethodCon _methcon;
-  
+
   // Annotations
   public final Annot[] _annos;
 
   // Return types
   public final Parameter[] _rets;
-  public XType[] _xrets;
+  private XType[] _xrets;
 
   // Argument types
   public final Parameter[] _args;
   public final int _nDefaults;  // Number of default arguments
-  public XType[] _xargs;
+  private XType[] _xargs;
 
   // Constants for code
   public final Const[] _cons;
@@ -37,13 +39,13 @@ public class MethodPart extends MMethodPart {
   public final byte[] _code;
   // The XEC AST
   public final byte[] _ast;
-  
+
   // The source code
   public final String[] _lines; // Source lines
   public final int[] _indts;    // Indents
   public final int _first;      // First line number
-  
-  // 
+
+  //
   MethodPart( Part par, int nFlags, MethodCon id, CondCon con, CPool X ) {
     super(par,nFlags,id,con,X);
 
@@ -75,7 +77,7 @@ public class MethodPart extends MMethodPart {
     if( rawParms!=null )
       for( int i=0; i<rawParms.length; i++ )
         _args[i] = new Parameter(/*false, i,*/ i<nparms, rawParms[i], X);
-    
+
     // Read method's "super(s)"
     _supercon = (MethodCon)X.xget();
     _supers = _supercon == null ? null : PartCon.parts(X);
@@ -154,37 +156,43 @@ public class MethodPart extends MMethodPart {
     if( _cons !=null )
       for( Const con : _cons )
         if( con instanceof MethodCon meth )
-          // Link signature, but not the method proper 
+          // Link signature, but not the method proper
           ; //meth._sig.link(repo);
-        else 
+        else
           //con.link(repo);
           throw XEC.TODO();
   }
-  
-  // Link signature constants
-  void _sig_cons( XEC.ModRepo repo ) {
-    if( _cons !=null )
-      for( Const con : _cons )
-        if( con instanceof MethodCon meth )
-          //meth._sig.link(repo);
-          throw XEC.TODO();
-  }
-  
-  // Link method constants
-  void _meth_cons( XEC.ModRepo repo ) {
-    if( _cons !=null )
-      for( Const con : _cons )
-        if( con instanceof MethodCon meth )
-          //meth.link(repo);
-          throw XEC.TODO();
-  }
-  
+
   public boolean is_empty_function() {
     return _code.length==2 && _code[0]==1 && _code[1]==76;
   }
+  public boolean is_constructor() { return S.eq(_name,"construct"); }
 
-  // Methods returning a conditional have to consume the conditional imm-
-  // ediately or it's lost.  The returned value will be optionally assigned.
+  // XTypes for all arguments.  Lazily built.
+  // Default arguments responsibility of the caller.
+
+  // Default constructors take class type parameters, but will lack explicit
+  // args here; so _args and _xargs will not necessarily be the same.
+
+  public XType[] xargs() {
+    if( _xargs != null ) return _xargs;
+    // The "free" empty constructors also take type arguments
+    if( is_constructor() && is_empty_function() ) {
+      XType[] zts = clz()._tclz._xts;
+      return zts.length==0 ? null : (_xargs=zts);
+    }
+    return (_xargs = XType.xtypes(_args));
+  }
+  public XType xarg(int idx) { return xargs()[idx]; }
+
+  public XType[] xrets() {
+    if( _xrets != null ) return _xrets;
+    return (_xrets = XType.xtypes(_rets));
+  }
+  public XType xret(int idx) { return xrets()[idx]; }
+
+  // Methods returning a conditional have to consume the conditional
+  // immediately, or it's lost.  The returned value will be optionally assigned.
   //
   // 's' already defined
   // XTC   s := cond_ret();
@@ -201,8 +209,8 @@ public class MethodPart extends MMethodPart {
   // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
   // BAST  (Assert (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
   // Java  long n0, n1;  assert $t(n0=S1()) && GET$COND() && ...n0...
-  
-  
+
+
   public boolean is_cond_ret() { return (_nFlags & Part.COND_RET_BIT) != 0; }
 
   // Reasonable java name.
