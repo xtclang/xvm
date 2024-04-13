@@ -649,9 +649,9 @@ public class CmpExpression
         ExprAST[] aAstArgs = new ExprAST[] {
                 toTypeParameterAst(ctx, m_typeCommon.getType()), ast1, ast2};
 
-        ExprAST      exprCmp  = new ConstantExprAST(m_idCmp);
-        boolean      fNot     = false;
-        Operator     opCmp    = null;
+        ExprAST  exprCmp = new ConstantExprAST(m_idCmp);
+        boolean  fNot    = false;
+        Operator opCmp   = null;
 
         switch (operator.getId())
             {
@@ -682,11 +682,10 @@ public class CmpExpression
                 throw new UnsupportedOperationException(operator.getValueText());
             }
 
-        ExprAST exprAst = new CallExprAST(exprCmp, pool.typeBoolean(), aAstArgs);
-        if (opCmp != null)
-            {
-            exprAst = new OrderedExprAST(exprAst, opCmp);
-            }
+        ExprAST exprAst = opCmp == null
+                ? new CallExprAST(exprCmp, pool.typeBoolean(), aAstArgs)
+                : new OrderedExprAST(
+                        new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs), opCmp);
         if (fNot)
             {
             exprAst = new UnaryOpExprAST(exprAst, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
