@@ -7,7 +7,6 @@ import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.MethodCon;
 
 class ConvAST extends AST {
-  final MethodPart _meth;
 
   static ConvAST make( ClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
@@ -26,7 +25,11 @@ class ConvAST extends AST {
       assert convs.length==2 && convs[0]==null;
     }
     _type = XType.xtype(types[idx],false);
-    _meth = (MethodPart)convs[idx].part();
+  }
+
+  ConvAST( XClz cast, AST kid ) {
+    super(new AST[]{kid});
+    _type = cast;
   }
 
   @Override XType _type() { return _type; }
@@ -46,7 +49,7 @@ class ConvAST extends AST {
   }
 
   @Override public SB jcode( SB sb ) {
-    _type.clz(sb.p("(")).p(")(");
+    _type.clz(sb.p("((")).p(")");
     return _kids[0].jcode(sb).p(")");
   }
 }

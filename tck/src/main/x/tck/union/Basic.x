@@ -10,11 +10,12 @@ class Basic {
     // -----------------------------
     void basic() {
         typedef (String | Int) as StrInt;
-        StrInt x = 7;
+        StrInt id( StrInt x ) { return x; }
+        StrInt x = id(7);
         assert x==7;
-        assert x!="abc";
+        assert x!=id("abc");
         x = "def";
         assert x=="def";
-        //assert x!= 9;
+        //assert x!= id(9);
     }
 }

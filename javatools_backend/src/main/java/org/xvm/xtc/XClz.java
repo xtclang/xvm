@@ -1,9 +1,7 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.util.S;
-import org.xvm.util.SB;
-import org.xvm.util.VBitSet;
+import org.xvm.util.*;
 import org.xvm.xtc.cons.*;
 
 import static org.xvm.XEC.TODO;
@@ -535,5 +533,27 @@ public class XClz extends XType {
       if( !_xts[i].isa(clz._xts[i]) )
         return false;
     return true;
+  }
+
+  static XClz lca( XClz u0, XClz u1 ) {
+    if( u0==u1 ) return u0;
+    Ary<XClz> clzs = new Ary<>(XClz.class);
+    // Collect super-class chain LHS
+    for( ; u0!=XCons.XXTC; u0 = u0._super )
+      clzs.push(u0);
+    // Find first place super chain LHS differs from RHS
+    XClz lca = u1.lca(clzs);
+    assert lca!=null;
+    return lca;
+  }
+
+  // Walk backwards via recursive unwind until this!=xclz but supers match;
+  // then return the common super
+  private XClz lca( Ary<XClz> clzs ) {
+    if( _super==XCons.XXTC ) return null;
+    XClz xclz = _super.lca(clzs);
+    if( xclz != null ) return xclz;
+    xclz = clzs.pop();
+    return xclz==_super ? null : xclz._super;
   }
 }

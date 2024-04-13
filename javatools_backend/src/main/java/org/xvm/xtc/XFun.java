@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.util.VBitSet;
 import org.xvm.xtc.cons.ParamTCon;
+import org.xvm.xtc.ast.AST;
 
 import java.util.Arrays;
 
@@ -24,6 +25,24 @@ public class XFun extends XType {
   public static XFun make( MethodPart meth ) {
     return make(xtypes(meth._args),xtypes(meth._rets));
   }
+
+  // Make a function from a Call.  The Call's return is the XFun's return.
+  // Arg 0 is ignored.  Args are either from kids 1&2 or kids 1&2&3.
+  // If either kid 2 or kid 3 is boxed, then both are.
+  public static XFun makeCall( AST call ) {
+    XType[] args = new XType[call._kids.length-1];
+    args[0] = call._kids[1].type();
+    args[1] = call._kids[2].type();
+    if( args.length==3 ) {
+      args[2] = call._kids[3].type();
+      if( !(args[1] instanceof XBase && args[2] instanceof XBase) ) {
+        args[1] = args[1].box();
+        args[2] = args[2].box();
+      }
+    }
+    return make(args,new XType[]{call.type()});
+  }
+
   public int nargs() { return _nargs; }
   public int nrets() { return _xts.length-_nargs; }
   public XType arg(int i) { return _xts[i]; }

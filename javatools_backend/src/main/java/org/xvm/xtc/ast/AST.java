@@ -19,7 +19,7 @@ public abstract class AST {
 
   @Override public String toString() { return jcode(new SB() ).toString(); }
 
-  public XType getType() { return _type; }
+  public XType type() { return _type; }
 
   // Use the _par parent to find nearest enclosing Block for tmps
   BlockAST enclosing_block() {
@@ -114,8 +114,15 @@ public abstract class AST {
   public AST unBox() {
     // Parent is narrowed, removes not-null and allows unboxing
     if( _par instanceof NarrowAST nar && !(nar._par instanceof AssignAST) &&
-        _par._type instanceof XBase && _type instanceof XClz )
-      return new UniOpAST(new AST[]{this},null,"._i",_par._type);
+        nar._type instanceof XBase nbase && _type instanceof XClz ) {
+      XClz nbox = nbase.box();
+      AST box = this;
+      if( nbox != _type ) {
+        box = new ConvAST(nbox,this); _par = box;
+        nar._kids[0] = box;  box._par = nar;
+      }
+      return new UniOpAST(new AST[]{box},null,"._i",nbase);
+    }
 
     // Otherwise unbox if type is boxed and not immediately demanded boxed
     XType unbox = _type.unbox();
@@ -147,15 +154,11 @@ public abstract class AST {
     // Desired flavor is no-change or not-boxed or already isa
     if( lhs == null || lhs instanceof XBase || _type.isa(lhs) ) return this;
     XClz rhs = _type.box();
-    if( _type == rhs ) return this; // Always going to the box, so this is a noop
+    if( rhs == null || rhs == _type ) return this; // Always going to the box, so this is a noop
     // Never box to an interface, caller had already better be a boxed implementer
     XClz lhsc = (XClz)lhs;
     if( lhsc.iface() ) lhsc = XCons.XXTC;
-    // RHS is not isa desired LHS flavor
-    if( !rhs.isa(lhsc) ) {
-      assert rhs != _type;
-      rhs = lhsc;               // Force RHS to desired
-    }
+    assert rhs.isa(lhsc);
 
     // Box 'em up!
     return (_par._kids[S.find(_par._kids,this)] = new NewAST(new AST[]{this},rhs));

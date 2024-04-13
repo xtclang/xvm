@@ -165,8 +165,7 @@ public abstract class XType {
   public final boolean isa( XType xt ) {
     return this==xt
       || (getClass() == xt.getClass() && _isa(xt))
-      || (this==XCons.NULL && !xt._notNull)
-      || xt instanceof XUnion union && union._reverse_isa(this);
+      || (this==XCons.NULL && !xt._notNull);
   }
   abstract boolean _isa( XType xt );
   public boolean isVar() { return false; }
@@ -297,8 +296,9 @@ public abstract class XType {
       ClassPart clz1 = ((ClzCon)utc._con1).clz();
       if( clz1 !=null && clz1._name.equals("Nullable") )
         yield (u2.zero() ? u2.box() : u2).nullable();
-      XType u1 = xtype(utc._con1,false,self);
-      yield XUnion.make(u1,u2);
+      XType u1 = xtype(utc._con1,true,self);
+      if( u2 instanceof XFun ) u2 = XCons.XXTC; // Union of functions just goes to XTC for now
+      yield XClz.lca((XClz)u1, u2.box());
     }
 
     // Generalized union types gonna wait awhile.

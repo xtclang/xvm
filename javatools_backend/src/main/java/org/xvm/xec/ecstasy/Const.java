@@ -15,11 +15,12 @@ import org.xvm.xtc.*;
     The XTC Const is an *XTC interface*, not an XTC class, but it has many class-like properties.
     The XTC Const interface is thus treated like this Java Class.
  */
-public abstract class Const extends XTC
+public class Const extends XTC
   implements org.xvm.xec.ecstasy.Orderable, // XTC comparable adds compare,equals
              Hashable,                      // XTC hashCode
              Stringable                     // has appendTo
 {
+  public static final Const GOLD = new Const(null);
   public Const() {}             // Explicit no-arg-no-work constructor
   public Const(Never n) {}      // Forced   no-arg-no-work constructor
 

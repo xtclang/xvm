@@ -1,10 +1,8 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.ParamTCon;
-import org.xvm.xtc.cons.MethodCon;
 import org.xvm.util.SB;
 import org.xvm.util.S;
 
@@ -72,8 +70,7 @@ public class CallAST extends AST {
       // Convert CLZ.hashCode (GOLD,arg1     ) to their static variant: CLZ.hashCode$CLZ (GOLD,arg1,arg2);
       con._con += "$"+clz;
       // Sharpen the function type
-      XType[] args = base.equals("hashCode") ? new XType[]{k1._type,k2._type} : new XType[]{k1._type,k2._type,_kids[3]._type};
-      con._type = XFun.make(args,new XType[]{_type});
+      con._type = XFun.makeCall(this);
       return this;
     }
 

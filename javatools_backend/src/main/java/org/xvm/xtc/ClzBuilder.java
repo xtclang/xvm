@@ -542,8 +542,7 @@ public class ClzBuilder {
           X.jclass_body();
           break;
         case TDefPart tdef:
-          System.out.println("TypeDef "+tdef._name);
-          break;
+          break;                // Do nothing, handled by the XTypes already
         default: throw XEC.TODO();
         }
       }
