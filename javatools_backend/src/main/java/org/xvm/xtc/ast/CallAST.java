@@ -20,13 +20,13 @@ public class CallAST extends AST {
     // Move the function to the 0th kid slot.
     kids[0] = ast_term(X);     // Call expression first
     XType[] rets = XType.xtypes(retTypes);
-    return new CallAST(rets,X._meth._name,kids);
+    return new CallAST(rets,X._meth._name,XFun.make(X._meth.xargs(),X._meth.xrets()),kids);
   }
-  CallAST( XType[] rets, String mname, AST... kids ) {
+  CallAST( XType[] rets, String mname, XFun fun, AST... kids ) {
     super(kids);
     // Check for a call to super: "super.call()" becomes "super.METHOD"
     if( _kids[0] instanceof RegAST reg && reg._reg== -13 )
-      _kids[0] = new ConAST(null,null,"super."+mname,reg._type);
+      _kids[0] = new ConAST(null,null,"super."+mname,fun);
     _rets = rets;
     _type = _type();
   }

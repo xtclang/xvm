@@ -18,7 +18,6 @@ public class ConAST extends AST {
     _type = type;
     if( _tcon instanceof IntCon itc && XCons.format_iprims(itc._f) )
       _type = XCons.LONG;       // Can be Java long
-
     _X = X;
   }
 

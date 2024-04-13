@@ -27,8 +27,9 @@ class OrderAST extends AST {
     };
     // TODO: BAST bug Call to compare is currently returning a Boolean and not an Ordered
     XType arg = _kids[0]._type;
-    ConAST con = new ConAST("Orderable."+s,XFun.make(new XType[]{arg},new XType[]{XCons.BOOL}));
-    CallAST call = new CallAST(null,s,con,_kids[0]);
+    XFun fun = XFun.make(new XType[]{arg},new XType[]{XCons.BOOL});
+    ConAST con = new ConAST("Orderable."+s,fun);
+    CallAST call = new CallAST(null,s,fun,con,_kids[0]);
     call._type = XCons.BOOL;
     ClzBuilder.add_import(XCons.ORDERABLE);
     return call;
