@@ -35,9 +35,11 @@ public class XFun extends XType {
     args[1] = call._kids[2].type();
     if( args.length==3 ) {
       args[2] = call._kids[3].type();
+      // If both are primitives, take it.
+      // Otherwise, box them both.
       if( !(args[1] instanceof XBase && args[2] instanceof XBase) ) {
-        args[1] = args[1].box();
-        args[2] = args[2].box();
+        if( args[1].box() != null ) args[1] = args[1].box();
+        if( args[2].box() != null ) args[2] = args[1].box();
       }
     }
     return make(args,new XType[]{call.type()});

@@ -78,12 +78,12 @@ class AssignAST extends AST {
     // var := (true,val)  or  var ?= not_null;
     if( _op == AsnOp.AsnIfNotFalse || _op == AsnOp.AsnIfNotNull) {
       XType type = _kids[0]._type;
-      BlockAST blk = enclosing_block();
       if( _kids[0] instanceof DefRegAST ) {
         // Use the _par parent to find nearest enclosing If or Assert for a conditional assignment
         AST top = _par;
         while( !(top instanceof IfAST) && !(top instanceof AssertAST) )
           top = top._par;
+        BlockAST blk = top.enclosing_block();
         // IfAST
         if( top instanceof IfAST iff ) {
           // XTC   if( String s := cond_ret(), Int n :=... ) { ..s...}
@@ -102,6 +102,12 @@ class AssignAST extends AST {
           iff._kids[1] = blk0;  blk0._par = iff;
           blk0._kids[0] = new DefRegAST(type,_name,tmp);
           for( AST kid : kids ) kid._par = blk0;
+          // Walk the tree under iff condition and replace uses _name with the tmp
+          iff._kids[0].visit(ast -> {
+              if( ast instanceof RegAST reg && reg._name.equals(_name) )
+                reg._name = tmp;
+              return ast;
+            },iff);
         } else {
           // XTC   assert Int n := S1(), ...n...
           // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
@@ -118,7 +124,7 @@ class AssignAST extends AST {
         // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
         // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
         // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
-        String tmp = blk.add_tmp(type);
+        String tmp = enclosing_block().add_tmp(type);
         _cond_asgn = _name;
         _kids[0] = new RegAST(0,tmp,type);
         _kids[0]._par = this;

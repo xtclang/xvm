@@ -10,7 +10,7 @@ public class ExprAST extends AST {
     // Kids are nested in an Expr "method" and not the outer method
     assert X._expr==null;            // No double nesting
     ExprAST expr = X._expr = new ExprAST();
-    
+
     // Parse kids in order as stmts not exprs
     expr._kids[0] = ast(X);
     // Done with the nested expr "method"
@@ -21,7 +21,7 @@ public class ExprAST extends AST {
     expr._type = XType.xtype(types[0],false);
     return expr;
   }
-  
+
   private ExprAST( ) { super(new AST[1]); }
   @Override XType _type() { return _type; }
 
@@ -30,7 +30,7 @@ public class ExprAST extends AST {
     _type.clz(sb).p(" get_");
     _type.clz(sb).p("() {").ii().nl();
   }
-  @Override void jmid( SB sb, int i ) { sb.p(";").nl(); }
+  @Override void jmid( SB sb, int i ) { }
   @Override void jpost( SB sb ) {
     sb.di().ip("}}.get_");
     _type.clz(sb).p("()");

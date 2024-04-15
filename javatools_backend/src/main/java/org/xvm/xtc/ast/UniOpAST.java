@@ -78,8 +78,8 @@ class UniOpAST extends AST {
       // conditional on the "elvis" existing.
       for( AST par = _par, old = this; true; old = par, par = par._par )
         switch( par ) {
-        case TernaryAST ttop: return ttop.doElvis(_kids[0]);
-        case MultiAST   mtop: return mtop.doElvis(_kids[0],S.find(mtop._kids,old));
+        case TernaryAST ttop: return ttop.doElvis( _kids[0] );
+        case MultiAST   mtop: return mtop.doElvis(_kids[0],old);
         case AssertAST  asrt: return asrt.doElvis(_kids[0]);
         default: break;
         }

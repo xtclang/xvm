@@ -176,12 +176,17 @@ public class MethodPart extends MMethodPart {
 
   public XType[] xargs() {
     if( _xargs != null ) return _xargs;
+    if( !is_constructor() )
+      return (_xargs = XType.xtypes(_args));
     // The "free" empty constructors also take type arguments
-    if( is_constructor() && is_empty_function() ) {
-      XType[] zts = clz()._tclz._xts;
-      return zts.length==0 ? null : (_xargs=zts);
+    XType[] zts = clz()._tclz._xts;
+    if( _args != null ) {
+      int old = zts.length;
+      zts = Arrays.copyOf(zts,old+_args.length);
+      for( int i=0; i<_args.length; i++ )
+        zts[i+old] = _args[i].type();
     }
-    return (_xargs = XType.xtypes(_args));
+    return zts.length==0 ? null : (_xargs=zts);
   }
   public XType xarg(int idx) { return xargs()[idx]; }
 

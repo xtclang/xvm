@@ -95,19 +95,7 @@ public abstract class AST {
             kid._par = x;
       old = x;
     }
-    assert x==null || x.check_par(par,3);
     return x;
-  }
-
-  private boolean check_par( AST par, int d ) {
-    if( _par!=par )
-      return false;
-    if( d==0 ) return true;
-    if( _kids != null )
-      for( AST kid : _kids )
-        if( kid != null && !kid.check_par(this,d-1) )
-          return false;
-    return true;
   }
 
   // Auto-unbox e.g. Int64 to a long or xtc.String to j.l.String
