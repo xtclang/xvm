@@ -1,9 +1,7 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.util.S;
-import org.xvm.util.SB;
-import org.xvm.util.VBitSet;
+import org.xvm.util.*;
 import org.xvm.xtc.cons.*;
 
 import static org.xvm.XEC.TODO;
@@ -121,7 +119,7 @@ public class XClz extends XType {
     // See if already exists
     XClz clz = _intern();
     if( clz != this ) {
-      assert proto._super==clz._super && proto._clz  ==clz._clz;
+      assert proto._super==clz._super && (proto._clz==clz._clz || clz._clz==null);
       return clz;
     }
     assert _ro || (_super==null || !_super._ro);  // Set if super is set
@@ -241,31 +239,29 @@ public class XClz extends XType {
   // An inner class, which gets the outer class Type variables
   public static XClz make( VirtDepTCon virt ) {
     ClassPart iclz = virt.part(); // Inner clz
-    //XClz xclz = _malloc(iclz);    // Inner xclz
-    //ParamTCon ptc = (ParamTCon)virt._par;
-    //TCon[] parms = ptc._parms;
-    //if( parms != null ) {
-    //  ClassPart oclz = ptc.clz(); // Outer class
-    //  XType [] xts = xclz._xts;
-    //  String[] tns = xclz._tns;
-    //  int len = xts==null ? 0 : xts.length;
-    //  xclz._xts    = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
-    //  xclz._tns = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
-    //  for( int i=0; i<parms.length; i++ ) {
-    //    boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
-    //    tns[len+i] = isType ? null : oclz._tnames[i];
-    //    xts[len+i] = xtype(parms[i],true);
-    //  }
-    //  xclz._nTypeParms = xts.length;
-    //}
-    //xclz._super = get_super(iclz);
-    //xclz._jpack = "";
-    //xclz._jname = "";
-    //XClz xclz2 = xclz._intern();
-    //if( xclz2 != xclz ) return xclz2;
-    //iclz._tclz = xclz;
-    //return xclz;
-    throw TODO();
+    XClz xclz = _malloc(iclz);    // Inner xclz
+    ParamTCon ptc = (ParamTCon)virt._par;
+    TCon[] parms = ptc._parms;
+    if( parms != null ) {
+      ClassPart oclz = ptc.clz(); // Outer class
+      XType [] xts = xclz._xts;
+      String[] tns = xclz._tns;
+      int len = xts==null ? 0 : xts.length;
+      xclz._xts    = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
+      xclz._tns = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
+      for( int i=0; i<parms.length; i++ ) {
+        boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
+        tns[len+i] = isType ? null : oclz._tnames[i];
+        xts[len+i] = xtype(parms[i],true);
+      }
+    }
+    xclz._super = get_super(iclz);
+    xclz._jpack = "";
+    xclz._jname = "";
+    XClz xclz2 = xclz._intern();
+    if( xclz2 != xclz ) return xclz2;
+    iclz._tclz = xclz;
+    return xclz;
   }
 
   // Make a specialized FutureVar type
@@ -380,7 +376,7 @@ public class XClz extends XType {
   public boolean needs_build() { return _jname.isEmpty(); }
 
   // Find a type name in the superclass chain
-  XType find(String tname) {
+  public XType find(String tname) {
     XClz clz = this;
     for( ; clz!=null; clz = clz._super ) {
       int idx = S.find(clz._tns,tname);
@@ -390,9 +386,13 @@ public class XClz extends XType {
     return null;
   }
 
-  // Bare name
+  // Bare name, no generics
   public String clz_bare( ) {
-    return this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ? qualified_name() : name();
+    // Tuples have a mangled class name without generics
+    if( isTuple() ) return strTuple(new SB()).toString();
+    // These guys need a fully qualified name to avoid name conflicts
+    if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ) return qualified_name();
+    return name();
   }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups  ) {
@@ -533,5 +533,27 @@ public class XClz extends XType {
       if( !_xts[i].isa(clz._xts[i]) )
         return false;
     return true;
+  }
+
+  static XClz lca( XClz u0, XClz u1 ) {
+    if( u0==u1 ) return u0;
+    Ary<XClz> clzs = new Ary<>(XClz.class);
+    // Collect super-class chain LHS
+    for( ; u0!=XCons.XXTC; u0 = u0._super )
+      clzs.push(u0);
+    // Find first place super chain LHS differs from RHS
+    XClz lca = u1.lca(clzs);
+    assert lca!=null;
+    return lca;
+  }
+
+  // Walk backwards via recursive unwind until this!=xclz but supers match;
+  // then return the common super
+  private XClz lca( Ary<XClz> clzs ) {
+    if( _super==XCons.XXTC ) return null;
+    XClz xclz = _super.lca(clzs);
+    if( xclz != null ) return xclz;
+    xclz = clzs.pop();
+    return xclz==_super ? null : xclz._super;
   }
 }

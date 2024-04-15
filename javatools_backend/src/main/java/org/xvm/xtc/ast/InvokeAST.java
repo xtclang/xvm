@@ -25,13 +25,11 @@ public class InvokeAST extends AST {
   private InvokeAST( AST[] kids, Const[] retTypes, Const methcon, boolean async ) {
     super(kids);
     // Calling target.method(args)
-    MethodPart meth = (MethodPart)((MethodCon)methcon).part();
+    MethodPart meth = (MethodPart)methcon.part();
     _meth = meth.jname();
     _async = async;
-    if( meth._args != null && meth._xargs==null )   meth._xargs = XType.xtypes(meth._args);
-    if( meth._rets != null && meth._xrets==null )   meth._xrets = XType.xtypes(retTypes);
-    _args = meth._xargs;
-    _rets = meth._xrets;
+    _args = meth.xargs();
+    _rets = XType.xtypes(retTypes);
 
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -67,18 +65,18 @@ public class InvokeAST extends AST {
     return _rets!=null && _rets.length == 2 && _rets[0]==XCons.BOOL;
   }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     XType k0t = _kids[0]._type;
     // Handle all the Int/Int64/Intliteral to "long" calls
     if( k0t == XCons.JLONG || k0t == XCons.LONG ) {
       return switch( _meth ) {
-      case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long"),_kids[0]).do_type();
+      case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long",XCons.JLONG),_kids[0]).doType();
       case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
-      case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL" ));
-      case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL" ));
-      case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL" ));
+      case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL",XCons.LONG ));
+      case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL",XCons.LONG ));
+      case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL",XCons.LONG ));
       case "eq"  ->
               this;
         //new BinOpAST( "==","", XCons.LONG, _kids );
@@ -97,19 +95,23 @@ public class InvokeAST extends AST {
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
       case "valueOf", "equals", "toInt128", "estimateStringLength" ->
-        new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber"),_kids[0]);
+        new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
 
       default -> throw XEC.TODO(_meth);
       };
     }
 
-    // Handle all the Int/Int64/Intliteral to "long" calls
-    if( k0t == XCons.JCHAR || k0t == XCons.CHAR ) {
+    // Handle all the Char to "char" calls
+    if( k0t == XCons.CHAR ) {
       return switch( _meth ) {
-      case "add" -> new BinOpAST( "+", "", XCons.INT, _kids );
-      case "sub" -> new BinOpAST( "-", "", XCons.INT, _kids );
-      case "asciiDigit", "decimalValue" -> this;
-      case "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char"),_kids[0]);
+      case "add" -> new BinOpAST( "+", "", XCons.CHAR, _kids );
+      case "sub" -> new BinOpAST( "-", "", XCons.CHAR, _kids );
+      case "asciiDigit" -> {
+        InvokeAST inv = new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+        inv._cond = true;
+        yield inv;
+      }
+      case "decimalValue", "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -125,29 +127,30 @@ public class InvokeAST extends AST {
       }
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
-      case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String"),_kids[0]);
+      case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
       case "equals", "split" -> this;
       case "indexOf" -> {
         castInt(2);                         // Force index to be an int not a long
         if( _type!=XCons.BOOL ) yield this; // Return int result
         // Request for the boolean result instead of int result
-        _type = XCons.LONG;   // Back to producing an an int result
+        _type = XCons.LONG;   // Back to producing an int result
         // But insert compare to -1 for boolean
-        yield new BinOpAST( "!=", "", XCons.BOOL, this, new ConAST( "-1" ) );
+        yield new BinOpAST( "!=", "", XCons.BOOL, this, new ConAST( "-1", XCons.LONG ) );
       }
       default -> throw XEC.TODO();
       };
     }
 
     if( k0t instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
-      if( _meth.equals( "next" ) ) {
-        _meth = "next8";        // Use the primitive long iterator
-        return this;
-      }
-      throw XEC.TODO();
+      switch( _meth ) {
+      case "next":  _meth = "next8"; break;  // Use the primitive iterator
+      case "whileEach", "untilAny", "limit", "take", "forEach": break;
+      default: throw XEC.TODO();
+      };
+      return this;
     }
 
-    if( _type instanceof XClz clz && clz.isTuple() ) {
+    if( k0t instanceof XClz clz && clz.isTuple() ) {
       switch( _meth ) {
       case "slice":
         BlockAST blk = enclosing_block();
@@ -159,14 +162,19 @@ public class InvokeAST extends AST {
       }
     }
 
-    // Auto-box arguments for non-internal calls
-    if( _args!=null && (k0t==XCons.XXTC || !(k0t instanceof XClz clz) || clz._jname.isEmpty()) )
-      for( int i=0; i<_args.length; i++ )
-        autobox(i+1, _args[i]);
-
     return this;
   }
 
+  @Override XType reBox( AST kid ) {
+    if( _args==null ) return kid._type;
+    if( kid instanceof NewAST ) return null; // Already boxed
+    if( _kids[0]._type instanceof XBase ) return null;
+    if( !((XClz)_kids[0]._type)._jname.isEmpty() ) return null; // "this" ptr is a Java special, will have primitive arg version
+    int idx = S.find(_kids,kid);
+    if( idx==0 ) return null; // The "this" ptr never boxes
+    // Expected args type vs provided kids[idx]._type
+    return _args[idx-1];
+  }
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();

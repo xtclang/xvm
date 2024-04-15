@@ -13,14 +13,21 @@ class AssertAST extends AST {
   }
   private AssertAST( AST... kids ) { super(kids); }
   @Override XType _type() {
-    // If I have a conditional child, I want the conditional from the child
+    // If I have a conditional child, I want the conditional from the child.
+    // So: `assert string.indexOf("sub")` tests the presence of "sub" in "string"
     if( _kids[1] != null && _kids[1]._cond )
       _kids[1]._type = XCons.BOOL;
     return XCons.VOID;
   }
 
-  @Override AST prewrite() {
-    return new InvokeAST("xassert",(XType)null,_kids).do_type();
+  // THIS:    (assert (elvis e0) )
+  // MAPS TO: (assert (e0 != null) )
+  AST doElvis(AST elvis) {
+    return new BinOpAST("!=","",XCons.BOOL,new ConAST("null"),elvis);
+  }
+
+  @Override public AST rewrite() {
+    return new InvokeAST("xassert",(XType)null,_kids).doType();
   }
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p(".xassert(");

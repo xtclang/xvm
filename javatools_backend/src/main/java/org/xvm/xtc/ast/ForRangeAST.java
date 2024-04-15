@@ -24,7 +24,7 @@ class ForRangeAST extends AST {
 
   @Override XType _type() { return XCons.VOID; }
 
-  @Override AST prewrite() {
+  @Override public AST rewrite() {
     // Primitive iterator?
     // Get a tmp
     if( _kids[0]._type.primeq() ) {
@@ -35,7 +35,7 @@ class ForRangeAST extends AST {
     return this;
   }
 
-  
+
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     if( _tmp == null ) {

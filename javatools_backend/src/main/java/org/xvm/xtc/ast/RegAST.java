@@ -11,7 +11,7 @@ import org.xvm.util.SB;
 // Since Java has no defaults, explicitly replace.
 public class RegAST extends AST {
   final int _reg;
-  final String _name;
+  String _name;
   public RegAST( int reg, String name, XType type ) {
     super(null);
     _reg  = reg ;
@@ -36,7 +36,7 @@ public class RegAST extends AST {
     case -11 -> X._tclz;     // A_CLASS
     case -13 -> ((ClassPart)X._clz._par)._tclz;
     default -> X._ltypes.at(reg);
-    };    
+    };
     assert _type!=null;
   }
   @Override String name() { return _name; } // Can be null for 'this'?

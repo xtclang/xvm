@@ -10,7 +10,7 @@ class BindMethAST extends AST {
     AST target = ast_term(X);
     Const meth = X.con();
     Const type = X.con();
-    return new BindMethAST( (MethodPart)((MethodCon)meth).part(), XType.xtype(type,false), target );
+    return new BindMethAST( (MethodPart) meth.part(), XType.xtype(type,false), target );
   }
     
   private BindMethAST( MethodPart meth, XType type, AST... kids ) {

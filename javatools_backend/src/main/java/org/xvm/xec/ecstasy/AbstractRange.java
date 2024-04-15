@@ -46,7 +46,7 @@ abstract public class AbstractRange extends XTC implements Iterable<Int64> {
   public boolean in( long x ) { return _incr == 1 ? x < _end : x > _end; }
 
   public static AbstractRange range(AST ast) {
-    XClz rng = (XClz)ast.getType();
+    XClz rng = (XClz)ast.type();
     int lo = con(ast._kids[0]);
     int hi = con(ast._kids[1]);
     if( rng==XCons.RANGEII ) return new RangeII(lo,hi);

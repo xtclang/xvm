@@ -7,12 +7,16 @@ import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 
+import java.util.Arrays;
+
+
 class BindFuncAST extends AST {
   // Which arguments are being bound here.  This is basically reverse-currying
   // by any other name.
   final int[] _idxs;            // Which args are being bound
   String[] _args;               // Remaining args
   private final ClzBuilder _X;
+  private final MethodPart _lam;  // Avoid double-rewrite on nested BindFunc/Con-> setups (nested lambda expressions)
 
   static BindFuncAST make( ClzBuilder X ) {
     AST target = ast_term(X);
@@ -27,73 +31,53 @@ class BindFuncAST extends AST {
     Const type = X.con();
     return new BindFuncAST( X, kids, idxs, type );
   }
-    
+
   BindFuncAST( ClzBuilder X, AST[] kids, int[] idxs, Const type ) {
     super(kids);
     _idxs = idxs;
     _X = X;
+    // Known lambda function being inlined
+    _lam = kids[0] instanceof ConAST con && con._con.equals("->")
+      ? (MethodPart) con._tcon.part()
+      : null;
+  }
+  BindFuncAST( AST body, MethodPart lam ) {
+    super(new AST[]{body});
+    _idxs = null;
+    _X = null;
+    _lam = lam;
   }
 
   @Override XType _type() {
     int nargs = _kids.length-1;
-    if( _kids[0] instanceof ConAST con && con._con.equals("->") ) {
-      MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
+    if( _lam != null ) {
       // All the explicit lambda args
-      _args = new String[lam._args.length-nargs];
-      XType[] xargs = new XType[lam._args.length-nargs];
-      for( int i=nargs; i<lam._args.length; i++ ) {
-        String name = lam._args[i]._name;
-        XType atype = XType.xtype(lam._args[i].tcon(),false);
+      _args = new String[_lam._args.length-nargs];
+      XType[] xargs = new XType[_lam._args.length-nargs];
+      for( int i=nargs; i<_lam._args.length; i++ ) {
+        String name = _lam._args[i]._name;
+        XType atype = XType.xtype(_lam._args[i].tcon(),false);
         _args[i-nargs] = name;
         xargs[i-nargs] = atype;
       }
-      return XFun.make(xargs,XType.xtypes(lam._rets));
-      
+      return XFun.make(xargs,XType.xtypes(_lam._rets));
+
       // Currying: pre-binding some method args
     } else {
-      assert nargs==_idxs.length; // Every 
+      assert nargs==_idxs.length; // Every
       return _kids[0]._type;
-    } 
+    }
   }
-  
-  @Override AST prewrite() {
-    if( _kids[0] instanceof ConAST con && con._con.equals("->") ) {
+
+  // Rewrite effectively-final parameter names before building the lambda AST
+  @Override public AST unBox() {
+    if( _lam != null ) {
       // Check for other exposed names being effectively final
-      MethodPart lam = (MethodPart)((MethodCon)con._tcon).part();
       for( int i=1; i<_kids.length; i++ )
         if( _kids[i] instanceof RegAST reg )
-          make_effectively_final(reg,lam);
-      return this;
+          make_effectively_final(reg,_lam);
     }
-    
-    XFun lam = (XFun)_type;
-    int nargs = _kids.length-1;
-    // The idx[] args are pre-defined; the remaining args are passed along.
-    // Example: foo( Int x, String s ) { ...body... }
-    // The "1th" arg is predefined here, the 0th arg is passed along.
-    //     foo2 = &foo(s="abc")   ===>>>
-    //     foo2(long x) = x -> foo(x,"abc");
-    // 
-    // All the explicit lambda args: all the args minus the given (curried) args
-    _args = new String[lam.nargs()-nargs];
-    
-    // Recycle the kids array for the InvokeAST
-    AST[] ikids = new AST[lam.nargs()+1];
-    
-    // Fill in the args, leaving slot 0 open
-    int j=0;
-    for( int i=0; i<lam.nargs(); i++ )
-      ikids[i + 1] = j < nargs && _idxs[j]==i
-        ? _kids[1 + j++] // The jth curried arg
-        : new RegAST(i-j,_args[i-j] = "x"+i,lam.arg(i)); // The ith arg e.g. "x0"
-    
-    // If kid0 is a BindMeth, then called as "expr.call(args)"
-    // else                        called as "this.fun (args)"
-    String fname = _kids[0] instanceof BindMethAST ? _kids[0].name()   : "call";
-    ikids[0]     = _kids[0] instanceof BindMethAST ? new RegAST(-5,_X) : _kids[0];
-    // Update this BindFunc to just call with the curried arguments
-    _kids[0] = new InvokeAST(fname,lam.rets(),ikids);
-    return this;
+    return super.unBox();
   }
 
   // Make this register Java-effectively-final here
@@ -109,7 +93,7 @@ class BindFuncAST extends AST {
 
   private boolean isEF(AST par, AST kid, RegAST reg) {
     if( par==null ) return true;
-    int i=0; while( par._kids[i] != kid )
+    int i=0; while( i< par._kids.length && par._kids[i] != kid )
       if( isRedefTree(par._kids[i++],reg) )
         return false;
     return isEF(par._par,par,reg);
@@ -127,7 +111,45 @@ class BindFuncAST extends AST {
     }
     return false;
   }
-  
+
+  @Override public AST rewrite() {
+    // Has embedded AST, already expanded.  Not a currying operation
+    if( _lam != null ) return this;
+
+    // Curry some function: no embedded AST, just some arg shuffles
+    XFun lam = (XFun)_type;
+    int nargs = _kids.length-1;
+    // The idx[] args are pre-defined; the remaining args are passed along.
+    // Example: foo( Int x, String s ) { ...body... }
+    // The "1th" arg is predefined here, the 0th arg is passed along.
+    //     foo2 = &foo(s="abc")   ===>>>
+    //     foo2(long x) = x -> foo(x,"abc");
+    //
+    // All the explicit lambda args: all the args minus the given (curried) args
+    _args = new String[lam.nargs()-nargs];
+
+    // Recycle the kids array for the InvokeAST
+    AST[] ikids = new AST[lam.nargs()+1];
+
+    // Fill in the args, leaving slot 0 open
+    int j=0;
+    for( int i=0; i<lam.nargs(); i++ )
+      ikids[i + 1] = j < nargs && _idxs[j]==i
+        ? _kids[1 + j++] // The jth curried arg
+        : new RegAST(i-j,_args[i-j] = "x"+i,lam.arg(i)); // The ith arg e.g. "x0"
+
+    // If kid0 is a BindMeth, then called as "expr.call(args)"
+    // else                        called as "this.fun (args)"
+    String fname = _kids[0] instanceof BindMethAST ? _kids[0].name()   : "call";
+    ikids[0]     = _kids[0] instanceof BindMethAST ? new RegAST(-5,_X) : _kids[0];
+    AST curry = new InvokeAST(fname,lam.rets(),ikids);
+    for( AST ikid : ikids ) ikid._par = curry;
+    // Update this BindFunc to just call with the curried arguments
+    Arrays.fill(_kids,null);
+    _kids[0] = curry; _kids[0]._par = this;
+    return this;
+  }
+
   @Override public SB jcode( SB sb ) {
     sb.p("( ");
     if( _args != null )

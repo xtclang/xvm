@@ -7,7 +7,6 @@ import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.MethodCon;
 
 class ConvAST extends AST {
-  final MethodPart _meth;
 
   static ConvAST make( ClzBuilder X ) {
     AST[] kids = X.kids(1);     // One expr
@@ -15,7 +14,7 @@ class ConvAST extends AST {
     Const[] convs = X.sparse_consts(types.length);
     return new ConvAST(kids,types,convs);
   }
-  
+
   private ConvAST( AST[] kids, Const[] types, Const[] convs) {
     super(kids);
     // Expecting exactly 2 types; first is boolean for a COND.
@@ -26,12 +25,16 @@ class ConvAST extends AST {
       assert convs.length==2 && convs[0]==null;
     }
     _type = XType.xtype(types[idx],false);
-    _meth = (MethodPart)convs[idx].part();
+  }
+
+  ConvAST( XClz cast, AST kid ) {
+    super(new AST[]{kid});
+    _type = cast;
   }
 
   @Override XType _type() { return _type; }
 
-  @Override AST postwrite() {
+  @Override public AST rewrite() {
     if( _type==_kids[0]._type ) // No change
       return _kids[0];
     // Converting from a Java primitive will always need some kind of conversion call
@@ -44,9 +47,9 @@ class ConvAST extends AST {
       return new UniOpAST(new AST[]{_kids[0]},null,"._i",_type);
     return this;
   }
-  
+
   @Override public SB jcode( SB sb ) {
-    _type.clz(sb.p("(")).p(")(");
+    _type.clz(sb.p("((")).p(")");
     return _kids[0].jcode(sb).p(")");
   }
 }

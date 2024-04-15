@@ -19,7 +19,7 @@ import java.util.function.LongUnaryOperator;
 public class Arylong extends Array<Int64> {
   public static final Arylong GOLD = new Arylong();
   public static final Arylong EMPTY= new Arylong();
-  
+
   public long[] _es;
   private Arylong(Mutability mut, long[] es) { super(Int64.GOLD,mut,es.length); _es = es; }
   public  Arylong(                    ) { this(Mutable , new long[ 0 ]); }
@@ -38,8 +38,8 @@ public class Arylong extends Array<Int64> {
   public static Arylong construct() { return new Arylong(); }
   public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
   public static Arylong construct(long len) { return new Arylong((int)len); }
-  
-  
+
+
   // Fetch element
   public long at8(long idx) {
     if( 0 <= idx && idx < _len )
@@ -87,7 +87,7 @@ public class Arylong extends Array<Int64> {
     _es[(int)idx] = _es[--_len];
     return this;
   }
-  
+
   public Arylong delete(long idx) {
     System.arraycopy(_es,(int)idx+1,_es,(int)idx,--_len-(int)idx);
     return this;
@@ -100,10 +100,10 @@ public class Arylong extends Array<Int64> {
     private int _i;
     @Override public Int64 next() { return Int64.make(next8()); }
     public long next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
-    @Override public boolean hasNext() { return _i<_len; }  
+    @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return _i+".."+_len; }
     // --- Comparable
-    @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }  
+    @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }
   }
 
   // --- Freezable
@@ -114,7 +114,9 @@ public class Arylong extends Array<Int64> {
     return this;
   }
 
-  
+  // --- Appender
+  @Override public Arylong appendTo( Int64 s ) { return add(s); }
+
   @Override public String toString() {
     SBX.p("[  ");
     for( int i=0; i<_len; i++ )
@@ -123,7 +125,7 @@ public class Arylong extends Array<Int64> {
     SBX.clear();
     return str;
   }
-  
+
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a
   // HashMap) and the then the array changes, the hashCode() will change also.

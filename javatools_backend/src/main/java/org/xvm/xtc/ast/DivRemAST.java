@@ -19,7 +19,7 @@ class DivRemAST extends AST {
     XType[] rets = XType.xtypes(X.consts());
     return new DivRemAST(op.text,rets,kids);
   }
-  
+
   DivRemAST( String op, XType[] rets, AST... kids ) {
     super(kids);
     _op = op;
@@ -47,7 +47,7 @@ class DivRemAST extends AST {
         _kids[1].jcode(sb);
       }
       return sb;
-      
+
     } else
       throw XEC.TODO();
   }

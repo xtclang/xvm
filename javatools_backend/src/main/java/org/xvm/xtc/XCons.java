@@ -16,11 +16,12 @@ public abstract class XCons {
   public static XClz SERVICE = make_java("ecstasy","Service",XXTC);
 
   // Java non-primitive classes
-  public static XClz JBOOL  = make_java("ecstasy","Boolean",ENUM);
-  public static XClz JCHAR  = make_java("ecstasy.text","Char",CONST);
-  public static XClz JSTRING= make_java("ecstasy.text","String",CONST);
-  public static XClz JOBJECT= make_java("ecstasy","Object",null);
-  public static XClz EXCEPTION = make_java("java.lang","Exception","ecstasy","Exception",CONST);
+  public static XClz JBOOL    = make_java("ecstasy","Boolean",ENUM);
+  public static XClz JCHAR    = make_java("ecstasy.text","Char",CONST);
+  public static XClz JSTRING  = make_java("ecstasy.text","String",CONST);
+  public static XClz JSTRINGN = JSTRING.nullable();
+  public static XClz JOBJECT  = make_java("ecstasy","Object",null);
+  public static XClz EXCEPTION= make_java("java.lang","Exception","ecstasy","Exception",CONST);
 
   // Java primitives or primitive classes
   public static XBase BOOL = XBase.make("boolean",false);
@@ -88,13 +89,13 @@ public abstract class XCons {
 
   public static XClz ROUNDING    = make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
 
-  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy","Range"  ,CONST,"Element",CONST);
-  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","RangeEE",RANGE,"Element",JLONG    ); // No Ecstasy matching class
-  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","RangeIE",RANGE,"Element",JLONG    ); // No Ecstasy matching class
-  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","RangeII",RANGE,"Element",JLONG    ); // No Ecstasy matching class
+  public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy", "Range"  ,CONST,"Element",CONST);
+  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",RANGE,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",RANGE,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,"Element",JLONG); // No Ecstasy matching class
 
   // This is a mixin type
-  public static XClz VOLATILEVAR = make_java("","","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
+  public static XClz VOLATILEVAR = make_java("ecstasy.annotations","VolatileVar","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
   public static XClz FUTUREVAR   = make_java("ecstasy.annotations","FutureVar","ecstasy.annotations","FutureVar",VOLATILEVAR,"Referent",XXTC);
 
   // Convert a Java primitive to the Java object version.
@@ -110,6 +111,7 @@ public abstract class XCons {
       put(TRUE ,JTRUE );
       put(FALSE,JFALSE);
       put(STRING,JSTRING);
+      put(STRINGN,JSTRINGN);
     }};
   // Convert a Java wrapped primitive to the unwrapped primitive
   static final HashMap<XType, XBase> UNBOX = new HashMap<>() {{
@@ -178,6 +180,25 @@ public abstract class XCons {
     JUINTN  ,
   };
   public static XClz format_clz(Const.Format f) { return XCLZS[f.ordinal()]; }
+  private static final boolean[] IPRIMS = new boolean[] {
+    false,                  // IntLiteral
+    false,                  // Bit
+    false,                  // Nybble
+    true ,                  // i8
+    true ,                  // i16
+    true ,                  // i32
+    true ,                  // i64
+    false,                  // i128
+    false,                  // BigInteger
+    true ,                  // u8
+    true ,                  // u16
+    true ,                  // u32
+    true ,                  // u64
+    false,                  // u128
+    false,                  // UBigInteger
+  };
+  public static boolean format_iprims(Const.Format f) { return IPRIMS[f.ordinal()]; }
+
 
 
   // Made from a Java class directly; the XTC class shows up later.
@@ -217,7 +238,8 @@ public abstract class XCons {
       // Set mod and clz
       clz._mod = pclz.mod();
       clz._clz = pclz;
-      pclz._tclz = clz;         // Fill in class cache
+      if( S.eq(jname,name) )
+        pclz._tclz = clz;         // Fill in class cache
     }
     XClz clz2 = clz._intern();
     assert clz==clz2;           // No prior versions of these java-based XClzs

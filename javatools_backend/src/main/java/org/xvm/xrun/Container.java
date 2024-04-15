@@ -19,13 +19,13 @@ public abstract class Container {
   final ModPart _mod;           // Main module
   public NativeConsole console() { return _par.console(); }
   public NativeTimer timer() { return _par.timer(); }
-  
+
   Container( Container par, ModPart mod ) {
     _par = par;
     _mod = mod;
   }
 
-  
+
   public Object invoke( String xrun, String[] args) {
     // Build the java module class.
     if( JavaC.XFM.klass(_mod)==null )
@@ -40,7 +40,7 @@ public abstract class Container {
     } catch( Exception ie ) {
       throw XEC.TODO();
     }
-    
+
     // Find method in the java module class.
     if( !xrun.equals("run") ) throw XEC.TODO();
     XRunClz runner = (XRunClz)jobj;

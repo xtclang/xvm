@@ -10,7 +10,7 @@ class TryCatchAST extends AST {
   // kids[xbody]         // the body
   // kids[xbody+1...len] // catch clauses, each a StmtBody with DefReg first
   final int _xbody;
-  
+
   static TryCatchAST make( ClzBuilder X ) {
     AST[] resources = X.kids(); // Resources to close
     int xbody = resources==null ? 0 : resources.length;
@@ -20,8 +20,11 @@ class TryCatchAST extends AST {
     kids[xbody] = body;
     for( int i=0; i<ncs; i++ )  // Catch clauses
       kids[xbody+1+i] = ast(X); // Each expected to be a BlockAST with a DefReg first
+    for( int i=0; i<xbody; i++ )
+      kids[i] = resources[i];
     return new TryCatchAST(kids,xbody);
   }
+
   private TryCatchAST( AST[] kids, int xbody ) {
     super(kids);
     _xbody = xbody;
@@ -35,7 +38,7 @@ class TryCatchAST extends AST {
           aks.length!=2 || !(aks[0] instanceof DefRegAST) ||
           (aks[1] instanceof DefRegAST) )
         throw XEC.TODO();       // Expect a single DefReg for the catch variable
-      // Restructure as (Block DefReg  AST     ) as (Block DefReg (Block AST)) 
+      // Restructure as (Block DefReg  AST     ) as (Block DefReg (Block AST))
       // Restructure as (Block DefReg (Multi...) as (Block DefReg (Block ...))
       if( aks[1] instanceof MultiAST  )
         aks[1] = new BlockAST(aks[1]._kids);
@@ -46,11 +49,16 @@ class TryCatchAST extends AST {
   }
 
   @Override XType _type() { return XCons.VOID; }
-  
+
   @Override public SB jcode( SB sb ) {
-    if( _xbody!=0 )
-      throw XEC.TODO();         // Need to handle closes
-    sb.ip("try {").nl().ii();
+    sb.ip("try");
+    if( _xbody > 0 ) {
+      sb.p("(");
+      for( int i=0; i<_xbody; i++ )
+        _kids[i].jcode(sb.p("AUTOCLOSE ")).p(";");
+      sb.p(")");
+    }
+    sb.p(" {").nl().ii();
     _kids[_xbody].jcode(sb);
     // 1-line body:            // block-body
     //                         try {
@@ -58,7 +66,7 @@ class TryCatchAST extends AST {
     //                         }
     if( !sb.was_nl() ) sb.p(";");
     sb.di().nl().ip("}").nl();
-    
+
     // Catch clauses
     for( int i=_xbody+1; i<_kids.length; i++ ) {
       sb.ip("catch( ");

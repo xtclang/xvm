@@ -23,7 +23,7 @@ class AssignAST extends AST {
       int idx = ((DefRegAST)kids[0])._reg;
       X._locals.set(idx, ((RegAST)kids[1])._name);
     }
-    
+
     return new AssignAST(op, meth, kids);
   }
   AssignAST( AST... kids ) { this(AsnOp.Asn,null,kids); }
@@ -36,18 +36,22 @@ class AssignAST extends AST {
 
 
   @Override XType _type() { return _kids[0]._type; }
-  @Override boolean _cond() { return _op==AsnOp.AsnIfNotFalse; }
-  
-  @Override AST prewrite() {
+
+  @Override public AST rewrite() {
     // Assign of a non-primitive array
     if( _kids[0] instanceof BinOpAST bin &&
         // Replace with "ary.set(idx,val)"
         bin._op0.equals(".at(") )
       return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
 
-    // Add/push element to array
-    if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz )
-      return new AssignAST(AsnOp.Asn,_meth,_kids[0],new InvokeAST(_meth.name(),clz,_kids));
+    // Add/push element to array; or op-assign "x+=y"
+    if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz ) {
+      RegAST reg0 = (RegAST)_kids[0];
+      AST op = new InvokeAST( _meth.name(), clz, _kids );
+      for( AST kid : _kids ) kid._par = op;
+      RegAST reg1 = new RegAST(reg0._reg,reg0._name,reg0._type);
+      return new AssignAST( AsnOp.Asn, _meth, reg1, op ).doType();
+    }
 
     // Multi-returns from tuples.
     //   XTC: (Int a, String b, Double c) = retTuple();
@@ -57,27 +61,29 @@ class AssignAST extends AST {
       MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
       System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
       String tmp = blk.add_tmp(_kids[1]._type);
-      mm._kids[0] = new AssignAST(new RegAST(-1,tmp,_kids[1]._type),_kids[1]);
+      AST reg = new RegAST(-1,tmp,_kids[1]._type), con;
+      mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
+      reg._par = _kids[1]._par = mm._kids[0];
       for( int i=0; i<m._kids.length; i++ ) {
         AST kid = m._kids[i];
-        mm._kids[i+1] = new AssignAST(new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type),new ConAST(tmp+"._f"+i));
+        reg = new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type);
+        con = new ConAST(tmp+"._f"+i,kid._type);
+        mm._kids[i+1] = new AssignAST(reg,con).doType();
+        con._par = reg._par = mm._kids[i+1];
       }
-      return mm;
+      return mm.doType();
     }
 
-    
-    // Autobox into _kids[0] from Base in _kids[1]
-    autobox(1,_kids[0]._type);
 
     // var := (true,val)  or  var ?= not_null;
     if( _op == AsnOp.AsnIfNotFalse || _op == AsnOp.AsnIfNotNull) {
       XType type = _kids[0]._type;
-      BlockAST blk = enclosing_block();
       if( _kids[0] instanceof DefRegAST ) {
         // Use the _par parent to find nearest enclosing If or Assert for a conditional assignment
         AST top = _par;
-        while( !(top instanceof IfAST) && !(top instanceof InvokeAST call && call._meth.equals("xassert")) )
+        while( !(top instanceof IfAST) && !(top instanceof AssertAST) )
           top = top._par;
+        BlockAST blk = top.enclosing_block();
         // IfAST
         if( top instanceof IfAST iff ) {
           // XTC   if( String s := cond_ret(), Int n :=... ) { ..s...}
@@ -85,10 +91,23 @@ class AssignAST extends AST {
           // BAST  (If (&&    (Op$AsgnIfNotFalse (Reg stmp) (Invoke cond_ret))...) (Block (DefReg s stmp) ...true...) ...false...)
           // Java  if( $t(stmp = cond_ret()) && GET$COND() && $t(ntmp = cond_ret()) && GET$COND() ) { String s=stmp; long n=ntmp; ...s... }
           String tmp = blk.add_tmp(type);
-          _kids[0] = new RegAST(0,tmp,type);
-          BlockAST iftblk = iff.true_blk();
-          assert iftblk._kids[0]==null;
-          iftblk._kids[0] = new DefRegAST(type,_name,tmp);
+          _kids[0] = new RegAST(0,tmp,type);  _kids[0]._par = this;
+
+          // Insert new block under IF, with extra slot for DefReg.
+          AST ift = iff._kids[1]; // If-true
+          // If if-true is already a block, then expand extra slot, else make fresh block
+          AST[] kids = ift instanceof BlockAST ? new AST[ift._kids.length+1] : new AST[]{null,ift};
+          if(          ift instanceof BlockAST ) System.arraycopy(ift._kids,0,kids,1,ift._kids.length);
+          BlockAST blk0 = new BlockAST(kids);
+          iff._kids[1] = blk0;  blk0._par = iff;
+          blk0._kids[0] = new DefRegAST(type,_name,tmp);
+          for( AST kid : kids ) kid._par = blk0;
+          // Walk the tree under iff condition and replace uses _name with the tmp
+          iff._kids[0].visit(ast -> {
+              if( ast instanceof RegAST reg && reg._name.equals(_name) )
+                reg._name = tmp;
+              return ast;
+            },iff);
         } else {
           // XTC   assert Int n := S1(), ...n...
           // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
@@ -97,6 +116,7 @@ class AssignAST extends AST {
           // Java  long n0, n1;  xassert( $t(n0=S1()) && GET$COND() && ...n0...)
           String tmp = blk.add_tmp(type,_name);
           _kids[0] = new RegAST(0,tmp,type);
+          _kids[0]._par = this;
         }
       } else {
         // 's' already defined
@@ -104,15 +124,24 @@ class AssignAST extends AST {
         // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
         // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
         // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
-        String tmp = blk.add_tmp(type);
+        String tmp = enclosing_block().add_tmp(type);
         _cond_asgn = _name;
         _kids[0] = new RegAST(0,tmp,type);
+        _kids[0]._par = this;
       }
     }
 
     return this;
   }
-  
+
+  // Box as needed
+  @Override XType reBox( AST kid ) {
+    if( _kids[1]!=kid ) return null;
+    if( _op == AsnOp.AsnIfNotNull )
+      return _type.nullable();
+    return _type;
+  }
+
   @Override public SB jcode( SB sb ) {
     return switch( _op ) {
     case AsnIfNotFalse, AsnIfNotNull -> {
@@ -125,15 +154,15 @@ class AssignAST extends AST {
       if( _op == AsnOp.AsnIfNotFalse ) sb.p("$t");
       _kids[1].jcode(sb.p("(").p(name).p(" = ")).p(")");
       sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.GET$COND()" : "!=null " );
-      
+
       // $t(tmp = expr()) && XRuntime.GET$COND() && $t(var = tmp)
       if( _cond_asgn != null )
         sb.p(") ").p(_cond_asgn).p(" = ").p(name);
       yield sb;
     }
-      
-    case AsnIfWasFalse -> asnIf(sb,"!",""      ); // if(!var      ) var = e0;      
-    case AsnIfWasTrue  -> asnIf(sb,"" ,""      ); // if( var      ) var = e0;      
+
+    case AsnIfWasFalse -> asnIf(sb,"!",""      ); // if(!var      ) var = e0;
+    case AsnIfWasTrue  -> asnIf(sb,"" ,""      ); // if( var      ) var = e0;
     case AsnIfWasNull  -> asnIf(sb,"" ,"==null"); // if( var==null) var = e0;
     // Converts? a "normal" thing into a "Var" thing.
     // Nothing, because loads & stores are all $get and $set now
@@ -143,7 +172,7 @@ class AssignAST extends AST {
       // Assigning a Var uses "$set()"
       ? _kids[1].jcode(sb.ip(reg._name).p(".$set(")).p(")")
       : asn(sb);
-      
+
     case AddAsn -> asn(sb);
     case SubAsn -> asn(sb);
     case MulAsn -> asn(sb);
@@ -157,7 +186,7 @@ class AssignAST extends AST {
     _kids[0].jcode(sb).p(" ").p(_op.text).p(" ");
     return _kids[1].jcode(sb);
   }
-  
+
   private SB asnIf(SB sb, String pre, String post) {
     sb.ip("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
     return _kids[1].jcode(sb);

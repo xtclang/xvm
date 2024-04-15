@@ -21,7 +21,7 @@ public class XBase extends XType {
   // Oddly, String is treated as an "array of Char"
   @Override public boolean isAry() { return this==XCons.STRING; }
 
-  @Override XBase nullable() { return make(_jtype,false); }
+  @Override public XBase nullable() { return make(_jtype,false); }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {
     sb.p(_jtype);
@@ -36,5 +36,9 @@ public class XBase extends XType {
     return XCons.CHAR;
   }
 
-  @Override boolean _isa( XType xt ) { return false; }
+  // Because interning, if not "==" then never structurally equals and
+  // because simple fully expanded types, never "isa" unless "==".
+  @Override boolean _isa( XType xt ) {
+    return S.eq( "String", _jtype ) && S.eq( "String", ((XBase) xt)._jtype ) && !xt._notNull;
+  }
 }

@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.util.VBitSet;
 import org.xvm.xtc.cons.ParamTCon;
+import org.xvm.xtc.ast.AST;
 
 import java.util.Arrays;
 
@@ -24,6 +25,26 @@ public class XFun extends XType {
   public static XFun make( MethodPart meth ) {
     return make(xtypes(meth._args),xtypes(meth._rets));
   }
+
+  // Make a function from a Call.  The Call's return is the XFun's return.
+  // Arg 0 is ignored.  Args are either from kids 1&2 or kids 1&2&3.
+  // If either kid 2 or kid 3 is boxed, then both are.
+  public static XFun makeCall( AST call ) {
+    XType[] args = new XType[call._kids.length-1];
+    args[0] = call._kids[1].type();
+    args[1] = call._kids[2].type();
+    if( args.length==3 ) {
+      args[2] = call._kids[3].type();
+      // If both are primitives, take it.
+      // Otherwise, box them both.
+      if( !(args[1] instanceof XBase && args[2] instanceof XBase) ) {
+        if( args[1].box() != null ) args[1] = args[1].box();
+        if( args[2].box() != null ) args[2] = args[1].box();
+      }
+    }
+    return make(args,new XType[]{call.type()});
+  }
+
   public int nargs() { return _nargs; }
   public int nrets() { return _xts.length-_nargs; }
   public XType arg(int i) { return _xts[i]; }
@@ -45,11 +66,12 @@ public class XFun extends XType {
     if( ptc != null ) {
       XClz xargs = (XClz)xtype(ptc._parms[0],true);
       if( xargs._xts.length!=_nargs ) throw XEC.TODO();
-      //if( _nargs!=0 ) throw XEC.TODO();
     }
     sb.p("Fun").p(_nargs);
-    for( int i=0; i<_nargs; i++ )
-      _xts[i]._clz(sb,ptc,print).p("$");
+    for( int i=0; i<_nargs; i++ ) {
+      if( _xts[i]==XCons.JSTRING )   sb.p("XString$");
+      else          _xts[i]._clz(sb,ptc,print).p("$");
+    }
     return sb.unchar();
   }
 
@@ -57,12 +79,18 @@ public class XFun extends XType {
   @Override boolean eq(XType xt) { return _nargs == ((XFun)xt)._nargs; }
   @Override int hash() { return _nargs; }
   @Override boolean _isa( XType xt ) {
-    throw XEC.TODO();
+    XFun fun = (XFun)xt;        // Invariant
+    if( _nargs !=  fun._nargs ) return false;
+    for( int i=0; i<_nargs; i++ )
+      if( !_xts[i].isa(fun._xts[i]) )
+        return false;
+    // TODO: Need to check covariant returns?
+    return true;
   }
 
   // Make a callable interface with a particular signature
   public XFun make_class( ) {
-    String tclz = clz();
+    String tclz = _clz(new SB(),null,false).toString();
     String qual = (XEC.XCLZ+"."+tclz).intern();
     ClzBuilder.add_import(qual);
     if( ClzBldSet.find(qual) )
@@ -86,7 +114,7 @@ public class XFun extends XType {
     // Return
     int nrets = nrets();
     if( nrets==0 ) sb.p("void");
-    else if( nrets==1 ) _xts[nargs()].str(sb);
+    else if( nrets==1 ) _xts[nargs()].clz(sb);
     else throw XEC.TODO();
     sb.p(" call( ");
     int nargs = nargs();
