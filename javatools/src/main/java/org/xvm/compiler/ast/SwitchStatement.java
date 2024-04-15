@@ -291,12 +291,12 @@ public class SwitchStatement
 
     @Override
     protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn,
-                            Map<String, Argument> mapsArg, Label label)
+                            Map<String, Argument> mapArgs, Label label)
         {
         // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
         m_listBreaks.add(mapAsn);
 
-        super.addBreak(nodeOrigin, Collections.emptyMap(), Collections.emptyMap(), label);
+        super.addBreak(nodeOrigin, Collections.emptyMap(), mapArgs, label);
         }
 
     @Override

@@ -88,14 +88,14 @@ public abstract class Statement
         }
 
     protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn,
-                            Map<String, Argument> mapsArg, Label label)
+                            Map<String, Argument> mapArgs, Label label)
         {
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listBreaks == null)
             {
             m_listBreaks = new ArrayList<>();
             }
-        m_listBreaks.add(new Break(nodeOrigin, mapAsn, mapsArg, label));
+        m_listBreaks.add(new Break(nodeOrigin, mapAsn, mapArgs, label));
         }
 
     /**
