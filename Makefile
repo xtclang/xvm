@@ -194,7 +194,7 @@ XDKX = $(XDK_LIB)/ecstasy
 $(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x
 	@echo "compiling " $@ " because " $?
 	@[ -d $(XDK_LIB) ] || mkdir -p $(XDK_LIB)
-	@bin/makedepends.sh $(SRCX) $(XDKX)
+	@javatools_backend/bin/makedepends.sh $(SRCX) $(XDKX)
 	@java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild $(SRCX).x $(MACK).x
 	@mv $(MACK).xtc $(TURTLE)
 	@mv lib_ecstasy/build/ecstasy.xtc $(XDKX).xtc
@@ -204,14 +204,14 @@ SRCCRY = lib_crypto/src/main/x/crypto
 LIBCRY = $(XDK_LIB)/crypto
 $(LIBCRY).xtc:	$(SRCCRY).x $(LIBCRY).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCCRY) $(LIBCRY)
+	@javatools_backend/bin/makedepends.sh $(SRCCRY) $(LIBCRY)
 	@$(XCC) $< -o $@
 
 SRCNET = lib_net/src/main/x/net
 LIBNET = $(XDK_LIB)/net
 $(LIBNET).xtc:	$(SRCNET).x $(LIBNET).d $(XDK_JAR) $(LIBCRY).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCNET) $(LIBNET)
+	@javatools_backend/bin/makedepends.sh $(SRCNET) $(LIBNET)
 	@$(XCC) $< -o $@
 
 
@@ -219,21 +219,21 @@ SRCAGG = lib_aggregate/src/main/x/aggregate
 LIBAGG = $(XDK_LIB)/aggregate
 $(LIBAGG).xtc:	$(SRCAGG).x $(LIBAGG).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCAGG) $(LIBAGG)
+	@javatools_backend/bin/makedepends.sh $(SRCAGG) $(LIBAGG)
 	@$(XCC) $< -o $@
 
 SRCCOL = lib_collections/src/main/x/collections
 LIBCOL = $(XDK_LIB)/collections
 $(LIBCOL).xtc:	$(SRCCOL).x $(LIBCOL).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCCOL) $(LIBCOL)
+	@javatools_backend/bin/makedepends.sh $(SRCCOL) $(LIBCOL)
 	@$(XCC) $< -o $@
 
 SRCJSN = lib_json/src/main/x/json
 LIBJSN = $(XDK_LIB)/json
 $(LIBJSN).xtc:	$(SRCJSN).x $(LIBJSN).d $(XDK_JAR) $(XDKX).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCJSN) $(LIBJSN)
+	@javatools_backend/bin/makedepends.sh $(SRCJSN) $(LIBJSN)
 	@$(XCC) $< -o $@
 
 
@@ -241,14 +241,14 @@ SRCWEB = lib_web/src/main/x/web
 LIBWEB = $(XDK_LIB)/web
 $(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCWEB) $(LIBWEB)
+	@javatools_backend/bin/makedepends.sh $(SRCWEB) $(LIBWEB)
 	@$(XCC) $< -o $@
 
 SRCNAT = javatools_bridge/src/main/x/_native
 LIBNAT = $(XDK_DIR)/javatools/javatools_bridge
 $(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBWEB).xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $(SRCNAT) $(LIBNAT)
+	@javatools_backend/bin/makedepends.sh $(SRCNAT) $(LIBNAT)
 	@$(XCC) $< -o $@
 
 
@@ -258,7 +258,7 @@ xlib:	$(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJ
 # Automatic X-file dependency generation; .d file is next to both the XTC and sources.
 %.xtc:	%.x %.d $(XDK_JAR) $(XDK_LIB)/ecstasy.xtc
 	@echo "compiling " $@ " because " $?
-	@bin/makedepends.sh $* $*
+	@javatools_backend/bin/makedepends.sh $* $*
 	@$(XCC) $< -o $@
 
 # No complaints if these do not exist, just go make them
