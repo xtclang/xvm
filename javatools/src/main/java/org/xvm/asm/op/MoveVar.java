@@ -10,6 +10,7 @@ import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;

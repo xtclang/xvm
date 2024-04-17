@@ -553,7 +553,7 @@ public class Context
                     TypeConstant typeArg = getVar(sName).getType();
                     if (!regDest.getType().equals(typeArg))
                         {
-                        mapArgMods.putIfAbsent(sName, regDest.narrowType(typeArg));
+                        mapArgMods.put(sName, regDest.narrowType(typeArg));
                         }
                     }
                 }

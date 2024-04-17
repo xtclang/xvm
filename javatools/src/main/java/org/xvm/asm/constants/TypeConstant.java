@@ -524,7 +524,7 @@ public abstract class TypeConstant
     public boolean isEnumValue()
         {
         return isExplicitClassIdentity(false) &&
-               getExplicitClassFormat() == Component.Format.ENUMVALUE
+                    getExplicitClassFormat() == Component.Format.ENUMVALUE
                || isOnlyNullable();
         }
 
