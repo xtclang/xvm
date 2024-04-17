@@ -99,13 +99,18 @@ public class NotNullExpression
                 return null;
 
             case 1:
-                return atype[0].removeNullable();
+                {
+                TypeConstant type = atype[0];
+                return type.isNullable() ? type.removeNullable() : null;
+                }
 
             default:
+                {
                 TypeConstant type0 = atype[0];
                 return type0.isA(pool().typeBoolean())
                         ? atype[1]
-                        : type0.removeNullable();
+                        : type0.isNullable() ? type0.removeNullable() : null;
+                }
             }
         }
 
@@ -182,7 +187,7 @@ public class NotNullExpression
         if (!fCond && !typeResult.isNullable() && !pool().typeNull().isA(typeResult.resolveConstraints()))
             {
             exprNew.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-            return replaceThisWith(exprNew);
+            return null;
             }
 
         AstNode parent = getParent();
@@ -241,6 +246,12 @@ public class NotNullExpression
     protected boolean allowsConditional(Expression exprChild)
         {
         return m_fCond;
+        }
+
+    @Override
+    public void resetLValueTypes(Context ctx)
+        {
+        expr.resetLValueTypes(ctx);
         }
 
     @Override

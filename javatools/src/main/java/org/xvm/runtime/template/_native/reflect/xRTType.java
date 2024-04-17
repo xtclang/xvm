@@ -183,7 +183,7 @@ public class xRTType
             TypeConstant typeData = typeTarget.getParamType(0);
 
             typeData = typeData.resolveGenerics(pool,
-                    frame.getGenericsResolver(typeData.containsDynamicType(null)));
+                    frame.getGenericsResolver(typeData.containsDynamicType()));
             return frame.pushStack(typeData.normalizeParameters().ensureTypeHandle(frame.f_context.f_container));
             }
 

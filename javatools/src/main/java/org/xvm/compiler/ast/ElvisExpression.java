@@ -204,7 +204,7 @@ public class ElvisExpression
             if (type1.isOnlyNullable())
                 {
                 expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_ONLY_NULLABLE);
-                return replaceThisWith(expr2New);
+                return null;
                 }
 
             // the second check is for not-nullable type that is still allowed to be assigned from
@@ -212,7 +212,7 @@ public class ElvisExpression
             if (!type1.isNullable() && !pool.typeNull().isA(type1.resolveConstraints()))
                 {
                 expr1New.log(errs, Severity.ERROR, Compiler.ELVIS_NOT_NULLABLE);
-                return replaceThisWith(expr1New);
+                return null;
                 }
 
             type1Non = type1.removeNullable();

@@ -543,6 +543,20 @@ public class Context
                 {
                 mapArgMods.put(sName, getVar(sName));
                 }
+
+            // there could be some narrowed arguments that didn't get into the assignment map
+            for (String sName : getNameMap().keySet())
+                {
+                if (!mapArgMods.containsKey(sName) &&
+                        ctxDest.getVar(sName) instanceof Register regDest)
+                    {
+                    TypeConstant typeArg = getVar(sName).getType();
+                    if (!regDest.getType().equals(typeArg))
+                        {
+                        mapArgMods.put(sName, regDest.narrowType(typeArg));
+                        }
+                    }
+                }
             }
         }
 
@@ -577,9 +591,13 @@ public class Context
                 asnNew = getVarAssignment(sName).join(asnNew);
                 }
             mapAsn.put(sName, asnNew);
+            }
 
-            Register regNew = (Register) mapAddArg.get(sName);
-            if (regNew != null)
+        for (Entry<String, Argument> entry : mapAddArg.entrySet())
+            {
+            String sName = entry.getKey();
+
+            if (entry.getValue() instanceof Register regNew)
                 {
                 Register regOld = (Register) getVar(sName);
                 assert regOld != null;
@@ -804,6 +822,30 @@ public class Context
                 {
                 mapNarrowing.keySet().retainAll(map.keySet());
                 }
+            }
+        }
+
+    /**
+     * Restore the original types for all narrowed arguments in this context.
+     */
+    public void restoreOriginalTypes()
+        {
+        for (String sName : getNameMap().keySet())
+            {
+            restoreOriginalType(sName);
+            }
+        }
+
+    /**
+     * Restore the original type for the specified argument.
+     *
+     * @param sName  the argument name
+     */
+    protected void restoreOriginalType(String sName)
+        {
+        if (getVar(sName) instanceof Register regOrig)
+            {
+            replaceArgument(sName, Branch.Always, regOrig.restoreType());
             }
         }
 
@@ -1427,7 +1469,10 @@ public class Context
                reg.getOriginalType().isFormalType() ||
                reg.getOriginalType().getParamType(0).isFormalType();
 
-        replaceArgument(sName, branch, reg.narrowType(typeNarrow));
+        if (reg.isInPlace() || !reg.getType().equals(typeNarrow))
+            {
+            replaceArgument(sName, branch, reg.narrowType(typeNarrow));
+            }
         }
 
     /**
@@ -1479,7 +1524,13 @@ public class Context
             }
         else
             {
-            map.remove(sName);
+            map.remove(sName); // remove the argument from this scope before calling "getVar()"
+
+            Argument argOrig = getVar(sName);
+            if (argOrig != null && !argOrig.getType().equals(regOrig.getType()))
+                {
+                map.put(sName, regOrig);
+                }
             }
         }
 
@@ -1576,16 +1627,13 @@ public class Context
         Map<FormalConstant, TypeConstant> map = ensureFormalTypeMap(branch);
 
         TypeConstant typeOld = map.get(constFormal);
-        if (typeOld != null)
+        if (typeOld == null)
             {
-            TypeConstant typeNew = argNew.getType();
-
-            TypeConstant typeJoin = typeNew.union(pool(), typeOld);
-            map.put(constFormal, typeJoin);
+            map.remove(constFormal);
             }
         else
             {
-            map.remove(constFormal);
+            map.put(constFormal, argNew.getType().union(pool(), typeOld));
             }
         }
 
@@ -1665,12 +1713,19 @@ public class Context
             public TypeConstant resolveFormalType(FormalConstant constFormal)
                 {
                 TypeConstant typeType = getFormalTypeMap(branch).get(constFormal);
-                if (typeType == null)
+                if (typeType != null)
                     {
-                    return resolveLocalVar(constFormal.getName(), branch);
+                    assert typeType.isTypeOfType();
+                    return typeType.getParamType(0);
                     }
-                assert typeType.isTypeOfType();
-                return typeType.getParamType(0);
+
+                String   sName = constFormal.getName();
+                Argument arg   = getLocalVar(sName, branch);
+                return arg == null
+                        ? isFunction() || !constFormal.isProperty()
+                                ? null
+                                : getThisClass().getFormalType().resolveGenericType(sName)
+                        : extractElementType(arg);
                 }
 
             @Override
@@ -1688,19 +1743,16 @@ public class Context
                         }
                     }
 
-                return resolveLocalVar(sFormalName, branch);
+                Argument arg = getLocalVar(sFormalName, branch);
+                return arg == null
+                        ? isFunction()
+                                ? null
+                                : getThisClass().getFormalType().resolveGenericType(sFormalName)
+                        : extractElementType(arg);
                 }
 
-            private TypeConstant resolveLocalVar(String sFormalName, Branch branch)
+            private TypeConstant extractElementType(Argument arg)
                 {
-                Argument arg = getLocalVar(sFormalName, branch);
-                if (arg == null)
-                    {
-                    return isFunction()
-                            ? null
-                            : getThisClass().getFormalType().resolveGenericType(sFormalName);
-                    }
-
                 TypeConstant typeType = arg.getType();
                 return typeType.isTypeOfType()
                         ? typeType.getParamType(0)

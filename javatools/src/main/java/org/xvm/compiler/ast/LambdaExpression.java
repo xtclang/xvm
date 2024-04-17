@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +33,7 @@ import org.xvm.asm.ast.PropertyExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
+import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
@@ -545,39 +547,17 @@ public class LambdaExpression
 
         fValid &= collectParamNamesAndTypes(atypeReqParams, atypeParams, asParams, errs);
 
-        // even if we know we cannot proceed, we need to validate the lambda to report on errors
-        // that would not have been otherwise reported
-        m_typeRequired = typeReqFn;
-        m_lambda       = instantiateLambda(errs);
-
-        // the logic below is basically a copy of the "extractReturnTypes" method,
-        // which we couldn't use since we need two things back: the types and the new context
-        StatementBlock blockTemp = (StatementBlock) body.clone();
-        if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
+        if (!fValid)
             {
-            blockTemp.discard(true);
             return null;
             }
 
-        LambdaContext ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
-        StatementBlock blockNew = (StatementBlock) blockTemp.validate(ctxLambda, errs);
-        if (blockNew == null)
-            {
-            blockTemp.discard(true);
-            fValid = false;
-            }
-        else
-            {
-            // we do NOT store off the validated block; the block does NOT belong to the lambda
-            // expression; rather, it belongs to the function (m_lambda) that we created, and the
-            // real (not temp) block will get validated and compiled by generateCode() above
-            blockNew.discard(true);
-            }
+        // even if we know we cannot proceed, we need to validate the lambda to report on errors
+        // that would not have been otherwise reported
+        m_lambda = instantiateLambda(errs);
 
-        // collected VAS information from the lambda context
-        ctxLambda.exit();
-
-        if (!fValid)
+        LambdaContext ctxLambda = createContext(ctx, typeReqFn, atypeParams, asParams, errs);
+        if (ctxLambda == null)
             {
             return null;
             }
@@ -623,14 +603,17 @@ public class LambdaExpression
                 int cReturns = atypeRets.length;
 
                 // lambda's return type is used to define the method structure and therefore cannot
-                // refer to a dynamic type; need to resolve those
+                // refer to a dynamic type with an unbound register; need to resolve those;
+                // (Note: collector (above) returns a new array; no problem mutating it)
                 for (int i = 0; i < cReturns; i++)
                     {
                     TypeConstant typeRet = atypeRets[i];
-                    if (typeRet.containsDynamicType(null))
+                    if (typeRet.containsDynamicType())
                         {
-                        // collector (above) returns a new array; no problem mutating it
-                        atypeRets[i] = typeRet.resolveConstraints();
+                        GenericTypeResolver resolver = new ConstraintResolver(
+                            ctxLambda.ensureRegisterMap().values());
+
+                        atypeRets[i] = typeRet.resolveGenerics(pool, resolver);
                         }
                     }
                 if (cReqReturns != -1 && cReturns > cReqReturns)
@@ -782,9 +765,37 @@ public class LambdaExpression
                                               TypeConstant[] atypeParams, String[] asParams,
                                               TypeConstant[] atypeReturns, ErrorListener errs)
         {
-        // clone the body (to avoid damaging the original) and validate it to calculate its type
-        StatementBlock blockTemp = (StatementBlock) body.clone();
+        TypeConstant typeReqFn = atypeReturns == null
+                ? null
+                : pool().buildFunctionType(atypeParams, replacePending(atypeReturns));
 
+        createContext(ctx, typeReqFn, atypeParams, asParams, errs);
+        try
+            {
+            // extract return types
+            return m_collector == null
+                    ? TypeConstant.NO_TYPES
+                    : m_collector.inferMulti(atypeReturns);
+            }
+        finally
+            {
+            m_collector = null;
+            }
+        }
+
+    /**
+     * Prepare a LambdaContext to use for code generation for this LambdaExpression. Since the lambda
+     * as a function could be called any number of times, we may need to validate the lambda block
+     * a number of times (in the same way as we do for "for", "for-each" and "while" statements)
+     * to ensure that the assignments and type inferences align for every iteration.
+     *
+     * @return a valid LambdaContext or null if the validation was unsuccessful
+     */
+    private LambdaContext createContext(Context ctx, TypeConstant typeRequired,
+                                        TypeConstant[] atypeParams, String[] asParams,
+                                        ErrorListener errs)
+        {
+        StatementBlock blockTemp = (StatementBlock) body.clone();
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20))
             {
             blockTemp.discard(true);
@@ -793,42 +804,81 @@ public class LambdaExpression
 
         // prior to calling "blockTemp.validate()" below we need to prime the expected lambda type;
         // note that only the return types portion is going to be used via "getReturnTypes()" method
-        if (atypeReturns != null)
-            {
-            m_typeRequired = pool().buildFunctionType(atypeParams, replacePending(atypeReturns));
-            }
+        m_typeRequired = typeRequired;
 
-        // use a black-hole context (to avoid damaging the original)
-        Context ctxTemp = ctx.enter();
-        ctxTemp   = enterCapture(ctxTemp, blockTemp, atypeParams, asParams);
-        blockTemp = (StatementBlock) blockTemp.validate(ctxTemp, errs);
-        ctxTemp.discard();
+        Context                 ctxOrig      = ctx;
+        Map<String, Assignment> mapAsnBefore = new HashMap<>();
+        Map<String, Argument>   mapArgBefore = new HashMap<>();
 
-        try
+        StatementBlock blockOrig = blockTemp;
+
+        // don't let this repeat ad nauseam
+        int cTries = 0;
+        while (true)
             {
-            // the resulting returned types come back in m_collector (if everything succeeds)
-            if (blockTemp == null)
+            boolean fValid = true;
+
+            // clone the condition(s) and the body
+            blockTemp = (StatementBlock) blockOrig.clone();
+
+            // create a temporary error list
+            ErrorListener errsTemp = errs.branch(this);
+
+            // we use a potentially unnecessary context here as a place to jam in any assumptions
+            // that we learned on a previous trial run through the loop
+            ctx = ctxOrig.enter();
+            ctx.merge(mapAsnBefore, mapArgBefore);
+
+            LambdaContext  ctxLambda = enterCapture(ctx, blockTemp, atypeParams, asParams);
+            StatementBlock blockNew  = (StatementBlock) blockTemp.validate(ctxLambda, errsTemp);
+
+            if (blockNew != blockTemp)
                 {
-                return null;
+                if (blockNew == null)
+                    {
+                    fValid = false;
+                    }
+                else
+                    {
+                    blockOrig = blockNew;
+                    }
                 }
 
-            // extract return types
-            if (m_collector == null)
+            // discard the clone
+            blockTemp.discard(true);
+
+            // see if there are any assignments that would change our starting assumptions
+            Map<String, Assignment> mapAsnAfter = new HashMap<>();
+            Map<String, Argument>   mapArgAfter = new HashMap<>();
+            ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
+
+            if (!mapAsnAfter.equals(mapAsnBefore))
                 {
-                return TypeConstant.NO_TYPES;
+                // don't let this repeat forever
+                if (++cTries < 10)
+                    {
+                    mapAsnBefore = mapAsnAfter;
+                    mapArgBefore = mapArgAfter;
+                    continue; // repeat
+                    }
+
+                if (!errsTemp.hasSeriousErrors())
+                    {
+                    log(errsTemp, Severity.ERROR, Compiler.FATAL_ERROR);
+                    }
+                fValid = false;
                 }
 
-            return m_collector.inferMulti(atypeReturns); // TODO conditional
-            }
-        finally
-            {
-            m_collector    = null;
+            // we do NOT store off the validated block; the block does NOT belong to the lambda
+            // expression; rather, it belongs to the function (m_lambda) that we created, and the
+            // real (not temp) block will get validated and compiled by generateCode() above
+            blockOrig.discard(true);
+            errsTemp.merge();
+
+            // collected VAS information from the lambda context
+            ctxLambda.exit().exit();
             m_typeRequired = null;
-
-            if (blockTemp != null)
-                {
-                blockTemp.discard(true);
-                }
+            return fValid ? ctxLambda : null;
             }
         }
 
@@ -1459,7 +1509,16 @@ public class LambdaExpression
         @Override
         protected void promoteNonCompleting(Context ctxInner)
             {
-            // Lambda's non-completion has no effect on the parent's context
+            // Lambda's non-completion has no effect on the parent's context (AAMOF, it's always
+            // non-completing), however if any changes are detected within the lambda, they *may*
+            // impact previous inferences, so we need to restore the original types. For example:
+            //      @Volatile String? s = Null; // we know "s" is Null here
+            //      f(() -> {s=""; return;});
+            // Since we cannot know whether the lambda is called, "s" may or may not be Null
+            // afterward.
+
+            ctxInner.restoreOriginalTypes();
+            ctxInner.promoteNarrowedTypes();
             }
 
         @Override
@@ -1578,6 +1637,42 @@ public class LambdaExpression
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;
+        }
+
+    /**
+     * Custom GenericTypeResolver allowing to avoid resolving constraints for "known" dynamic types.
+     */
+    static protected class ConstraintResolver
+            implements GenericTypeResolver
+        {
+        public ConstraintResolver(Collection<Register> setCapture)
+            {
+            f_setCapture = setCapture;
+            }
+
+        @Override
+        public TypeConstant resolveFormalType(FormalConstant constFormal)
+            {
+            if (constFormal instanceof DynamicFormalConstant constDynamic)
+                {
+                Register register = constDynamic.getRegister();
+                if (register == null || !f_setCapture.contains(register))
+                    {
+                    // this formal dynamic type is unknown (possibly a shadow is captured);
+                    // resolve the constraints
+                    return constDynamic.getConstraintType();
+                    }
+                }
+            return null;
+            }
+
+        @Override
+        public TypeConstant resolveGenericType(String sFormalName)
+            {
+            return null;
+            }
+
+        private final Collection<Register> f_setCapture;
         }
 
 

@@ -307,8 +307,6 @@ public class ForEachStatement
         Map<String, Assignment> mapLoopAsn = new HashMap<>();
         Map<String, Argument>   mapLoopArg = new HashMap<>();
 
-        ctxOrig.prepareJump(ctxOrig, mapLoopAsn, mapLoopArg);
-
         StatementBlock      blockOrig = block;
         AssignmentStatement condOrig  = getCondition();
 
@@ -317,8 +315,7 @@ public class ForEachStatement
 
         while (true)
             {
-            boolean fValid  = true;
-            boolean fRepeat = false;
+            boolean fValid = true;
 
             // clone the condition(s) and the body
             conds = Collections.singletonList(condOrig.clone());
@@ -622,47 +619,44 @@ public class ForEachStatement
 
             if (!mapAsnAfter.equals(mapLoopAsn))
                 {
-                mapLoopAsn = mapAsnAfter;
-                mapLoopArg = mapArgAfter;
-                fRepeat    = true;
+                // don't let this repeat forever
+                if (++cTries < 10)
+                    {
+                    mapLoopAsn = mapAsnAfter;
+                    mapLoopArg = mapArgAfter;
+
+                    // discard the clones created in this pass
+                    cond.discard(true);
+                    block.discard(true);
+                    continue; // repeat
+                    }
+
+                if (!errs.hasSeriousErrors())
+                    {
+                    log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
+                    }
+                fValid = false;
                 }
 
-            // don't let this repeat forever
-            if (++cTries > 10 && fRepeat)
-                {
-                log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
-                fValid  = false;
-                fRepeat = false;
-                }
+            // discard the original nodes (we cloned them already)
+            condOrig.discard(true);
+            blockOrig.discard(true);
 
-            if (fRepeat)
-                {
-                // discard the clones created in this pass
-                cond.discard(true);
-                block.discard(true);
-                }
-            else
-                {
-                // discard the original nodes (we cloned them already)
-                condOrig.discard(true);
-                blockOrig.discard(true);
+            // leaving the "true" fork of the condition
+            ctx = ctx.exit();
 
-                // leaving the "true" fork of the condition
-                ctx = ctx.exit();
+            // leaving the "if" scope
+            ctx = ctx.exit();
 
-                // leaving the "if" scope
-                ctx = ctx.exit();
+            // leaving the scope of the for() statement
+            ctx = ctx.exit();
 
-                // leaving the scope of the for() statement
-                ctx = ctx.exit();
+            // lazily created loop vars are only created inside the validation of this statement
+            m_ctxLabelVars  = null;
+            m_errsLabelVars = null;
 
-                // lazily created loop vars are only created inside the validation of this statement
-                m_ctxLabelVars  = null;
-                m_errsLabelVars = null;
-
-                errs.merge();
-                return fValid ? this : null;
-                }
+            errs.merge();
+            return fValid ? this : null;
             }
         }
 

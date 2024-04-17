@@ -737,13 +737,10 @@ public abstract class Expression
                         // if the expression's type is an enum value, widen it to its parent
                         // Enumeration; for example, if the argument is Null, widen the type to
                         // Nullable, if the type is True widen it to Boolean, etc.
-                        if (typeResolved.isExplicitClassIdentity(false))
+                        if (typeResolved.isEnumValue())
                             {
-                            IdentityConstant id = (IdentityConstant) typeResolved.getDefiningConstant();
-                            if (id.getComponent().getFormat() == Component.Format.ENUMVALUE)
-                                {
-                                typeResolved = id.getNamespace().getType();
-                                }
+                            typeResolved = typeResolved.getSingleUnderlyingClass(false).
+                                                getNamespace().getType();
                             }
                         mapResolve.put(sName, typeResolved);
                         }

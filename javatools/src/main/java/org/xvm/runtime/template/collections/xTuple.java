@@ -117,7 +117,7 @@ public class xTuple
         TypeConstant typeTuple = constTuple.getType();
 
         typeTuple = typeTuple.resolveGenerics(frame.poolContext(),
-                        frame.getGenericsResolver(typeTuple.containsDynamicType(null)));
+                        frame.getGenericsResolver(typeTuple.containsDynamicType()));
 
         ObjectHandle[] ahValue   = new ObjectHandle[c];
         boolean        fDeferred = false;
@@ -806,6 +806,37 @@ public class xTuple
                 return super.makeImmutable();
                 }
             return true;
+            }
+
+        @Override
+        protected TypeConstant augmentType(TypeConstant type)
+            {
+            ObjectHandle[] ahValue     = m_ahValue;
+            TypeConstant[] atypeOrig   = type.getParamTypesArray();
+            TypeConstant[] atypeActual = null;
+
+            for (int i = 0, c = ahValue.length; i < c; i++)
+                {
+                ObjectHandle hValue = ahValue[i];
+                if (hValue == null)
+                    {
+                    // this can only be a scenario of a conditional Tuple
+                    assert i > 0 && ahValue[0] == xBoolean.FALSE;
+                    return type;
+                    }
+                TypeConstant typeVal = hValue.getType();
+                if (!typeVal.equals(atypeOrig[i]))
+                    {
+                    if (atypeActual == null)
+                        {
+                        atypeActual = atypeOrig.clone();
+                        }
+                    atypeActual[i] = typeVal;
+                    }
+                }
+            return super.augmentType(atypeActual == null
+                    ? type
+                    : type.getConstantPool().ensureTupleType(atypeActual));
             }
 
         @Override

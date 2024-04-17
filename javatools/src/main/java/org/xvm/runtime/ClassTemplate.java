@@ -799,7 +799,8 @@ public abstract class ClassTemplate
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
+                            // raise an exception for the original property instead
+                            break ;
 
                         default:
                             throw new IllegalStateException();

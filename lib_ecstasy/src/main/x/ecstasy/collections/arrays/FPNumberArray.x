@@ -565,7 +565,6 @@ mixin FPNumberArray<Element extends FPNumber>
             ResultType?      negInfinity     = Null) {
         assert Range<Number> range := ResultType.range()
                 as $"{ResultType} a is not fixed length integer type";
-        assert range.is(Range<ResultType>);
 
         function Element(ResultType) elementOf = ResultType.converterTo(Element);
         Element min = elementOf(range.effectiveLowerBound);

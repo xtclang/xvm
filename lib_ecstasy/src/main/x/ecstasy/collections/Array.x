@@ -223,7 +223,7 @@ class Array<Element>
          * @return a reified array delegate that provides storage for the elements that it
          *         represents
          */
-        ArrayDelegate reify(Mutability? mutability = Null);
+        ArrayDelegate! reify(Mutability? mutability = Null);
     }
 
     /**
@@ -577,7 +577,7 @@ class Array<Element>
     }
 
     @Override
-    Array toArray(Mutability? mutability = Null, Boolean inPlace = False) {
+    Array! toArray(Mutability? mutability = Null, Boolean inPlace = False) {
         if (mutability == Null || mutability == this.mutability) {
             return this;
         }
@@ -595,7 +595,7 @@ class Array<Element>
     }
 
     @Override
-    Array reify(Mutability? mutability = Null) {
+    Array! reify(Mutability? mutability = Null) {
         ArrayDelegate<Element> reifiedDelegate = delegate.reify(mutability);
         return &delegate == &reifiedDelegate
                 ? this

@@ -519,6 +519,16 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff the type represents an Enum value
+     */
+    public boolean isEnumValue()
+        {
+        return isExplicitClassIdentity(false) &&
+                    getExplicitClassFormat() == Component.Format.ENUMVALUE
+               || isOnlyNullable();
+        }
+
+    /**
      * @return true iff this type represents a virtual child type
      */
     public boolean isVirtualChild()
@@ -931,12 +941,30 @@ public abstract class TypeConstant
             return that;
             }
 
-        // the type of Type is known to have a distributive property:
-        // Type<X> + Type<Y> == Type<X + Y>
-        return this.isTypeOfType() && this.getParamsCount() > 0 &&
-               that.isTypeOfType() && that.getParamsCount() > 0
-                ? this.getParamType(0).combine(pool, that.getParamType(0)).getType()
-                : pool.ensureIntersectionTypeConstant(this, that);
+        if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true))
+            {
+            if (this instanceof ParameterizedTypeConstant)
+                {
+                TypeConstant typeThis = this.getUnderlyingType();
+                TypeConstant typeThat = that.getUnderlyingType();
+                if (typeThis.equals(typeThat))
+                    {
+                    // Parameterized types are known to have a distributive property:
+                    // T<E1> + T<E2> == T<E1 + E2>
+                    TypeConstant[] atypeThis  = this.getParamTypesArray();
+                    TypeConstant[] atypeThat  = that.getParamTypesArray();
+                    int            cTypes     = Math.max(atypeThis.length, atypeThat.length);
+                    TypeConstant[] atypeInter = new TypeConstant[cTypes];
+                    for (int i = 0; i < cTypes; i++)
+                        {
+                        atypeInter[i] = this.getParamType(i).combine(pool, that.getParamType(i));
+                        }
+                    return pool.ensureParameterizedTypeConstant(typeThis, atypeInter);
+                    }
+                }
+            }
+
+        return pool.ensureIntersectionTypeConstant(this, that);
         }
 
     /**
@@ -963,12 +991,53 @@ public abstract class TypeConstant
             return this;
             }
 
-        // type Type is known to have a distributive property:
-        // Type<X> | Type<Y> == Type<X | Y>
-        return this.isTypeOfType() && this.getParamsCount() > 0 &&
-               that.isTypeOfType() && that.getParamsCount() > 0
-                ? this.getParamType(0).union(pool, that.getParamType(0)).getType()
-                : pool.ensureUnionTypeConstant(this, that);
+        if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true))
+            {
+            if (this instanceof ParameterizedTypeConstant)
+                {
+                TypeConstant typeThis = this.getUnderlyingType();
+                TypeConstant typeThat = that.getUnderlyingType();
+                if (typeThis.equals(typeThat))
+                    {
+                    // Parameterized types are known to have a distributive property:
+                    // T<E1> | T<E2> == T<E1 | E2>
+                    TypeConstant[] atypeThis  = this.getParamTypesArray();
+                    TypeConstant[] atypeThat  = that.getParamTypesArray();
+                    int            cTypes     = Math.max(atypeThis.length, atypeThat.length);
+                    TypeConstant[] atypeUnion = new TypeConstant[cTypes];
+                    for (int i = 0; i < cTypes; i++)
+                        {
+                        atypeUnion[i] = this.getParamType(i).union(pool, that.getParamType(i));
+                        }
+                    return pool.ensureParameterizedTypeConstant(typeThis, atypeUnion);
+                    }
+                }
+            else if (this instanceof ImmutableTypeConstant)
+                {
+                // if (T1 | T2) is a single underlying class type, then
+                // (immutable T1) | (immutable T2) == (immutable (T1 | T2))
+                TypeConstant typeThis  = this.getUnderlyingType();
+                TypeConstant typeThat  = that.getUnderlyingType();
+                TypeConstant typeUnion = typeThis.union(pool, typeThat);
+                if (typeUnion.isSingleUnderlyingClass(true))
+                    {
+                    return pool.ensureImmutableTypeConstant(typeUnion);
+                    }
+                // atm, we don't allow (immutable (T1 | T2))
+                }
+            else if (this.isEnumValue() && that.isEnumValue())
+                {
+                // if both T1 and T2 are enum values of the same enum, then use the enum type
+                IdentityConstant idEnumThis = this.getSingleUnderlyingClass(false).getNamespace();
+                IdentityConstant idEnumThat = that.getSingleUnderlyingClass(false).getNamespace();
+                if (idEnumThis.equals(idEnumThat))
+                    {
+                    return idEnumThis.getType();
+                    }
+                }
+            }
+
+        return pool.ensureUnionTypeConstant(this, that);
         }
 
     /**
@@ -6542,13 +6611,21 @@ public abstract class TypeConstant
     /**
      * Check if this type contains a dynamic formal type based on the specified register.
      *
-     * @param register  the register to check for (null for all)
+     * @param register the register to check for (null for all)
      *
      * @return true iff the TypeConstant contains a dynamic formal type
      */
     public boolean containsDynamicType(Register register)
         {
         return getUnderlyingType().containsDynamicType(register);
+        }
+
+    /**
+     * @return true iff this type contains any dynamic formal type
+     */
+    public boolean containsDynamicType()
+        {
+        return containsDynamicType(null);
         }
 
     /**

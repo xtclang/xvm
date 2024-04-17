@@ -595,7 +595,7 @@ public class xConst
                 TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
-                            frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
+                            frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK))
                     {
@@ -792,7 +792,7 @@ public class xConst
                 TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
 
                 typeProp = typeProp.resolveGenerics(pool,
-                            frameCaller.getGenericsResolver(typeProp.containsDynamicType(null)));
+                            frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
 
                 MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
                 if (methodHash == null)

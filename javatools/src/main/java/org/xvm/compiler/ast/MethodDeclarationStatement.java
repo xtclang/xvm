@@ -530,7 +530,7 @@ public class MethodDeclarationStatement
                     {
                     // this is a short-hand property method
                     List<AnnotationExpression> annotations =
-                        ((PropertyDeclarationStatement) getParent().getParent()).annotations; // TODO: replace
+                        ((PropertyDeclarationStatement) getParent().getParent()).annotations;
 
                     MethodStructure methodSuper = findRefMethod(property, annotations, sName, params);
                     if (methodSuper == null)

@@ -103,7 +103,7 @@ public class xClass
             TypeConstant     typeClz  = idClz.getValueType(frame.poolContext(), null);
 
             typeClz = typeClz.resolveGenerics(frame.poolContext(),
-                        frame.getGenericsResolver(typeClz.containsDynamicType(null)));
+                        frame.getGenericsResolver(typeClz.containsDynamicType()));
 
             ClassTemplate template = switch (idClz.getComponent().getFormat())
                 {

@@ -210,6 +210,12 @@ public class TryStatement
                 @Override
                 protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
                     {
+                    // this is only called when the context is reachable; since the exception may or
+                    // may not happen, we need to restore the original type
+                    if (!isVarDeclaredInThisScope(sName))
+                        {
+                        getOuterContext().restoreOriginalType(sName);
+                        }
                     }
 
                 @Override

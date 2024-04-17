@@ -116,6 +116,16 @@ public class MultipleLValueStatement
         }
 
     @Override
+    public void resetLValueTypes(Context ctx)
+        {
+        List<AstNode>  listLVals = LVals;
+        for (int i = 0, c = listLVals.size(); i < c; ++i)
+            {
+            listLVals.get(i).resetLValueTypes(ctx);
+            }
+        }
+
+    @Override
     protected boolean isRValue(Expression exprChild)
         {
         return false;
@@ -344,6 +354,12 @@ public class MultipleLValueStatement
                                                 TypeConstant[] aTypes)
             {
             getParent().updateLValueFromRValueTypes(ctx, branch, fCond, aTypes);
+            }
+
+        @Override
+        public void resetLValueTypes(Context ctx)
+            {
+            getParent().resetLValueTypes(ctx);
             }
 
         @Override

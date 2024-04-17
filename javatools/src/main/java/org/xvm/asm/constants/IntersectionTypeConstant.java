@@ -12,7 +12,6 @@ import java.util.Set;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ConstantPool;
@@ -679,14 +678,14 @@ public class IntersectionTypeConstant
         // since Enum values cannot be extended, an Enum value type cannot be combined with any
         // other type and an intersection with a formal type doesn't actually narrow that Enum value type;
         // this obviously applies to Nullable
-        if (isEnumValue(typeRight))
+        if (typeRight.isEnumValue())
             {
-            if (isEnumValue(thisLeft1) && thisLeft2.isFormalType())
+            if (thisLeft1.isEnumValue() && thisLeft2.isFormalType())
                 {
                 // Nullable + Element <= Nullable (if Element's constraint is trivial)
                 return rel1.worseOf(typeRight.calculateRelation(thisLeft2.resolveConstraints()));
                 }
-            if (thisLeft1.isFormalType() && isEnumValue(thisLeft2))
+            if (thisLeft1.isFormalType() && thisLeft2.isEnumValue())
                 {
                 // Element + Lesser <= Lesser (if Element's constraint is trivial)
                 return rel2.worseOf(typeRight.calculateRelation(thisLeft1.resolveConstraints()));
@@ -694,16 +693,6 @@ public class IntersectionTypeConstant
             }
 
         return rel1.worseOf(rel2);
-        }
-
-    /**
-     * @return true iff the type represents an Enum value
-     */
-    private boolean isEnumValue(TypeConstant typeRight)
-        {
-        return typeRight.isExplicitClassIdentity(false) &&
-               typeRight.getExplicitClassFormat() == Component.Format.ENUMVALUE
-               || typeRight.isOnlyNullable();
         }
 
     @Override

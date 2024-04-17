@@ -263,6 +263,12 @@ public class LiteralExpression
             }
 
         assert constVal != null;
+
+        if (typeRequired != null && typeRequired.isFormalType())
+            {
+            // find a conversion to the constraint type
+            typeRequired = typeRequired.resolveConstraints();
+            }
         return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);
         }
 

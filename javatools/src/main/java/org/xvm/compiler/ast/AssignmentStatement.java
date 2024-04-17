@@ -703,12 +703,6 @@ public class AssignmentStatement
                         atypeRight = exprRightNew.getTypes();
                         }
                     }
-                else
-                    {
-                    // this could only happen after an error had been reported
-                    assert errs.hasSeriousErrors();
-                    return null;
-                    }
 
                 if (fInfer)
                     {
@@ -716,7 +710,6 @@ public class AssignmentStatement
                     }
 
                 merge(ctxRValue, ctxLValue);
-
                 exprLeft.markAssignment(ctxRValue, false, errs);
                 break;
                 }
@@ -724,6 +717,7 @@ public class AssignmentStatement
 
         if (exprRightNew == null)
             {
+            nodeLeft.resetLValueTypes(ctx);
             return null;
             }
 

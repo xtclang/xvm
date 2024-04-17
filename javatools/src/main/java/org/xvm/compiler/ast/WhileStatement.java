@@ -239,8 +239,6 @@ public class WhileStatement
         Map<String, Assignment> mapLoopAsn = new HashMap<>();
         Map<String, Argument>   mapLoopArg = new HashMap<>();
 
-        ctxOrig.prepareJump(ctxOrig, mapLoopAsn, mapLoopArg);
-
         // the validated conditions will end up in this temporary array; each will be a clone of the
         // original in "conds"
         int           cConds    = getConditionCount();
@@ -456,59 +454,56 @@ public class WhileStatement
             Map<String, Argument>   mapArgAfter = new HashMap<>();
             ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
 
-            if (!mapAsnAfter.equals(mapLoopAsn))
+            if (fRepeat || !mapAsnAfter.equals(mapLoopAsn))
                 {
-                mapLoopAsn = mapAsnAfter;
-                mapLoopArg = mapArgAfter;
-                fRepeat    = true;
+                // don't let this repeat forever
+                if (++cTries < 10)
+                    {
+                    mapLoopAsn = mapAsnAfter;
+                    mapLoopArg = mapArgAfter;
+
+                    // discard the clones created in this pass
+                    for (AstNode cond : conds)
+                        {
+                        cond.discard(true);
+                        }
+                    block.discard(true);
+                    continue; // repeat
+                    }
+
+                if (!errs.hasSeriousErrors())
+                    {
+                    log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
+                    }
+                fValid = false;
                 }
 
-            // don't let this repeat forever
-            if (++cTries > 10 && fRepeat)
+            // discard the original nodes (we cloned them already)
+            for (AstNode cond : condsOrig)
                 {
-                log(errs, Severity.ERROR, Compiler.FATAL_ERROR);
-                fValid  = false;
-                fRepeat = false;
+                cond.discard(true);
                 }
+            blockOrig.discard(true);
 
-            if (fRepeat)
+            // lazily created loop vars are only created inside the validation of this statement
+            m_ctxLabelVars  = null;
+            m_errsLabelVars = null;
+
+            // unwind local contexts
+            while (cExits-- > 0)
                 {
-                // discard the clones created in this pass
-                for (AstNode cond : conds)
-                    {
-                    cond.discard(true);
-                    }
-                block.discard(true);
+                ctx = ctx.exit();
                 }
-            else
+            assert ctx == ctxOrig;
+
+            if (fAlwaysTrue)
                 {
-                // discard the original nodes (we cloned them already)
-                for (AstNode cond : condsOrig)
-                    {
-                    cond.discard(true);
-                    }
-                blockOrig.discard(true);
-
-                // lazily created loop vars are only created inside the validation of this statement
-                m_ctxLabelVars  = null;
-                m_errsLabelVars = null;
-
-                // unwind local contexts
-                while (cExits-- > 0)
-                    {
-                    ctx = ctx.exit();
-                    }
-                assert ctx == ctxOrig;
-
-                if (fAlwaysTrue)
-                    {
-                    // doesn't complete normally; the breaks will be processed by
-                    // Statement.validate()
-                    ctx.setReachable(false);
-                    }
-                errs.merge();
-                return fValid ? this : null;
+                // doesn't complete normally; the breaks will be processed by
+                // Statement.validate()
+                ctx.setReachable(false);
                 }
+            errs.merge();
+            return fValid ? this : null;
             }
         }
 

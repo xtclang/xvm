@@ -443,7 +443,8 @@ module TestReflection {
                 // need to get a Ref for the property:
                 // - must be assigned
                 // - actual type cannot be Service
-                val ref = prop.of(o);
+                assert val s := &o.revealAs(c.StructType);
+                val ref = prop.of(s);
                 console.print($|     assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
                                  |     isService={ref.isService}, isConst={ref.isConst}
                                  |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
