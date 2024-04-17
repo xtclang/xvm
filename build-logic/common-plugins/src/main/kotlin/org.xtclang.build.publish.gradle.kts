@@ -43,12 +43,16 @@ publishing {
                 developerConnection = "scm:git:ssh://github.com/xtclang/xvm.git"
                 url = "https://github.com/xtclang/xvm/tree/master"
             }
-            withXml {
-                val propNode = asNode().appendNode("properties")
-                propNode.appendNode("gitCommit", project.executeCommand(throwOnError = true, "git", "rev-parse", "HEAD"))
-                propNode.appendNode("xdkVersion", project.version)
-            }
         }
+    }
+}
+
+val ensureTag by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Ensure that the current commit is tagged with the current version."
+    doLast {
+        val git = GitLabel(project, semanticVersion)
+        git.update()
     }
 }
 
@@ -131,178 +135,5 @@ val deleteAllRemotePublications by tasks.registering {
         val github = xdkBuildLogic.github()
         github.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
         logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
-    }
-}
-
-
-class GitHubTag {
-    val prefix = "GitHubTag"
-    val tagPrefix = "v"
-    val tagSuffix = "-SNAPSHOT"
-    val tagSuffixLength = tagSuffix.length
-
-    fun tagExistsLocal(tag: String): Boolean {
-        val (exitCode, _) = project.executeCommand(throwOnError = false, "git", "rev-parse", tag)
-        return exitCode == 0
-    }
-
-    fun tagExistsRemote(tag: String): Boolean {
-        val (exitCode, _) = project.executeCommand(throwOnError = false, "git", "ls-remote", "--tags", "origin", tag)
-        return exitCode == 0
-    }
-
-    fun deleteTag(tag: String, localOnly: Boolean = true) {
-        if (tagExistsLocal(tag)) {
-            project.executeCommand(throwOnError = true, "git", "tag", "-d", tag)
-            logger.lifecycle("$prefix Deleted local tag: $tag")
-        }
-        if (!localOnly && tagExistsRemote(tag)) {
-            project.executeCommand(throwOnError = true, "git", "push", "origin", ":refs/tags/$tag")
-            logger.lifecycle("$prefix Deleted remote tag: $tag")
-        }
-    }
-
-    fun createTag(tag: String, commit: String) {
-        project.executeCommand(throwOnError = true, "git", "tag", tag, commit)
-        project.executeCommand(throwOnError = true, "git", "push", "origin", "--tags")
-        logger.lifecycle("$prefix Created tag: $tag")
-    }
-
-    fun ensureTag() {
-        val parsedVersion = File(compositeRootProjectDirectory.asFile, "VERSION").readText().trim()
-        if (parsedVersion != version.toString()) {
-            throw buildException("$prefix Version mismatch: parsed version '$parsedVersion' does not match project version '$version'")
-        }
-        val baseVersion = parsedVersion.removeSuffix(tagSuffix)
-        val isSnapshot = project.isSnapshot()
-        val localTag = buildString {
-            append(tagPrefix)
-            append(baseVersion)
-            if (isSnapshot) {
-                append(tagSuffix)
-            }
-        }
-        val remoteTag = "$tagPrefix$baseVersion"
-        project.executeCommand(throwOnError = true, "git", "fetch", "--force", "--tags")
-        val localBranchName = project.executeCommand(throwOnError = true, "git", "branch", "--show-current").second
-        val remote
-}
-
-val deleteTag by tasks.registering {
-    fun tagExistsLocal(tag: String): String {
-
-    }
-    fun deleteTag(tag: String, localOnly: Boolean=true) {
-
-    }
-
-
-    onlyIf {
-        logger.lifecycle("$prefix Delete tag is only used for SNAPSHOT versions.")
-        project.isSnapshot()
-    }
-    doLast {
-        TODO("deleter")
-    }
-}
-
-
-val ensureTag by tasks.registering {
-    doLast {
-        fun output(vararg args: String) = project.executeCommand(throwOnError = true, *args).second
-
-        fun execute(throwOnError: Boolean = false, vararg args: String): Pair<Int, String> {
-            val result = project.executeCommand(throwOnError, *args)
-            if (result.first != 0) {
-                logger.error("$prefix Git returned non zero value: $result")
-            }
-            return result
-        }
-
-        fun remoteTag(localTag: String): String {
-            return "refs/tag/$localTag"
-        }
-
-        fun deleteTag(throwOnError: Boolean = false, localTag: String): Boolean {
-            // only if tag exists
-            val remoteTag = remoteTag(localTag)
-            //execute(throwOnError = throwOnError, "git", "tag", "-d", localTag)
-            // 1) Delete the tag on any remote before pushing
-            execute(throwOnError = throwOnError, "git", "push", "origin", ":${remoteTag(localTag)}")
-            logger.lifecycle("$prefix Deleted tags: (local: $localTag, remote: $remoteTag)")
-            return true
-        }
-
-        fun existingCommits(localTag: String): Pair<String, String> {
-            val (localTagValue, localTagCommit) = execute(throwOnError = false, "git", "rev-list", "-n", "1", localTag)
-            val (remoteTagValue, remoteTagCommitAndName) = execute(
-                throwOnError = false,
-                "git",
-                "ls-remote",
-                "--tags",
-                "origin",
-                remoteTag(localTag)
-            )
-            val local = if (localTagValue == 0) localTagCommit else ""
-            val remote =
-                if (remoteTagValue == 0) remoteTagCommitAndName.removeSuffix(remoteTag(localTag)).trim() else ""
-            return local to remote
-        }
-
-        val parsedVersion = File(compositeRootProjectDirectory.asFile, "VERSION").readText().trim()
-        if (parsedVersion != version.toString()) {
-            throw buildException("$prefix Version mismatch: parsed version '$parsedVersion' does not match project version '$version'")
-        }
-        val baseVersion = parsedVersion.removeSuffix("-SNAPSHOT")
-        val isSnapshot = project.isSnapshot()
-
-        val localTag = buildString {
-            append(if (isSnapshot) "snapshot/v" else "v")
-            append(baseVersion)
-        }
-
-        val remoteTag = remoteTag(localTag)
-        execute(throwOnError = true, "git", "fetch", "--force", "--tags") // TODO P options?
-        val localBranchName = output("git", "branch", "--show-current")
-        val remoteBranchName = "remotes/origin/$localBranchName"
-        val localLastCommit = output("git", "rev-parse", "HEAD")
-        val remoteLastCommit = output("git", "ls-remote", "origin", "HEAD").removeSuffix("HEAD").trim()
-        val (localTagCommit, remoteTagCommit) = existingCommits(localTag)
-        val hasLocalTag = localTagCommit.isNotEmpty()
-        val hasRemoteTag = remoteTagCommit.isNotEmpty()
-        val hasTag = hasLocalTag || hasRemoteTag
-
-        logger.lifecycle(
-            """
-             $prefix createTag for version $version (base version: $baseVersion)
-             $prefix   isSnapshot: $isSnapshot
-             $prefix   hasLocalTag: $hasLocalTag, hasRemoteTag: $hasRemoteTag
-             $prefix   Local branch: '$localBranchName'
-             $prefix       last commit: '$localLastCommit'   
-             $prefix       tag : '$localTag'
-             $prefix       tag place at local commit: '$localTagCommit'
-             $prefix   Remote branch: '$remoteBranchName'
-             $prefix       last: '$remoteLastCommit'
-             $prefix       tag : '$remoteTag'
-             $prefix       tag placed at remote commit: '$remoteTagCommit'
-         """.trimIndent()
-        )
-
-        if (hasTag) {
-            logger.warn("$prefix Tag $localTag already exists ($hasLocalTag, $hasRemoteTag).")
-            if (!isSnapshot) {
-                throw buildException("FATAL ERROR: Cannot tag non-snapshot release with an existing tag: $localTag")
-            }
-            // delete on any remote before push.
-            //execute(throwOnError = true, "git", "push", "origin", ":${remoteTag(localTag)}")
-        }
-
-        if (isSnapshot) {
-            execute(throwOnError = false, "git", "tag", "-d", localTag)
-            execute(throwOnError = false, "git", "push", "origin", ":refs/tags/$localTag")
-        }
-        execute(throwOnError = true, "git", "tag", localTag, localLastCommit)
-        execute(throwOnError = true, "git", "push", "origin", "--tags")
-// Alternatively git push origin --tags to push all local tag changes or git push origin <tagname>
     }
 }

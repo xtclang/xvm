@@ -44,7 +44,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         append(project.version)
         if (isCiEnabled) {
             val buildNumber = System.getenv(BUILD_NUMBER) ?: ""
-            val gitCommitHash = project.executeCommand(throwOnError = true, "git", "rev-parse", "HEAD").second
+            val gitCommitHash = project.executeCommand(listOf("git", "rev-parse", "HEAD"), throwOnError = true).second
             if (buildNumber.isNotEmpty() || gitCommitHash.isNotEmpty()) {
                 logger.warn("This is a CI run, BUILD_NUMBER and git hash must both be available: (BUILD_NUMBER='$buildNumber', commit='$gitCommitHash')")
                 return@buildString

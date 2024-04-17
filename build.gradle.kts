@@ -15,6 +15,15 @@ private val xdk = gradle.includedBuild("xdk")
 private val plugin = gradle.includedBuild("plugin")
 private val includedBuildsWithPublications = listOf(xdk, plugin)
 
+// This is a remote dependency only, but it applies to the full codebase.
+val ensureTag by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Ensure that the current commit is tagged with the current version."
+    doLast {
+        dependsOn(xdk.task(":$name"))
+    }
+}
+
 /**
  * Installation and distribution tasks that aggregate publishable/distributable included
  * build projects. The aggregator proper should be as small as possible, and only contains
