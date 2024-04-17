@@ -65,18 +65,7 @@ public class xTuple
         {
         H_VOID = makeImmutableHandle(getCanonicalClass(), Utils.OBJECTS_NONE);
 
-        // Note: all interface properties are implicitly native due to "NativeRebase"
-
-        markNativeMethod("add", null, null);
-        markNativeMethod("addAll", null, null);
-        markNativeMethod("elementAt", INT, null);
-        markNativeMethod("freeze", BOOLEAN, null);
-        markNativeMethod("getElement", INT, null);
-        markNativeMethod("remove", INT, null);
-        markNativeMethod("removeAll", new String[] {"Range<numbers.Int64>"}, null);
-        markNativeMethod("slice", new String[] {"Range<numbers.Int64>"}, null);
-
-        invalidateTypeInfo();
+        // Note: all interface methods and properties are implicitly native due to "NativeRebase"
         }
 
     @Override

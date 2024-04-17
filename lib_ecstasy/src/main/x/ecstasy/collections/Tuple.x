@@ -89,15 +89,7 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     @Op("+") Tuple!<> addAll(Tuple!<> that);
 
     /**
-     * Modify the value of the specified element in the tuple, returning the resultant tuple. The
-     * mutability of the returned tuple is the same as the mutability of this tuple, except when
-     * the original mutability is [Constant](Mutability.Constant) and the new element value is not
-     * immutable, in which case the resulting Tuple will have [Persistent](Mutability.Persistent)
-     * mutability.
-     *
-     * If the tuple is fixed-size, then modification is made to this tuple, and a reference to this
-     * tuple is returned; otherwise, a new tuple with the change is returned, and this tuple is left
-     * unchanged.
+     * Modify the value of the specified element in the tuple, returning the resultant new tuple.
      *
      * @throws TypeMismatch  if the value does not match the type of the specified tuple element
      */
