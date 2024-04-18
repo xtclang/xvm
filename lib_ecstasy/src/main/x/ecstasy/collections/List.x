@@ -618,12 +618,17 @@ interface List<Element>
     /**
      * Sort the contents of this list in the order specified by the optional [Type.Orderer].
      *
-     * @param order    (optional) the Orderer to use to sort the list, defaulting to using the
-     *                 "natural" sort order of the Element type
-     * @param inPlace  (optional) pass `True` to allow the List to sort itself "in place", if the
-     *                 List is able to do so
+     * @param order      (optional) the Orderer to use to sort the list, defaulting to using the
+     *                   "natural" sort order of the Element type
+     * @param collector  (optional) an [Aggregator] to use to collect the results; if specified,
+     *                   the value of `inPlace` argument is ignored
+     * @param inPlace    (optional) pass `True` to allow the List to sort itself "in place", if the
+     *                   List is able to do so
      *
      * @return the resultant list, which is the same as `this` for a mutable list
+     *
+     * @throws ReadOnly if the collector is not specified, the value of `inPlace` argument is `True`,
+     *                  but the List is not mutable
      */
     @Override
     <Result extends List!> Result sorted(Orderer?                     order     = Null,
@@ -646,7 +651,11 @@ interface List<Element>
                     : this[0 ..< size]).as(Result);
         }
 
-        return (this.inPlace && inPlace
+        if (inPlace && !this.inPlace) {
+            throw new ReadOnly();
+        }
+
+        return (inPlace
                 ? sort(order)
                 : super(order)).as(Result);
     }
