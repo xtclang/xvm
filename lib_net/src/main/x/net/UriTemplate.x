@@ -382,7 +382,7 @@ const UriTemplate {
                         return False;
                     }
                 } else if (prev == Null) {
-                    bindings = (bindings.empty ? new HashMap<String, Value>() : bindings).put(name, text);
+                    bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(name, text);
                 } else if (!(prev.is(String) && prev == text)) {
                     return False;
                 }
@@ -512,7 +512,7 @@ const UriTemplate {
                 String segment = text[offset ..< nextDelim];
                 Value  value   = explode ? segment.split(prefix) : segment;
 
-                bindings = (bindings.empty ? new HashMap<String, Value>() : bindings).put(var.name, value);
+                bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(var.name, value);
                 offset   = nextDelim;
             }
 
