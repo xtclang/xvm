@@ -19,9 +19,13 @@ private val includedBuildsWithPublications = listOf(xdk, plugin)
 val ensureTag by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
-    doLast {
-        dependsOn(xdk.task(":$name"))
-    }
+    dependsOn(xdk.task(":$name"))
+}
+
+val listTags by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Ensure that the current commit is tagged with the current version."
+    dependsOn(xdk.task(":$name"))
 }
 
 /**

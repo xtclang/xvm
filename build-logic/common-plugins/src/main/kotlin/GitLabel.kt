@@ -1,6 +1,16 @@
 import org.gradle.api.Project
+import org.gradle.api.logging.LogLevel
 
 data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) {
+
+    companion object {
+        private const val DRY_RUN = false
+    }
+
+    private val artifactBaseVersion = semanticVersion.artifactVersion.removeSuffix("-SNAPSHOT")
+    private val tagPrefix = if (semanticVersion.isSnapshot()) "snapshot" else ""
+    private val localTag = "${tagPrefix}/v$artifactBaseVersion"
+    private val remoteTag = "refs/tags/$tagPrefix/v$artifactBaseVersion"
 
     data class GitResult(val execResult: Pair<Int, String>) {
         val exitValue: Int = execResult.first
@@ -9,13 +19,98 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
         fun lines(): List<String> = output.lines()
     }
 
-    private val artifactBaseVersion = semanticVersion.artifactVersion.removeSuffix("-SNAPSHOT")
-    private val tagPrefix = if (semanticVersion.isSnapshot()) "snapshot/" else ""
-    private val localTag = "${tagPrefix}v$artifactBaseVersion"
-    private val remoteTag = "refs/tags/$tagPrefix/v${semanticVersion.artifactVersion}"
+    data class GitTagInfo(
+        val tagsNeeded: Pair<String, String>,
+        val localBranchName: String,
+        val remoteBranchName: String,
+        val localLastCommit: String,
+        val remoteLastCommit: String,
+        val localTags: List<String>,
+        val remoteTags: List<String>,
+    ) {
+        fun localTagExists(): Boolean = localTags.contains(tagsNeeded.first)
+
+        fun remoteTagExists(): Boolean = remoteTags.contains(tagsNeeded.second)
+
+        fun tagExists(): Boolean = localTagExists() || remoteTagExists()
+
+        override fun toString(): String {
+            return buildString {
+                appendLine("tagsNeeded       : $tagsNeeded")
+                appendLine("localBranchName  : $localBranchName")
+                appendLine("remoteBranchName : $remoteBranchName")
+                appendLine("localLastCommit  : $localLastCommit")
+                appendLine("remoteLastCommit : $remoteLastCommit")
+                appendLine("localTags        : $localTags")
+                append("remoteTags       : $remoteTags")
+            }
+        }
+    }
 
     private fun fetchTags() {
-        git(true, "fetch", "--force", "--tags")
+        git("fetch", "--force", "--tags")
+    }
+
+    private fun listPackages() {
+        //val (exitValue, output) = project.executeCommand(listOf("gh", "api", "\"https://api.github.com/orgs/xtclang/packages?package_type=maven\""), true)
+        gh("api", "\"https://api.github.com/orgs/xtclang/packages?package_type=maven\"")
+    }
+
+    fun resolveTags(logLevel: LogLevel = LogLevel.LIFECYCLE): GitTagInfo = project.run {
+        val localBranchName = git("branch", "--show-current").output
+        return GitTagInfo(
+            localTag to remoteTag,
+            localBranchName,
+            "remotes/origin/$localBranchName",
+            git("rev-parse", "HEAD").output, // localLastCommit
+            git("ls-remote", "origin", "HEAD").output.removeSuffix("HEAD").trim(), // remoteLastCommit
+            git("tag", "--list").output.lines().toList(), // localTags
+            git("ls-remote", "--tags", "origin").output.lines().map { it: String ->
+                it.split("\\s+".toRegex(), 2).last()
+            }.toList()
+        ).also {
+            it.toString().lines().forEach { line -> logger.log(logLevel, "$prefix [git tag info] $line") }
+        }
+    }
+
+    // For a snapshot, delete existing tag
+// (if there is one), recreate and attach to latest commit.
+// For a non-snapshot, fail if exists locally or remotely. Otherwise tag attach to latest commit.
+// Push all tag changes to upstream as a separate step.
+    fun update(): Unit = project.run {
+        fetchTags()
+
+        val tags = resolveTags()
+
+        // The tag we want
+        val localTagExists = tags.localTagExists()
+        val remoteTagExists = tags.remoteTagExists()
+        val isSnapshot = semanticVersion.isSnapshot()
+        val isRelease = !isSnapshot
+
+        if (localTagExists != remoteTagExists) {
+            logger.warn("$prefix Local tag $localTag is not in sync with remote tag $remoteTag.")
+        }
+
+        if (isRelease && tags.tagExists()) {
+            throw buildException("Cannot publish a release/non-snapshot build with an existing tag ($localTag, $remoteTag).")
+        }
+
+        if (isSnapshot) {
+            if (localTagExists) {
+                logger.lifecycle("$prefix Deleting tag (locale=$remoteTag)")
+                git("tag", "-d", localTag) // delete from local
+            }
+            if (remoteTagExists) {
+                logger.lifecycle("$prefix Deleting tag (remote=$remoteTag)")
+                git("push", "origin", ":$remoteTag") // delete from remote
+            }
+        }
+
+        // Tag is guaranteed to not exist if we reach this code.
+        logger.lifecycle("$prefix Creating tag $localTag at commit ${tags.localLastCommit}")
+        git("tag", localTag, tags.localLastCommit)
+        git("push", "origin", "--tags")
     }
 
     private fun logGitOutput(header: String, result: GitResult): GitResult = project.run {
@@ -24,60 +119,10 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
         if (exitValue != 0) {
             logger.warn("$prefix Git call was non-throwing, but returned non zero value: $exitValue")
         }
-        result.lines().forEach { line -> logger.lifecycle("$prefix     output: $line") }
-        return result
-    }
-
-    // For a snapshot, delete existing tag (if there is one), recreate and attach to latest commit.
-    // For a non-snapshot, fail if exists locally or remotely. Otherwise tag attach to latest commit.
-    // Push all tag changes to upstream as a separate step.
-    fun update(): Unit = project.run {
-        fetchTags()
-        val localBranchName = git(true, "branch", "--show-current").output
-        val remoteBranchName = "remotes/origin/$localBranchName"
-        val localLastCommit = git(true, "rev-parse", "HEAD").output
-        // should be freshly fetched
-        val remoteLastCommit = git(true, "ls-remote", "origin", "HEAD").output.removeSuffix("HEAD").trim()
-        val localTags = git(true, "tag", "--list").output.lines().toList()
-        val remoteTags = git(true, "ls-remote", "--tags", "origin").output.lines().map {
-            it.split("\\s+".toRegex(), 2).last()
-        }.toList()
-
-        System.err.println("localtags: " + localTags)
-        System.err.println("remotetags: " + remoteTags)
-
-        logger.lifecycle("""
-            $prefix createTag for version $semanticVersion
-            $prefix    local branch       : $localBranchName
-            $prefix    remote branch      : $remoteBranchName
-            $prefix:   local last commit  : $localLastCommit
-            $prefix:   remote last commit : $remoteLastCommit
-        """.trimIndent())
-
-        logger.lifecycle("""
-            $prefix:   local tags         : $localTags
-            $prefix:   remote tags        : $remoteTags
-        """.trimIndent())
-        // if this is not a snapshot, the tag cannot already exist. That is a failure
-        // if this is a snapshot, delete and recreate teh tag at the last commit.
-        if (project.isSnapshot()) {
-            // git tag -d localTag
-            // git push origin: remoteTag
-            //if (tagExistsLocal(localTag)) {
-            //    deleteTag(localTag)
-            //}
-        } else {
-            //if
-            //git(true, "tag", localTag, localLastCommit)
-            //git(true, "push", "origin", "--tags")
+        if (!DRY_RUN) {
+            result.lines().forEach { line -> logger.lifecycle("$prefix     out: $line") }
         }
-        /*execute(throwOnError = true, "git", "fetch", "--force", "--tags") // TODO P options?
-        val localBranchName = output("git", "branch", "--show-current")
-        val remoteBranchName = "remotes/origin/$localBranchName"
-        val localLastCommit = output("git", "rev-parse", "HEAD")
-        val remoteLastCommit = output("git", "ls-remote", "origin", "HEAD").removeSuffix("HEAD").trim()
-        val (localTagCommit, remoteTagCommit) = existingCommits(localTag)*/
-
+        return result
     }
 
     fun pushTags() {
@@ -108,19 +153,22 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
         return getRemoteCommit().isNotEmpty()
     }
 
-    private fun git(throwOnError: Boolean = true, vararg args: String): GitResult = project.run {
-        // TODO move this to project independent spawn, but right now github actions hates that.
-        val cmd = buildList {
-            add("git")
-            addAll(args)
-        }
-        return logGitOutput(cmd.joinToString(" "), GitResult(executeCommand(cmd, throwOnError)))
+    private fun gh(vararg args: String): Unit = project.run {
+        executeCommand(listOf("gh", *args), throwOnError = true, dryRun = DRY_RUN)
     }
 
+    private fun git(vararg args: String): GitResult = project.run {
+        // TODO move this to project independent spawn, but right now github actions hates that.
+        val cmd = listOf("git", *args)
+        return logGitOutput(
+            cmd.joinToString(" "),
+            GitResult(executeCommand(cmd, throwOnError = true, dryRun = DRY_RUN))
+        )
+    }
 }
 
 /*
-val ensureTag by tasks.registering {
+val en by tasks.registering {
     doLast {
         fun output(vararg args: String) = project.executeCommand(throwOnError = true, *args).second
 
@@ -290,7 +338,7 @@ val deleteTag by tasks.registering {
 }
 
 
-val ensureTag by tasks.registering {
+val en by tasks.registering {
     doLast {
         fun output(vararg args: String) = project.executeCommand(throwOnError = true, *args).second
 

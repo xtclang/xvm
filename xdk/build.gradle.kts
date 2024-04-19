@@ -139,15 +139,6 @@ val clean by tasks.existing {
     }
 }
 
-val createTag by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Create a tag for the current version in the repository."
-    doLast {
-        val git = semanticVersion.getGitHubLabel(project)
-        git.update()
-    }
-}
-
 tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"

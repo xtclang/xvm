@@ -6,7 +6,6 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
-import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.api.logging.LogLevel.LIFECYCLE
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -25,8 +24,8 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
-    private val xdkGitHub: GitHubPackages by lazy {
-        GitHubPackages(project)
+    private val xdkGit: GitLabel by lazy {
+        GitLabel(project, project.findProperty("semanticVersion") as SemanticVersion)
     }
 
     private val xdkVersions: XdkVersionHandler by lazy {
@@ -54,12 +53,8 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         return xdkDistributions
     }
 
-    fun github(): GitHubPackages {
-        return xdkGitHub
-    }
-
-    fun resolveLocalXdkInstallation(): File {
-        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
+    fun git(): GitLabel {
+        return xdkGit
     }
 
     companion object {
@@ -169,7 +164,9 @@ fun Project.executeCommand(
     args: List<String>,
     throwOnError: Boolean = false,
     env: Map<String, String> = emptyMap(),
-    logLevel: LogLevel = LIFECYCLE
+    logLevel: LogLevel = LIFECYCLE,
+    logOutput: Boolean = false,
+    dryRun: Boolean = false
 ): Pair<Int, String> = project.run {
 
     val cmd = args.joinToString(" ")
@@ -179,6 +176,11 @@ fun Project.executeCommand(
 
     logger.log(logLevel, "$cmdPrefix executeCommand (throwOnError=$throwOnError, env=$env): '$cmd'")
 
+    if (dryRun) {
+        logger.log(logLevel, "$cmdPrefix Command: '$cmd' would be executed.")
+        return 0 to ""
+    }
+
     val os = ByteArrayOutputStream()
     val execResult = exec {
         standardOutput = os
@@ -186,8 +188,8 @@ fun Project.executeCommand(
         environment(env)
         commandLine(args)
     }
-
     val result = execResult.exitValue to os.toString().trim()
+
     val (exitValue, output) = result
     if (exitValue != 0) {
         logger.error("$prefix ERROR: Command '$cmd' failed with exit code $exitValue")
@@ -195,10 +197,13 @@ fun Project.executeCommand(
     }
 
     logger.log(logLevel, "$cmdPrefix Command: '$cmd' executed successfully.")
-    if (output.isEmpty()) {
-        logger.log(logLevel, "$cmdOutputPrefix [no output]")
+    if (logOutput) {
+        if (output.isEmpty()) {
+            logger.log(logLevel, "$cmdOutputPrefix [no output]")
+        }
+        output.lines().forEach { logger.log(logLevel, "$cmdOutputPrefix $it") }
     }
-    output.lines().forEach { logger.log(logLevel, "$cmdOutputPrefix $it") }
+
     return result
 }
 // TODO these should probably be lazy for input purposes

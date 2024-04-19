@@ -51,8 +51,15 @@ val ensureTag by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Ensure that the current commit is tagged with the current version."
     doLast {
-        val git = GitLabel(project, semanticVersion)
-        git.update()
+        xdkBuildLogic.git().update()
+    }
+}
+
+val listTags by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "List all tags in the repository."
+    doLast {
+        xdkBuildLogic.git().resolveTags(LogLevel.LIFECYCLE)
     }
 }
 
@@ -75,6 +82,7 @@ val publishAllPublicationsToMavenLocalRepository by tasks.existing
 val deleteAllLocalPublications by tasks.registering {
     doLast {
         logger.warn("Task '$name' is not implemented yet. Delete your \$HOME/.m2 directory and any other local repositories manually.")
+        TODO("Implement me: $name")
     }
 }
 
@@ -108,6 +116,13 @@ val listAllRemotePublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that lists publications for this project on the 'xtclang' org GitHub package repo."
     doLast {
+        //val (exitValue, output) = project.executeCommand(listOf("gh", "api", "\"https://api.github.com/orgs/xtclang/packages?package_type=maven\""), true)
+        //logger.lifecycle("$prefix '$name' Listing remote publications for project '${project.group}:${project.name}':")
+        //logger.lifecycle("$prefix   Exit value: $exitValue, $output")
+        //project.executeCommand("gh", "api", )
+        //gh api "https://api.github.com/orgs/xtclang/packages?package_type=maven" | jq -r ".[].name"
+        TODO("Implement me: $name")
+        /*
         val github = xdkBuildLogic.github()
         logger.lifecycle("$prefix '$name' Listing remote publications for project '${project.group}:${project.name}':")
         val packageNames = github.queryXtcLangPackageNames()
@@ -123,7 +138,7 @@ val listAllRemotePublications by tasks.registering {
                 return@forEach
             }
             versions.forEach { logger.lifecycle("$prefix        version: '$it'") }
-        }
+        }*/
     }
 }
 
@@ -132,8 +147,6 @@ val deleteAllRemotePublications by tasks.registering {
     description =
         "Delete all versions of all packages on the 'xtclang' org GitHub package repo. WARNING: ALL VERSIONS ARE PURGED."
     doLast {
-        val github = xdkBuildLogic.github()
-        github.deleteXtcLangPackages() // TODO: Add a pattern that can be set thorugh a property to get finer granularity here than "kill everything!".
-        logger.lifecycle("$prefix Finished '$name' deleting publications for project: '${project.group}:${project.name}'.")
+        TODO("Implement me: $name")
     }
 }
