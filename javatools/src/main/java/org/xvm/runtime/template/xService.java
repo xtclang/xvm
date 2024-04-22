@@ -185,12 +185,20 @@ public class xService
         {
         // called via constructSync() or allocateSync()
         ServiceContext context = frame.f_context;
-        ServiceHandle  hStruct = new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
+        ServiceHandle  hStruct = createStructHandle(clazz, context);
 
         // prime the context with the service "struct" handle; it will be replaced with a "public"
         // one by constructSync() above
         context.setService(hStruct);
         return hStruct;
+        }
+
+    /**
+     * @return  a service structure handle
+     */
+    protected ServiceHandle createStructHandle(TypeComposition clazz, ServiceContext context)
+        {
+        return new ServiceHandle(clazz.ensureAccess(Access.STRUCT), context);
         }
 
     @Override

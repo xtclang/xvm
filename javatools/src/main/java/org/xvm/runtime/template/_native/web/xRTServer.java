@@ -45,6 +45,7 @@ import javax.net.ssl.X509ExtendedKeyManager;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -61,7 +62,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -103,20 +103,15 @@ public class xRTServer
     @Override
     public void initNative()
         {
-        markNativeMethod("configureImpl"  , null, VOID);
+        markNativeMethod("bindImpl"       , null, VOID);
         markNativeMethod("addRouteImpl"   , null, VOID);
         markNativeMethod("removeRouteImpl", null, VOID);
-        markNativeMethod("start"          , null, VOID);
-        markNativeMethod("send"           , null, VOID);
+        markNativeMethod("respond"        , null, VOID);
         markNativeMethod("close"          , null, VOID);
 
-        markNativeMethod("getClientAddressBytes",  null, null);
-        markNativeMethod("getClientHostName",      null, null);
-        markNativeMethod("getClientPort",          null, null);
-        markNativeMethod("getServerAddressBytes",  null, null);
-        markNativeMethod("getServerPort",          null, null);
-        markNativeMethod("getMethodString",        null, null);
-        markNativeMethod("getUriString",           null, null);
+        markNativeMethod("getReceivedAtAddress",   null, null);
+        markNativeMethod("getReceivedFromAddress", null, null);
+        markNativeMethod("getClientHost",          null, null);
         markNativeMethod("getProtocolString",      null, null);
         markNativeMethod("getHeaderNames",         null, null);
         markNativeMethod("getHeaderValuesForName", null, null);
@@ -142,11 +137,31 @@ public class xRTServer
      */
     public ObjectHandle ensureServer(Frame frame, ObjectHandle hOpts)
         {
-        ServiceContext context  = f_container.createServiceContext("HttpServer");
-        ServiceHandle  hService = new HttpServerHandle(getCanonicalClass(f_container), context);
+        TypeComposition clz     = getCanonicalClass();
+        MethodStructure ctor    = getStructure().findConstructor();
+        ServiceContext  context = f_container.createServiceContext("HttpServer");
 
-        context.setService(hService);
-        return hService;
+        switch (context.sendConstructRequest(frame, clz, ctor, null,
+                    new ObjectHandle[ctor.getMaxVars()], Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                return frame.popStack();
+
+            case Op.R_CALL:
+                return new ObjectHandle.DeferredCallHandle(frame);
+
+            case Op.R_EXCEPTION:
+                return new ObjectHandle.DeferredCallHandle(frame.m_hException);
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    @Override
+    protected ServiceHandle createStructHandle(TypeComposition clazz, ServiceContext context)
+        {
+        return new HttpServerHandle(clazz.ensureAccess(Constants.Access.STRUCT), context);
         }
 
     public int invokeNative1(Frame frame, MethodStructure method,
@@ -154,32 +169,14 @@ public class xRTServer
         {
         switch (method.getName())
             {
-            case "getClientHostName":
-                return invokeGetClientHostName(frame, (HttpContextHandle) hArg, iReturn);
-
-            case "getClientAddressBytes":
-                return invokeGetClientAddress(frame, (HttpContextHandle) hArg, iReturn);
-
-            case "getClientPort":
-                return invokeGetClientPort(frame, (HttpContextHandle) hArg, iReturn);
-
-            case "getServerAddressBytes":
-                return invokeGetServerAddress(frame, (HttpContextHandle) hArg, iReturn);
-
-            case "getServerPort":
-                return invokeGetServerPort(frame, (HttpContextHandle) hArg, iReturn);
-
-            case "getMethodString":
-                return invokeGetMethod(frame, (HttpContextHandle) hArg, iReturn);
-
-            case "getUriString":
-                return invokeGetUri(frame, (HttpContextHandle) hArg, iReturn);
-
             case "getProtocolString":
                 return invokeGetProtocol(frame, (HttpContextHandle) hArg, iReturn);
 
             case "getHeaderNames":
                 return invokeGetHeaderNames(frame, (HttpContextHandle) hArg, iReturn);
+
+            case "containsNestedBodies":
+                return invokeContainsBodies(frame, (HttpContextHandle) hArg, iReturn);
 
             case "removeRouteImpl":
                 return invokeRemoveRoute(frame, (HttpServerHandle) hTarget, (StringHandle) hArg);
@@ -202,26 +199,17 @@ public class xRTServer
         {
         switch (method.getName())
             {
-            case "start":
-                {
-                HttpServerHandle hService = (HttpServerHandle) hTarget;
-                return frame.f_context == hService.f_context
-                        ? invokeStart(frame, hService)
-                        : xRTFunction.makeAsyncNativeHandle(method).
-                                call1(frame, hService, Utils.OBJECTS_NONE, iReturn);
-                }
-
-            case "configureImpl":
-                return invokeConfigure(frame, (HttpServerHandle) hTarget, ahArg);
+            case "bindImpl":
+                return invokeBind(frame, (HttpServerHandle) hTarget, ahArg);
 
             case "addRouteImpl":
                 return invokeAddRoute(frame, (HttpServerHandle) hTarget, ahArg);
 
-            case "send":
+            case "respond":
                 {
                 HttpServerHandle hService = (HttpServerHandle) hTarget;
                 return frame.f_context == hService.f_context
-                        ? invokeSend(frame, ahArg)
+                        ? invokeRespond(frame, ahArg)
                         : xRTFunction.makeAsyncNativeHandle(method).
                                 call1(frame, hService, ahArg, iReturn);
                 }
@@ -236,15 +224,21 @@ public class xRTServer
         {
         switch (method.getName())
             {
+            case "getReceivedAtAddress":
+                return invokeGetReceivedAtAddress(frame, (HttpContextHandle) ahArg[0], aiReturn);
+
+            case "getReceivedFromAddress":
+                return invokeGetReceivedFromAddress(frame, (HttpContextHandle) ahArg[0], aiReturn);
+
+            case "getClientHost":
+                return invokeGetClientHost(frame, (HttpContextHandle) ahArg[0], aiReturn);
+
             case "getHeaderValuesForName":
                 return invokeGetHeaderValues(frame, (HttpContextHandle) ahArg[0],
                         (StringHandle) ahArg[1], aiReturn);
 
             case "getBodyBytes":
                 return invokeGetBody(frame, (HttpContextHandle) ahArg[0], aiReturn);
-
-            case "containsNestedBodies":
-                return invokeContainsBodies(frame, (HttpContextHandle) ahArg[0], aiReturn);
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -254,9 +248,9 @@ public class xRTServer
     // ----- native implementations ----------------------------------------------------------------
 
     /**
-     * Implementation of "void configureImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
+     * Implementation of "void bindImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
      */
-    private int invokeConfigure(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
+    private int invokeBind(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
         if (hServer.getHttpServer() != null)
             {
@@ -271,6 +265,41 @@ public class xRTServer
             {
             configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
             configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
+
+            HttpServer  httpServer  = hServer.getHttpServer();
+            HttpsServer httpsServer = hServer.getHttpsServer();
+
+            // at the moment we only support a single "binding"; set up the thread pool
+            String        sName   = "HttpHandler";
+            ThreadGroup   group   = new ThreadGroup(sName);
+            ThreadFactory factory = r ->
+                {
+                Thread thread = new Thread(group, r);
+                thread.setDaemon(true);
+                thread.setName(sName + "@" + thread.hashCode());
+                return thread;
+                };
+
+            // We don't actually rely on any scaling here; all requests go to a single natural
+            // Handler service instance that needs to demultiplex it as quick as possible
+            // (see HttpHandler.x in xenia.xtclang.org module).
+            // If necessary, we can change the start() method to take an array of handlers and
+            // demultiplex it earlier by the native code
+            Executor executor = Executors.newCachedThreadPool(factory);
+
+            httpServer.setExecutor(executor);
+            httpServer.start();
+
+            httpsServer.setExecutor(executor);
+            httpsServer.start();
+
+            // prevent the container from being terminated
+            hServer.f_context.f_container.getServiceContext().registerNotification();
+
+            Router router = hServer.getRouter();
+            httpServer .createContext("/", router);
+            httpsServer.createContext("/", router);
+
             return Op.R_NEXT;
             }
         catch (Exception e)
@@ -320,13 +349,13 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "void addRouteImpl(String hostName, Handler handler, KeyStore keystore,
+     * Implementation of "void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore keystore,
      *                    String? tlsKey=Null)" method.
      */
     private int invokeAddRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
         StringHandle   hHostName  = (StringHandle) ahArg[0];
-        ServiceHandle  hHandler   = (ServiceHandle) ahArg[1];
+        ServiceHandle  hWrapper = (ServiceHandle) ahArg[1];
         KeyStoreHandle hKeystore  = (KeyStoreHandle)  ahArg[2];
         String         sTlsKey    = ahArg[3] instanceof StringHandle hS ? hS.getStringValue() : null;
         Router         router     = hServer.getRouter();
@@ -357,12 +386,12 @@ public class xRTServer
                 }
             }
 
-        ClassStructure  clzHandler = hHandler.getTemplate().getStructure();
+        ClassStructure  clzHandler = hWrapper.getTemplate().getStructure();
         MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 4);
         assert method != null;
 
-        FunctionHandle hFunction = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hHandler);
-        RequestHandler handler   = new RequestHandler(hHandler.f_context, hFunction);
+        FunctionHandle hFunction = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
+        RequestHandler handler   = new RequestHandler(hWrapper.f_context, hFunction);
 
         router.mapRoutes.put(hHostName.getStringValue(), new RouteInfo(handler, hKeystore, sTlsKey));
         return Op.R_NEXT;
@@ -378,126 +407,45 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "start()" method.
+     * Implementation of "(Byte[], UInt16) getReceivedAtAddress(RequestContext context)" method.
      */
-    private int invokeStart(Frame frame, HttpServerHandle hServer)
+    private int invokeGetReceivedAtAddress(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
-        HttpServer  httpServer  = hServer.getHttpServer();
-        HttpsServer httpsServer = hServer.getHttpsServer();
+        InetSocketAddress addr  = hCtx.f_exchange.getLocalAddress();
+        byte[]            ab    = addr.getAddress().getAddress();
+        int               nPort = addr.getPort();
 
-        if (httpServer == null)
-            {
-            return frame.raiseException(xException.illegalState(frame, "Server is not configured"));
-            }
-
-        if (httpServer.getExecutor() == null)
-            {
-            // this is a very first call; set up the thread pool
-            String        sName   = "HttpHandler";
-            ThreadGroup   group   = new ThreadGroup(sName);
-            ThreadFactory factory = r ->
-                {
-                Thread thread = new Thread(group, r);
-                thread.setDaemon(true);
-                thread.setName(sName + "@" + thread.hashCode());
-                return thread;
-                };
-
-            // We don't actually rely on any scaling here; all requests go to a single natural
-            // Handler service instance that needs to demultiplex it as quick as possible
-            // (see HttpHandler.x in xenia.xtclang.org module).
-            // If necessary, we can change the start() method to take an array of handlers and
-            // demultiplex it earlier by the native code
-            Executor executor = Executors.newCachedThreadPool(factory);
-
-            httpServer.setExecutor(executor);
-            httpServer.start();
-
-            httpsServer.setExecutor(executor);
-            httpsServer.start();
-
-            // prevent the container from being terminated
-            hServer.f_context.f_container.getServiceContext().registerNotification();
-
-            Router router = hServer.getRouter();
-            httpServer .createContext("/", router);
-            httpsServer.createContext("/", router);
-            }
-        return Op.R_NEXT;
+        return frame.assignValues(aiResult,
+                xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
+                xUInt16.INSTANCE.makeJavaLong(nPort));
         }
 
     /**
-     * Implementation of "String? getClientHostName(RequestContext context)" method.
+     * Implementation of "(Byte[], UInt16) getReceivedFromAddress(RequestContext context)" method.
      */
-    private int invokeGetClientHostName(Frame frame, HttpContextHandle hCtx, int iResult)
+    private int invokeGetReceivedFromAddress(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
-        String sHost = getClientHostName(hCtx.f_exchange);
+        InetSocketAddress addr  = hCtx.f_exchange.getRemoteAddress();
+        byte[]            ab    = addr.getAddress().getAddress();
+        int               nPort = addr.getPort();
 
-        return frame.assignValue(iResult, sHost == null
-                ? xNullable.NULL
-                : xString.makeHandle(sHost));
+        return frame.assignValues(aiResult,
+                xByteArray.makeByteArrayHandle(ab, Mutability.Constant),
+                xUInt16.INSTANCE.makeJavaLong(nPort));
         }
 
     /**
-     * Implementation of "Byte[] getClientAddressBytes(RequestContext context)" method.
+     * Implementation of "conditional (String, Uint16) getClientHost(RequestContext context)" method.
      */
-    private int invokeGetClientAddress(Frame frame, HttpContextHandle hCtx, int iResult)
+    private int invokeGetClientHost(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
-        InetSocketAddress addr = hCtx.f_exchange.getRemoteAddress();
-        byte[]            ab   = addr.getAddress().getAddress();
+        String sHost = getHostName(hCtx.f_exchange);
+        int    nPort = getHostPort(hCtx.f_exchange);
 
-        return frame.assignValue(iResult, xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
-        }
-
-    /**
-     * Implementation of "UInt16 getClientPort(RequestContext context)" method.
-     */
-    private int invokeGetClientPort(Frame frame, HttpContextHandle hCtx, int iResult)
-        {
-        int nPort = getClientPort(hCtx.f_exchange);
-
-        return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(nPort));
-        }
-
-    /**
-     * Implementation of "Byte[] getServerAddressBytes(RequestContext context)" method.
-     */
-    private int invokeGetServerAddress(Frame frame, HttpContextHandle hCtx, int iResult)
-        {
-        InetSocketAddress addr = hCtx.f_exchange.getLocalAddress();
-        byte[]            ab   = addr.getAddress().getAddress();
-
-        return frame.assignValue(iResult, xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
-        }
-
-    /**
-     * Implementation of "UInt16 getServerPort(RequestContext context)" method.
-     */
-    private int invokeGetServerPort(Frame frame, HttpContextHandle hCtx, int iResult)
-        {
-        InetSocketAddress addr = hCtx.f_exchange.getLocalAddress();
-
-        return frame.assignValue(iResult, xUInt16.INSTANCE.makeJavaLong(addr.getPort()));
-        }
-
-    /**
-     * Implementation of "String getMethodString(RequestContext context)" method.
-     */
-    private int invokeGetMethod(Frame frame, HttpContextHandle hCtx, int iResult)
-        {
-        String sMethod = hCtx.f_exchange.getRequestMethod();
-
-        return frame.assignValue(iResult, xString.makeHandle(sMethod));
-        }
-
-    /**
-     * Implementation of "String getUriString(RequestContext context)" method.
-     */
-    private int invokeGetUri(Frame frame, HttpContextHandle hCtx, int iResult)
-        {
-        String sUri = hCtx.f_exchange.getRequestURI().toASCIIString();
-
-        return frame.assignValue(iResult, xString.makeHandle(sUri));
+        return sHost == null
+            ? frame.assignValue(aiResult[0], xBoolean.FALSE)
+            : frame.assignValues(aiResult, xBoolean.TRUE,
+                    xString.makeHandle(sHost), xUInt16.INSTANCE.makeJavaLong(nPort));
         }
 
     /**
@@ -562,12 +510,12 @@ public class xRTServer
 
     /**
      * Implementation of
-     *  "conditional RequestContext[] containsNestedBodies(RequestContext context)" method.
+     *  "Boolean containsNestedBodies(RequestContext context)" method.
      */
-    private int invokeContainsBodies(Frame frame, HttpContextHandle hCtx, int[] aiResult)
+    private int invokeContainsBodies(Frame frame, HttpContextHandle hCtx, int iResult)
         {
         // TODO implement
-        return frame.assignValue(aiResult[0], xBoolean.FALSE);
+        return frame.assignValue(iResult, xBoolean.FALSE);
         }
 
     /**
@@ -604,9 +552,11 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "send()" method.
+     * Implementation of "respond(
+     *   RequestContext ctx, Int status, String[] headerNames, String[] headerValues, Byte[] body)"
+     * method.
      */
-    private int invokeSend(Frame frame, ObjectHandle[] ahArg)
+    private int invokeRespond(Frame frame, ObjectHandle[] ahArg)
         {
         HttpExchange      exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
         long              nStatus       = ((JavaLong) ahArg[1]).getValue();
@@ -648,7 +598,7 @@ public class xRTServer
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static String getClientHostName(HttpExchange exchange)
+    protected static String getHostName(HttpExchange exchange)
         {
         String sHost = exchange.getRequestHeaders().getFirst("Host");
         if (sHost != null)
@@ -662,7 +612,7 @@ public class xRTServer
         return sHost;
         }
 
-    protected static int getClientPort(HttpExchange exchange)
+    protected static int getHostPort(HttpExchange exchange)
         {
         String sHost = exchange.getRequestHeaders().getFirst("Host");
         if (sHost == null)
@@ -875,7 +825,7 @@ public class xRTServer
         public void handle(HttpExchange exchange)
                 throws IOException
             {
-            String    sHost = getClientHostName(exchange);
+            String    sHost = getHostName(exchange);
             RouteInfo route = mapRoutes.get(sHost);
             if (route == null)
                 {

@@ -2,35 +2,38 @@ import crypto.Decryptor;
 
 import web.HttpStatus;
 
+import web.http.HostInfo;
+
 import web.codecs.Registry;
 
 import web.security.Authenticator;
 
 import HttpServer.Handler;
-import HttpServer.RequestContext;
+import HttpServer.RequestInfo;
 
 
 /**
- * An HTTP request entry point.
+ * An low-level HTTP request entry point.
  */
 @Concurrent
 service HttpHandler
         implements Handler {
     /**
-     * Construct an HttpHandler for a specific application using a provided HttpServer.
+     * Construct an HttpHandler that provides the specified web application as the implementation of
+     * the specified host.
      *
-     * @param httpServer  the HttpServer
-     * @param app         the application
+     * @param host  the HostInfo that routes to this handler
+     * @param app   the `WebApp` application to route to
      */
-    construct(HttpServer httpServer, WebApp app) {
+    construct(HostInfo host, WebApp app) {
         Catalog catalog = buildCatalog(app);
 
-        this.httpServer     = httpServer;
+        this.host           = host;
         this.catalog        = catalog;
         this.dispatchers    = new Dispatcher[];
         this.busy           = new Boolean[];
         this.bundlePool     = new BundlePool(catalog);
-        this.sessionManager = createSessionManager(httpServer, catalog);
+        this.sessionManager = createSessionManager(host, catalog);
         this.authenticator  = app.authenticator;
 
         Registry registry = app.registry_;
@@ -39,9 +42,9 @@ service HttpHandler
     }
 
     /**
-     * The HttpServer.
+     * The information about the host that this handler is servicing.
      */
-    HttpServer httpServer;
+    protected HostInfo host;
 
     /**
      * The Catalog.
@@ -94,26 +97,21 @@ service HttpHandler
     // ----- Handler API ---------------------------------------------------------------------------
 
     @Override
-    void configure(Decryptor decryptor) {
-        sessionManager.configureEncryption(decryptor);
-    }
-
-    @Override
-    void handle(RequestContext context, String uri, String methodName, Boolean tls) {
+    void handle(RequestInfo request) {
         if (closing) {
-            httpServer.send(context, HttpStatus.Gone.code, [], [], []);
+            request.respond(HttpStatus.Gone.code, [], [], []);
             return;
         }
 
         Int   index  = ensureDispatcher();
-        Tuple result = dispatchers[index].dispatch^(httpServer, context, tls, uri, methodName);
+        Tuple result = dispatchers[index].dispatch^(request);
         &result.whenComplete((response, e) -> {
             if (e != Null) {
                 // TODO GG: remove
                 @Inject Console console;
-                console.print($"HttpHandler: unhandled exception for {uri.quoted()}: {e}");
+                console.print($"HttpHandler: unhandled exception for {request.uriString.quoted()}: {e}");
 
-                httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
+                request.respond(HttpStatus.InternalServerError.code, [], [], []);
             }
             busy[index] = False;
         });
@@ -121,6 +119,16 @@ service HttpHandler
 
 
     // ----- HttpHandler specific methods ----------------------------------------------------------
+
+    /**
+     * Configure the handler.
+     *
+     * @param decryptor  a [Decryptor] that can be used to encrypt/decrypt application specific
+     *                   information (e.g. cookies)
+     */
+    void configure(Decryptor decryptor) {
+        sessionManager.configureEncryption(decryptor);
+    }
 
     /**
      * Shutdown this HttpHandler; it will stop accepting any new requests.
@@ -135,7 +143,7 @@ service HttpHandler
 
     @Override
     String toString() {
-        return $"HttpHandler@{httpServer}";
+        return $"HttpHandler@{host}";
     }
 
 
@@ -184,13 +192,13 @@ service HttpHandler
     }
 
     /**
-     * Instantiate a SessionManager for the application described by the provided [Catalog] using
-     * the specified HttpServer.
+     * Instantiate a SessionManager for the application described by the provided [Catalog] on
+     * behalf of the specified host.
      *
-     * @param httpServer  the HttpServer
-     * @param catalog     the application's Catalog
+     * @param host     the HostInfo
+     * @param catalog  the application's Catalog
      */
-    private static SessionManager createSessionManager(HttpServer httpServer, Catalog catalog) {
+    private static SessionManager createSessionManager(HostInfo host, Catalog catalog) {
         import ecstasy.reflect.Annotation;
         import SessionManager.SessionProducer;
 
@@ -215,7 +223,6 @@ service HttpHandler
             };
         }
 
-        return new SessionManager(
-            new SessionStore(), sessionProducer, httpServer.plainPort, httpServer.tlsPort);
+        return new SessionManager(new SessionStore(), sessionProducer, host.httpPort, host.httpsPort);
     }
 }

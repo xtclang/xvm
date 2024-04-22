@@ -11,6 +11,8 @@ const Uri
      * Construct a Uri from a String.
      *
      * @param text  the URI
+     *
+     * @throws IllegalArgument  if the URI string cannot be successfully parsed
      */
     @Override
     construct(String text) {
@@ -48,6 +50,8 @@ const Uri
      * @param query      the '?' query portion, or Null if none
      * @param opaque     the opaque portion, if the URI is not of the hierarchical form
      * @param fragment   the '#' fragment portion, which may be blank, or Null if none
+     *
+     * @throws IllegalArgument  if any of the URI parts is not valid
      */
     construct(String?    scheme    = Null,
               String?    authority = Null,

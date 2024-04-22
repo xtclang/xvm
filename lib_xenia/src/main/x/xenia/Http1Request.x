@@ -83,12 +83,12 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
     @Override
     HttpMethod method.get() {
-        return info.getMethod();
+        return info.method;
     }
 
     @Override
     @Lazy Uri uri.calc() {
-        return info.getUri();
+        return info.uri;
     }
 
     @Override
@@ -103,7 +103,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
     @Override
     Protocol protocol.get() {
-        return info.getProtocol();
+        return info.protocol;
     }
 
     @Override
@@ -131,32 +131,28 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         UInt16? port;
 
         if (scheme.tls) {
-            port = info.server.tlsPort;
+            port = info.host.httpsPort;
             if (port == 443) {
                 port = Null;
             }
         } else {
-            port = info.server.plainPort;
+            port = info.host.httpPort;
             if (port == 80) {
                 port = Null;
             }
         }
 
         return uri.with(scheme = scheme.name,
-                        host   = info.getClientHostName(),
+                        host   = info.host.host.toString(),
                         port   = port
                        );
     }
 
     @Override
-    @RO SocketAddress? client.get() {
-        return (info.getClientAddress(), info.getClientPort());
-    }
+    SocketAddress client.get() = info.clientAddress;
 
     @Override
-    @RO SocketAddress? server.get() {
-        return (info.getServerAddress(), info.getServerPort());
-    }
+    SocketAddress server.get() = info.receivedAtAddress;
 
     typedef (String | List<String>) as QueryParameter;
 
@@ -202,9 +198,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     }
 
     @Override
-    @Lazy List<String> names.calc() {
-        return info.getHeaderNames();
-    }
+    @Lazy String[] names.calc() = info.headerNames;
 
     @Override
     @Lazy List<Header.Entry> entries.calc() {

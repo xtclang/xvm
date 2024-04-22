@@ -511,8 +511,8 @@ public class PropertyStructure
             sigThis = sigThis.resolveGenericTypes(pool, clzThis.new SimpleTypeResolver(pool, listActual));
             }
 
-        // TODO: if read-only then isA() would suffice
-        return sigThat.equals(sigThis);
+        return sigThat.equals(sigThis) ||
+               sigThat.isSubstitutableFor(sigThis, null) && sigThis.isSubstitutableFor(sigThat, null);
         }
 
     /**
