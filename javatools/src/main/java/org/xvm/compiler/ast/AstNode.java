@@ -1561,10 +1561,13 @@ public abstract class AstNode
                 return null;
                 }
             int iParam = param.getIndex() - cTypeParams;
+            if (iParam < cUnnamed)
+                {
+                log(errs, Severity.ERROR, Compiler.DUPLICATE_PARAMETER, sName);
+                return null;
+                }
 
-            // if a named arg overrides an unnamed (required), we'll null it out to generate
-            // an error later
-            aexpr[iParam] = iParam >= cUnnamed ? mapNamedExpr.get(sName) : null;
+            aexpr[iParam] = mapNamedExpr.get(sName);
             }
 
         // replace non-specified "holes" with NonBindingExpressions
