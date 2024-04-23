@@ -193,7 +193,7 @@ service HttpHandler
 
     /**
      * Instantiate a SessionManager for the application described by the provided [Catalog] on
-     * behalf of the specified host (route).
+     * behalf of the specified host route.
      *
      * @param route    the HostInfo for the route
      * @param catalog  the application's Catalog

@@ -242,22 +242,40 @@ service RTServer
         }
 
         @Override
-        Boolean tls;
+        Boolean tls; // TODO CP: augment by the backTrace etc
 
         @Override
         SocketAddress userAgentAddress.get() {
-            TODO
+            // the user agent is the very last address in the back-trace list, even if we can't
+            // trust that part of the back-trace information
+            assert SocketAddress addr := backTrace.last();
+            return addr;
         }
 
         @Override
-        SocketAddress clientAddress.get() {
-            // TODO augment
-            return receivedFromAddress;
+        @Lazy SocketAddress clientAddress.calc() {
+            assert ProxyCheck isTrustedProxy := bindings.get(binding);
+
+            // start with the address that sent the request to this server, and work backwards
+            // toward the user agent
+            SocketAddress[] addrs = backTrace;
+            SocketAddress?  last  = Null;
+            for (Int i = 1, Int c = addrs.size; i < c; ++i) {
+                SocketAddress addr = addrs[i];
+                if (isTrustedProxy(addr[0])) {
+                    last = addr;
+                } else {
+                    // the client is assumed to be the first address that is NOT a trusted proxy
+                    return addr;
+                }
+            }
+            return last ?: assert;
         }
 
         @Override
-        SocketAddress[] backTrace.get() {
-            TODO
+        @Lazy SocketAddress[] backTrace.calc() {
+            // TODO CP: use X-Forwarded-For etc. headers
+            return [receivedAtAddress, receivedFromAddress];
         }
 
         @Override
@@ -308,6 +326,11 @@ service RTServer
         @Override
         void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
             this.RTServer.respond(context, status, headerNames, headerValues, body);
+        }
+
+        @Override
+        String toString() {
+            return $"({uriString=}, {method.name=}, {tls=})";
         }
     }
 

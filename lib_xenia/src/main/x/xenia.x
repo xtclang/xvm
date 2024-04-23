@@ -96,7 +96,7 @@ module xenia.xtclang.org {
      *
      * @param webApp     the WebApp to dispatch the HTTP requests to
      * @param route      (optional) the HostInfo for request routing
-     * @param binding    (optional) the HostInfo for server binding
+     * @param binding    (optional) the HostInfo for server binding; defaults to the `route`
      * @param keystore   (optional) the keystore to use for tls certificates and encryption
      * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls; if not
      *                   specified, the first key pair will be used
@@ -104,9 +104,10 @@ module xenia.xtclang.org {
      * @return a function that allows to shutdown the server
      */
     function void () createServer(WebApp webApp,
-                                  HostInfo route = DefaultHost, HostInfo binding = DefaultBind,
+                                  HostInfo route = DefaultHost, HostInfo? binding = Null,
                                   KeyStore? keystore = Null, String? tlsKey = Null) {
         @Inject HttpServer server;
+        binding ?:= route;
         try {
             server.bind(binding);
 

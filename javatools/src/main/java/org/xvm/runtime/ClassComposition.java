@@ -288,13 +288,29 @@ public class ClassComposition
     @Override
     public boolean isInjected(PropertyConstant idProp)
         {
-        return f_typeInception.ensureTypeInfo().findProperty(idProp).isInjected();
+        try
+            {
+            return f_typeInception.ensureTypeInfo().findProperty(idProp).isInjected();
+            }
+        catch (NullPointerException e)
+            {
+            // let the caller detect a missing property
+            return false;
+            }
         }
 
     @Override
     public boolean isAtomic(PropertyConstant idProp)
         {
-        return f_typeInception.ensureTypeInfo().findProperty(idProp).isAtomic();
+        try
+            {
+            return f_typeInception.ensureTypeInfo().findProperty(idProp).isAtomic();
+            }
+        catch (NullPointerException e)
+            {
+            // let the caller detect a missing property
+            return false;
+            }
         }
 
     @Override
