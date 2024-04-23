@@ -11,6 +11,7 @@ import kotlin.io.path.Path
 data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) {
     companion object {
         private const val DRY_RUN = false
+        private const val LOG_OUTPUT = false
     }
 
     private val artifactBaseVersion = semanticVersion.artifactVersion.removeSuffix("-SNAPSHOT")
@@ -64,11 +65,10 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
      *
      * @return map of package names to maps of versions and when they were updated.
      */
-    private fun listPackages(): Map<String, Map<String, List<String>>> = project.run {
+    fun resolvePackages(logLevel: LogLevel = LogLevel.LIFECYCLE): Map<String, Map<String, List<String>>> = project.run {
         val (_, output) = gh("api", "https://api.github.com/orgs/xtclang/packages?package_type=maven")
         val packages = Json.parseToJsonElement(output)
         require(packages is JsonArray)
-        System.err.println("Data size: ${packages.size}")
 
         val map = buildMap<String, Map<String, List<String>>> {
             packages.map { obj -> (obj as JsonObject) }.forEach { node ->
@@ -104,7 +104,6 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
     }
 
     fun resolveTags(logLevel: LogLevel = LogLevel.LIFECYCLE): GitTagInfo = project.run {
-        listPackages()
         val localBranchName = git("branch", "--show-current").output
         return GitTagInfo(
             localTag to remoteTag,
@@ -171,18 +170,24 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
     private fun gh(vararg arguments: String): Pair<Int, String> = project.run {
         logger.lifecycle("$prefix Executing: gh ${arguments.joinToString(" ")}")
         val whichOut = ByteArrayOutputStream()
-        exec {
+        val execResult = exec {
             standardOutput = whichOut
             executable = "which"
             args("gh")
+            isIgnoreExitValue = true
         }
+
+        if (execResult.exitValue != 0) {
+            throw buildException("'gh' is not installed. Please install it from https://cli.github.com/, or with a package manager, e.g. like 'brew install gh'")
+        }
+
         val ghRealPath = Path(whichOut.toString().trim()).toRealPath().toString()
         logger.lifecycle("$prefix Executing gh from real path: $ghRealPath")
         val ghOut = ByteArrayOutputStream()
         exec {
+            standardOutput = ghOut
             executable = ghRealPath
             args(*arguments)
-            standardOutput = ghOut
         }
         return 0 to ghOut.toString()
     }
@@ -202,7 +207,7 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
         if (exitValue != 0) {
             logger.warn("$prefix Git call was non-throwing, but returned non zero value: $exitValue")
         }
-        if (!DRY_RUN) {
+        if (!DRY_RUN && LOG_OUTPUT) {
             result.lines().forEach { line -> logger.lifecycle("$prefix     out: $line") }
         }
         return result

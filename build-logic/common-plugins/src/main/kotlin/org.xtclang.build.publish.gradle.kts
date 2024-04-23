@@ -63,6 +63,14 @@ val listTags by tasks.registering {
     }
 }
 
+val listPackages by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "List all published packages in the GitHub Maven repository."
+    doLast {
+        xdkBuildLogic.git().resolvePackages()
+    }
+}
+
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to local repositories (e.g. build and mavenLocal)."

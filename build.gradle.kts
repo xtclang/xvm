@@ -111,11 +111,32 @@ private val includedBuildsWithPublications = listOf(xdk, plugin)
  *       mechanism to cross compile executable for another platform, which otherwise would have
  *       been a mess to maintain.
  *
+ *       After a release has been published, it is impossible to push a new change that has that
+ *       commit in its history, with a non snapshot version number. The next push to master after
+ *       a release has been created must have a new version number. We will likely automatically
+ *       update the VERSION file to be the next patch version number in sequence, and append
+ *       a snapshot suffix as the next change to master. This can be automated, and usually is.
+ *
+ *       I.e. If the last commit contained a release tag, i.e. "vX.Y.Z", the VERSION file of
+ *       that commit would contain the same tag. If we push another commit to master, where
+ *       the VERSION hasn't been updated, this will break the build, as releases are unique
+ *       and cannot be overwritten. The release process likely modifies the VERSION file
+ *       so that it reads "X.Y.(Z+1)-SNAPSHOT" instead of "X.Y.Z", as it refers to what the
+ *       next release will be, when enough commits have been added, and product management
+ *       decides it's time to release a new "official" version.
+ *
  */
+
 val ensureTag by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Ensure that the current commit is tagged with the current version."
-    dependsOn(xdk.task(":$name"))
+    delegateTo(PUBLISH_TASK_GROUP, "Ensure that the current commit is tagged with a tag based on the current VERSION file.", xdk to name)
+}
+
+/**
+ * List existing tags and deduce which tags would need to be moved and/or created to publish
+ * package artifacts for this version of the XDK.
+ */
+val listTags by tasks.registering {
+    delegateTo(PUBLISH_TASK_GROUP, "Fetch and list all local and remote Git tags, used for package publication and releases.", xdk to name)
 }
 
 /**
@@ -124,10 +145,8 @@ val ensureTag by tasks.registering {
  * the respective snapshots. Of course, a non-snapshot package cannot contain several creation
  * dates - it can never be overwritten, just deleted (which is also a bad idea).
  */
-val listTags by tasks.registering {
-    group = PUBLISH_TASK_GROUP
-    description = "Ensure that the current commit is tagged with the current version."
-    dependsOn(xdk.task(":$name"))
+val listPackages by tasks.registering {
+    delegateTo(PUBLISH_TASK_GROUP, "Fetch and list all local and remote Git tags, used for package publication and releases.", xdk to name)
 }
 
 /**
@@ -148,9 +167,7 @@ val installDist by tasks.registering {
 }
 
 val installLocalDist by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Build and overwrite any local distribution with the new distribution produced by the build."
-    dependsOn(xdk.task(":$name"))
+    delegateTo(DISTRIBUTION_TASK_GROUP,  "Build and overwrite any local distribution with the new distribution produced by the build.", xdk to name)
 }
 
 /**
@@ -212,5 +229,16 @@ publishTaskPrefixes.forEach { prefix ->
                 dependsOn(it.task(":$taskName"))
             }
         }
+    }
+}
+
+private fun Task.delegateTo(groupName: String, taskDescription: String = "", vararg delegates: Pair<IncludedBuild, String>) {
+    group = groupName
+    description = taskDescription
+    delegates.forEach {
+        val (includedBuild, taskName) = it
+        val delegateTask = includedBuild.task(":$taskName")
+        dependsOn(delegateTask)
+        logger.info("$prefix Registered task delegate: $name -> ${includedBuild.name}:$taskName ($delegateTask)")
     }
 }
