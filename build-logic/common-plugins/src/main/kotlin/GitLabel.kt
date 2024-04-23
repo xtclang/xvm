@@ -55,65 +55,28 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
         }
     }
 
-    private fun gh(vararg arguments: String): Pair<Int, String> = project.run {
-        logger.lifecycle("$prefix Executing: gh ${arguments.joinToString(" ")}")
-        val whichOut = ByteArrayOutputStream()
-        exec {
-            standardOutput = whichOut
-            executable = "which"
-            args("gh")
-        }
-        val ghRealPath = Path(whichOut.toString().trim()).toRealPath().toString()
-        logger.lifecycle("$prefix Executing gh from real path: $ghRealPath")
-        val ghOut = ByteArrayOutputStream()
-        exec {
-            executable = ghRealPath
-            args(*arguments)
-            standardOutput = ghOut
-        }
-        return 0 to ghOut.toString()
-    }
-
-    private fun git(vararg args: String): GitResult = project.run {
-        // TODO move this to project independent spawn, but right now github actions hates that.
-        val cmd = listOf("git", *args)
-        return logGitOutput(
-            cmd.joinToString(" "),
-            GitResult(executeCommand(cmd, throwOnError = true, dryRun = DRY_RUN))
-        )
-    }
-
-    private fun logGitOutput(header: String, result: GitResult): GitResult = project.run {
-        val exitValue = result.exitValue
-        logger.lifecycle("$prefix $header (exitValue: $exitValue)")
-        if (exitValue != 0) {
-            logger.warn("$prefix Git call was non-throwing, but returned non zero value: $exitValue")
-        }
-        if (!DRY_RUN) {
-            result.lines().forEach { line -> logger.lifecycle("$prefix     out: $line") }
-        }
-        return result
-    }
-
     private fun fetchTags() {
         git("fetch", "--force", "--tags")
     }
 
-    private fun listPackages() = project.run {
+    /**
+     * Ask GitHub about all published packages for the xtclang organization.
+     *
+     * @return map of package names to maps of versions and when they were updated.
+     */
+    private fun listPackages(): Map<String, Map<String, List<String>>> = project.run {
         val (_, output) = gh("api", "https://api.github.com/orgs/xtclang/packages?package_type=maven")
         val packages = Json.parseToJsonElement(output)
         require(packages is JsonArray)
         System.err.println("Data size: ${packages.size}")
+
         val map = buildMap<String, Map<String, List<String>>> {
             packages.map { obj -> (obj as JsonObject) }.forEach { node ->
                 val packageName = node["name"]!!.jsonPrimitive.content.removeSurrounding("\"")
                 val packageVersionCount = node["version_count"]!!.jsonPrimitive.int
                 require(packageVersionCount > 0) { "Package '$packageName' has no versions." }
-                val (_, versionsOutput) = gh(
-                    "api",
-                    "https://api.github.com/orgs/xtclang/packages/maven/$packageName/versions"
-                )
-                val versionArray = Json.parseToJsonElement(versionsOutput)
+                val (_, outVer) = gh("api","https://api.github.com/orgs/xtclang/packages/maven/$packageName/versions")
+                val versionArray = Json.parseToJsonElement(outVer)
                 require(versionArray is JsonArray)
                 val timeMap = mutableMapOf<String, MutableList<String>>()
                 versionArray.map { it as? JsonObject ?: throw buildException("Expected JsonObject for version") }
@@ -128,6 +91,7 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
                 put(packageName, timeMap)
             }
         }
+
         logger.lifecycle("$prefix Listing all packages and their creation timestamps:")
         map.forEach { (packageName, versionMap) ->
             logger.lifecycle("$prefix   Package: '$packageName'")
@@ -136,6 +100,7 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
                 timestamps.forEach { timestamp -> logger.lifecycle("$prefix             Created at: $timestamp") }
             }
         }
+        return map
     }
 
     fun resolveTags(logLevel: LogLevel = LogLevel.LIFECYCLE): GitTagInfo = project.run {
@@ -201,5 +166,45 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
         logger.lifecycle("$prefix Creating tag $localTag at commit ${tags.localLastCommit}")
         git("tag", localTag, tags.localLastCommit)
         git("push", "origin", "--tags")
+    }
+
+    private fun gh(vararg arguments: String): Pair<Int, String> = project.run {
+        logger.lifecycle("$prefix Executing: gh ${arguments.joinToString(" ")}")
+        val whichOut = ByteArrayOutputStream()
+        exec {
+            standardOutput = whichOut
+            executable = "which"
+            args("gh")
+        }
+        val ghRealPath = Path(whichOut.toString().trim()).toRealPath().toString()
+        logger.lifecycle("$prefix Executing gh from real path: $ghRealPath")
+        val ghOut = ByteArrayOutputStream()
+        exec {
+            executable = ghRealPath
+            args(*arguments)
+            standardOutput = ghOut
+        }
+        return 0 to ghOut.toString()
+    }
+
+    private fun git(vararg args: String): GitResult = project.run {
+        // TODO move this to project independent spawn, but right now github actions hates that.
+        val cmd = listOf("git", *args)
+        return logGitOutput(
+            cmd.joinToString(" "),
+            GitResult(executeCommand(cmd, throwOnError = true, dryRun = DRY_RUN))
+        )
+    }
+
+    private fun logGitOutput(header: String, result: GitResult): GitResult = project.run {
+        val exitValue = result.exitValue
+        logger.lifecycle("$prefix $header (exitValue: $exitValue)")
+        if (exitValue != 0) {
+            logger.warn("$prefix Git call was non-throwing, but returned non zero value: $exitValue")
+        }
+        if (!DRY_RUN) {
+            result.lines().forEach { line -> logger.lifecycle("$prefix     out: $line") }
+        }
+        return result
     }
 }
