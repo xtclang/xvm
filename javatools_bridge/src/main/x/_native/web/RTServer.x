@@ -77,11 +77,14 @@ service RTServer
             hostName = route.host.toString();
         }
 
-        UInt16 httpPort  = route.httpPort;
-        UInt16 httpsPort = route.httpsPort;
-        if (routes.keys.any(info -> info.host.toString() == hostName &&
-                              (info.httpPort == httpPort || info.httpsPort == httpsPort))) {
-            throw new IllegalArgument($"Route is not unique: {route}");
+        // we should be able to replace an exiting route, but must not add any ambiguous ones
+        if (!routes.contains(route)) {
+            UInt16 httpPort  = route.httpPort;
+            UInt16 httpsPort = route.httpsPort;
+            if (routes.keys.any(info -> info.host.toString() == hostName &&
+                                  (info.httpPort == httpPort || info.httpsPort == httpsPort))) {
+                throw new IllegalArgument($"Route is not unique: {route}");
+            }
         }
 
         cookieDecryptor:
