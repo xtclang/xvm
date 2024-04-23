@@ -25,7 +25,8 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 
 class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
     private val xdkGit: GitLabel by lazy {
-        GitLabel(project, project.findProperty("semanticVersion") as SemanticVersion)
+        // A semantic version must be resolved when this is called, or we will get an exception.
+        GitLabel(project, project.property("semanticVersion") as SemanticVersion)
     }
 
     private val xdkVersions: XdkVersionHandler by lazy {

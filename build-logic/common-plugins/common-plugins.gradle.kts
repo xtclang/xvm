@@ -9,8 +9,10 @@ dependencies {
     //  version catalog. Not even with the "best practice hacks", that are mostly applicable
     //  for this.
     val kohttpVersion = "0.12.0"
+    val kotlinxJsonSerializationVersion = "1.6.3"
     implementation("io.github.rybalkinsd:kohttp:$kohttpVersion")
     implementation("io.github.rybalkinsd:kohttp-jackson:$kohttpVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxJsonSerializationVersion")
 }
 
 repositories {
