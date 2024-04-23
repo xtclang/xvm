@@ -109,7 +109,7 @@ interface CertificateManager {
                 |{{if (state.size    > 0) {$.addAll($"S={state},"   );}}}\
                 |{{if (locality.size > 0) {$.addAll($"L={locality},");}}}\
                 |{{if (orgUnit.size  > 0) {$.addAll($"OU={orgUnit},");}}}\
-                |{{if (org.size      > 0) {$.addAll($"OU={org},"    );}}}\
+                |{{if (org.size      > 0) {$.addAll($"O={org},"     );}}}\
                 |CN={domain}
                 ;
     }

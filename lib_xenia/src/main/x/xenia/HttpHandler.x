@@ -22,18 +22,18 @@ service HttpHandler
      * Construct an HttpHandler that provides the specified web application as the implementation of
      * the specified host.
      *
-     * @param host  the HostInfo that routes to this handler
-     * @param app   the `WebApp` application to route to
+     * @param route  the HostInfo that routes to this handler
+     * @param app    the `WebApp` application to route to
      */
-    construct(HostInfo host, WebApp app) {
+    construct(HostInfo route, WebApp app) {
         Catalog catalog = buildCatalog(app);
 
-        this.host           = host;
+        this.route          = route;
         this.catalog        = catalog;
         this.dispatchers    = new Dispatcher[];
         this.busy           = new Boolean[];
         this.bundlePool     = new BundlePool(catalog);
-        this.sessionManager = createSessionManager(host, catalog);
+        this.sessionManager = createSessionManager(route, catalog);
         this.authenticator  = app.authenticator;
 
         Registry registry = app.registry_;
@@ -42,9 +42,9 @@ service HttpHandler
     }
 
     /**
-     * The information about the host that this handler is servicing.
+     * The information about the route that this handler is servicing.
      */
-    protected HostInfo host;
+    protected HostInfo route;
 
     /**
      * The Catalog.
@@ -143,7 +143,7 @@ service HttpHandler
 
     @Override
     String toString() {
-        return $"HttpHandler@{host}";
+        return $"HttpHandler@{route}";
     }
 
 
@@ -193,12 +193,12 @@ service HttpHandler
 
     /**
      * Instantiate a SessionManager for the application described by the provided [Catalog] on
-     * behalf of the specified host.
+     * behalf of the specified host (route).
      *
-     * @param host     the HostInfo
+     * @param route    the HostInfo for the route
      * @param catalog  the application's Catalog
      */
-    private static SessionManager createSessionManager(HostInfo host, Catalog catalog) {
+    private static SessionManager createSessionManager(HostInfo route, Catalog catalog) {
         import ecstasy.reflect.Annotation;
         import SessionManager.SessionProducer;
 
@@ -223,6 +223,6 @@ service HttpHandler
             };
         }
 
-        return new SessionManager(new SessionStore(), sessionProducer, host.httpPort, host.httpsPort);
+        return new SessionManager(new SessionStore(), sessionProducer, route.httpPort, route.httpsPort);
     }
 }

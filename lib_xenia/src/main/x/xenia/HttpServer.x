@@ -78,13 +78,10 @@ interface HttpServer
      * to the specified 'hostName' and a matching port number will be passed to the specified
      * handler.
      *
+     * @param route      the HostInfo for request routing that indicates which requests should be
+     *                   delivered to the specified handler
      * @param handler    the request handler to route to
      * @param keystore   the KeyStore to use for TLS certificates and encryption
-     * @param route      (optional) the HostInfo for request routing that indicates which
-     *                   requests should be delivered to the specified handler; if no route is
-     *                   specified, then the server will deliver all otherwise-undeliverable
-     *                   requests to the specified handler, and the server will attempt to infer
-     *                   a host name from the server binding info
      * @param tlsKey     (optional) the name of the key pair in the keystore to use for TLS; if not
      *                   specified, the keystore must have one and only one
      *                   [key-pair](crypto.KeyForm.Pair) entry, which will be used for TLS
@@ -95,8 +92,8 @@ interface HttpServer
      *
      * @return the `HostInfo` object created to represent the new route
      */
-     void addRoute(Handler handler, KeyStore keystore,
-                   HostInfo? route = Null, String? tlsKey=Null, String? cookieKey=Null);
+     void addRoute(HostInfo route, Handler handler, KeyStore keystore,
+                   String? tlsKey=Null, String? cookieKey=Null);
 
     /**
      * Update an existing route such that it will now route to the specified `Handler`. The purpose
@@ -182,7 +179,7 @@ interface HttpServer
         /**
          * The [HostInfo] that represents the host information used to select the request [Handler].
          */
-        @RO HostInfo host;
+        @RO HostInfo route;
 
         /**
          * True indicates that the communication from the claimed client to either a trusted proxy
@@ -219,12 +216,12 @@ interface HttpServer
         @RO SocketAddress clientAddress;
 
         /**
-         * The route of [SocketAddress] objects -- in reverse order -- representing how the request
+         * The list of [SocketAddress] objects -- in reverse order -- representing how the request
          * arrived at this server. This is a sequence of `SocketAddress` objects representing each
          * HTTP/HTTPS hop, starting with this server, followed by any reverse proxy servers, then
          * any client proxies, and finally the _claimed_ originating client (the "user agent").
          */
-        @RO SocketAddress[] route;
+        @RO SocketAddress[] backTrace;
 
         /**
          * The host name. This is the name (or address) that the user agent used to submit the
@@ -295,9 +292,8 @@ interface HttpServer
 
             Scheme   scheme    = protocol.scheme;
             Scheme   tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
-            HostInfo hostInfo  = host;
-            String   hostName  = hostInfo.host.toString();
-            UInt16   tlsPort   = hostInfo.httpsPort;
+            String   hostName  = route.host.toString();
+            UInt16   tlsPort   = route.httpsPort;
 
             // TODO GG REVIEW
             // if the client request comes from the standard http port 80, and the server http port

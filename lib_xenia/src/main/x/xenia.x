@@ -95,7 +95,7 @@ module xenia.xtclang.org {
      * not specified, a temporary one will be created with a self-signed certificate.
      *
      * @param webApp     the WebApp to dispatch the HTTP requests to
-     * @param host       (optional) the HostInfo for request routing
+     * @param route      (optional) the HostInfo for request routing
      * @param binding    (optional) the HostInfo for server binding
      * @param keystore   (optional) the keystore to use for tls certificates and encryption
      * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls; if not
@@ -104,7 +104,7 @@ module xenia.xtclang.org {
      * @return a function that allows to shutdown the server
      */
     function void () createServer(WebApp webApp,
-                                  HostInfo host = DefaultHost, HostInfo binding = DefaultBind,
+                                  HostInfo route = DefaultHost, HostInfo binding = DefaultBind,
                                   KeyStore? keystore = Null, String? tlsKey = Null) {
         @Inject HttpServer server;
         try {
@@ -127,7 +127,7 @@ module xenia.xtclang.org {
                 }
                 // create a new one
                 @Inject CertificateManager manager;
-                String dName = CertificateManager.distinguishedName(host.host.toString(),
+                String dName = CertificateManager.distinguishedName(route.host.toString(),
                                     org="xenia.xtclang.org", orgUnit=appName);
 
                 manager.createCertificate(storeFile, "password", "certificate", dName);
@@ -138,8 +138,8 @@ module xenia.xtclang.org {
                 keystore = store;
                 }
 
-            HttpHandler handler = new HttpHandler(host, webApp);
-            server.addRoute(handler, keystore, host, tlsKey);
+            HttpHandler handler = new HttpHandler(route, webApp);
+            server.addRoute(route, handler, keystore, tlsKey);
 
             return () -> {
                 if (handler.shutdown()) {

@@ -131,19 +131,19 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
         UInt16? port;
 
         if (scheme.tls) {
-            port = info.host.httpsPort;
+            port = info.route.httpsPort;
             if (port == 443) {
                 port = Null;
             }
         } else {
-            port = info.host.httpPort;
+            port = info.route.httpPort;
             if (port == 80) {
                 port = Null;
             }
         }
 
         return uri.with(scheme = scheme.name,
-                        host   = info.host.host.toString(),
+                        host   = info.route.host.toString(),
                         port   = port
                        );
     }

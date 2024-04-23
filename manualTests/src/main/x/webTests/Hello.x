@@ -20,19 +20,15 @@ module Hello
 
     void run(String[] args=[""]) {
         @Inject Console console;
-        @Inject Directory curDir;
 
-        xenia.createServer(this, host=new HostInfo("localhost", 8080, 8090));
-
-        Boolean  forwarding = args[0] == "forward";
-        HostInfo host = forwarding
+        HostInfo route = args[0] == "forward"
                 ? new HostInfo("localhost")
                 : new HostInfo("localhost", 8080, 8090);
 
-        xenia.createServer(this, host=host, binding=new HostInfo(IPv4Any, 8080, 8090));
+        xenia.createServer(this, route=route, binding=new HostInfo(IPv4Any, 8080, 8090));
 
-        String portSuffix = host.httpPort == 80 ? "" : $":{host.httpPort}";
-        String uri        = $"http://{host.host}{portSuffix}";
+        String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
+        String uri        = $"http://{route.host}{portSuffix}";
 
         console.print($|Use the curl command to test, for example:
                        |

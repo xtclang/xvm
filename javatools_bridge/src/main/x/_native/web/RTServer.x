@@ -63,16 +63,11 @@ service RTServer
     // ----- host routes ---------------------------------------------------------------------------
 
     @Override
-    void addRoute(Handler handler, KeyStore keystore,
-                  HostInfo? route = Null, String? tlsKey=Null, String? cookieKey=Null) {
+    void addRoute(HostInfo route, Handler handler, KeyStore keystore,
+                  String? tlsKey=Null, String? cookieKey=Null) {
 
         import crypto.RTAlgorithms;
         import crypto.RTEncryptionAlgorithm;
-
-        if (route == Null) {
-            assert HostInfo binding := bindings.keys.iterator().next();
-            route = binding;
-        }
 
         String hostName  = route.host.toString();
         UInt16 httpPort  = route.httpPort;
@@ -82,6 +77,7 @@ service RTServer
             throw new IllegalArgument($"Route is not unique: {route}");
         }
 
+        cookieDecryptor:
         if (handler.is(DecryptorAware)) {
             CryptoKey secretKey;
             findKey:
@@ -92,7 +88,8 @@ service RTServer
                         break findKey;
                     }
                 }
-                throw new IllegalState("The key store is missing a cookie encryption key");
+                // no key - no cookie encryption
+                break cookieDecryptor;
             } else {
                 assert secretKey := keystore.getKey(cookieKey)
                         as $|Key is missing "{cookieKey}"
@@ -229,7 +226,7 @@ service RTServer
         }
 
         @Override
-        @Lazy HostInfo host.calc() {
+        @Lazy HostInfo route.calc() {
             if ((String hostName, UInt16 port) := getClientHost(context)) {
                 HostInfo route;
                 if (tls) {
@@ -259,12 +256,12 @@ service RTServer
         }
 
         @Override
-        SocketAddress[] route.get() {
+        SocketAddress[] backTrace.get() {
             TODO
         }
 
         @Override
-        String hostName.get() = host.host.toString();
+        String hostName.get() = route.host.toString();
 
         @Override
         String protocolString.get() = getProtocolString(context);
@@ -304,26 +301,8 @@ service RTServer
 
         @Override
         String convertToHttps() {
-            assert !tls as "already a TLS request";
-
-            Scheme   scheme    = protocol.scheme;
-            Scheme   tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
-            HostInfo hostInfo  = host;
-            String   hostName  = hostInfo.host.toString();
-            UInt16   tlsPort   = hostInfo.httpsPort;
-
-            // TODO GG REVIEW
-            // if the client request comes from the standard http port 80, and the server http port
-            // is not standard, it's an indication that a reverse proxy or the Network Address
-            // Translation (NAT) is in play (e.g. using "pfctl" on Mac OS), in which case we should
-            // not add the server port the redirecting Url
-            // Boolean showPort = getClientPort() != 80 && tlsPort != 443;
-            Boolean showPort = tlsPort != 443;
-
-            return $|{tlsScheme.name}://{hostName}\
-                    |{{if (showPort) {$.add(':').append(tlsPort);}}}\
-                    |{uriString}
-                   ;
+            // this should not be called; implemented by the xenia's interface
+            throw new IllegalState();
         }
 
         @Override
@@ -350,8 +329,8 @@ service RTServer
 
         @RO Map<HostInfo, ProxyCheck> bindings;
 
-         void addRoute(Handler handler, KeyStore keystore,
-                       HostInfo? route = Null, String? tlsKey=Null, String? cookieKey=Null);
+        void addRoute(HostInfo route, Handler handler, KeyStore keystore,
+                      String? tlsKey=Null, String? cookieKey=Null);
 
         Boolean replaceRoute(HostInfo route, Handler handler);
 
@@ -377,7 +356,7 @@ service RTServer
 
         @RO HostInfo binding;
 
-        @RO HostInfo host;
+        @RO HostInfo route;
 
         @RO Boolean tls;
 
@@ -385,7 +364,7 @@ service RTServer
 
         @RO SocketAddress clientAddress;
 
-        @RO SocketAddress[] route;
+        @RO SocketAddress[] backTrace;
 
         @RO String hostName;
 
