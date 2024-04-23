@@ -63,13 +63,20 @@ service RTServer
     // ----- host routes ---------------------------------------------------------------------------
 
     @Override
-    void addRoute(HostInfo route, Handler handler, KeyStore keystore,
+    void addRoute(HostInfo|String route, Handler handler, KeyStore keystore,
                   String? tlsKey=Null, String? cookieKey=Null) {
 
         import crypto.RTAlgorithms;
         import crypto.RTEncryptionAlgorithm;
 
-        String hostName  = route.host.toString();
+        String hostName;
+        if (route.is(String)) {
+            hostName = route;
+            route    = new HostInfo(route);
+        } else {
+            hostName = route.host.toString();
+        }
+
         UInt16 httpPort  = route.httpPort;
         UInt16 httpsPort = route.httpsPort;
         if (routes.keys.any(info -> info.host.toString() == hostName &&
@@ -114,15 +121,23 @@ service RTServer
     }
 
     @Override
-    Boolean replaceRoute(HostInfo route, Handler handler) {
+    Boolean replaceRoute(HostInfo|String route, Handler handler) {
         TODO
     }
 
     @Override
-    Boolean removeRoute(HostInfo route) {
+    Boolean removeRoute(HostInfo|String route) {
+        String hostName;
+        if (route.is(String)) {
+            hostName = route;
+            route    = new HostInfo(route);
+        } else {
+            hostName = route.host.toString();
+        }
+
         if (routes.contains(route)) {
             routes.remove(route);
-            removeRouteImpl(route.host.toString());
+            removeRouteImpl(hostName);
             return True;
         }
         return False;
@@ -319,8 +334,18 @@ service RTServer
 
         @Override
         String convertToHttps() {
-            // this should not be called; implemented by the xenia's interface
-            throw new IllegalState();
+            assert !tls as "already a TLS request";
+
+            Scheme  scheme    = protocol.scheme;
+            Scheme  tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
+            String  hostName  = route.host.toString();
+            UInt16  tlsPort   = route.httpsPort;
+            Boolean showPort  = tlsPort != 443;
+
+            return $|{tlsScheme.name}://{hostName}\
+                    |{{if (showPort) {$.add(':').append(tlsPort);}}}\
+                    |{uriString}
+                   ;
         }
 
         @Override
@@ -352,12 +377,12 @@ service RTServer
 
         @RO Map<HostInfo, ProxyCheck> bindings;
 
-        void addRoute(HostInfo route, Handler handler, KeyStore keystore,
+        void addRoute(HostInfo|String route, Handler handler, KeyStore keystore,
                       String? tlsKey=Null, String? cookieKey=Null);
 
-        Boolean replaceRoute(HostInfo route, Handler handler);
+        Boolean replaceRoute(HostInfo|String route, Handler handler);
 
-        Boolean removeRoute(HostInfo route);
+        Boolean removeRoute(HostInfo|String route);
 
         @RO Map<HostInfo, Handler> routes;
     }

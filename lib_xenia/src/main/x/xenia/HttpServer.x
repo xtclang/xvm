@@ -92,7 +92,7 @@ interface HttpServer
      *
      * @return the `HostInfo` object created to represent the new route
      */
-     void addRoute(HostInfo route, Handler handler, KeyStore keystore,
+     void addRoute(HostInfo|String route, Handler handler, KeyStore keystore,
                    String? tlsKey=Null, String? cookieKey=Null);
 
     /**
@@ -106,7 +106,7 @@ interface HttpServer
      *         route to use the specified `Handler`; details of any failures would likely be located
      *         in a server log
      */
-    Boolean replaceRoute(HostInfo route, Handler handler);
+    Boolean replaceRoute(HostInfo|String route, Handler handler);
 
     /**
      * Remove the specified route. After this method returns, no more requests are going to be
@@ -119,7 +119,7 @@ interface HttpServer
      *         if that host was not registered); details of any failures would likely be located in
      *         a server log
      */
-    Boolean removeRoute(HostInfo route);
+    Boolean removeRoute(HostInfo|String route);
 
     /**
      * The information about the hosts that the server is currently routing for, and the `Handler`
@@ -290,18 +290,11 @@ interface HttpServer
         String convertToHttps() {
             assert !tls as "already a TLS request";
 
-            Scheme   scheme    = protocol.scheme;
-            Scheme   tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
-            String   hostName  = route.host.toString();
-            UInt16   tlsPort   = route.httpsPort;
-
-            // TODO GG REVIEW
-            // if the client request comes from the standard http port 80, and the server http port
-            // is not standard, it's an indication that a reverse proxy or the Network Address
-            // Translation (NAT) is in play (e.g. using "pfctl" on Mac OS), in which case we should
-            // not add the server port the redirecting Url
-            // Boolean showPort = getClientPort() != 80 && tlsPort != 443;
-            Boolean showPort = tlsPort != 443;
+            Scheme  scheme    = protocol.scheme;
+            Scheme  tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
+            String  hostName  = route.host.toString();
+            UInt16  tlsPort   = route.httpsPort;
+            Boolean showPort  = tlsPort != 443;
 
             return $|{tlsScheme.name}://{hostName}\
                     |{{if (showPort) {$.add(':').append(tlsPort);}}}\
