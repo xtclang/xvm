@@ -482,12 +482,7 @@ public abstract class ClassTemplate
             return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
             }
 
-        if (typeProxy == null)
-            {
-            return frame.raiseException(xException.mutableObject(frame, typeTarget));
-            }
-
-        if (typeProxy.isInterfaceType())
+        if (typeProxy != null && typeProxy.isInterfaceType())
             {
             if (typeProxy.containsGenericType(true))
                 {
@@ -495,8 +490,16 @@ public abstract class ClassTemplate
                 }
             assert typeTarget.isA(typeProxy);
 
-            ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
-            return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
+            try
+                {
+                ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
+                return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
+                }
+            catch (Throwable e)
+                {
+                return frame.raiseException(
+                    "Failed to create a proxy for " + typeTarget.getValueString());
+                }
             }
 
         return frame.raiseException(xException.mutableObject(frame, typeTarget));
