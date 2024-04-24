@@ -92,12 +92,12 @@ data class GitLabel(val project: Project, val semanticVersion: SemanticVersion) 
             }
         }
 
-        logger.lifecycle("$prefix Listing all packages and their creation timestamps:")
+        logger.log(logLevel, "$prefix Listing all packages and their creation timestamps:")
         map.forEach { (packageName, versionMap) ->
-            logger.lifecycle("$prefix   Package: '$packageName'")
+            logger.log(logLevel, "$prefix   Package: '$packageName'")
             versionMap.forEach { (version, timestamps) ->
-                logger.lifecycle("$prefix      Version: '$version'")
-                timestamps.forEach { timestamp -> logger.lifecycle("$prefix             Created at: $timestamp") }
+                logger.log(logLevel, "$prefix      Version: '$version'")
+                timestamps.forEach { timestamp -> logger.log(logLevel, "$prefix             Created at: $timestamp") }
             }
         }
         return map

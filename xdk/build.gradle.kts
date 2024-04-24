@@ -1,11 +1,10 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
-import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
-import XdkDistribution.Companion.JAVATOOLS_JARFILE_PATTERN
+import XdkDistribution.Companion.JAVATOOLS_INSTALLATION_NAME
+import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.xtclang.plugin.tasks.XtcCompileTask
-import java.io.ByteArrayOutputStream
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -107,13 +106,9 @@ distributions {
     main {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
     }
-    // The contents logic is broken out so we can use it in multiple distributions, should we want
-    // to build e.g. linux/windows/mac zip files. It's still not perfectly aligned with any release
-    // pipeline, or tools like JReleaser, but its a potential way to create more than one distribution and
-    // use them as the basis for any framework that works with Gradle installs and distros.
-    //create("xdk-macos") {
-    //    contentSpec("xdk", xdkDist.distributionVersion, "macosx")
-    //}
+    val withLaunchers by registering {
+        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), installLaunchers = true)
+    }
 }
 
 tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
@@ -148,58 +143,6 @@ val distZip by tasks.existing(Zip::class) {
     dependsOn(tasks.compileXtc) // And by transitive dependency, processResources
 }
 
-@Deprecated("The NSIS .exe installer we be moved to be part of a JReleaser flow.")
-val distExe by tasks.registering {
-    group = DISTRIBUTION_TASK_GROUP
-    description = "Use an NSIS compatible plugin to create the Windows .exe installer."
-
-    dependsOn(tasks.distZip)
-
-    val nsi = file("src/main/nsi/xdkinstall.nsi")
-    val makensis = XdkBuildLogic.findExecutableOnPath(XdkDistribution.MAKENSIS)
-    onlyIf {
-        makensis != null && xdkDist.shouldCreateWindowsDistribution()
-    }
-
-    val outputFile = layout.buildDirectory.file("distributions/xdk-$version.exe")
-    outputs.file(outputFile)
-
-    // notes:
-    // - requires NSIS to be installed (e.g. "sudo apt install nsis" works on Debian/Ubuntu)
-    // - requires the "makensis" command to be in the path
-    // - requires the EnVar plugin to be installed (i.e. unzipped) into NSIS
-    // - requires the x.ico file to be in the same directory as the nsi file
-    doLast {
-        if (makensis == null) {
-            throw buildException("Cannot find '${XdkDistribution.MAKENSIS}' in PATH.")
-        }
-        if (!nsi.exists()) {
-            throw buildException("Cannot find 'nsi' file: ${nsi.absolutePath}")
-        }
-        logger.info("$prefix Writing Windows installer: ${outputFile.get()}")
-        val stdout = ByteArrayOutputStream()
-        val distributionDir = layout.buildDirectory.dir("tmp-archives")
-        copy {
-            from(zipTree(tasks.distZip.map { it.archiveFile }))
-            //from(zipTree(distZip.get().archiveFile))
-            into(distributionDir)
-        }
-        exec {
-            environment(
-                "NSIS_SRC" to distributionDir.get(),
-                "NSIS_ICO" to xdkIconFile,
-                "NSIS_OUT" to outputFile.get(),
-                "NSIS_VER" to xdkDist.distributionVersion
-            )
-            commandLine(makensis.toFile().absolutePath, nsi.absolutePath, "-NOCD")
-            standardOutput = stdout
-        }
-        makensis.toFile().setExecutable(true)
-        logger.info("$prefix Finished building distribution: '$name'")
-        stdout.toString().lines().forEach { logger.info("$prefix     $it") }
-    }
-}
-
 val test by tasks.existing {
     doLast {
         TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
@@ -213,14 +156,13 @@ val test by tasks.existing {
  * and distributions with slightly different contents, for example, based o OS, and with
  * an OS specific launcher already in "bin".
  */
-private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "") {
+private fun Distribution.contentSpec(distName: String, distVersion: String, distClassifier: String = "", installLaunchers: Boolean = false) {
     distributionBaseName = distName
     version = distVersion
     if (distClassifier.isNotEmpty()) {
         @Suppress("UnstableApiUsage")
         distributionClassifier = distClassifier
     }
-
     contents {
         val xdkTemplate = tasks.processResources.map {
             logger.info("$prefix Resolving processResources output (this should be during the execution phase).");
@@ -236,19 +178,135 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
         }
         from(configurations.xtcModule) {
             into("lib")
-            exclude(JAVATOOLS_JARFILE_PATTERN)
+            exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
         }
         from(configurations.xtcModule) {
             into("javatools")
-            include(JAVATOOLS_JARFILE_PATTERN)
+            include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
         }
         from(configurations.xdkJavaTools) {
-            rename {
-                assert(it.endsWith(".jar"))
-                it.replace(Regex("-.*.jar"), ".jar")
-            }
-            into("javatools") // should just be one file with corrected dependencies, assert?
+            rename("javatools-${project.version}.jar", JAVATOOLS_INSTALLATION_NAME)
+            into("javatools")
         }
         from(tasks.xtcVersionFile)
+        if (installLaunchers) {
+            // Do we want to install launchers that work on the host system?
+            assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
+            XdkDistribution.binaryLauncherNames.forEach {
+                val launcher = xdkDist.launcherFileName()
+                from(xtcLauncherBinaries) {
+                    include(launcher)
+                    rename(launcher, it)
+                    into("bin")
+                }
+            }
+        }
     }
 }
+
+val installDist by tasks.existing {
+    dependsOn(tasks.compileXtc)
+}
+
+/*
+ *
+ *
+ * val jreleaserAssemble by tasks.existing {
+ *     dependsOn(tasks.distZip, tasks.installDist)
+ *     doFirst {
+ *         logger.lifecycle("$prefix Executing jreleaser assemble doFirst")
+ *     }
+ * }
+ *
+ * jreleaser {
+ * //    configFile = file("jreleaser.yml")
+ *     gitRootSearch = true
+ *
+ *     environment {
+ *         // TODO: Artifacts dir.
+ *     }
+ *
+ *     project {
+ *         authors = listOf("xtclang.org")
+ *         license = "Apache-2.0"
+ *         snapshot {
+ *             enabled = true
+ *             fullChangelog = false
+ *         }
+ *         links {
+ *             homepage = "https://acme.com/app"
+ *         }
+ *         inceptionYear = "2024"
+ *         stereotype = Stereotype.CLI
+ *     }
+ *
+ *     release {
+ *         github {
+ *             // RepoOwner should auto configure to the github root found.
+ *             overwrite = true
+ *         }
+ *     }
+ *
+ *     assemble {
+ *         val xdk by archive.registering {
+ *             // TODO: ALWAYS, NEVER, RELEASE, PRERELEASE, RELEASE_PRERELEASE, SNAPSHOT
+ *             active = Active.ALWAYS
+ *             formats = setOf(Format.ZIP)
+ *             attachPlatform = true
+ *             fileSet {
+ *                 input = installDirFile.absolutePath
+ *             }	            }
+ *         }	        }
+ *         from(tasks.xtcVersionFile)
+ *         checksum {
+ *             name = "checksums.txt"
+ *             individual = false
+ *             algorithms = setOf(Algorithm.SHA_256)
+ *             artifacts = true
+ *             files = true
+ *         }
+ *     }
+ *
+ *     // TODO: Command and script hooks, maybe only on the CI side.
+ *     // TODO: Snapshot release
+ *     // TODO: Publish snapshot distributions, Gradle user guide. Publish every push.
+ *     val xdk by distributions.registering {
+ *         artifact {
+ *             // TODO it would be great being to take providers here, now we are forced to code the
+ *             // path as a string, or force execute the distZip to determine outputs.
+ *             path = layout.buildDirectory.dir("distributions/xdk-$releaseVersion.zip").get().asFile
+ *         }
+ *     }	    }
+ * }	}
+ *
+ * /*
+ * assemble {
+ *     this.
+ *     this.archive
+ *     directory = installDir.get().asFile
+ *     archiveFormats = setOf(Format.TAR, Format.ZIP)
+ *     checksum {
+ *         name = "checksums.txt"
+ *         individual = false
+ *         algorithms = setOf("SHA_256")
+ *         artifacts = true
+ *         files = true
+ *     }
+ * }
+ * // A binary distribution is basically just a directory tree with a bin/executable in it
+ * // This is exactly what we want for the output of installDistForBuildHost
+ * // The file structure needs to contain:
+ * //    LICENSE and README in the root
+ * //    bin directory in the root, and an executable (hopefully two) in it.
+ * // The final distribution artifact is packaged as tar or zip. The archive must contain
+ * // a root entry followed by the name of the archive. Thus, if the archive is named
+ * // app-1.2.3.zip, the root entry should be app-1.2.3/.
+ * //
+ * // We can also use an archive assembler, to create an archive, e.g. Docker, Sdkman,
+ * // Homebrew etc. We probably want to do that as part of the release.
+ * /*val xdk by distributions.registering {
+ *     distributionType = DistributionType.BINARY
+ *     // We can also configure
+ * }*/
+ * }
+ */

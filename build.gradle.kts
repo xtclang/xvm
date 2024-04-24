@@ -11,10 +11,6 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-private val xdk = gradle.includedBuild("xdk")
-private val plugin = gradle.includedBuild("plugin")
-private val includedBuildsWithPublications = listOf(xdk, plugin)
-
 /**
  * Ensure that the remote publication (on GitHub) has the correct tag.
  * This may mutate the Git repository under source control (tags only)
@@ -35,20 +31,20 @@ private val includedBuildsWithPublications = listOf(xdk, plugin)
  *       published artifacts side by side for the same SNAPSHOT number. The common use case
  *       is, after all, that you want the SNAPSHOT to be a hardcoded/fixed dependency, and
  *       you want the latest version of that.
- *    
+ *
  *       If you have a dependency to an XDK or XDK plugin artifact in your project, your
  *       project will be rebuilt every time the publication has been overwritten by a later
  *       change having been committed to 'master'. This is typically exactly what you want.
- *    
+ *
  *       If you want snapshot or bleeding edge versions of XDK and the plugin, i.e. published
  *       from the code at the latest commit in master, and do not care about a specific version
  *       number, you can use the magic string "latest.integration" for the Gradle version of
  *       the artifact.
- *    
+ *
  *       Snapshots are currently only published to our GitHub Maven repository, owned by
  *       the xtclang organization. It is bad form to clutter up public repositories with
  *       lots and lots of SNAPSHOT releases.
- *    
+ *
  *       The SNAPSHOT artifacts are created with exactly the same semantics for occasion and
  *       timeline, as are the xdk-latest brew installations.
  *
@@ -128,7 +124,11 @@ private val includedBuildsWithPublications = listOf(xdk, plugin)
  */
 
 val ensureTag by tasks.registering {
-    delegateTo(PUBLISH_TASK_GROUP, "Ensure that the current commit is tagged with a tag based on the current VERSION file.", xdk to name)
+    delegateTo(
+        PUBLISH_TASK_GROUP,
+        "Ensure that the current commit is tagged with a tag based on the current VERSION file.",
+        xdk to name
+    )
 }
 
 /**
@@ -136,7 +136,11 @@ val ensureTag by tasks.registering {
  * package artifacts for this version of the XDK.
  */
 val listTags by tasks.registering {
-    delegateTo(PUBLISH_TASK_GROUP, "Fetch and list all local and remote Git tags, used for package publication and releases.", xdk to name)
+    delegateTo(
+        PUBLISH_TASK_GROUP,
+        "Fetch and list all local and remote Git tags, used for package publication and releases.",
+        xdk to name
+    )
 }
 
 /**
@@ -146,7 +150,11 @@ val listTags by tasks.registering {
  * dates - it can never be overwritten, just deleted (which is also a bad idea).
  */
 val listPackages by tasks.registering {
-    delegateTo(PUBLISH_TASK_GROUP, "Fetch and list all local and remote Git tags, used for package publication and releases.", xdk to name)
+    delegateTo(
+        PUBLISH_TASK_GROUP,
+        "Fetch and list all local and remote Git tags, used for package publication and releases.",
+        xdk to name
+    )
 }
 
 /**
@@ -164,10 +172,21 @@ val installDist by tasks.registering {
         dependsOn(xdk.task(":$it"))
     }
     dependsOn(xdk.task(":$name"))
+    /*
+        delegateTo(DISTRIBUTION_TASK_GROUP,
+            "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories.",
+            xdk to name,
+            *distributionTaskNames.map { xdk to it }.toTypedArray()
+        )
+    */
 }
 
 val installLocalDist by tasks.registering {
-    delegateTo(DISTRIBUTION_TASK_GROUP,  "Build and overwrite any local distribution with the new distribution produced by the build.", xdk to name)
+    delegateTo(
+        DISTRIBUTION_TASK_GROUP,
+        "Build and overwrite any local distribution with the new distribution produced by the build.",
+        xdk to name
+    )
 }
 
 /**
@@ -212,6 +231,10 @@ val publish by tasks.registering {
     dependsOn(publishLocal, publishRemote)
 }
 
+private val xdk = gradle.includedBuild("xdk")
+private val plugin = gradle.includedBuild("plugin")
+private val includedBuildsWithPublications = listOf(xdk, plugin)
+private val distributionTaskNames = XdkDistribution.distributionTasks
 private val publishTaskPrefixes = listOf("list", "delete")
 private val publishTaskSuffixesRemote = listOf("AllRemotePublications")
 private val publishTaskSuffixesLocal = listOf("AllLocalPublications")
@@ -232,7 +255,11 @@ publishTaskPrefixes.forEach { prefix ->
     }
 }
 
-private fun Task.delegateTo(groupName: String, taskDescription: String = "", vararg delegates: Pair<IncludedBuild, String>) {
+private fun Task.delegateTo(
+    groupName: String,
+    taskDescription: String = "",
+    vararg delegates: Pair<IncludedBuild, String>
+) {
     group = groupName
     description = taskDescription
     delegates.forEach {

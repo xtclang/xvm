@@ -8,16 +8,17 @@ import org.gradle.internal.os.OperatingSystem
 class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
-        const val MAKENSIS = "makensis"
-        const val JAVATOOLS_JARFILE_PATTERN = "**/javatools*"
+        const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
+        const val JAVATOOLS_INSTALLATION_NAME : String = "javatools.jar"
 
         private const val BUILD_NUMBER = "BUILD_NUMBER"
         private const val CI = "CI"
 
-        private val currentOs = OperatingSystem.current()
         private val isCiEnabled = System.getenv(CI) == "true"
 
-        val distributionTasks = listOf("distTar", "distZip", "distExe")
+        val currentOs: OperatingSystem = OperatingSystem.current()
+        val distributionTasks = listOf("distTar", "distZip", "withLaunchersDistTar", "withLaunchersDistZip")
+        val binaryLauncherNames = listOf("xcc", "xec")
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
@@ -53,8 +54,29 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
-    fun resolveLauncherFile(localDistDir: Provider<Directory>): RegularFile {
-        val launcher = if (currentOs.isMacOsX) {
+    val distributionCommit: String get() = buildString {
+        val last = project.executeCommand(listOf("git", "rev-parse", "HEAD"), throwOnError = true)
+        logger.lifecycle("$prefix distributionCommit info: ${last.second}")
+        assert(last.first == 0)
+        return last.second
+    }
+
+    fun configScriptFilename(installDir: Provider<Directory>): RegularFile {
+        val config = if (currentOs.isMacOsX) {
+            "cfg_macos.sh"
+        } else if (currentOs.isLinux) {
+            "cfg_linux.sh"
+        } else if (currentOs.isWindows) {
+            "cfg_windows.bat"
+        } else {
+            throw UnsupportedOperationException("Cannot find launcher config script for currentOs: $currentOs")
+        }
+        return installDir.get().file(config)
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    fun launcherFileName(): String {
+        return if (currentOs.isMacOsX) {
             "macos_launcher"
         } else if (currentOs.isLinux) {
             "linux_launcher"
@@ -63,20 +85,23 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         } else {
             throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
         }
-        return localDistDir.get().file("bin/$launcher")
     }
 
-    fun shouldCreateWindowsDistribution(): Boolean {
-        val runDistExe = project.getXdkPropertyBoolean("org.xtclang.install.distExe", false)
-        if (runDistExe) {
-            logger.info("$prefix 'distExe' task is enabled; will attempt to build Windows installer.")
-            if (XdkBuildLogic.findExecutableOnPath(MAKENSIS) == null) {
-                throw project.buildException("Illegal configuration; project is set to weave a Windows installer, but '$MAKENSIS' is not on the PATH.")
-            }
-            return true
+    fun resolveLauncherFile(dir: Provider<Directory>): RegularFile {
+        return dir.get().file("bin/${launcherFileName()}")
+    }
+
+    /*
+     * Helper for jreleaser etc.
+     */
+    fun osClassifier(): String {
+        val arch = System.getProperty("os.arch")
+        return when {
+            currentOs.isMacOsX -> "macos_$arch"
+            currentOs.isLinux -> "linux_$arch"
+            currentOs.isWindows -> "windows_$arch"
+            else -> throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
         }
-        logger.info("$prefix 'distExe' is disabled for building distributions. Only 'tar.gz' and 'zip' are allowed.")
-        return false
     }
 
     override fun toString(): String {
