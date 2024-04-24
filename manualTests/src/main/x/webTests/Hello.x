@@ -1,62 +1,42 @@
 /**
- * To run this module, create a self-signed certificate using the following command
- * (assuming "xvm/manualTests" is the current directory):
- *
- *    keytool -genkeypair -alias hello_tls -keyalg RSA -keysize 2048 -validity 365\
- *            -dname "cn=xqiz.it, ou=hello"\
- *            -keystore src/main/x/webTests/resources/hello/https.p12 -storetype PKCS12 -storepass password
- *
- * Create a symmetric key used to encrypt the cookies:
- *
- *    keytool -genseckey -alias hello_cookies -keyalg AES -keysize 256\
- *            -keystore src/main/x/webTests/resources/hello/https.p12 -storetype PKCS12 -storepass password
- *
+ * You can run this module with or without port forwarding.
+
  * Then start the server by the command:
  *
- *    xec build/Hello.xtc password
+ *    xec build/Hello.xtc [forward]
  */
 module Hello
         incorporates WebApp {
-    package crypto import crypto.xtclang.org;
-    package web    import web.xtclang.org;
-    package xenia  import xenia.xtclang.org;
-    package msg    import Messages;
-
-    import crypto.KeyStore;
-    import crypto.KeyStore.Info;
+    package web   import web.xtclang.org;
+    package xenia import xenia.xtclang.org;
 
     import web.*;
+    import web.http.*;
     import web.responses.*;
     import web.security.*;
 
+    package msg import Messages;
     import msg.Greeting;
 
-    void run(String[] args=["password"]) {
+    void run(String[] args=[""]) {
         @Inject Console console;
-        @Inject Directory curDir;
 
-        File   store = /resources/hello/https.p12;
-        String password;
-        if (args.size == 0) {
-            password = console.readLine("Enter password:", suppressEcho=True);
-        } else {
-            password = args[0];
-        }
+        HostInfo route = args[0] == "forward"
+                ? new HostInfo("localhost")
+                : new HostInfo("localhost", 8080, 8090);
 
-        @Inject(opts=new Info(store.contents, password)) KeyStore keystore;
+        xenia.createServer(this, route=route, binding=new HostInfo(IPv4Any, 8080, 8090));
 
-        String hostName  = "localhost";
-        UInt16 httpPort  = 8080;
-        UInt16 httpsPort = 8090;
-        xenia.createServer(this, hostName, httpPort, httpsPort, keystore);
+        String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
+        String uri        = $"http://{route.host}{portSuffix}";
 
         console.print($|Use the curl command to test, for example:
                        |
-                       |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/
+                       |  curl -L -b cookies.txt -i -w '\\n' -X GET {uri}
                        |
                        | To activate the debugger:
                        |
-                       |  curl -L -b cookies.txt -i -w '\\n' -X GET http://{hostName}:{httpPort}/e/debug
+                       |  curl -L -b cookies.txt -i -w '\\n' -X GET {uri}/e/debug
                        |
                        |Use Ctrl-C to stop.
                      );

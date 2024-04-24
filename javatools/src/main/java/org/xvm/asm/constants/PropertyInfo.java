@@ -623,6 +623,15 @@ public class PropertyInfo
             // there is a possibility that the property has been "duck-typeable", which is only
             // allowable for interfaces
             Component parent = idProp.getNamespace().getComponent();
+            if (parent == null)
+                {
+                ConstantPool pool = ConstantPool.getCurrentPool();
+                if (idProp.isShared(pool))
+                    {
+                    idProp = (PropertyConstant) pool.register(idProp);
+                    parent = idProp.getNamespace().getComponent();
+                    }
+                }
             return parent != null && parent.getFormat() == Format.INTERFACE;
             }
 

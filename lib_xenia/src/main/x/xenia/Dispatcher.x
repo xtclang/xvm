@@ -83,12 +83,12 @@ service Dispatcher {
     /**
      * Dispatch the "raw" request.
      */
-    void dispatch(HttpServer     httpServer,
-                  RequestContext context,
-                  Boolean        tls,
-                  String         uriString,
-                  String         methodName,
-                 ) {
+    void dispatch(RequestInfo requestInfo) {
+
+        // REVIEW CP
+        Boolean tls        = requestInfo.tls;
+        String  uriString  = requestInfo.uriString;
+        String  methodName = requestInfo.method.name;
 
         FromTheTop: while (True) {
             // select the service to delegate request processing to; the service infos are sorted
@@ -120,12 +120,11 @@ service Dispatcher {
                 }
             }
 
-            RequestInfo         requestInfo = new RequestInfo(httpServer, context, tls);
             ChainBundle?        bundle      = Null;
             @Future ResponseOut response;
             ProcessRequest: if (serviceInfo == Null) {
                 RequestIn request = new Http1Request(requestInfo, []);
-                Session?  session = getSessionOrNull(httpServer, context);
+                Session?  session = getSessionOrNull(requestInfo);
 
                 response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
             } else {
@@ -194,7 +193,7 @@ service Dispatcher {
 
                     // there is no matching endpoint
                     RequestIn   request     = new Http1Request(requestInfo, []);
-                    Session?    session     = getSessionOrNull(httpServer, context);
+                    Session?    session     = getSessionOrNull(requestInfo);
                     MethodInfo? onErrorInfo = catalog.findOnError(wsid);
                     if (onErrorInfo != Null && session != Null) {
                         Int errorWsid = onErrorInfo.wsid;
@@ -215,7 +214,7 @@ service Dispatcher {
                 if (!tls && endpoint.requiresTls) {
                     response = new SimpleResponse(PermanentRedirect);
 
-                    response.header.put(Header.Location, requestInfo.convertToTlsUrl());
+                    response.header.put(Header.Location, requestInfo.convertToHttps());
                     break ProcessRequest;
                 }
 
@@ -240,8 +239,8 @@ service Dispatcher {
                 // correct cookies for the current version of the session
                 if (!redirect) {
                     // check for any IP address and/or user agent change in the connection
-                    redirect = session.updateConnection_(requestInfo.getUserAgent(),
-                            requestInfo.getClientAddress());
+                    redirect = session.updateConnection_(requestInfo.userAgent ?: "<unknown>",
+                            requestInfo.clientAddress[0]);
                 }
 
                 if (redirect) {
@@ -347,12 +346,12 @@ service Dispatcher {
                     @Inject Console console;
                     console.print($"Dispatcher: unhandled exception for {uriString.quoted()}: {e}");
 
-                    httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
+                    requestInfo.respond(HttpStatus.InternalServerError.code, [], [], []);
                 } else {
                     (Int status, String[] names, String[] values, Byte[] body) =
                         Http1Response.prepare(r);
 
-                    httpServer.send(context, status, names, values, body);
+                    requestInfo.respond(status, names, values, body);
                 }
             });
             return;
@@ -364,13 +363,12 @@ service Dispatcher {
      * validations. No session validation, security checks, etc. are performed. This method does not
      * attempt to redirect, create or destroy a session, etc.
      *
-     * @param httpServer  the [HttpServer] that received the request
-     * @param context     the [RequestContext] for the current request
+     * @param request  the [RequestInfo] for the current request
      *
      * @return the [SessionImpl] indicated by the request, or Null if none
      */
-    private SessionImpl? getSessionOrNull(HttpServer httpServer, RequestContext context) {
-        if (String[] cookies := httpServer.getHeaderValuesForName(context, Header.Cookie)) {
+    private SessionImpl? getSessionOrNull(RequestInfo request) {
+        if (String[] cookies := request.getHeaderValuesForName(Header.Cookie)) {
             for (String cookieHeader : cookies) {
                 for (String cookie : cookieHeader.split(';')) {
                     if (Int      delim    := cookie.indexOf('='),
@@ -659,7 +657,7 @@ service Dispatcher {
 
                         case Encrypted:
                             // firefox bug: TLS-only cookies sent to localhost when TLS is false
-                            if (!tls && requestInfo.getClientAddress().loopback) {
+                            if (!tls && requestInfo.clientAddress[0].loopback) {
                                 continue NextCookie;
                             }
 
@@ -669,7 +667,7 @@ service Dispatcher {
 
                         case Consent:
                             // firefox bug: TLS-only cookies sent to localhost when TLS is false
-                            if (!tls && requestInfo.getClientAddress().loopback) {
+                            if (!tls && requestInfo.clientAddress[0].loopback) {
                                 continue NextCookie;
                             }
 

@@ -1,4 +1,27 @@
+import net.Host;
+
 package http {
+
+    /**
+     * `HostInfo` represents a combination of an HTTP and HTTPS address. It is used to represent
+     * both (i) bindings and (ii) routes. A "binding" refers to the low level socket connection that
+     * a server listens on (receives an HTTP request on), while a "route" refers to the high level
+     * web site name that a client specified when it sent a request.
+     *
+     * @param host       the host name or IP address of the HTTP server
+     * @param httpPort   the HTTP (plain text) port of the HTTP server; the default is 80
+     * @param httpsPort  the HTTPS (TLS) port of the HTTP server; the default is 443
+     */
+    const HostInfo(Host host, UInt16 httpPort=80, UInt16 httpsPort=443) {
+        HostInfo with(Host?   host      = Null,
+                      UInt16? httpPort  = Null,
+                      UInt16? httpsPort = Null) {
+            return new HostInfo(host      ?: this.host,
+                                httpPort  ?: this.httpPort,
+                                httpsPort ?: this.httpsPort);
+        }
+    }
+
     /**
      * Validate the passed string as a file extension. This is based on the HTTP token definition,
      * as illustrated in [validToken], but with a reduced set of non-alpha-numeric characters, based

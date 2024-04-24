@@ -12,16 +12,14 @@
  */
 @WebApp
 module HelloServer {
-    package crypto import crypto.xtclang.org;
-    package web    import web.xtclang.org;
-    package xenia  import xenia.xtclang.org;
+    package web   import web.xtclang.org;
+    package xenia import xenia.xtclang.org;
 
     import web.*;
+    import web.http.*;
 
     void run() {
-        import crypto.KeyStore;
-        @Inject(opts=new KeyStore.Info(#./https.p12, "password")) KeyStore keystore;
-        xenia.createServer(this, "localhost", 8080, 8090, keystore);
+        xenia.createServer(this, new HostInfo("localhost", 8080, 8090));
 
         @Inject Console console;
         console.print($|To access this server, open a browser on this machine and enter this URL:

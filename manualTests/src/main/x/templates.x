@@ -24,6 +24,7 @@ module TestUriTemplate
             new Uri("/test/abc"),
             new Uri("/test/abc/"),
             new Uri("/test/abc/def"),
+            new Uri("/test/abc?k1=v1;k2=v2#red,green,blue"),
             new Uri("/test/abc/?k1=v1;k2=v2#red,green,blue"),
         ];
 

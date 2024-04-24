@@ -61,8 +61,8 @@ service SessionImpl
         structure.created         = now;
         structure.lastUse         = now;
         structure.versionChanged_ = now;
-        structure.ipAddress       = requestInfo.getClientAddress();
-        structure.userAgent       = requestInfo.getUserAgent();
+        structure.ipAddress       = requestInfo.clientAddress[0];
+        structure.userAgent       = requestInfo.userAgent ?: "<unknown>";
         structure.cookieConsent   = None;
         structure.trustLevel      = None;
         structure.roles           = [];
@@ -734,7 +734,7 @@ service SessionImpl
 
         if (result.is(SessionImpl)) {
             // keep track of splits
-            this.splits_ += new SessionSplit_(requestInfo.getClientAddress(), version_, result.internalId_);
+            this.splits_ += new SessionSplit_(requestInfo.clientAddress[0], version_, result.internalId_);
 
             // create new cookies
             result.ensureCookies_(desiredCookies_(requestInfo.tls));
@@ -806,7 +806,7 @@ service SessionImpl
             id = rnd.int(100k).toInt64() + 1;
         } while (pendingRedirects_?.any(r -> r.id == id));
 
-        PendingRedirect_ pending = new PendingRedirect_(id, info.getUri(), now);
+        PendingRedirect_ pending = new PendingRedirect_(id, info.uri, now);
         pendingRedirects_ = pendingRedirects_? + pending : [pending];
 
         return id;

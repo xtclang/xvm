@@ -1702,7 +1702,7 @@ public class LiteralConstant
                     {
                     // go through the entire list of possibilities
                     for (Format format = Format.Bit;
-                         format.ordinal() <= Format.DecN.ordinal(); format = format.next())
+                         format.ordinal() <= Format.FloatN.ordinal(); format = format.next())
                         {
                         TypeConstant typeSupported = format.getType(pool);
                         if (typeSupported.isA(typeOut))

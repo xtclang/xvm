@@ -19,19 +19,21 @@ const UriTemplate {
      * Construct a URI template.
      *
      * @param the template string, as defined by RFC 6570
+     *
+     * @throws IllegalArgument  iff the URI template string cannot be successfully parsed
      */
     construct(String template) {
-        assert (parts, implicitSection, vars) := parse(template)
+        assert:arg (parts, implicitSection, vars) := parse(template)
                 as $"Failed to parse URI template: {template.quoted()}";
     }
 
     /**
-     * Construct a trivial "root" URI template.
+     * Internal constructor.
      */
-    private construct() {
-        implicitSection = [];
-        vars            = [];
-        parts           = vars;
+    private construct((String|Expression)[] parts, Section?[] implicitSection, String[] vars) {
+        this.parts           = parts;
+        this.implicitSection = implicitSection;
+        this.vars            = vars;
     }
 
 
@@ -977,5 +979,5 @@ const UriTemplate {
         return buf;
     }
 
-    static UriTemplate ROOT = new UriTemplate();
+    static UriTemplate ROOT = new UriTemplate([], [], []);
 }

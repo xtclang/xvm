@@ -10,6 +10,7 @@ module xenia.xtclang.org {
     package json        import json.xtclang.org;
     package web         import web.xtclang.org;
 
+    import crypto.CertificateManager;
     import crypto.KeyStore;
 
     import net.IPAddress;
@@ -21,6 +22,8 @@ module xenia.xtclang.org {
     import web.RequestIn;
     import web.Session;
     import web.WebApp;
+
+    import web.http.HostInfo;
 
     /**
      * The clock used within this module.
@@ -78,30 +81,66 @@ module xenia.xtclang.org {
     typedef function ResponseOut(RequestIn, Tuple) as Responder;
 
     /**
-     * Create and start an HTTP/HTTPS server for the specified web application.
+     * Default HostInfo for an [HttpServer] request routing.
+     */
+    static HostInfo DefaultHost = new HostInfo("localhost");
+
+    /**
+     * Default HostInfo for an [HttpServer] binding.
+     */
+    static HostInfo DefaultBind = new HostInfo(IPAddress.IPv4Any);
+
+    /**
+     * Create and start an HTTP/HTTPS server for the specified web application. If a `keystore` is
+     * not specified, a temporary one will be created with a self-signed certificate.
      *
      * @param webApp     the WebApp to dispatch the HTTP requests to
-     * @param bindAddr   the host name to bind the server to and use for request routing
-     * @param httpPort   the port for plain text (insecure) communications
-     * @param httpsPort  the port for encrypted (tls) communications
-     * @param keystore   the keystore to use for tls certificates and encryption
+     * @param route      (optional) the HostInfo for request routing
+     * @param binding    (optional) the HostInfo for server binding; defaults to the `route`
+     * @param keystore   (optional) the keystore to use for tls certificates and encryption
      * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls; if not
      *                   specified, the first key pair will be used
-     * @param cookieKey  (optional) the name of the secret key in the keystore to use for cookie
-     *                   encryption; if not specified, the first secret key will be used
      *
      * @return a function that allows to shutdown the server
      */
-    function void () createServer(WebApp webApp, String bindAddr, UInt16 httpPort, UInt16 httpsPort,
-                                  KeyStore keystore, String? tlsKey = Null, String? cookieKey = Null) {
+    function void () createServer(WebApp webApp,
+                                  HostInfo route = DefaultHost, HostInfo? binding = Null,
+                                  KeyStore? keystore = Null, String? tlsKey = Null) {
         @Inject HttpServer server;
+        binding ?:= route;
         try {
-            server.configure(bindAddr, httpPort, httpsPort);
+            server.bind(binding);
 
-            HttpHandler handler = new HttpHandler(server, webApp);
+            EnsureKeystore:
+            if (keystore == Null) {
+                @Inject Directory tmpDir;
 
-            server.addRoute(bindAddr, handler, keystore, tlsKey, cookieKey);
-            server.start();
+                String appName   = $"{webApp.qualifiedName}";
+                String storeName = $"{appName}.p12";
+                File   storeFile = tmpDir.fileFor(storeName);
+                if (storeFile.exists) {
+                    try {
+                        @Inject(resourceName="keystore",
+                                opts=new KeyStore.Info(storeFile.contents, "password")) KeyStore store;
+                        keystore = store;
+                        break EnsureKeystore;
+                    } catch (Exception ignore) {}
+                }
+                // create a new one
+                @Inject CertificateManager manager;
+                String dName = CertificateManager.distinguishedName(route.host.toString(),
+                                    org="xenia.xtclang.org", orgUnit=appName);
+
+                manager.createCertificate(storeFile, "password", "certificate", dName);
+                manager.createSymmetricKey(storeFile, "password", "cookies");
+
+                @Inject(resourceName="keystore",
+                        opts=new KeyStore.Info(storeFile.contents, "password")) KeyStore store;
+                keystore = store;
+                }
+
+            HttpHandler handler = new HttpHandler(route, webApp);
+            server.addRoute(route, handler, keystore, tlsKey);
 
             return () -> {
                 if (handler.shutdown()) {

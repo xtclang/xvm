@@ -773,7 +773,7 @@ public abstract class ClassTemplate
                         }
                     }
                 }
-            else
+            else if (!frame.isNative())
                 {
                 Component container = frame.f_function.getParent().getParent();
                 if (container instanceof PropertyStructure prop)
