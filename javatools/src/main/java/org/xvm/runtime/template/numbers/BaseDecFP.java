@@ -318,7 +318,7 @@ public abstract class BaseDecFP
         Decimal dec1 = ((DecimalHandle) hTarget).getValue();
         Decimal dec2 = ((DecimalHandle) hArg).getValue();
 
-        if (dec1.getSignum() == 0)
+        if (dec2.getSignum() == 0)
             {
             return overflow(frame);
             }
