@@ -86,6 +86,7 @@ class UniOpAST extends AST {
         case TernaryAST ttop: return ttop.doElvis(_kids[0]);
         case MultiAST   mtop: return mtop.doElvis(_kids[0],old);
         case AssertAST  asrt: return asrt.doElvis(_kids[0]);
+        case null: return new BinOpAST("!=","",_type,_kids[0],new ConAST("null",XCons.NULL));
         default: break;
         }
       // Cannot reach here
