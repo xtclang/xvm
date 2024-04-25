@@ -81,6 +81,7 @@ class UniOpAST extends AST {
         case TernaryAST ttop: return ttop.doElvis( _kids[0] );
         case MultiAST   mtop: return mtop.doElvis(_kids[0],old);
         case AssertAST  asrt: return asrt.doElvis(_kids[0]);
+        case null: return new BinOpAST("!=","",_type,_kids[0],new ConAST("null",XCons.NULL));
         default: break;
         }
     } // End of Elvis
@@ -99,6 +100,8 @@ class UniOpAST extends AST {
       if( S.eq("!=",bin._op0) ) { bin._op0="=="; return bin; }
       if( S.eq("==",bin._op0) ) { bin._op0="!="; return bin; }
     }
+    if( S.eq("-",_pre) && _kids[0]._type instanceof XClz clz )
+      return new InvokeAST("neg",clz,_kids[0]);
 
     return this;
   }

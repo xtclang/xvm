@@ -334,7 +334,7 @@ public class ClzBuilder {
     if( _is_module ) {
         Part prun = _clz._name2kid.get("run");
         if( prun!=null ) {
-          MethodPart run =  (MethodPart)(((MMethodPart)prun)._name2kid.get("run"));
+          MethodPart run = (MethodPart)prun._name2kid.get("run");
           if( run._args != null ) {
             add_import(XCons.ARYSTRING);
             _sb.ip("public void run() { run(new AryString()); }").nl();
@@ -512,7 +512,7 @@ public class ClzBuilder {
       // method - which has the normal no-arg Java constructor already called -
       // but now the XTC constructor method needs to end in a Java return.
       if( constructor )
-        blk = blk.add(new ReturnAST(null,m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
+        blk = blk.add(new ReturnAST(m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
       blk.jcode(_sb);
       _sb.nl();
     }

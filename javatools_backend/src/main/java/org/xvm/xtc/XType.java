@@ -147,7 +147,7 @@ public abstract class XType {
 
   static String xjkey(ClassPart clz) { return clz._name + "+" + clz._path._str; }
   public boolean primeq() { return XBOX.containsKey(this); }
-  public boolean zero() { return primeq() && this!=STRING && this!=TRUE && this!=FALSE; }
+  public boolean zero() { return primeq() && this!=STRING && this!=STRINGN && this!=TRUE && this!=FALSE; }
   public String ztype() { return zero() ? "0" : "null"; }
   public boolean is_jdk() { return primeq() || this==JNULL; }
 

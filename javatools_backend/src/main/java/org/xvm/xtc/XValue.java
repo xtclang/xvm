@@ -84,11 +84,19 @@ public abstract class XValue {
       // TParmCon is a parameterized type, just use generic
       if( ptc._parms[0] instanceof TermTCon ttc && ttc.id() instanceof TParmCon tpc )
         yield ASB.p(tpc._name);
-      if( ptc._parms[0] instanceof ParamTCon parm && parm.part()._name.equals("Type") ) // Dynamic formal type?
-        // Trim off leading $, get the parameter name, not the generic name
-        yield ASB.p(xt.toString().substring(1));
+      if( ptc._parms[0] instanceof ParamTCon parm && parm.part()._name.equals("Type") ) { // Dynamic formal type?
+        // Generic named type got a "$" prepended for the Java type, and we
+        // need the plain type as a normal Java value now.
+        if( xt instanceof XBase base ) {
+          assert base._jtype.charAt(0)=='$';
+          yield ASB.p(base._jtype.substring(1));
+        }
+        yield xt.clz(ASB);
+      }
       if( xt instanceof XClz clz )
         yield ClzBuilder.add_import(clz).clz(ASB).p(".GOLD");
+      if( xt instanceof XBase base )
+        yield base.box().clz(ASB);
       // TODO: ASSERT XClz from PTC, get the gold instance from the one type parameter?
       // Assert ntypeparms ==1, get field#0 as the type, get gold from that?
       yield ASB.p("org.xvm.xec.ecstasy.reflect.Type.GOLD");

@@ -148,7 +148,8 @@ public class XClz extends XType {
     } else if( clz._par instanceof MethodPart meth ) {
       cnest = "";
       cname = S.java_class_name(meth._name+"$"+clz.name());
-    } else if( !clz._path.equals(mod._path) ) {
+    } else if( !mod._path.equals(clz._path) ) {
+      // Standalone Class from another module
       cnest = "";
       cname = S.java_class_name( clz.name() );
     } else {
@@ -163,7 +164,7 @@ public class XClz extends XType {
     xclz._mod = mod;  // Self module
     xclz._clz = clz;
     xclz._jname = xclz._jpack = "";
-    xclz._super = get_super(clz._super);
+    xclz._super = get_super(clz);
     return xclz;
   }
 
@@ -180,7 +181,7 @@ public class XClz extends XType {
       xclz._tns[i] = clz._tnames[i];
       xclz._xts[i] = xtype(clz._tcons[i],true,xclz);
     }
-    xclz._super = get_super(clz);
+    assert xclz._super == get_super(clz);
     XClz xclz2 = xclz._intern();
     assert xclz2 == xclz;       // Only intern XTC ClassPart once
     clz._tclz = xclz;           // Assign the class cache
@@ -255,7 +256,7 @@ public class XClz extends XType {
         xts[len+i] = xtype(parms[i],true);
       }
     }
-    xclz._super = get_super(iclz);
+    assert xclz._super == get_super(iclz);
     xclz._jpack = "";
     xclz._jname = "";
     XClz xclz2 = xclz._intern();
@@ -505,8 +506,8 @@ public class XClz extends XType {
   // Using shallow equals, hashCode, not deep, because the parts are already interned
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;
-    return Arrays.equals( _tns,clz._tns ) &&
-      S.eq( _name,clz. _name) && S.eq( _nest,clz. _nest) && S.eq( _pack,clz. _pack) &&
+    return Arrays.equals(_tns, clz._tns ) &&
+      S.eq(_name, clz._name) && S.eq(_nest, clz._nest) && S.eq(_pack, clz._pack) &&
       _ro == clz._ro;
   }
   @Override int hash() {

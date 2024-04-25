@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.ParamTCon;
@@ -59,8 +60,13 @@ public class CallAST extends AST {
     // Primitive funky dispatch goes to Java operators
     AST k1 = _kids[1];
     AST k2 = _kids[2];
-    if( k2._type instanceof XBase && k2._type != XCons.STRING )
-      return ast;
+    if( k2._type instanceof XBase ) {
+      if( k2._type != XCons.STRING && k2._type != XCons.STRINGN )
+        return ast;
+      clz = XCons.JSTRING.clz();
+      ((ConAST)k1)._con = null;
+      ((ConAST)k1)._type= XCons.NULL;
+    }
 
     if( k1 instanceof ConAST ) {
       // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name

@@ -39,6 +39,9 @@ public class Int128 extends IntNumber {
   }
   public Int128 div( Int128 x ) { throw XEC.TODO(); }
   public Int128 mod( Int128 x ) { throw XEC.TODO(); }
+  public Int128 abs() { throw XEC.TODO(); }
+  public Int128 neg() { throw XEC.TODO(); }
+  @Override public Signum sign$get() { throw XEC.TODO(); }
   public boolean eq( Int128 x ) { throw XEC.TODO(); }
   public boolean gt( Int128 x ) { return _hi != x._hi ? (_hi >  x._hi) : (_lo >  x._lo); }
   public boolean ge( Int128 x ) { return _hi != x._hi ? (_hi >= x._hi) : (_lo >= x._lo); }

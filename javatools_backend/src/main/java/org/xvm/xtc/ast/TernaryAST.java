@@ -1,9 +1,7 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
-import org.xvm.xtc.cons.Const;
 
 class TernaryAST extends AST {
   static TernaryAST make( ClzBuilder X) { return new TernaryAST(X.kids(3),XType.xtypes(X.consts())[0]); }
@@ -12,6 +10,7 @@ class TernaryAST extends AST {
   @Override XType _type() { return _type; }
 
   RegAST doElvis( AST elvis ) {
+    assert _kids[0]==null;
     XType type = elvis._type;
     // THIS:     ( : [good_expr (elvis var)] [bad_expr])
     // MAPS TO:  ( ((tmp=var)!=null) ? [good_expr tmp] [bad_expr] )
@@ -35,9 +34,15 @@ class TernaryAST extends AST {
     return new RegAST(-1,tmpname,type);
   }
 
+  // Box as needed
+  @Override XType reBox( AST kid ) {
+    return _kids[0]==kid ? null : _type;
+  }
 
+  @Override void jpre( SB sb ) { sb.p("("); }
   @Override void jmid ( SB sb, int i ) {
     if( i==0 ) sb.p(" ? ");
     if( i==1 ) sb.p(" : ");
   }
+  @Override void jpost( SB sb ) { sb.p(")"); }
 }

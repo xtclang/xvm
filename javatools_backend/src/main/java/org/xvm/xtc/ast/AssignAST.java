@@ -113,8 +113,8 @@ class AssignAST extends AST {
           // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
           // BAST  (Invoke (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
           // BAST  (Invoke (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
-          // Java  long n0, n1;  xassert( $t(n0=S1()) && GET$COND() && ...n0...)
-          String tmp = blk.add_tmp(type,_name);
+          // Java  long n;  xassert( $t(n=S1()) && GET$COND() && ...n...)
+          String tmp = blk.add_tmp(type, _name);
           _kids[0] = new RegAST(0,tmp,type);
           _kids[0]._par = this;
         }

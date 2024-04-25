@@ -77,9 +77,7 @@ public class InvokeAST extends AST {
       case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL",XCons.LONG ));
       case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL",XCons.LONG ));
       case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL",XCons.LONG ));
-      case "eq"  ->
-              this;
-        //new BinOpAST( "==","", XCons.LONG, _kids );
+      case "eq"  -> this; //new BinOpAST( "==","", XCons.LONG, _kids );
       case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "mul" -> new BinOpAST( "*", "", XCons.LONG, _kids );
@@ -94,7 +92,7 @@ public class InvokeAST extends AST {
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
-      case "valueOf", "equals", "toInt128", "estimateStringLength" ->
+      case "valueOf", "equals", "toInt128", "estimateStringLength", "abs" ->
         new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
 
       default -> throw XEC.TODO(_meth);
@@ -168,8 +166,12 @@ public class InvokeAST extends AST {
   @Override XType reBox( AST kid ) {
     if( _args==null ) return kid._type;
     if( kid instanceof NewAST ) return null; // Already boxed
-    if( _kids[0]._type instanceof XBase ) return null;
-    if( !((XClz)_kids[0]._type)._jname.isEmpty() ) return null; // "this" ptr is a Java special, will have primitive arg version
+    switch( _kids[0]._type ) {
+    case XBase  base : return null;
+    case XInter in   : return null;
+    case XClz clz when !clz._jname.isEmpty(): return null; // "this" ptr is a Java special, will have primitive arg version
+    default: break;
+    }
     int idx = S.find(_kids,kid);
     if( idx==0 ) return null; // The "this" ptr never boxes
     // Expected args type vs provided kids[idx]._type

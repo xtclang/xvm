@@ -80,5 +80,8 @@ public class Const extends XTC
 
   public static boolean  equals$Const(XTC gold, XTC c0, XTC c1 ) { return equals$Const(gold,(Const)c0,(Const)c1); }
 
+  public static boolean  equals$String(XTC gold, String s0, String s1 ) { return s0.equals(s1); }
+  public static Ordered compare$String(XTC gold, String s0, String s1 ) { return org.xvm.xec.ecstasy.text.String.GOLD.compare(s0,s1); }
+
   @Override public Const freeze( boolean inPlace ) { assert mutability$get() == Mutability.Constant; return this; }
 }

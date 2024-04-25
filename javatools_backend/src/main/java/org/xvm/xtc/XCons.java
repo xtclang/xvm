@@ -61,6 +61,7 @@ public abstract class XCons {
   public static XClz TYPE        = make_java("ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
+  public static XClz SIGNUM  = make_java("ecstasy.numbers.Number","Signum",ENUM);
   public static XClz BIT     = make_java("ecstasy.numbers","Bit",CONST);
 
   public static XClz INTNUM  = make_java("ecstasy.numbers","IntNumber" ,NUMBER);

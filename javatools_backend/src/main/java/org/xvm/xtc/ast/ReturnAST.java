@@ -10,21 +10,20 @@ import org.xvm.xtc.XCons;
 import org.xvm.xtc.XType;
 
 public class ReturnAST extends AST {
-  private final String _ztype;  // Set if this is a conditional return
   private final MethodPart _meth;
   private final ExprAST _expr;
+  boolean _cond_true;
+
   static ReturnAST make( ClzBuilder X, int n ) {
-    String ztype=null;
-    if( X._expr==null && X._meth.is_cond_ret() )
-      ztype = X._meth.xret(1).ztype();
-    return new ReturnAST(ztype, X._meth, X._expr, X.kids(n) );
+    return new ReturnAST(X._meth, X._expr, X.kids(n) );
   }
-  public ReturnAST( String ztype, MethodPart meth, ExprAST expr, AST... kids) {
+  public ReturnAST( MethodPart meth, ExprAST expr, AST... kids) {
     super(kids);
-    _ztype= ztype;
     _meth = meth;
     _expr = expr;
   }
+
+  @Override boolean _cond() { return _meth.is_cond_ret(); }
 
   @Override XType _type() {
     // Nested statement expression; kids[0] is statement and have to drill to
@@ -62,12 +61,21 @@ public class ReturnAST extends AST {
     if( _meth.xrets()==null && _expr==null )
       return _kids==null ? null : _kids[0];
     // Flip multi-return into a tuple return
-    if( !_meth.is_cond_ret() && _kids.length>1 ) {
+    if( !_cond && _kids.length>1 ) {
       AST nnn = new NewAST(_kids,(XClz)_type);
       for( AST kid : _kids ) kid._par = nnn;
-      AST ret = new ReturnAST(_ztype,_meth,_expr,nnn);
+      AST ret = new ReturnAST(_meth,_expr,nnn);
       ret._type = _type;
       return ret;
+    }
+    if( _cond ) {
+      // cond_true is set by MultiAST
+      if( _kids.length==1 && !_cond_true ) {
+        assert _kids[0] instanceof ConAST con && con._con.equals("false");
+      } else {
+        if( _kids.length==2 ) throw XEC.TODO(); // Maybe a complex conditional return?
+        _cond_true = true;                      //
+      }
     }
     return this;
   }
@@ -78,28 +86,13 @@ public class ReturnAST extends AST {
   @Override public SB jcode( SB sb ) {
     sb.ip("return ");
     if( _kids==null ) return sb;
-    // Conditional return:
-    if( _ztype!=null && !_kids[0]._cond ) {
-      if( _kids.length==1 ) {
-        // The only two returns allowed are: MultiAST (Boolean,T) or False
-        if( _kids[0] instanceof ConAST )
-          return sb.p("XRuntime.SET$COND(false,").p(_ztype).p(")");
-        assert _kids[0] instanceof MultiAST && _kids[0]._kids.length==2;
-        sb.p("XRuntime.SET$COND(true,");
-        _kids[0]._kids[1].jcode(sb);
-        return sb.p(")");
-      }
-      // Returning two parts: (bar,isValid)
-      assert _kids.length==2;
+    if( _cond ) {
+      // Conditional return; first part in the global XRuntime.COND
       sb.p("XRuntime.SET$COND(");
-      _kids[0].jcode(sb);
-      sb.p(",");
-      _kids[1].jcode(sb);
-      sb.p(")");
-      return sb;
+      if( _cond_true ) _kids[0].jcode(sb.p("true,"));
+      else             sb.p("false,").p(_meth.xret(1).ztype());
+      return sb.p(")");
     }
-
-    assert _kids.length==1;
     return _kids[0].jcode(sb);
   }
 }
