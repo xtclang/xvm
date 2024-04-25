@@ -2,14 +2,12 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Int[] ints = [3, 1, 2];
-        try {
-            ints.sorted(inPlace=True); // this used to produce an out-of-place result; should throw
-            console.print(ints);
-        } catch (ReadOnly ignore) {
-            console.print("Array is immutable");
-        }
+         assert !(String s := never());
 
-        console.print(ints.sorted());
+        // above could be re-written and should produce the same result as
+        // String s;
+        // assert !never();
     }
+
+    conditional String never() = False;
 }

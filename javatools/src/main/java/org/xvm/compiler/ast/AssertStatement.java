@@ -13,11 +13,14 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.Op;
+import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.AssertStmtAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -28,6 +31,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.op.Assert;
 import org.xvm.asm.op.AssertM;
 import org.xvm.asm.op.AssertV;
+import org.xvm.asm.op.IsNot;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpNCond;
@@ -476,7 +480,10 @@ public class AssertStatement
                 fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
                 argCond = stmtCond.getConditionRegister();
 
-                aAstCond[i] = (ExprAST) ctx.getHolder().getAst(stmtCond);
+                ExprAST astCond = (ExprAST) ctx.getHolder().getAst(stmtCond);
+                aAstCond[i] = fNegated
+                        ? new UnaryOpExprAST(astCond, UnaryOpExprAST.Operator.Not, pool.typeBoolean())
+                        : astCond;
                 }
             else
                 {
@@ -509,6 +516,12 @@ public class AssertStatement
 
             if (message == null || fDebug)
                 {
+                if (fNegated)
+                    {
+                    Register regNeg = new Register(pool.typeBoolean(), null, Op.A_STACK);
+                    code.add(new IsNot(argCond, regNeg));
+                    argCond = regNeg;
+                    }
                 if (fDebug)
                     {
                     code.add(new Assert(argCond, null));

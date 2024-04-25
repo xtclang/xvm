@@ -126,8 +126,10 @@ public class UnaryOpExprAST
 
     @Override
     public String toString() {
-        return op.pre
-            ? op.text + getExpr()
-            : getExpr() + op.text;
+        String expr = getExpr().toString();
+        if (expr.contains(" ")) {
+            expr = '(' + expr + ')';
+        }
+        return op.pre ? op.text + expr : expr + op.text;
     }
 }

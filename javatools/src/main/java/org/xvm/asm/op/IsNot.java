@@ -22,20 +22,6 @@ public class IsNot
         extends OpTest
     {
     /**
-     * Construct an IS_NOT op.
-     *
-     * @param nValue  the input Boolean value
-     * @param nRet    the location to store the Boolean result
-     */
-    public IsNot(int nValue, int nRet)
-        {
-        super((Argument) null, null);
-
-        m_nValue1   = nValue;
-        m_nRetValue = nRet;
-        }
-
-    /**
      * Construct an IS_NOT op based on the specified arguments.
      *
      * @param arg        the value Argument
