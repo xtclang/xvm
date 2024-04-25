@@ -437,7 +437,7 @@ public abstract class BaseDecFP
         return new DecimalHandle(getCanonicalClass(), decValue);
         }
 
-    protected static class DecimalHandle
+    public static class DecimalHandle
             extends ObjectHandle
         {
         protected DecimalHandle(ClassComposition clz, Decimal decValue)

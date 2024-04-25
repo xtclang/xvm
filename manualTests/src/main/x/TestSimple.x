@@ -2,12 +2,12 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-         assert !(String s := never());
-
-        // above could be re-written and should produce the same result as
-        // String s;
-        // assert !never();
+        console.print(simulate(42));
     }
 
-    conditional String never() = False;
+    Int attempts = 100000;
+
+    Dec simulate(Int pardoned) {
+        return pardoned / attempts;
+    }
 }

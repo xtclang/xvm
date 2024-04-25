@@ -5,10 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
+
+import org.xvm.type.Decimal;
+import org.xvm.type.Decimal64;
 
 import org.xvm.util.Hash;
 import org.xvm.util.PackedInteger;
@@ -1035,57 +1041,61 @@ public class IntConstant
             {
             return toByteConstant(Format.Int8);
             }
-        else if (typeOut.equals(pool.typeInt16()))
+        if (typeOut.equals(pool.typeInt16()))
             {
             return toIntConstant(Format.Int16);
             }
-        else if (typeOut.equals(pool.typeInt32()))
+        if (typeOut.equals(pool.typeInt32()))
             {
             return toIntConstant(Format.Int32);
             }
-        else if (typeOut.equals(pool.typeInt64()))
+        if (typeOut.equals(pool.typeInt64()))
             {
             return toIntConstant(Format.Int64);
             }
-        else if (typeOut.equals(pool.typeInt128()))
+        if (typeOut.equals(pool.typeInt128()))
             {
             return toIntConstant(Format.Int128);
             }
-        else if (typeOut.equals(pool.typeIntN()))
+        if (typeOut.equals(pool.typeIntN()))
             {
             return toIntConstant(Format.IntN);
             }
-        else if (typeOut.equals(pool.typeBit()))
+        if (typeOut.equals(pool.typeBit()))
             {
             return toByteConstant(Format.Bit);
             }
-        else if (typeOut.equals(pool.typeNibble()))
+        if (typeOut.equals(pool.typeNibble()))
             {
             return toByteConstant(Format.Nibble);
             }
-        else if (typeOut.equals(pool.typeUInt8()))
+        if (typeOut.equals(pool.typeUInt8()))
             {
             return toByteConstant(Format.UInt8);
             }
-        else if (typeOut.equals(pool.typeUInt16()))
+        if (typeOut.equals(pool.typeUInt16()))
             {
             return toIntConstant(Format.UInt16);
             }
-        else if (typeOut.equals(pool.typeUInt32()))
+        if (typeOut.equals(pool.typeUInt32()))
             {
             return toIntConstant(Format.UInt32);
             }
-        else if (typeOut.equals(pool.typeUInt64()))
+        if (typeOut.equals(pool.typeUInt64()))
             {
             return toIntConstant(Format.UInt64);
             }
-        else if (typeOut.equals(pool.typeUInt128()))
+        if (typeOut.equals(pool.typeUInt128()))
             {
             return toIntConstant(Format.UInt128);
             }
-        else if (typeOut.equals(pool.typeUIntN()))
+        if (typeOut.equals(pool.typeUIntN()))
             {
             return toIntConstant(Format.UIntN);
+            }
+        if (typeOut.equals(pool.typeDec64()))
+            {
+            return toDecConstant(Format.Dec64);
             }
         return null;
         }
@@ -1126,6 +1136,18 @@ public class IntConstant
         }
 
     /**
+     * Convert this IntConstant to a DecimalConstant of the specified format.
+     *
+     * @param format  the format of the DecimalConstant to use
+     *
+     * @return a DecimalConstant
+     */
+    public DecimalConstant toDecConstant(Format format)
+        {
+        return toDecConstant(format, getValue(), getConstantPool());
+        }
+
+    /**
      * Convert the specified PackedInteger to an IntConstant of the specified format.
      *
      * @param format  the format of the IntConstant to use
@@ -1145,6 +1167,26 @@ public class IntConstant
             }
 
         return pool.ensureIntConstant(pi, format);
+        }
+
+    /**
+     * Convert the specified PackedInteger to a DecimalConstant of the specified format.
+     *
+     * @param format  the format of the DecimalConstant to use
+     * @param pi      the PackedInteger value
+     * @param pool    the ConstantPool to use
+     *
+     * @return a DecimalConstant
+     */
+    public static DecimalConstant toDecConstant(Format format, PackedInteger pi, ConstantPool pool)
+        {
+        Decimal dec = switch (format)
+            {
+            case Dec64 -> new Decimal64(new BigDecimal(pi.getBigInteger(), MathContext.DECIMAL64));
+            default    -> throw new IllegalArgumentException("Unsupported format " + format);
+            };
+
+        return pool.ensureDecConstant(dec);
         }
 
     @Override
