@@ -794,8 +794,13 @@ public class NameExpression
                         else if (left instanceof NameExpression exprName &&
                                 exprName.getMeaning() == Meaning.Class)
                             {
-                            log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
-                                    idMethod.getValueString(), exprName.getName());
+                            IdentityConstant idClz = exprName.getIdentity(ctx);
+                            ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+                            if (!clz.isSingleton())
+                                {
+                                log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
+                                        idMethod.getValueString(), exprName.getName());
+                                }
                             }
                         break;
                     }
@@ -2969,8 +2974,9 @@ public class NameExpression
             case Method:
                 {
                 // the constant refers to a method or function
-                MethodConstant idMethod = (MethodConstant) argRaw;
-                TypeConstant   typeFn;
+                MethodConstant  idMethod = (MethodConstant) argRaw;
+                MethodStructure method   = (MethodStructure) idMethod.getComponent();
+                TypeConstant    typeFn;
 
                 if (idMethod.isFunction())
                     {
@@ -2989,9 +2995,19 @@ public class NameExpression
                     if (left instanceof NameExpression exprName &&
                                 exprName.getMeaning() == Meaning.Class)
                         {
-                        // turn a method into a "method handle" function
-                        m_plan = Plan.BjarneLambda;
-                        typeFn = idMethod.getBjarneLambdaType();
+                        IdentityConstant idClz = exprName.getIdentity(ctx);
+                        ClassStructure   clz   = (ClassStructure) idClz.getComponent();
+                        if (clz.isSingleton())
+                            {
+                            m_plan = Plan.BindTarget;
+                            typeFn = idMethod.getSignature().asFunctionType();
+                            }
+                        else
+                            {
+                            // turn a method into a "method handle" function
+                            m_plan = Plan.BjarneLambda;
+                            typeFn = idMethod.getBjarneLambdaType();
+                            }
                         }
                     else
                         {
@@ -3003,7 +3019,6 @@ public class NameExpression
 
                 if (typeDesired != null)
                     {
-                    MethodStructure method = (MethodStructure) idMethod.getComponent();
                     if (method == null)
                         {
                         TypeConstant typeLeft = left == null

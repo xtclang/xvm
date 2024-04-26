@@ -31,19 +31,8 @@ module StringComparisons {
             // How to achieve both case sensitive comparisons and case
             // insensitive comparisons within the language
 
-            // TODO GG #1 comment out the import at the top and uncomment this import:
+            // TODO GG comment out the import at the top and uncomment this import:
             // import ecstasy.collections.CaseInsensitive;
-
-            // TODO GG #2 java.lang.AssertionError at org.xvm.asm.constants.MethodConstant.getValueType(MethodConstant.java:478)
-            // Type<String>.Orderer ord = CaseInsensitive.compare(_,_);
-
-            // TODO GG #3
-            // Type<String>.Comparer cmp = CaseInsensitive.areEqual;
-            // Type<String>.Orderer  ord = CaseInsensitive.compare;
-
-            // TODO GG #4 (here "String" is the Type<String>
-            // String.Comparer cmp = CaseInsensitive.areEqual;
-            // String.Orderer  ord = CaseInsensitive.compare;
 
             if (CaseInsensitive.areEqual(s1, s2)) {
                 console.print($"{s1} == {s2} (case-insensitive)");

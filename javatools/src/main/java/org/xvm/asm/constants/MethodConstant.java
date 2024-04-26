@@ -473,11 +473,7 @@ public class MethodConstant
         SignatureConstant sig       = getSignature();
         boolean           fFunction = isFunction();
 
-        if (fFunction)
-            {
-            assert typeTarget == null;
-            }
-        else
+        if (!fFunction)
             {
             if (typeTarget == null)
                 {
