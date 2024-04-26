@@ -1,7 +1,6 @@
 module StringComparisons {
     void run() {
         @Inject Console console;
-        import ecstasy.collections.CaseInsensitive;
 
         String[] tests = ["dog", "cat", "Dog"];
         String s1 = tests[0];
@@ -31,8 +30,7 @@ module StringComparisons {
             // How to achieve both case sensitive comparisons and case
             // insensitive comparisons within the language
 
-            // TODO GG comment out the import at the top and uncomment this import:
-            // import ecstasy.collections.CaseInsensitive;
+            import ecstasy.collections.CaseInsensitive;
 
             if (CaseInsensitive.areEqual(s1, s2)) {
                 console.print($"{s1} == {s2} (case-insensitive)");

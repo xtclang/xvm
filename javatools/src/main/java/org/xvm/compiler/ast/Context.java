@@ -1404,7 +1404,7 @@ public class Context
      *
      * @param ctxFrom  the context from which the name resolution began
      * @param sName    the name to resolve
-     * @param name     the name token for error reporting (optional)
+     * @param name     the name token (optional)
      * @param errs     the error list to log errors to (optional)
      *
      * @return an Argument iff the name is registered to an argument; otherwise null

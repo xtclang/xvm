@@ -209,25 +209,30 @@ public class StatementBlock
      * Obtain the ImportStatement for a particular import alias. This method has different behaviors
      * depending on the phase of compilation. During the phase in which the imports are registered,
      * this will only provide an answer for the imports that have already been registered. For
-     * example, the {@link AstNode#resolveNames(StageMgr, ErrorListener)} method
-     * is used to resolve all global names (all names, down to the method level, but not resolving
-     * within any methods), and thus imports outside of methods are all registered during that
-     * phase, such that only the ones registered will be visible via this method. The reason for
-     * this approach is that imports are not visible outside a file, and furthermore, because
-     * they can occur at any point within the file, only those encountered "above" some current
-     * point in that file are considered to be visible at that point.
+     * example, the {@link AstNode#resolveNames(StageMgr, ErrorListener)} method is used to resolve
+     * all global names (all names, down to the method level, but not resolving within any methods),
+     * and thus imports outside of methods are all registered during that phase, such that only the
+     * ones registered will be visible via this method. The reason for this approach is that imports
+     * are not visible outside a file, and furthermore, because they can occur at any point within
+     * the file, only those encountered "above" some current point in that file are considered to be
+     * visible at that point.
+     * <p/>
+     * Naturally, if a Token `name` is specified, the import statement must precede (source position
+     * wise) that token.
      *
      * @param sName  the import alias
+     * @param name   the name token (optional)
      * @param errs   the error listener
      *
      * @return the ImportStatement, or null
      */
-    public ImportStatement getImport(String sName, ErrorListener errs)
+    public ImportStatement getImport(String sName, Token name, ErrorListener errs)
         {
         if (imports != null)
             {
             ImportStatement stmt = imports.get(sName);
-            if (stmt != null)
+            if (stmt != null &&
+                    (name == null || name.getStartPosition() > stmt.getStartPosition()))
                 {
                 return stmt;
                 }
@@ -238,6 +243,10 @@ public class StatementBlock
             ImportStatement stmtResult = null;
             for (ImportStatement stmt : importsWild)
                 {
+                if (name != null && name.getStartPosition() < stmt.getStartPosition())
+                    {
+                    continue;
+                    }
                 Constant constant = stmt.getNameResolver().getConstant();
                 if (constant instanceof IdentityConstant id && constant.isClass())
                     {
@@ -409,7 +418,7 @@ public class StatementBlock
             {
             if (hasScope())
                 {
-                ctx = ctx.enter();
+                ctx = new NestedBlockContext(ctx);
                 }
 
             AstNode parent = getParent();
@@ -616,7 +625,7 @@ public class StatementBlock
             return null;
             }
 
-        ImportStatement stmtImport = getImport(sName, errs);
+        ImportStatement stmtImport = getImport(sName, null, errs);
         return stmtImport == null
                 ? super.resolveImportBySingleName(sName, errs)
                 : stmtImport;
@@ -1252,7 +1261,7 @@ public class StatementBlock
                 if (node instanceof StatementBlock block)
                     {
                     // the name may specify an import
-                    ImportStatement stmtImport = block.getImport(sName, errs);
+                    ImportStatement stmtImport = block.getImport(sName, name, errs);
                     if (stmtImport != null)
                         {
                         NameResolver resolver = stmtImport.getNameResolver();
@@ -1696,6 +1705,41 @@ public class StatementBlock
          * capture-properties in an anonymous inner class.
          */
         private Map<String, Register> m_mapCaptureVars;
+        }
+
+
+    /**
+     * The context for compiling a nested StatementBlock. This context maintains a link with the
+     * StatementBlock, allowing it to resolve imports.
+     */
+    public class NestedBlockContext
+            extends Context
+        {
+        protected NestedBlockContext(Context ctxOuter)
+            {
+            super(ctxOuter, true);
+            }
+
+        @Override
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name,
+                                              ErrorListener errs)
+            {
+            ImportStatement stmtImport = getImport(sName, name, errs);
+            if (stmtImport != null)
+                {
+                NameResolver resolver = stmtImport.getNameResolver();
+                if (resolver.getResult() == Result.RESOLVED)
+                    {
+                    Constant constant = resolver.getConstant();
+                    return stmtImport.isWildcard()
+                            ? ((IdentityConstant) constant).getComponent().
+                                    getChild(sName).getIdentityConstant()
+                            : constant;
+                    }
+                }
+
+            return super.resolveRegularName(ctxFrom, sName, name, errs);
+            }
         }
 
 
