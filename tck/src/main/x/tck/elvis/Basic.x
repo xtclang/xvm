@@ -18,11 +18,15 @@ class Basic {
         multi3();
     }
 
+    Int?        hideI(Int?        x) = x;
+    IntLiteral? hideL(IntLiteral? x) = x;
+    String?     hideS(String?     x) = x;
+
     // -----------------------------
     void basic0() {
         Int a = 2;
         Int b = 3;
-        Int? c = a;
+        Int? c = hideI(a);
         assert ( c?:b) == 2;
     }
 
@@ -34,7 +38,7 @@ class Basic {
     }
 
     void basic2() {
-        IntLiteral? a = Null;
+        IntLiteral? a = hideL(Null);
         Int b = 7;
         assert (a?.toInt64():b) == 7;
 
@@ -55,7 +59,7 @@ class Basic {
         assert s=="neg";
         s := checkPositive(99);
         assert s=="pos";
-        String? s2 = s;
+        String? s2 = hideS(s);
         if( s2==Null ) { assert; } // Must be in or fails to compile
         static String? foolCompiler(String s) = s;
         s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
@@ -64,7 +68,7 @@ class Basic {
     }
 
     void basic4() {
-        Int? n = Null;
+        Int? n = hideI(Null);
         n ?:= 4;
         assert n==4;
 
@@ -76,7 +80,7 @@ class Basic {
     }
 
     void basic5() {
-        String? s2 = "abc";
+        String? s2 = hideS("abc");
         assert String s3 ?= s2;
         if( s2==Null ) { assert; } // Must be in or fails to compile
         static String? foolCompiler(String s) = s;

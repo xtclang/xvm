@@ -141,7 +141,10 @@ public class InvokeAST extends AST {
 
     if( k0t instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
       switch( _meth ) {
-      case "next":  _meth = "next8"; break;  // Use the primitive iterator
+      case "next":              // Use the primitive iterator
+        if( clz._xts[0].isa(XCons.INTNUM) )  _meth = "next8";
+        else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
+        break;
       case "whileEach", "untilAny", "limit", "take", "forEach": break;
       default: throw XEC.TODO();
       };

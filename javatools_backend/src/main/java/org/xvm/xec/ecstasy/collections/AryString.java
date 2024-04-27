@@ -89,8 +89,8 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   @Override public Iterator<org.xvm.xec.ecstasy.text.String> iterator() { return new IterString(); }
   public class IterString extends Iterator<org.xvm.xec.ecstasy.text.String> {
     private int _i;
-    @Override public org.xvm.xec.ecstasy.text.String next() { return org.xvm.xec.ecstasy.text.String.construct(next8()); }
-    public String next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public org.xvm.xec.ecstasy.text.String next() { return org.xvm.xec.ecstasy.text.String.construct(nextStr()); }
+    @Override public String nextStr() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return ""+_i+".."+_len; }
     // --- Comparable

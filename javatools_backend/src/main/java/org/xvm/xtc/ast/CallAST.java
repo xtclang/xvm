@@ -116,7 +116,9 @@ public class CallAST extends AST {
   }
 
   @Override void jmid ( SB sb, int i ) {
-    sb.p( i==0 ? (_kids[0] instanceof RegAST ? ".call(": "(") : ", " );
+    if( i>0 ) { sb.p(", "); return; }
+    AST kid = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
+    sb.p( (kid instanceof RegAST ? ".call(": "(") );
   }
   @Override void jpost( SB sb ) {
     if( _kids.length > 1 )

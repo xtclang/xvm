@@ -99,7 +99,7 @@ public class Arylong extends Array<Int64> {
   public class Iterlong extends Iterator<Int64> {
     private int _i;
     @Override public Int64 next() { return Int64.make(next8()); }
-    public long next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public long next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return _i+".."+_len; }
     // --- Comparable

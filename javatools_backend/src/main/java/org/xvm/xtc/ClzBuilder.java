@@ -600,16 +600,22 @@ public class ClzBuilder {
       // qualified name everywhere.
       String tqual = tclz.qualified_name();
       String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
+      boolean progress;
       if( old!=null && !S.eq(old,tqual) ) {
         tclz._ambiguous=true;   // Use fully qualified name
-        ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
+        progress = ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
       } else {
         // Import the qualified name, but use the shortcut name everywhere
-        ClzBuilder.IMPORTS.add(tqual);
+        progress = ClzBuilder.IMPORTS.add(tqual);
       }
       // Needs a build also
       if( tclz.needs_build() )
         ClzBldSet.add(tclz._clz);
+      // Catch nested generic types
+      if( progress )
+        for( XType xt : tclz._xts )
+          if( xt instanceof XClz xclz_nest )
+            add_import(xclz_nest);
     }
     return tclz;
   }
@@ -623,7 +629,7 @@ public class ClzBuilder {
   public AST ast( MethodPart m ) {
     // Build the AST from bytes
     _meth = m;
-    _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
+    _pool = new CPool(m._ast,m._cons); // Set up the constant pool parser
     AST ast = AST.parse(this);
     // Set types in every AST
     ast.doType(null);

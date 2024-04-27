@@ -46,7 +46,8 @@ class AssignAST extends AST {
 
     // Add/push element to array; or op-assign "x+=y"
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz ) {
-      RegAST reg0 = (RegAST)_kids[0];
+      AST k0 = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
+      RegAST reg0 = (RegAST)k0;
       AST op = new InvokeAST( _meth.name(), clz, _kids );
       for( AST kid : _kids ) kid._par = op;
       RegAST reg1 = new RegAST(reg0._reg,reg0._name,reg0._type);
