@@ -13,11 +13,13 @@ class Medium {
         Int[] a1 = [1, 2];
         Int[] a2 = [2, 1];
 
-        Collection<Int> c1 = a1;
-        Collection<Int> c2 = a2;
+        Collection<Int> c1 = asCollection(a1);
+        Collection<Int> c2 = asCollection(a2);
 
         assert !checkArrayEquals(a1, a2);
         assert checkEquals(c1, c2);
+
+        Collection<Int> asCollection(Collection<Int> col) = col;
     }
 
     @Test

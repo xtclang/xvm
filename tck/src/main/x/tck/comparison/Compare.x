@@ -70,37 +70,39 @@ class Compare {
     void compareConstantsDirect() {
         NamedPoint np1 = new NamedPoint("a", 0, 2);
         NamedPoint np2 = new NamedPoint("b", 0, 2);
-        Point p1 = np1;
-        Point p2 = np2;
 
         assert np1 != np2;
         assert np1 <=> np2 == Lesser;
-        assert p1 == p2;
-        assert p1 <=> p2 == Equal;
+        assert np1.as(Point) == np2.as(Point);
+        assert np1.as(Point) <=> np2.as(Point) == Equal;
     }
 
     @Test
     void compareConstantsWithBjarn() {
         NamedPoint np1 = new NamedPoint("a", 0, 2);
         NamedPoint np2 = new NamedPoint("b", 0, 2);
-        Point p1 = np1;
-        Point p2 = np2;
+        Point p1 = asPoint(np1);
+        Point p2 = asPoint(np2);
 
         assert !np1.equals(np2);
         assert np1.compare(np2) == Lesser;
         assert p1.equals(p2);
         assert p1.compare(p2) == Equal;
+
+        Point asPoint(Point p) = p;
     }
 
     @Test
     void compareConstantsFormal() {
         NamedPoint np1 = new NamedPoint("a", 0, 2);
         NamedPoint np2 = new NamedPoint("b", 0, 2);
-        Point p1 = np1;
-        Point p2 = np2;
+        Point p1 = asPoint(np1);
+        Point p2 = asPoint(np2);
 
         assert !checkEquals(np1, np2);
         assert checkEquals(p1, p2);
+
+        Point asPoint(Point p) = p;
     }
 
     @Test
@@ -132,8 +134,8 @@ class Compare {
 
     @Test
     void compareToNull() {
-        String? s1 = get(True);
-        String? s2 = get(False);
+        String? s1 = get(False);
+        String? s2 = get(True);
 
         assert s1 == Null;
         assert s2 != Null;
