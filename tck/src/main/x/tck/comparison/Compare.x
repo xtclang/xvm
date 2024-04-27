@@ -132,11 +132,13 @@ class Compare {
 
     @Test
     void compareToNull() {
-        String? s1 = Null;
-        String? s2 = "";
+        String? s1 = get(True);
+        String? s2 = get(False);
 
         assert s1 == Null;
         assert s2 != Null;
+
+        String? get(Boolean notNull) = notNull ? "" : Null;
     }
 
     <T> Boolean checkEquals(T t1, T t2) {

@@ -59,8 +59,10 @@ class Basic {
         assert !ary.is(immutable);
 
         Test t = new Test(ary);
-        assert t.ary.is(immutable);
+        assert toObject(t.ary).is(immutable);
         assert !ary.is(immutable);
+
+        Object toObject(Object o) = o;
     }
 
     /**
@@ -77,9 +79,11 @@ class Basic {
         assert !ary[0].is(immutable);
 
         Test t = new Test(ary);
-        assert t.ary.is(immutable);
+        assert toObject(t.ary).is(immutable);
         assert !ary.is(immutable);
         assert !ary[0].is(immutable);
+
+        Object toObject(Object o) = o;
     }
 
     /**
