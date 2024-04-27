@@ -9,7 +9,7 @@ const RTParameter<ParamType>(Int ordinal, String? name, Boolean formal, Boolean 
     conditional String hasName() {
         return name == Null
                 ? False
-                : (True, name.as(String));
+                : (True, name);
     }
 
     @Override

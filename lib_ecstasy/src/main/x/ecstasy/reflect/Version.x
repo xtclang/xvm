@@ -622,7 +622,7 @@ const Version
         Version? parent = version.parent;
         return parent == Null
                 ? version.number.toInt64()
-                : Version.hashCode(parent.as(Version)).rotateLeft(1) ^ version.number.toInt64();
+                : Version.hashCode(parent).rotateLeft(1) ^ version.number.toInt64();
     }
 
     /**

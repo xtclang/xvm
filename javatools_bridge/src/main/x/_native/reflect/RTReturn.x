@@ -10,6 +10,6 @@ const RTReturn<ReturnType>(Int ordinal, String? name)
     conditional String hasName() {
         return name == Null
                 ? False
-                : (True, name.as(String));
+                : (True, name);
     }
 }
