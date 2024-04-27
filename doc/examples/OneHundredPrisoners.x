@@ -17,7 +17,7 @@ module OneHundredPrisoners {
                 ++pardoned;
             }
         }
-        return (pardoned * 1000000 / attempts).toDec() / 10000;
+        return pardoned / attempts * 100;
     }
 
     Boolean tryRnd(Int[] drawers) {
