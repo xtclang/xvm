@@ -11,6 +11,11 @@ class Basic {
         basic4();
         basic5();
         basic6();
+
+        multi0();
+        multi1();
+        multi2();
+        multi3();
     }
 
     // -----------------------------
@@ -93,11 +98,41 @@ class Basic {
         return (x==0) ? False : ((x==1) ? (True,Null) : (True,"abc"));
     }
 
-    //void multi() {
-    //    if (Orderer? thisOrder := this.ordered(),
-    //        Orderer? thatOrder := values.ordered(),
-    //        thisOrder? == thatOrder?) {
-    //
-    //}
+    void multi0() {
+        // TODO: Awaiting update to BAST next rebase
+        //assert !(String? s0 := trinary(0));
+        assert String? s1 := trinary(1), s1==Null;
+        assert String? s2 := trinary(2), s2=="abc";
+    }
+
+    void multi1() {
+        if (String? s0 := trinary(0), // Always false, so IF is false
+            String? s1 := trinary(1),
+            s0? == s1?) {
+            assert False;
+        } else {
+            assert True;
+        }
+    }
+
+    void multi2() {
+        if (String? s0 := trinary(1), // Always null
+            String? s1 := trinary(2),
+            s0? == s1?) {       // So this fails
+            assert False;
+        } else {
+            assert True;
+        }
+    }
+
+    void multi3() {
+        if (String? s0 := trinary(2), // Always abc
+            String? s1 := trinary(2),
+            s0? == s1?) {       // So this passes
+            assert True;
+        } else {
+            assert False;
+        }
+    }
 
 }
