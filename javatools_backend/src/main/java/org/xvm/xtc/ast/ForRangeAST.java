@@ -4,6 +4,7 @@ import org.xvm.xtc.*;
 import org.xvm.util.SB;
 
 class ForRangeAST extends AST {
+  String _label;
   String _tmp;                  // For exploded iterator
   // _kids[0] == LHS
   // _kids[1] == RHS
@@ -34,12 +35,15 @@ class ForRangeAST extends AST {
     }
     return this;
   }
+  @Override void add_label() { if( _label==null ) _label = "label"; }
+  @Override String label() { return _label; }
 
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     if( _tmp == null ) {
       // for( long x : new XRange(1,100) ) {
+      if( _label!=null ) sb.p(_label).p(":").nl().i();
       _kids[0].jcode(sb.p("for( "));
       _kids[1].jcode(sb.p(" : "  ));
       sb.p(" ) ");
@@ -47,9 +51,10 @@ class ForRangeAST extends AST {
       // Range tmp = new XRange(1,100);
       // for( long x = tmp._lo; x < tmp._hi; x++ )
       sb.p(_tmp).p(" = ");
-      _kids[1].jcode(sb).p(";").nl();
+      _kids[1].jcode(sb).p(";").nl().i();
+      if( _label!=null ) sb.p(_label).p(":  ");
       DefRegAST def = (DefRegAST)_kids[0];
-      def._type.clz(sb.i().p("for( "));
+      def._type.clz(sb.p("for( "));
       sb.fmt(" %0 = %1._start; %1.in(%0); %0 += %1._incr ) ",def._name,_tmp);
     }
     // Body

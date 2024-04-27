@@ -34,10 +34,12 @@ public abstract class AST {
     AST ast = this;
     while( !ast.is_loopswitch() )
       ast = ast._par;
-    return i==0 ? ast : enclosing_loop(i-1);
+    return i==0 ? ast : ast._par.enclosing_loop(i-1);
   }
   boolean is_loopswitch() { return false; }
-
+  // Adding a continue/break label, if it makes sense
+  void add_label() { throw XEC.TODO(); }
+  String label() { throw XEC.TODO(); }
 
   // Name, if it makes sense
   String name() { throw XEC.TODO(); }

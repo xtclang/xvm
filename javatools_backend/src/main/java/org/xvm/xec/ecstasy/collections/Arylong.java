@@ -1,17 +1,16 @@
 package org.xvm.xec.ecstasy.collections;
 
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.LongUnaryOperator;
 import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
-import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xrun.XRuntime;
-
 import static org.xvm.xec.ecstasy.collections.Array.Mutability.*;
-
-import java.util.Arrays;
-import java.util.function.LongUnaryOperator;
 
 // ArrayList with primitives and an exposed API for direct use by code-gen.
 // Not intended for hand use.
@@ -93,6 +92,18 @@ public class Arylong extends Array<Int64> {
     return this;
   }
 
+  public Arylong shuffled(boolean inPlace) {
+    if( inPlace )
+      throw XEC.TODO();
+    // Not inPlace so clone
+    Arylong ary = new Arylong(_mut,this);
+    Random R = new Random();
+    for( int i=0; i<_len; i++ ) {
+      int idx = R.nextInt(_len);
+      long x = ary._es[i];  ary._es[i] = ary._es[idx];  ary._es[idx] = x;
+    }
+    return ary;
+  }
 
   /** @return an iterator */
   public Iterlong iterator() { return new Iterlong(); }

@@ -12,7 +12,7 @@ class BindMethAST extends AST {
     Const type = X.con();
     return new BindMethAST( (MethodPart) meth.part(), XType.xtype(type,false), target );
   }
-    
+
   private BindMethAST( MethodPart meth, XType type, AST... kids ) {
     super(kids);
     _meth = meth;
@@ -23,6 +23,6 @@ class BindMethAST extends AST {
   @Override String name() { return _meth.jname(); }
 
   @Override void jpost( SB sb ) {
-    sb.p(".").p(_meth._name);
+    sb.p("::").p(_meth._name);
   }
 }

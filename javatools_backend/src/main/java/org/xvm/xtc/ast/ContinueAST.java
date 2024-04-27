@@ -11,9 +11,13 @@ class ContinueAST extends AST {
 
   @Override XType _type() { return XCons.VOID; }
 
-  @Override public SB jcode ( SB sb ) {
-    if( _d > 0 ) throw XEC.TODO();
+  @Override public AST rewrite() {
+    if( _d > 0 )
+      enclosing_loop(_d).add_label(); // Needs a named GOTO
+    return this;
+  }
 
+  @Override public SB jcode ( SB sb ) {
     AST enclosing = enclosing_loop(_d);
     if( enclosing instanceof SwitchAST ) {
       if( _par instanceof BlockAST blk &&
@@ -24,6 +28,8 @@ class ContinueAST extends AST {
       // amounts to a GOTO.
       throw XEC.TODO();
     }
-    return sb.ip("continue");
+    sb.ip("continue");
+    if( _d > 0 ) sb.p(" ").p(enclosing.label());
+    return sb;
   }
 }

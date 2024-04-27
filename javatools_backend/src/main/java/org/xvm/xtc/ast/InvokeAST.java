@@ -86,14 +86,15 @@ public class InvokeAST extends AST {
       case "and" -> new BinOpAST( "&", "", XCons.LONG, _kids );
       case "or"  -> new BinOpAST( "|", "", XCons.LONG, _kids );
       case "xor" -> new BinOpAST( "^", "", XCons.LONG, _kids );
-      case "shiftLeft"  -> new BinOpAST( "<<", "", XCons.LONG, _kids );
-      case "shiftRight" -> new BinOpAST( ">>", "", XCons.LONG, _kids );
-      case "shiftAllRight" -> new BinOpAST( ">>>", "", XCons.LONG, _kids );
+      case "shiftLeft"    -> new BinOpAST( "<<", "", XCons.LONG, _kids );
+      case "shiftRight"   -> new BinOpAST( ">>", "", XCons.LONG, _kids );
+      case "shiftAllRight"-> new BinOpAST( ">>>","", XCons.LONG, _kids );
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
       case "valueOf", "equals", "toInt128", "estimateStringLength", "abs" ->
         new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
+      case "toDec64" -> new NewAST(new AST[]{_kids[0]},XCons.DEC64);
 
       default -> throw XEC.TODO(_meth);
       };
