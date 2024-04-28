@@ -1045,7 +1045,7 @@ public class xRTType
                     {
                     TypeConstant typeParent = idProp.getParentConstant().getType();
                     PropertyInfo infoProp   = frame.poolContext().ensureAccessTypeConstant(
-                            typeParent, Access.PRIVATE).ensureTypeInfo().findProperty(idProp);
+                            typeParent, Access.PRIVATE).ensureTypeInfo().findProperty(idProp, true);
 
                     if (infoProp != null)
                         {

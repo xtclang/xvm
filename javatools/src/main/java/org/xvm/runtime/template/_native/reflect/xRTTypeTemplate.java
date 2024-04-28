@@ -462,7 +462,7 @@ public class xRTTypeTemplate
                 {
                 TypeConstant  typeTarget = idProp.getClassIdentity().getType();
                 TypeInfo      infoTarget = typeTarget.ensureTypeInfo();
-                PropertyInfo  infoProp   = infoTarget.findProperty(idProp);
+                PropertyInfo  infoProp   = infoTarget.findProperty(idProp, true);
                 ObjectHandle  hProperty  = xRTProperty.makeHandle(frame, typeTarget, infoProp);
 
                 return Op.isDeferred(hProperty)

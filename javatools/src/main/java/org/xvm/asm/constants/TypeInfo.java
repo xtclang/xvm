@@ -1210,6 +1210,14 @@ public class TypeInfo
      */
     public PropertyInfo findProperty(PropertyConstant id)
         {
+        return findProperty(id, false);
+        }
+
+    /**
+     * Implementation of "findProperty" above, allowing for a duck-typed properties at runtime.
+     */
+    public PropertyInfo findProperty(PropertyConstant id, boolean fRuntime)
+        {
         PropertyInfo infoProp = f_mapProps.get(id);
         if (infoProp != null)
             {
@@ -1240,7 +1248,7 @@ public class TypeInfo
         if (id.isTopLevel())
             {
             infoProp = findProperty(id.getName());
-            return infoProp != null && infoProp.isIdentityValid(id) ? infoProp : null;
+            return infoProp != null && (fRuntime || infoProp.isIdentityValid(id)) ? infoProp : null;
             }
 
         int    cDeep   = id.getNestedDepth();
@@ -1251,7 +1259,7 @@ public class TypeInfo
             if (idThat.getNestedDepth() == cDeep && nidThis.equals(idThat.getNestedIdentity()))
                 {
                 infoProp = entry.getValue();
-                if (infoProp.isIdentityValid(id))
+                if (fRuntime || infoProp.isIdentityValid(id))
                     {
                     return infoProp;
                     }

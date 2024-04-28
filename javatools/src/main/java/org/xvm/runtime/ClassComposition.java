@@ -288,14 +288,14 @@ public class ClassComposition
     @Override
     public boolean isInjected(PropertyConstant idProp)
         {
-        PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp);
+        PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
         return infoProp != null && infoProp.isInjected();
         }
 
     @Override
     public boolean isAtomic(PropertyConstant idProp)
         {
-        PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp);
+        PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
         return infoProp != null && infoProp.isAtomic();
         }
 
@@ -744,7 +744,7 @@ public class ClassComposition
         TypeConstant type     = getInceptionType();
         TypeInfo     infoType = type.ensureTypeInfo();
         PropertyInfo infoProp = nid instanceof PropertyConstant idProp
-                ? infoType.findProperty(idProp)
+                ? infoType.findProperty(idProp, true)
                 : infoType.findProperty((String) nid);
         return infoProp == null ? null : infoProp.inferImmutable(type);
         }
@@ -754,7 +754,7 @@ public class ClassComposition
      */
     public PropertyInfo getPropertyInfo(PropertyConstant idProp)
         {
-        return getInceptionType().ensureTypeInfo().findProperty(idProp);
+        return getInceptionType().ensureTypeInfo().findProperty(idProp, true);
         }
 
     @Override

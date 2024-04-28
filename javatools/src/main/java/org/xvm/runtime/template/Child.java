@@ -22,7 +22,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public class Child
         extends xObject
     {
-    public Child(Container container, ClassStructure structure, boolean fInstance)
+    public Child(Container container, ClassStructure structure)
         {
         super(container, structure, false);
 

@@ -337,7 +337,7 @@ public abstract class Container
                 case CLASS:
                 case INTERFACE:
                     temp = structClass.isInstanceChild()
-                        ? new Child(this,   structClass, false)
+                        ? new Child(this,   structClass)
                         : new xObject(this, structClass, false);
                     break;
 

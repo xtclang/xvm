@@ -960,7 +960,7 @@ public abstract class ClassTemplate
                                     int iReturn)
         {
         TypeInfo     info      = hThis.getType().ensureTypeInfo();
-        PropertyInfo prop      = info.findProperty(idProp);
+        PropertyInfo prop      = info.findProperty(idProp, true);
         Annotation   anno      = prop.getRefAnnotations()[0];
         Constant[]   aParams   = anno.getParams();
         Constant     constName = aParams.length == 0 ? null : aParams[0];
