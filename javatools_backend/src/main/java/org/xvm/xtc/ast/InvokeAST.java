@@ -105,6 +105,7 @@ public class InvokeAST extends AST {
       return switch( _meth ) {
       case "add" -> new BinOpAST( "+", "", XCons.CHAR, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.CHAR, _kids );
+      case "toInt64" -> _kids[0]; // no-op cast
       case "asciiDigit" -> {
         InvokeAST inv = new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
         inv._cond = true;
@@ -126,8 +127,8 @@ public class InvokeAST extends AST {
       }
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
-      case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
-      case "equals", "split" -> this;
+      case "quoted", "iterator" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
+      case "equals", "split", "endsWith", "startsWith" -> this;
       case "indexOf" -> {
         castInt(2);                         // Force index to be an int not a long
         if( _type!=XCons.BOOL ) yield this; // Return int result

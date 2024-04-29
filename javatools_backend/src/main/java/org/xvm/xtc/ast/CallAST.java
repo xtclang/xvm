@@ -50,9 +50,9 @@ public class CallAST extends AST {
     String clz  = con._con.substring(0,lidx);
     String base = con._con.substring(lidx+1);
     AST ast = switch( base ) {
-    case "hashCode" ->  _kids[2];
-    case "equals"   ->  new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
-    case "compare"  ->  new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
+    case "hashCode" ->  _kids.length!=3 ? null : _kids[2];
+    case "equals"   ->  _kids.length!=4 ? null : new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
+    case "compare"  ->  _kids.length!=4 ? null : new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
     default -> null;
     };
     if( ast==null ) return this; // Not a funky dispatch

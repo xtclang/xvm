@@ -124,6 +124,9 @@ public abstract class XValue {
         yield ASB.p( S.java_class_name(mod._name));
       if( con0.part() instanceof PropPart prop )
         yield ASB.p(PropBuilder.jname(prop)).p("$get()");
+      if( con0.part() instanceof ClassPart clz )
+        yield ASB.p( S.java_class_name(clz._name)).p(".GOLD");
+
       throw XEC.TODO();
     }
 

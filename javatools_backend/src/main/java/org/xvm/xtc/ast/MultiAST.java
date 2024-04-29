@@ -101,12 +101,39 @@ public class MultiAST extends AST {
     return this;
   }
 
+  // All parts are simple defs of the same type.
+  // Can use Javas multi-def: "int x0=e0, x1=e1"
+  private XType multiAssign() {
+    if( !(_kids[0] instanceof AssignAST asg) )
+      return null;
+    XType xt = asg.isDef();
+    if( xt==null ) return null;
+    for( AST ast : _kids )
+      if( !(ast instanceof AssignAST asg1) || asg1.isDef()!=xt )
+        return null;
+    return xt;
+  }
+
   @Override public SB jcode(SB sb) {
+    XType xt;
     if( _expr ) {
       // A && B && C && ...
       for( AST kid : _kids )
         kid.jcode(sb).p(" && ");
       return sb.unchar(4); // Undo " && "
+
+    } else if( (xt=multiAssign()) != null ) {
+      // This form is required for for-loops
+      //   int x0=e0, x1=e1, ..., xn=en;
+      xt.str(sb).p(" ");
+      for( AST kid : _kids ) {
+        AssignAST asg = (AssignAST)kid;
+        sb.p(((DefRegAST)asg._kids[0])._name);
+        sb.p(" = ");
+        asg._kids[1].jcode(sb);
+        sb.p(", ");
+      }
+      return sb.unchar(2);
 
     } else {
       // A;

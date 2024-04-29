@@ -349,6 +349,8 @@ public abstract class XType {
         yield XClz.make(mod);
       if( con0.part() instanceof PropPart prop )
         yield XBase.make(PropBuilder.jname(prop),false);
+      if( con0.part() instanceof ClassPart clz )
+        yield XClz.make(clz);
       throw XEC.TODO();
     }
 

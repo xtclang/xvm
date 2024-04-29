@@ -36,6 +36,10 @@ class AssignAST extends AST {
 
 
   @Override XType _type() { return _kids[0]._type; }
+  // If is a simple define, return the type else null
+  XType isDef() {
+    return _op==AsnOp.Asn && _kids[0] instanceof DefRegAST def ? def._type : null;
+  }
 
   @Override public AST rewrite() {
     // Assign of a non-primitive array
@@ -120,15 +124,17 @@ class AssignAST extends AST {
           _kids[0]._par = this;
         }
       } else {
-        // 's' already defined
-        // XTC   s := cond_ret();
-        // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
-        // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
-        // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
-        String tmp = enclosing_block().add_tmp(type);
-        _cond_asgn = _name;
-        _kids[0] = new RegAST(0,tmp,type);
-        _kids[0]._par = this;
+        if( !(_par instanceof MultiAST) && !(_par instanceof WhileAST) ) {
+          // 's' already defined
+          // XTC   s := cond_ret();
+          // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
+          // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
+          // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
+          String tmp = enclosing_block().add_tmp(type);
+          _cond_asgn = _name;
+          _kids[0] = new RegAST(0,tmp,type);
+          _kids[0]._par = this;
+        } // part of a large conditional expression
       }
     }
 

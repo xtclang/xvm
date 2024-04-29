@@ -86,8 +86,8 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
 
   /** @return an iterator */
-  @Override public Iterator<org.xvm.xec.ecstasy.text.String> iterator() { return new IterString(); }
-  public class IterString extends Iterator<org.xvm.xec.ecstasy.text.String> {
+  @Override public Iterator<org.xvm.xec.ecstasy.text.String> iterator() { return new IterXString(); }
+  public class IterXString extends Iterator<org.xvm.xec.ecstasy.text.String> {
     private int _i;
     @Override public org.xvm.xec.ecstasy.text.String next() { return org.xvm.xec.ecstasy.text.String.construct(nextStr()); }
     @Override public String nextStr() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
@@ -96,6 +96,18 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
     // --- Comparable
     public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }
   }
+
+  /** @return an iterator */
+  private class Foo implements Iterable<String> {
+    public IterString iterator() { return new IterString(); }
+  }
+  public Iterable<String> iterStr() { return new Foo(); }
+  private class IterString extends Iterator<String> {
+    private int _i;
+    @Override public String next() { return _es[_i++]; }
+    @Override public boolean hasNext() { return _i<_len; }
+  }
+
 
   // Note that the hashCode() and equals() are not invariant to changes in the
   // underlying array.  If the hashCode() is used (e.g., inserting into a

@@ -1,20 +1,21 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 
 class ForRangeAST extends AST {
   String _label;
   String _tmp;                  // For exploded iterator
-  // _kids[0] == LHS
-  // _kids[1] == RHS
+  // _kids[0] == Var
+  // _kids[1] == Iter
   // _kids[2] == Body
   // _kids[3+] == Special Regs
   static ForRangeAST make( ClzBuilder X ) {
     int nlocals = X.nlocals(); // Count of locals
     AST[] kids = X.kids_bias(3);
-    kids[0] = ast_term(X);     // LHS
-    kids[1] = ast_term(X);     // RHS
+    kids[0] = ast_term(X);     // Var
+    kids[1] = ast_term(X);     // Iter
     kids[2] = ast(X);          // Body
     X.pop_locals(nlocals);     // Pop scope-locals at end of scope
     return new ForRangeAST(kids);
@@ -25,10 +26,19 @@ class ForRangeAST extends AST {
 
   @Override XType _type() { return XCons.VOID; }
 
+  @Override public AST unBox() {
+    AST k0 = _kids[0], k1 = _kids[1];
+    if( !k0._type.primeq() )  return this;
+    if( !k1._type.isa(XCons.ARYSTRING) )  return this;
+    k1._par = _kids[1] = new InvokeAST("iterStr",XCons.ITERSTR,k1);
+    _kids[1]._par = this;
+    return this;
+  }
+
   @Override public AST rewrite() {
     // Primitive iterator?
     // Get a tmp
-    if( _kids[0]._type.primeq() ) {
+    if( _kids[0]._type.zero() ) {
       if( _kids[1]._type instanceof XClz xclz )
         ClzBuilder.add_import(xclz);
       _tmp = enclosing_block().add_tmp(_kids[1]._type);
@@ -37,7 +47,6 @@ class ForRangeAST extends AST {
   }
   @Override void add_label() { if( _label==null ) _label = "label"; }
   @Override String label() { return _label; }
-
 
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();

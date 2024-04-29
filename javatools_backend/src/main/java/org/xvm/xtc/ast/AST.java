@@ -220,7 +220,7 @@ public abstract class AST {
     case DoWhileStmt  ->  DoWhileAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
-    case ForIterableStmt -> ForStmtAST.make(X);
+    case ForIterableStmt -> ForIterStmtAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
     case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);

@@ -165,7 +165,7 @@ public class ClzBuilder {
     // Get a GOLDen instance for faster special dispatch rules.
     // Use the sentinel "Never" type to get a true Java no-arg constructor
     if( !is_iface ) {
-      _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
+      _sb.ifmt("public static final %0 GOLD = new %0((Never)null);\n",java_class_name);
       _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     }
 
@@ -687,12 +687,10 @@ public class ClzBuilder {
   // Name mangle for java rules
   public static String jname( String name ) {
     // Mangle names colliding with java keywords
-    if( switch( name ) {
-    case "default" -> true;
-    case "assert" -> true;
-    default -> false;
-      } )
-      name += "0";
-    return name;
+    return switch( name ) {
+    case "default", "assert", "char" -> name+"0";
+    case "_" -> "$ignore";
+    default -> name;
+    };
   }
 }
