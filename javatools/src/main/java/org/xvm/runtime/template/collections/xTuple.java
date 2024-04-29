@@ -804,7 +804,7 @@ public class xTuple
             TypeConstant[] atypeOrig   = type.getParamTypesArray();
             TypeConstant[] atypeActual = null;
 
-            for (int i = 0, c = ahValue.length; i < c; i++)
+            for (int i = 0, c = Math.min(ahValue.length, atypeOrig.length); i < c; i++)
                 {
                 ObjectHandle hValue = ahValue[i];
                 if (hValue == null)

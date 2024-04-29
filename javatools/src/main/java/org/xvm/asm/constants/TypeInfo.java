@@ -1302,6 +1302,8 @@ public class TypeInfo
      * If the specified property is not visible directly by this TypeInfo due to the private access,
      * obtain its origin's TypeInfo.
      *
+     * Note: this method is used only by the runtime.
+     *
      * @param idProp  the property id
      *
      * @return the TypeInfo for the origin's type or null if not found
@@ -1314,7 +1316,7 @@ public class TypeInfo
             TypeConstant typeOrigin = origin.getType();
             TypeInfo     infoOrigin = pool().ensureAccessTypeConstant(typeOrigin, Access.PRIVATE).
                                             ensureTypeInfo();
-            if (infoOrigin.findProperty(idProp) != null)
+            if (infoOrigin.findProperty(idProp, true) != null)
                 {
                 return infoOrigin;
                 }
@@ -1708,7 +1710,7 @@ public class TypeInfo
      */
     public MethodBody[] getOptimizedGetChain(PropertyConstant id)
         {
-        PropertyInfo prop = findProperty(id);
+        PropertyInfo prop = findProperty(id, true);
         if (prop == null)
             {
             TypeInfo infoOrigin = findPropertyOrigin(id);
@@ -1731,7 +1733,7 @@ public class TypeInfo
      */
     public MethodBody[] getOptimizedSetChain(PropertyConstant id)
         {
-        PropertyInfo prop = findProperty(id);
+        PropertyInfo prop = findProperty(id, true);
         if (prop == null)
             {
             TypeInfo infoOrigin = findPropertyOrigin(id);
