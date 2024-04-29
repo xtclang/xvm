@@ -165,7 +165,7 @@ public class ClzBuilder {
     // Get a GOLDen instance for faster special dispatch rules.
     // Use the sentinel "Never" type to get a true Java no-arg constructor
     if( !is_iface ) {
-      _sb.ifmt("static final %0 GOLD = new %0((Never)null);\n",java_class_name);
+      _sb.ifmt("public static final %0 GOLD = new %0((Never)null);\n",java_class_name);
       _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     }
 
@@ -334,7 +334,7 @@ public class ClzBuilder {
     if( _is_module ) {
         Part prun = _clz._name2kid.get("run");
         if( prun!=null ) {
-          MethodPart run =  (MethodPart)(((MMethodPart)prun)._name2kid.get("run"));
+          MethodPart run = (MethodPart)prun._name2kid.get("run");
           if( run._args != null ) {
             add_import(XCons.ARYSTRING);
             _sb.ip("public void run() { run(new AryString()); }").nl();
@@ -512,7 +512,7 @@ public class ClzBuilder {
       // method - which has the normal no-arg Java constructor already called -
       // but now the XTC constructor method needs to end in a Java return.
       if( constructor )
-        blk = blk.add(new ReturnAST(null,m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
+        blk = blk.add(new ReturnAST(m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
       blk.jcode(_sb);
       _sb.nl();
     }
@@ -600,16 +600,22 @@ public class ClzBuilder {
       // qualified name everywhere.
       String tqual = tclz.qualified_name();
       String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
+      boolean progress;
       if( old!=null && !S.eq(old,tqual) ) {
         tclz._ambiguous=true;   // Use fully qualified name
-        ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
+        progress = ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
       } else {
         // Import the qualified name, but use the shortcut name everywhere
-        ClzBuilder.IMPORTS.add(tqual);
+        progress = ClzBuilder.IMPORTS.add(tqual);
       }
       // Needs a build also
       if( tclz.needs_build() )
         ClzBldSet.add(tclz._clz);
+      // Catch nested generic types
+      if( progress )
+        for( XType xt : tclz._xts )
+          if( xt instanceof XClz xclz_nest )
+            add_import(xclz_nest);
     }
     return tclz;
   }
@@ -623,7 +629,7 @@ public class ClzBuilder {
   public AST ast( MethodPart m ) {
     // Build the AST from bytes
     _meth = m;
-    _pool = new CPool(m._ast,m._cons); // Setup the constant pool parser
+    _pool = new CPool(m._ast,m._cons); // Set up the constant pool parser
     AST ast = AST.parse(this);
     // Set types in every AST
     ast.doType(null);
@@ -681,12 +687,10 @@ public class ClzBuilder {
   // Name mangle for java rules
   public static String jname( String name ) {
     // Mangle names colliding with java keywords
-    if( switch( name ) {
-    case "default" -> true;
-    case "assert" -> true;
-    default -> false;
-      } )
-      name += "0";
-    return name;
+    return switch( name ) {
+    case "default", "assert", "char" -> name+"0";
+    case "_" -> "$ignore";
+    default -> name;
+    };
   }
 }

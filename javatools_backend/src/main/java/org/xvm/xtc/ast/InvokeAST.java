@@ -77,9 +77,7 @@ public class InvokeAST extends AST {
       case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL",XCons.LONG ));
       case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL",XCons.LONG ));
       case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL",XCons.LONG ));
-      case "eq"  ->
-              this;
-        //new BinOpAST( "==","", XCons.LONG, _kids );
+      case "eq"  -> this; //new BinOpAST( "==","", XCons.LONG, _kids );
       case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "mul" -> new BinOpAST( "*", "", XCons.LONG, _kids );
@@ -88,14 +86,15 @@ public class InvokeAST extends AST {
       case "and" -> new BinOpAST( "&", "", XCons.LONG, _kids );
       case "or"  -> new BinOpAST( "|", "", XCons.LONG, _kids );
       case "xor" -> new BinOpAST( "^", "", XCons.LONG, _kids );
-      case "shiftLeft"  -> new BinOpAST( "<<", "", XCons.LONG, _kids );
-      case "shiftRight" -> new BinOpAST( ">>", "", XCons.LONG, _kids );
-      case "shiftAllRight" -> new BinOpAST( ">>>", "", XCons.LONG, _kids );
+      case "shiftLeft"    -> new BinOpAST( "<<", "", XCons.LONG, _kids );
+      case "shiftRight"   -> new BinOpAST( ">>", "", XCons.LONG, _kids );
+      case "shiftAllRight"-> new BinOpAST( ">>>","", XCons.LONG, _kids );
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
-      case "valueOf", "equals", "toInt128", "estimateStringLength" ->
+      case "valueOf", "equals", "toInt128", "estimateStringLength", "abs" ->
         new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
+      case "toDec64" -> new NewAST(new AST[]{_kids[0]},XCons.DEC64);
 
       default -> throw XEC.TODO(_meth);
       };
@@ -106,6 +105,7 @@ public class InvokeAST extends AST {
       return switch( _meth ) {
       case "add" -> new BinOpAST( "+", "", XCons.CHAR, _kids );
       case "sub" -> new BinOpAST( "-", "", XCons.CHAR, _kids );
+      case "toInt64" -> _kids[0]; // no-op cast
       case "asciiDigit" -> {
         InvokeAST inv = new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
         inv._cond = true;
@@ -127,8 +127,8 @@ public class InvokeAST extends AST {
       }
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
-      case "quoted" ->  new InvokeAST("quoted",_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
-      case "equals", "split" -> this;
+      case "quoted", "iterator" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
+      case "equals", "split", "endsWith", "startsWith" -> this;
       case "indexOf" -> {
         castInt(2);                         // Force index to be an int not a long
         if( _type!=XCons.BOOL ) yield this; // Return int result
@@ -143,7 +143,10 @@ public class InvokeAST extends AST {
 
     if( k0t instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
       switch( _meth ) {
-      case "next":  _meth = "next8"; break;  // Use the primitive iterator
+      case "next":              // Use the primitive iterator
+        if( clz._xts[0].isa(XCons.INTNUM) )  _meth = "next8";
+        else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
+        break;
       case "whileEach", "untilAny", "limit", "take", "forEach": break;
       default: throw XEC.TODO();
       };
@@ -168,8 +171,12 @@ public class InvokeAST extends AST {
   @Override XType reBox( AST kid ) {
     if( _args==null ) return kid._type;
     if( kid instanceof NewAST ) return null; // Already boxed
-    if( _kids[0]._type instanceof XBase ) return null;
-    if( !((XClz)_kids[0]._type)._jname.isEmpty() ) return null; // "this" ptr is a Java special, will have primitive arg version
+    switch( _kids[0]._type ) {
+    case XBase  base : return null;
+    case XInter in   : return null;
+    case XClz clz when !clz._jname.isEmpty(): return null; // "this" ptr is a Java special, will have primitive arg version
+    default: break;
+    }
     int idx = S.find(_kids,kid);
     if( idx==0 ) return null; // The "this" ptr never boxes
     // Expected args type vs provided kids[idx]._type

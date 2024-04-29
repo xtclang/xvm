@@ -74,15 +74,21 @@ class UniOpAST extends AST {
     if( is_trace() )
       return new InvokeAST("TRACE",_type,new ConAST("XTC"),_kids[0]).doType();
     if( is_elvis() ) {
+      // See Elvis comment in {@link MultiAST}.  If the elvis type itself is
+      // Boolean, we null/zero check it in-place.
+      if( _type==XCons.BOOL )
+        return new BinOpAST("!=","",_type,_kids[0],new ConAST("null",XCons.NULL));
+
       // Find the "elvis top" - the point where we make the subexpression
       // conditional on the "elvis" existing.
       for( AST par = _par, old = this; true; old = par, par = par._par )
         switch( par ) {
-        case TernaryAST ttop: return ttop.doElvis( _kids[0] );
+        case TernaryAST ttop: return ttop.doElvis(_kids[0]);
         case MultiAST   mtop: return mtop.doElvis(_kids[0],old);
         case AssertAST  asrt: return asrt.doElvis(_kids[0]);
         default: break;
         }
+      // Cannot reach here
     } // End of Elvis
 
 
@@ -99,6 +105,8 @@ class UniOpAST extends AST {
       if( S.eq("!=",bin._op0) ) { bin._op0="=="; return bin; }
       if( S.eq("==",bin._op0) ) { bin._op0="!="; return bin; }
     }
+    if( S.eq("-",_pre) && _kids[0]._type instanceof XClz clz )
+      return new InvokeAST("neg",clz,_kids[0]);
 
     return this;
   }

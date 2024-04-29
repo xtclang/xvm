@@ -42,6 +42,7 @@ public class Int64 extends IntNumber {
   // All the XTC types here are guaranteed to be Int64
   @Override public boolean equals ( XTC x0, XTC x1 ) { return ((Int64)x0)._i == ((Int64)x1)._i; }
   public static <E extends Int64> boolean equals$Int64(XTC gold, E i0, long i1 ) { return i0._i==i1; }
+  public static <E extends Int64> boolean equals$Int64(XTC gold, E i0, E    i1 ) { return i0._i==i1._i; }
   @Override public long hashCode(XTC x) { return ((Int64)x)._i; }
   @Override public Ordered compare( XTC x0, XTC x1 ) {
     long i0 = ((Int64)x0)._i;

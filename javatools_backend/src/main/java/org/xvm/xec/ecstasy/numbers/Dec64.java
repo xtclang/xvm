@@ -20,7 +20,7 @@ import java.math.RoundingMode;
 */
 public class Dec64 extends DecimalFPNumber {
   public static final Dec64 GOLD = new Dec64((Never)null);
-  
+
   static final MathContext[] MATHCONTEXTS = new MathContext[]{
     new MathContext(64,RoundingMode.HALF_EVEN),
     new MathContext(64,RoundingMode.UP       ),
@@ -31,12 +31,12 @@ public class Dec64 extends DecimalFPNumber {
 
   private final long _dec64;
   private final BigDecimal _bd;
-  
+
   public Dec64(Never n ) { _bd=null; _dec64=0; }
   public Dec64(BigDecimal bd) {
     _bd = bd;
     _dec64 = Dec64Con.toLongBits(_bd);
-  }    
+  }
   public Dec64(String s) { this(new BigDecimal(s,MathContext.DECIMAL64)); }
   public Dec64(double d) { this(new BigDecimal(d)); }
   public static Dec64 construct( AryXTC<Bit> bits ) { return new Dec64(bits); }
@@ -57,12 +57,15 @@ public class Dec64 extends DecimalFPNumber {
   }
 
   public static Dec64 construct( long d ) { return new Dec64((double)d); }
-  
+
   public Dec64 ceil()  { return new Dec64(_bd.setScale(0,RoundingMode.CEILING)); }
   public Dec64 floor() { return new Dec64(_bd.setScale(0,RoundingMode.FLOOR  )); }
   public Dec64 round(DecimalFPNumber.Rounding rnd) {
     return new Dec64(_bd.setScale(0,DecimalFPNumber.ROUNDINGMODE[rnd.ordinal()]));
   }
+
+  public Dec64 mul( Dec64 dec )  { return new Dec64(_bd.multiply(dec._bd)); }
+  public Dec64 div( Dec64 dec )  { return new Dec64(_bd.divide  (dec._bd)); }
 
   public Dec128 toDec128() { throw XEC.TODO(); }
   public AryXTC<Bit> toBitArray(Array.Mutability mut) {
@@ -77,7 +80,7 @@ public class Dec64 extends DecimalFPNumber {
       bs[i] = (byte)(_dec64>>(i*8));
     return new AryUInt8(mut,bs);
   }
-  
+
   // --- Stringable
   @Override public String toString() { return _bd.toString(); }
   // --- Comparable

@@ -61,6 +61,7 @@ public abstract class XCons {
   public static XClz TYPE        = make_java("ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
+  public static XClz SIGNUM  = make_java("ecstasy.numbers.Number","Signum",ENUM);
   public static XClz BIT     = make_java("ecstasy.numbers","Bit",CONST);
 
   public static XClz INTNUM  = make_java("ecstasy.numbers","IntNumber" ,NUMBER);
@@ -147,7 +148,8 @@ public abstract class XCons {
   // Type sig for Iterator<Int64>, which returns a non-XTC type "Iteratorlong"
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
-  static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,null,JLONG);
+  public static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,"Element",JLONG  );
+  public static XClz ITERSTR = make_java("ecstasy.collections.AryString", "IterString","ecstasy","Iterator",null,"Element",JSTRING);
 
   // These are always expanded to some Java constant
   public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);

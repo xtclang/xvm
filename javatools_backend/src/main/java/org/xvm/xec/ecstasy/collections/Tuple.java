@@ -105,7 +105,11 @@ public interface Tuple extends Cloneable {
     // Abstract accessors
     for( int i=0; i<N; i++ ) {
       XClz clz = xtt.typeParm(i).box();
-      sb.ifmt("public %0 f%1() { return %0.make(_f%1); }\n",clz.clz_bare(),i);
+      sb.ifmt("public %0 f%1() { return ",clz.clz_bare(),i);
+      if( clz==xtt.typeParm(i) )  sb.fmt("_f%0",i);
+      // Box prims
+      else   sb.fmt("%0.make(_f%1)",clz.clz_bare(),i);
+      sb.p("; }\n");
     }
     // Abstract setters
     for( int i=0; i<N; i++ ) {

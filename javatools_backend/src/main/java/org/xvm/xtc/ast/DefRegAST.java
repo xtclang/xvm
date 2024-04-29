@@ -8,7 +8,7 @@ import org.xvm.util.SB;
 
 class DefRegAST extends AST {
   final String _name;
-  String _init;
+  final String _init;
   int _reg;                     // Register number
 
   static DefRegAST make( ClzBuilder X, boolean named, boolean initd ) {
@@ -24,11 +24,7 @@ class DefRegAST extends AST {
     _type = XType.xtype(type,false);
     if( _type instanceof XClz clz )
       ClzBuilder.add_import(clz);
-    if( name==null ) _name = null;
-    else {
-      String s = ((StringCon)name)._str;
-      _name = S.eq(s,"_") ? "$ignore" : s;
-    }
+    _name = name==null ? null : ClzBuilder.jname(((StringCon)name)._str);
 
     if( init instanceof AnnotTCon anno ) {
       _init = XValue.val (X,anno);

@@ -118,7 +118,7 @@ module TestMisc {
         Int b = 45;
         // this is an error: console.print("a=" + a + ", b=" + b + ", a?:b=" + (a ?: b));
 
-        Int? c = a;
+        Int? c = a > 0 ? a : Null;
         console.print("c=" + c + ", b=" + b + ", c?:b=" + (c ?: b));
 
         static Int? trustMeItMightNotBeNull() {
@@ -132,8 +132,8 @@ module TestMisc {
     void testElseExpr() {
         console.print("\n** testElseExpr()");
 
-        IntLiteral? a = Null;
         Int b = 7;
+        IntLiteral? a = b > 0 ? Null : 17;
         console.print("a=" + a + ", b=" + b + ", a?.toInt64():b=" + (a?.toInt64():b));
 
         if (b==7) {
@@ -322,7 +322,7 @@ module TestMisc {
         s := checkPositive(99);
         console.print($"99 => {s}");
 
-        String? s2 = s;
+        String? s2 = s.size > 0 ? s : Null;
         if (String s3 ?= s2) {
             console.print($"value is not Null: {s3}");
         } else {
@@ -353,7 +353,8 @@ module TestMisc {
     void testAssignOps() {
         console.print("\n** testAssignOps()");
 
-        Int? n = Null;
+        Boolean f0 = True;
+        Int? n = f0 ? Null : -1;
         n ?:= 4;
         console.print("n=" + n + " (should be 4)");
 

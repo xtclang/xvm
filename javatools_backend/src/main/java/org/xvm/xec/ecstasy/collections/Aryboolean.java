@@ -113,8 +113,7 @@ public class Aryboolean extends Array<Boolean> {
   @Override public Iterboolean iterator() { return new Iterboolean(); }
   public class Iterboolean extends Iterator<Boolean> {
     private int _i;
-    @Override public Boolean next() { return Boolean.make(next8()); }
-    public boolean next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public Boolean next() { return Boolean.make(XRuntime.SET$COND(hasNext(), _es[_i++])); }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return _i+".."+_len; }
     // --- Comparable

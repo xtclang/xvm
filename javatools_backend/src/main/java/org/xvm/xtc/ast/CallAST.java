@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
 import org.xvm.xtc.cons.ParamTCon;
@@ -49,9 +50,9 @@ public class CallAST extends AST {
     String clz  = con._con.substring(0,lidx);
     String base = con._con.substring(lidx+1);
     AST ast = switch( base ) {
-    case "hashCode" ->  _kids[2];
-    case "equals"   ->  new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
-    case "compare"  ->  new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
+    case "hashCode" ->  _kids.length!=3 ? null : _kids[2];
+    case "equals"   ->  _kids.length!=4 ? null : new BinOpAST("==" ,"",XCons.BOOL,_kids[2],_kids[3]);
+    case "compare"  ->  _kids.length!=4 ? null : new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
     default -> null;
     };
     if( ast==null ) return this; // Not a funky dispatch
@@ -59,8 +60,13 @@ public class CallAST extends AST {
     // Primitive funky dispatch goes to Java operators
     AST k1 = _kids[1];
     AST k2 = _kids[2];
-    if( k2._type instanceof XBase && k2._type != XCons.STRING )
-      return ast;
+    if( k2._type instanceof XBase ) {
+      if( k2._type != XCons.STRING && k2._type != XCons.STRINGN )
+        return ast;
+      clz = XCons.JSTRING.clz();
+      ((ConAST)k1)._con = null;
+      ((ConAST)k1)._type= XCons.NULL;
+    }
 
     if( k1 instanceof ConAST ) {
       // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name
@@ -110,7 +116,9 @@ public class CallAST extends AST {
   }
 
   @Override void jmid ( SB sb, int i ) {
-    sb.p( i==0 ? (_kids[0] instanceof RegAST ? ".call(": "(") : ", " );
+    if( i>0 ) { sb.p(", "); return; }
+    AST kid = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
+    sb.p( (kid instanceof RegAST ? ".call(": "(") );
   }
   @Override void jpost( SB sb ) {
     if( _kids.length > 1 )

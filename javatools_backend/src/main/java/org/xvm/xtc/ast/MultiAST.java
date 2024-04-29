@@ -1,14 +1,13 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
+import org.xvm.util.Ary;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
-import org.xvm.XEC;
 
 public class MultiAST extends AST {
   final boolean _expr;
-  private AST[] _elves;         // Elvis index
-  private String[] _etmps;      // Elvis temps
   static MultiAST make( ClzBuilder X, boolean expr) {
     int len = X.u31();
     AST[] kids = new AST[len];
@@ -29,40 +28,112 @@ public class MultiAST extends AST {
     return XCons.BOOL;
   }
 
-  // THIS:    ( ...e0 ?. e1..., more);
-  // MAPS TO: ((e0==null || (...e0.e1...)) && more)
+
+  // General Elvis Rule
+  // MultiAST
+  //   e0 && e1 && e2 ... && en
+
+  // Suppose e1 is AST tree with ELVIS(evar).  e1 is typed boolean.
+  // "evar" is some expression with side effects.
+
+  // If ELVIS is not a boolean, we need to insert a test and do e1 afterwards:
+  //   e0 && (tmp=evar)!=null && e1[tmp/evar] && e2 ... && en
+  // Replacing evar with a tmp to avoid repeating side effects.
+  // If e1 has several ELVIS's, they all need to have their tests hoisted:
+  //   e1 === foo(ELVIS(v1),ELVIS(v2),ELVIS(v3))
+  // Then we get:
+  //   e0 && (tmp1=v1)!=null && (tmp2=v2)!=null && (tmp3=v3)!=null && foo(tmp1,tmp2,tmp3) && e2 .... && en
+
+  // If ELVIS typed boolean, then it must be directly being tested in Multi.
+  // The test e1 below might include {narrowing, TRACE, negate} at least.
+  //   e0 && e1(ELVIS(evar)) && e2 && ...
+  // We need to replace with a null/zero test inline:
+  //   e0 && e1(evar!=null) && e2 ... && en
+  // In this case no tmp and no seperate test expression.
+
+  private Ary<Elf> _elves;      // Elvis variable list
+  private static class Elf {    // Elvis tests to be inserted
+    int _idx; AST _var; String _tmp;
+    Elf(int idx, AST var, String tmp) { _idx=idx; _var=var; _tmp=tmp; }
+  }
+
+    // Collect an Elvis test to be inserted
   AST doElvis( AST elvis, AST old ) {
-    if( _elves==null ) { _elves = new AST[_kids.length]; _etmps = new String[_kids.length]; }
-    int idx = S.find(_kids,old);
-    _elves[idx] = elvis;
-    // Drop the elvis buried inside the expression and return a clone
-    _etmps[idx] = enclosing_block().add_tmp(elvis._type);
-    return new RegAST(-1,_etmps[idx],elvis._type);
+    if( _elves==null ) _elves = new Ary<>(Elf.class);
+    // Drop the elvis buried inside the expression and return a tmp
+    String tmp = enclosing_block().add_tmp(elvis._type);
+    _elves.push(new Elf(S.find(_kids,old),elvis,tmp));
+    return new RegAST(-1,tmp,elvis._type);
   }
 
   @Override public AST rewrite() {
-    if( _elves != null )
-      for( int i=0; i<_elves.length; i++ )
-        if( _elves[i] != null ) {
-          // Replace Elvis expression:
-          //    A && (expr(elvis)) && C
-          //    A && ( ((tmp=elvis)==null) || expr(tmp)) && C
-          AST reg = new RegAST(-1,_etmps[i],_elves[i]._type);
-          AST asg = new AssignAST(reg,_elves[i]);   reg._par = _elves[i]._par = asg;
-          ConAST con = new ConAST("null");
-          BinOpAST eq = new BinOpAST("==","",XCons.BOOL,con,asg);   con._par = asg._par = eq;
-          BinOpAST or = new BinOpAST("||","",XCons.BOOL,eq,_kids[i]); eq._par = _kids[i]._par = or;
-          return or;
-        }
+    // Insert all Elvis tests
+    if( _elves != null ) {
+      AST[] kids = new AST[_kids.length+_elves._len];
+      int i=0, j=0;
+      for( Elf elf : _elves ) {
+        while( i<elf._idx )  kids[j++] = _kids[i++];
+        // Insert Elvis expression:
+        //    A && (expr(elvis)) && C
+        //    A && ((tmp=elvis)!=null) && expr(tmp) && C
+        AST reg = new RegAST(-1,elf._tmp,elf._var._type);
+        AST asg = new AssignAST(reg,elf._var);   reg._par = elf._var._par = asg;
+        ConAST con = new ConAST("null");
+        BinOpAST eq = new BinOpAST("!=","",XCons.BOOL,asg,con);   con._par = asg._par = eq;
+        kids[j++] = eq;
+      }
+      while( i<_kids.length )  kids[j++] = _kids[i++];
+      return new MultiAST(_expr,kids);
+    }
+
+    // See if part of a conditional return:  "return pred ? (True,bar) : (True,baz)"
+    if( _expr && _kids[0] instanceof ConAST con && S.eq(con._con,"true") ) {
+      AST par = _par;
+      while( par instanceof TernaryAST )
+        par = par._par;
+      if( par instanceof ReturnAST ret && ret._cond ) {
+        // Already got the "true" part done, just report the content
+        ret._cond_true = true;
+        return _kids[1];
+      }
+    }
+
     return this;
   }
 
+  // All parts are simple defs of the same type.
+  // Can use Javas multi-def: "int x0=e0, x1=e1"
+  private XType multiAssign() {
+    if( !(_kids[0] instanceof AssignAST asg) )
+      return null;
+    XType xt = asg.isDef();
+    if( xt==null ) return null;
+    for( AST ast : _kids )
+      if( !(ast instanceof AssignAST asg1) || asg1.isDef()!=xt )
+        return null;
+    return xt;
+  }
+
   @Override public SB jcode(SB sb) {
+    XType xt;
     if( _expr ) {
       // A && B && C && ...
       for( AST kid : _kids )
         kid.jcode(sb).p(" && ");
       return sb.unchar(4); // Undo " && "
+
+    } else if( (xt=multiAssign()) != null ) {
+      // This form is required for for-loops
+      //   int x0=e0, x1=e1, ..., xn=en;
+      xt.str(sb).p(" ");
+      for( AST kid : _kids ) {
+        AssignAST asg = (AssignAST)kid;
+        sb.p(((DefRegAST)asg._kids[0])._name);
+        sb.p(" = ");
+        asg._kids[1].jcode(sb);
+        sb.p(", ");
+      }
+      return sb.unchar(2);
 
     } else {
       // A;
