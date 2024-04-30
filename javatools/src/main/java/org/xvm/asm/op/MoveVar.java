@@ -96,18 +96,25 @@ public class MoveVar
 
     protected int complete(Frame frame, ObjectHandle hReferent)
         {
+        int     nFrom    = m_nFromValue;
         int     nTo      = m_nToValue;
         boolean fNextReg = frame.isNextRegister(nTo);
 
         RefHandle hRef;
         if (fNextReg || nTo == Op.A_STACK)
             {
-            TypeConstant typeReferent = hReferent == null
-                    ? frame.poolContext().typeObject()
-                    : hReferent.getType();
+            TypeConstant typeReferent = hReferent == null ? null : hReferent.getType();
+
+            // the ref type must be "known" by this container
+            if (typeReferent == null || !typeReferent.isShared(frame.poolContext()))
+                {
+                typeReferent = nFrom == Op.A_STACK
+                        ? frame.poolContext().typeObject()
+                        : frame.getVarInfo(nFrom).getType();
+                }
             TypeComposition clzRef = xVar.INSTANCE.
                     ensureParameterizedClass(frame.f_context.f_container, typeReferent);
-            hRef = new RefHandle(clzRef, frame, m_nFromValue);
+            hRef = new RefHandle(clzRef, frame, nFrom);
             if (fNextReg)
                 {
                 frame.introduceResolvedVar(nTo, hRef.getType());
@@ -116,7 +123,7 @@ public class MoveVar
         else
             {
             TypeComposition clzRef = frame.getVarInfo(nTo).getType().ensureClass(frame);
-            hRef = new RefHandle(clzRef, frame, m_nFromValue);
+            hRef = new RefHandle(clzRef, frame, nFrom);
             }
 
         // the destination type must be the same as the source

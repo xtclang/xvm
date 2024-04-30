@@ -1004,16 +1004,9 @@ public class Frame
      */
     public int assignFutureResult(int iReturn, CompletableFuture<ObjectHandle> cfResult)
         {
-        if (cfResult.isDone() && !cfResult.isCompletedExceptionally())
+        if (cfResult.isDone())
             {
-            try
-                {
-                return assignValue(iReturn, cfResult.get());
-                }
-            catch (Throwable e)
-                {
-                assert false; // must not happen
-                }
+            return xFutureVar.assignCompleted(this, cfResult, iReturn);
             }
 
         if (isFutureVar(iReturn))

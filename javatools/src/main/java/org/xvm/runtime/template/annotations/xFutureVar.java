@@ -814,6 +814,26 @@ public class xFutureVar
         return ensureClass(container, typeReferent.getConstantPool().ensureFutureVar(typeReferent));
         }
 
+    /**
+     * Helper method to assign a result of the completed future.
+     */
+    public static int assignCompleted(Frame frame, CompletableFuture<ObjectHandle> cf, int iReturn)
+        {
+        try
+            {
+            // services may replace "null" elements of a negative conditional return
+            // with the DEFAULT values (see ServiceContext.sendResponse)
+            ObjectHandle hValue = cf.get();
+            return hValue == ObjectHandle.DEFAULT
+                ? Op.R_NEXT
+                : frame.assignValue(iReturn, hValue);
+            }
+        catch (Throwable e)
+            {
+            return frame.raiseException(Utils.translate(e));
+            }
+        }
+
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -948,19 +968,7 @@ public class xFutureVar
             CompletableFuture<ObjectHandle> cf = getFuture();
             assert cf.isDone();
 
-            try
-                {
-                // services may replace "null" elements of a negative conditional return
-                // with the DEFAULT values (see ServiceContext.sendResponse)
-                ObjectHandle hValue = cf.get();
-                return hValue == ObjectHandle.DEFAULT
-                        ? Op.R_NEXT
-                        : frame.assignValue(iReturn, hValue);
-                }
-            catch (Throwable e)
-                {
-                return frame.raiseException(Utils.translate(e));
-                }
+            return assignCompleted(frame, cf, iReturn);
             }
 
         @Override
