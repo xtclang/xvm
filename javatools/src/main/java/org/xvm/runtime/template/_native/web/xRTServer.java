@@ -103,11 +103,12 @@ public class xRTServer
     @Override
     public void initNative()
         {
-        markNativeMethod("bindImpl"       , null, VOID);
-        markNativeMethod("addRouteImpl"   , null, VOID);
-        markNativeMethod("removeRouteImpl", null, VOID);
-        markNativeMethod("respond"        , null, VOID);
-        markNativeMethod("close"          , null, VOID);
+        markNativeMethod("bindImpl"        , null, VOID);
+        markNativeMethod("addRouteImpl"    , null, VOID);
+        markNativeMethod("removeRouteImpl" , null, VOID);
+        markNativeMethod("replaceRouteImpl", null, BOOLEAN);
+        markNativeMethod("respond"         , null, VOID);
+        markNativeMethod("close"           , null, VOID);
 
         markNativeMethod("getReceivedAtAddress",   null, null);
         markNativeMethod("getReceivedFromAddress", null, null);
@@ -204,6 +205,9 @@ public class xRTServer
 
             case "addRouteImpl":
                 return invokeAddRoute(frame, (HttpServerHandle) hTarget, ahArg);
+
+            case "replaceRouteImpl":
+                return invokeReplaceRoute(frame, (HttpServerHandle) hTarget, ahArg, iReturn);
 
             case "respond":
                 {
@@ -386,15 +390,41 @@ public class xRTServer
                 }
             }
 
+        RequestHandler handler = createRequestHandler(frame, hWrapper);
+        router.mapRoutes.put(hHostName.getStringValue(), new RouteInfo(handler, hKeystore, sTlsKey));
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Implementation of "Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)" method.
+     */
+    private int invokeReplaceRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg, int iResult)
+        {
+        StringHandle   hHostName = (StringHandle) ahArg[0];
+        ServiceHandle  hWrapper  = (ServiceHandle) ahArg[1];
+        Router         router    = hServer.getRouter();
+        String         sHostName = hHostName.getStringValue();
+        RouteInfo      info      = router.mapRoutes.get(sHostName);
+
+        if (info == null)
+            {
+            return frame.assignValue(iResult, xBoolean.FALSE);
+            }
+
+        RequestHandler handler = createRequestHandler(frame, hWrapper);
+        router.mapRoutes.put(sHostName, new RouteInfo(handler, info.hKeyStore, info.sTlsKey));
+        return frame.assignValue(iResult, xBoolean.TRUE);
+        }
+
+    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper)
+        {
         ClassStructure  clzHandler = hWrapper.getTemplate().getStructure();
         MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 4);
         assert method != null;
 
-        FunctionHandle hFunction = xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
-        RequestHandler handler   = new RequestHandler(hWrapper.f_context, hFunction);
-
-        router.mapRoutes.put(hHostName.getStringValue(), new RouteInfo(handler, hKeystore, sTlsKey));
-        return Op.R_NEXT;
+        FunctionHandle hFunction =
+                xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
+        return new RequestHandler(hWrapper.f_context, hFunction);
         }
 
     /**

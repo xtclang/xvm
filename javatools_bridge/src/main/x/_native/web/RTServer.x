@@ -24,11 +24,9 @@ service RTServer
 
     typedef immutable Object as RequestContext;
 
-    @Override
-    public/private Map<HostInfo, ProxyCheck> bindings = new ListMap();
+    private ListMap<HostInfo, ProxyCheck> bindingsInternal = new ListMap();
 
-    @Override
-    public/private Map<HostInfo, Handler> routes = new HashMap();
+    private HashMap<HostInfo, Handler> routesInternal = new HashMap();
 
 
     // ----- network bindings ----------------------------------------------------------------------
@@ -37,9 +35,9 @@ service RTServer
     void bind(HostInfo binding, ProxyCheck reverseProxy=NoTrustedProxies) {
 
         // at the moment we only support a single mapping
-        assert bindings.empty as "Multiple bindings are not supported";
+        assert bindingsInternal.empty as "Multiple bindings are not supported";
 
-        bindings.put(binding, reverseProxy);
+        bindingsInternal.put(binding, reverseProxy);
 
         String|IPAddress bindAddr = binding.host;
         if (!bindAddr.is(String)) {
@@ -50,14 +48,17 @@ service RTServer
 
     @Override
     Boolean unbind(HostInfo binding) {
-        if (bindings.contains(binding)) {
+        if (bindingsInternal.contains(binding)) {
             // at the moment we only support a single mapping
-            bindings.clear();
+            bindingsInternal.clear();
             close();
             return True;
         }
         return False;
     }
+
+    @Override
+    Map<HostInfo, ProxyCheck> bindings.get() = bindingsInternal.duplicate().makeImmutable();
 
 
     // ----- host routes ---------------------------------------------------------------------------
@@ -78,10 +79,10 @@ service RTServer
         }
 
         // we should be able to replace an exiting route, but must not add any ambiguous ones
-        if (!routes.contains(route)) {
+        if (!routesInternal.contains(route)) {
             UInt16 httpPort  = route.httpPort;
             UInt16 httpsPort = route.httpsPort;
-            if (routes.keys.any(info -> info.host.toString() == hostName &&
+            if (routesInternal.keys.any(info -> info.host.toString() == hostName &&
                                   (info.httpPort == httpPort || info.httpsPort == httpsPort))) {
                 throw new IllegalArgument($"Route is not unique: {route}");
             }
@@ -120,12 +121,22 @@ service RTServer
 
         addRouteImpl(hostName, new HandlerWrapper(handler), keystore, tlsKey);
 
-        routes.put(route, handler);
+        routesInternal.put(route, handler);
     }
 
     @Override
     Boolean replaceRoute(HostInfo|String route, Handler handler) {
-        TODO
+        String hostName;
+        if (route.is(String)) {
+            hostName = route;
+            route    = new HostInfo(route);
+        } else {
+            hostName = route.host.toString();
+        }
+        if (routesInternal.contains(route)) {
+            return replaceRouteImpl(hostName, new HandlerWrapper(handler));
+        }
+        return False;
     }
 
     @Override
@@ -138,13 +149,19 @@ service RTServer
             hostName = route.host.toString();
         }
 
-        if (routes.contains(route)) {
-            routes.remove(route);
+        if (routesInternal.contains(route)) {
+            routesInternal.remove(route);
             removeRouteImpl(hostName);
             return True;
         }
         return False;
     }
+
+    @Override
+    Map<HostInfo, Handler> routes.get() = routesInternal.duplicate().makeImmutable();
+
+
+    // ----- life cycle ----------------------------------------------------------------------------
 
     @Override
     void close(Exception? cause = Null) {TODO("Native");}
@@ -159,6 +176,9 @@ service RTServer
     private void bindImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort) {TODO("Native");}
 
     private void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore keystore, String? tlsKey)
+        {TODO("Native");}
+
+    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)
         {TODO("Native");}
 
     private void removeRouteImpl(String hostName) {TODO("Native");}
@@ -204,7 +224,7 @@ service RTServer
     /**
      * The natural RequestInfo implementation.
      */
-    const RequestInfoImpl
+    class RequestInfoImpl
             implements RequestInfo {
 
         construct(RequestContext context, String uriString, String method, Boolean tls) {
@@ -239,7 +259,7 @@ service RTServer
 
         @Override
         @Lazy HostInfo binding.calc() {
-            assert HostInfo info := bindings.keys.iterator().next();
+            assert HostInfo info := bindingsInternal.keys.iterator().next();
             return info;
         }
 
@@ -248,10 +268,10 @@ service RTServer
             if ((String hostName, UInt16 port) := getClientHost(context)) {
                 HostInfo route;
                 if (tls) {
-                    assert route := routes.keys.any(info ->
+                    assert route := routesInternal.keys.any(info ->
                             info.host.toString() == hostName && info.httpsPort == port);
                 } else {
-                    assert route := routes.keys.any(info ->
+                    assert route := routesInternal.keys.any(info ->
                             info.host.toString() == hostName && info.httpPort == port);
                 }
                 return route;
@@ -272,7 +292,7 @@ service RTServer
 
         @Override
         @Lazy SocketAddress clientAddress.calc() {
-            assert ProxyCheck isTrustedProxy := bindings.get(binding);
+            assert ProxyCheck isTrustedProxy := bindingsInternal.get(binding);
 
             // start with the address that sent the request to this server, and work backwards
             // toward the user agent
