@@ -93,7 +93,7 @@ mixin CatalogMetadata<Schema extends RootSchema>
      *
      * @return a new `ClientConnection` factory of the database represented by the `Catalog`
      */
-    function oodb.Connection(DBUser) ensureConnectionFactory(Catalog catalog) {
+    function ClientConnection(DBUser) ensureConnectionFactory(Catalog catalog) {
         return user -> {
             Client<Schema> client = catalog.createClient(user).as(Client<Schema>);
             return client.conn ?: assert;
