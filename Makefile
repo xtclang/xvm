@@ -37,7 +37,7 @@ ifeq ($(UNAME),Darwin)
 endif
 
 # Fun Args to javac.
-JAVAC_ARGS = -source 21 -target 21 -XDignore.symbol.file -Xlint:-deprecation
+JAVAC_ARGS = --release 21 -XDignore.symbol.file -Xlint:-deprecation
 
 XEC := org/xvm
 
@@ -115,7 +115,7 @@ $(CLZU)/.tag: $(clzesU) $(javasU)
 	$(file > .argsU.txt, $(OODU))
 	@if [ ! -z "$(OODU)" ] ; then \
 	  echo -e "compiling javatools_utils because " $< " and " `wc -w < .argsU.txt` " more files" ; \
-	  javac $(JAVAC_ARGS) -cp "$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZU)/main @.argsU.txt ; \
+	  javac $(JAVAC_ARGS) -cp "$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZU)/main $(OODU) ; \
 	fi
 	@touch $(CLZU)/.tag
 	@rm -f .argsU.txt
