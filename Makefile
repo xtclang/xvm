@@ -33,8 +33,14 @@ endif
 CTAGS = $(shell which ctags)
 # Hack for MacOS: /usr/bin/ctags is unfriendly, so look for ctags from brew
 ifeq ($(UNAME),Darwin)
-	CTAGS = $(shell brew list ctags 2> /dev/null | grep bin/ctags)
+  CTAGS = $(shell brew list ctags 2> /dev/null | grep bin/ctags)
 endif
+
+MAKE_MIN_VERSION = 4.4.0
+ifneq "$(MAKE_MIN_VERSION)" "$(firstword $(sort $(MAKE_VERSION) $(MAKE_MIN_VERSION)))"
+  $(error make version is $(MAKE_VERSION), but needs to be version $(MAKE_MIN_VERSION) or later)
+endif
+
 
 # Fun Args to javac.
 JAVAC_ARGS = --release 21 -XDignore.symbol.file -Xlint:-deprecation
