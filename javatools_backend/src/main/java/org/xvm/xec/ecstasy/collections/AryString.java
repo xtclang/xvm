@@ -98,10 +98,10 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
 
   /** @return an iterator */
-  private class Foo implements Iterable<String> {
+  private class IterPrim implements Iterable<String> {
     public IterString iterator() { return new IterString(); }
   }
-  public Iterable<String> iterStr() { return new Foo(); }
+  public Iterable<String> iterStr() { return new IterPrim(); }
   private class IterString extends Iterator<String> {
     private int _i;
     @Override public String next() { return _es[_i++]; }
