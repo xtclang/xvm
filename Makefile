@@ -92,7 +92,7 @@ $(CLZB)/.tag: $(clzesB) $(javasB)
 	@[ -d $(CLZB)/main ] || mkdir -p $(CLZB)/main
 	$(file > .argsB.txt, $(OODB))
 	@if [ ! -z "$(OODB)" ] ; then \
-	  echo -e "compiling backend because " $< " and " `wc -w < .argsB.txt` " more files" ; \
+	  echo "compiling backend because " $< " and " `wc -w < .argsB.txt` " more files" ; \
 	  javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(OODB) ; \
 	fi
 	@touch $(CLZB)/.tag
@@ -114,7 +114,7 @@ $(CLZU)/.tag: $(clzesU) $(javasU)
 	@[ -d $(CLZU)/main ] || mkdir -p $(CLZU)/main
 	$(file > .argsU.txt, $(OODU))
 	@if [ ! -z "$(OODU)" ] ; then \
-	  echo -e "compiling javatools_utils because " $< " and " `wc -w < .argsU.txt` " more files" ; \
+	  echo "compiling javatools_utils because " $< " and " `wc -w < .argsU.txt` " more files" ; \
 	  javac $(JAVAC_ARGS) -cp "$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZU)/main $(OODU) ; \
 	fi
 	@touch $(CLZU)/.tag
@@ -136,7 +136,7 @@ $(CLZT)/.tag: $(clzesT)  $(javasT) $(CLZU)/.tag
 	@[ -d $(CLZT)/main ] || mkdir -p $(CLZT)/main
 	$(file > .argsT.txt, $(OODT))
 	@if [ ! -z "$(OODT)" ] ; then \
-	  echo -e "compiling javatools because " $< " and " `wc -w < .argsT.txt` " more files" ; \
+	  echo "compiling javatools because " $< " and " `wc -w < .argsT.txt` " more files" ; \
 	  javac $(JAVAC_ARGS) -cp "$(CLZT)/main$(SEP)$(CLZU)/main$(SEP)$(LIBS)/*" -sourcepath $(SRCT) -d $(CLZT)/main @.argsT.txt ; \
 	fi
 	@touch $(CLZT)/.tag
@@ -160,7 +160,7 @@ XDK_LIB = $(XDK_DIR)/lib
 
 $(XDK_JAR): $(clzesT) $(clzesU) $(CLZT)/.tag $(CLZU)/.tag $(XDK_DIR)/MANIFEST.MF javatools/src/main/resources/errors.properties lib_ecstasy/src/main/resources/implicit.x
 	@$(file > .args.txt, $? )
-	@echo -e "  jarring " $@ " because " $< " and " `wc -w < .args.txt` " more files"
+	@echo "  jarring " $@ " because " $< " and " `wc -w < .args.txt` " more files"
 	@rm -f .args.txt
 	@jar -cfm $@ $(XDK_DIR)/MANIFEST.MF -C $(CLZT)/main . -C $(CLZU)/main . -C javatools/src/main/resources errors.properties -C lib_ecstasy/src/main/resources implicit.x
 
