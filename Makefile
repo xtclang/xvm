@@ -3,6 +3,62 @@
 #
 #  cd $DESK/xvm; make
 
+# macOS specific notes:
+#
+# install necessary packages using brew:
+#
+#   brew install wget
+#   brew install make
+#   brew install bash
+#
+# as of April 2024:
+#
+#   ~$ wget --version
+#   GNU Wget 1.24.5 built on darwin21.6.0.
+#
+#   xvm$ gmake -version
+#   GNU Make 4.4.1
+#   Built for aarch64-apple-darwin23.0.0
+#   Copyright (C) 1988-2023 Free Software Foundation, Inc.
+#   License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>
+#   This is free software: you are free to change and redistribute it.
+#   There is NO WARRANTY, to the extent permitted by law.
+#
+#   ~$ bash -version
+#   GNU bash, version 3.2.57(1)-release (x86_64-apple-darwin21)
+#   Copyright (C) 2007 Free Software Foundation, Inc.
+#
+# note that brew installs GNU make as the "gmake" command, to avoid conflicting with the ancient
+# version of make that comes with macOS xcode.
+#
+# first time only - this is the only thing that hits the Interwebs
+#
+#   gmake init
+#
+# any time you want to nuke everything from space:
+#
+#   gmake clean
+#
+# run a test
+# (do this twice, since the first run may have to compile any dependencies ... same thing goes for
+# any timing examples)
+#
+#   time gmake doc/examples/OneHundredPrisoners.exe
+#   time gmake doc/examples/OneHundredPrisoners.exe
+#
+# compare that to the interpreter (by replacing the pretend extension .exe with .com)
+#
+#   time gmake doc/examples/OneHundredPrisoners.com
+#   time gmake doc/examples/OneHundredPrisoners.com
+#
+# run the tck (but only after commenting out the last 4 tests in tck.x -- known TODO for Cliff)
+#
+#   time gmake tck/src/main/x/tck.exe
+#
+# compare it to the interpreter (by replacing .exe with .com)
+#
+#   time gmake tck/src/main/x/tck.com
+
 #######################################################
 #
 # Boilerplate because make syntax isn't the best
