@@ -344,7 +344,6 @@ service RTServer
         @Override
         String[] headerNames.get() = getHeaderNames(context);
 
-         // TODO GG: remove unnecessary "this.RTServer." below
         @Override
         conditional String[] getHeaderValuesForName(String name) =
                 this.RTServer.getHeaderValuesForName(context, name);

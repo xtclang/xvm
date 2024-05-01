@@ -60,7 +60,6 @@ module Hello
                      );
     }
 
-    // TODO GG this cannot be protected or private?
     Authenticator createAuthenticator() {
         return new DigestAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
     }

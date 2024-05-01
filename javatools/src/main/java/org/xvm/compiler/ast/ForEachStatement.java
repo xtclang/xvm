@@ -695,12 +695,12 @@ public class ForEachStatement
                 }
             if (m_regKeyType != null)
                 {
-                code.add(new Var_N(m_regKeyType, toConst(m_regKeyType.getName()))); // TODO GG: code gen
+                code.add(new Var_N(m_regKeyType, toConst(m_regKeyType.getName())));
                 listSpecial.add(m_regKeyType.getRegAllocAST());
                 }
             if (m_regValType != null)
                 {
-                code.add(new Var_N(m_regValType, toConst(m_regValType.getName()))); // TODO GG: code gen
+                code.add(new Var_N(m_regValType, toConst(m_regValType.getName())));
                 listSpecial.add(m_regValType.getRegAllocAST());
                 }
             }

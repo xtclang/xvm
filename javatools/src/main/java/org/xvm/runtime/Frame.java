@@ -2549,7 +2549,7 @@ public class Frame
         private String          m_sVarName;
         private VarTypeResolver m_resolver;
         private int             m_nTargetId; // an id of the target used to resolve this VarInfo's type
-        private RefHandle       m_ref;       // an "active" reference to this register TODO GG: should be a WeakRef
+        private RefHandle       m_ref;       // an "active" reference to this register
 
         /**
          * Construct an unnamed VarInfo based on the specified type.
