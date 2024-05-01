@@ -3,7 +3,7 @@
 
  * Then start the server by the command:
  *
- *    xec build/Hello.xtc [forward]
+ *    xec build/Hello.xtc [routeName:httpPort/httpsPort] [bindHttpPort/bindHttpsPort]
  */
 module Hello
         incorporates WebApp {
@@ -18,19 +18,37 @@ module Hello
     package msg import Messages;
     import msg.Greeting;
 
-    void run(String[] args=[""]) {
+    void run(String[] args=["localhost", "0.0.0.0:8080/8090"]) {
         @Inject Console console;
 
-        HostInfo route = args[0] == "forward"
-                ? new HostInfo("localhost")
-                : new HostInfo("localhost", 8080, 8090);
+        String routeString = args.size > 0 ? args[0] : "localhost";
+        String bindString  = args.size > 1 ? args[1] : "0.0.0.0:8080/8090";
 
-        xenia.createServer(this, route=route, binding=new HostInfo(IPv4Any, 8080, 8090));
+        HostInfo hostOf(String addressString) {
+            if (Int portOffset := addressString.indexOf(":")) {
+                String portsString = addressString.substring(portOffset+1);
+                addressString = addressString[0 ..< portOffset];
+
+                assert Int slashOffset := portsString.indexOf("/") as "Ports are missing";
+
+                UInt16 httpPort  = new UInt16(portsString[0 ..slashOffset]);
+                UInt16 httpsPort = new UInt16(portsString.substring(slashOffset+1));
+                return new HostInfo(addressString, httpPort, httpsPort);
+            }
+            return new HostInfo(addressString);
+        }
+
+        HostInfo route   = hostOf(routeString);
+        HostInfo binding = hostOf(bindString);
+
+        xenia.createServer(this, route=route, binding=binding);
 
         String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
         String uri        = $"http://{route.host}{portSuffix}";
 
-        console.print($|Use the curl command to test, for example:
+        console.print($|Hello server is bouNd to {binding}
+                       |
+                       |Use the curl command to test, for example:
                        |
                        |  curl -L -b cookies.txt -i -w '\\n' -X GET {uri}
                        |
