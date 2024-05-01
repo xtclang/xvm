@@ -29,11 +29,36 @@ public class CallAST extends AST {
     _rets = rets;
     _type = _type();
   }
+  static CallAST make(XType ret, String clzname, String methname, AST kid) {
+    XType[] rets = new XType[]{ret};
+    XFun fun = XFun.make(new XType[]{kid._type},rets);
+    ConAST con = new ConAST(clzname+"."+methname,fun);
+    CallAST call = new CallAST(rets,methname,fun,con,kid);
+    call._type = ret;
+    return call;
+  }
 
   @Override XType _type() {
     if( _rets==null ) return XCons.VOID;
     if( _rets.length == 1 ) return _rets[0];
     return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_rets));
+  }
+
+  @Override public AST unBox() {
+    // If call's generic type returns boxed, but call is known to return
+    // unboxed (because BAST is promoting a generic to a boxed primitive, but
+    // expression using the Call extends unboxed), then unbox.
+    if( _kids[0]._type instanceof XFun fun && fun.nrets()==1 &&
+        fun.ret() != _type && _type instanceof XBase ) {
+      // Change to: Call to Uni(Cast(Call))
+      AST cast = new ConvAST(_type.box(),this);
+      AST unbx = new UniOpAST(new AST[]{cast},null,"._i",_type);
+      _par = cast;
+      cast._par = unbx;
+      _type = fun.ret();
+      return unbx;
+    }
+    return super.unBox();
   }
 
   @Override public AST rewrite() {
@@ -109,7 +134,7 @@ public class CallAST extends AST {
   //
   @Override void jpre( SB sb ) {
     // Assume we need a (self!) cast, from some abstract type to a more
-    // specificed local type.
+    // specified local type.
     if( _type != XCons.VOID && !(_type instanceof XBase) &&
         _kids.length>1 && _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ptc )
       _type.clz(sb.p("(")).p(")");

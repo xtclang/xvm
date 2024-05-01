@@ -73,7 +73,8 @@ class BinOpAST extends AST {
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG ) {
       _type = _type.unbox();
       if( _kids[0]._type == XCons.STRING ) {
-        _op0 = ".charAt((int)";
+        _op0 = ".charAt((int)(";
+        _op1 = "))";
       } else if( _kids[0]._type.isAry() ) {
         _op0 = ".at8(";         // Use primitive 'at' instead of generic
       } else if( _kids[0]._type.isTuple() && (idx=isFixedOffset()) != -1 ) {

@@ -26,13 +26,8 @@ class OrderAST extends AST {
     default -> throw XEC.TODO();
     };
     // TODO: BAST bug Call to compare is currently returning a Boolean and not an Ordered
-    XType arg = _kids[0]._type;
-    XFun fun = XFun.make(new XType[]{arg},new XType[]{XCons.BOOL});
-    ConAST con = new ConAST("Orderable."+s,fun);
-    CallAST call = new CallAST(null,s,fun,con,_kids[0]);
-    call._type = XCons.BOOL;
     ClzBuilder.add_import(XCons.ORDERABLE);
-    return call;
+    return CallAST.make(XCons.BOOL,"Orderable",s,_kids[0]);
   }
 
   @Override public void jpre( SB sb ) { sb.p(_op); }

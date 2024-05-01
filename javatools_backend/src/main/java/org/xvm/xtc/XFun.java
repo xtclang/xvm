@@ -52,6 +52,10 @@ public class XFun extends XType {
   public XType[] rets() {
     return nrets()==0 ? null : Arrays.copyOfRange(_xts,_nargs,_xts.length);
   }
+  public XType ret() {
+    assert nrets()==1;
+    return _xts[_nargs];
+  }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {
     sb.p("{ ");

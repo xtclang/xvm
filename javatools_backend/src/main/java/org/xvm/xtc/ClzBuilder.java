@@ -254,37 +254,49 @@ public class ClzBuilder {
             continue;           // Constructors emitted first for easy reading
           _sb.nl(); // Blank line between methods
           // A bunch of methods that have special dispatch rules.
+          boolean special = false;
           switch( mname ) {
           case "equals":
-            Comparable.make_equals(java_class_name,_sb);
-            // Add a full default method
-            if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
-            else jmethod(meth,mname+"$"+java_class_name);
+            if( meth._args.length==3 ) {
+              special = true;
+              Comparable.make_equals(java_class_name,_sb);
+              // Add a full default method
+              if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
+              else jmethod(meth,mname+"$"+java_class_name);
+            }
             break;
           case "compare":
-            Orderable.make_compare(java_class_name,_sb);
-            // Add a full default method
-            if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
-            else jmethod(meth,mname+"$"+java_class_name);
+            if( meth._args.length==3 ) {
+              special = true;
+              Orderable.make_compare(java_class_name,_sb);
+              // Add a full default method
+              if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
+              else jmethod(meth,mname+"$"+java_class_name);
+            }
             break;
           case "hashCode":
-            Hashable.make_hashCode(java_class_name,_sb);
-            // Add a full default method
-            if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
-            else jmethod(meth,mname+"$"+java_class_name);
+            if( meth._args.length==1 ) {
+              special = true;
+              Hashable.make_hashCode(java_class_name,_sb);
+              // Add a full default method
+              if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
+              else jmethod(meth,mname+"$"+java_class_name);
+            }
             break;
           case "estimateStringLength":
           case "appendTo":
             if( meth._ast==null ) // No body, but declared.  Use the interface default.
-              break;
-            //noinspection fallthrough
+              special = true;
+            break;
           default:
+          }
+          // Not special, use the generic AST generator
+          if( !special ) {
             // Generate the method from the AST
             jmethod(meth,mname);
             // Service classes generate $mname and $$mname wrapper methods.
             if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
               Service.make_methods(meth,java_class_name,_sb);
-            break;
           }
         }
         break;
