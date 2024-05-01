@@ -333,7 +333,7 @@ public class Runner
             Connector connector = new Connector(repo);
             connector.loadModule(module.getName());
 
-            connector.start();
+            connector.start(options.getInjections());
 
             ConstantPool pool = connector.getConstantPool();
             try (var ignore = ConstantPool.withPool(pool))

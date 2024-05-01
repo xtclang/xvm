@@ -2,17 +2,10 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        test1();
-    }
+        // for this to work, run the command line:
+        //      xec -I hello="Hi there"
+        @Inject String hello;
 
-    void test1(Boolean flag = True) {
-        import ecstasy.collections.CaseInsensitive;
-
-        if (flag) {
-            Type<String>.Orderer ord = CaseInsensitive.compare(_,_); // this used to fail to compiler\
-
-            console.print($"{ord("a", "b")}");
-            console.print($"{ord("b", "a")}");
-        }
+        console.print(hello);
     }
 }

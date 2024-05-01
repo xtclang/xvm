@@ -4,6 +4,7 @@ package org.xvm.api;
 import java.io.File;
 
 import java.util.List;
+import java.util.Map;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -128,7 +129,7 @@ public class Connector
     /**
      * Start the Runtime and the main Container.
      */
-    public void start()
+    public void start(Map<String, String> mapInjections)
         {
         if (!m_fStarted)
             {
@@ -136,7 +137,7 @@ public class Connector
             m_fStarted = true;
             }
 
-        m_containerMain.start();
+        m_containerMain.start(mapInjections);
         }
 
     /**

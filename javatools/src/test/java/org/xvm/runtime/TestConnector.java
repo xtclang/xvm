@@ -87,7 +87,7 @@ public final class TestConnector
 
             // configuration of the container happens here
 
-            connector.start();
+            connector.start(null);
 
             connector.invoke0("run", Utils.OBJECTS_NONE);
 

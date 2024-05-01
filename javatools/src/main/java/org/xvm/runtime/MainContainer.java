@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -14,6 +15,8 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
@@ -35,9 +38,21 @@ public class MainContainer
         {
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
 
-        return hResource == null
-                ? null
-                : maskInjection(frame, hResource, type);
+        if (hResource != null)
+            {
+            return maskInjection(frame, hResource, type);
+            }
+
+        // check the custom injections
+        if (m_mapInjections != null)
+            {
+            String sValue = m_mapInjections.get(sName);
+            if (sValue != null)
+                {
+                return xString.makeHandle(sValue);
+                }
+            }
+        return null;
         }
 
 
@@ -45,13 +60,17 @@ public class MainContainer
 
     /**
      * Start the main container.
+     *
+     * @param (optional) a map of custom injections
      */
-    public void start()
+    public void start(Map<String, String> mapInjections)
         {
         if (m_contextMain != null)
             {
             throw new IllegalStateException("Already started");
             }
+
+        m_mapInjections = mapInjections;
 
         ensureServiceContext();
         }
@@ -111,4 +130,9 @@ public class MainContainer
             throw new RuntimeException("failed to run: " + f_idModule, e);
             }
         }
+
+    /**
+     * Map of custom injections.
+     */
+    private Map<String, String> m_mapInjections;
     }
