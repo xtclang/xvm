@@ -1576,7 +1576,7 @@ public abstract class Launcher
             }
 
         File dir = fSingle ? file.getParentFile() : file;
-        if (!dir.exists())
+        if (dir != null && !dir.exists())
             {
             log(Severity.INFO, "Creating directory " + dir);
             // ignore any errors here; errors would end up being reported further down
@@ -1604,7 +1604,7 @@ public abstract class Launcher
                     }
                 }
             }
-        else if (!dir.exists())
+        else if (dir != null && !dir.exists())
             {
             log(Severity.ERROR, "Directory " + dir + " is missing");
             }
