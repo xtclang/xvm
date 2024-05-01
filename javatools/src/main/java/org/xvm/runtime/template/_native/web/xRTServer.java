@@ -765,15 +765,20 @@ public class xRTServer
             if (session instanceof ExtendedSSLSession sessionEx)
                 {
                 List<SNIServerName> listNames = sessionEx.getRequestedServerNames();
-                if (!listNames.isEmpty())
+
+                String sHost = listNames.isEmpty()
+                        ? sessionEx.getPeerHost()
+                        : ((SNIHostName) listNames.get(0)).getAsciiName();
+                if (sHost != null)
                     {
-                    String    sHost = ((SNIHostName) listNames.get(0)).getAsciiName();
                     RouteInfo route = f_hServer.getRouter().mapRoutes.get(sHost);
                     if (route != null)
                         {
                         f_tloKeyStore.set(route.hKeyStore);
                         return route.sTlsKey;
                         }
+                    // TODO: REMOVE
+                    System.err.println("*** Handshake from unknown host " + sHost);
                     }
                 else
                     {
@@ -859,6 +864,8 @@ public class xRTServer
             RouteInfo route = mapRoutes.get(sHost);
             if (route == null)
                 {
+                System.err.println("*** Request from unknown host " + sHost);
+
                 exchange.sendResponseHeaders(444, -1); // HttpStatus.NoResponse
                 }
             else
