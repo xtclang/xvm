@@ -36,6 +36,7 @@ import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -589,7 +590,7 @@ public class LambdaExpression
             }
         else
             {
-            atypeRets   = m_collector.inferMulti(atypeReqReturns);
+            atypeRets   = replacePending(m_collector.inferMulti(atypeReqReturns));
             fCond       = cReqReturns > 1 && m_collector.isConditional();
             m_collector = null;
 
@@ -1352,8 +1353,11 @@ public class LambdaExpression
         org.xvm.asm.Parameter[] aparamParams = new org.xvm.asm.Parameter[cParams];
         for (int i = 0; i < cParams; ++i)
             {
-            String sName = i < cNames ? asParams[i] : null;
-            aparamParams[i] = new org.xvm.asm.Parameter(pool, atypeParams[i], sName, null, false, i, i < cFormal);
+            String       sName = i < cNames ? asParams[i] : null;
+            TypeConstant type  = atypeParams[i];
+            assert !type.containsUnresolved();
+
+            aparamParams[i] = new org.xvm.asm.Parameter(pool, type, sName, null, false, i, i < cFormal);
 
             // check if the parameter needs to be marked as being an implicit de-reference
             if (afImpliedDeref != null && afImpliedDeref.length > i && afImpliedDeref[i])
@@ -1367,7 +1371,10 @@ public class LambdaExpression
         org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
         for (int i = 0; i < cRets; ++i)
             {
-            aparamRets[i] = new org.xvm.asm.Parameter(pool, atypeRets[i], null, null, true, i, false);
+            TypeConstant type  = atypeRets[i];
+            assert !type.containsUnresolved();
+
+            aparamRets[i] = new org.xvm.asm.Parameter(pool, type, null, null, true, i, false);
             }
 
         lambda.configureLambda(aparamParams, cFormal, aparamRets);
@@ -1384,20 +1391,36 @@ public class LambdaExpression
         }
 
     /**
-     * Replace all PendingTypeConstants in the specified array with the Object type.
+     * Replace all PendingTypeConstants in the specified array with the Object type (recursively).
      */
     private TypeConstant[] replacePending(TypeConstant[] atype)
         {
         TypeConstant[] atypeRets = atype;
         for (int i = 0, c = atype == null ? 0 : atype.length; i < c; i++)
             {
-            if (atype[i] instanceof PendingTypeConstant)
+            TypeConstant typeOld = atype[i];
+            TypeConstant typeNew = typeOld;
+            if (typeOld instanceof PendingTypeConstant)
+                {
+                typeNew = pool().typeObject();
+                }
+            else if (typeOld instanceof ParameterizedTypeConstant typeParams)
+                {
+                TypeConstant[] atypeOld = typeParams.getParamTypesArray();
+                TypeConstant[] atypeNew = replacePending(atypeOld);
+                if (atypeNew != atypeOld)
+                    {
+                    typeNew = pool().ensureParameterizedTypeConstant(
+                                typeParams.getUnderlyingType(), atypeNew);
+                    }
+                }
+            if (typeNew != typeOld)
                 {
                 if (atypeRets == atype)
                     {
                     atypeRets = atype.clone();
                     }
-                atypeRets[i] = pool().typeObject();
+                atypeRets[i] = typeNew;
                 }
             }
         return atypeRets;
