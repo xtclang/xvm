@@ -3,7 +3,7 @@
 
  * Then start the server by the command:
  *
- *    xec build/Hello.xtc [routeName:httpPort/httpsPort] [bindHttpPort/bindHttpsPort]
+ *    xec build/Hello.xtc [routeName:httpPort/httpsPort] [bindName:bindHttpPort/bindHttpsPort]
  */
 module Hello
         incorporates WebApp {
@@ -46,7 +46,7 @@ module Hello
         String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
         String uri        = $"http://{route.host}{portSuffix}";
 
-        console.print($|Hello server is bouNd to {binding}
+        console.print($|Hello server is bound to {binding}
                        |
                        |Use the curl command to test, for example:
                        |
