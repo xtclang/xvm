@@ -47,7 +47,7 @@ public class MainContainer
         if (m_mapInjections != null)
             {
             String sValue = m_mapInjections.get(sName);
-            if (sValue != null)
+            if (sValue != null && type.equals(frame.poolContext().typeString()))
                 {
                 return xString.makeHandle(sValue);
                 }
