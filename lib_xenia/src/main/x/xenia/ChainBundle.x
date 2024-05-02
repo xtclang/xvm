@@ -189,7 +189,7 @@ service ChainBundle {
 
         Int observerCount = observerInfos.size;
         if (observerCount > 0) {
-            Observer[] observers = new Observer[observerCount] (i -> {
+            Observer[] observers = new Observer[observerCount](i -> {
                     MethodInfo info = observerInfos[i];
                     return info.method.as(ObserverMethod).bindTarget(ensureWebService(info.wsid));
             });
@@ -409,43 +409,82 @@ service ChainBundle {
         import ecstasy.reflect.Return;
 
         Return[] returns = endpoint.method.returns;
-        if (returns.size == 0) {
+        Boolean  cond    = endpoint.conditionalResult;
+        Type     type;
+
+        switch (returns.size) {
+        case 0:
             return (request, result) -> new SimpleResponse(OK);
+
+        case 1:
+            type = returns[0].ReturnType;
+            break;
+
+        case 2:
+            if (cond) {
+                type = returns[1].ReturnType;
+                break;
+            }
+            continue;
+
+        default:
+            throw new IllegalState($|Method "{endpoint.method}": \
+                                    |multiple returns are not currently supported
+                                    );
         }
 
-        // if the method is conditional, the element zero of the tuple is the Boolean value
-        Int  index = endpoint.conditionalResult ? 1 : 0;
-        Type type  = returns[index].ReturnType;
-
-        // check for special return types
-        switch (type.is(_), index) {
-        case (Type<ResponseOut>, 0):
+        // check for special return types (`HttpStatus` or `ResponseOut`)
+        switch (type.is(_), cond) {
+        case (Type<ResponseOut>, False):
             return (request, result) -> result[0].as(ResponseOut);
 
-        case (Type<ResponseOut>, 1):
+        case (Type<ResponseOut>, True):
             return (request, result) ->
                 (result[0].as(Boolean)
                     ? result[1].as(ResponseOut)
                     : new SimpleResponse(HttpStatus.NotFound));
 
-        case (Type<HttpStatus>, 0):
+        case (Type<HttpStatus>, False):
             return (request, result) ->
                 new SimpleResponse(result[0].as(HttpStatus));
 
-        case (Type<HttpStatus>, 1):
+        case (Type<HttpStatus>, True):
             return (request, result) ->
                 new SimpleResponse(result[0].as(Boolean)
                                     ? result[1].as(HttpStatus)
                                     : HttpStatus.NotFound);
         }
 
+        // check for a union type where one type is `ResponseOut`
+        Boolean union = False;
+        if (type.form == Union) {
+            if (cond) {
+                throw new IllegalState($|Method "{endpoint.method}": \
+                                        |conditional return of a union type is not currently supported
+                                        );
+
+            }
+            union = True;
+            assert (Type t1, Type t2) := type.relational();
+            if        (t1.is(Type<ResponseOut>)) {
+                type = t2;
+            } else if (t2.is(Type<ResponseOut>)) {
+                type = t1;
+            } else {
+                throw new IllegalState($|Method "{endpoint.method}": \
+                                        |arbitrary union types are not currently supported
+                                        );
+            }
+        }
+
         // helper function to look up a Codec based on the result type and the MediaType
-        Codec findCodec(MediaType mediaType, Type type) {
+        Codec findCodec(EndpointInfo endpoint, MediaType mediaType, Type type) {
             if (Codec codec := registry.findCodec(mediaType, type)) {
                 return codec;
             }
-
-            throw new IllegalState($"Unsupported mediaType {mediaType} type {type}");
+            throw new IllegalState($|Method "{endpoint.method}": \
+                                    |unsupported mediaType "{mediaType}" for type "{type}"
+                                    );
         }
 
         MediaType|MediaType[] produces = endpoint.produces;
@@ -454,30 +493,45 @@ service ChainBundle {
         }
         if (produces.is(MediaType)) {
             MediaType mediaType = produces;
-            Codec     codec     = findCodec(mediaType, type);
+            Codec     codec     = findCodec(endpoint, mediaType, type);
 
-            if (index == 0) {
+            if (cond) {
+                return (request, result) ->
+                    result[0].as(Boolean)
+                       ? createSimpleResponse(mediaType, codec, request, result[1])
+                       : new SimpleResponse(HttpStatus.NotFound);
+            } else if (union) {
+                return (request, result) -> {
+                    if (ResponseOut response := result[0].is(ResponseOut)) {
+                        return response;
+                    } else {
+                        return createSimpleResponse(mediaType, codec, request, result[0]);
+                    }};
+            } else {
                 return (request, result) ->
                     createSimpleResponse(mediaType, codec, request, result[0]);
             }
 
-            return (request, result) ->
-                result[0].as(Boolean)
-                   ? createSimpleResponse(mediaType, codec, request, result[1])
-                   : new SimpleResponse(HttpStatus.NotFound);
         } else {
             MediaType[] mediaTypes = produces;
-            Codec[]     codecs     = new Codec[mediaTypes.size] (i -> findCodec(mediaTypes[i], type));
+            Codec[]     codecs     = new Codec[mediaTypes.size](i -> findCodec(endpoint, mediaTypes[i], type));
 
-            if (index == 0) {
+            if (cond) {
+                return (request, result) ->
+                    result[0].as(Boolean)
+                       ? createSimpleResponse(mediaTypes, codecs, request, result[1])
+                       : new SimpleResponse(HttpStatus.NotFound);
+            } else if (union) {
+                return (request, result) -> {
+                    if (ResponseOut response := result[0].is(ResponseOut)) {
+                        return response;
+                    } else {
+                        return createSimpleResponse(mediaTypes, codecs, request, result[0]);
+                    }};
+            } else {
                 return (request, result) ->
                     createSimpleResponse(mediaTypes, codecs, request, result[0]);
             }
-
-            return (request, result) ->
-                result[0].as(Boolean)
-                   ? createSimpleResponse(mediaTypes, codecs, request, result[1])
-                   : new SimpleResponse(HttpStatus.NotFound);
         }
     }
 
@@ -486,6 +540,7 @@ service ChainBundle {
      */
     private static ResponseOut createSimpleResponse(
             MediaType mediaType, Codec codec, RequestIn request, Object result) {
+
         if (!request.accepts.matches(mediaType)) {
             TODO find a converter and convert
         }
@@ -498,10 +553,11 @@ service ChainBundle {
      */
     private static ResponseOut createSimpleResponse(
             MediaType[] mediaTypes, Codec[] codecs, RequestIn request, Object result) {
-        (MediaType, Codec)
-                resolveContentType(MediaType[] mediaTypes, Codec[] codecs, AcceptList accepts) {
-            Loop:
-            for (MediaType mediaType : mediaTypes) {
+
+        (MediaType, Codec) resolveContentType(
+                MediaType[] mediaTypes, Codec[] codecs, AcceptList accepts) {
+
+            Loop: for (MediaType mediaType : mediaTypes) {
                 if (accepts.matches(mediaType)) {
                     return mediaType, codecs[Loop.count];
                 }

@@ -392,13 +392,15 @@ public class Lexer
      */
     protected Token[] eatTemplateExpression(boolean fMultiline)
         {
-        int              nPrevLine = m_source.getLine();
-        long             lInitPos  = m_source.getPosition();
-        Token curly = next();
+        int   nPrevLine = m_source.getLine();
+        long  lInitPos  = m_source.getPosition();
+        Token curly     = next();
+
         assert curly.getId() == Id.L_CURLY;
-        long             lPrevPos  = mark();
-        int              cDepth    = 1;
-        ArrayList<Token> tokens    = new ArrayList<>();
+
+        long             lPrevPos = mark();
+        int              cDepth   = 1;
+        ArrayList<Token> tokens   = new ArrayList<>();
         while (true)
             {
             Token token = next();
