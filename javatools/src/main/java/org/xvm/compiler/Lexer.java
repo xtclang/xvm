@@ -394,7 +394,8 @@ public class Lexer
         {
         int              nPrevLine = m_source.getLine();
         long             lInitPos  = m_source.getPosition();
-        expect('{');
+        Token curly = next();
+        assert curly.getId() == Id.L_CURLY;
         long             lPrevPos  = mark();
         int              cDepth    = 1;
         ArrayList<Token> tokens    = new ArrayList<>();
@@ -1568,8 +1569,9 @@ public class Lexer
                     case '{':
                         if (fTemplate)
                             {
+                            long lPosStartExpr = source.getPosition();
                             source.rewind();
-                            long lPosEndText = source.getPosition();
+                            long lPosEndText   = source.getPosition();
 
                             // eat from the opening { to the closing } (inclusive of both)
                             Token[] aTokens = eatTemplateExpression(fMultiline);
@@ -1583,7 +1585,7 @@ public class Lexer
                                 aTokens = new Token[--cTokens];
                                 System.arraycopy(aTokensOld, 0, aTokens, 0, cTokens);
 
-                                sb.append(source.toString(aTokensOld[0].getStartPosition(),
+                                sb.append(source.toString(lPosStartExpr,
                                                           aTokensOld[cTokens].getEndPosition()));
                                 }
 
