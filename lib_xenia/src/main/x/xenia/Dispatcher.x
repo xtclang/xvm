@@ -178,7 +178,7 @@ service Dispatcher {
 
                     for (EndpointInfo eachEndpoint : serviceInfo.endpoints) {
                         if (eachEndpoint.httpMethod.name == methodName,
-                                uriParams := eachEndpoint.template.matches(uri)) {
+                                uriParams := eachEndpoint.matches(uri)) {
                             endpoint = eachEndpoint;
                             break FindEndpoint;
                         }

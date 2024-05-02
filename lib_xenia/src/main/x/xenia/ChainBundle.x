@@ -99,11 +99,11 @@ service ChainBundle {
             assert String name := param.hasName();
 
             if (param.is(ParameterBinding)) {
-                String paramName = param.bindName ?: name;
+                name ?= param.bindName;
 
                 if (param.is(QueryParam)) {
                     binders += (session, request, values) ->
-                        extractQueryValue(request, paramName, param, values);
+                        extractQueryValue(request, name, param, values);
                     continue;
                 }
                 if (param.is(UriParam)) {

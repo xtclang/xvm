@@ -1,27 +1,10 @@
 import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.Argument;
 
-import web.Consumes;
-import web.Default;
-import web.Endpoint;
-import web.ErrorHandler;
-import web.HttpMethod;
-import web.HttpsOptional;
-import web.HttpsRequired;
-import web.Intercept;
-import web.LoginOptional;
-import web.LoginRequired;
-import web.MediaType;
-import web.Observe;
-import web.OnError;
-import web.Produces;
-import web.Restrict;
-import web.StreamingRequest;
-import web.StreamingResponse;
-import web.TrustLevel;
-import web.WebService;
+import web.*;
 
 import net.UriTemplate;
+import net.UriTemplate.UriParameters;
 
 
 /**
@@ -128,15 +111,41 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             this.id = id;
             construct MethodInfo(method, wsid);
 
-            String template = method.template;
-            while (template.startsWith('/')) {
+            String templateString = method.template;
+            while (templateString.startsWith('/')) {
                 // the endpoint path is always relative
-                template = template.substring(1);
+                templateString = templateString.substring(1);
             }
 
-            this.template = template == "" || template == "/"
+            this.template = templateString == "" || templateString == "/"
                 ? UriTemplate.ROOT
-                : new UriTemplate(template);
+                : new UriTemplate(templateString);
+
+            // check if the template matches UriParam's in the method
+            Int requiredParamCount = 0;
+            for (Parameter param : method.params) {
+                // well-known types are Session and RequestIn (see ChainBundle.ensureCallChain)
+                if (param.ParamType.is(Type<Session>) ||
+                    param.ParamType == RequestIn      ||
+                    param.is(QueryParam)              ||
+                    param.is(BodyParam)               ||
+                    param.defaultValue()) {
+                    continue;
+                }
+
+                assert String name := param.hasName();
+                if (param.is(UriParam)) {
+                    name ?= param.bindName;
+                }
+                if (!template.vars.contains(name)) {
+                    throw new IllegalState($|The template for method "{method}" is missing \
+                                            |a variable name "{name}": \
+                                            |"{templateString}"
+                                        );
+                }
+                requiredParamCount++;
+            }
+            this.requiredParamCount = requiredParamCount;
 
             this.requiresTls = serviceTls
                         ? !method.is(HttpsOptional)
@@ -190,6 +199,11 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
         UriTemplate template;
 
         /**
+         * The number of required `UriParameters` that are needed to "fulfil" this endpoint.
+         */
+         Int requiredParamCount;
+
+        /**
          * The media type(s) this endpoint consumes.
          */
         MediaType|MediaType[] consumes;
@@ -223,6 +237,21 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
          * Indicates if this endpoint allows the response content not to be fully buffered.
          */
         Boolean allowResponseStreaming;
+
+        /**
+         * Test if the specified URI matches this endpoint.
+         *
+         * @param uri  the `Uri` to test to see if it matches this endpoint
+         *
+         * @return a map from variable name to value
+         */
+        conditional UriParameters matches(Uri|String uri) {
+            if (UriParameters uriParams      := template.matches(uri),
+                              uriParams.size >= requiredParamCount) {
+                return True, uriParams;
+            }
+            return False;
+        }
 
         /**
          * Check if any of the specified roles matches the restrictions of this endpoint.
