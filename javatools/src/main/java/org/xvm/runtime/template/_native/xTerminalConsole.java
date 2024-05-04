@@ -209,7 +209,7 @@ public class xTerminalConsole
                 History  history  = new DefaultHistory();
 
                 reader = LineReaderBuilder.builder()
-                        .terminal(terminal)
+                        .terminal(terminal).option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                         .history(history)
                         .build();
                 }
