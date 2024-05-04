@@ -58,10 +58,128 @@ module cli.xtclang.org {
             while (True) {
                 String command = console.readLine(commandPrompt);
 
-                if (!runCommand(command.split(' ', trim=True), catalog)) {
-                    return;
+                (Boolean ok, String[] args) = parseCommand(command);
+                if (ok) {
+                    if (!runCommand(args, catalog)) {
+                        return;
+                    }
+                } else {
+                    console.print($"Error in command: {args[0]}");
                 }
             }
+        }
+
+        /**
+         * Parse the command string into a series of pieces.
+         *
+         * @return True iff the parsing encountered no issues
+         * @return an array of parsed arguments, otherwise a description of the parsing error
+         */
+        (Boolean, String[]) parseCommand(String command) {
+            Int          offset   = 0;
+            Int          length   = command.size;
+            String[]     args     = new String[];
+            StringBuffer buf      = new StringBuffer();
+            Boolean      quoted   = False;
+            Boolean      escaped  = False;
+            while (offset < length) {
+                switch (Char ch = command[offset++]) {
+                case ' ':
+                    if (quoted) {
+                        if (escaped) {
+                            buf.add('\\');      // it was not an escape
+                            escaped = False;
+                        }
+                        buf.add(' ');
+                    } else if (buf.size > 0) {
+                        args.add(buf.toString());
+                        buf = new StringBuffer();
+                    }
+                    break;
+
+                case '"':
+                    if (escaped) {
+                        buf.add('\"');
+                        escaped = False;
+                    } else if (quoted) {
+                        // this needs to be the end of the command or there needs to be a space
+                        if (offset < length && command[offset] != ' ') {
+                            return False, ["A space is required after a quoted argument"];
+                        }
+
+                        args.add(buf.toString());
+                        buf    = new StringBuffer();
+                        quoted = False;
+                    } else if (buf.size == 0) {
+                        quoted = True;
+                    } else {
+                        return False, ["Unexpected quote character"];
+                    }
+                    break;
+
+                case '\\':
+                    if (escaped) {
+                        buf.add('\\');
+                        escaped = False;
+                    } else if (quoted) {
+                        escaped = True;
+                    } else {
+                        return False, ["Unexpected escape outside of quoted text"];
+                    }
+                    break;
+
+                case '0':
+                case 'b':
+                case 'd':
+                case 'e':
+                case 'f':
+                case 'n':
+                case 'r':
+                case 't':
+                case 'v':
+                case 'z':
+                case '\'':
+                    if (escaped) {
+                        buf.append(switch (ch) {
+                            case '0':  '\0';
+                            case 'b':  '\b';
+                            case 'd':  '\d';
+                            case 'e':  '\e';
+                            case 'f':  '\f';
+                            case 'n':  '\n';
+                            case 'r':  '\r';
+                            case 't':  '\t';
+                            case 'v':  '\v';
+                            case 'z':  '\z';
+                            case '\'': '\'';
+                            default: assert;
+                        });
+                        escaped = False;
+                    } else {
+                        buf.add(ch);
+                    }
+                    break;
+
+                default:
+                    if (escaped) {
+                        // it wasn't an escape
+                        buf.add('\\');
+                        escaped = False;
+                    }
+                    buf.add(ch);
+                    break;
+                }
+            }
+
+            if (quoted) {
+                return False, ["Missing a closing quote"];
+            }
+
+            if (buf.size > 0) {
+                args.add(buf.toString());
+            }
+
+            return True, args;
         }
 
         /**
