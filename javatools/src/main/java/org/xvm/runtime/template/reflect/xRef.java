@@ -154,7 +154,7 @@ public class xRef
                 return getPropertyAnnotations(frame, hRef, iReturn);
 
             case "assigned":
-                return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
+                return getPropertyAssigned(frame, hRef, iReturn);
 
             case "identity":
                 return actOnReferent(frame, hRef,
@@ -622,6 +622,20 @@ public class xRef
                 ? new Utils.CreateAnnos(aAnno, iReturn).doNext(frame)
                 : frame.assignValue(iReturn,
                         Utils.makeAnnoArrayHandle(frame.f_context.f_container, Utils.OBJECTS_NONE));
+        }
+
+    /**
+     * Implementation of "assigned" property.
+     *
+     * @param frame    the current frame
+     * @param hRef     the Ref object
+     * @param iReturn  the register to return the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int getPropertyAssigned(Frame frame, RefHandle hRef, int iReturn)
+        {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hRef.isAssigned()));
         }
 
     /**

@@ -1,11 +1,12 @@
 module TestSimple {
-    @Inject Console console;
 
     void run() {
-        // for this to work, run the command line:
-        //      xec -I hello="Hi there"
-        @Inject String hello;
+        @Inject Console console;
+        assert &console.assigned; // this used to assert
 
-        console.print(hello);
+        @Inject String greeting;
+        console.print(&greeting.assigned
+                ? greeting
+                : "no greeting");
     }
 }

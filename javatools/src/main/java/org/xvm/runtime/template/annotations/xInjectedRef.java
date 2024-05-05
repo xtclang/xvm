@@ -16,6 +16,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.text.xString;
@@ -124,6 +125,40 @@ public class xInjectedRef
             }
 
         return frame.assignValue(iReturn, hValue);
+        }
+
+    @Override
+    protected int getPropertyAssigned(Frame frame, RefHandle hRef, int iReturn)
+        {
+        switch (getReferent(frame, hRef, Op.A_STACK))
+            {
+            case Op.R_NEXT:
+                frame.popStack();
+                return frame.assignValue(iReturn, xBoolean.TRUE);
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    if (frameCaller.clearException() == null)
+                        {
+                        frameCaller.popStack();
+                        return frameCaller.assignValue(iReturn, xBoolean.TRUE);
+                        }
+                    else
+                        {
+                        frameCaller.clearException();
+                        return frameCaller.assignValue(iReturn, xBoolean.FALSE);
+                        }
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                frame.clearException();
+                return frame.assignValue(iReturn, xBoolean.FALSE);
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
 
