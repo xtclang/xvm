@@ -131,7 +131,10 @@ public class MapExpression
                         : new TypeConstant[] {typeKey, typeVal});
                 }
             }
-
+        if (typeKey != null && typeVal != null && typeKey.isImmutable() && typeVal.isImmutable())
+            {
+            typeMap = typeMap.freeze();
+            }
         return typeMap;
         }
 
@@ -339,12 +342,13 @@ public class MapExpression
 
             if (fConstVals)
                 {
-                if (!typeActual.isImmutabilitySpecified())
-                    {
-                    typeActual = pool.ensureImmutableTypeConstant(typeActual);
-                    }
                 constVal = pool.ensureMapConstant(typeActual, map);
                 }
+            }
+
+        if (constVal != null || typeKey.isImmutable() && typeVal.isImmutable())
+            {
+            typeActual = typeActual.freeze();
             }
 
         return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
