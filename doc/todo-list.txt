@@ -1,3 +1,7 @@
+- CP: implement RTServer.backTrace.get() and tls.get(); test it with nginx
+
+- GG: deal with a potential leak at ClassComposition.ensureGetterChain
+
 - CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
 
 - CP: dedicated Realm and/or Authenticator; for OAth and TokenAuth; chaining of Authenticators
@@ -15,6 +19,10 @@
 - CP: add API support for multi-part body, for example (Body.x):
     conditional Body[] multipart() = False;
 
+- CP: need to implement "persistent" mutators for HasherMap
+
+- GG: allow injection of Console to specify a history file (or do it by default?)
+
 - GG: add the following method to Tuple
         /**
          * Obtain a `List` view of this Tuple. Note, that the type check will be performed only
@@ -30,8 +38,6 @@
     - readBytes() methods need to return the number of bytes read
     - would be nice to have an "eof" indicator
 
-- what to do about passing a const/service argument from a child container into the parent's one?
-
 - GG: entering the debugger should stop time
 
 - GG: consider allowing to debug an eval expression (debug eval)
@@ -46,8 +52,6 @@
   (Mark's suggestion to evaluated keys' hashCode distribution)
 
 - GG: implement timeout for IO operations (interrupt IO executor threads)
-
-- CP: need to implement "persistent" mutators for HasherMap
 
 - how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
 
