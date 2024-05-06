@@ -360,11 +360,11 @@ public class xRTServer
         {
         StringHandle   hHostName = (StringHandle) ahArg[0];
         ServiceHandle  hWrapper  = (ServiceHandle) ahArg[1];
-        KeyStoreHandle hKeystore = (KeyStoreHandle)  ahArg[2];
+        KeyStoreHandle hKeystore = ahArg[2] instanceof KeyStoreHandle hK ? hK : null;
         String         sTlsKey   = ahArg[3] instanceof StringHandle hS ? hS.getStringValue() : null;
         Router         router    = hServer.getRouter();
 
-        if (sTlsKey == null && router.mapRoutes.isEmpty())
+        if (hKeystore != null && sTlsKey == null && router.mapRoutes.isEmpty())
             {
             // find a public/private key pair that could be used to encrypt tls communications
             try

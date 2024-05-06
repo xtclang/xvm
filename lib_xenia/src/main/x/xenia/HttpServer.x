@@ -81,10 +81,11 @@ interface HttpServer
      * @param route      the HostInfo for request routing that indicates which requests should be
      *                   delivered to the specified handler
      * @param handler    the request handler to route to
-     * @param keystore   the KeyStore to use for TLS certificates and encryption
-     * @param tlsKey     (optional) the name of the key pair in the keystore to use for TLS; if not
-     *                   specified, the keystore must have one and only one
-     *                   [key-pair](crypto.KeyForm.Pair) entry, which will be used for TLS
+     * @param keystore   (optional) the KeyStore to use for https certificates and encryption;
+     *                   if not specified, this route will not accept any https requests
+     * @param tlsKey     (optional) the name of the key pair in the keystore to use for https;
+     *                   if not specified, the keystore must have one and only one
+     *                   [key-pair](crypto.KeyForm.Pair) entry, which will be used for https
      * @param cookieKey  (optional) the name of the secret key in the keystore to use for session
      *                   cookie encryption; if not specified, and the keystore contains one and only
      *                   one [secret](crypto.KeyForm.Secret) key, then that key will be used to
@@ -92,7 +93,7 @@ interface HttpServer
      *
      * @return the `HostInfo` object created to represent the new route
      */
-     void addRoute(HostInfo|String route, Handler handler, KeyStore keystore,
+     void addRoute(HostInfo|String route, Handler handler, KeyStore? keystore = Null,
                    String? tlsKey=Null, String? cookieKey=Null);
 
     /**
@@ -283,9 +284,9 @@ interface HttpServer
         Boolean containsNestedBodies();
 
         /**
-         * Build a URL that converts this request to a corresponding HTTPS request.
+         * Build a URL that converts this request to a corresponding https request.
          *
-         * @return a string holding a TLS-enabled request URL equivalent of this request
+         * @return a string holding am https request URL equivalent of this http request
          */
         String convertToHttps() {
             assert !tls as "already a TLS request";

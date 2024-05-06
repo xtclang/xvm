@@ -64,8 +64,8 @@ service RTServer
     // ----- host routes ---------------------------------------------------------------------------
 
     @Override
-    void addRoute(HostInfo|String route, Handler handler, KeyStore keystore,
-                  String? tlsKey=Null, String? cookieKey=Null) {
+    void addRoute(HostInfo|String route, Handler handler, KeyStore? keystore = Null,
+                  String? tlsKey = Null, String? cookieKey = Null) {
 
         import crypto.RTAlgorithms;
         import crypto.RTEncryptionAlgorithm;
@@ -89,7 +89,7 @@ service RTServer
         }
 
         cookieDecryptor:
-        if (handler.is(DecryptorAware)) {
+        if (keystore != Null && handler.is(DecryptorAware)) {
             CryptoKey secretKey;
             findKey:
             if (cookieKey == Null) {
@@ -175,7 +175,7 @@ service RTServer
 
     private void bindImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort) {TODO("Native");}
 
-    private void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore keystore, String? tlsKey)
+    private void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)
         {TODO("Native");}
 
     private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)
@@ -399,8 +399,8 @@ service RTServer
 
         @RO Map<HostInfo, ProxyCheck> bindings;
 
-        void addRoute(HostInfo|String route, Handler handler, KeyStore keystore,
-                      String? tlsKey=Null, String? cookieKey=Null);
+        void addRoute(HostInfo|String route, Handler handler, KeyStore? keystore = Null,
+                      String? tlsKey = Null, String? cookieKey = Null);
 
         Boolean replaceRoute(HostInfo|String route, Handler handler);
 

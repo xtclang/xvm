@@ -4,7 +4,7 @@
 service TerminalConsole
         implements Console {
     @Override
-    void print(Object object= "", Boolean suppressNewline = False);
+    void print(Object object = "", Boolean suppressNewline = False);
 
     @Override
     String readLine(String prompt = "", Boolean suppressEcho = False);
