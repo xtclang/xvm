@@ -31,7 +31,7 @@ module Hello
 
                 assert Int slashOffset := portsString.indexOf("/") as "Ports are missing";
 
-                UInt16 httpPort  = new UInt16(portsString[0 ..slashOffset]);
+                UInt16 httpPort  = new UInt16(portsString[0 ..< slashOffset]);
                 UInt16 httpsPort = new UInt16(portsString.substring(slashOffset+1));
                 return new HostInfo(addressString, httpPort, httpsPort);
             }

@@ -778,12 +778,12 @@ public class xRTServer
                         return route.sTlsKey;
                         }
                     // TODO: REMOVE
-                    System.err.println("*** Handshake from unknown host " + sHost);
+                    System.err.println("*** Handshake with unknown host: " + sHost);
                     }
                 else
                     {
                     // TODO: REMOVE
-                    System.err.println("*** Handshake from unspecified host");
+                    System.err.println("*** Handshake with unspecified host");
                     }
                 }
             else
@@ -864,8 +864,8 @@ public class xRTServer
             RouteInfo route = mapRoutes.get(sHost);
             if (route == null)
                 {
-                System.err.println("*** Request from unknown host " + sHost);
-
+                System.err.println("*** Request for unknown host: " + sHost
+                        + exchange.getRequestURI());
                 exchange.sendResponseHeaders(444, -1); // HttpStatus.NoResponse
                 }
             else
