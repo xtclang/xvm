@@ -27,7 +27,7 @@ class ConvAST extends AST {
     _type = XType.xtype(types[idx],false);
   }
 
-  ConvAST( XClz cast, AST kid ) {
+  ConvAST( XType cast, AST kid ) {
     super(new AST[]{kid});
     _type = cast;
   }

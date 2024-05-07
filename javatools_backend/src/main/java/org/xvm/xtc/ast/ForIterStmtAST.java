@@ -23,6 +23,16 @@ class ForIterStmtAST extends AST {
 
   @Override XType _type() { return XCons.VOID; }
 
+  @Override public AST rewrite( ) {
+    if( _kids[1]._type == XCons.STRING || _kids[1]._type == XCons.STRINGN ) {
+      AST kid1 = _kids[1];
+      AST call = _kids[1] = new InvokeAST("toCharArray",XBase.make("char[]",true),_kids[1]);
+      kid1._par = call;
+      call._par = this;
+    }
+    return this;
+  }
+
   @Override public SB jcode( SB sb ) {
     if( sb.was_nl() ) sb.i();
     for( int i=3; i<_kids.length; i++ )

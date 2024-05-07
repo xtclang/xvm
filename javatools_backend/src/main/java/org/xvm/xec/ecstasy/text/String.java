@@ -3,11 +3,13 @@ package org.xvm.xec.ecstasy.text;
 import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.Const;
+import org.xvm.xec.ecstasy.Iterable;
+import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.Ordered;
 import org.xvm.xrun.Never;
 import java.util.Objects;
 
-public class String extends Const {
+public class String extends Const implements Iterable<Char> {
   public static final String GOLD = new String((Never)null);
   public String(Never n) { _i=null; }
   public final java.lang.String _i;
@@ -17,6 +19,7 @@ public class String extends Const {
   public static String construct(java.lang.String s) { return new String(s); } // TODO: Intern
 
   public int length() { return _i.length(); }
+  @Override public int size$get() { return length(); }
   public char charAt(int x) { return _i.charAt(x); }
   @Override public java.lang.String toString() { return _i; }
 
@@ -53,6 +56,14 @@ public class String extends Const {
   public long hashCode( java.lang.String s0 ) { return s0.hashCode(); }
   @Override public long hashCode( XTC s0 ) { return hashCode(((String)s0)._i); }
   public static long hashCode$String( XTC gold, java.lang.String s0 ) { return s0.hashCode(); }
+
+  @Override public Iterator<Char> iterator() {
+    throw XEC.TODO();
+  }
+  static public Iterator<Char> iterator(java.lang.String s0) {
+    throw XEC.TODO();
+  }
+
 
   // --- Freezable
   @Override public String freeze(boolean inPlace) { return this; }

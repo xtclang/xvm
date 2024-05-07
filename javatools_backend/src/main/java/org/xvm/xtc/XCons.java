@@ -150,6 +150,7 @@ public abstract class XCons {
   // No corresponding XTC class.
   public static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,"Element",JLONG  );
   public static XClz ITERSTR = make_java("ecstasy.collections.AryString", "IterString","ecstasy","Iterator",null,"Element",JSTRING);
+  public static XClz ITERATORCHAR = make_java("ecstasy","Iterator",(XClz)null,"Element",XCons.CHAR);
 
   // These are always expanded to some Java constant
   public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);

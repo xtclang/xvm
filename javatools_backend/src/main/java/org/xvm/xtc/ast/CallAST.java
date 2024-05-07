@@ -34,6 +34,7 @@ public class CallAST extends AST {
     XFun fun = XFun.make(new XType[]{kid._type},rets);
     ConAST con = new ConAST(clzname+"."+methname,fun);
     CallAST call = new CallAST(rets,methname,fun,con,kid);
+    con._par = call;
     call._type = ret;
     return call;
   }
