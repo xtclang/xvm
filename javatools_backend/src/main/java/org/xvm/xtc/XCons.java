@@ -210,7 +210,7 @@ public abstract class XCons {
     return make_java(pack,name,pack,name,supr,flds);
   }
   public static XClz make_java( String jpack, String jname, String pack, String name, XClz supr, Object... flds ) {
-    XClz clz = XClz.malloc(true, pack,"",name,flds.length>>1);
+    XClz clz = XClz.mallocLen(true, pack,"",name,flds.length>>1);
     clz._jpack = jpack;
     clz._jname = jname;
     for( int i=0; i<flds.length; i += 2 ) {
@@ -252,7 +252,7 @@ public abstract class XCons {
   // Java primitive array classes, no corresponding XTC class.
   // Treated as a specific instance of the generic Array class using concrete types.
   private static XClz make_java_ary( String jname, XType xelem ) {
-    XClz clz = XClz.malloc(true, "ecstasy.collections","","Array",1);
+    XClz clz = XClz.mallocLen(true, "ecstasy.collections","","Array",1);
     clz._tns[0] = null;      // Concrete generic type
     clz._xts[0] = xelem;
     clz._intern(XCons.ARRAY);
@@ -262,7 +262,7 @@ public abstract class XCons {
 
 
   public static XClz make_tuple( XType... clzs ) {
-    XClz clz = XClz.malloc(true,"ecstasy.collections","","Tuple",clzs.length);
+    XClz clz = XClz.mallocLen(true,"ecstasy.collections","","Tuple",clzs.length);
     for( int i=0; i<clzs.length; i++ )
       clz._tns[i] = (""+i).intern();
     clz._xts = clzs;
