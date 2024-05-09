@@ -52,6 +52,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.Runtime;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -105,7 +106,7 @@ public class xRTKeyStore
         markNativeMethod("getPasswordInfo"   , STRING, null);
 
         ConstantPool pool = pool();
-        s_typeNamedPasssord = pool.ensureClassConstant(
+        s_typeNamedPassword = pool.ensureClassConstant(
                 pool.ensureModuleConstant("crypto.xtclang.org"), "CryptoPassword").getType();
 
         invalidateTypeInfo();
@@ -214,7 +215,7 @@ public class xRTKeyStore
         catch (Exception e)
             {
             return new DeferredCallHandle(xException.makeHandle(frame,
-                    "Illegal KeyStore arguments: " + e.getMessage()));
+                    Runtime.logRuntimeException("Illegal KeyStore arguments: " + e.getMessage())));
             }
         }
 
@@ -235,7 +236,7 @@ public class xRTKeyStore
                     }
                 catch (KeyStoreException e)
                     {
-                    return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+                    return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
                     }
                 }
             }
@@ -375,7 +376,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
@@ -452,7 +453,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
@@ -517,7 +518,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
@@ -547,7 +548,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(xException.makeHandle(frame, e.getMessage()));
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
@@ -566,7 +567,7 @@ public class xRTKeyStore
             return hString;
             }
 
-        hPwd = hPwd.revealAs(frame, s_typeNamedPasssord);
+        hPwd = hPwd.revealAs(frame, s_typeNamedPassword);
         if (hPwd instanceof GenericHandle hNamed)
             {
             return (StringHandle) hNamed.getField(null, "password");
@@ -633,5 +634,5 @@ public class xRTKeyStore
     /**
      * Cached NamedPassword type.
      */
-    private static TypeConstant s_typeNamedPasssord;
+    private static TypeConstant s_typeNamedPassword;
     }

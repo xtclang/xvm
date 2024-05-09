@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Runtime;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
@@ -222,7 +223,8 @@ public class xRTCertificateManager
 
                 if (sError != null)
                     {
-                    return frame.raiseException(xException.ioException(frame, sError));
+                    return frame.raiseException(xException.ioException(frame,
+                            Runtime.logRuntimeException(sError)));
                     }
                 }
 
@@ -232,7 +234,7 @@ public class xRTCertificateManager
             {
             return frame == null
                 ? Op.R_NEXT
-                : frame.raiseException(e.getMessage());
+                : frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
