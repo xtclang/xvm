@@ -86,6 +86,14 @@ jobs:
 
       - uses: gradle/actions/wrapper-validation@v3
 
+      - name: Dump environment info
+        shell: bash
+        run: |
+          echo "Branch (github.ref)    : ${{ github.ref }}"
+          echo "Runner OS              : ${{ runner.os }}"
+          echo "Java system properties :" 
+          java -XshowSettings:properties --version
+
       - name: Build the XDK and create a distribution layout
         shell: bash
         run: |
@@ -124,12 +132,6 @@ jobs:
         shell: bash
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
-
-      - name: Dump environment info
-        shell: bash
-        run: |
-          echo "Branch (github.ref): ${{ github.ref }}"
-          echo "Runner OS          : ${{ runner.os }}"
 
       - name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
         if: ${{ ((env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) && (runner.os == 'Linux') }}
