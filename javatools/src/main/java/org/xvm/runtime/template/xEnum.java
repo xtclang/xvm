@@ -99,24 +99,23 @@ public class xEnum
         {
         if (constant instanceof SingletonConstant constValue)
             {
-            EnumHandle hValue = (EnumHandle) constValue.getHandle();
-
-            if (hValue == null)
+            ObjectHandle hValue = constValue.getHandle();
+            if (hValue != null)
                 {
-                assert getStructure().getFormat() == Format.ENUMVALUE;
-
-                xEnum templateEnum = (xEnum) getSuper();
-
-                hValue = templateEnum.getEnumByConstant(constValue.getClassConstant());
-                constValue.setHandle(hValue);
-
-                if (hValue.isStruct())
-                    {
-                    return completeConstruction(frame, hValue);
-                    }
+                // Note: this could be an InitializingHandle
+                return frame.pushStack(hValue);
                 }
 
-            return frame.pushStack(hValue);
+            assert getStructure().getFormat() == Format.ENUMVALUE;
+
+            xEnum templateEnum = (xEnum) getSuper();
+
+            EnumHandle hEnum = templateEnum.getEnumByConstant(constValue.getClassConstant());
+            constValue.setHandle(hEnum);
+
+            return hEnum.isStruct()
+                    ? completeConstruction(frame, hEnum)
+                    : frame.pushStack(hEnum);
             }
 
         return super.createConstHandle(frame, constant);
