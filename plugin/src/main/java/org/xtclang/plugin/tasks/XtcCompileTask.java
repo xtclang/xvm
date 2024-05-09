@@ -180,7 +180,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
     }
 
     @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
@@ -226,7 +226,7 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
             if (hasVerboseLogging()) {
                 logger.lifecycle("{} Stamping XTC module with version: '{}'", prefix, moduleVersion);
             }
-            args.add("--set-version", moduleVersion);
+            args.add("--set-version", semanticVersion(moduleVersion));
         }
         args.addRepeated("-L", resolveFullModulePath());
         final var sourceFiles = resolveXtcSourceFiles().stream().map(File::getAbsolutePath).sorted().toList();
@@ -240,12 +240,17 @@ public class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtensio
         finalizeOutputs();
     }
 
+    private static String semanticVersion(final String version) {
+        return version.endsWith("-SNAPSHOT") ? version.replace("-SNAPSHOT", "+SNAPSHOT") : version;
+    }
+
     private String resolveModuleVersion() {
         // TODO: We need to tell the plugin, when we build it, which version it has from the catalog.
         //    This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
         if (getXtcVersion().isPresent()) {
             return getXtcVersion().get();
         }
+        logger.warn("{} WARNING: No XTC version was resolved. Module will not be versioned.", prefix());
         return null;
     }
 

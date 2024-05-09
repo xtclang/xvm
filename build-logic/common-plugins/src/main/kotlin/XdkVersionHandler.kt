@@ -21,12 +21,16 @@ class XdkVersionHandler(project: Project): XdkProjectBuildLogic(project) {
     }
 
     fun assignSemanticVersionFromCatalog(): SemanticVersion {
+        return assignSemanticVersion(resolveSemanticVersionFromCatalog())
+    }
+
+    fun resolveSemanticVersionFromCatalog(): SemanticVersion {
         val verXdk = catalogSemanticVersion(XDK_VERSION_CATALOG_GROUP, XDK_VERSION_CATALOG_VERSION)
         val verXtcPlugin = catalogSemanticVersion(XTC_VERSION_PLUGIN_CATALOG_GROUP, XTC_VERSION_PLUGIN_CATALOG_VERSION)
         if (verXdk != verXtcPlugin) {
             throw project.buildException("Illegal state: version mismatch between XDK and XTC plugin: '$verXdk' != '$verXtcPlugin'")
         }
-        return assignSemanticVersion(catalogSemanticVersion(XDK_VERSION_CATALOG_GROUP, XDK_VERSION_CATALOG_VERSION))
+        return verXdk
     }
 
     private fun assignSemanticVersion(semanticVersion: SemanticVersion): SemanticVersion {

@@ -61,7 +61,14 @@ private fun includeManualTests(): Boolean {
 }
 
 if (includeManualTests()) {
-    logger.info("[xvm] The XDK build includes 'manualTests'. This may cause additional overhead with an empty build cache, or after running a 'gradlew clean', but should not be otherwise significant.")
+    logger.info(
+        """
+        [xvm] Tbe XDK build includes 'manualTests'
+        [xvm]
+        [xvm] This may cause additional overhead with an empty build cache, or after running a 'gradlew clean',
+        [xvm] but should not be otherwise significant.
+        """.trimIndent(),
+    )
     includeBuild("manualTests")
 }
 

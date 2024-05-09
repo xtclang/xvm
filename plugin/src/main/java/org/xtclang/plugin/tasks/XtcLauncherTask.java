@@ -115,7 +115,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
         return project.files(project.getConfigurations().getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
     }
@@ -280,14 +280,14 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     @InputDirectory
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     Provider<Directory> getInputXdkContents() {
         return XtcProjectDelegate.getXdkContentsDir(project);
     }
 
     @Optional
     @InputFiles
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getXtcModuleDependencies() {
         final List<SourceSet> sourceSets = getDependentSourceSets();
         final List<String> xtcDependencyConfigNames = sourceSets.stream().map(XtcProjectDelegate::incomingXtcModuleDependencies).toList();

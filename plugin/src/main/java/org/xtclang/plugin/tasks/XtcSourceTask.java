@@ -71,7 +71,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     @InputFiles
     @SkipWhenEmpty
     @IgnoreEmptyDirectories
-    @PathSensitive(PathSensitivity.ABSOLUTE)
+    @PathSensitive(PathSensitivity.RELATIVE)
     public FileTree getSource() {
         return sourceFiles.getAsFileTree().matching(patternSet);
     }
@@ -201,7 +201,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        logger.info("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
+        logger.debug("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
             prefix(), file.getAbsolutePath(), isTopLevelSrc);
         if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
             logger.info("{} Found module definition: {}", prefix(), file.getAbsolutePath());

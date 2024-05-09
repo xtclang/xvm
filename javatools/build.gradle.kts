@@ -56,7 +56,12 @@ sourceSets {
     }
 }
 
-val copyDependencies by tasks.registering(Copy::class) {
+/**
+ * Sync (not copy) all dependencies from the compile classpath. This is to prevent
+ * older versions of dependencies with different file names (due to version changed),
+ * still being in the build output, as we have not cleaned.
+ */
+val syncDependencies by tasks.registering(Sync::class) {
     from(configurations.compileClasspath) {
         include("**/*.jar")
     }
@@ -92,7 +97,10 @@ val jar by tasks.existing(Jar::class) {
      * TODO: an alternative solution would be to leave the run-time dependent libraries "as is" and
      *      use the "Class-Path" attribute of the manifest to point to them.
      */
-    from(copyDependencies.map { fileTree(it.destinationDir).map { jarFile -> zipTree(jarFile) } })
+    from(syncDependencies.map { fileTree(it.destinationDir).map { jarFile ->
+        logger.info("$prefix Resolving dependency: $jarFile for $version")
+        zipTree(jarFile)
+    }})
 
     archiveBaseName = "javatools"
 
@@ -141,33 +149,13 @@ val sanityCheckJar by tasks.registering {
         val size = DebugBuild.verifyJarFileContents(
             project,
             listOf(
-                "implicit.x",                 // verify the implicits are in the jar
-                "org/xvm/tool/Compiler",      // verify the javatools package inclusion
-                "org/xvm/util/Severity",      // verify the javatools_utils package inclusion
-                "org/jline/reader/LineReader" // verify the jline library inclusion
+                "implicit.x",                       // verify the implicits are in the jar
+                "org/xvm/tool/Compiler.class",      // verify the javatools package inclusion
+                "org/xvm/util/Severity.class",      // verify the javatools_utils package inclusion
+                "org/jline/reader/LineReader.class" // verify the jline library inclusion
             ),
             expectedEntryCount
         )
         logger.lifecycle("$prefix Sanity check of javatools.jar completed successfully ($size elements found).")
     }
 }
-
-/*
- * We may want to provide a "thin" javatools.jar with javatools utils, jline and other dependencies
- * on the classpath in the manifest, and have them, together with licenses, in a sub-folder to
- * javatools in the XDK installation.
- *
- * TODO: This configuration exports the dependencies of the javatools.jar, so that we can consume
- *       and package them separately.
- */
-/*
-val xdkJavaToolsDependencyProvider by configurations.registering {
-    isCanBeResolved = false
-    isCanBeConsumed = true
-    outgoing.artifact(copyDependencies)
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("javatools-dependencies-dir"))
-    }
-}
-*/

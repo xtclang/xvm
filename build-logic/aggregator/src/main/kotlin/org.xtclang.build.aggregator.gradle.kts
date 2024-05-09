@@ -25,7 +25,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
             val attachKey = "includeBuildAttach${it.replaceFirstChar(Char::titlecase)}"
             val attach = (properties[attachKey]?.toString() ?: "true").toBoolean()
             if (!attach) {
-                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: $attach).")
+                logger.info("$prefix Included build '$it' is explicitly configured to be outside the root lifecycle ($attachKey: false).")
             }
             !attach
         }.toSet()
@@ -60,7 +60,7 @@ private class XdkBuildAggregator(project: Project) : Runnable {
 
             if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
                 val msg =
-                    "$prefix Multiple start parameter tasks are not guaranteed to in order/in parallel. Please run each task individually. (task names: $taskNames)"
+                    "$prefix Multiple start parameter tasks are not guaranteed to run in order/in parallel. Please run each task individually. (task names: $taskNames)"
                 logger.error(msg)
                 throw GradleException(msg)
             }

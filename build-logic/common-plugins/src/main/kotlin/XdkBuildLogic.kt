@@ -7,13 +7,7 @@ import org.gradle.api.file.ProjectLayout
 import org.gradle.api.invocation.Gradle
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.LogLevel.LIFECYCLE
-import org.gradle.api.provider.Provider
-import java.io.ByteArrayOutputStream
 import java.io.File
-import java.nio.file.Path
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 abstract class XdkProjectBuildLogic(protected val project: Project) {
     protected val logger = project.logger
@@ -25,8 +19,9 @@ abstract class XdkProjectBuildLogic(protected val project: Project) {
 }
 
 class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic(project) {
-    private val xdkGitHub: GitHubPackages by lazy {
-        GitHubPackages(project)
+    private val xdkGit: GitHubProtocol by lazy {
+        // A semantic version must be resolved when this is called, or we will get an exception.
+        GitHubProtocol(project)
     }
 
     private val xdkVersions: XdkVersionHandler by lazy {
@@ -54,12 +49,8 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         return xdkDistributions
     }
 
-    fun github(): GitHubPackages {
-        return xdkGitHub
-    }
-
-    fun resolveLocalXdkInstallation(): File {
-        return findLocalXdkInstallation() ?: throw project.buildException("Could not find local installation of XVM.")
+    fun gitHubProtocol(): GitHubProtocol {
+        return xdkGit
     }
 
     companion object {
@@ -68,10 +59,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR = "javatools-fatjar"
         const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
-
-        private const val ENV_PATH = "PATH"
-        private const val XTC_LAUNCHER = "xec"
-        private const val DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 
         private val singletonCache: MutableMap<Project, XdkBuildLogic> = mutableMapOf()
 
@@ -89,38 +76,6 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
                     ${project.prefix} (project -> instance) ${System.identityHashCode(project)} -> ${System.identityHashCode(instance)}
                 """.trimIndent())
             return instance
-        }
-
-        fun getDateTimeStampWithTz(ms: Long = System.currentTimeMillis()): String {
-            return SimpleDateFormat(DATE_TIME_FORMAT, Locale.getDefault()).format(Date(ms))
-        }
-
-        fun findExecutableOnPath(executable: String): Path? {
-            return System.getenv(ENV_PATH)?.split(File.pathSeparator)?.map { File(it, executable) }
-                ?.find { it.exists() && it.canExecute() }?.toPath()?.toRealPath()
-        }
-
-        fun findLocalXdkInstallation(): File? {
-            return findExecutableOnPath(XTC_LAUNCHER)?.toFile()?.parentFile?.parentFile // xec -> bin -> xdk
-        }
-
-        /**
-         * Generate listing of a directory tree (recursively) with modification timestamps
-         * for all its files. This is useful, e.g. for making sure that an installation was
-         * updated, and, e.g., not erroneously considered as cached or some other hard-to-debug
-         * scenario like that.
-         */
-        fun listDirWithTimestamps(dir: File): String {
-            val truncate = dir.absolutePath
-            return buildString {
-                appendLine("Recursively listing '$dir' with modification timestamps:")
-                dir.walkTopDown().forEach {
-                    assert(it.absolutePath.startsWith(truncate))
-                    val path = it.absolutePath.substring(truncate.length)
-                    val timestamp = getDateTimeStampWithTz(it.lastModified())
-                    appendLine("    [$timestamp] '${dir.name}$path'")
-                }
-            }.trim()
         }
     }
 }
@@ -159,22 +114,6 @@ val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatool
 val Project.xdkImplicitsPath: String get() = "$compositeRootProjectDirectory/lib_ecstasy/src/main/resources/implicit.x"
 
 val Project.xdkImplicitsFile: File get() = File(xdkImplicitsPath)
-
-fun Project.executeCommand(vararg args: String): String = project.run {
-    val output = ByteArrayOutputStream()
-    val result = project.exec {
-        commandLine(*args)
-        standardOutput = output
-        isIgnoreExitValue = false
-    }
-    if (result.exitValue != 0) {
-        logger.error("$prefix ERROR: Command '${args.joinToString(" ")}' failed with exit code ${result.exitValue}")
-        return ""
-    }
-    return output.toString().trim()
-}
-
-// TODO these should probably be lazy for input purposes
 
 fun Project.isXdkPropertySet(key: String): Boolean {
     return xdkBuildLogic.props().has(key)
@@ -231,6 +170,30 @@ fun Task.considerNeverUpToDate() {
  * Extension method to flag a task as always up to date. Declaring no outputs will
  * cause a task to rerun, even an extended task.
  */
-fun Task.considerAlwaysUpToDate() {
+fun Task.considerAlwaqysUpToDate() {
     outputs.upToDateWhen { true }
+}
+
+/**
+ * Global predicate that any project can use to disable mutating operations, so that we
+ * can, e.g. do a test run, and check the log outputs, but without actually modifying
+ * anything.
+ */
+fun Project.isDryRun() = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
+
+fun Project.isSnapshot(): Boolean {
+    return project.version.toString().endsWith("-SNAPSHOT")
+}
+
+fun Project.isRelease(): Boolean {
+    return !isSnapshot()
+}
+
+fun Project.snapshotOnly(): Boolean {
+    return findProperty("snapshotOnly")?.toString()?.toBoolean() ?: false
+}
+
+fun Project.allowPublication(): Boolean {
+    val forbidPublication = findProperty("forbidPublication")?.toString()?.toBoolean() ?: false
+    return !forbidPublication && !(snapshotOnly() && !project.isSnapshot())
 }
