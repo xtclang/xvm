@@ -56,6 +56,11 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
     }
 
     fun resolveGpgSecret(): Boolean {
+        val sign = getXdkPropertyBoolean("org.xtclang.signing.enabled", isRelease())
+        if (!sign) {
+            logger.info("$prefix Signing is disabled. Will not try to resolve any keys.")
+            return false
+        }
         val password = (project.findProperty("signing.password") ?: System.getenv("GPG_SIGNING_PASSWORD") ?: "") as String
         val key = (project.findProperty("signing.key") ?: System.getenv("GPG_SIGNING_KEY") ?: readKeyFile()) as String
         if (key.isEmpty() || password.isEmpty()) {
@@ -63,8 +68,6 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             if (XdkDistribution.isCiEnabled) {
                 throw buildException("No GPG signing key or password found in CI build, and no manual way to set them.")
             }
-            logger.warn("$prefix WARNING: Reverting to useGpgCmd() for signing; this will NOT work in CI.")
-            useGpgCmd()
             return false
         }
         logger.info("$prefix Signature: In-memory GPG keys successfully configured.")
