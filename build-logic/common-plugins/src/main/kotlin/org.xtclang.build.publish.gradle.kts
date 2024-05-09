@@ -9,7 +9,8 @@ plugins {
     //id("io.github.gradle-nexus.publish-plugin") version "1.0.0"
 }
 
-val semanticVersion: SemanticVersion by extra
+private val semanticVersion: SemanticVersion by extra
+private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
 
 publishing {
     repositories {
@@ -30,8 +31,6 @@ tasks.withType<PublishToMavenRepository>().configureEach {
 
 val publishAllPublicationsToMavenLocalRepository by tasks.existing
 
-val publishAllPublicationsToGitHubRepository by tasks.existing
-
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to local repositories (e.g. GitHub and mavenCentral)."
@@ -41,7 +40,15 @@ val publishLocal by tasks.registering {
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to remote repositories (e.g. mavenLocal)."
-    dependsOn(publishAllPublicationsToGitHubRepository)
+
+    if (gitHubToken.isNotEmpty()) {
+        dependsOn("publishAllPublicationsToGitHubRepository")
+    }
+    doLast {
+        if (gitHubToken.isEmpty()) {
+            throw buildException("ERROR: No remote repositories for remote publication are configured.")
+        }
+    }
 }
 
 val listTags by tasks.registering {
