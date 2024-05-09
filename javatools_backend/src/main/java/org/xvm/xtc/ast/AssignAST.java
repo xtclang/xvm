@@ -49,7 +49,7 @@ class AssignAST extends AST {
       return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
 
     // Add/push element to array; or op-assign "x+=y"
-    if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz && clz.unbox()== clz ) {
+    if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz ) {
       AST k0 = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
       RegAST reg0 = (RegAST)k0;
       AST op = new InvokeAST( _meth.name(), clz, _kids );

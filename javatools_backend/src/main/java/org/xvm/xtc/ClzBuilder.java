@@ -206,8 +206,10 @@ public class ClzBuilder {
         _sb.fmt("$%0 %0,",_tclz._tns[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
+      // Init any local type variables; these appear in name2kid
       for( int i=0; i<_tclz._tns.length; i++ )
-        _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
+        if( _clz._name2kid.get(_tclz._tns[i])!=null )
+          _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
       _sb.di().ip("}\n");
 
       // For all other constructors
@@ -242,6 +244,21 @@ public class ClzBuilder {
         }
       }
     }
+
+    // Property types not mentioned in name2kids; must be concrete types from
+    // interfaces.
+    for( int i=0; i<_tclz._tns.length; i++ ) {
+      String name = _tclz._tns[i];
+      Part p = _clz._name2kid.get(name);
+      if( p==null ) {
+        _sb.ip("public ");
+        _tclz._xts[i].clz(_sb);
+        _sb.p(" ").p(name).p("$get() { return ");
+        _tclz._xts[i].clz(_sb);
+        _sb.p(".GOLD; }").nl();
+      }
+    }
+
 
     // Output Java methods for all class methods
     for( Part part : _clz._name2kid.values() ) {
@@ -414,10 +431,11 @@ public class ClzBuilder {
   static public void args(MethodPart m, SB sb) {
     // Argument list
     if( m._args !=null ) {
-      int delta = m.xargs().length - m._args.length;
+      XType[] xargs = m.xargs();
+      int delta = xargs.length - m._args.length;
       for( int i = 0; i < m._args.length; i++ ) {
         // Unbox boxed args
-        XType xt = m.xarg(i+delta);
+        XType xt = xargs[i+delta];
         if( xt instanceof XClz xclz )
           add_import(xclz);
         // Parameter class, using local generic parameters
@@ -682,13 +700,14 @@ public class ClzBuilder {
     return kids;
   }
 
+  // Define a new local
   public int define( String name, XType type ) {
     // Track active locals
     _locals.add(name);
     _ltypes.add(type);
     return _locals._len-1;      // Return register number
   }
-    // Pop locals at end of scope
+  // Pop locals at end of scope
   public void pop_locals(int n) {
     while( n < nlocals() ) {
       _ltypes.pop();

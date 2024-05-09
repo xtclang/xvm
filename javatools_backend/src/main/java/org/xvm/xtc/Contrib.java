@@ -17,11 +17,9 @@ public class Contrib {
   private final SingleCon _inject;
   public final Annot _annot;
   private final HashMap<String, TCon> _parms;
-  // Post link values
-  final HashMap<String, ClassPart> _clzs;
-  
+
   public final TCon _tContrib;
-  
+
   protected Contrib( CPool X ) {
     _comp = Part.Composition.valueOf(X.u8());
     _tContrib = (TCon)X.xget();
@@ -29,7 +27,7 @@ public class Contrib {
     Annot annot = null;
     SingleCon inject = null;
     HashMap<String, TCon> parms = null;
-  
+
     assert _tContrib!=null;
     switch( _comp ) {
     case Extends:
@@ -43,7 +41,7 @@ public class Contrib {
     case Delegates:
       prop = (PropCon)X.xget();
       break;
-      
+
     case Incorporates:
       int len = X.u31();
       if( len == 0 ) break;
@@ -59,14 +57,13 @@ public class Contrib {
       inject = (SingleCon)X.xget();
       if( inject==null ) break;
       throw XEC.TODO();
-      
+
     default: throw XEC.TODO();
     }
     _annot = annot;
     _prop = prop;
     _inject = inject;
     _parms = parms;
-    _clzs = parms==null ? null : new HashMap<>();
   }
 
   @Override public String toString() { return str(new SB()).toString(); }
@@ -74,7 +71,7 @@ public class Contrib {
     sb.p(_comp.toString());
     return _tContrib ==null ? sb : _tContrib.str(sb.p(" -> "));
   }
-  
+
   static Contrib[] xcontribs( int len, CPool X ) {
     if( len==0 ) return null;
     Contrib[] cs = new Contrib[len];

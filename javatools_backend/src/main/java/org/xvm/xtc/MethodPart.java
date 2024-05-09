@@ -132,19 +132,19 @@ public class MethodPart extends MMethodPart {
   // Match against signature.
   public boolean match_sig(SigCon sig) {
     assert sig._name.equals(_name);
-    boolean rez = match_sig(_args,sig._args);
+    boolean rez = match_sig(_args,sig._args, true);
     if( !rez ) return false;
-    //assert match_sig(_rets,sig._rets); // No selection based on return, it just needs to match
+    //assert match_sig(_rets,sig._rets, false); // No selection based on return, it just needs to match
     return true;
   }
-  private boolean match_sig(Parameter[] ps, TCon[] ts) {
+  private boolean match_sig(Parameter[] ps, TCon[] ts, boolean box) {
     if( ps==null && ts==null ) return true;
     if( ps==null || ts==null ) return false;
     if( ps.length != ts.length ) return false;
     for( int i=0; i<ps.length; i++ ) {
       if( ps[i].tcon() == ts[i] ) continue; // Trivially true
-      XType xp = ps[i].type();
-      XType xt = XType.xtype(ts[i],false);
+      XType xp = ps[i].type(box);
+      XType xt = XType.xtype(ts[i],box);
       if( !xt.isa(xp) )
         return false;
     }
@@ -167,6 +167,11 @@ public class MethodPart extends MMethodPart {
     return _code.length==2 && _code[0]==1 && _code[1]==76;
   }
   public boolean is_constructor() { return S.eq(_name,"construct"); }
+  boolean isOperator() {
+    // Operator methods always unbox (since cannot dispatch as operator).
+    // TODO: Probably can dispatch as normal method, will need boxed version.
+    return _annos!=null && _annos[0]._par.name().equals("Operator");
+  }
 
   // XTypes for all arguments.  Lazily built.
   // Default arguments responsibility of the caller.
@@ -176,15 +181,16 @@ public class MethodPart extends MMethodPart {
 
   public XType[] xargs() {
     if( _xargs != null ) return _xargs;
-    if( !is_constructor() )
-      return (_xargs = XType.xtypes(_args));
+    if( !is_constructor() && !isPrivate() && !isOperator() )
+      return (_xargs = XType.xtypes(_args,true));
     // The "free" empty constructors also take type arguments
     XType[] zts = clz()._tclz._xts;
     if( _args != null ) {
       int old = zts.length;
       zts = Arrays.copyOf(zts,old+_args.length);
       for( int i=0; i<_args.length; i++ )
-        zts[i+old] = _args[i].type();
+        // Free constructors are unboxed
+        zts[i+old] = _args[i].type(false);
     }
     return zts.length==0 ? null : (_xargs=zts);
   }
@@ -192,7 +198,7 @@ public class MethodPart extends MMethodPart {
 
   public XType[] xrets() {
     if( _xrets != null ) return _xrets;
-    return (_xrets = XType.xtypes(_rets));
+    return (_xrets = XType.xtypes(_rets,false));
   }
   public XType xret(int idx) { return xrets()[idx]; }
 

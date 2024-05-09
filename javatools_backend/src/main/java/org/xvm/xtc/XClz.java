@@ -41,8 +41,6 @@ import java.util.Arrays;
 //   class CaseInsensitive implements Hasher<String> { .... }
 //   XClz: CaseInsensitive{_=String}
 
-
-
 public class XClz extends XType {
   private static final String[] STR0 = new String[0];
 
@@ -74,8 +72,57 @@ public class XClz extends XType {
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _pack = "0xDEADBEEF"; }
 
+
+  // --------------------------------------------------------------------------
+  // Interning: hash and compare the XClz-specific parts, check in the INTERN
+  // table, manage FREE, fill in based fields.
+
   // Free XClz to recycle
   private static XClz FREE;
+
+  // Using shallow equals, hashCode, not deep, because the parts are already interned
+  @Override boolean eq(XType xt) {
+    XClz clz = (XClz)xt;
+    return Arrays.equals(_tns, clz._tns ) &&
+      S.eq(_name, clz._name) && S.eq(_nest, clz._nest) && S.eq(_pack, clz._pack) &&
+      _ro == clz._ro;
+  }
+  @Override int hash() {
+    int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode() ^ (_ro ? 2048 : 0);
+    if( _tns != null )
+      for( String tname : _tns )
+        if( tname != null )
+          hash ^= tname.hashCode();
+    return hash;
+  }
+
+  // Intern, but do not fill in the extra info fields.
+  XClz _intern() {
+    assert _pack != "0xDEADBEEF"; // Got set
+    XClz clz = (XClz)intern(this);
+    if( clz!=this ) { FREE = this; _pack = "0xDEADBEEF"; }
+    return clz;
+  }
+
+  // Intern and fill out a parameterized class from the prototype
+  XClz _intern( XClz proto ) {
+    // See if already exists
+    XClz clz = _intern();
+    if( clz != this ) {
+      assert proto._super==clz._super && (proto._clz==clz._clz || clz._clz==null);
+      return clz;
+    }
+    assert _ro || (_super==null || !_super._ro);  // Set if super is set
+
+    _mod = proto._mod;
+    _clz = proto._clz;
+    _super = proto._super;
+    _jpack = proto._jpack;
+    _jname = proto._jname;
+    return clz;
+  }
+
+  // --------------------------------------------------------------------------
 
   // Makes a new uninterned XCLZ.
   // Fills in package,nesting,name,null-ness.
@@ -115,42 +162,15 @@ public class XClz extends XType {
 
   // Makes a new uninterned XClz cloned from the prototype.
   // SHARES xts/tns; so these need to be defensively copied before changing.
-  private XClz mallocClone() {
+  private XClz _mallocClone() {
     XClz clz = mallocBase(_notNull,_pack, _nest, _name);
     clz._xts = _xts;
     clz._tns = _tns;
     return clz;
   }
 
-  // Intern, but do not fill in the extra info fields.
-  XClz _intern() {
-    assert _pack != "0xDEADBEEF"; // Got set
-    XClz clz = (XClz)intern(this);
-    if( clz!=this ) { FREE = this; _pack = "0xDEADBEEF"; }
-    return clz;
-  }
-
-  // Intern and fill out a parameterized class from the prototype
-  XClz _intern( XClz proto ) {
-    // See if already exists
-    XClz clz = _intern();
-    if( clz != this ) {
-      assert proto._super==clz._super && (proto._clz==clz._clz || clz._clz==null);
-      return clz;
-    }
-    assert _ro || (_super==null || !_super._ro);  // Set if super is set
-
-    _mod = proto._mod;
-    _clz = proto._clz;
-    _super = proto._super;
-    _jpack = proto._jpack;
-    _jname = proto._jname;
-    return clz;
-  }
-
-
-
   // Fill in common fields.  Not interned yet.
+  private static final Ary<String> TNS = new Ary<>(String.class);
   private static XClz _malloc( ClassPart clz ) {
     // Extra useful info
     ModPart mod = clz.mod();
@@ -176,11 +196,59 @@ public class XClz extends XType {
       cname = S.java_class_name(clz.name());
     }
 
-    XClz xclz = mallocLen( true, pack(clz,mod), cnest, cname, clz._tnames.length );
+    // Get super class early.
+    XClz supr = get_super(clz);
+    assert TNS._len==0;
+
+    // Collect superclass type variables
+    if( supr!=null && supr._tns!=null )
+      for( int i=0; i<supr._tns.length; i++ )
+        TNS.add(supr._tns[i]);
+
+    // Collect self type variable names
+    if( clz._tnames != null )
+      for( String tname : clz._tnames )
+        if( TNS.find(tname)== -1 ) // Filter if sharpening from super
+          TNS.add(tname);
+
+    // Collect type variable names from interfaces also
+    if( clz._contribs != null )
+      for( Contrib c : clz._contribs )
+        if( c._comp == Part.Composition.Implements )
+          for( String tname : ((ClzCon)c._tContrib).clz()._tnames )
+            if( TNS.find(tname)== -1 ) // Filter if from class
+              TNS.add(tname);
+
+    // Make a basic XClz with space for type vars
+    XClz xclz = mallocLen( true, pack(clz,mod), cnest, cname, TNS._len );
+    String[] tns = xclz._tns = TNS.asAry();
+    TNS.clear();                // Clear early, allows recursive type creation
+
+    // Copy super types
+    if( supr!=null && supr._tns!=null )
+      System.arraycopy( supr._xts, 0, xclz._xts, 0, supr._tns.length );
+
+    // Fill in interface type variables
+    if( clz._contribs != null )
+      for( Contrib c : clz._contribs )
+        if( c._comp == Part.Composition.Implements ) {
+          ClassPart iface = ((ClzCon)c._tContrib).clz();
+          for( int i=0; i<iface._tnames.length; i++ ) {
+            String tname = iface._tnames[i];
+            XType xt = xtype(((ParamTCon)c._tContrib)._parms[i],true);
+            xclz._xts[S.find(tns,tname)] = xt;
+          }
+        }
+
+    // Fill in self type variables, will override supers or ifaces
+    if( clz._tnames != null )
+      for( int i=0; i<clz._tnames.length; i++ )
+        xclz._xts[S.find(tns,clz._tnames[i])] = xtype(clz._tcons[i],true,xclz);
+
     xclz._mod = mod;  // Self module
     xclz._clz = clz;
     xclz._jname = xclz._jpack = "";
-    xclz._super = get_super(clz);
+    xclz._super = supr;
     return xclz;
   }
 
@@ -192,12 +260,6 @@ public class XClz extends XType {
     if( clz._tclz != null )     // Check class cache
       return clz._tclz;
     XClz xclz = _malloc(clz);
-    // Load the type parameters, part of the uniqueness
-    for( int i=0; i<clz._tnames.length; i++ ) {
-      xclz._tns[i] = clz._tnames[i];
-      xclz._xts[i] = xtype(clz._tcons[i],true,xclz);
-    }
-    assert xclz._super == get_super(clz);
     XClz xclz2 = xclz._intern();
     assert xclz2 == xclz;       // Only intern XTC ClassPart once
     clz._tclz = xclz;           // Assign the class cache
@@ -238,7 +300,7 @@ public class XClz extends XType {
       proto = proto._ro ? XCons.ARYXTC_RO : XCons.ARYXTC;
     }
 
-    XClz xclz = proto.mallocClone();
+    XClz xclz = proto._mallocClone();
     xclz._xts = ptc._parms==null ? EMPTY : new XType [ptc._parms.length];
     xclz._tns = ptc._parms==null ? STR0  : new String[ptc._parms.length];
     // Override parameterized type fields
@@ -264,7 +326,7 @@ public class XClz extends XType {
       XType [] xts = xclz._xts;
       String[] tns = xclz._tns;
       int len = xts==null ? 0 : xts.length;
-      xclz._xts    = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
+      xclz._xts = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
       xclz._tns = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
       for( int i=0; i<parms.length; i++ ) {
         boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
@@ -315,13 +377,13 @@ public class XClz extends XType {
 
   @Override public XClz nullable() {
     if( !_notNull ) return this;
-    XClz clz = mallocClone();
+    XClz clz = _mallocClone();
     clz._notNull = false;
     return clz._intern(this);
   }
   public XClz readOnly() {
     if( _ro ) return this;
-    XClz clz = mallocClone();
+    XClz clz = _mallocClone();
     clz._ro = true;
     return clz._intern(this);
   }
@@ -517,22 +579,6 @@ public class XClz extends XType {
     for( XType xt : _xts )
       xt._clz(sb,null,false).p("$");
     return sb.unchar();
-  }
-
-  // Using shallow equals, hashCode, not deep, because the parts are already interned
-  @Override boolean eq(XType xt) {
-    XClz clz = (XClz)xt;
-    return Arrays.equals(_tns, clz._tns ) &&
-      S.eq(_name, clz._name) && S.eq(_nest, clz._nest) && S.eq(_pack, clz._pack) &&
-      _ro == clz._ro;
-  }
-  @Override int hash() {
-    int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode() ^ (_ro ? 2048 : 0);
-    if( _tns != null )
-      for( String tname : _tns )
-        if( tname != null )
-          hash ^= tname.hashCode();
-    return hash;
   }
 
   // Does 'this' subclass 'sup' ?

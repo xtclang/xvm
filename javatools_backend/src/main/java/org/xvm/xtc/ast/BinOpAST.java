@@ -44,6 +44,8 @@ class BinOpAST extends AST {
       XType tk = _kids[0]._type;
       if( tk.isAry()  )
         return tk.e();
+      if( tk == XCons.JSTRING )
+        return XCons.JCHAR;
       // Something else (PropCon?) means get the collections' element type
       int idx = 0;              // Default for non-Tuple
       // Tuple at fixed field offset
@@ -186,6 +188,7 @@ class BinOpAST extends AST {
 
       put("?:" ,2);
 
+      put(".charAt((int)(",0); // Not-the-operator
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);

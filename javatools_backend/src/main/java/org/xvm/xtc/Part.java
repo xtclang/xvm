@@ -8,7 +8,7 @@ import org.xvm.util.NonBlockingHashMap;
 /**
    DAG structure containment of the existing components/structures.
    Handles e.g. the Class hierarchy, Modules, Methods, and Packages.
-   These things are represented as structures in memory.   
+   These things are represented as structures in memory.
  */
 abstract public class Part {
   public final Const _id;
@@ -21,16 +21,16 @@ abstract public class Part {
   // Zero except for Class and Prop parts.
   final int _cslen;
 
-  // Map from kid name to kid.  
+  // Map from kid name to kid.
   public NonBlockingHashMap<String,Part> _name2kid;
-  
+
   Part( Part par, int nFlags, Const id, String name, CondCon cond, CPool X ) {
     _id = id;
     _par = par;
     assert (par==null) ==  this instanceof FilePart; // File doesn't have a parent
     //assert (id ==null) ==  this instanceof FilePart; // File doesn't have a id
     assert cond==null || !(this instanceof FilePart); // File can't be conditional
-    
+
     _name = id==null ? name : ((IdCon)id.resolveTypedefs()).name();
     _nFlags = nFlags;
     _cond = cond;
@@ -47,7 +47,7 @@ abstract public class Part {
     _name = name;
     _nFlags = 0;
     _cond = null;
-    _cslen = 0;    
+    _cslen = 0;
   }
 
   @Override public String toString() { return str(new SB()).toString(); }
@@ -94,7 +94,7 @@ abstract public class Part {
     assert !_name2kid.containsKey(kid._name);
     _name2kid.put(kid._name,kid);
   }
-  
+
   // Tik-tok style recursive-descent linking.  This is the Tik, shared amongst
   // all kids.  The Tok is where we do kid-specific linking.  If I see too many
   // of these tik-tok patterns I'll probably add a Visitor instead.
@@ -104,12 +104,12 @@ abstract public class Part {
     p = link_as(repo);          // In-place replacement (Required ModPart becomes Primary ModPart)
     XEC.ModRepo.VISIT.put(this,p);     // Stop cycles
     if( p!=this ) return p.link(repo); // Now link the replacement
-    
+
     // Link specific part innards
     link_innards(repo);                 // Link internal Const
 
     // For all child parts
-    if( _name2kid!=null ) 
+    if( _name2kid!=null )
       for( String name : _name2kid.keySet() ) {
         Part kid0 = _name2kid.get(name);
         Part kid1 = kid0.link(repo); // Link and upgrade
@@ -123,7 +123,7 @@ abstract public class Part {
 
   // Tok, kid-specific internal linking.
   abstract void link_innards( XEC.ModRepo repo );
-  
+
   // Look up a child.
   public Part child(String s) {
     return _name2kid==null ? null : _name2kid.get(s);
@@ -152,7 +152,7 @@ abstract public class Part {
     RSVD_D,
     MULTIMETHOD,
     FILE;
-    
+
     /**
      * Instantiate a component as it is being read from a stream, reading its body
      * @param par    the parent component
@@ -251,7 +251,7 @@ abstract public class Part {
      */
     Equal,
     ;
-    
+
     /**
      * Look up a Composition enum by its ordinal.
      * @param i  the ordinal
@@ -286,6 +286,7 @@ abstract public class Part {
   public boolean isStatic   () { return (_nFlags &    STATIC_BIT) != 0; }
   public boolean isSynthetic() { return (_nFlags & SYNTHETIC_BIT) != 0; }
   public boolean isAuxiliary() { return (_nFlags & AUXILIARY_BIT) != 0; }
-  public boolean isPublic   () { return (_nFlags &   ACCESS_MASK) == ACCESS_PUBLIC; }
+  public boolean isPublic   () { return (_nFlags &   ACCESS_MASK) == ACCESS_PUBLIC ; }
+  public boolean isPrivate  () { return (_nFlags &   ACCESS_MASK) == ACCESS_PRIVATE; }
 
 }

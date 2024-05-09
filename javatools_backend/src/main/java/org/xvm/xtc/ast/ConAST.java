@@ -39,7 +39,10 @@ public class ConAST extends AST {
       int nargs = lam._args.length;
       for( int i=0; i<nargs; i++ ) {
         String aname = lam._args[i]._name;
-        XType atype = XType.xtype(lam._args[i].tcon(),false);
+        int idx = _X._locals.find(aname);
+        XType atype = idx >= 0
+          ? _X._ltypes.at(idx)  // Name exists in out scope, use that type
+          : XType.xtype(lam._args[i].tcon(),false);
         X2.define(aname,atype);
       }
 

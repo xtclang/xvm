@@ -136,9 +136,6 @@ public abstract class AST {
   // Auto-box e.g. long to Int64 or j.l.String to xtc.String
   public AST reBox() {
     if( _par == null )              return this; // Must have a parent that cares
-    if( _par._type == XCons.VOID )  return this; // No boxing around VOID
-    if(      _type == XCons.VOID )  return this;
-    if( _par._type instanceof XFun) return this; // No boxing issues around functions
     // Assigns RHS and Returns LHS might need to box
     XType lhs = _par.reBox(this);
     // Desired flavor is no-change or not-boxed or already isa
