@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-val semanticVersion: SemanticVersion by extra
+private val semanticVersion: SemanticVersion by extra
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.
 val xdkJavaToolsProvider by configurations.registering {

@@ -211,3 +211,7 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
         return merge(to, local)
     }
 }
+
+fun Project.getXtclangGitHubMavenPackageRepositoryToken(): String {
+    return getXdkProperty("org.xtclang.repo.github.token", System.getenv("GITHUB_TOKEN") ?: "")
+}

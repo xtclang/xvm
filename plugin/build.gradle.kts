@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
-val semanticVersion: SemanticVersion by extra
+private val semanticVersion: SemanticVersion by extra
 
 private val pprefix = "org.xtclang"
 

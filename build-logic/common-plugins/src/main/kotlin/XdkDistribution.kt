@@ -93,9 +93,9 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
  * property file.
  */
 fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project.run {
-    val gitHubToken = project.getXdkProperty("org.xtclang.repo.github.token", System.getenv("GITHUB_TOKEN") ?: "")
+    val gitHubToken = project.getXtclangGitHubMavenPackageRepositoryToken()
     if (gitHubToken.isEmpty()) {
-        logger.warn("$prefix No GitHub token found, either in config or environment. publishRemote won't work.")
+        logger.warn("$prefix WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
         return false
     }
 
