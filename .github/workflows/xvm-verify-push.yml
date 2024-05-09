@@ -6,9 +6,9 @@
 #   2) Cleans Gradle and other build caches, maybe one every 24 h
 #   3) Cleans ...
 #
-
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
 # gh auth switch --hostname enterprise.internal --user monalisa  (switch auth)
+name: XVM Verification and Package Updates
 
 on:
   push:
@@ -27,6 +27,7 @@ on:
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
   always_publish_snapshot: false
+  enable_gradle_home_cache_cleanup: true
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -54,7 +55,7 @@ env:
   # Build environment and build workflow debug flags.
   # ACTIONS_RUNNER_DEBUG: true
   # ACTIONS_STEP_DEBUG: true
-  # GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
+  GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: true
 
 # Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
 concurrency:
@@ -71,27 +72,34 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Fetch Sources
+        uses: actions/checkout@v4
         with:
           show-progress: true
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: temurin
+          distribution: zulu
+          java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
+          gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
+          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
 
-      - uses: gradle/actions/wrapper-validation@v3
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v3
 
       - name: Dump environment info
         shell: bash
         run: |
-          echo "Branch (github.ref)    : ${{ github.ref }}"
-          echo "Runner OS              : ${{ runner.os }}"
-          echo "Java system properties :" 
+          echo "*** Branch (github.ref)    : ${{ github.ref }}"
+          echo "*** Commit (github.sha)    : ${{ github.sha }}"
+          echo "*** Runner OS              : ${{ runner.os }}"
+          echo "*** Java system properties :" 
           java -XshowSettings:properties --version
 
       - name: Build the XDK and create a distribution layout
@@ -109,12 +117,18 @@ jobs:
           xec_path=$(find xdk/build/install/ -name xec)
           echo "Location of native launcher (xcc): $xcc_path"
           echo "Location of native launcher (xec): $xec_path"
-          echo ">>> Testing native launchers, verifying their binary format and that they run on this platform..."
-          file $xcc_path
-          file $xec_path
-          $xcc_path --version
-          $xec_path --version
-          echo "<<< Native launchers work."
+          echo "*** Testing native launchers, verifying their binary format and that they run on this platform..."
+          xcc_file=$(file $xcc_path)
+          xec_file=$(file $xec_path)
+          xcc_version=$($xcc_path --version)
+          xec_version=$($xec_path --version)
+          echo "    xcc:"
+          echo "        file   : $xcc_file"
+          echo "        version: $xcc_version"
+          echo "    xec:"
+          echo "        file   : $xec_file"
+          echo "        version: $xec_version"
+          echo "*** Native launchers work."
 
       - name: Default manualTest tasks
         if: ${{ env.skip_manual_tests != 'true' }}
@@ -133,8 +147,47 @@ jobs:
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
-      - name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
-        if: ${{ ((env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master')) && (runner.os == 'Linux') }}
+  publish-snapshot:
+    name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
+    needs: build-verify
+    runs-on: ubuntu-latest
+    #if: ${{ (github.ref == 'refs/heads/master') }}
+    steps:
+      - name: Maximize Build Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          large-packages: false
+
+      # Check out current repository
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      # Set up Java environment for the next steps
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
+          cache-disabled: ${{ github.ref == 'refs/heads/master' }}
+          cache-read-only: false
+
+      - name: Dump environment info
+        shell: bash
+        run: |
+          echo "*** Branch (github.ref)    : ${{ github.ref }}"
+          echo "*** Commit (github.sha)    : ${{ github.sha }}"
+          echo "*** Runner OS              : ${{ runner.os }}"
+          echo "*** Java system properties :" 
+          java -XshowSettings:properties --version
+
+      - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
+        if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true

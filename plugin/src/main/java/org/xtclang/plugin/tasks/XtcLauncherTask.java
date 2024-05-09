@@ -9,6 +9,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPEN
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModule;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
+import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 import static org.xtclang.plugin.XtcPluginUtils.singleArgumentIterableProvider;
 
 import java.io.File;
@@ -271,7 +272,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         for (final var sourceSet : getDependentSourceSets()) {
             final Set<File> sourceSetOutput = resolveDirectories(XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet));
-            map.put(XTC_LANGUAGE_NAME + sourceSet.getName(), sourceSetOutput);
+            map.put(XTC_LANGUAGE_NAME + capitalize(sourceSet.getName()), sourceSetOutput);
         }
 
         logger.info("{} Compilation/runtime full module path resolved as: ", prefix());

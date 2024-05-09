@@ -113,7 +113,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
             logger.info("{} Scanning file collection: filesFrom: {} {}, files: {}", prefix, name, config.getState(), files.getFiles());
             fc = fc.plus(files);
         }
-        fc.getAsFileTree().forEach(it -> logger.info("{}    Resolved fileTree '{}'", prefix, it.getAbsolutePath()));
+        fc.getAsFileTree().forEach(it -> logger.debug("{}    Resolved fileTree '{}'", prefix, it.getAbsolutePath()));
         return fc;
     }
 
