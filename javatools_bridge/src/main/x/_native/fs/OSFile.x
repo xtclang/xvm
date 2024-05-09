@@ -65,9 +65,9 @@ const OSFile
 
     @Override
     Cancellable watch(FileWatcher watcher) {
-        Directory parent = this.parent ?: assert;
-        if (!parent.exists) {
-            throw new FileNotFound(path, "No parent directory");
+        Directory? parent = this.parent;
+        if (parent == Null || !parent.exists) {
+            throw new AccessDenied(path, "Inaccessible parent directory");
         }
         return store.watchFile(this, watcher);
     }
