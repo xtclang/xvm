@@ -55,6 +55,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.Runtime;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -309,7 +310,8 @@ public class xRTServer
         catch (Exception e)
             {
             frame.f_context.f_container.terminate(hServer.f_context);
-            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            return frame.raiseException(
+                    xException.ioException(frame, Runtime.logRuntimeException(e.getMessage())));
             }
         }
 
@@ -608,7 +610,8 @@ public class xRTServer
             }
         catch (IOException e)
             {
-            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            return frame.raiseException(
+                    xException.ioException(frame, Runtime.logRuntimeException(e.getMessage())));
             }
 
         if (cbBody > 0)
@@ -619,7 +622,8 @@ public class xRTServer
                 }
             catch (Throwable e)
                 {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                return frame.raiseException(
+                    xException.ioException(frame, Runtime.logRuntimeException(e.getMessage())));
                 }
             }
         return Op.R_NEXT;

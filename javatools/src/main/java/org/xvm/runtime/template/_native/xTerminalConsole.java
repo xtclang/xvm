@@ -25,6 +25,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Runtime;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -165,7 +166,8 @@ public class xTerminalConsole
                 }
             catch (IOException e)
                 {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                return frame.raiseException(xException.ioException(frame,
+                        Runtime.logRuntimeException(e.getMessage())));
                 }
             }
         else

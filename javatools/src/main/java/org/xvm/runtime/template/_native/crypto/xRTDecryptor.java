@@ -12,6 +12,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.Runtime;
 
 import org.xvm.runtime.template.xService;
 
@@ -93,7 +94,7 @@ public class xRTDecryptor
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(e.getMessage());
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
@@ -120,7 +121,7 @@ public class xRTDecryptor
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(e.getMessage());
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
     }

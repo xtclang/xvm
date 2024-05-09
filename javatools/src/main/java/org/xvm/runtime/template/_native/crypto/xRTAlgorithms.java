@@ -28,6 +28,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.Runtime;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -216,7 +217,7 @@ public class xRTAlgorithms
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(e.getMessage());
+            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
 
@@ -282,7 +283,7 @@ public class xRTAlgorithms
             }
         }
 
-    enum KeyForm {Public, Private, PublicOrSecret, PrivateOrSecret}
+    public enum KeyForm {Public, Private, PublicOrSecret, PrivateOrSecret}
 
 
     // ----- handles -------------------------------------------------------------------------------
