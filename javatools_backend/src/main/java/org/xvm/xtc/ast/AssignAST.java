@@ -94,7 +94,7 @@ class AssignAST extends AST {
           // XTC   if( String s := cond_ret(), Int n :=... ) { ..s...}
           // BAST  (If (Multi (Op$AsgnIfNotFalse (DefReg s) (Invoke cond_ret))...) ...true... ...false...)
           // BAST  (If (&&    (Op$AsgnIfNotFalse (Reg stmp) (Invoke cond_ret))...) (Block (DefReg s stmp) ...true...) ...false...)
-          // Java  if( $t(stmp = cond_ret()) && GET$COND() && $t(ntmp = cond_ret()) && GET$COND() ) { String s=stmp; long n=ntmp; ...s... }
+          // Java  if( $t(stmp = cond_ret()) && $COND && $t(ntmp = cond_ret()) && $COND ) { String s=stmp; long n=ntmp; ...s... }
           String tmp = blk.add_tmp(type);
           _kids[0] = new RegAST(0,tmp,type);  _kids[0]._par = this;
 
@@ -118,7 +118,7 @@ class AssignAST extends AST {
           // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
           // BAST  (Invoke (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
           // BAST  (Invoke (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
-          // Java  long n;  xassert( $t(n=S1()) && GET$COND() && ...n...)
+          // Java  long n;  xassert( $t(n=S1()) && $COND && ...n...)
           String tmp = blk.add_tmp(type, _name);
           _kids[0] = new RegAST(0,tmp,type);
           _kids[0]._par = this;
@@ -129,7 +129,7 @@ class AssignAST extends AST {
           // XTC   s := cond_ret();
           // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
           // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
-          // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
+          // Java  if( $t(tmp = cond_ret()) && $COND ) s=tmp;
           String tmp = enclosing_block().add_tmp(type);
           _cond_asgn = _name;
           _kids[0] = new RegAST(0,tmp,type);
@@ -156,13 +156,13 @@ class AssignAST extends AST {
       if( _cond_asgn!=null ) sb.ip("if( ");
       // Expression result is the boolean conditional value,
       // and the var was previously defined.
-      // $t(var = expr()) && XRuntime.GET$COND()
+      // $t(var = expr()) && XRuntime.$COND
       String name = _kids[0] instanceof RegAST reg ? reg._name : ((DefRegAST)_kids[0])._name;
       if( _op == AsnOp.AsnIfNotFalse ) sb.p("$t");
       _kids[1].jcode(sb.p("(").p(name).p(" = ")).p(")");
-      sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.GET$COND()" : "!=null " );
+      sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.$COND" : "!=null " );
 
-      // $t(tmp = expr()) && XRuntime.GET$COND() && $t(var = tmp)
+      // $t(tmp = expr()) && XRuntime.$COND && $t(var = tmp)
       if( _cond_asgn != null )
         sb.p(") ").p(_cond_asgn).p(" = ").p(name);
       yield sb;

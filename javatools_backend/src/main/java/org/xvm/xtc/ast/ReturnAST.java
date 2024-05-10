@@ -12,7 +12,6 @@ import org.xvm.xtc.XType;
 public class ReturnAST extends AST {
   private final MethodPart _meth;
   private final ExprAST _expr;
-  boolean _cond_true;
 
   static ReturnAST make( ClzBuilder X, int n ) {
     return new ReturnAST(X._meth, X._expr, X.kids(n) );
@@ -69,30 +68,50 @@ public class ReturnAST extends AST {
       return ret;
     }
     if( _cond ) {
-      // cond_true is set by MultiAST
-      if( _kids.length==1 && !_cond_true ) {
-        assert _kids[0] instanceof ConAST con && con._con.equals("false");
-      } else {
-        if( _kids.length==2 ) throw XEC.TODO(); // Maybe a complex conditional return?
-        _cond_true = true;                      //
+      if( _kids.length==2 ) {
+        MultiAST mult = new MultiAST(true,_kids);
+        _kids[0]._par = _kids[1]._par= mult;
+        mult._type = _type;
+        AST ret = new ReturnAST(_meth,null,mult);
+        ret._cond = true;
+        return ret;
       }
+      assert _kids.length==1;
+      cond_rewrite(this,0,_meth.xret(1).ztype());
     }
     return this;
   }
 
+  // Rewrite children to directly call the XRuntime.COND backdoors.
+  private static void cond_rewrite(AST par, int idx, String ztype) {
+    AST ast = par._kids[idx];
+    switch( ast ) {
+    case ConAST con:
+      ast._cond = true;
+      assert S.eq(con._con,"false");
+      con._con = "XRuntime.False(" + ztype + ")";
+      break;
+    case MultiAST mult:
+      ast._cond = true;
+      assert mult._kids[0] instanceof ConAST con && S.eq(con._con,"true");
+      CallAST call = CallAST.make(mult._type,"XRuntime","True",mult._kids[1]);  mult._kids[1]._par = call;
+      par._kids[idx] = call;  call._par = par;
+      break;
+    case TernaryAST tern:
+      ast._cond = true;
+      cond_rewrite(tern,1,ztype);
+      cond_rewrite(tern,2,ztype);
+      break;
+    case InvokeAST invk:  break;
+    case CallAST call2:   break;
+
+    default: throw XEC.TODO();
+    }
+  }
+
+
   // Box as needed
   @Override XType reBox( AST kid ) { return _kids[0]==kid ? _type : null; }
 
-  @Override public SB jcode( SB sb ) {
-    sb.ip("return ");
-    if( _kids==null ) return sb;
-    if( _cond ) {
-      // Conditional return; first part in the global XRuntime.COND
-      sb.p("XRuntime.SET$COND(");
-      if( _cond_true ) _kids[0].jcode(sb.p("true,"));
-      else             sb.p("false,").p(_meth.xret(1).ztype());
-      return sb.p(")");
-    }
-    return _kids[0].jcode(sb);
-  }
+  @Override public void jpre( SB sb ) { sb.p("return "); }
 }

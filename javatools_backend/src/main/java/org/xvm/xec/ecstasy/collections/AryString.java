@@ -68,8 +68,8 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   public int indexOf( String e ) {
     for( int i=0; i<_len; i++ )
       if( _es[i].equals(e) )
-        return XRuntime.SET$COND(true,i);
-    return XRuntime.SET$COND(false,-1);
+        return XRuntime.True(i);
+    return XRuntime.False(-1);
   }
   public AryString removeUnordered(String e) {
     int idx = indexOf(e);
@@ -90,7 +90,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   public class IterXString extends Iterator<org.xvm.xec.ecstasy.text.String> {
     private int _i;
     @Override public org.xvm.xec.ecstasy.text.String next() { return org.xvm.xec.ecstasy.text.String.construct(nextStr()); }
-    @Override public String nextStr() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public String nextStr() { return (XRuntime.$COND = hasNext()) ? _es[_i++] : null; }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return ""+_i+".."+_len; }
     // --- Comparable

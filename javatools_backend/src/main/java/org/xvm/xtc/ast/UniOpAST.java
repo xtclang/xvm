@@ -12,7 +12,7 @@ import org.xvm.xtc.cons.Const.UniOp;
 // AST: ( ~ e0 ) -- Java: ~e0 // no rewrite if e0 is some integer
 // AST: ( ~ e0 ) -- Java: !e0 // rewritten in make if e0 is boolean
 // AST: ( ! e0 ) -- Java: !e0 // e0 NOT CONDITIONAL
-// AST: ( ! e0 ) -- Java: !($t(e0) && GET$COND()) // E0 YES CONDITIONAL
+// AST: ( ! e0 ) -- Java: !($t(e0) && $COND) // E0 YES CONDITIONAL
 // AST: ( .TRACE() e0 ) - Java: XTC.TRACE(e0) // rewrite
 
 class UniOpAST extends AST {
@@ -117,7 +117,7 @@ class UniOpAST extends AST {
     if( _kids[0]._cond ) {
       if( S.eq("!",_pre) ) {
         _kids[0].jcode(sb.p("$t("));
-        return sb.p(") && !XRuntime.GET$COND()");
+        return sb.p(") && !XRuntime.$COND");
       } else
         return _kids[0].jcode(sb.p("COND(")).p(")");
     }

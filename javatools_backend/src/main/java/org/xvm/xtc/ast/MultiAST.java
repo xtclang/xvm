@@ -86,18 +86,6 @@ public class MultiAST extends AST {
       return new MultiAST(_expr,kids);
     }
 
-    // See if part of a conditional return:  "return pred ? (True,bar) : (True,baz)"
-    if( _expr && _kids[0] instanceof ConAST con && S.eq(con._con,"true") ) {
-      AST par = _par;
-      while( par instanceof TernaryAST )
-        par = par._par;
-      if( par instanceof ReturnAST ret && ret._cond ) {
-        // Already got the "true" part done, just report the content
-        ret._cond_true = true;
-        return _kids[1];
-      }
-    }
-
     return this;
   }
 

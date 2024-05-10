@@ -108,7 +108,7 @@ public class Arychar extends Array<Char> {
   public class Iterchar extends Iterator<Char> {
     private int _i;
     @Override public Char next() { return Char.make((char)next8()); }
-    @Override public long next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public long next8() { return (XRuntime.$COND = hasNext()) ? _es[_i++] : 0; }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return _i+".."+_len; }
     @Override public boolean equals( XTC x0, XTC x1 ) { throw org.xvm.XEC.TODO(); }

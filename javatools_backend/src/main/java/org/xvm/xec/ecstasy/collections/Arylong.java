@@ -75,8 +75,8 @@ public class Arylong extends Array<Int64> {
   public int indexOf( long e ) {
     for( int i=0; i<_len; i++ )
       if( _es[i]==e )
-        return XRuntime.SET$COND(true,i);
-    return XRuntime.SET$COND(false,-1);
+        return XRuntime.True(i);
+    return XRuntime.False(-1);
   }
   public Arylong removeUnordered(long e) {
     int idx = indexOf(e);
@@ -110,7 +110,7 @@ public class Arylong extends Array<Int64> {
   public class Iterlong extends Iterator<Int64> {
     private int _i;
     @Override public Int64 next() { return Int64.make(next8()); }
-    @Override public long next8() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public long next8() { return (XRuntime.$COND = hasNext()) ? _es[_i++] : 0; }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return _i+".."+_len; }
     // --- Comparable
