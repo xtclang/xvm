@@ -14,11 +14,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.IfStmtAST;
 import org.xvm.asm.ast.ReturnStmtAST;
-import org.xvm.asm.ast.TernaryExprAST;
 import org.xvm.asm.ast.UnpackExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -232,11 +229,11 @@ public class ReturnStatement
             Expression exprNew;
 
             TypeConstant typeRequired = cRets >= 1 ? aRetTypes[0] : null;
-            if (fConditional && exprOld instanceof TernaryExpression exprTernary)
+            if (fConditional && exprOld instanceof TernaryExpression)
                 {
                 // ternary expression needs to know the fact that it returns a conditional type
                 m_fConditionalTernary = true;
-                exprTernary.markConditional();
+                exprOld.markConditional();
                 typeRequired = cRets == 2 ? aRetTypes[1] : null;
                 }
 
