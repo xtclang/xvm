@@ -8,5 +8,6 @@ import org.xvm.XEC;
 */
 public abstract class Iterator<E> extends XTC implements java.util.Iterator<E>  {
   public long next8() { throw XEC.TODO(); }
+  public char next2() { throw XEC.TODO(); }
   public String nextStr() { throw XEC.TODO(); }
 }

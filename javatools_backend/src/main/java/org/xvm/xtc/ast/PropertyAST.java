@@ -35,6 +35,9 @@ class PropertyAST extends AST {
       if( _kids[0]._type.isAry() )
         { _prop="_len"    ; _type=XCons.LONG; return this; }
     }
+    if( _prop.equals("lowercase$get()") && _kids[0]._type==XCons.CHAR )
+      return CallAST.make(XCons.CHAR,"Character","toLowerCase",_kids[0]);
+
     // Prop READS use prop$get, but assigns keep the plain name
     if( _par instanceof AssignAST && _par._kids[0]==this ) {
       if( _prop.endsWith("$get()") )

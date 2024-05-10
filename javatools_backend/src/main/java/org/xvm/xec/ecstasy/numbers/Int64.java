@@ -36,6 +36,7 @@ public class Int64 extends IntNumber {
   public static Int64 construct( long i ) { return new Int64(i); }
 
   public boolean eq( long x ) { return _i==x; }
+  public Int64 div( long i ) { return make(_i/i); }
 
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
 

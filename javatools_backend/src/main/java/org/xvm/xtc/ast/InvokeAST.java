@@ -65,6 +65,23 @@ public class InvokeAST extends AST {
     return _rets!=null && _rets.length == 2 && _rets[0]==XCons.BOOL;
   }
 
+  @Override public AST unBox() {
+    // Unbox primitive iterators
+    if( _kids[0]._type instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
+      XType xt = clz._xts[0];
+      switch( _meth ) {
+      case "next":              // Use the primitive iterator
+        if(      clz._xts[0].isa(XCons.INTNUM ) )  _meth = "next8";
+        else if( clz._xts[0].isa(XCons.JCHAR  ) )  _meth = "next2";
+        else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
+        break;
+      case "whileEach", "untilAny", "limit", "take", "forEach": break;
+      default: throw XEC.TODO();
+      };
+    }
+    return this;
+  }
+
   @Override public AST rewrite() {
     XType k0t = _kids[0]._type;
     // Handle all the Int/Int64/Intliteral to "long" calls
@@ -139,18 +156,6 @@ public class InvokeAST extends AST {
       }
       default -> throw XEC.TODO();
       };
-    }
-
-    if( k0t instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
-      switch( _meth ) {
-      case "next":              // Use the primitive iterator
-        if( clz._xts[0].isa(XCons.INTNUM) )  _meth = "next8";
-        else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
-        break;
-      case "whileEach", "untilAny", "limit", "take", "forEach": break;
-      default: throw XEC.TODO();
-      };
-      return this;
     }
 
     if( k0t instanceof XClz clz && clz.isTuple() ) {

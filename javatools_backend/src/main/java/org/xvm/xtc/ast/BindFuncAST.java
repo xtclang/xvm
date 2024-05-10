@@ -60,7 +60,7 @@ class BindFuncAST extends AST {
         _args[i-nargs] = name;
         xargs[i-nargs] = atype;
       }
-      return XFun.make(xargs,XType.xtypes(_lam._rets));
+      return XFun.make(xargs,_lam.xrets());
 
       // Currying: pre-binding some method args
     } else {

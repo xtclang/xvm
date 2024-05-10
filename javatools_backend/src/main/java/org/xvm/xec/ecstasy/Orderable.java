@@ -109,4 +109,8 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
 
   public static boolean lesser ( Ordered x ) { return x==Ordered.Lesser ; }
   public static boolean greater( Ordered x ) { return x==Ordered.Greater; }
+
+  public static <O extends Orderable> O minOf( XTC gold, O o0, O o1 ) {
+    return compare(gold,(XTC)o0,(XTC)o1)==Ordered.Greater ? o1 : o0;
+  }
 }

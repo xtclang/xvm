@@ -3,11 +3,13 @@ package org.xvm.xec.ecstasy.text;
 import org.xvm.XEC;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.Const;
+import org.xvm.xec.ecstasy.Iterable;
+import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.Ordered;
 import org.xvm.xrun.Never;
-import java.util.Objects;
+import org.xvm.xrun.XRuntime;
 
-public class String extends Const {
+public class String extends Const implements Iterable<Char> {
   public static final String GOLD = new String((Never)null);
   public String(Never n) { _i=null; }
   public final java.lang.String _i;
@@ -17,6 +19,7 @@ public class String extends Const {
   public static String construct(java.lang.String s) { return new String(s); } // TODO: Intern
 
   public int length() { return _i.length(); }
+  @Override public int size$get() { return length(); }
   public char charAt(int x) { return _i.charAt(x); }
   @Override public java.lang.String toString() { return _i; }
 
@@ -53,6 +56,23 @@ public class String extends Const {
   public long hashCode( java.lang.String s0 ) { return s0.hashCode(); }
   @Override public long hashCode( XTC s0 ) { return hashCode(((String)s0)._i); }
   public static long hashCode$String( XTC gold, java.lang.String s0 ) { return s0.hashCode(); }
+
+  @Override public Iterator<Char> iterator()                    { return new IterStr(_i); }
+  static    public Iterator<Char> iterator(java.lang.String s0) { return new IterStr(s0); }
+  private static class IterStr extends Iterator<Char> {
+    final java.lang.String _s;
+    int _i;
+    IterStr(java.lang.String s) { _s = s; }
+    @Override public Char next() { throw XEC.TODO(); }
+    @Override public boolean hasNext() { return _i < _s.length(); }
+    @Override public char next2() {
+      boolean has = _i < _s.length();
+      return XRuntime.SET$COND(has, has ? _s.charAt(_i++) : (char)0);
+    }
+    @Override public long next8() { throw XEC.TODO(); }
+    @Override public java.lang.String nextStr() { throw XEC.TODO(); }
+  }
+
 
   // --- Freezable
   @Override public String freeze(boolean inPlace) { return this; }

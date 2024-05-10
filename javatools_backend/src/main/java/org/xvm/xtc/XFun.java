@@ -23,7 +23,7 @@ public class XFun extends XType {
     return jt;
   }
   public static XFun make( MethodPart meth ) {
-    return make(xtypes(meth._args),xtypes(meth._rets));
+    return make(meth.xargs(),meth.xrets());
   }
 
   // Make a function from a Call.  The Call's return is the XFun's return.
@@ -51,6 +51,10 @@ public class XFun extends XType {
 
   public XType[] rets() {
     return nrets()==0 ? null : Arrays.copyOfRange(_xts,_nargs,_xts.length);
+  }
+  public XType ret() {
+    assert nrets()==1;
+    return _xts[_nargs];
   }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {

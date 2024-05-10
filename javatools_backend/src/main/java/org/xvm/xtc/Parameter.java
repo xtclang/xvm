@@ -10,7 +10,7 @@ public class Parameter {
   public String _name;
   // Parameter type
   private final TCon _tcon;
-  private XType _xtype;
+  private XType _box, _raw;
   // Parameter annotations
   public final Annot[] _annots;
   // Default value
@@ -23,7 +23,8 @@ public class Parameter {
   private Parameter( Annot[] annos, boolean special, TCon tcon, XType xt, String name, TCon def ) {
     _name = name;
     _tcon = tcon;
-    _xtype = xt;
+    _box = xt==null ? null : xt.  box();
+    _raw = xt==null ? null : xt.unbox();
     _annots = annos;
     _def = def;
     _special = special;
@@ -41,8 +42,9 @@ public class Parameter {
 
   @Override public String toString() { return _name; }
   public TCon tcon() { assert _tcon != null; return _tcon; }
-  public XType type() {
-    return _xtype == null ? (_xtype = XType.xtype(_tcon,false)) : _xtype;
+  public XType type(boolean box) {
+    if( box ) return _box == null ? (_box = XType.xtype(_tcon,true )) : _box;
+    else      return _raw == null ? (_raw = XType.xtype(_tcon,false)) : _raw;
   }
 
 }

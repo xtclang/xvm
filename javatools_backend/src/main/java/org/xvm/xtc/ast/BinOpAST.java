@@ -44,6 +44,8 @@ class BinOpAST extends AST {
       XType tk = _kids[0]._type;
       if( tk.isAry()  )
         return tk.e();
+      if( tk == XCons.JSTRING )
+        return XCons.JCHAR;
       // Something else (PropCon?) means get the collections' element type
       int idx = 0;              // Default for non-Tuple
       // Tuple at fixed field offset
@@ -73,7 +75,8 @@ class BinOpAST extends AST {
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG ) {
       _type = _type.unbox();
       if( _kids[0]._type == XCons.STRING ) {
-        _op0 = ".charAt((int)";
+        _op0 = ".charAt((int)(";
+        _op1 = "))";
       } else if( _kids[0]._type.isAry() ) {
         _op0 = ".at8(";         // Use primitive 'at' instead of generic
       } else if( _kids[0]._type.isTuple() && (idx=isFixedOffset()) != -1 ) {
@@ -185,6 +188,7 @@ class BinOpAST extends AST {
 
       put("?:" ,2);
 
+      put(".charAt((int)(",0); // Not-the-operator
     }};
   private boolean prec(String op, String ex) {
     Integer ii0 = PRECS.get(op);

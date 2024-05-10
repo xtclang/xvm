@@ -206,8 +206,10 @@ public class ClzBuilder {
         _sb.fmt("$%0 %0,",_tclz._tns[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
+      // Init any local type variables; these appear in name2kid
       for( int i=0; i<_tclz._tns.length; i++ )
-        _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
+        if( _clz._name2kid.get(_tclz._tns[i])!=null )
+          _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
       _sb.di().ip("}\n");
 
       // For all other constructors
@@ -243,6 +245,21 @@ public class ClzBuilder {
       }
     }
 
+    // Property types not mentioned in name2kids; must be concrete types from
+    // interfaces.
+    for( int i=0; i<_tclz._tns.length; i++ ) {
+      String name = _tclz._tns[i];
+      Part p = _clz._name2kid.get(name);
+      if( p==null ) {
+        _sb.ip("public ");
+        _tclz._xts[i].clz(_sb);
+        _sb.p(" ").p(name).p("$get() { return ");
+        _tclz._xts[i].clz(_sb);
+        _sb.p(".GOLD; }").nl();
+      }
+    }
+
+
     // Output Java methods for all class methods
     for( Part part : _clz._name2kid.values() ) {
       switch( part ) {
@@ -254,37 +271,49 @@ public class ClzBuilder {
             continue;           // Constructors emitted first for easy reading
           _sb.nl(); // Blank line between methods
           // A bunch of methods that have special dispatch rules.
+          boolean special = false;
           switch( mname ) {
           case "equals":
-            Comparable.make_equals(java_class_name,_sb);
-            // Add a full default method
-            if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
-            else jmethod(meth,mname+"$"+java_class_name);
+            if( meth._args.length==3 ) {
+              special = true;
+              Comparable.make_equals(java_class_name,_sb);
+              // Add a full default method
+              if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
+              else jmethod(meth,mname+"$"+java_class_name);
+            }
             break;
           case "compare":
-            Orderable.make_compare(java_class_name,_sb);
-            // Add a full default method
-            if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
-            else jmethod(meth,mname+"$"+java_class_name);
+            if( meth._args.length==3 ) {
+              special = true;
+              Orderable.make_compare(java_class_name,_sb);
+              // Add a full default method
+              if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
+              else jmethod(meth,mname+"$"+java_class_name);
+            }
             break;
           case "hashCode":
-            Hashable.make_hashCode(java_class_name,_sb);
-            // Add a full default method
-            if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
-            else jmethod(meth,mname+"$"+java_class_name);
+            if( meth._args.length==1 ) {
+              special = true;
+              Hashable.make_hashCode(java_class_name,_sb);
+              // Add a full default method
+              if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
+              else jmethod(meth,mname+"$"+java_class_name);
+            }
             break;
           case "estimateStringLength":
           case "appendTo":
             if( meth._ast==null ) // No body, but declared.  Use the interface default.
-              break;
-            //noinspection fallthrough
+              special = true;
+            break;
           default:
+          }
+          // Not special, use the generic AST generator
+          if( !special ) {
             // Generate the method from the AST
             jmethod(meth,mname);
             // Service classes generate $mname and $$mname wrapper methods.
             if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
               Service.make_methods(meth,java_class_name,_sb);
-            break;
           }
         }
         break;
@@ -402,10 +431,11 @@ public class ClzBuilder {
   static public void args(MethodPart m, SB sb) {
     // Argument list
     if( m._args !=null ) {
-      int delta = m.xargs().length - m._args.length;
+      XType[] xargs = m.xargs();
+      int delta = xargs.length - m._args.length;
       for( int i = 0; i < m._args.length; i++ ) {
         // Unbox boxed args
-        XType xt = m.xarg(i+delta);
+        XType xt = xargs[i+delta];
         if( xt instanceof XClz xclz )
           add_import(xclz);
         // Parameter class, using local generic parameters
@@ -670,13 +700,14 @@ public class ClzBuilder {
     return kids;
   }
 
+  // Define a new local
   public int define( String name, XType type ) {
     // Track active locals
     _locals.add(name);
     _ltypes.add(type);
     return _locals._len-1;      // Return register number
   }
-    // Pop locals at end of scope
+  // Pop locals at end of scope
   public void pop_locals(int n) {
     while( n < nlocals() ) {
       _ltypes.pop();

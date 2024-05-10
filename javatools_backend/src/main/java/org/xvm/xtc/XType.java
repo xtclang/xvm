@@ -188,11 +188,11 @@ public abstract class XType {
   }
 
   // Convert an array of Parameter._con to an array of XType
-  public static XType[] xtypes( Parameter[] parms ) {
+  public static XType[] xtypes( Parameter[] parms, boolean box ) {
     if( parms==null ) return null;
     XType[] xts = new XType[parms.length];
     for( int i=0; i<parms.length; i++ )
-      xts[i] = parms[i].type();
+      xts[i] = parms[i].type(box);
     return xts;
   }
 
