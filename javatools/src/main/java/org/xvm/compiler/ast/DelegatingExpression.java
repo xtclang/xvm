@@ -33,6 +33,12 @@ public abstract class DelegatingExpression
         return expr;
         }
 
+    @Override
+    public void markConditional()
+        {
+        expr.markConditional();
+        }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

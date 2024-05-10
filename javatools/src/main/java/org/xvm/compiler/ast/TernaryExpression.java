@@ -56,14 +56,13 @@ public class TernaryExpression
         return CHILD_FIELDS;
         }
 
-    /**
-     * Mark this ternary as "possibly" asymmetrical - returning conditional "false" on some branch.
-     *
-     * This method must be called *before* validation or testFit.
-     */
+    @Override
     public void markConditional()
         {
         m_fConditional = true;
+
+        exprThen.markConditional();
+        exprElse.markConditional();
         }
 
 
@@ -681,13 +680,13 @@ public class TernaryExpression
             {
             TypeConstant typeFalse = pool().typeFalse();
 
-            // test "? (true, result) : false" first
+            // test "? (True, result) : False" first
             if (exprElse.testFit(ctx, typeFalse, fExhaustive, null).isFit())
                 {
                 return m_plan = Plan.ElseIsFalse;
                 }
 
-            // test "? false : (true, result)" next
+            // test "? False : (True, result)" next
             if (exprThen.testFit(ctx, typeFalse, fExhaustive, null).isFit())
                 {
                 return m_plan = Plan.ThenIsFalse;
