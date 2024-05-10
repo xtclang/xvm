@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -22,7 +21,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.ast.ExprAST;
 
 import org.xvm.asm.constants.ConditionalConstant;
-import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
@@ -152,6 +150,15 @@ public abstract class Expression
     public ConditionalConstant toConditionalConstant()
         {
         throw notImplemented();
+        }
+
+    /**
+     * Mark this expression as "possibly" asymmetrical - returning conditional "False" on some branch.
+     *
+     * This method must be called *before* the validation or testFit.
+     */
+    public void markConditional()
+        {
         }
 
 

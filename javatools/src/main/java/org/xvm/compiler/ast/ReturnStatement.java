@@ -396,26 +396,7 @@ public class ReturnStatement
             TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
             exprTernary.generateConditionalReturn(ctx, code, errs);
 
-            TernaryExprAST astTernary = (TernaryExprAST) exprTernary.getExprAST(ctx);
-
-            astResult = switch (exprTernary.getPlan())
-                {
-                case Symmetrical ->
-                    new ReturnStmtAST(astTernary);
-
-                case ThenIsFalse ->
-                    // we need to unroll the ternary expression into an "if-then-else" sequence
-                    new IfStmtAST(
-                        astTernary.getCond(),
-                        new ReturnStmtAST(new ConstantExprAST(pool.valFalse())),
-                        new ReturnStmtAST(astTernary.getElse()));
-
-                case ElseIsFalse ->
-                    new IfStmtAST(
-                        astTernary.getCond(),
-                        new ReturnStmtAST(astTernary.getThen()),
-                        new ReturnStmtAST(new ConstantExprAST(pool.valFalse())));
-                };
+            astResult = new ReturnStmtAST(exprTernary.getExprAST(ctx));
             }
         else
             {
