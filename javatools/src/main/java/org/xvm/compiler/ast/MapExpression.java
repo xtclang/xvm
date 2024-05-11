@@ -346,7 +346,9 @@ public class MapExpression
                 }
             }
 
-        if (constVal != null || typeKey.isImmutable() && typeVal.isImmutable())
+        if (constVal != null ||
+                typeKey != null && typeKey.isImmutable() &&
+                typeVal != null && typeVal.isImmutable())
             {
             typeActual = typeActual.freeze();
             }
