@@ -2,8 +2,6 @@ import Catalog.EndpointInfo;
 import Catalog.MethodInfo;
 import Catalog.WebServiceInfo;
 
-import ecstasy.collections.CollectArray;
-
 import web.AcceptList;
 import web.Body;
 import web.BodyParam;
@@ -16,7 +14,6 @@ import web.QueryParam;
 import web.Response;
 import web.Session;
 import web.UriParam;
-import web.WebService;
 
 import web.codecs.Codec;
 import web.codecs.Format;

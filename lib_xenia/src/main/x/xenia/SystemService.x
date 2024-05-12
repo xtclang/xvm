@@ -4,9 +4,6 @@ import SessionImpl.Match_;
 
 import web.Header;
 import web.HttpStatus;
-import web.WebService;
-
-import web.codecs.Registry;
 
 import web.responses.SimpleResponse;
 

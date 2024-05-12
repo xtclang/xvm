@@ -1,11 +1,12 @@
 import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.Argument;
 
-import web.*;
-
 import net.UriTemplate;
 import net.UriTemplate.UriParameters;
 
+import web.*;
+
+import WebService.Constructor;
 
 /**
  * The catalog of WebApp endpoints.
@@ -54,23 +55,17 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     }
 
     /**
-     * The function that represents a default WebService constructor.
-     */
-    typedef function WebService() as ServiceConstructor;
-
-    /**
      * The WebService info.
      */
-    static const WebServiceInfo<ServiceType extends WebService>(
-                                Int                id,
-                                String             path,
-                                ServiceConstructor constructor,
-                                EndpointInfo[]     endpoints,
-                                EndpointInfo?      defaultEndpoint,
-                                MethodInfo[]       interceptors,
-                                MethodInfo[]       observers,
-                                MethodInfo?        onError,
-                                MethodInfo?        route
+    static const WebServiceInfo(Int            id,
+                                String         path,
+                                Constructor    constructor,
+                                EndpointInfo[] endpoints,
+                                EndpointInfo?  defaultEndpoint,
+                                MethodInfo[]   interceptors,
+                                MethodInfo[]   observers,
+                                MethodInfo?    onError,
+                                MethodInfo?    route
                                 ) {
         /**
          * The number of endpoints for this WebService.
@@ -286,14 +281,31 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     /**
      * Build a Catalog for a WebApp.
      *
-     * @param app  the WebApp singleton instance
+     * @param app     the WebApp singleton instance
+     * @param extras  (optional) a map of WebService classes for processing requests for
+     *                corresponding paths
      */
-    static Catalog buildCatalog(WebApp app) {
+    static Catalog buildCatalog(WebApp app, Map<Class<WebService>, Constructor> extras = []) {
         ClassInfo[] classInfos    = new ClassInfo[];
         Class[]     sessionMixins = new Class[];
 
-        // collect the ClassInfos for WebServices and Session mixins
         Set<String> declaredPaths = new HashSet<String>();
+
+        // collect ClassInfos for "extras"; this should be done first to account for services
+        // without default constructors, which those extra services possibly are
+        if (!extras.empty) {
+            for ((Class<WebService> clz, Constructor constructor) : extras) {
+                if (AnnotationTemplate webServiceAnno := clz.annotatedBy(WebService)) {
+                    String path = extractPath(webServiceAnno, declaredPaths);
+                    classInfos += new ClassInfo(path, clz, constructor);
+                } else {
+                    throw new IllegalState($|"WebService" annotation is missing for "{clz}"
+                                          );
+                }
+            }
+        }
+
+        // collect the ClassInfos for standard WebServices and Session mixins
         scanClasses(app.classes, classInfos, sessionMixins, declaredPaths);
 
         // compute the system service name and add the system service info
@@ -301,9 +313,10 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
         for (Int i = 0; declaredPaths.contains(systemPath); i++) {
             systemPath = $"{DefaultSystemPath}_{i}";
         }
-        classInfos += new ClassInfo(SystemService, systemPath);
+        classInfos += new ClassInfo(systemPath, SystemService,
+                        SystemService.PublicType.defaultConstructor() ?: assert);
 
-        // sort the ClassInfos based on their paths
+        // sort the ClassInfos based on their paths (SystemService goes first)
         classInfos.sorted((ci1, ci2) ->
             ci1.path == systemPath ? Lesser : (ci1.path <=> ci2.path).reversed, inPlace=True);
 
@@ -315,9 +328,9 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     }
 
     /**
-     * WebService class/path info collected during the scan phase.
+     * WebService info collected during the scan phase.
      */
-    private static const ClassInfo(Class<WebService> clz, String path);
+    private static const ClassInfo(String path, Class<WebService> clz, Constructor constructor);
 
     /**
      * Scan all the specified classes for WebServices and add the corresponding information
@@ -331,36 +344,22 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             }
 
             if (AnnotationTemplate webServiceAnno := child.annotatedBy(WebService)) {
-                Argument[] args = webServiceAnno.arguments;
-                assert !args.empty;
+                 // TODO GG: drop protected and private
+                assert child.is(Class<WebService, (protected WebService), (private WebService)>);
 
-                String path;
-                if (!(path := args[0].value.is(String))) {
-                    throw new IllegalState($|WebService "{child}": first argument is not a path
-                                          );
-                }
+                Type<WebService> serviceType = child.PublicType;
+                if (Constructor constructor := serviceType.defaultConstructor()) {
+                    String path = extractPath(webServiceAnno, declaredPaths);
 
-                if (path != "/") {
-                    while (path.endsWith('/')) {
-                        // while the service path represents a "directory", we normalize it, so it
-                        // does not end with the '/' (except for the root)
-                        path = path[0 ..< path.size-1];
-                    }
-
-                    if (!path.startsWith('/')) {
-                        // the service path is always a "root"
-                        path = "/" + path;
+                    classInfos += new ClassInfo(path, child, constructor);
+                } else {
+                    // the WebService without a default constructor might have been one of the
+                    // "extras"; we should still scan its children classes
+                    if (!classInfos.any(info -> info.clz == child)) {
+                        throw new IllegalState($|The default constructor is missing for "{child}"
+                                               );
                     }
                 }
-
-                if (declaredPaths.contains(path)) {
-                    throw new IllegalState($|WebService "{child}": \
-                                            |path {path.quoted()} is already in use
-                                            );
-                }
-
-                declaredPaths += path;
-                classInfos    += new ClassInfo(child.as(Class<WebService>), path);
 
                 // scan classes inside the WebService class
                 Collection<Type>  childTypes   = child.PrivateType.childTypes.values;
@@ -386,6 +385,41 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
     }
 
     /**
+     * Extract and validate the uniqueness of the [WebService] path.
+     */
+    private static String extractPath(AnnotationTemplate webServiceAnno, Set<String> declaredPaths) {
+        Argument[] args = webServiceAnno.arguments;
+        assert !args.empty;
+
+        String path;
+        if (!(path := args[0].value.is(String))) {
+            throw new IllegalState($|WebService "{webServiceAnno}": first argument is not a path
+                                  );
+        }
+
+        if (path != "/") {
+            while (path.endsWith('/')) {
+                // while the service path represents a "directory", we normalize it, so it
+                // does not end with the '/' (except for the root)
+                path = path[0 ..< path.size-1];
+            }
+
+            if (!path.startsWith('/')) {
+                // the service path is always a "root"
+                path = "/" + path;
+            }
+        }
+
+        if (declaredPaths.contains(path)) {
+            throw new IllegalState($|WebService "{webServiceAnno}": path "{path}" is already in use
+                                    );
+        }
+
+        declaredPaths += path;
+        return path;
+    }
+
+    /**
      * Collect all endpoints for the WebServices in the specified ClassInfo array and
      * create a corresponding WebServiceInfo array.
      */
@@ -407,13 +441,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
 
         WebServiceInfo[] webServiceInfos = new Array(classInfos.size);
         for (ClassInfo classInfo : classInfos) {
-            Class<WebService>  clz         = classInfo.clz;
-            Type<WebService>   serviceType = clz.PublicType;
-            ServiceConstructor constructor;
-            if (!(constructor := serviceType.defaultConstructor())) {
-                throw new IllegalState($|default constructor is missing for "{clz}"
-                                      );
-            }
+            Class<WebService> clz         = classInfo.clz;
+            Type<WebService>  serviceType = clz.PublicType;
 
             TrustLevel serviceTrust = appTrustLevel;
             Boolean    serviceTls   = appTls;
@@ -533,7 +562,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             observers   .freeze(inPlace=True);
 
             webServiceInfos += new WebServiceInfo(wsid++,
-                    classInfo.path, constructor,
+                    classInfo.path, classInfo.constructor,
                     endpoints, defaultEndpoint,
                     interceptors, observers, onError, route
                     );
