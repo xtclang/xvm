@@ -123,6 +123,7 @@ public class IsExpression
                 }
 
             TypeConstant typeInferred = typeTest;
+            CheckMatch:
             if (!typeTest.isFormalType() && exprTest.isConstant())
                 {
                 if (typeTarget.isTypeOfType())
@@ -144,8 +145,12 @@ public class IsExpression
                             return null;
                             }
                         }
+                    if (typeTarget.getParamType(0).isFormalType())
+                        {
+                        break CheckMatch;
+                        }
                     }
-                else if (typeTarget.isA(typeTest))
+                if (typeTarget.isA(typeTest))
                     {
                     log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS,
                         exprTarget.toString(), typeTarget.getValueString(),
