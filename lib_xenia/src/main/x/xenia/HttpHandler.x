@@ -13,7 +13,7 @@ import HttpServer.RequestInfo;
 
 
 /**
- * An low-level HTTP request entry point.
+ * A low-level HTTP request entry point.
  */
 @Concurrent
 service HttpHandler
@@ -22,11 +22,16 @@ service HttpHandler
      * Construct an HttpHandler that provides the specified web application as the implementation of
      * the specified host.
      *
-     * @param route  the HostInfo that routes to this handler
-     * @param app    the `WebApp` application to route to
+     * @param route   the HostInfo that routes to this handler
+     * @param app     the `WebApp` application to route to
+     * @param extras  (optional) a map of [WebService] classes for processing requests for the
+     *                corresponding [paths](WebService.path) that would otherwise be processed at a
+     *                more generic level or left unprocessed;  useful for injecting platform
+     *                services, such as the "ACME" protocol for certificate provisioning; all
+     *                specified classes must be `@WebService` annotated and paths must be unique
      */
-    construct(HostInfo route, WebApp app) {
-        Catalog catalog = buildCatalog(app);
+    construct(HostInfo route, WebApp app, Map<Class<WebService>, WebService.Constructor> extras = []) {
+        Catalog catalog = buildCatalog(app, extras);
 
         this.route          = route;
         this.catalog        = catalog;

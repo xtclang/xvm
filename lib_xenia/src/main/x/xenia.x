@@ -2,7 +2,6 @@
  * The Web Server implementation.
  */
 module xenia.xtclang.org {
-    // external module dependencies
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
     package crypto      import crypto.xtclang.org;
@@ -22,6 +21,7 @@ module xenia.xtclang.org {
     import web.RequestIn;
     import web.Session;
     import web.WebApp;
+    import web.WebService;
 
     import web.http.HostInfo;
 
@@ -100,12 +100,15 @@ module xenia.xtclang.org {
      * @param keystore   (optional) the keystore to use for tls certificates and encryption
      * @param tlsKey     (optional) the name of the key pair in the keystore to use for Tls; if not
      *                   specified, the first key pair will be used
+     * @param extras     (optional) a map of WebService classes for processing requests for the
+     *                   corresponding paths (see [HttpHandler])
      *
      * @return a function that allows to shutdown the server
      */
     function void () createServer(WebApp webApp,
                                   HostInfo route = DefaultHost, HostInfo? binding = Null,
-                                  KeyStore? keystore = Null, String? tlsKey = Null) {
+                                  KeyStore? keystore = Null, String? tlsKey = Null,
+                                  Map<Class<WebService>, WebService.Constructor> extras = []) {
         @Inject HttpServer server;
         binding ?:= route;
         try {
@@ -139,7 +142,7 @@ module xenia.xtclang.org {
                 keystore = store;
                 }
 
-            HttpHandler handler = new HttpHandler(route, webApp);
+            HttpHandler handler = new HttpHandler(route, webApp, extras);
             server.addRoute(route, handler, keystore, tlsKey);
 
             return () -> {

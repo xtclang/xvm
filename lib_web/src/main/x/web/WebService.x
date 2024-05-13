@@ -58,6 +58,11 @@ mixin WebService(String path)
      */
     RequestIn? request;
 
+    /**
+     * The function that represents a WebService constructor.
+     */
+    typedef function WebService() as Constructor;
+
 
     // ----- processing ----------------------------------------------------------------------------
 

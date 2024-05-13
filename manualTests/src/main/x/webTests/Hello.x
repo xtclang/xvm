@@ -41,7 +41,11 @@ module Hello
         HostInfo route   = hostOf(routeString);
         HostInfo binding = hostOf(bindString);
 
-        xenia.createServer(this, route=route, binding=binding);
+        @Inject Directory curDir;
+        Directory dataDir = curDir.dirFor("data");
+
+        WebService.Constructor constructor = () -> new ExtraFiles(dataDir);
+        xenia.createServer(this, route=route, binding=binding, extras=[ExtraFiles=constructor]);
 
         String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
         String uri        = $"http://{route.host}{portSuffix}";
@@ -62,6 +66,17 @@ module Hello
 
     Authenticator createAuthenticator() {
         return new DigestAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
+    }
+
+    /**
+     * This service allows accessing files in the "data" directory.
+     */
+    @WebService("/data")
+    service ExtraFiles
+            incorporates StaticContent {
+        construct(Directory extra){
+            construct StaticContent(path, extra);
+        }
     }
 
     package inner {
