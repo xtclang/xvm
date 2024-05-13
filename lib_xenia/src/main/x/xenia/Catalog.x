@@ -344,8 +344,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             }
 
             if (AnnotationTemplate webServiceAnno := child.annotatedBy(WebService)) {
-                 // TODO GG: drop protected and private
-                assert child.is(Class<WebService, (protected WebService), (private WebService)>);
+                assert child.is(Class<WebService>);
 
                 Type<WebService> serviceType = child.PublicType;
                 if (Constructor constructor := serviceType.defaultConstructor()) {

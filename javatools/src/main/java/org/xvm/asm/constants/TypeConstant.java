@@ -941,6 +941,29 @@ public abstract class TypeConstant
             return that;
             }
 
+        // if T1 == (immutable T0) and T2.isA(T0) then (T1 + T2) => immutable T2
+        if (this instanceof ImmutableTypeConstant && that.isA(this.getUnderlyingType()))
+            {
+            assert !that.isImmutable();
+            return pool.ensureImmutableTypeConstant(that);
+            }
+        if (that instanceof ImmutableTypeConstant && this.isA(that.getUnderlyingType()))
+            {
+            assert !this.isImmutable();
+            return pool.ensureImmutableTypeConstant(this);
+            }
+
+        // if T1 == T0<E> and T2.isA(T0) then (T1 + T2) => T2<E + EC2>
+        // where EC2 is a constraint for E on T2
+        if (combineOneParameterized(pool, this, that) instanceof TypeConstant typeCombined)
+            {
+            return typeCombined;
+            }
+        if (combineOneParameterized(pool, that, this) instanceof TypeConstant typeCombined)
+            {
+            return typeCombined;
+            }
+
         if (this.getClass() == that.getClass() && isSingleUnderlyingClass(true))
             {
             if (this instanceof ParameterizedTypeConstant)
@@ -965,6 +988,40 @@ public abstract class TypeConstant
             }
 
         return pool.ensureIntersectionTypeConstant(this, that);
+        }
+
+    /**
+     * If T1 == T0<E> and T2.isA(T0) then return (T1 + T2) => T2<E + EC2>, where EC2 is a constraint
+     * for E on T2.
+     */
+    private static TypeConstant combineOneParameterized(ConstantPool pool,
+                                                        TypeConstant t1, TypeConstant t2)
+        {
+        if (t1 instanceof ParameterizedTypeConstant &&
+                t2.isA(t1.getUnderlyingType()) &&
+                t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified())
+            {
+            TypeConstant[] atype1 = t1.getParamTypesArray();
+            ClassStructure clz2   = (ClassStructure) t2.getSingleUnderlyingClass(true).getComponent();
+            TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
+            boolean        fClone = false;
+            for (int i = 0, c = atype1.length; i < c; i++)
+                {
+                TypeConstant te1 = atype1[i];
+                TypeConstant te2 = atype2[i];
+                if (!te1.isA(te2))
+                    {
+                    if (!fClone)
+                        {
+                        atype1 = atype1.clone();
+                        fClone = true;
+                        }
+                    atype1[i] = te1.combine(pool, te2);
+                    }
+                }
+            return pool.ensureParameterizedTypeConstant(t2, atype1);
+            }
+        return null;
         }
 
     /**

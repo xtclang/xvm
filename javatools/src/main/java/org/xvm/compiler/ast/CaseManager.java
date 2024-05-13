@@ -798,7 +798,7 @@ public class CaseManager<CookieType>
                     TypeConstant typeTest = exprTest.getImplicitType(ctx);
                     if (typeTest != null)
                         {
-                        typeCase = IsExpression.computeInferredType(pool, typeTest, typeCase);
+                        typeCase = typeCase.combine(pool, typeTest);
                         }
                     }
                 exprTest.narrowType(ctx, Branch.Always, typeCase);
@@ -823,7 +823,7 @@ public class CaseManager<CookieType>
                         TypeConstant typeTest = exprTest.getImplicitType(ctx);
                         if (typeTest != null)
                             {
-                            typeCase = IsExpression.computeInferredType(pool, typeTest, typeCase);
+                            typeCase = typeCase.combine(pool, typeTest);
                             }
                         }
                     exprTest.narrowType(ctx, Branch.Always, typeCase);

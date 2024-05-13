@@ -2,8 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -179,7 +177,7 @@ public class IsExpression
                 }
             else if (exprTarget instanceof NameExpression exprName)
                 {
-                typeInferred = computeInferredType(pool, typeTarget, typeTest);
+                typeInferred = typeTarget.combine(pool, typeTest);
 
                 exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
                 exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
@@ -198,75 +196,6 @@ public class IsExpression
             }
 
         return finishValidations(ctx, atypeRequired, atypeActual, fit, aconstVal, errs);
-        }
-
-    /**
-     * @return an inferred narrowing type based on the original type and "is" type
-     */
-    public static TypeConstant computeInferredType(ConstantPool pool,
-                                                   TypeConstant typeOriginal,
-                                                   TypeConstant typeNarrowing)
-        {
-        if (typeNarrowing.isTuple()
-        || !typeNarrowing.isExplicitClassIdentity(true)
-        || !typeOriginal.isExplicitClassIdentity(true))
-            {
-            return typeOriginal.combine(pool, typeNarrowing);
-            }
-
-        ClassStructure clzNarrowing = (ClassStructure) typeNarrowing.
-                getSingleUnderlyingClass(true).getComponent();
-        ClassStructure clzOriginal  = (ClassStructure) typeOriginal.
-                getSingleUnderlyingClass(true).getComponent();
-        TypeConstant   typeInferred  = typeNarrowing;
-
-        if (clzNarrowing.getFormat() == Component.Format.MIXIN &&
-            clzOriginal.getFormat()  != Component.Format.MIXIN &&
-                typeOriginal.isA(typeNarrowing.getExplicitClassInto(true)))
-            {
-            typeInferred = pool.ensureAnnotatedTypeConstant(clzNarrowing.getIdentityConstant(),
-                                null, typeOriginal.removeImmutable().removeAccess());
-            }
-        else if (clzOriginal.isParameterized() && clzNarrowing.isParameterized() &&
-                clzNarrowing.getCanonicalType().isA(clzOriginal.getCanonicalType()))
-            {
-            typeInferred = clzNarrowing.getFormalType().resolveGenerics(pool,
-                sFormalName ->
-                    {
-                    TypeConstant typeParam = clzNarrowing.getConstraint(sFormalName).resolveConstraints();
-                    int          ixParam   = clzNarrowing.indexOfGenericParameter(sFormalName);
-
-                    // TODO GG: we assume that formal type indexes stay invariant across classes,
-                    //          which is not correct in a general case
-                    if (typeOriginal.getParamsCount() > ixParam)
-                        {
-                        typeParam = typeOriginal.getParamType(ixParam).combine(pool, typeParam);
-                        }
-                    if (typeNarrowing.getParamsCount() > ixParam)
-                        {
-                        typeParam = typeNarrowing.getParamType(ixParam).combine(pool, typeParam);
-                        }
-                    return typeParam;
-                    });
-            typeInferred = typeNarrowing.adoptParameters(pool, typeInferred.getParamTypesArray());
-            }
-
-        if (typeInferred.equals(typeNarrowing))
-            {
-            typeInferred = typeOriginal.combine(pool, typeNarrowing);
-            }
-        else
-            {
-            if (typeOriginal.isAccessSpecified() && !typeInferred.isAccessSpecified())
-                {
-                typeInferred = pool.ensureAccessTypeConstant(typeInferred, typeOriginal.getAccess());
-                }
-            if (typeOriginal.isImmutabilitySpecified() && !typeInferred.isImmutable())
-                {
-                typeInferred = pool.ensureImmutableTypeConstant(typeInferred);
-                }
-            }
-        return typeInferred;
         }
 
     @Override
