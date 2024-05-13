@@ -218,7 +218,7 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Create or Update Snapshot (if pushed to 'master', or env.always_publish_snapshot is true)
-        if: ${{ success() && (env.publish_enabled == 'true' || github.ref == 'refs/heads/master') }}
+        if: ${{ env.publish_enabled }}
         #if: ${{ (env.always_publish_snapshot == 'true') || (github.ref == 'refs/heads/master') }}
         shell: bash
         run: |
