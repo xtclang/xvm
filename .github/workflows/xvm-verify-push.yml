@@ -67,11 +67,11 @@ jobs:
   free-disk-space:
     # TODO: Free disk space takes some time. Let's do it only if necessary.
     # TODO: Check if we persist the removed volume contents between runs, though.
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Maximize CI/CD disk space
         uses: jlumbroso/free-disk-space@v1.3.1
+        if: ${{ false }}
         with:
           tool-cache: false
           large-packages: false
@@ -81,7 +81,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
-    needs: free-disk-space
+    #needs: free-disk-space
     outputs:
       xdk-version: ${{ steps.read-xdk-version.outputs.XDK_VERSION }}
 
