@@ -184,8 +184,6 @@ jobs:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
     needs: build-verify
     runs-on: ubuntu-latest
-    env:
-    # TODO: Put the if here when we see it evaluates correctly.
     steps:
       # Check out current repository
       - name: Fetch Sources
