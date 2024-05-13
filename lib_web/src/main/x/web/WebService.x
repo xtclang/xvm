@@ -64,7 +64,6 @@ mixin WebService(String path)
     typedef function WebService() as Constructor;
 
 
-
     // ----- processing ----------------------------------------------------------------------------
 
     /**
