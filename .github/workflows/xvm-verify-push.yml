@@ -122,7 +122,7 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Notify Discord about new installation build
-        uses: xtclang/xvm/.github/actions/discord.yml@master
+        uses: ./.github/actions/discord.yml
         with:
           message: "STARTED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
 
