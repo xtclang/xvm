@@ -5,6 +5,9 @@ on:
         required: true
         type: string
 
+#env:
+# WEBHOOK_URL: ${{ secrets.ORG_XTCLANG_DISCORD_BOT_TOKEN }}
+
 jobs:
   discord-send-message:
     runs-on: ubuntu-latest

@@ -65,6 +65,9 @@ concurrency:
 
 jobs:
   free-disk-space:
+    # TODO: Free disk space takes some time. Let's do it only if necessary.
+    # TODO: Check if we persist the removed volume contents between runs, though.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Maximize CI/CD disk space
@@ -119,7 +122,7 @@ jobs:
           java -XshowSettings:properties --version
 
       - name: Notify Discord about new installation build
-        uses: ./.github/actions/discord.yml
+        uses: xtclang/xvm/.github/actions/discord.yml@master
         with:
           message: "STARTED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
 
@@ -151,11 +154,11 @@ jobs:
           echo "        version: $xec_version"
           echo "*** Native launchers work."
 
-      - name: Notify Discord of Sanity Checked Installation
-        if: ${{ success() }}
-        uses: ./.github/actions/discord.yml
-        with:
-          message: "FINISHED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
+      #- name: Notify Discord of Sanity Checked Installation
+      #  if: ${{ success() }}
+      #  uses: ./.github/actions/discord.yml
+      #  with:
+      #    message: "FINISHED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
 
       - name: Default manualTest tasks
         if: ${{ env.skip_manual_tests != 'true' && success() }}
@@ -174,11 +177,11 @@ jobs:
         run: |
           ./gradlew ${{ env.gradle_options }} manualTests:runParallel
 
-      - name: Notify Discord of Clean Tests
-        if: ${{ success() }}
-        uses: ./.github/actions/discord.yml
-        with:
-          message: "FINISHED: All check-in tests are green for ${{ env.XDK_VERSION }} ${{ github.ref }} (${{ github.sha }})"
+      #- name: Notify Discord of Clean Tests
+      #  if: ${{ success() }}
+      #  uses: ./.github/actions/discord.yml
+      #  with:
+      #    message: "FINISHED: All check-in tests are green for ${{ env.XDK_VERSION }} ${{ github.ref }} (${{ github.sha }})"
 
   publish-snapshot:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
@@ -218,8 +221,8 @@ jobs:
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
-      - name: Notify Discord of Publication
-        if: ${{ success() }}
-        uses: ./.github/actions/discord.yml
-        with:
-          message: "FINISHED: Snapshot publication of ${{ needs.build-verify.outputs.XDK_VERSION }} publication for ${{ github.ref }} (${{ github.sha }})"
+      #- name: Notify Discord of Publication
+      #  if: ${{ success() }}
+      #  uses: ./.github/actions/discord.yml
+      #  with:
+      #    message: "FINISHED: Snapshot publication of ${{ needs.build-verify.outputs.XDK_VERSION }} publication for ${{ github.ref }} (${{ github.sha }})"
