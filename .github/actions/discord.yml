@@ -1,0 +1,17 @@
+on:
+  workflow_call:
+    inputs:
+      message:
+        required: true
+        type: string
+
+jobs:
+  discord-send-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send message to Discord
+        shell: bash
+        run: |
+          curl -i -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data' \
+            { "content": "${{ inputs.message }}" }' \
+            ${{ secrets.ORG_XTCLANG_DISCORD_WEBHOOK_URL }}
