@@ -73,20 +73,14 @@ jobs:
           tool-cache: false
           large-packages: false
 
-  discord-notify-start:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify Discord of build start
-        shell: bash
-        run: |
-          ${{ env.discord_msg }} "{\"content\": \"GitHub ${{ github.event }} workflow started for ${{ github.ref }} (${{ github.sha }})\"}" ${{ secrets.ORG_XTCLANG_DISCORD_WEBHOOK }}            
-
   build-verify:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
-    needs: [ free-disk-space, discord-notify ]
+    needs: free-disk-space
+    outputs:
+      xdk-version: ${{ steps.read-xdk-version.outputs.XDK_VERSION }}
 
     steps:
       - name: Fetch Sources
@@ -95,8 +89,9 @@ jobs:
           show-progress: true
 
       - name: Read version file
+        id: read-xdk-version
         shell: bash
-        run: echo "XDK_VERSION=$(cat ./VERSION)" >> $GITHUB_ENV
+        run: echo "XDK_VERSION=$(cat ./VERSION)" >> $GITHUB_OUTPUT
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -122,6 +117,11 @@ jobs:
           echo "*** Runner OS              : ${{ runner.os }}"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
+
+      - name: Notify Discord about new installation build
+        uses: ./.github/actions/discord.yml
+        with:
+          message: "STARTED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
 
       - name: Build the XDK and create a distribution layout
         shell: bash
@@ -155,7 +155,7 @@ jobs:
         if: ${{ success() }}
         uses: ./.github/actions/discord.yml
         with:
-          message: "Finished building verified distribution for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
+          message: "FINISHED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
 
       - name: Default manualTest tasks
         if: ${{ env.skip_manual_tests != 'true' && success() }}
@@ -178,7 +178,7 @@ jobs:
         if: ${{ success() }}
         uses: ./.github/actions/discord.yml
         with:
-          message: "Completed clean tests for ${{ github.ref }} (${{ github.sha }})"
+          message: "FINISHED: All check-in tests are green for ${{ env.XDK_VERSION }} ${{ github.ref }} (${{ github.sha }})"
 
   publish-snapshot:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
@@ -188,10 +188,6 @@ jobs:
       # Check out current repository
       - name: Fetch Sources
         uses: actions/checkout@v4
-
-      - name: Read version file
-        shell: bash
-        run: echo "XDK_VERSION=$(cat ./VERSION)" >> $GITHUB_ENV
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -226,4 +222,4 @@ jobs:
         if: ${{ success() }}
         uses: ./.github/actions/discord.yml
         with:
-          message: "Published (or updated) ${{ env.XDK_VERSION }} publication for ${{ github.ref }} (${{ github.sha }})"
+          message: "FINISHED: Snapshot publication of ${{ needs.build-verify.outputs.XDK_VERSION }} publication for ${{ github.ref }} (${{ github.sha }})"
