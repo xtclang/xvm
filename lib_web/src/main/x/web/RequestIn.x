@@ -25,14 +25,26 @@ interface RequestIn
     Uri url;
 
     /**
-     * The IP address and port number used by the requester to issue the request, if it is known.
+     * The IP address that indicates the IP address of the user agent. This information is not
+     * trusted (because it can be forged), but it can be useful for differentiating among many
+     * requests coming through the same proxy.
      */
-    @RO SocketAddress? client;
+    @RO IPAddress originator;
 
     /**
-     * The IP address and port number on which the request was received, if it is known.
+     * The IP address that the request was received from, which may be a proxy server.
      */
-    @RO SocketAddress? server;
+    @RO IPAddress client;
+
+    /**
+     * The IP address on which the request was received.
+     */
+    @RO IPAddress server;
+
+    /**
+     * The port number on which the request was received.
+     */
+    @RO UInt16 serverPort;
 
     /**
      * The HTTP parameters contained with the URI query string.

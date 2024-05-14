@@ -240,7 +240,7 @@ service Dispatcher {
                 if (!redirect) {
                     // check for any IP address and/or user agent change in the connection
                     redirect = session.updateConnection_(requestInfo.userAgent ?: "<unknown>",
-                            requestInfo.clientAddress[0]);
+                            requestInfo.clientAddress);
                 }
 
                 if (redirect) {
@@ -657,7 +657,7 @@ service Dispatcher {
 
                         case Encrypted:
                             // firefox bug: TLS-only cookies sent to localhost when TLS is false
-                            if (!tls && requestInfo.clientAddress[0].loopback) {
+                            if (!tls && requestInfo.clientAddress.loopback) {
                                 continue NextCookie;
                             }
 
@@ -667,7 +667,7 @@ service Dispatcher {
 
                         case Consent:
                             // firefox bug: TLS-only cookies sent to localhost when TLS is false
-                            if (!tls && requestInfo.clientAddress[0].loopback) {
+                            if (!tls && requestInfo.clientAddress.loopback) {
                                 continue NextCookie;
                             }
 

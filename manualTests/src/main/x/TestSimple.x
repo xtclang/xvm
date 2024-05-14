@@ -1,15 +1,32 @@
 module TestSimple {
-
     @Inject Console console;
-
     void run() {
-    }
+        String[] tests =
+            [
+            "",
+            " ",
+            " abc ",
+            " a , b ",
+            "a , b,",
+            ",a,b,",
+            " , a,b , ",
+            ];
 
-    void test(Type type) {
-        if (type.is(Type<String>) || type.is(Type<Int>)) {
-            if (!type.is(Type<String>)) {
-                assert type.is(Type<Int>); // this used to compile without a warning
-            }
+        private static String str(String s) {
+            return s.quoted();
+        }
+
+        private static String str(String[] a) {
+            return a.toString(render = s -> str(s));
+        }
+
+        for (String s : tests) {
+            console.print($|{str(s)=}
+                           |    {str(s.split(','))=}
+                           |    {str(s.split(',', omitEmpty=True))=}
+                           |    {str(s.split(',', trim=True))=}
+                           |    {str(s.split(',', True, True))=}
+                         );
         }
     }
 }

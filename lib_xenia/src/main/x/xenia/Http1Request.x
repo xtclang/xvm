@@ -93,7 +93,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
     @Override
     Scheme scheme.get() {
-        return protocol.scheme;
+        return info.tls ? HTTPS : HTTP;
     }
 
     @Override
@@ -103,7 +103,8 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
 
     @Override
     Protocol protocol.get() {
-        return info.protocol;
+        String protocolString = info.protocolString;
+        return Protocol.byProtocolString.get(protocolString) ?: new Protocol(protocolString);
     }
 
     @Override
@@ -149,10 +150,16 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     }
 
     @Override
-    SocketAddress client.get() = info.clientAddress;
+    IPAddress originator.get() = info.userAgentAddress;
 
     @Override
-    SocketAddress server.get() = info.receivedAtAddress;
+    IPAddress client.get() = info.clientAddress;
+
+    @Override
+    IPAddress server.get() = info.receivedAtAddress[0];
+
+    @Override
+    UInt16 serverPort.get() = info.receivedAtAddress[1];
 
     typedef (String | List<String>) as QueryParameter;
 

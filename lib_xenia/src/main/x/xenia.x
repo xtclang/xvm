@@ -108,11 +108,13 @@ module xenia.xtclang.org {
     function void () createServer(WebApp webApp,
                                   HostInfo route = DefaultHost, HostInfo? binding = Null,
                                   KeyStore? keystore = Null, String? tlsKey = Null,
-                                  Map<Class<WebService>, WebService.Constructor> extras = []) {
+                                  Map<Class<WebService>, WebService.Constructor> extras = [],
+                                  HttpServer.ProxyCheck isTrustedProxy = HttpServer.NoTrustedProxies,
+                                 ) {
         @Inject HttpServer server;
         binding ?:= route;
         try {
-            server.bind(binding);
+            server.bind(binding, isTrustedProxy);
 
             EnsureKeystore:
             if (keystore == Null) {

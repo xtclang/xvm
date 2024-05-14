@@ -73,6 +73,7 @@ mixin Interval<Element extends immutable Sequential>
      *
      * True iff the Interval contains no elements.
      */
+    @Override
     Boolean empty.get() {
         try {
             return 0 > lowerBound.stepsTo(upperBound) - (lowerExclusive ? 1 : 0)

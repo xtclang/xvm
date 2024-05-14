@@ -61,7 +61,7 @@ service SessionImpl
         structure.created         = now;
         structure.lastUse         = now;
         structure.versionChanged_ = now;
-        structure.ipAddress       = requestInfo.clientAddress[0];
+        structure.ipAddress       = requestInfo.clientAddress;
         structure.userAgent       = requestInfo.userAgent ?: "<unknown>";
         structure.cookieConsent   = None;
         structure.trustLevel      = None;
@@ -734,7 +734,7 @@ service SessionImpl
 
         if (result.is(SessionImpl)) {
             // keep track of splits
-            this.splits_ += new SessionSplit_(requestInfo.clientAddress[0], version_, result.internalId_);
+            this.splits_ += new SessionSplit_(requestInfo.clientAddress, version_, result.internalId_);
 
             // create new cookies
             result.ensureCookies_(desiredCookies_(requestInfo.tls));

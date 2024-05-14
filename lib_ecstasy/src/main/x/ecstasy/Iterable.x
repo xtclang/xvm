@@ -13,6 +13,11 @@ interface Iterable<Element> {
     @RO Int size;
 
     /**
+     * True iff the Iterable object contains no elements.
+     */
+    @RO Boolean empty.get() = size == 0;        // TODO GG: remove ".get()" and run test suite
+
+    /**
      * Obtain an iterator over the contents of the Iterable object.
      *
      * @return an Iterator

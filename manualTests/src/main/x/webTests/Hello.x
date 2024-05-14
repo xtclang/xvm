@@ -15,6 +15,8 @@ module Hello
     import web.responses.*;
     import web.security.*;
 
+    import xenia.Http1Request;
+
     package msg import Messages;
     import msg.Greeting;
 
@@ -23,6 +25,11 @@ module Hello
 
         String routeString = args.size > 0 ? args[0] : "localhost";
         String bindString  = args.size > 1 ? args[1] : "0.0.0.0:8080/8090";
+
+        // optional third parameter specifies the IP address of the trusted reverse proxy
+        xenia.HttpServer.ProxyCheck isTrustedProxy = args.size > 2
+                ? (ip -> ip.toString() == args[2])
+                : xenia.HttpServer.NoTrustedProxies;
 
         HostInfo hostOf(String addressString) {
             if (Int portOffset := addressString.indexOf(":")) {
@@ -45,7 +52,8 @@ module Hello
         Directory dataDir = curDir.dirFor("data");
 
         WebService.Constructor constructor = () -> new ExtraFiles(dataDir);
-        xenia.createServer(this, route=route, binding=binding, extras=[ExtraFiles=constructor]);
+        xenia.createServer(this, route=route, binding=binding, extras=[ExtraFiles=constructor],
+                isTrustedProxy=isTrustedProxy);
 
         String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
         String uri        = $"http://{route.host}{portSuffix}";
@@ -150,8 +158,10 @@ module Hello
                         $"url={request.url}",
                         $"uri={request.uri}",
                         $"scheme={request.scheme}",
+                        $"originator={request.originator}",
                         $"client={request.client}",
                         $"server={request.server}",
+                        $"route={request.as(Http1Request).info.routeTrace}",
                         $"authority={request.authority}",
                         $"path={request.path}",
                         $"protocol={request.protocol}",

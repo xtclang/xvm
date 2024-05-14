@@ -1,3 +1,5 @@
+import libcolls.LRUCache;
+
 import libcrypto.Algorithm;
 import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
@@ -24,33 +26,31 @@ service RTServer
 
     typedef immutable Object as RequestContext;
 
-    private ListMap<HostInfo, ProxyCheck> bindingsInternal = new ListMap();
-
-    private HashMap<HostInfo, Handler> routesInternal = new HashMap();
+    @Override
+    String toString() = "HttpServer";       // purposefully vague; do NOT leak any info!
 
 
     // ----- network bindings ----------------------------------------------------------------------
 
     @Override
     void bind(HostInfo binding, ProxyCheck reverseProxy=NoTrustedProxies) {
-
         // at the moment we only support a single mapping
-        assert bindingsInternal.empty as "Multiple bindings are not supported";
-
-        bindingsInternal.put(binding, reverseProxy);
+        assert bindings.empty as "Multiple bindings are not supported";
 
         String|IPAddress bindAddr = binding.host;
         if (!bindAddr.is(String)) {
             bindAddr = bindAddr.toString();
         }
-        bindImpl(bindAddr, binding.httpPort, binding.httpsPort);
+
+        bindImpl(binding, bindAddr, binding.httpPort, binding.httpsPort);
+        bindings = bindings.put(binding, reverseProxy);
+        assert bindings.is(immutable);
     }
 
     @Override
     Boolean unbind(HostInfo binding) {
-        if (bindingsInternal.contains(binding)) {
-            // at the moment we only support a single mapping
-            bindingsInternal.clear();
+        if (bindings.contains(binding)) {
+            bindings = []; // at the moment we only support a single mapping
             close();
             return True;
         }
@@ -58,10 +58,18 @@ service RTServer
     }
 
     @Override
-    Map<HostInfo, ProxyCheck> bindings.get() = bindingsInternal.duplicate().makeImmutable();
+    public/private Map<HostInfo, ProxyCheck> bindings = [];
 
 
     // ----- host routes ---------------------------------------------------------------------------
+
+    /**
+     * HttpRequest handler. This API must be equivalent (duck-type) to [xenia.HttpServer.Handler]
+     * service API.
+     */
+    static interface Handler {
+        void handle(RequestInfo request);
+    }
 
     @Override
     void addRoute(HostInfo|String route, Handler handler, KeyStore? keystore = Null,
@@ -79,11 +87,11 @@ service RTServer
         }
 
         // we should be able to replace an exiting route, but must not add any ambiguous ones
-        if (!routesInternal.contains(route)) {
+        if (!routes.contains(route)) {
             UInt16 httpPort  = route.httpPort;
             UInt16 httpsPort = route.httpsPort;
-            if (routesInternal.keys.any(info -> info.host.toString() == hostName &&
-                                  (info.httpPort == httpPort || info.httpsPort == httpsPort))) {
+            if (routes.keys.any(info -> info.host.toString() == hostName &&
+                                       (info.httpPort == httpPort || info.httpsPort == httpsPort))) {
                 throw new IllegalArgument($"Route is not unique: {route}");
             }
         }
@@ -121,7 +129,8 @@ service RTServer
 
         addRouteImpl(hostName, new HandlerWrapper(handler), keystore, tlsKey);
 
-        routesInternal.put(route, handler);
+        routes = routes.put(route, handler);
+        assert routes.is(immutable);
     }
 
     @Override
@@ -133,8 +142,12 @@ service RTServer
         } else {
             hostName = route.host.toString();
         }
-        if (routesInternal.contains(route)) {
-            return replaceRouteImpl(hostName, new HandlerWrapper(handler));
+        if (routes.contains(route)) {
+            if (replaceRouteImpl(hostName, new HandlerWrapper(handler))) {
+                routes = routes.put(route, handler);
+                assert routes.is(immutable);
+                return True;
+            }
         }
         return False;
     }
@@ -149,8 +162,8 @@ service RTServer
             hostName = route.host.toString();
         }
 
-        if (routesInternal.contains(route)) {
-            routesInternal.remove(route);
+        if (routes.contains(route)) {
+            routes = routes.remove(route);
             removeRouteImpl(hostName);
             return True;
         }
@@ -158,52 +171,56 @@ service RTServer
     }
 
     @Override
-    Map<HostInfo, Handler> routes.get() = routesInternal.duplicate().makeImmutable();
+    public/private Map<HostInfo, Handler> routes = [];
 
 
-    // ----- life cycle ----------------------------------------------------------------------------
+    // ----- request handling ----------------------------------------------------------------------
 
-    @Override
-    void close(Exception? cause = Null) {TODO("Native");}
-
-    @Override
-    String toString() {
-        return "HttpServer";
+    /**
+     * An object that provides access to low-level information about a request.
+     * This API must be equivalent (duck-type) to [xenia.HttpServer.RequestInfo] interface.
+     */
+    static interface RequestInfo {
+        @RO String uriString;
+        @RO Uri uri;
+        @RO HttpMethod method;
+        @RO SocketAddress receivedAtAddress;
+        @RO SocketAddress receivedFromAddress;
+        @RO HostInfo binding;
+        @RO HostInfo route;
+        @RO Boolean tls;
+        @RO IPAddress userAgentAddress;
+        @RO IPAddress clientAddress;
+        @RO IPAddress[] routeTrace;
+        @RO String hostName;
+        @RO String protocolString;
+        @RO Protocol protocol;
+        @RO String? userAgent;
+        @RO String[] headerNames;
+        conditional String[] getHeaderValuesForName(String name);
+        conditional Byte[] getBodyBytes();
+        Boolean containsNestedBodies();
+        String convertToHttps();
+        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
     }
+
 
     // ----- native implementations all run on the service context ---------------------------------
 
-    private void bindImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort) {TODO("Native");}
-
-    private void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)
-        {TODO("Native");}
-
-    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)
-        {TODO("Native");}
-
-    private void removeRouteImpl(String hostName) {TODO("Native");}
-
-    private (Byte[], UInt16) getReceivedAtAddress(RequestContext context) {TODO("Native");}
-
-    private (Byte[], UInt16) getReceivedFromAddress(RequestContext context) {TODO("Native");}
-
-    private conditional (String, UInt16) getClientHost(RequestContext context) {TODO("Native");}
-
-    private String getProtocolString(RequestContext context) {TODO("Native");}
-
-    private String[] getHeaderNames(RequestContext context) {TODO("Native");}
-
-    private conditional String[] getHeaderValuesForName(RequestContext context, String name)
-        {TODO("Native");}
-
-    private conditional Byte[] getBodyBytes(RequestContext context) {TODO("Native");}
-
-    private Boolean containsNestedBodies(RequestContext context)
-        {TODO("Native");}
-
-    private void respond(RequestContext context, Int status,
-                            String[] headerNames, String[] headerValues, Byte[] body)
-        {TODO("Native");}
+    private void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)                {TODO("Native");}
+    private void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)     {TODO("Native");}
+    private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)                                  {TODO("Native");}
+    private void removeRouteImpl(String hostName)                                                              {TODO("Native");}
+    (Byte[], UInt16) getReceivedAtAddress(RequestContext context)                                              {TODO("Native");}
+    (Byte[], UInt16) getReceivedFromAddress(RequestContext context)                                            {TODO("Native");}
+    conditional (String, UInt16) getHostInfo(RequestContext context)                                           {TODO("Native");}
+    String getProtocolString(RequestContext context)                                                           {TODO("Native");}
+    String[] getHeaderNames(RequestContext context)                                                            {TODO("Native");}
+    conditional String[] getHeaderValuesForName(RequestContext context, String name)                           {TODO("Native");}
+    conditional Byte[] getBodyBytes(RequestContext context)                                                    {TODO("Native");}
+    Boolean containsNestedBodies(RequestContext context)                                                       {TODO("Native");}
+    void respond(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body) {TODO("Native");}
+    @Override void close(Exception? cause = Null)                                                              {TODO("Native");}
 
 
     // ----- internal classes ----------------------------------------------------------------------
@@ -212,174 +229,22 @@ service RTServer
 
         /**
          * This is the method called by the native request handler. It assumes that the handler
-         * never throws (which is the case with the our only implementation by xenia.HttpHandler)
+         * never throws -- which is the case in the only implementation today: xenia.HttpHandler.
+         *
+         * @param binding    the HTTP server binding that received the current request
+         * @param context    the opaque RequestContext representing the current request
+         * @param uriString  the requested URI
+         * @param method     the HTTP method string, e.g. "GET"
+         * @param tls        if the message was received (the last hop) over a TLS connection
          */
-        void handle(RequestContext context, String uriString, String method, Boolean tls) {
-            RequestInfo info = new RequestInfoImpl(context, uriString, method, tls);
-            info = &info.maskAs(RequestInfo);
-            handler.handle^(info);
+        void handle(HostInfo binding, RequestContext context, String uriString, String method, Boolean tls) {
+            RequestInfo info   = new RequestInfoImpl(this.RTServer,
+                    binding, bindings.get(binding) ?: HttpServer.NoTrustedProxies,
+                    context, uriString, HttpMethod.of(method), tls);
+            handler.handle^(&info.maskAs(RequestInfo));
         }
     }
 
-    /**
-     * The natural RequestInfo implementation.
-     */
-    class RequestInfoImpl
-            implements RequestInfo {
-
-        construct(RequestContext context, String uriString, String method, Boolean tls) {
-            this.context   = context;
-            this.uriString = uriString;
-            this.method    = HttpMethod.of(method);
-            this.tls       = tls;
-        }
-
-        RequestContext context;
-
-        @Override
-        String uriString;
-
-        @Override
-        @Lazy Uri uri.calc() = new Uri(uriString);
-
-        @Override
-        HttpMethod method;
-
-        @Override
-        SocketAddress receivedAtAddress.get() {
-            (Byte[] addressBytes, UInt16 port) = getReceivedAtAddress(context);
-            return (new IPAddress(addressBytes), port);
-        }
-
-        @Override
-        SocketAddress receivedFromAddress.get() {
-            (Byte[] addressBytes, UInt16 port) = getReceivedFromAddress(context);
-            return (new IPAddress(addressBytes), port);
-        }
-
-        @Override
-        @Lazy HostInfo binding.calc() {
-            assert HostInfo info := bindingsInternal.keys.iterator().next();
-            return info;
-        }
-
-        @Override
-        @Lazy HostInfo route.calc() {
-            if ((String hostName, UInt16 port) := getClientHost(context)) {
-                HostInfo route;
-                if (tls) {
-                    assert route := routesInternal.keys.any(info ->
-                            info.host.toString() == hostName && info.httpsPort == port);
-                } else {
-                    assert route := routesInternal.keys.any(info ->
-                            info.host.toString() == hostName && info.httpPort == port);
-                }
-                return route;
-            }
-            return binding;
-        }
-
-        @Override
-        Boolean tls; // TODO CP: augment by the backTrace etc
-
-        @Override
-        SocketAddress userAgentAddress.get() {
-            // the user agent is the very last address in the back-trace list, even if we can't
-            // trust that part of the back-trace information
-            assert SocketAddress addr := backTrace.last();
-            return addr;
-        }
-
-        @Override
-        @Lazy SocketAddress clientAddress.calc() {
-            assert ProxyCheck isTrustedProxy := bindingsInternal.get(binding);
-
-            // start with the address that sent the request to this server, and work backwards
-            // toward the user agent
-            SocketAddress[] addrs = backTrace;
-            SocketAddress?  last  = Null;
-            for (Int i = 1, Int c = addrs.size; i < c; ++i) {
-                SocketAddress addr = addrs[i];
-                if (isTrustedProxy(addr[0])) {
-                    last = addr;
-                } else {
-                    // the client is assumed to be the first address that is NOT a trusted proxy
-                    return addr;
-                }
-            }
-            return last ?: assert;
-        }
-
-        @Override
-        @Lazy SocketAddress[] backTrace.calc() {
-            // TODO CP: use X-Forwarded-For etc. headers
-            return [receivedAtAddress, receivedFromAddress];
-        }
-
-        @Override
-        String hostName.get() = route.host.toString();
-
-        @Override
-        String protocolString.get() = getProtocolString(context);
-
-        @Override
-        @Lazy Protocol protocol.calc() {
-            if (Protocol protocol := Protocol.byProtocolString.get(protocolString)) {
-                if (tls && !protocol.TLS) {
-                    assert protocol ?= protocol.upgradeToTls;
-                }
-                return protocol;
-            }
-            assert as $"Unknown protocol: {protocolString.quoted()}";
-        }
-
-        @Override
-        String? userAgent.get() {
-            if (String[] values := getHeaderValuesForName(Header.UserAgent)) {
-                return values[0];
-            }
-            return Null;
-        }
-
-        @Override
-        String[] headerNames.get() = getHeaderNames(context);
-
-        @Override
-        conditional String[] getHeaderValuesForName(String name) =
-                this.RTServer.getHeaderValuesForName(context, name);
-
-        @Override
-        conditional Byte[] getBodyBytes() = this.RTServer.getBodyBytes(context);
-
-        @Override
-        Boolean containsNestedBodies() = this.RTServer.containsNestedBodies(context);
-
-        @Override
-        String convertToHttps() {
-            assert !tls as "already a TLS request";
-
-            Scheme  scheme    = protocol.scheme;
-            Scheme  tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
-            String  hostName  = route.host.toString();
-            UInt16  tlsPort   = route.httpsPort;
-            Boolean showPort  = tlsPort != 443;
-
-            return $|{tlsScheme.name}://{hostName}\
-                    |{{if (showPort) {$.add(':').append(tlsPort);}}}\
-                    |{uriString}
-                   ;
-        }
-
-        @Override
-        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
-            this.RTServer.respond(context, status, headerNames, headerValues, body);
-        }
-
-        @Override
-        String toString() {
-            return $"({uriString=}, {method.name=}, {tls=})";
-        }
-    }
 
     // ----- interfaces ----------------------------------------------------------------------------
 
@@ -394,75 +259,14 @@ service RTServer
         static ProxyCheck NoTrustedProxies = _ -> False;
 
         void bind(HostInfo binding, ProxyCheck reverseProxy=NoTrustedProxies);
-
         Boolean unbind(HostInfo binding);
-
         @RO Map<HostInfo, ProxyCheck> bindings;
 
         void addRoute(HostInfo|String route, Handler handler, KeyStore? keystore = Null,
                       String? tlsKey = Null, String? cookieKey = Null);
-
         Boolean replaceRoute(HostInfo|String route, Handler handler);
-
         Boolean removeRoute(HostInfo|String route);
-
         @RO Map<HostInfo, Handler> routes;
-    }
-
-    /**
-     * An object that provides access to low-level information about a request.
-     * This API must be equivalent (duck-type) to [xenia.HttpServer.RequestInfo] interface.
-     */
-    static interface RequestInfo {
-        @RO String uriString;
-
-        @RO Uri uri;
-
-        @RO HttpMethod method;
-
-        @RO SocketAddress receivedAtAddress;
-
-        @RO SocketAddress receivedFromAddress;
-
-        @RO HostInfo binding;
-
-        @RO HostInfo route;
-
-        @RO Boolean tls;
-
-        @RO SocketAddress userAgentAddress;
-
-        @RO SocketAddress clientAddress;
-
-        @RO SocketAddress[] backTrace;
-
-        @RO String hostName;
-
-        @RO String protocolString;
-
-        @RO Protocol protocol;
-
-        @RO String? userAgent;
-
-        @RO String[] headerNames;
-
-        conditional String[] getHeaderValuesForName(String name);
-
-        conditional Byte[] getBodyBytes();
-
-        Boolean containsNestedBodies();
-
-        String convertToHttps();
-
-        void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
-    }
-
-    /**
-     * HttpRequest handler. This API must be equivalent (duck-type) to [xenia.HttpServer.Handler]
-     * service API.
-     */
-    static interface Handler {
-        void handle(RequestInfo request);
     }
 
     /**
