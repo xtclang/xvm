@@ -47,6 +47,7 @@ env:
   MAVEN_CENTRAL_USERNAME: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_USERNAME }}
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
+  current_run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   gradle_options: "-Dorg.gradle.jvmargs=-Xmx8G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
 
   # Optional flags to skip manual tests, or at least some of them.
@@ -64,24 +65,11 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  free-disk-space:
-    # TODO: Free disk space takes some time. Let's do it only if necessary.
-    # TODO: Check if we persist the removed volume contents between runs, though.
-    runs-on: ubuntu-latest
-    steps:
-      - name: Maximize CI/CD disk space
-        uses: jlumbroso/free-disk-space@v1.3.1
-        if: ${{ false }}
-        with:
-          tool-cache: false
-          large-packages: false
-
   build-verify:
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
-    #needs: free-disk-space
     outputs:
       xdk-version: ${{ steps.read-xdk-version.outputs.XDK_VERSION }}
 
@@ -95,6 +83,14 @@ jobs:
         id: read-xdk-version
         shell: bash
         run: echo "XDK_VERSION=$(cat ./VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Send Discord Message; New Build
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.ORG_XTCLANG_DISCORD_WEBHOOK_URL }}
+          content: |
+            Started XDK installation/verification run for XDK ${{ env.XDK_VERSION }} (branch: ${{ github.ref }}
+            (url to run: ${{ env.current_run_url }})
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -120,11 +116,6 @@ jobs:
           echo "*** Runner OS              : ${{ runner.os }}"
           echo "*** Java system properties :" 
           java -XshowSettings:properties --version
-
-      - name: Notify Discord about new installation build
-        uses: ./.github/workflows/discord-send-message.yml
-        with:
-          message: "STARTED: Building XDK installation for ${{ env.XDK_VERSION }} (branch: ${{ github.ref }} (@${{ github.sha }})"
 
       - name: Build the XDK and create a distribution layout
         shell: bash
@@ -221,8 +212,3 @@ jobs:
           ./gradlew ${{ env.gradle_options }} xdk:ensureTags -PsnapshotOnly=true
           ./gradlew ${{ env.gradle_options }} publishRemote -PsnapshotOnly=true
 
-      #- name: Notify Discord of Publication
-      #  if: ${{ success() }}
-      #  uses: ./.github/actions/discord-send-message.yml
-      #  with:
-      #    message: "FINISHED: Snapshot publication of ${{ needs.build-verify.outputs.XDK_VERSION }} publication for ${{ github.ref }} (${{ github.sha }})"

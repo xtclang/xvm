@@ -113,3 +113,15 @@ jobs:
           # TODO: Temporarily disable the cache deletion based on cron schedule, until we have verified it works manually
           dry-run: ${{ env.DRY_RUN }}
           github-token: ${{ github.token }}
+
+  clean-disk-space:
+    # TODO: Free disk space takes some time. Let's do it only if necessary.
+    # TODO: Check if we persist the removed volume contents between runs, though.
+    runs-on: ubuntu-latest # only works on Linux
+    steps:
+      - name: Maximize CI/CD disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        if: ${{ false }}
+        with:
+          tool-cache: false
+          large-packages: false
