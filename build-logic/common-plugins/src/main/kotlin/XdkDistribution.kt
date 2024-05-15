@@ -155,9 +155,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     val distributionName: String get() = project.name // Default: "xdk"
 
     @Suppress("MemberVisibilityCanBePrivate") // No it can't, IntelliJ
-    val distributionVersion: String get() = buildString {
-        append(project.version)
-    }
+    val distributionVersion: String get() = project.version.toString()
 
     fun configScriptFilename(installDir: Provider<Directory>): RegularFile {
         val config = if (currentOs.isMacOsX) {
