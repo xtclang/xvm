@@ -803,6 +803,10 @@ public class NameExpression
                                 }
                             }
                         break;
+
+                    case BjarneLambda:
+                        constVal = m_idBjarnLambda;
+                        break;
                     }
                 }
             }
@@ -1229,9 +1233,8 @@ public class NameExpression
 
                 case BjarneLambda:
                     {
-                    MethodConstant idHandler = argRaw instanceof MethodConstant idMethod
-                            ? createBjarneLambda(ctx.getThisClass(), idMethod)
-                            : createBjarneLambda(ctx.getThisClass(), (PropertyConstant) argRaw);
+                    MethodConstant idHandler = m_idBjarnLambda;
+
                     code.add(new Move(idHandler, argLVal));
 
                     m_astResult = new ConstantExprAST(idHandler);
@@ -1569,11 +1572,12 @@ public class NameExpression
                 }
 
             case BjarneLambda:
-                MethodConstant idHandler = argRaw instanceof MethodConstant idMethod
-                        ? createBjarneLambda(ctx.getThisClass(), idMethod)
-                        : createBjarneLambda(ctx.getThisClass(), (PropertyConstant) argRaw);
+                {
+                MethodConstant idHandler = m_idBjarnLambda;
+
                 m_astResult = new ConstantExprAST(idHandler);
                 return idHandler;
+                }
 
             default:
                 throw new IllegalStateException("arg=" + argRaw);
@@ -1581,13 +1585,13 @@ public class NameExpression
         }
 
     /**
-     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified method.
+     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} function for the specified
+     * method.
      *
      * Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
      * production of a function that takes an argument "t" of the target type "T" at index zero,
      * this method creates a new lambda performing the following transformation:
      *      (t, a, ...) -> t.m(a, ...)
-     * REVIEW: how to avoid duplicates?
      *
      * @param clz       the containing class
      * @param idMethod  the underlying method
@@ -1739,14 +1743,13 @@ public class NameExpression
         }
 
     /**
-     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} for the specified property
-     * getter.
+     * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} function for the specified
+     * property getter.
      *
      * Note, that for every occurrence of an expression in the form of "T.p" that requires
      * production of a function that takes an argument "t" of the target type "T" at index zero,
      * this method creates a new lambda performing the following transformation:
      *      t -> t.p
-     * REVIEW: how to avoid duplicates?
      *
      * @param clz       the containing class
      * @param idProp  the underlying property
@@ -2829,7 +2832,8 @@ public class NameExpression
                                 !typeProp.isA(pool.typeFunction()))
                             {
                             // turn the property into a lambda
-                            m_plan = Plan.BjarneLambda;
+                            m_plan          = Plan.BjarneLambda;
+                            m_idBjarnLambda = createBjarneLambda(ctx.getThisClass(), idProp);
                             return idProp.getBjarneLambdaType();
                             }
                         else
@@ -3005,8 +3009,9 @@ public class NameExpression
                         else
                             {
                             // turn a method into a "method handle" function
-                            m_plan = Plan.BjarneLambda;
-                            typeFn = idMethod.getBjarneLambdaType();
+                            m_plan          = Plan.BjarneLambda;
+                            m_idBjarnLambda = createBjarneLambda(ctx.getThisClass(), idMethod);
+                            typeFn          = idMethod.getBjarneLambdaType();
                             }
                         }
                     else
@@ -3689,6 +3694,11 @@ public class NameExpression
     private transient Plan m_plan = Plan.None;
 
     /**
+     * If the plan is {@link Plan#BjarneLambda}, the corresponding lambda id.
+     */
+    private transient MethodConstant m_idBjarnLambda;
+
+    /**
      * There are three possible scenarios getting to a property represented by this expression:
      *
      * 1) the property is on a singleton parent (module, package or singleton class)
@@ -3705,13 +3715,13 @@ public class NameExpression
     /**
      * The chosen property access plan.
      */
-    private PropertyAccess m_propAccessPlan;
+    private transient PropertyAccess m_propAccessPlan;
 
     /**
      * If the property access plan is {@link PropertyAccess#SingletonParent}, the identity of the
      * parent.
      */
-    private IdentityConstant m_idSingletonParent;
+    private transient IdentityConstant m_idSingletonParent;
 
     /**
      * If true, indicates that the argument refers to a property or method for a class of Class

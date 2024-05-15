@@ -5,8 +5,6 @@ const Protocol(String string, Version? version, String? ALPN_Id=Null) {
 
     /**
      * Construct a protocol from a protocol string.
-     *
-     * @param text  a
      */
     construct(String string) {
         String[] parts = string.split('/', trim=True);
@@ -54,17 +52,17 @@ const Protocol(String string, Version? version, String? ALPN_Id=Null) {
      * Like HTTP/2, HTTP/3 is almost never encountered, because all known browser implementations
      * that support HTTP/3 require TLS; see [HTTPS3].
      */
-    static Protocol HTTP3   = new Protocol("HTTP/3", v:3);
+    static Protocol HTTP3 = new Protocol("HTTP/3", v:3);
 
     /**
      * Protocol lookup table by string.
      */
     static Map<String, Protocol> byProtocolString =
             [
-            HTTP1.string    =  HTTP1,
-            HTTP1_1.string  =  HTTP1_1,
-            HTTP2.string    =  HTTP2,
-            HTTP3.string    =  HTTP3,
+            HTTP1.string   = HTTP1,
+            HTTP1_1.string = HTTP1_1,
+            HTTP2.string   = HTTP2,
+            HTTP3.string   = HTTP3,
             ];
 
 

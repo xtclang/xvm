@@ -1,5 +1,3 @@
-import libcolls.LRUCache;
-
 import libcrypto.Algorithm;
 import libcrypto.CryptoKey;
 import libcrypto.Decryptor;
@@ -27,7 +25,7 @@ service RTServer
     typedef immutable Object as RequestContext;
 
     @Override
-    String toString() = "HttpServer";       // purposefully vague; do NOT leak any info!
+    String toString() = "HttpServer";  // purposefully vague; do NOT leak any info!
 
 
     // ----- network bindings ----------------------------------------------------------------------

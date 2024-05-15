@@ -297,10 +297,10 @@ interface HttpServer
         String convertToHttps() {
             assert !tls as "already a TLS request";
 
-            Scheme  scheme    = HTTPS;
-            String  hostName  = route.host.toString();
-            UInt16  tlsPort   = route.httpsPort;
-            Boolean showPort  = tlsPort != 443;
+            Scheme  scheme   = HTTPS;
+            String  hostName = route.host.toString();
+            UInt16  tlsPort  = route.httpsPort;
+            Boolean showPort = tlsPort != 443;
 
             return $|{scheme.name}://{hostName}\
                     |{{if (showPort) {$.add(':').append(tlsPort);}}}\

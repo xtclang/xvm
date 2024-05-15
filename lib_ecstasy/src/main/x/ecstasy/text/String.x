@@ -143,8 +143,7 @@ const String
      *
      * @return the contents of this String, but without any leading or trailing whitespace
      */
-    // TODO GG: String trim(function Boolean(Char) whitespace = Char.isWhitespace) {
-    String trim(function Boolean(Char) whitespace = ch -> ch.isWhitespace()) {
+    String trim(function Boolean(Char) whitespace = Char.isWhitespace) {
         Int leading = 0;
         val length  = size;
         while (leading < length && whitespace(this[leading])) {
