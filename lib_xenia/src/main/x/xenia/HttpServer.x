@@ -24,7 +24,7 @@ interface HttpServer
      * then it is considered to have no "trusted reverse proxies", because the requests transmitted
      * to the HTTP server may have been forged.
      */
-    typedef function Boolean(IPAddress) as ProxyCheck;
+    typedef immutable function Boolean(IPAddress) as ProxyCheck;
 
     /**
      * A simple implementation of a ProxyCheck that does not recognize any trusted proxies.
