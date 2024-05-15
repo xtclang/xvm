@@ -61,7 +61,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                                 String         path,
                                 Constructor    constructor,
                                 EndpointInfo[] endpoints,
-                                EndpointInfo?  defaultEndpoint,
+                                EndpointInfo?  defaultGet,
                                 MethodInfo[]   interceptors,
                                 MethodInfo[]   observers,
                                 MethodInfo?    onError,
@@ -71,7 +71,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
          * The number of endpoints for this WebService.
          */
         Int endpointCount.get() {
-            return endpoints.size + (defaultEndpoint == Null ? 0 : 1);
+            return endpoints.size + (defaultGet == Null ? 0 : 1);
         }
     }
 
@@ -464,12 +464,12 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             Boolean    serviceStreamRequest  = clz.is(StreamingRequest) || appStreamRequest;
             Boolean    serviceStreamResponse = clz.is(StreamingResponse) || appStreamResponse;
 
-            EndpointInfo[] endpoints       = new EndpointInfo[];
-            EndpointInfo?  defaultEndpoint = Null;
-            MethodInfo[]   interceptors    = new MethodInfo[];
-            MethodInfo[]   observers       = new MethodInfo[];
-            MethodInfo?    onError         = Null;
-            MethodInfo?    route           = Null;
+            EndpointInfo[] endpoints    = new EndpointInfo[];
+            EndpointInfo?  defaultGet   = Null;
+            MethodInfo[]   interceptors = new MethodInfo[];
+            MethodInfo[]   observers    = new MethodInfo[];
+            MethodInfo?    onError      = Null;
+            MethodInfo?    route        = Null;
 
             static void validateEndpoint(Method method) {
                 Int returnCount = method.returns.size;
@@ -482,17 +482,22 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             for (Method<WebService, Tuple, Tuple> method : serviceType.methods) {
                 switch (method.is(_)) {
                 case Default:
-                    if (defaultEndpoint == Null) {
+                    if (defaultGet == Null) {
+                        if (method.httpMethod != GET) {
+                            throw new IllegalState($|WebService "{clz}": "Default" is only \
+                                                    |applicable to "@Get" endpoints
+                                                    );
+                        }
                         if (method.template != "") {
                             throw new IllegalState($|WebService "{clz}": non-empty uri template \
                                                     |for "Default" endpoint "{method}"
                                                     );
                         }
                         validateEndpoint(method);
-                        defaultEndpoint = new EndpointInfo(method, epid++, wsid,
-                                            serviceTls, serviceTrust,
-                                            serviceProduces, serviceConsumes, serviceSubjects,
-                                            serviceStreamRequest, serviceStreamResponse);
+                        defaultGet = new EndpointInfo(method, epid++, wsid,
+                                        serviceTls, serviceTrust,
+                                        serviceProduces, serviceConsumes, serviceSubjects,
+                                        serviceStreamRequest, serviceStreamResponse);
                     } else {
                         throw new IllegalState($|multiple "Default" endpoints on "{clz}"
                                                 );
@@ -562,9 +567,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
 
             webServiceInfos += new WebServiceInfo(wsid++,
                     classInfo.path, classInfo.constructor,
-                    endpoints, defaultEndpoint,
-                    interceptors, observers, onError, route
-                    );
+                    endpoints, defaultGet, interceptors, observers, onError, route);
         }
         return webServiceInfos;
     }

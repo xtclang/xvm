@@ -184,11 +184,10 @@ service Dispatcher {
                         }
                     }
 
-                    if (EndpointInfo defaultEndpoint ?= serviceInfo.defaultEndpoint) {
-                        if (defaultEndpoint.httpMethod.name == methodName) {
-                            endpoint = defaultEndpoint;
-                            break FindEndpoint;
-                        }
+                    if (methodName == "GET",
+                            EndpointInfo defaultGet ?= serviceInfo.defaultGet) {
+                        endpoint = defaultGet;
+                        break FindEndpoint;
                     }
 
                     // there is no matching endpoint

@@ -254,7 +254,8 @@ module web.xtclang.org {
             extends Endpoint(DELETE, template);
 
     /**
-     * Default route on a WebService, if no other route could be found.
+     * Default route on a WebService, if no other route could be found. At the moment, it only
+     * applies to `@Get` endpoints.
      *
      * Example:
      *
