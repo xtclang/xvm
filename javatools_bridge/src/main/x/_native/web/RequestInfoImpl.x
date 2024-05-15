@@ -1,9 +1,10 @@
-import libweb.HttpMethod;
+import libnet.Host;
 import libnet.IPAddress;
 import libnet.SocketAddress;
 import libnet.Uri;
 
 import libweb.Header;
+import libweb.HttpMethod;
 import libweb.Protocol;
 import libweb.Scheme;
 
@@ -361,6 +362,21 @@ service RequestInfoImpl(RTServer       server,
     }
 
     @Override
+    Uri httpsUrl.get() {
+        Uri     uri      = this.uri;
+        Scheme  scheme   = HTTPS;
+        Host    host     = route.host;
+        UInt16  tlsPort  = route.httpsPort;
+        Boolean noPort   = tlsPort == 443;
+
+        return uri.withoutPort().with(
+            scheme = scheme.name,
+            host   = host.toString(),
+            port   = noPort ? Null : tlsPort,
+        );
+    }
+
+    @Override
     @Lazy String? userAgent.calc() {
         if (String[] values := getHeaderValuesForName(Header.UserAgent)) {
             return values[0];
@@ -381,21 +397,6 @@ service RequestInfoImpl(RTServer       server,
 
     @Override
     Boolean containsNestedBodies() = server.containsNestedBodies(context);
-
-    @Override
-    String convertToHttps() {
-        assert !tls as "already a TLS request";
-
-        Scheme  scheme    = HTTPS;
-        String  hostName  = route.host.toString();
-        UInt16  tlsPort   = route.httpsPort;
-        Boolean showPort  = tlsPort != 443;
-
-        return $|{scheme.name}://{hostName}\
-                |{{if (showPort) {$.add(':').append(tlsPort);}}}\
-                |{uriString}
-               ;
-    }
 
     @Override
     void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {

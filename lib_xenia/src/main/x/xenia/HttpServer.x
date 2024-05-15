@@ -294,18 +294,18 @@ interface HttpServer
          *
          * @return a string holding am https request URL equivalent of this http request
          */
-        String convertToHttps() {
-            assert !tls as "already a TLS request";
-
+        @RO Uri httpsUrl.get() {
+            Uri     uri      = this.uri;
             Scheme  scheme   = HTTPS;
-            String  hostName = route.host.toString();
+            Host    host     = route.host;
             UInt16  tlsPort  = route.httpsPort;
-            Boolean showPort = tlsPort != 443;
+            Boolean noPort   = tlsPort == 443;
 
-            return $|{scheme.name}://{hostName}\
-                    |{{if (showPort) {$.add(':').append(tlsPort);}}}\
-                    |{uriString}
-                   ;
+            return uri.withoutPort().with(
+                scheme = scheme.name,
+                host   = host.toString(),
+                port   = noPort ? Null : tlsPort,
+            );
         }
 
         /**

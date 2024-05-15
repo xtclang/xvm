@@ -336,6 +336,30 @@ const Uri
                       );
     }
 
+    /**
+     * Return this same URI, but with no port.
+     *
+     * @return this URI, but with its port removed
+     */
+    Uri withoutPort() {
+        if (port == Null) {
+            return this;
+        }
+
+        return new Uri(originalForm = Null,
+                       scheme       = scheme,
+                       authority    = renderAuthority(new StringBuffer(), user, host, ip, Null).toString(),
+                       user         = user,
+                       host         = host,
+                       ip           = ip,
+                       port         = Null,
+                       path         = path,
+                       query        = query,
+                       opaque       = opaque,
+                       fragment     = fragment,
+                     );
+    }
+
 
     // ----- searching -----------------------------------------------------------------------------
 

@@ -214,7 +214,7 @@ service Dispatcher {
                 if (!tls && endpoint.requiresTls) {
                     response = new SimpleResponse(PermanentRedirect);
 
-                    response.header.put(Header.Location, requestInfo.convertToHttps());
+                    response.header.put(Header.Location, requestInfo.httpsUrl.toString());
                     break ProcessRequest;
                 }
 

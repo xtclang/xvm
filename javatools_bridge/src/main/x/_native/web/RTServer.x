@@ -193,12 +193,12 @@ service RTServer
         @RO String hostName;
         @RO String protocolString;
         @RO Protocol protocol;
+        @RO Uri httpsUrl;
         @RO String? userAgent;
         @RO String[] headerNames;
         conditional String[] getHeaderValuesForName(String name);
         conditional Byte[] getBodyBytes();
         Boolean containsNestedBodies();
-        String convertToHttps();
         void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
     }
 
