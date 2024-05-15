@@ -165,8 +165,8 @@ interface HttpServer
         @RO SocketAddress receivedAtAddress;
 
         /**
-         * Obtain the IP address and port that the request was received from, which _may_ be a
-         * reverse proxy or load balancer.
+         * Obtain the IP address and port that the request was received from, which _may_ be the
+         * user agent, a client proxy, a reverse proxy, or a load balancer.
          *
          * @return the immediately preceding sender's IP address and port
          */
@@ -194,35 +194,41 @@ interface HttpServer
         @RO Boolean tls;
 
         /**
-         * Obtain the IP address and port that the request claims that it was sent from. This
-         * address must not be trusted, because it uses headers of the request itself, and any such
-         * headers can be forged by the request originator or any untrusted proxy that the request
-         * is routed through. This information is useful, though, to differentiate among multiple
-         * clients behind a shared client proxy, even though that differentiation must not be
-         * considered to be trustworthy information.
+         * Obtain the IP address that the request claims that it was sent from. This address must
+         * not be trusted, because it may use headers from the request itself, and any such headers
+         * can be forged by the request originator or any untrusted proxy that the request is routed
+         * through. This information is useful, though, to differentiate among multiple clients
+         * behind a shared client proxy, even though that differentiation must not be considered to
+         * be trustworthy information.
          *
-         * @return the IP address and port that the request claims that the user agent resides at
+         * @return the IP address that the request claims that the user agent resides at
          */
-        @RO SocketAddress userAgentAddress;
+        @RO IPAddress userAgentAddress;
 
         /**
-         * Obtain the IP address and port that the request was received from. This address can be
-         * trusted, because it uses information from the HTTP server, or from trusted proxy servers
-         * that route to the HTTP server. To obtain the untrusted client address information, use
-         * the [userAgentAddress] property, which _should_ differ from this property's value iff
-         * the request was transmitted through any untrusted proxies.
+         * Obtain the IP address that the request was received from. The term "received" refers to
+         * to the first _trusted proxy_ that the request was received on, or on this server (if the
+         * message did not come through any trusted proxies). At the point that the request was
+         * received, the address of the sender is recorded, and that address is the _client_.
          *
-         * @return the client IP address and port
+         * This address can be trusted, because it uses information from the HTTP server, or from
+         * trusted proxy servers that route to the HTTP server. To obtain the _untrusted_ client
+         * address information, use the [userAgentAddress] property, which may differ from this
+         * `clientAddress` value if the request was transmitted through any untrusted proxies, if
+         * those proxies included proxying information in the request's headers.
+         *
+         * @return the "trusted" client IP address
          */
-        @RO SocketAddress clientAddress;
+        @RO IPAddress clientAddress;
 
         /**
-         * The list of [SocketAddress] objects -- in reverse order -- representing how the request
-         * arrived at this server. This is a sequence of `SocketAddress` objects representing each
-         * HTTP/HTTPS hop, starting with this server, followed by any reverse proxy servers, then
-         * any client proxies, and finally the _claimed_ originating client (the "user agent").
+         * The list of [IPAddress] objects representing the "hops" that the request took to arrive
+         * at this server. This is a sequence of `IPAddress` objects representing each HTTP/HTTPS
+         * hop, starting at the client end (which may include a user agent itself, then any number
+         * of proxies), followed by any trusted reverse proxy servers. The array does not include
+         * this server; that information is represented by the [receivedAtAddress] property.
          */
-        @RO SocketAddress[] backTrace;
+        @RO IPAddress[] routeTrace;
 
         /**
          * The host name. This is the name (or address) that the user agent used to submit the
@@ -280,7 +286,7 @@ interface HttpServer
          * @return (conditional) an array of `context` objects, each representing the one nested
          *         body
          */
-        // conditional RequestInfo[] TODO CP: need a non-recursive API
+        // conditional RequestInfo[] TODO GG recursive duck type
         Boolean containsNestedBodies();
 
         /**
@@ -291,13 +297,12 @@ interface HttpServer
         String convertToHttps() {
             assert !tls as "already a TLS request";
 
-            Scheme  scheme    = protocol.scheme;
-            Scheme  tlsScheme = scheme.upgradeToTls? : assert as $"cannot upgrade {scheme}";
+            Scheme  scheme    = HTTPS;
             String  hostName  = route.host.toString();
             UInt16  tlsPort   = route.httpsPort;
             Boolean showPort  = tlsPort != 443;
 
-            return $|{tlsScheme.name}://{hostName}\
+            return $|{scheme.name}://{hostName}\
                     |{{if (showPort) {$.add(':').append(tlsPort);}}}\
                     |{uriString}
                    ;

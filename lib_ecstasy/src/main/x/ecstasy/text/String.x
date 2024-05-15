@@ -143,6 +143,7 @@ const String
      *
      * @return the contents of this String, but without any leading or trailing whitespace
      */
+    // TODO GG: String trim(function Boolean(Char) whitespace = Char.isWhitespace) {
     String trim(function Boolean(Char) whitespace = ch -> ch.isWhitespace()) {
         Int leading = 0;
         val length  = size;
@@ -187,35 +188,78 @@ const String
      * character.
      *
      * @param separator  the character that separates the items in the String
-     * @param trim       (optional) indicates whether empty strings are to be trimmed from the
+     * @param omitEmpty  (optional) indicates whether empty strings are to be omitted from the
      *                   resulting array
+     * @param trim       (optional) pass `True` to trim whitespace from each string in the
+     *                   resulting array, or pass a function that determines what whitespace
+     *                   characters to trim
      *
-     * @return an array of Strings
+     * @return an immutable array of Strings
      */
-    String![] split(Char separator, Boolean trim = False) {
-        if (size == 0) {
-            return [""];
+    String![] split(Char                             separator,
+                    Boolean                          omitEmpty = False,
+                    Boolean | function Boolean(Char) trim      = False,
+                   ) {
+        Int length = size;
+        if (length == 0) {
+            return omitEmpty ? [] : [""];
         }
 
         String[] results = new String[];
-
-        Int start = 0;
-        while (Int next := indexOf(separator, start)) {
-            if (start == next) {
-                if (!trim) {
-                    results += "";
+        if (trim == False) {
+            Int start = 0;
+            while (Int next := indexOf(separator, start)) {
+                if (start == next) {
+                    if (!omitEmpty) {
+                        results += "";
+                    }
+                } else {
+                    results += this[start ..< next];
                 }
-            } else {
-                results += this[start ..< next];
+                start = next + 1;
             }
-            start = next + 1;
+            // whatever remains after the last separator (or the entire String, if there were no
+            // separators found)
+            String last = substring(start);
+            if (!omitEmpty || !last.empty) {
+                results += last;
+            }
+        } else {
+            Char[]                 chars      = this.chars;
+            Int                    offset     = 0;
+            Int                    start      = 0;
+            Boolean                leading    = True;
+            function Boolean(Char) whitespace = trim.is(function Boolean(Char)) ?: Char.isWhitespace;
+            while (True) {
+                if (offset >= length || chars[offset] == separator) {
+                    Int end = offset-1;
+                    while (end >= start && whitespace(chars[end])) {
+                        --end;
+                    }
+
+                    if (end >= start) {
+                        results += this[start..end];
+                    } else if (!omitEmpty) {
+                        results += "";
+                    }
+
+                    if (offset >= length) {
+                        break;
+                    }
+                    start   = offset + 1;
+                    leading = True;
+                } else if (leading) {
+                    if (whitespace(chars[offset])) {
+                        start = offset + 1;
+                    } else {
+                        leading = False;
+                    }
+                }
+                ++offset;
+            }
         }
 
-        // whatever remains after the last separator (or the entire String, if there were no
-        // separators found)
-        results += substring(start);
-
-        return results;
+        return results.freeze(True);
     }
 
     /**

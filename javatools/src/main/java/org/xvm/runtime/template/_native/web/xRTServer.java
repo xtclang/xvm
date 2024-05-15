@@ -113,7 +113,7 @@ public class xRTServer
 
         markNativeMethod("getReceivedAtAddress",   null, null);
         markNativeMethod("getReceivedFromAddress", null, null);
-        markNativeMethod("getClientHost",          null, null);
+        markNativeMethod("getHostInfo",            null, null);
         markNativeMethod("getProtocolString",      null, null);
         markNativeMethod("getHeaderNames",         null, null);
         markNativeMethod("getHeaderValuesForName", null, null);
@@ -235,8 +235,8 @@ public class xRTServer
             case "getReceivedFromAddress":
                 return invokeGetReceivedFromAddress(frame, (HttpContextHandle) ahArg[0], aiReturn);
 
-            case "getClientHost":
-                return invokeGetClientHost(frame, (HttpContextHandle) ahArg[0], aiReturn);
+            case "getHostInfo":
+                return invokeGetHostInfo(frame, (HttpContextHandle) ahArg[0], aiReturn);
 
             case "getHeaderValuesForName":
                 return invokeGetHeaderValues(frame, (HttpContextHandle) ahArg[0],
@@ -253,7 +253,8 @@ public class xRTServer
     // ----- native implementations ----------------------------------------------------------------
 
     /**
-     * Implementation of "void bindImpl(String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
+     * Implementation of
+     * "void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)" method.
      */
     private int invokeBind(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
@@ -262,14 +263,16 @@ public class xRTServer
             return frame.raiseException(xException.illegalState(frame, "Server is already configured"));
             }
 
-        String sBindAddr  = ((StringHandle)   ahArg[0]).getStringValue();
-        int    nHttpPort  = (int) ((JavaLong) ahArg[1]).getValue();
-        int    nHttpsPort = (int) ((JavaLong) ahArg[2]).getValue();
+        ObjectHandle hBinding   =                   ahArg[0];
+        String       sBindAddr  = ((StringHandle)   ahArg[1]).getStringValue();
+        int          nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
+        int          nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
 
         try
             {
             configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
             configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
+            configureBinding(hServer, hBinding);
 
             HttpServer  httpServer  = hServer.getHttpServer();
             HttpsServer httpsServer = hServer.getHttpsServer();
@@ -354,9 +357,13 @@ public class xRTServer
         hServer.setHttpsServer(httpsServer);
         }
 
+    private void configureBinding(HttpServerHandle hServer, ObjectHandle hBinding) {
+        hServer.setBinding(hBinding);
+    }
+
     /**
-     * Implementation of "void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore keystore,
-     *                    String? tlsKey=Null)" method.
+     * Implementation of "void addRouteImpl(String hostName, HandlerWrapper wrapper,
+     *                    KeyStore keystore, String? tlsKey=Null)" method.
      */
     private int invokeAddRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
@@ -392,7 +399,7 @@ public class xRTServer
                 }
             }
 
-        RequestHandler handler = createRequestHandler(frame, hWrapper);
+        RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
         router.mapRoutes.put(hHostName.getStringValue(), new RouteInfo(handler, hKeystore, sTlsKey));
         return Op.R_NEXT;
         }
@@ -413,20 +420,20 @@ public class xRTServer
             return frame.assignValue(iResult, xBoolean.FALSE);
             }
 
-        RequestHandler handler = createRequestHandler(frame, hWrapper);
+        RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
         router.mapRoutes.put(sHostName, new RouteInfo(handler, info.hKeyStore, info.sTlsKey));
         return frame.assignValue(iResult, xBoolean.TRUE);
         }
 
-    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper)
+    private RequestHandler createRequestHandler(Frame frame, ServiceHandle hWrapper, HttpServerHandle hServer)
         {
         ClassStructure  clzHandler = hWrapper.getTemplate().getStructure();
-        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 4);
+        MethodStructure method     = clzHandler.findMethodDeep("handle", m -> m.getParamCount() == 5);
         assert method != null;
 
         FunctionHandle hFunction =
                 xRTFunction.makeInternalHandle(frame, method).bindTarget(frame, hWrapper);
-        return new RequestHandler(hWrapper.f_context, hFunction);
+        return new RequestHandler(hWrapper.f_context, hFunction, hServer);
         }
 
     /**
@@ -467,9 +474,9 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "conditional (String, Uint16) getClientHost(RequestContext context)" method.
+     * Implementation of "conditional (String, Uint16) getHostInfo(RequestContext context)" method.
      */
-    private int invokeGetClientHost(Frame frame, HttpContextHandle hCtx, int[] aiResult)
+    private int invokeGetHostInfo(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
         String sHost = getHostName(hCtx.f_exchange);
         int    nPort = getHostPort(hCtx.f_exchange);
@@ -502,7 +509,8 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "conditional String[] getHeaderValuesForName(RequestContext context, String name)" method.
+     * Implementation of "conditional String[] getHeaderValuesForName(RequestContext context,
+     * String name)" method.
      */
     private int invokeGetHeaderValues(Frame frame, HttpContextHandle hCtx,
                                       StringHandle hName, int[] aiResult)
@@ -578,6 +586,7 @@ public class xRTServer
                 hServer.f_context.f_container.getServiceContext().unregisterNotification();
                 }
             hServer.getRouter().mapRoutes.clear();
+            hServer.clear();
             }
 
         return Op.R_NEXT;
@@ -670,10 +679,11 @@ public class xRTServer
     protected static class RequestHandler
             implements HttpHandler
         {
-        public RequestHandler(ServiceContext context, FunctionHandle hFunction)
+        public RequestHandler(ServiceContext context, FunctionHandle hFunction, HttpServerHandle hServer)
             {
             f_context   = context;
             f_hFunction = hFunction;
+            f_hServer   = hServer;
             }
 
         @Override
@@ -702,12 +712,12 @@ public class xRTServer
 
         private ObjectHandle[] createArguments(HttpExchange exchange)
             {
-            HttpContextHandle hContext = new HttpContextHandle(exchange);
-            StringHandle      hURI     = xString.makeHandle(exchange.getRequestURI().toASCIIString());
-            StringHandle      hMethod  = xString.makeHandle(exchange.getRequestMethod());
-            BooleanHandle     hTls     = xBoolean.makeHandle(exchange instanceof HttpsExchange);
-
-            return new ObjectHandle[]{hContext, hURI, hMethod, hTls};
+            ObjectHandle      hBinding  = f_hServer.getBinding();
+            HttpContextHandle hContext  = new HttpContextHandle(exchange);
+            StringHandle      hURI      = xString.makeHandle(exchange.getRequestURI().toASCIIString());
+            StringHandle      hMethod   = xString.makeHandle(exchange.getRequestMethod());
+            BooleanHandle     hTls      = xBoolean.makeHandle(exchange instanceof HttpsExchange);
+            return new ObjectHandle[]{hBinding, hContext, hURI, hMethod, hTls};
             }
 
         private void sendError(HttpExchange exchange, Throwable t)
@@ -723,8 +733,9 @@ public class xRTServer
                 }
             }
 
-        private final ServiceContext f_context;
-        private final FunctionHandle f_hFunction;
+        private final ServiceContext   f_context;
+        private final FunctionHandle   f_hFunction;
+        private final HttpServerHandle f_hServer;
         }
 
     /**
@@ -860,6 +871,8 @@ public class xRTServer
     protected static class Router
             implements HttpHandler
         {
+        private ObjectHandle m_hBinding;
+
         @Override
         public void handle(HttpExchange exchange)
                 throws IOException
@@ -876,6 +889,16 @@ public class xRTServer
                 {
                 route.handler.handle(exchange);
                 }
+            }
+
+        protected ObjectHandle getBinding()
+            {
+            return m_hBinding;
+            }
+
+        protected void setBinding(ObjectHandle binding)
+            {
+            m_hBinding = binding;
             }
 
         public final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
@@ -905,31 +928,35 @@ public class xRTServer
             f_aoNative[0] = new Router();
             }
 
-        protected void setHttpServer(HttpServer httpServer)
-            {
-            f_aoNative[1] = httpServer;
-            }
-
-        protected void setHttpsServer(HttpsServer httpsServer)
-            {
-            f_aoNative[2] = httpsServer;
-            }
-
-        @Override
-        public String toString()
-            {
-            return "HttpServer" +
-                    (getHttpServer() == null
-                        ? ""
-                        : "@" + getHttpServer().getAddress().getHostString());
-            }
-
         /**
          * @return the request router
          */
         protected Router getRouter()
             {
             return (Router) f_aoNative[0];
+            }
+
+        protected void setRouter(Router router)
+            {
+            Router routerPrev = getRouter();
+            if (router == routerPrev)
+                {
+                return;
+                }
+
+            ObjectHandle binding = getBinding();
+            if (binding != null)
+                {
+                // clean up the reference while we still can
+                setBinding(null);
+                }
+
+            if (router != null)
+                {
+                router.setBinding(binding);
+                }
+
+            f_aoNative[0] = router;
             }
 
         /**
@@ -940,12 +967,59 @@ public class xRTServer
             return (HttpServer) f_aoNative[1];
             }
 
+        protected void setHttpServer(HttpServer httpServer)
+            {
+            f_aoNative[1] = httpServer;
+            }
+
         /**
          * @return the underlying {@link HttpsServer}
          */
         protected HttpsServer getHttpsServer()
             {
             return (HttpsServer) f_aoNative[2];
+            }
+
+        protected void setHttpsServer(HttpsServer httpsServer)
+            {
+            f_aoNative[2] = httpsServer;
+            }
+
+        protected ObjectHandle getBinding()
+            {
+            Router router = getRouter();
+            return router == null
+                    ? null
+                    : router.getBinding();
+            }
+
+        protected void setBinding(ObjectHandle binding)
+            {
+            Router router = getRouter();
+            if (router == null)
+                {
+                assert binding == null;
+                }
+            else
+                {
+                router.setBinding(binding);
+                }
+            }
+
+        protected void clear()
+            {
+            setRouter(null);
+            setHttpServer(null);
+            setHttpsServer(null);
+            }
+
+        @Override
+        public String toString()
+            {
+            return "HttpServer" +
+                    (getHttpServer() == null
+                        ? ""
+                        : "@" + getHttpServer().getAddress().getHostString());
             }
         }
 

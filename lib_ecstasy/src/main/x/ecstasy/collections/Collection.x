@@ -120,13 +120,13 @@ interface Collection<Element>
      * size:
      *
      *     return size == 0;
+     *
+     * Implementations of Collection that do not have a cached size of the collection should
+     * override this method if a more efficient means of determining emptiness is available.
      */
     @Concurrent
-    @RO Boolean empty.get() {
-        // implementations of Collection that do not have a cached size of the collection should
-        // override this method if a more efficient means of determining emptiness is available
-        return size == 0;
-    }
+    @Override
+    @RO Boolean empty;
 
     /**
      * Determine if this collection contains the specified value.
