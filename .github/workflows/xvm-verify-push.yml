@@ -73,10 +73,11 @@ jobs:
       with:
         webhook-url: ${{ secrets.ORG_XTCLANG_DISCORD_WEBHOOK_URL }}
         content: |
-          Started XDK installation/verification run for XDK ${{ env.XDK_VERSION }} (branch: ${{ github.ref }}
-          [url to run: ${{ env.current_run_url }}]
+          Started XDK installation/verification run for XDK ${{ env.XDK_VERSION }} 
+             branch: ${{ github.ref }} (${{ github.sha }})) 
 
   build-verify:
+    needs: discord-message
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
@@ -105,13 +106,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
-          dependency-graph: 'generate-and-upload'
+          dependency-graph: 'generate-and-submit'
+          artifact-retention-days: 1
           validate-wrappers: true
           #cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           #cache-read-only: false
 
-      #- name: Validate Gradle Wrapper
-      #  uses: gradle/actions/wrapper-validation@v3
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v3
 
       - name: Dump environment info
         shell: bash
