@@ -87,7 +87,15 @@ service RequestInfoImpl(RTServer       server,
         if (tls && hops > 1) {
             IPAddress[] addrs = routeTrace;
             for (Int hop : 1 ..< hops) {
-                if (isTrustedProxy(addrs[hop])) {
+                Trusted: if (isTrustedProxy(addrs[hop])) {
+                    // the rest of the hops all need to be verified as trusted proxies; otherwise,
+                    // it would be possible to forge a header with a fake forward record by citing a
+                    // trusted proxy address, which could then produce a false positive for TLS
+                    for (Int revProxy : hop >..< hops) {
+                        if (!isTrustedProxy(addrs[revProxy])) {
+                            break Trusted;
+                        }
+                    }
                     return tls;
                 }
                 if (!hopsTls[hop]) {
