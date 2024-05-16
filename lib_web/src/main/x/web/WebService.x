@@ -92,12 +92,10 @@ mixin WebService(String path)
 
         try {
             return handle(session, request).freeze(True);
+        } catch (RequestAborted e) {
+            return e.makeResponse();
         } catch (Exception e) {
-            if (onError == Null) {
-                throw e;
-            } else {
-                return onError(session, request, e).freeze(True);
-            }
+            return onError?(session, request, e).freeze(True) : throw e;
         } finally {
             this.request = Null;
             this.session = Null;

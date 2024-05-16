@@ -19,10 +19,13 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType = Null,
     @Get("{path}")
     conditional ResponseOut getResource(String path) {
         ResponseOut createResponse(File file) {
-            if (MediaType mediaType := webApp.registry_.findMediaType(file.name)) {
-                return new SimpleResponse(OK, mediaType, file.contents);
+            MediaType? mediaType = this.mediaType;
+            if (mediaType == Null) {
+                mediaType := webApp.registry_.findMediaType(file.name);
             }
-            throw new RequestAborted(NoContent, $"Unknown media type for {file.name}");
+            return mediaType == Null
+                ? new SimpleResponse(UnsupportedMediaType, $"Unknown media type for {file.name}")
+                : new SimpleResponse(OK, mediaType, file.contents);
         }
 
         if (path == "" || path == "/") {

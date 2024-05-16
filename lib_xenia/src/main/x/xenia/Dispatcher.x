@@ -9,11 +9,11 @@ import SessionCookie.CookieId;
 
 import SessionImpl.Match_;
 
-import web.CookieConsent;
 import web.Endpoint;
 import web.ErrorHandler;
 import web.Header;
 import web.HttpStatus;
+import web.RequestAborted;
 
 import web.responses.SimpleResponse;
 
@@ -341,17 +341,20 @@ service Dispatcher {
                 bundlePool.releaseBundle(bundle?);
 
                 if (r == Null) {
-                    // TODO GG: remove
-                    @Inject Console console;
-                    console.print($"Dispatcher: unhandled exception for {uriString.quoted()}: {e}");
+                    if (e.is(RequestAborted)) {
+                        r = e.makeResponse();
+                    } else {
+                        // TODO GG: remove
+                        @Inject Console console;
+                        console.print($"Dispatcher: unhandled exception for {uriString.quoted()}: {e}");
 
-                    requestInfo.respond(HttpStatus.InternalServerError.code, [], [], []);
-                } else {
-                    (Int status, String[] names, String[] values, Byte[] body) =
-                        Http1Response.prepare(r);
-
-                    requestInfo.respond(status, names, values, body);
+                        requestInfo.respond(HttpStatus.InternalServerError.code, [], [], []);
+                        return;
+                    }
                 }
+
+                (Int status, String[] names, String[] values, Byte[] body) = Http1Response.prepare(r);
+                requestInfo.respond(status, names, values, body);
             });
             return;
         }

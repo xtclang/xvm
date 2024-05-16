@@ -431,5 +431,16 @@ module web.xtclang.org {
      * general use is discouraged.
      */
     const RequestAborted(HttpStatus status, String? text = Null, Exception? cause = Null)
-            extends Exception(text, cause);
+            extends Exception(text, cause) {
+
+        /**
+         * Create a [response](ResponseOut) based on the exception information.
+         */
+        ResponseOut makeResponse() {
+            import responses.SimpleResponse;
+            return text == Null
+                    ? new SimpleResponse(status)
+                    : new SimpleResponse(status, text);
+        }
+    }
 }
