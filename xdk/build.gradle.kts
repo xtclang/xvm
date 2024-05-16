@@ -5,6 +5,9 @@ import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.jreleaser.model.Active
+import org.jreleaser.model.Distribution.DistributionType
+import org.jreleaser.model.Stereotype
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -19,6 +22,7 @@ plugins {
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
+    alias(libs.plugins.jreleaser)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
     signing
 }
@@ -259,4 +263,51 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
 
 val installDist by tasks.existing {
     dependsOn(tasks.compileXtc)
+}
+
+val withLaunchersDistZip by tasks.existing(Zip::class) {
+    doLast {
+        logger.lifecycle("$prefix Creating distribution with launchers: ${outputs.files.singleFile.absolutePath}")
+        archiveFile
+    }
+}
+
+//val platformZip: Provider<RegularFile> = withLaunchersDistZip.map { it.archiveFile }
+
+val installWithLaunchersDist by tasks.existing(Sync::class) {
+    doLast {
+        logger.lifecycle("$prefix Installing distribution with launchers: ${destinationDir.absolutePath}")
+    }
+}
+
+val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archiveFile }
+System.err.println("platformZip : ${platformZip.get()}")
+
+jreleaser {
+    gitRootSearch = true
+    dryrun = true
+    project {
+        description = "XDK Platform"
+        copyright = "(C) xtclang.org 2024"
+        license = "https://github.com/xtclang/xvm/blob/master/LICENSE.md"
+        authors = listOf("xtclang.org")
+        links {
+            homepage = "https://xtclang.org"
+        }
+    }
+    release {
+        github {
+            overwrite = true
+            tagName.set(xdkBuildLogic.gitHubProtocol().localTag)
+        }
+    }
+    distributions {
+        // TODO - plugin?
+        create("xdk") {
+            distributionType = DistributionType.BINARY
+            artifact {
+                path = platformZip
+            }
+        }
+    }
 }

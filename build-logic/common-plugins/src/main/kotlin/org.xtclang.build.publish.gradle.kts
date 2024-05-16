@@ -16,6 +16,7 @@ publishing {
     repositories {
         mavenLocal()
         mavenGitHubPackages(project)
+        mavenLocalStagingDeploy(project)
     }
     configureMavenPublications(project)
 }

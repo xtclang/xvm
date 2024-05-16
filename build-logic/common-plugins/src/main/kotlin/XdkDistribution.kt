@@ -22,6 +22,10 @@ fun PublishingExtension.configureMavenPublications(project: Project) = project.r
     publications.withType<MavenPublication>().configureEach {
         logger.info("$prefix Configuring publication '$name' for project '${project.name}'.")
         pom {
+            name = project.name
+            description = "xtclang.org $name"
+            inceptionYear = "2024"
+            packaging = "jar"
             licenses {
                 license {
                     name = "The XDK License"
@@ -84,6 +88,16 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
             logger.warn("$prefix WARNING: No publications found, but signature are still enabled.")
         } else {
             logger.info("$prefix Signature: Configured sign tasks publications in '${project.name}', publications: ${publications.map { it.name }}.")
+        }
+    }
+}
+
+// Configure a local repo under build for maven artifacts. This is required to be the
+// staging-deploy repo for a mavenCentral release.
+fun PublishingExtension.mavenLocalStagingDeploy(project: Project) = project.run {
+    repositories {
+        maven {
+            url = uri(layout.buildDirectory.dir("stating-deploy"))
         }
     }
 }

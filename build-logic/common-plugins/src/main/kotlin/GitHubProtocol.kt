@@ -34,8 +34,9 @@ data class GitHubProtocol(private val project: Project) {
     private val semanticVersion = project.property("semanticVersion") as SemanticVersion
     private val artifactBaseVersion = semanticVersion.artifactVersion.removeSuffix("-SNAPSHOT")
     private val tagPrefix = if (semanticVersion.isSnapshot()) "snapshot/" else ""
-    private val localTag = "${tagPrefix}v$artifactBaseVersion"
-    private val remoteTag = "refs/tags/${tagPrefix}v$artifactBaseVersion"
+
+    val localTag = "${tagPrefix}v$artifactBaseVersion"
+    val remoteTag = "refs/tags/${tagPrefix}v$artifactBaseVersion"
 
     data class GitTagInfo(
         val tagsNeeded: Pair<String, String>,
