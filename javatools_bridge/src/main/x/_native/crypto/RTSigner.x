@@ -35,8 +35,8 @@ service RTSigner
     }
 
     @Override
-    OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotations=Null) {
+    OutputSigner createOutputSigner(BinaryOutput? destination = Null,
+                                    Annotations?  annotations = Null) {
         TODO
     }
 

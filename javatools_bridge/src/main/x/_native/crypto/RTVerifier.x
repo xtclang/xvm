@@ -52,14 +52,14 @@ service RTVerifier
 
     @Override
     OutputVerifier createOutputVerifier(Digest        signature,
-                                        BinaryOutput? destination=Null,
-                                        Annotations?  annotations=Null) {
+                                        BinaryOutput? destination = Null,
+                                        Annotations?  annotations = Null) {
         TODO
     }
 
     @Override
     InputVerifier createInputVerifier(BinaryInput  source,
-                                      Annotations? annotations=Null) {
+                                      Annotations? annotations = Null) {
         TODO
     }
 

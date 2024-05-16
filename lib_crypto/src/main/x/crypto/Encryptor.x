@@ -52,6 +52,5 @@ interface Encryptor
      *         this returned `BinaryOutput` as soon as all of the data to encrypt has been written
      *         to it
      */
-    BinaryOutput createOutputEncryptor(BinaryOutput destination,
-                                       Annotations? annotations=Null);
+    BinaryOutput createOutputEncryptor(BinaryOutput destination, Annotations? annotations = Null);
 }

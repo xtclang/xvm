@@ -64,8 +64,8 @@ interface Verifier
      * @param annotations  (optional) one or more mixins to include in the [OutputSigner]
      */
     OutputVerifier createOutputVerifier(Digest        signature,
-                                        BinaryOutput? destination=Null,
-                                        Annotations?  annotations=Null);
+                                        BinaryOutput? destination = Null,
+                                        Annotations?  annotations = Null);
 
     /**
      * A stateful output stream that collects information as it is written to (or through) the
@@ -90,7 +90,7 @@ interface Verifier
      * @param annotations  (optional) one or more mixins to include in the [InputVerifier]
      */
     InputVerifier createInputVerifier(BinaryInput  source,
-                                      Annotations? annotations=Null);
+                                      Annotations? annotations = Null);
 
     /**
      * A stateful input stream that collects information as data is read through the stream,  and

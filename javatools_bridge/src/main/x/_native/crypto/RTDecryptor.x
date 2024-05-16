@@ -32,8 +32,7 @@ service RTDecryptor
     }
 
     @Override
-    BinaryInput createInputDecryptor(BinaryInput  source,
-                                     Annotations? annotations=Null) {
+    BinaryInput createInputDecryptor(BinaryInput  source, Annotations? annotations = Null) {
         TODO
     }
 

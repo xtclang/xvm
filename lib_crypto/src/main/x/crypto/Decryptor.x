@@ -42,5 +42,5 @@ interface Decryptor
      * @return the `BinaryInput` to read the decrypted data from
      */
     BinaryInput createInputDecryptor(BinaryInput  source,
-                                     Annotations? annotations=Null);
+                                     Annotations? annotations = Null);
 }

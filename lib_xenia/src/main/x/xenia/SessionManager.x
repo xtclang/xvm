@@ -1,4 +1,5 @@
 import crypto.Decryptor;
+import crypto.NullDecryptor;
 
 import web.HttpStatus;
 import web.codecs.Base64Format;
@@ -47,7 +48,8 @@ import SessionStore.IOResult;
 service SessionManager {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(SessionStore store, SessionProducer instantiateSession, UInt16 plainPort=80, UInt16 tlsPort=443) {
+    construct(SessionStore store, SessionProducer instantiateSession,
+              UInt16 plainPort = 80, UInt16 tlsPort = 443) {
         this.store              = store;
         this.instantiateSession = instantiateSession;
 
@@ -169,8 +171,7 @@ service SessionManager {
     /**
      * The encryptor/decryptor used for session cookie values.
      */
-    @Unassigned
-    private Decryptor cookieDecryptor;
+    private Decryptor cookieDecryptor = NullDecryptor;
 
     /**
      * Tracks whether event dispatching failures have already been logged, per event.
@@ -181,7 +182,7 @@ service SessionManager {
     // ----- cookie encoding support ---------------------------------------------------------------
 
     void configureEncryption(Decryptor cookieDecryptor) {
-        assert this.&cookieDecryptor.assigned == False;
+        assert this.cookieDecryptor == NullDecryptor as "Cookie decryptor is not re-assignable";
         this.cookieDecryptor = cookieDecryptor;
     }
 

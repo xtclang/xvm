@@ -54,8 +54,8 @@ const TruncatingSigner
     }
 
     @Override
-    OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotations=Null) {
+    OutputSigner createOutputSigner(BinaryOutput? destination = Null,
+                                    Annotations?  annotations = Null) {
         OutputSigner baseOutputSigner = baseSigner.createOutputSigner(destination);
         // TODO apply annotations
         return new TruncatingOutputSigner(baseOutputSigner);
@@ -103,8 +103,8 @@ const TruncatingSigner
 
     @Override
     OutputVerifier createOutputVerifier(Digest        signature,
-                                        BinaryOutput? destination=Null,
-                                        Annotations?  annotations=Null) {
+                                        BinaryOutput? destination = Null,
+                                        Annotations?  annotations = Null) {
         OutputSigner baseOutputSigner = baseSigner.createOutputSigner(destination);
         // TODO apply annotations
         Byte[] signatureBytes = signature.is(Signature) ? signature.bytes : signature;
@@ -113,7 +113,7 @@ const TruncatingSigner
 
     @Override
     InputVerifier createInputVerifier(BinaryInput  source,
-                                      Annotations? annotations=Null) {
+                                      Annotations? annotations = Null) {
         TODO
     }
 }

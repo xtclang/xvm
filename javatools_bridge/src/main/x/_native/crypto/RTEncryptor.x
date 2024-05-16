@@ -56,8 +56,7 @@ service RTEncryptor(String algorithm, Int blockSize)
     }
 
     @Override
-    BinaryOutput createOutputEncryptor(BinaryOutput destination,
-                                       Annotations? annotations=Null) {
+    BinaryOutput createOutputEncryptor(BinaryOutput destination, Annotations? annotations = Null) {
         TODO
     }
 

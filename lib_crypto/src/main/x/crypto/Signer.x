@@ -41,8 +41,8 @@ interface Signer
      *                     through all of the data that is written to the `OutputSigner`
      * @param annotation   (optional) one or more mixins to include in the returned [OutputSigner]
      */
-    OutputSigner createOutputSigner(BinaryOutput? destination=Null,
-                                    Annotations?  annotations=Null);
+    OutputSigner createOutputSigner(BinaryOutput? destination = Null,
+                                    Annotations?  annotations = Null);
 
     /**
      * A stateful output stream that collects information as it is written to (or thru) the stream,
