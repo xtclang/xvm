@@ -703,10 +703,7 @@ public class MethodDeclarationStatement
         if (cAnnos > 0)
             {
             boolean      fReordered = false;
-            TypeConstant typeBase   = method.isStatic()
-                        ? pool.typeFunction()
-                        : pool.ensureParameterizedTypeConstant(pool.typeMethod(),
-                                clzParent.getIdentityConstant().getType());
+            TypeConstant typeBase   = method.getIdentityConstant().getValueType(pool, null);
 
             Validate:
             if (cAnnos == 1)
