@@ -1243,7 +1243,7 @@ public class xRTType
      */
     public int invokeResolveFormalType(Frame frame, TypeHandle hType, StringHandle hName, int[] aiReturn)
         {
-        TypeConstant type  = hType.getUnsafeType();
+        TypeConstant type  = hType.getUnsafeType().getParamType(0);
         TypeConstant typeR = type.resolveGenericType(hName.getStringValue());
 
         return typeR == null
