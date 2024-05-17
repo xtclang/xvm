@@ -130,7 +130,10 @@ public class ConstHeap
             if (containerParent != null)
                 {
                 hValue = containerParent.f_heap.getConstHandle(constValue);
-                if (hValue != null)
+
+                // there is a chance that both our child and our parent do "know" that value's type,
+                // but it's not a part of our type system
+                if (hValue != null && hValue.isShared(f_container.getConstantPool(), null))
                     {
                     saveConstHandle(constValue, hValue);
                     }
