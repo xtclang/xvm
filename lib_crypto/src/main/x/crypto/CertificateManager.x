@@ -11,7 +11,7 @@ interface CertificateManager {
      *
      * Note, that the "Common Name" part of the distinguished name should represent a sub-domain
      * managed by the corresponding Ecstasy container, which is most likely to be a subdomain of
-     * "users.xqiz.it".
+     * "xqiz.it".
      *
      * This operation consists of a number of steps:
      *  - create a Certificate Signing Request (CSR) for the specified distinguished name
@@ -24,7 +24,7 @@ interface CertificateManager {
      * @param pwd    the password for the keystore
      * @param name   the name the certificate is known by the KeyStore
      * @param dName  the distinguished name string, which is comma-delimited string of X.509
-     *               certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=www.xqiz.it)
+     *               certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=host.xqiz.it)
      *
      * @throws IOException if anything goes wrong
      */
@@ -86,12 +86,12 @@ interface CertificateManager {
      * Helper function to create a distinguished name in the format prescribed by the (X.509
      * certificate spec)[https://www.rfc-editor.org/rfc/rfc5280]
      *
-     * @param domain   the fully qualified domain name such as "acme.users.xqiz.it"
-     * @param org      (optional) Organization (the legal company name)
-     * @param orgUnit  (optional) Organizational Unit such as division or department of company
-     * @param locality (optional) Locality or City name
-     * @param state    (optional) State or Province (must be spelled out completely such as "New York")
-     * @param country  (optional) two character ISO country code (such as "US")
+     * @param domain    the fully qualified domain name such as "acme.com.xqiz.it"
+     * @param org       (optional) Organization (the legal company name)
+     * @param orgUnit   (optional) Organizational Unit such as division or department of company
+     * @param locality  (optional) Locality or City name
+     * @param state     (optional) State or Province (must be spelled out completely such as "New York")
+     * @param country   (optional) two character ISO country code (such as "US")
      *
      * @return the distinguished name in the X.509 spec format
      */

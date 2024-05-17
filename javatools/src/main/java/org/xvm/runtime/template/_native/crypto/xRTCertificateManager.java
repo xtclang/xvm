@@ -2,26 +2,35 @@ package org.xvm.runtime.template._native.crypto;
 
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+
+import java.nio.file.Path;
+
+import java.util.concurrent.TimeUnit;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
 
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
+import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 
@@ -74,9 +83,16 @@ public class xRTCertificateManager
      */
     public ObjectHandle ensureManager(Frame frame, ObjectHandle hOpts)
         {
-        // we could cache the handle as well
-        return createServiceHandle(f_container.createServiceContext("CertificateManager"),
-                getCanonicalClass(), getCanonicalType());
+        StringHandle hProvider = hOpts instanceof StringHandle hS
+                ? hS
+                : xString.makeHandle("self");
+
+        // we could cache the handles based on the provider
+        ClassComposition clz  = getCanonicalClass();
+        ServiceHandle    hMgr = createServiceHandle(f_container.
+                createServiceContext("CertificateManager"), clz, getCanonicalType());
+        hMgr.setField(0, hProvider); // "provider" property
+        return hMgr;
         }
 
     @Override
@@ -86,7 +102,10 @@ public class xRTCertificateManager
         switch (method.getName())
             {
             case "createCertificateImpl":
-                return invokeCreateCertificate(frame, ahArg);
+                return invokeCreateCertificate(frame, (ServiceHandle) hTarget, ahArg);
+
+            case "revokeCertificateImpl":
+                return invokeRevokeCertificate(frame, ahArg);
 
             case "createSymmetricKeyImpl":
                 return invokeCreateSymmetricKey(frame, ahArg);
@@ -105,12 +124,13 @@ public class xRTCertificateManager
      * Native implementation of
      *     "createCertificateImpl(String path, Password pwd, String name, String dName)"
      */
-    private int invokeCreateCertificate(Frame frame, ObjectHandle[] ahArg)
+    private int invokeCreateCertificate(Frame frame, ServiceHandle hMgr, ObjectHandle[] ahArg)
         {
-        StringHandle hPath  = (StringHandle) ahArg[0];
-        StringHandle hPwd   = xRTKeyStore.getPassword(frame, ahArg[1]);
-        StringHandle hName  = (StringHandle) ahArg[2];
-        StringHandle hDName = (StringHandle) ahArg[3];
+        StringHandle hPath     = (StringHandle) ahArg[0];
+        StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName     = (StringHandle) ahArg[2];
+        StringHandle hDName    = (StringHandle) ahArg[3];
+        StringHandle hProvider = (StringHandle) hMgr.getField(0); // "provider" property
 
         runCommand(null, null,
                 "keytool", "-delete",
@@ -118,14 +138,98 @@ public class xRTCertificateManager
                 "-keystore", hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
-        return runCommand(frame, null,
-                "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "365",
+
+        String sDName = hDName.getStringValue();
+        switch (hProvider.getStringValue())
+            {
+            case "self":
+                // create self-signed certificate
+                return runCommand(frame, null,
+                        "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "365",
+                        "-alias", hName.getStringValue(),
+                        "-dname", sDName,
+                        "-storetype", "PKCS12",
+                        "-keystore", hPath.getStringValue(),
+                        "-storepass", hPwd.getStringValue()
+                        );
+
+            case "certbot":
+                {
+                File   dirCerts   = getCertsPath(hPath);
+                String sCertsPath = dirCerts.getAbsolutePath();
+
+                if (!dirCerts.exists() && !dirCerts.mkdir() || !dirCerts.isDirectory())
+                    {
+                    return frame.raiseException(xException.ioException(frame,
+                            "Cannot create directory: " + sCertsPath));
+                    }
+
+                int ofDomain = sDName.indexOf("CN=");
+                assert ofDomain > 0;
+                String sDomain = sDName.substring(ofDomain + 3);
+
+                int iResult = runCommand(frame, "yes\nyes",
+                        "certbot", "certonly",
+                        "--staging",
+                        "--webroot",
+                        "--webroot-path", sCertsPath,
+                        "--config-dir",   sCertsPath + "/config",
+                        "--work-dir",     sCertsPath + "/work",
+                        "--logs-dir",     sCertsPath + "/logs",
+                        "--register-unsafely-without-email",
+                        "-d", sDomain);
+                if (iResult == Op.R_NEXT)
+                    {
+                    // TODO: process further
+                    }
+                return iResult;
+                }
+
+            default:
+                return frame.raiseException(
+                        "Unsupported certificate provider: " + hProvider.getStringValue());
+            }
+        }
+
+    /**
+     * Native implementation of
+     *     "revokeCertificateImpl(String path, Password pwd, String name)"
+     */
+    private int invokeRevokeCertificate(Frame frame, ObjectHandle[] ahArg)
+        {
+        StringHandle hPath  = (StringHandle) ahArg[0];
+        StringHandle hPwd   = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName  = (StringHandle) ahArg[2];
+
+        File   dirCerts   = getCertsPath(hPath);
+        String sCertsPath = dirCerts.getAbsolutePath();
+
+        if (dirCerts.isDirectory())
+            {
+            runCommand(frame, "yes\nyes",
+                        "certbot", "remove",
+                        "--staging",
+                        "--config-dir", sCertsPath + "/config",
+                        "--work-dir",   sCertsPath + "/work",
+                        "--logs-dir",   sCertsPath + "/logs",
+                        "--cert-name",  hName.getStringValue(),
+                        "--reason",     "unspecified"
+                      );
+            }
+
+        runCommand(null, null,
+                "keytool", "-delete",
                 "-alias", hName.getStringValue(),
-                "-dname", hDName.getStringValue(),
-                "-storetype", "PKCS12",
                 "-keystore", hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
+        return Op.R_NEXT;
+        }
+
+    private File getCertsPath(StringHandle hPath)
+        {
+        File fileKeystore = Path.of(hPath.getStringValue()).toFile();
+        return new File(fileKeystore.getParentFile(), ".certs");
         }
 
     /**
@@ -209,23 +313,21 @@ public class xRTCertificateManager
                 out.write(sInput.getBytes());
                 out.close();
                 }
-            process.waitFor();
-
-            if (frame != null)
+System.out.println("*** running command: " + toString(cmd));
+            if (!process.waitFor(30, TimeUnit.SECONDS))
                 {
-                // it's completely bonkers, but keytool issues errors to system out and
-                // info messages to system err
-                String sError = checkError(process.getInputStream(), "");
-                if (sError == null)
-                    {
-                    sError = checkError(process.getErrorStream(), "keytool error:");
-                    }
+                process.destroy();
+                return frame.raiseException(xException.timedOut(frame,
+                        Runtime.logRuntimeException("Timed out: " + toString(cmd)), xNullable.NULL));
+                }
 
-                if (sError != null)
-                    {
-                    return frame.raiseException(xException.ioException(frame,
-                            Runtime.logRuntimeException(sError)));
-                    }
+            if (frame != null && process.exitValue() != 0)
+                {
+                String sOut = checkMessage(process.getInputStream());
+                String sErr = checkMessage(process.getErrorStream());
+
+                return frame.raiseException(xException.ioException(frame,
+                        Runtime.logRuntimeException(sOut + '\n' + sErr)));
                 }
 
             return Op.R_NEXT;
@@ -241,23 +343,38 @@ public class xRTCertificateManager
     /**
      * Check the specified input stream for an error message.
      *
-     * @return an error message; null if there are none
+     * @return an error message
      */
-    private String checkError(InputStream streamIn, String sPrefix)
-            throws IOException
+    private String checkMessage(InputStream streamIn)
         {
         BufferedReader reader = new BufferedReader(new InputStreamReader(streamIn));
-
-        String sLine;
-        while ((sLine = reader.readLine()) != null)
+        StringBuilder  sb     = new StringBuilder();
+        try
             {
-            int ofErr = sLine.indexOf(sPrefix);
-            if (ofErr >= 0)
+            String sLine;
+            while ((sLine = reader.readLine()) != null)
                 {
-                return sLine.substring(ofErr + sPrefix.length());
+                if (!sb.isEmpty())
+                    {
+                    sb.append('\n');
+                    }
+                sb.append(sLine);
                 }
             }
-        return null;
+        catch (IOException ignore) {}
+
+        return sb.toString();
+        }
+
+    private String toString(String... cmd)
+        {
+        StringBuilder sb = new StringBuilder();
+        for (String s : cmd)
+            {
+            sb.append(' ')
+              .append(s);
+            }
+        return sb.substring(1);
         }
 
 
@@ -267,4 +384,9 @@ public class xRTCertificateManager
      * Cached canonical type.
      */
     private TypeConstant m_typeCanonical;
+
+    /**
+     * The "provider" property id.
+     */
+    private PropertyConstant m_idProvider;
     }

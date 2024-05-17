@@ -4,6 +4,13 @@ import libcrypto.Password;
 service RTCertificateManager
         implements CertificateManager{
 
+    /**
+     * The name for the certificate provider. Potential values are:
+     *   - "self" for the self-signed certificates
+     *   - "certbot" for certificates signed by "Let's Encrypt" using certbot utility
+     */
+    private String provider = "self";
+
     @Override
     void createCertificate(File keystore, Password pwd, String name, String dName) {
         createCertificateImpl(getPath(keystore), pwd, name, dName);
@@ -30,7 +37,11 @@ service RTCertificateManager
     }
 
     private String getPath(File keystore) {
+        import ecstasy.fs.DirectoryFileStore.FileWrapper;
         import fs.OSFile;
+        while (keystore := &keystore.revealAs((protected FileWrapper))) {
+            keystore = keystore.origFile;
+        }
         assert OSFile file := &keystore.revealAs(OSFile) as $"ReadOnly {keystore=}";
         return file.pathString;
     }

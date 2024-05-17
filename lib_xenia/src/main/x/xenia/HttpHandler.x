@@ -30,7 +30,7 @@ service HttpHandler
      *                services, such as the "ACME" protocol for certificate provisioning; all
      *                specified classes must be `@WebService` annotated and paths must be unique
      */
-    construct(HostInfo route, WebApp app, Map<Class<WebService>, WebService.Constructor> extras = []) {
+    construct(HostInfo route, WebApp app, CatalogExtras extras = []) {
         Catalog catalog = buildCatalog(app, extras);
 
         this.route          = route;
@@ -45,6 +45,8 @@ service HttpHandler
         registry.registerResource("sessionManager", this.sessionManager);
         registry.registerResource("catalog"       , this.catalog);
     }
+
+    typedef Map<Class<WebService>, WebService.Constructor> as CatalogExtras;
 
     /**
      * The information about the route that this handler is servicing.

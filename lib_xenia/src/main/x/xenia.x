@@ -105,11 +105,13 @@ module xenia.xtclang.org {
      *
      * @return a function that allows to shutdown the server
      */
-    function void () createServer(WebApp webApp,
-                                  HostInfo route = DefaultHost, HostInfo? binding = Null,
-                                  KeyStore? keystore = Null, String? tlsKey = Null,
-                                  Map<Class<WebService>, WebService.Constructor> extras = [],
-                                  HttpServer.ProxyCheck isTrustedProxy = HttpServer.NoTrustedProxies,
+    function void () createServer(WebApp                    webApp,
+                                  HostInfo                  route          = DefaultHost,
+                                  HostInfo?                 binding        = Null,
+                                  KeyStore?                 keystore       = Null,
+                                  String?                   tlsKey         = Null,
+                                  HttpHandler.CatalogExtras extras         = [],
+                                  HttpServer.ProxyCheck     isTrustedProxy = HttpServer.NoTrustedProxies,
                                  ) {
         @Inject HttpServer server;
         binding ?:= route;
