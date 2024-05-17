@@ -7,8 +7,11 @@
  */
 module Hello
         incorporates WebApp {
+    package net   import net.xtclang.org;
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
+
+    import net.IPAddress;
 
     import web.*;
     import web.http.*;
@@ -23,12 +26,14 @@ module Hello
     void run(String[] args=["localhost", "0.0.0.0:8080/8090"]) {
         @Inject Console console;
 
-        String routeString = args.size > 0 ? args[0] : "localhost";
-        String bindString  = args.size > 1 ? args[1] : "0.0.0.0:8080/8090";
+        String      routeString = args.size > 0 ? args[0] : "localhost";
+        String      bindString  = args.size > 1 ? args[1] : "0.0.0.0:8080/8090";
+        IPAddress[] proxies     = args.size > 2 ? args[2]
+                .split(',', True, True).map(s->new IPAddress(s)).toArray(Constant) : [];
 
         // optional third parameter specifies the IP address of the trusted reverse proxy
         xenia.HttpServer.ProxyCheck isTrustedProxy = args.size > 2
-                ? (ip -> ip.toString() == args[2])
+                ? (ip -> proxies.contains(ip))
                 : xenia.HttpServer.NoTrustedProxies;
 
         HostInfo hostOf(String addressString) {

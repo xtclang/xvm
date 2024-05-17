@@ -461,7 +461,8 @@ class Array<Element>
             return this;
 
         case Fixed:
-            throw new ReadOnly("Fixed size array");
+            Int oldSize = this.size;
+            return new Element[oldSize+1](i -> i < oldSize ? this[i] : element);
 
         case Persistent:
         case Constant:
@@ -483,7 +484,13 @@ class Array<Element>
             return this;
 
         case Fixed:
-            throw new ReadOnly("Fixed size array");
+            Int oldSize = this.size;
+            if (values.is(List)) {
+                return new Element[oldSize+values.size](i -> i < oldSize ? this[i] : values[i-oldSize]);
+            } else {
+                Iterator<Element> iter = values.iterator();
+                return new Element[oldSize+values.size](i -> i < oldSize ? this[i] : iter.take());
+            }
 
         case Persistent:
         case Constant:
