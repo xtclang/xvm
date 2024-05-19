@@ -36,7 +36,7 @@ service RequestInfoImpl(RTServer       server,
                         Boolean        lastHopTls)
         implements RequestInfo {
 
-    private /* TODO GG static */ function Boolean(String, String) eqInsens = CaseInsensitive.areEqual;
+    private static function Boolean(String, String) eqInsens = CaseInsensitive.areEqual;
 
     @Override
     @Lazy Uri uri.calc() = new Uri(uriString);
