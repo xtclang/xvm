@@ -1,5 +1,3 @@
-import Number.Rounding;
-
 /**
  * Represents a value that can be converted to an integer or floating point numeric value.
  */

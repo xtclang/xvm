@@ -1,5 +1,3 @@
-import Number.Rounding;
-
 /**
  * A Nibble is half of a byte (bite); basically, a nibble is the number of bits necessary to hold a
  * hexadecimal value (a _hexit_, akin to a digit).

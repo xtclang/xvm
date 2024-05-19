@@ -1,5 +1,3 @@
-import Number.Rounding;
-
 /**
  * An IntLiteral is a constant type that is able to convert any text string containing a
  * legal representation of an IntNumber into any of the built-in IntNumber implementations.

@@ -343,8 +343,10 @@ public class NameResolver
                         Component component = (Component) structure;
                         switch (component.resolveName(m_sName, Access.PRIVATE, this))
                             {
+                            case POSSIBLE:
+                                // the component's type has some unresolved parts, which is not a
+                                // consideration at this point; process as unknown
                             case UNKNOWN:
-                                // the component didn't know the name
                                 m_node.log(errs, Severity.ERROR, Compiler.NAME_MISSING, m_sName, m_constant);
                                 m_stage = Stage.ERROR;
                                 return Result.ERROR;
@@ -354,9 +356,8 @@ public class NameResolver
                                 m_sName = m_iter.hasNext() ? m_iter.next() : null;
                                 break;
 
-                            case POSSIBLE:
-                                // should not be possible (no pun intended)
                             case ERROR:
+                                assert errs.hasSeriousErrors();
                                 m_stage = Stage.ERROR;
                                 return Result.ERROR;
 

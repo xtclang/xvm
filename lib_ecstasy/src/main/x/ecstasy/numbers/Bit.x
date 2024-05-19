@@ -1,6 +1,3 @@
-import Number.Rounding;
-
-
 /**
  * A bit represents the smallest possible unit of storage. It has two states: `0` and `1`.
  */

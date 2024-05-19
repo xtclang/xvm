@@ -2,7 +2,6 @@ import Catalog.EndpointInfo;
 import Catalog.MethodInfo;
 import Catalog.WebServiceInfo;
 
-import HttpServer.RequestContext;
 import HttpServer.RequestInfo;
 
 import SessionCookie.CookieId;

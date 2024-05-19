@@ -11,8 +11,6 @@ import libweb.Scheme;
 import libweb.http.HostInfo;
 
 import RTServer.HttpServer.ProxyCheck;
-// TODO GG replace previous line with:
-// import RTServer.ProxyCheck;
 import RTServer.RequestContext;
 import RTServer.RequestInfo;
 
