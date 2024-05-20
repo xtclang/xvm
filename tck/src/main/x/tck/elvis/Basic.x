@@ -154,11 +154,13 @@ class Basic {
         }
     }
 
+
     void multi4() {
-        String? x = trinary(1)  // Returns (True,Null)
-            ?: hideS("def")     // Tests condition (true), so that's yer answer, no running hideS
+        String? x = trinary(1)
+            ?: hideS("def")
+            ?: hideS("ghi")
             ?: "xyz";
-        assert x==Null;
+        assert x=="def";
     }
 
     void multi5() {
