@@ -32,6 +32,7 @@ class CmpChainAST extends AST {
   @Override XType _type() { return XCons.BOOL; }
 
   @Override public AST rewrite() {
+    if( _tmps[1] !=null ) return null; // Already did it
     BlockAST blk = enclosing_block();
     for( int i=1; i<_ops.length; i++ )
       _tmps[i] = blk.add_tmp(_kids[i]._type);

@@ -16,7 +16,7 @@ class IfAST extends AST {
     X.pop_locals(nlocals0);     // Pop scope-locals at end of scope
     return new IfAST(kids);
   }
-  private IfAST( AST[] kids ) { super(kids); }
+  IfAST( AST... kids ) { super(kids); }
 
   @Override XType _type() { return XCons.VOID; }
 

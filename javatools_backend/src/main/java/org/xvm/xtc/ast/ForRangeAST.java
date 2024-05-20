@@ -28,10 +28,9 @@ class ForRangeAST extends AST {
 
   @Override public AST unBox() {
     AST k0 = _kids[0], k1 = _kids[1];
-    if( !k0._type.primeq() )  return this;
-    if( !k1._type.isa(XCons.ARYSTRING) )  return this;
-    k1._par = _kids[1] = new InvokeAST("iterStr",XCons.ITERSTR,k1);
-    _kids[1]._par = this;
+    if( !k0._type.primeq() )  return null;
+    if( !k1._type.isa(XCons.ARYSTRING) )  return null;
+    _kids[1] = new InvokeAST("iterStr",XCons.ITERSTR,k1);
     return this;
   }
 
@@ -43,7 +42,7 @@ class ForRangeAST extends AST {
         ClzBuilder.add_import(xclz);
       _tmp = enclosing_block().add_tmp(_kids[1]._type);
     }
-    return this;
+    return null;
   }
   @Override void add_label() { if( _label==null ) _label = "label"; }
   @Override String label() { return _label; }

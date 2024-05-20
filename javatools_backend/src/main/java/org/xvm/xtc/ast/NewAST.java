@@ -80,7 +80,7 @@ class NewAST extends AST {
       System.arraycopy(_kids,0,kids,1,_kids.length);
       return new InvokeAST("$new",_type,kids);
     }
-    return this;
+    return null;
   }
 
   @Override XType reBox( AST kid ) {

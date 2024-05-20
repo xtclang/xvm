@@ -54,8 +54,6 @@ public class CallAST extends AST {
       // Change to: Call to Uni(Cast(Call))
       AST cast = new ConvAST(_type.box(),this);
       AST unbx = new UniOpAST(new AST[]{cast},null,"._i",_type);
-      _par = cast;
-      cast._par = unbx;
       _type = fun.ret();
       return unbx;
     }
@@ -65,12 +63,12 @@ public class CallAST extends AST {
   @Override public AST rewrite() {
     // Try to rewrite constant calls.  This is required for e.g. "funky
     // dispatch" calls - virtual calls off of a type argument.
-    if( !(_kids[0] instanceof ConAST con) ) return this; // Not a constant call, take as-is
+    if( !(_kids[0] instanceof ConAST con) ) return null; // Not a constant call, take as-is
     assert _kids[0]._type instanceof XFun;
 
     // Convert "funky dispatch" calls; something like "Class.equals"
     int lidx = con._con.lastIndexOf('.');
-    if( lidx == -1 ) return this; // Normal call, take as-is
+    if( lidx == -1 ) return null; // Normal call, take as-is
 
     // Filter for the special names
     String clz  = con._con.substring(0,lidx);
@@ -81,7 +79,7 @@ public class CallAST extends AST {
     case "compare"  ->  _kids.length!=4 ? null : new BinOpAST("<=>","",XCons.BOOL,_kids[2],_kids[3]);
     default -> null;
     };
-    if( ast==null ) return this; // Not a funky dispatch
+    if( ast==null ) return null; // Not a funky dispatch
 
     // Primitive funky dispatch goes to Java operators
     AST k1 = _kids[1];
@@ -90,7 +88,7 @@ public class CallAST extends AST {
       if( k2._type != XCons.STRING && k2._type != XCons.STRINGN )
         return ast;
       clz = XCons.JSTRING.clz();
-      ((ConAST)k1)._con = null;
+      ((ConAST)k1)._con = "null";
       ((ConAST)k1)._type= XCons.NULL;
     }
 
@@ -103,7 +101,7 @@ public class CallAST extends AST {
       con._con += "$"+clz;
       // Sharpen the function type
       con._type = XFun.makeCall(this);
-      return this;
+      return null;
     }
 
     // Dynamic variant

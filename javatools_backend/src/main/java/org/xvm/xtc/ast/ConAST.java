@@ -23,7 +23,7 @@ public class ConAST extends AST {
 
   @Override public AST unBox() {
     if( _con.endsWith(".GOLD") )
-      return this;              // No unboxing gold instances
+      return null;              // No unboxing gold instances
     return super.unBox();
   }
 
@@ -53,6 +53,7 @@ public class ConAST extends AST {
       if( body instanceof BlockAST && body._kids.length==1 &&
           body._kids[0] instanceof ReturnAST ret && ret._kids!=null && ret._kids.length==1 )
         body = ret._kids[0];
+      body._par = null;
 
       // If the parent started as a BindFunc, the BindFunc will print the
       // lambda header.  If there are no extra args, BAST skips the BindFunc,
@@ -64,7 +65,7 @@ public class ConAST extends AST {
       return body;
     }
 
-    return this;
+    return null;
   }
   @Override XType _type() { return _type; }
   @Override public SB jcode( SB sb ) { return sb.p(_con); }

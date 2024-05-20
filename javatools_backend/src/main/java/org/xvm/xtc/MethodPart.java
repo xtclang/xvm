@@ -181,8 +181,9 @@ public class MethodPart extends MMethodPart {
 
   public XType[] xargs() {
     if( _xargs != null ) return _xargs;
-    if( !is_constructor() && !isPrivate() && !isOperator() )
-      return (_xargs = XType.xtypes(_args,true));
+    if( !is_constructor() )
+      // Dont box privates or operators
+      return (_xargs = XType.xtypes(_args, !(isPrivate() || isOperator()) ));
     // The "free" empty constructors also take type arguments
     XType[] zts = clz()._tclz._xts;
     if( _args != null ) {

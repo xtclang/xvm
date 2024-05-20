@@ -11,11 +11,14 @@ class Basic {
         basic4();
         basic5();
         basic6();
+        basic7();
 
         multi0();
         multi1();
         multi2();
         multi3();
+        multi4();
+        multi5();
     }
 
     Int?        hideI(Int?        x) = x;
@@ -40,10 +43,10 @@ class Basic {
     void basic2() {
         IntLiteral? a = hideL(Null);
         Int b = 7;
-        assert (a?.toInt64():b) == 7;
+        assert (a?.toInt64()+1:b) == 7;
 
         if (b==7) { a = 4; }
-        assert (a?.toInt64():b) == 4;
+        assert (a?.toInt64()+1:b) == 5;
     }
 
     private conditional String checkPositive(Int i) = i < 0 ? False : (True, "pos");
@@ -96,6 +99,19 @@ class Basic {
         assert n == 1;
     }
 
+    private static class X {
+        Int cnt;
+        X  inc () { cnt++;  return this; }
+        X? incQ() { cnt++;  return this; }
+        void empty() { }
+        static X? make() { return new X(); }
+    }
+    void basic7() {
+        X? x = X.make();
+        x?.inc().empty();
+        assert x?.cnt == 1;
+    }
+
     // -----------------------------
 
     private conditional String? trinary(Int x) {
@@ -103,8 +119,7 @@ class Basic {
     }
 
     void multi0() {
-        // TODO: Awaiting update to BAST next rebase
-        //assert !(String? s0 := trinary(0));
+        assert !(String? s0 := trinary(0));
         assert String? s1 := trinary(1), s1==Null;
         assert String? s2 := trinary(2), s2=="abc";
     }
@@ -137,6 +152,21 @@ class Basic {
         } else {
             assert False;
         }
+    }
+
+
+    void multi4() {
+        String? x = trinary(1)
+            ?: hideS("def")
+            ?: hideS("ghi")
+            ?: "xyz";
+        assert x=="def";
+    }
+
+    void multi5() {
+        X? x = Null;
+        x = X.make()?.incQ()?.inc();
+        assert x.cnt==2;
     }
 
 }

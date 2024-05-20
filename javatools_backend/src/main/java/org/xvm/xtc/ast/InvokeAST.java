@@ -79,7 +79,7 @@ public class InvokeAST extends AST {
       default: throw XEC.TODO();
       };
     }
-    return this;
+    return null;
   }
 
   @Override public AST rewrite() {
@@ -87,7 +87,7 @@ public class InvokeAST extends AST {
     // Handle all the Int/Int64/Intliteral to "long" calls
     if( k0t == XCons.JLONG || k0t == XCons.LONG ) {
       return switch( _meth ) {
-      case "toString" -> _kids[0] instanceof ConAST ? this : new InvokeAST(_meth,XCons.STRING,new ConAST("Long",XCons.JLONG),_kids[0]).doType();
+      case "toString" -> _kids[0] instanceof ConAST ? null : new InvokeAST(_meth,XCons.STRING,new ConAST("Long",XCons.JLONG),_kids[0]).doType();
       case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
@@ -95,17 +95,17 @@ public class InvokeAST extends AST {
       case "toUInt16" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(     "0xFFFFL",XCons.LONG ));
       case "toUInt32" -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST( "0xFFFFFFFFL",XCons.LONG ));
       case "eq"  -> this; //new BinOpAST( "==","", XCons.LONG, _kids );
-      case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
-      case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
-      case "mul" -> new BinOpAST( "*", "", XCons.LONG, _kids );
-      case "div" -> new BinOpAST( "/", "", XCons.LONG, _kids );
-      case "mod" -> new BinOpAST( "%", "", XCons.LONG, _kids );
-      case "and" -> new BinOpAST( "&", "", XCons.LONG, _kids );
-      case "or"  -> new BinOpAST( "|", "", XCons.LONG, _kids );
-      case "xor" -> new BinOpAST( "^", "", XCons.LONG, _kids );
-      case "shiftLeft"    -> new BinOpAST( "<<", "", XCons.LONG, _kids );
-      case "shiftRight"   -> new BinOpAST( ">>", "", XCons.LONG, _kids );
-      case "shiftAllRight"-> new BinOpAST( ">>>","", XCons.LONG, _kids );
+      case "add" -> llbin( "+" );
+      case "sub" -> llbin( "-" );
+      case "mul" -> llbin( "*" );
+      case "div" -> llbin( "/" );
+      case "mod" -> llbin( "%" );
+      case "and" -> llbin( "&" );
+      case "or"  -> llbin( "|" );
+      case "xor" -> llbin( "^" );
+      case "shiftLeft"    -> llbin( "<<"  );
+      case "shiftRight"   -> llbin( ">>"  );
+      case "shiftAllRight"-> llbin( ">>>" );
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
@@ -136,19 +136,19 @@ public class InvokeAST extends AST {
     // XTC String calls mapped to Java String calls
     if( k0t == XCons.STRING ) {
       return switch( _meth ) {
-      case "toCharArray" -> new NewAST(_kids,XCons.ARYCHAR);
+      case "toCharArray" -> _par._type== XCons.ARYCHAR ? new NewAST(_kids,XCons.ARYCHAR) : null;
       case "appendTo" -> {
         // Invert the call for String; FROM "abc".appendTo(sb) TO sb.appendTo("abc")
         AST tmp = _kids[0]; _kids[0] = _kids[1]; _kids[1] = tmp;
-        yield this;
+        yield null;
       }
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
       case "quoted", "iterator" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
-      case "equals", "split", "endsWith", "startsWith" -> this;
+      case "equals", "split", "endsWith", "startsWith" -> null;
       case "indexOf" -> {
         castInt(2);                         // Force index to be an int not a long
-        if( _type!=XCons.BOOL ) yield this; // Return int result
+        if( _type!=XCons.BOOL ) yield null; // Return int result
         // Request for the boolean result instead of int result
         _type = XCons.LONG;   // Back to producing an int result
         // But insert compare to -1 for boolean
@@ -170,7 +170,11 @@ public class InvokeAST extends AST {
       }
     }
 
-    return this;
+    return null;
+  }
+
+  private BinOpAST llbin(String op) {
+    return _type==XCons.LONG ? new BinOpAST( op, "", XCons.LONG, _kids ) : null;
   }
 
   @Override XType reBox( AST kid ) {

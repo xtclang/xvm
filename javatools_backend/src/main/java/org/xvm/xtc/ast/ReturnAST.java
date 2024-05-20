@@ -10,8 +10,8 @@ import org.xvm.xtc.XCons;
 import org.xvm.xtc.XType;
 
 public class ReturnAST extends AST {
-  private final MethodPart _meth;
-  private final ExprAST _expr;
+  final MethodPart _meth;
+  final ExprAST _expr;
 
   static ReturnAST make( ClzBuilder X, int n ) {
     return new ReturnAST(X._meth, X._expr, X.kids(n) );
@@ -62,7 +62,6 @@ public class ReturnAST extends AST {
     // Flip multi-return into a tuple return
     if( !_cond && _kids.length>1 ) {
       AST nnn = new NewAST(_kids,(XClz)_type);
-      for( AST kid : _kids ) kid._par = nnn;
       AST ret = new ReturnAST(_meth,_expr,nnn);
       ret._type = _type;
       return ret;
@@ -70,7 +69,6 @@ public class ReturnAST extends AST {
     if( _cond ) {
       if( _kids.length==2 ) {
         MultiAST mult = new MultiAST(true,_kids);
-        _kids[0]._par = _kids[1]._par= mult;
         mult._type = _type;
         AST ret = new ReturnAST(_meth,null,mult);
         ret._cond = true;
@@ -79,7 +77,7 @@ public class ReturnAST extends AST {
       assert _kids.length==1;
       cond_rewrite(this,0,_meth.xret(1).ztype());
     }
-    return this;
+    return null;
   }
 
   // Rewrite children to directly call the XRuntime.COND backdoors.

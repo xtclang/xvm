@@ -1,13 +1,14 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.xtc.*;
-import org.xvm.util.SB;
-import org.xvm.util.Ary;
-
 import java.util.Arrays;
 import java.util.HashMap;
+import org.xvm.XEC;
+import org.xvm.util.Ary;
+import org.xvm.util.S;
+import org.xvm.util.SB;
+import org.xvm.xtc.*;
 
-public class BlockAST extends AST {
+public class BlockAST extends ElvisAST {
   static BlockAST make( ClzBuilder X ) {
     int nlocals = X.nlocals();  // Count of locals
     // Parse kids in order as stmts not exprs
@@ -49,6 +50,26 @@ public class BlockAST extends AST {
     return "f$"+reg._name;
   }
 
+  @Override public AST rewrite() {
+    if( _elves != null ) {
+      for( int i=_elves._len-1; i>=0; i-- ) {
+        Elf elf = _elves.at(i);
+        AST expr = _kids[elf._idx];
+        AST eq = elf.test();
+        _kids[elf._idx] = new IfAST(eq,expr);
+      }
+      _elves=null;              // Been there, done that
+      return this;
+    }
+
+    if( _kids.length>0 && _kids[_kids.length-1] instanceof ReturnAST ret &&
+        ret._meth.xrets()==null && ret._expr==null ) {
+      // Void return functions execute the return for side effects only
+      _kids = Arrays.copyOf(_kids,_kids.length-1);
+      return this;
+    }
+    return null;
+  }
 
   @Override void jpre( SB sb ) {
     sb.p("{").ii().nl();

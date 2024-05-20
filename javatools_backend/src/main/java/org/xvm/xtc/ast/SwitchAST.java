@@ -168,7 +168,7 @@ class SwitchAST extends AST {
     if( _cond_defines )
       hoist_defs(_kids[0],blk);
 
-    return this;
+    return null;
   }
 
   // Hoist any DefRegAST into the Block
@@ -177,7 +177,7 @@ class SwitchAST extends AST {
     for( int i=0; i<ast._kids.length; i++ ) {
       AST kid = ast._kids[i];
       if( kid instanceof DefRegAST def ) {
-        ast._kids[i] = new RegAST(-1,def._name,def._type);
+        ast._kids[i] = new RegAST(def._name,def._type);
         ast._kids[i]._par = ast;
         blk.add_tmp(def._type,def._name);
       } else if( kid != null )

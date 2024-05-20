@@ -12,9 +12,10 @@ import org.xvm.util.SB;
 public class RegAST extends AST {
   final int _reg;
   String _name;
+  public RegAST( String name, XType type ) { this(-99,name,type); }
   public RegAST( int reg, String name, XType type ) {
     super(null);
-    _reg  = reg ;
+    _reg  = reg;
     _name = name;
     _type = type;
   }
