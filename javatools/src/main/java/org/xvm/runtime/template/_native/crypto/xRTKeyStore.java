@@ -354,7 +354,7 @@ public class xRTKeyStore
             byte[]    abPublic   = publicKey.getEncoded();
 
             // DER bytes
-            byte[] abDer = cert509.getTBSCertificate();
+            byte[] abDer = cert509.getEncoded();
 
             // create the arguments
             List<ObjectHandle> list = new ArrayList<>(9);
