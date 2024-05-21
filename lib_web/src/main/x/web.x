@@ -77,7 +77,7 @@ module web.xtclang.org {
      *
      *     @Patch("/{id}/items")
      *     @Consumes(Json)
-     *     HttpStatus updateItem(@UriParam String id, @Body Item item) {...}
+     *     HttpStatus updateItem(@UriParam String id, @BodyParam Item item) {...}
      */
     mixin Consumes(MediaType|MediaType[] consumes)
             into Class<WebApp> | Class<WebService> | Endpoint;
