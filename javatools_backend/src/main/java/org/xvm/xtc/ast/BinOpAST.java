@@ -108,6 +108,7 @@ class BinOpAST extends AST {
     if( _op0.equals("?:") ) {
       TernaryAST tern = new TernaryAST(new AST[]{null,null, _kids[1]},_kids[0]._type);
       tern._par = _par;
+      tern._cond = _kids[0]._cond;
       tern._kids[1] = tern.doElvis(_kids[0]);
       return tern;
     }
