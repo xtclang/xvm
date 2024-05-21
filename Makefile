@@ -261,7 +261,6 @@ $(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x
 	@mv $(MACK).xtc $(TURTLE)
 	@mv lib_ecstasy/build/ecstasy.xtc $(XDKX).xtc
 
-
 SRCCRY = lib_crypto/src/main/x/crypto
 LIBCRY = $(XDK_LIB)/crypto
 $(LIBCRY).xtc:	$(SRCCRY).x $(LIBCRY).d $(XDK_JAR) $(XDKX).xtc
@@ -314,7 +313,12 @@ $(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc $(LIBCRY).xtc $(LI
 	@$(XCC) $< -o $@
 
 
-xlib:	$(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJSN).xtc $(LIBWEB).xtc $(LIBNAT).xtc
+# All the core libs
+XLIB = $(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJSN).xtc $(LIBWEB).xtc $(LIBNAT).xtc
+xlib:	$(XLIB)
+
+include $(XLIB:.xtc=.d)
+
 
 # General recipe for making an XTC from a X file
 # Automatic X-file dependency generation; .d file is next to both the XTC and sources.
@@ -350,7 +354,7 @@ xlib:	$(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJ
 # Pick up any make-depends files for each desired XTC file.
 # Useful to pick up updates in top-level XTC modules from deep child X files.
 ifeq (,$(filter clean tags,$(MAKECMDGOALS)))
-MAKE_DEPS = $(filter %.d,$(sort $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d)))
+MAKE_DEPS = $(filter %.d,$(sort $(MAKECMDGOALS:.xtc=.d) $(MAKECMDGOALS:.exe=.d) $(MAKECMDGOALS:.com=.d)))
 include $(MAKE_DEPS)
 endif
 
