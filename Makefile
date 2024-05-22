@@ -99,7 +99,7 @@ endif
 
 
 # Fun Args to javac.
-JAVAC_ARGS = --release 21 -XDignore.symbol.file -Xlint:-deprecation
+JAVAC_ARGS = --release 21 -XDignore.symbol.file -Xlint:-deprecation -Xlint:-unchecked
 
 XEC := org/xvm
 
@@ -152,10 +152,17 @@ clzesB := $(patsubst $(SRCB)/%java,$(CLZB)/main/%class,$(javasB))
 OODB :=
 $(CLZB)/.tag: $(clzesB) $(javasB)
 	@[ -d $(CLZB)/main ] || mkdir -p $(CLZB)/main
+	@# This crap is really just "javac", but with a beautiful error message.
+	@# The very very long list of java files is suppressed and counted.
+	@# The required output "Note: blah blah deprecated blah" is suppressed.
 	$(file > .argsB.txt, $(OODB))
 	@if [ ! -z "$(OODB)" ] ; then \
 	  echo "compiling backend because " $< " and " `wc -w < .argsB.txt` " more files" ; \
-	  javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(OODB) ; \
+	  if ! javac $(JAVAC_ARGS) -cp "$(CLZB)/main$(SEP)$(LIBS)" -sourcepath $(SRCB) -d $(CLZB)/main $(OODB) >& .outB.txt ; then \
+            cat .outB.txt ; \
+            exit 1; \
+          fi ; \
+          rm -rf .outB.txt ; \
 	fi
 	@touch $(CLZB)/.tag
 	@rm -f .argsB.txt
@@ -174,10 +181,17 @@ clzesU := $(patsubst $(SRCU)/%java,$(CLZU)/main/%class,$(javasU))
 OODU :=
 $(CLZU)/.tag: $(clzesU) $(javasU)
 	@[ -d $(CLZU)/main ] || mkdir -p $(CLZU)/main
+	@# This crap is really just javac, but with a beautiful error message.
+	@# The very very long list of java files is suppressed and counted.
+	@# The required output "Note: blah blah deprecated blah" is suppressed.
 	$(file > .argsU.txt, $(OODU))
 	@if [ ! -z "$(OODU)" ] ; then \
 	  echo "compiling javatools_utils because " $< " and " `wc -w < .argsU.txt` " more files" ; \
-	  javac $(JAVAC_ARGS) -cp "$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZU)/main $(OODU) ; \
+	  if ! javac $(JAVAC_ARGS) -cp "$(CLZU)/main$(SEP)$(LIBS)" -sourcepath $(SRCU) -d $(CLZU)/main $(OODU) >& .outU.txt ; then \
+            cat .outU.txt ; \
+            exit 1; \
+          fi ; \
+          rm -rf .outU.txt ; \
 	fi
 	@touch $(CLZU)/.tag
 	@rm -f .argsU.txt
@@ -196,10 +210,17 @@ clzesT := $(patsubst $(SRCT)/%java,$(CLZT)/main/%class,$(javasT))
 OODT :=
 $(CLZT)/.tag: $(clzesT)  $(javasT) $(CLZU)/.tag
 	@[ -d $(CLZT)/main ] || mkdir -p $(CLZT)/main
+	@# This crap is really just javac, but with a beautiful error message.
+	@# The very very long list of java files is suppressed and counted.
+	@# The required output "Note: blah blah deprecated blah" is suppressed.
 	$(file > .argsT.txt, $(OODT))
 	@if [ ! -z "$(OODT)" ] ; then \
 	  echo "compiling javatools because " $< " and " `wc -w < .argsT.txt` " more files" ; \
-	  javac $(JAVAC_ARGS) -cp "$(CLZT)/main$(SEP)$(CLZU)/main$(SEP)$(LIBS)/*" -sourcepath $(SRCT) -d $(CLZT)/main @.argsT.txt ; \
+	  if ! javac $(JAVAC_ARGS) -cp "$(CLZT)/main$(SEP)$(CLZU)/main$(SEP)$(LIBS)/*" -sourcepath $(SRCT) -d $(CLZT)/main @.argsT.txt >& .outT.txt ; then \
+            cat .outT.txt ; \
+            exit 1; \
+          fi ; \
+          rm -rf .outT.txt ; \
 	fi
 	@touch $(CLZT)/.tag
 	@rm -f .argsT.txt
@@ -253,8 +274,10 @@ SRCX = lib_ecstasy/src/main/x/ecstasy
 MACK = javatools_turtle/src/main/resources/mack
 TURTLE = $(XDK_DIR)/javatools/javatools_turtle.xtc
 XDKX = $(XDK_LIB)/ecstasy
-$(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x
-	@echo "compiling " $@ " because " $?
+$(XDKX).xtc $(TURTLE):	$(SRCX).x $(XDKX).d $(MACK).x $(XDK_JAR)
+	$(file > .argsX.txt, $?)
+	@echo "compiling " $@ " because " $< " and " `wc -w < .argsX.txt` " more files"
+	@rm -f .argsX.txt
 	@[ -d $(XDK_LIB) ] || mkdir -p $(XDK_LIB)
 	@javatools_backend/bin/makedepends.sh $(SRCX) $(XDKX)
 	@java -jar $(XDK_JAR) xcc -L $(XDK_DIR)/javatools -L $(XDK_LIB) --rebuild $(SRCX).x $(MACK).x
