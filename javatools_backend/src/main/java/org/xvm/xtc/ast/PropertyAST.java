@@ -31,9 +31,9 @@ class PropertyAST extends AST {
     // Java strings do not have any properties, just rewrite to the java name
     if( _prop.equals("size") || _prop.equals("size$get()")) {
       if( _kids[0]._type == XCons.STRING || _kids[0]._type == XCons.STRINGN )
-        { _prop="length()"; _type=XCons.LONG; return this; }
+        { _prop="length()"; _type=XCons.LONG; return null; }
       if( _kids[0]._type.isAry() )
-        { _prop="_len"    ; _type=XCons.LONG; return this; }
+        { _prop="_len"    ; _type=XCons.LONG; return null; }
     }
     if( _prop.equals("lowercase$get()") && _kids[0]._type==XCons.CHAR )
       return CallAST.make(XCons.CHAR,"Character","toLowerCase",_kids[0]);
@@ -43,7 +43,7 @@ class PropertyAST extends AST {
       if( _prop.endsWith("$get()") )
         _prop = _prop.substring(0,_prop.length()-6);
     }
-    return this;
+    return null;
   }
 
   @Override void jpost( SB sb ) {

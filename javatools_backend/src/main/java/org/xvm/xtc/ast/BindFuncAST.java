@@ -16,7 +16,7 @@ class BindFuncAST extends AST {
   final int[] _idxs;            // Which args are being bound
   String[] _args;               // Remaining args
   private final ClzBuilder _X;
-  private final MethodPart _lam;  // Avoid double-rewrite on nested BindFunc/Con-> setups (nested lambda expressions)
+  private MethodPart _lam;  // Avoid double-rewrite on nested BindFunc/Con-> setups (nested lambda expressions)
 
   static BindFuncAST make( ClzBuilder X ) {
     AST target = ast_term(X);
@@ -114,7 +114,7 @@ class BindFuncAST extends AST {
 
   @Override public AST rewrite() {
     // Has embedded AST, already expanded.  Not a currying operation
-    if( _lam != null ) return this;
+    if( _lam != null ) return null;
 
     // Curry some function: no embedded AST, just some arg shuffles
     XFun lam = (XFun)_type;
@@ -143,10 +143,10 @@ class BindFuncAST extends AST {
     String fname = _kids[0] instanceof BindMethAST ? _kids[0].name()   : "call";
     ikids[0]     = _kids[0] instanceof BindMethAST ? new RegAST(-5,_X) : _kids[0];
     AST curry = new InvokeAST(fname,lam.rets(),ikids);
-    for( AST ikid : ikids ) ikid._par = curry;
     // Update this BindFunc to just call with the curried arguments
     Arrays.fill(_kids,null);
-    _kids[0] = curry; _kids[0]._par = this;
+    _kids[0] = curry;
+    _lam = _X._meth; // Flag to stop double rewrite
     return this;
   }
 
@@ -157,7 +157,7 @@ class BindFuncAST extends AST {
         sb.p(arg).p(",");
     sb.unchar(1).p(") -> ");
     AST body = _kids[0];
-    body.jcode(sb);
+    if( body!= null ) body.jcode(sb);
     return sb;
   }
 }

@@ -526,7 +526,7 @@ public class ClzBuilder {
       for( int i = 0; i < m.xargs().length; i++ )
         define(m._args[i]._name,m.xarg(i));
 
-    // Abstract method, no body
+    // Abstract method, no "body"
     if( m._ast.length==0 ) {
       _sb.p(";").nl();
     } else {

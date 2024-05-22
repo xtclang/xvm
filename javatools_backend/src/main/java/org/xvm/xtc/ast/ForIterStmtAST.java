@@ -25,12 +25,10 @@ class ForIterStmtAST extends AST {
 
   @Override public AST rewrite( ) {
     if( _kids[1]._type == XCons.STRING || _kids[1]._type == XCons.STRINGN ) {
-      AST kid1 = _kids[1];
-      AST call = _kids[1] = new InvokeAST("toCharArray",XBase.make("char[]",true),_kids[1]);
-      kid1._par = call;
-      call._par = this;
+      _kids[1] = new InvokeAST("toCharArray",XBase.make("char[]",true),_kids[1]);
+      return this;
     }
-    return this;
+    return null;
   }
 
   @Override public SB jcode( SB sb ) {

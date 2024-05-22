@@ -64,7 +64,7 @@ public class AryXTC<E extends XTC> extends Array<E> {
   @Override public Iterator<E> iterator() { return new Iter(); }
   private class Iter extends Iterator<E> {
     private int _i;
-    @Override public E next() { return XRuntime.SET$COND(hasNext(), _es[_i++]); }
+    @Override public E next() { return (XRuntime.$COND = hasNext()) ? _es[_i++] : null; }
     @Override public boolean hasNext() { return _i<_len; }
     @Override public final String toString() { return ""+_i+".."+_len; }
     // --- Comparable

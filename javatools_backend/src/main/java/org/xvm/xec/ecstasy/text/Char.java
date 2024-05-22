@@ -35,12 +35,14 @@ public class Char extends Const {
   // ASCII digit check
   public long asciiDigit() {
     long x = _i-'0';
-    return XRuntime.SET$COND(0 <= x && x <= 9,x);
+    XRuntime.$COND = 0 <= x && x <= 9;
+    return x;
   }
   // ASCII digit check
   public static long asciiDigit(char c) {
     long x = c-'0';
-    return XRuntime.SET$COND(0 <= x && x <= 9,x);
+    XRuntime.$COND = 0 <= x && x <= 9;
+    return x;
   }
   // Unicode version of ASCII digit check
   public long decimalValue() {

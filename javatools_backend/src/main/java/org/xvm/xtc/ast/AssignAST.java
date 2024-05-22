@@ -11,7 +11,7 @@ import java.util.Arrays;
 class AssignAST extends AST {
   final AsnOp _op;
   final MethodCon _meth;
-  String _cond_asgn, _name;
+  String _cond_asgn, _name, _tmp;
   static AssignAST make( ClzBuilder X, boolean asgn ) {
     AST[] kids = new AST[2];
     kids[0] = ast_term(X);
@@ -52,8 +52,7 @@ class AssignAST extends AST {
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz ) {
       AST k0 = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
       RegAST reg0 = (RegAST)k0;
-      AST op = new InvokeAST( _meth.name(), clz, _kids );
-      for( AST kid : _kids ) kid._par = op;
+      AST op = new InvokeAST( _meth.name(), clz, _kids.clone() );
       RegAST reg1 = new RegAST(reg0._reg,reg0._name,reg0._type);
       return new AssignAST( AsnOp.Asn, _meth, reg1, op ).doType();
     }
@@ -66,15 +65,13 @@ class AssignAST extends AST {
       MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
       System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
       String tmp = blk.add_tmp(_kids[1]._type);
-      AST reg = new RegAST(-1,tmp,_kids[1]._type), con;
+      AST reg = new RegAST(tmp,_kids[1]._type), con;
       mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
-      reg._par = _kids[1]._par = mm._kids[0];
       for( int i=0; i<m._kids.length; i++ ) {
         AST kid = m._kids[i];
-        reg = new RegAST(-1,blk.add_tmp(kid._type,kid.name()),kid._type);
+        reg = new RegAST(blk.add_tmp(kid._type,kid.name()),kid._type);
         con = new ConAST(tmp+"._f"+i,kid._type);
         mm._kids[i+1] = new AssignAST(reg,con).doType();
-        con._par = reg._par = mm._kids[i+1];
       }
       return mm.doType();
     }
@@ -82,6 +79,7 @@ class AssignAST extends AST {
 
     // var := (true,val)  or  var ?= not_null;
     if( _op == AsnOp.AsnIfNotFalse || _op == AsnOp.AsnIfNotNull) {
+      if( _tmp!=null ) return null; // Already did the rewrite
       XType type = _kids[0]._type;
       if( _kids[0] instanceof DefRegAST ) {
         // Use the _par parent to find nearest enclosing If or Assert for a conditional assignment
@@ -94,9 +92,9 @@ class AssignAST extends AST {
           // XTC   if( String s := cond_ret(), Int n :=... ) { ..s...}
           // BAST  (If (Multi (Op$AsgnIfNotFalse (DefReg s) (Invoke cond_ret))...) ...true... ...false...)
           // BAST  (If (&&    (Op$AsgnIfNotFalse (Reg stmp) (Invoke cond_ret))...) (Block (DefReg s stmp) ...true...) ...false...)
-          // Java  if( $t(stmp = cond_ret()) && GET$COND() && $t(ntmp = cond_ret()) && GET$COND() ) { String s=stmp; long n=ntmp; ...s... }
-          String tmp = blk.add_tmp(type);
-          _kids[0] = new RegAST(0,tmp,type);  _kids[0]._par = this;
+          // Java  if( $t(stmp = cond_ret()) && $COND && $t(ntmp = cond_ret()) && $COND ) { String s=stmp; long n=ntmp; ...s... }
+          String tmp = _tmp = blk.add_tmp(type);
+          _kids[0] = new RegAST(tmp,type);
 
           // Insert new block under IF, with extra slot for DefReg.
           AST ift = iff._kids[1]; // If-true
@@ -104,41 +102,39 @@ class AssignAST extends AST {
           AST[] kids = ift instanceof BlockAST ? new AST[ift._kids.length+1] : new AST[]{null,ift};
           if(          ift instanceof BlockAST ) System.arraycopy(ift._kids,0,kids,1,ift._kids.length);
           BlockAST blk0 = new BlockAST(kids);
-          iff._kids[1] = blk0;  blk0._par = iff;
+          iff._kids[1] = blk0;
           blk0._kids[0] = new DefRegAST(type,_name,tmp);
-          for( AST kid : kids ) kid._par = blk0;
           // Walk the tree under iff condition and replace uses _name with the tmp
           iff._kids[0].visit(ast -> {
               if( ast instanceof RegAST reg && reg._name.equals(_name) )
                 reg._name = tmp;
-              return ast;
+              return null;
             },iff);
-        } else {
-          // XTC   assert Int n := S1(), ...n...
-          // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
-          // BAST  (Invoke (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
-          // BAST  (Invoke (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
-          // Java  long n;  xassert( $t(n=S1()) && GET$COND() && ...n...)
-          String tmp = blk.add_tmp(type, _name);
-          _kids[0] = new RegAST(0,tmp,type);
-          _kids[0]._par = this;
+          return this;
         }
-      } else {
-        if( !(_par instanceof MultiAST) && !(_par instanceof WhileAST) ) {
-          // 's' already defined
-          // XTC   s := cond_ret();
-          // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
-          // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
-          // Java  if( $t(tmp = cond_ret()) && GET$COND() ) s=tmp;
-          String tmp = enclosing_block().add_tmp(type);
-          _cond_asgn = _name;
-          _kids[0] = new RegAST(0,tmp,type);
-          _kids[0]._par = this;
-        } // part of a large conditional expression
+        // XTC   assert Int n := S1(), ...n...
+        // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
+        // BAST  (Invoke (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
+        // BAST  (Invoke (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
+        // Java  long n;  xassert( $t(n=S1()) && $COND && ...n...)
+        _tmp = blk.add_tmp(type, _name);
+        _kids[0] = new RegAST(_tmp,type);
+        return this;
       }
+      if( !(_par instanceof MultiAST) && !(_par instanceof WhileAST) ) {
+        // 's' already defined
+        // XTC   s := cond_ret();
+        // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
+        // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
+        // Java  if( $t(tmp = cond_ret()) && $COND ) s=tmp;
+        _tmp = enclosing_block().add_tmp(type);
+        _cond_asgn = _name;
+        _kids[0] = new RegAST(_tmp,type);
+        return this;
+      } // part of a large conditional expression
     }
 
-    return this;
+    return null;
   }
 
   // Box as needed
@@ -156,13 +152,13 @@ class AssignAST extends AST {
       if( _cond_asgn!=null ) sb.ip("if( ");
       // Expression result is the boolean conditional value,
       // and the var was previously defined.
-      // $t(var = expr()) && XRuntime.GET$COND()
+      // $t(var = expr()) && XRuntime.$COND
       String name = _kids[0] instanceof RegAST reg ? reg._name : ((DefRegAST)_kids[0])._name;
       if( _op == AsnOp.AsnIfNotFalse ) sb.p("$t");
       _kids[1].jcode(sb.p("(").p(name).p(" = ")).p(")");
-      sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.GET$COND()" : "!=null " );
+      sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.$COND" : "!=null " );
 
-      // $t(tmp = expr()) && XRuntime.GET$COND() && $t(var = tmp)
+      // $t(tmp = expr()) && XRuntime.$COND && $t(var = tmp)
       if( _cond_asgn != null )
         sb.p(") ").p(_cond_asgn).p(" = ").p(name);
       yield sb;

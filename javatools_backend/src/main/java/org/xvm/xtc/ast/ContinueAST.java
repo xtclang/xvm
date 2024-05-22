@@ -14,7 +14,7 @@ class ContinueAST extends AST {
   @Override public AST rewrite() {
     if( _d > 0 )
       enclosing_loop(_d).add_label(); // Needs a named GOTO
-    return this;
+    return null;
   }
 
   @Override public SB jcode ( SB sb ) {

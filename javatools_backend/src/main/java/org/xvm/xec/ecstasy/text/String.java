@@ -66,8 +66,8 @@ public class String extends Const implements Iterable<Char> {
     @Override public Char next() { throw XEC.TODO(); }
     @Override public boolean hasNext() { return _i < _s.length(); }
     @Override public char next2() {
-      boolean has = _i < _s.length();
-      return XRuntime.SET$COND(has, has ? _s.charAt(_i++) : (char)0);
+      boolean has = XRuntime.$COND = _i < _s.length();
+      return has ? _s.charAt(_i++) : (char)0;
     }
     @Override public long next8() { throw XEC.TODO(); }
     @Override public java.lang.String nextStr() { throw XEC.TODO(); }

@@ -9,7 +9,7 @@ import org.xvm.util.S;
 public abstract class AST {
   public static int _uid;       // Private counter for temp names
 
-  public final AST[] _kids;     // Kids
+  public AST[] _kids;           // Kids
   AST _par;                     // Parent
   XType _type;                  // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
   boolean _cond;                // True if passing the hidden condition flag
@@ -45,15 +45,15 @@ public abstract class AST {
   String name() { throw XEC.TODO(); }
 
   // Cast nth child from a long to an int
-  AST castInt(int n) {
+  void castInt(int n) {
     AST kid = _kids[n];
     // Update a long constant to an int in-place
     if( kid instanceof ConAST con ) {
-      if( con._type == XCons.INT ) return this; // Already an int
+      if( con._type == XCons.INT ) return; // Already an int
       assert con._type == XCons.LONG;
       con._con = con._con.substring(0,con._con.length()-1);
       con._type = XCons.INT;
-      return this;
+      return;
     }
     throw XEC.TODO();
   }
@@ -80,37 +80,47 @@ public abstract class AST {
   boolean _cond() { return false; }
 
   // Generic visitor pattern, allowing updates
-  public AST visit(java.util.function.UnaryOperator<AST> F, AST par) {
-    assert _par==par;
-    if( _kids != null )
-      for( int i=0; i<_kids.length; i++ )
-        if( _kids[i] != null )
-          _kids[i] = _kids[i].visit(F,this);
+  public  AST visit(java.util.function.UnaryOperator<AST> F, AST par) { return visit(F,par,true,0); }
+  private AST visit(java.util.function.UnaryOperator<AST> F, AST par, boolean first, int cnt) {
+    assert cnt<100;
+    if( _par==null || _par._par==par ) _par = par;
+    else assert _par==par;
+    AST[] kids = _kids;
+    if( kids != null )
+      for( int i=0; i<kids.length; i++ ) {
+        AST kid = kids[i];
+        if( kid != null && (first || kid._par!=this) ) {
+          kid._par = this;
+          kids[i] = kid.visit(F,this,first,cnt+1);
+          assert kids[i]._par==this; // Kid updates always leave parent correct
+        }
+      }
+    assert kids==_kids;         // Children cannot replace parents base kids array
     // Apply op to AST.  Correct _par field amongst self and kids.
     // Repeat until stable.
-    AST old = this, x;
-    while( (x=F.apply(old)) != old && x != null ) {
-      x._par = par;
-      if( x._kids != null )
-        for( AST kid : x._kids )
-          if( kid != null )
-            kid._par = x;
-      old = x;
-    }
-    return x;
+    AST x = F.apply(this);
+    return x==null ? check_par(par) : x.visit(F,par,false,cnt+1);
+  }
+
+  private AST check_par(AST par) {
+    assert _par==par;
+    if( _kids!=null )
+      for( AST kid : _kids )
+        assert kid==null || kid._par==this;
+    return this;
   }
 
   // Auto-unbox e.g. Int64 to a long or xtc.String to j.l.String
   public AST unBox() {
+    if( _par instanceof UniOpAST uni && S.eq(uni._post,"._i") )
+      return null; // Exactly the just-inserted unboxing
     // Parent is narrowed, removes not-null and allows unboxing
     if( _par instanceof NarrowAST nar && !(nar._par instanceof AssignAST) &&
         nar._type instanceof XBase nbase && _type instanceof XClz ) {
       XClz nbox = nbase.box();
       AST box = this;
-      if( nbox != _type ) {
-        box = new ConvAST(nbox,this); _par = box;
-        nar._kids[0] = box;  box._par = nar;
-      }
+      if( nbox != _type )
+        nar._kids[0] = box = new ConvAST(nbox,this);
       return new UniOpAST(new AST[]{box},null,"._i",nbase);
     }
 
@@ -125,30 +135,31 @@ public abstract class AST {
         this instanceof AssignAST asgn1 && asgn1._par instanceof BlockAST ||
         this instanceof MultiAST
         )
-      return this;              // Do not unbox
+      return null;              // Do not unbox
     // Unbox
     return new UniOpAST(new AST[]{this},null,"._i",unbox);
   }
 
   // Rewrite some AST bits before Java
-  public AST rewrite() { return this; }
+  public AST rewrite() { return null; }
 
   // Auto-box e.g. long to Int64 or j.l.String to xtc.String
   public AST reBox() {
-    if( _par == null )              return this; // Must have a parent that cares
+    if( _par == null )  return null; // Must have a parent that cares
+    if( this instanceof NewAST nnn && nnn._meth==null ) return null; // This is exactly a recently made box
     // Assigns RHS and Returns LHS might need to box
     XType lhs = _par.reBox(this);
     // Desired flavor is no-change or not-boxed or already isa
-    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) ) return this;
+    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) ) return null;
     XClz rhs = _type.box();
-    if( rhs == null || rhs == _type ) return this; // Always going to the box, so this is a noop
+    if( rhs == null || rhs == _type ) return null; // Always going to the box, so this is a noop
     // Never box to an interface, caller had already better be a boxed implementer
     XClz lhsc = (XClz)lhs;
     if( lhsc.iface() ) lhsc = XCons.XXTC;
     assert rhs.isa(lhsc);
 
     // Box 'em up!
-    return (_par._kids[S.find(_par._kids,this)] = new NewAST(new AST[]{this},rhs));
+    return new NewAST(new AST[]{this},rhs);
   }
 
   XType reBox( AST par ) { return null; }

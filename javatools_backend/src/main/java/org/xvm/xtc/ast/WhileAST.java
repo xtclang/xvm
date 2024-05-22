@@ -33,14 +33,14 @@ class WhileAST extends AST {
   @Override XType _type() { return XCons.VOID; }
 
   @Override public AST rewrite() {
-    if( _kids.length==2 ) return this;
+    if( _kids.length==2 ) return null;
     if( _skids!=0 ) throw XEC.TODO();
     BlockAST blk = enclosing_block();
     for( int i=2; i<_kids.length; i++ ) {
       DefRegAST def = (DefRegAST)_kids[i];
       blk.add_tmp(def._type,def._name);
     }
-    return this;
+    return null;
   }
 
   @Override public SB jcode( SB sb ) {

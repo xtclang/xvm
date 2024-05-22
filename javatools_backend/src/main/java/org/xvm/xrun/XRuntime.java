@@ -16,7 +16,7 @@ public abstract class XRuntime {
 
   // The executor for XVM services.
   public static final ThreadPoolExecutor _executorIO;
-  
+
   static {
     int parallelism = Integer.parseInt(System.getProperty("xvm.parallelism", "0"));
     if (parallelism <= 0)
@@ -44,7 +44,7 @@ public abstract class XRuntime {
     _executorIO = new ThreadPoolExecutor(parallelism, 1024, 0, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), factoryIO);
   }
 
-  
+
   /** Submit ServiceContext work for eventual processing by the runtime.
    *  @param task the task to process   */
   static protected void submitService(Runnable task) { _executorXVM.submit(task); }
@@ -77,21 +77,13 @@ public abstract class XRuntime {
   //       if( person=callee() ) do stuff...
   //     }
   // Becomes:
-  //     Person callee() { return SET$COND(true,person); }
+  //     Person callee() { return XRuntime.True(person); }
   //     void caller() {
-  //       if( $t(person=callee()) & GET$COND() ) do stuff...
+  //       if( $t(person=callee()) & XRuntime.$COND ) do stuff...
   //     }
-  
-  private static boolean $COND, COND_SET;
-  public static boolean GET$COND() {
-    assert COND_SET;
-    COND_SET=false;
-    return $COND;
-  }
-  public static <X> X   SET$COND(boolean cond, X       o) { COND_SET=true; $COND=cond; return o; }
-  public static long    SET$COND(boolean cond, long    x) { COND_SET=true; $COND=cond; return x; }
-  public static int     SET$COND(boolean cond, int     x) { COND_SET=true; $COND=cond; return x; }
-  public static char    SET$COND(boolean cond, char    x) { COND_SET=true; $COND=cond; return x; }
-  public static boolean SET$COND(boolean cond, boolean x) { COND_SET=true; $COND=cond; return x; }
+
+  public static boolean $COND;
+  public static <X> X False(X o) { $COND=false; return o; }
+  public static <X> X True (X o) { $COND=true ; return o; }
 
 }

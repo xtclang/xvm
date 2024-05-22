@@ -181,8 +181,9 @@ public class MethodPart extends MMethodPart {
 
   public XType[] xargs() {
     if( _xargs != null ) return _xargs;
-    if( !is_constructor() && !isPrivate() && !isOperator() )
-      return (_xargs = XType.xtypes(_args,true));
+    if( !is_constructor() )
+      // Dont box privates or operators
+      return (_xargs = XType.xtypes(_args, !(isPrivate() || isOperator()) ));
     // The "free" empty constructors also take type arguments
     XType[] zts = clz()._tclz._xts;
     if( _args != null ) {
@@ -209,17 +210,17 @@ public class MethodPart extends MMethodPart {
   // XTC   s := cond_ret();
   // BAST  (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret))
   // BAST  (If (Op$AsgnIfNotFalse (Reg s) (Invoke cond_ret)) (Assign (Reg s) (Ret tmp)))
-  // Java  $t(tmp = cond_ret()) && GET$COND() && $t(s=tmp)
+  // Java  $t(tmp = cond_ret()) && $COND && $t(s=tmp)
   //
   // XTC   if( String s := cond_ret(), Int n :=... ) { ..s...}
   // BAST  (If (Multi (Op$AsgnIfNotFalse (DefReg s) (Invoke cond_ret))...) ...true... ...false...)
   // BAST  (If (&&    (Op$AsgnIfNotFalse (Reg stmp) (Invoke cond_ret))...) (Block (DefReg s stmp) ...true...) ...false...)
-  // Java  if( (stmp = cond_ret()) && GET$COND() && (ntmp = cond_ret() && GET$COND() ) { String s=stmp; long n=ntmp; ...s... }
+  // Java  if( (stmp = cond_ret()) && $COND && (ntmp = cond_ret() && $COND ) { String s=stmp; long n=ntmp; ...s... }
   //
   // XTC   assert Int n := S1(), ...n...
   // BAST  (Assert (XTC) (Multi (Op$AsgnIfNotFalse (DefReg n) (Invoke cond_ret)), other bools ops all anded, including more assigns))
   // BAST  (Assert (XTC) (&&    (Op$AsgnIfNotFalse (Reg n) (Invoke cond_ret))... )), other bools ops all anded, including more assigns))
-  // Java  long n0, n1;  assert $t(n0=S1()) && GET$COND() && ...n0...
+  // Java  long n0, n1;  assert $t(n0=S1()) && $COND && ...n0...
 
 
   public boolean is_cond_ret() { return (_nFlags & Part.COND_RET_BIT) != 0; }

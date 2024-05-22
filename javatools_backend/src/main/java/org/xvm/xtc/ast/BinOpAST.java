@@ -75,16 +75,16 @@ class BinOpAST extends AST {
     if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG ) {
       _type = _type.unbox();
       if( _kids[0]._type == XCons.STRING ) {
-        _op0 = ".charAt((int)(";
-        _op1 = "))";
-      } else if( _kids[0]._type.isAry() ) {
+        _op0 = ".charAt((int)(";  _op1 = "))";
+        return this;            // progress
+      }
+      if( _kids[0]._type.isAry() ) {
         _op0 = ".at8(";         // Use primitive 'at' instead of generic
-      } else if( _kids[0]._type.isTuple() && (idx=isFixedOffset()) != -1 ) {
+        return this;            // progress
+      }
+      if( _kids[0]._type.isTuple() && (idx=isFixedOffset()) != -1 )
         // Tuple at fixed field offset
         return new PropertyAST(_kids[0],_type,"_f"+idx);
-      } else {
-        // Use generic at for generic collection
-      }
     }
     return super.unBox();
   }
@@ -108,6 +108,7 @@ class BinOpAST extends AST {
     if( _op0.equals("?:") ) {
       TernaryAST tern = new TernaryAST(new AST[]{null,null, _kids[1]},_kids[0]._type);
       tern._par = _par;
+      tern._cond = _kids[0]._cond;
       tern._kids[1] = tern.doElvis(_kids[0]);
       return tern;
     }
@@ -117,7 +118,7 @@ class BinOpAST extends AST {
     if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type<XTC,XTC>.GOLD") )
       return _kids[0];          // Types already as values
 
-    return this;
+    return null;
   }
 
   static AST do_range( AST[] kids, XClz rng ) {

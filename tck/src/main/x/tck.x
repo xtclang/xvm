@@ -8,6 +8,7 @@ module tck.xtclang.org {
         new array.Medium().run();
         new comparison.Compare().run();
         new comparison.Hash().run();
+        new cond.Basic().run();
         new elvis.Basic().run();
         new operations.Basic().run();
         new numbers.Decimals().run();

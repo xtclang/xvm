@@ -12,7 +12,7 @@ import org.xvm.xtc.cons.Const.UniOp;
 // AST: ( ~ e0 ) -- Java: ~e0 // no rewrite if e0 is some integer
 // AST: ( ~ e0 ) -- Java: !e0 // rewritten in make if e0 is boolean
 // AST: ( ! e0 ) -- Java: !e0 // e0 NOT CONDITIONAL
-// AST: ( ! e0 ) -- Java: !($t(e0) && GET$COND()) // E0 YES CONDITIONAL
+// AST: ( ! e0 ) -- Java: !($t(e0) && $COND) // E0 YES CONDITIONAL
 // AST: ( .TRACE() e0 ) - Java: XTC.TRACE(e0) // rewrite
 
 class UniOpAST extends AST {
@@ -81,14 +81,16 @@ class UniOpAST extends AST {
 
       // Find the "elvis top" - the point where we make the subexpression
       // conditional on the "elvis" existing.
-      for( AST par = _par, old = this; true; old = par, par = par._par )
+      for( AST par = _par, old = this; par!=null; old = par, par = par._par )
         switch( par ) {
-        case TernaryAST ttop: return ttop.doElvis(_kids[0]);
+        case AssertAST  asrt: return asrt.doElvis(_kids[0],old);
+        case BlockAST   blok: return blok.doElvis(_kids[0],old);
         case MultiAST   mtop: return mtop.doElvis(_kids[0],old);
-        case AssertAST  asrt: return asrt.doElvis(_kids[0]);
+        case TernaryAST ttop: return ttop.doElvis(_kids[0]);
         default: break;
         }
       // Cannot reach here
+      throw XEC.TODO();
     } // End of Elvis
 
 
@@ -108,18 +110,28 @@ class UniOpAST extends AST {
     if( S.eq("-",_pre) && _kids[0]._type instanceof XClz clz )
       return new InvokeAST("neg",clz,_kids[0]);
 
-    return this;
+    // Pre/post increment on properties
+    // cnt$get()++
+    if( S.eq("++",_post) && _kids[0] instanceof PropertyAST prop ) {
+      String p = prop._prop;
+      assert p.endsWith("$get()");
+      prop._prop = p.substring(0,p.length()-6);
+      return null;
+    }
+
+    return null;
   }
 
   @Override public SB jcode( SB sb ) {
     // Bang "eats" the test part of {test,value} conditionals and drops the
     // value part.
-    if( _kids[0]._cond ) {
+    AST k0 = _kids[0];
+    if( k0._cond ) {
       if( S.eq("!",_pre) ) {
-        _kids[0].jcode(sb.p("$t("));
-        return sb.p(") && !XRuntime.GET$COND()");
+        k0.jcode(sb.p("$t("));
+        return sb.p(") && !XRuntime.$COND");
       } else
-        return _kids[0].jcode(sb.p("COND(")).p(")");
+        return k0.jcode(sb.p("COND(")).p(")");
     }
 
     if( _pre !=null ) {
@@ -127,9 +139,11 @@ class UniOpAST extends AST {
       else sb.p(" ");
       sb.p(_pre );
     }
-    if( _kids[0] instanceof BinOpAST ) sb.p('(');
-    _kids[0].jcode(sb);
-    if( _kids[0] instanceof BinOpAST ) sb.p(')');
+    boolean wrap = k0 instanceof BinOpAST ||
+      (k0 instanceof AssignAST asgn && asgn._op==Const.AsnOp.AsnIfNotFalse);
+    if( wrap ) sb.p('(');
+    k0.jcode(sb);
+    if( wrap ) sb.p(')');
     if( _post!=null ) sb.p(_post).p(" ");
     return sb;
   }
