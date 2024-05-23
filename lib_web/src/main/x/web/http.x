@@ -12,13 +12,131 @@ package http {
      * @param httpPort   the HTTP (plain text) port of the HTTP server; the default is 80
      * @param httpsPort  the HTTPS (TLS) port of the HTTP server; the default is 443
      */
-    const HostInfo(Host host, UInt16 httpPort=80, UInt16 httpsPort=443) {
+    const HostInfo(Host host, UInt16 httpPort=80, UInt16 httpsPort=443)
+            implements Destringable {
+
         HostInfo with(Host?   host      = Null,
                       UInt16? httpPort  = Null,
                       UInt16? httpsPort = Null) {
             return new HostInfo(host      ?: this.host,
                                 httpPort  ?: this.httpPort,
                                 httpsPort ?: this.httpsPort);
+        }
+
+        construct(String text) {
+            assert (Host host, UInt16 httpPort, UInt16 httpsPort) := parse(text, s -> throw new IllegalArgument(s));
+            construct HostInfo(host, httpPort, httpsPort);
+        }
+
+        /**
+         * Parse the provided HostInfo text into its constituent pieces. The format is a host name
+         * or an IP address (either v4 or v6, with the v6 form inside of required square brackets),
+         * followed by an optional port number pair, which (if present) is separated from the host
+         * using a colon ':', with the two port numbers separated by a forward slash '/' character.
+         *
+         * Examples:
+         * * `0.0.0.0`
+         * * `locahost:80/443`
+         *
+         * @param text    the host name or address, with an optional pair of port numbers
+         * @param report  (optional) the function to report a failure to, as a non-localized string
+         *
+         * @return `True` iff the parsing succeeded
+         * @return (conditional) the host name or IP address
+         * @return (conditional) the HTTP port, which defaults to 80
+         * @return (conditional) the HTTPS port, which defaults to 443
+         */
+        static conditional (Host host, UInt16 httpPort, UInt16 httpsPort) parse(
+                String text, function void (String)? report = Null) {
+            text = text.trim();
+            if (text.empty) {
+                report?($"Invalid HostInfo {text.quoted()}: No host information");
+                return False;
+            }
+
+            Host   host      = text;
+            String ports     = "";
+            UInt16 httpPort  = 80;
+            UInt16 httpsPort = 443;
+
+            // IPv6 format requires brackets
+            if (text[0] == '[') {
+                if (Int close := text.lastIndexOf(']')) {
+                    String ipText = text[0>..<close];
+                    if (Byte[] bytes := IPAddress.parseIPv6(ipText, report)) {
+                        host = new IPAddress(bytes);
+                        if (close == text.size-1) {
+                            return True, host, httpPort, httpsPort;
+                        } else if (text[close+1] == ':') {
+                            ports = text.substring(close + 2);
+                        } else {
+                            report?($"Invalid HostInfo {text.quoted()}: Expected ':' after ']' at close of IPv6 address");
+                            return False;
+                        }
+                    } else {
+                        report?($"Invalid HostInfo {text.quoted()}: Invalid IPv6 address {ipText.quoted()}");
+                        return False;
+                    }
+                } else {
+                    report?($"Invalid HostInfo {text.quoted()}: The IPv6 address requires a closing ']'");
+                    return False;
+                }
+            } else {
+                // separate authority info from port info, if any
+                String authority = text;
+                if (Int first := text.indexOf(':'), Int last := text.lastIndexOf(':')) {
+                    if (first == last) {
+                        authority  = text[0..<last];
+                        ports = text.substring(last+1);
+                    } else {
+                        // IPv6 without the brackets
+                        report?($"Invalid HostInfo {text.quoted()}: IPv6 addresses must be enclosed in brackets");
+                        return False;
+                    }
+                }
+
+                // parse the host name or address
+                if ((String? user, String? hostStr, IPAddress? ip, UInt16? port) := Uri.parseAuthority(authority, report)) {
+                    if (user != Null) {
+                        report?($"Invalid HostInfo {text.quoted()}: A user identity is not permitted");
+                        return False;
+                    } else if (port != Null) {
+                        // this cannot happen (so it probably will)
+                        report?($"Invalid HostInfo {text.quoted()}: A port parsing error occurred");
+                        return False;
+                    } else if (ip != Null) {
+                        host = ip;
+                    } else if (hostStr != Null) {
+                        host = hostStr;
+                    } else {
+                        // this cannot happen (so it probably will)
+                        report?($"Invalid HostInfo {text.quoted()}: The host string contain neither a host name nor an IP address");
+                        return False;
+                    }
+                } else {
+                    return False;
+                }
+            }
+
+            if (!ports.empty) {
+                if (Int slash := ports.indexOf('/')) {
+                    if (httpPort  := UInt16.parse(ports[0 ..< slash]),
+                        httpsPort := UInt16.parse(ports.substring(slash+1))) {
+                    } else {
+                        report?($"Invalid HostInfo {text.quoted()}: Invalid port number(s): {ports.quoted()}");
+                        return False;
+                    }
+                } else {
+                    report?($"Invalid HostInfo {text.quoted()}: Ports must be separated by a '/' character");
+                    return False;
+                }
+            }
+            return True, host, httpPort, httpsPort;
+        }
+
+        @Override
+        String toString() {
+            return $"{host}:{httpPort}/{httpsPort}";
         }
     }
 

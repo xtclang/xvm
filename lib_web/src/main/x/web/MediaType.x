@@ -59,6 +59,7 @@ const MediaType {
     static MediaType CSS         = predefine("text/css",                                      "css" );
     static MediaType CSV         = predefine("text/csv",                                      "csv" );
     static MediaType HTML        = predefine("text/html",                                     ["htm", "html"]);
+    static MediaType Html        = HTML;
     static MediaType JavaScript  = predefine(["text/javascript", "application/javascript"],   "js"  );
     static MediaType Text        = predefine("text/plain",                                    "txt" );
     static MediaType Woff        = predefine("font/woff",                                     "woff");

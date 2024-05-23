@@ -2,7 +2,7 @@
  * A StringBuffer is used to efficiently create a resulting String from any number of contributions
  * of any size.
  *
- * TODO add deleteAll(offset..offset) method (or maybe just implement List<Char>)
+ * TODO insert and delete (including ranges) functionality
  */
 class StringBuffer
         implements Appender<Char>
@@ -28,6 +28,20 @@ class StringBuffer
     // ----- StringBuffer API ----------------------------------------------------------------------
 
     /**
+     * The current capacity of the StringBuffer, which can be modified (but not to less than the
+     * current size).
+     */
+    Int capacity {
+        @Override
+        Int get() = chars.capacity;
+
+        @Override
+        void set(Int n) {
+            chars.capacity = Int.maxOf(n, chars.size);
+        }
+    }
+
+    /**
      * Append a value to the StringBuffer.
      *
      * @param o  the object to append
@@ -37,6 +51,7 @@ class StringBuffer
     @Op("+")
     StringBuffer append(Object o) {
         if (o.is(Stringable)) {
+            ensureCapacity(o.estimateStringLength());
             o.appendTo(this);
         } else {
             o.toString().appendTo(this);
@@ -45,11 +60,44 @@ class StringBuffer
         return this;
     }
 
-    @Auto
-    @Override
-    String toString() {
-        return new String(chars);
+    /**
+     * Append the specified character repeatedly to the StringBuffer.
+     *
+     * @param ch  the character to repeatedly append
+     * @param n   the number of times
+     *
+     * @return this buffer
+     */
+    StringBuffer addDup(Char ch, Int n) {
+        ensureCapacity(n);
+        while (--n >= 0) {
+            add(ch);
+        }
+        return this;
     }
+
+    /**
+     * Look for the specified character value, starting at the specified index.
+     *
+     * @param value    the character value to search for
+     * @param startAt  (optional) the first index to search from
+     *
+     * @return True iff this StringBuffer contains the character, at or after the `startAt` index
+     * @return (conditional) the index at which the specified character was found
+     */
+    conditional Int indexOf(Char value, Int startAt = 0) = chars.indexOf(value, startAt);
+
+    /**
+     * Look for the specified character value, starting at the specified index and searching
+     * backwards.
+     *
+     * @param value    the character value to search for
+     * @param startAt  (optional) the index to start searching backwards from
+     *
+     * @return True iff this StringBuffer contains the character, at or before the `startAt` index
+     * @return (conditional) the index at which the specified value was found
+     */
+    conditional Int lastIndexOf(Char value, Int startAt = MaxValue) = chars.lastIndexOf(value, startAt);
 
     /**
      * Modify the contents of this StringBuffer so that it has the specified size.
@@ -82,27 +130,42 @@ class StringBuffer
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return size;
-    }
+    Int estimateStringLength() = size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return buf.addAll(chars);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = buf.addAll(chars);
 
 
     // ----- Appender methods ----------------------------------------------------------------------
 
     @Override
     StringBuffer add(Char v) {
+        ensureCapacity(1);
         chars[size] = v;
         return this;
     }
 
     @Override
-    StringBuffer addAll(Iterable<Char> array) {
-        chars += array;
+    StringBuffer addAll(Iterable<Char> iterable) {
+        ensureCapacity(iterable.size);
+        chars.addAll(iterable);
+        return this;
+    }
+
+    @Override
+    StringBuffer ensureCapacity(Int count) {
+        // "count" represents an expected *additional* amount of capacity
+        Int curCap = chars.capacity;
+        Int reqCap = chars.size + count;
+        if (reqCap > curCap) {
+            if (curCap == 0 && reqCap > 1) {
+                // the first attempt to specify the capacity may be exact, so trust it
+                chars.capacity = reqCap;
+            } else {
+                // power-of-two capacity (but at least 32)
+                chars.capacity = (reqCap + reqCap - 1).leftmostBit.notLessThan(32);
+            }
+        }
         return this;
     }
 
@@ -110,23 +173,17 @@ class StringBuffer
     // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
-    Int size.get() {
-        return chars.size;
-    }
+    Int size.get() = chars.size;
 
     @Override
-    Iterator<Char> iterator() {
-        return chars.iterator();
-    }
+    Iterator<Char> iterator() = chars.iterator();
 
 
     // ----- UniformIndexed methods ----------------------------------------------------------------------
 
     @Override
     @Op("[]")
-    Char getElement(Int index) {
-        return chars[index];
-    }
+    Char getElement(Int index) = chars[index];
 
     @Override
     @Op("[]=")
@@ -135,7 +192,7 @@ class StringBuffer
     }
 
 
-    // ----- Sliceable methods ----------------------------------------------------------------------
+    // ----- Sliceable methods ---------------------------------------------------------------------
 
     @Override
     @Op("[..]") StringBuffer slice(Range<Int> indexes) {
@@ -145,25 +202,9 @@ class StringBuffer
     }
 
 
-    // -----  methods ----------------------------------------------------------------------
+    // ----- Object methods ------------------------------------------------------------------------
 
-    Int capacity {
-        @Override
-        Int get() {
-            return chars.capacity;
-        }
-
-        @Override
-        void set(Int n) {
-            chars.capacity = Int.maxOf(n, chars.size);
-        }
-    }
-
-    conditional Int indexOf(Char value, Int startAt = 0) {
-        return chars.indexOf(value, startAt);
-    }
-
-    conditional Int lastIndexOf(Char value, Int startAt = MaxValue) {
-        return chars.lastIndexOf(value, startAt);
-    }
+    @Auto
+    @Override
+    String toString() = new String(chars);
 }
