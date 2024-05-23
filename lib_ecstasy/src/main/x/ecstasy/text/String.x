@@ -758,29 +758,19 @@ const String
      *         character
      */
     String! leftJustify(Int length, Char fill = ' ') {
-        switch (length.sign) {
-        case Negative:
-            assert;
-
-        case Zero:
+        if (length <= 0) {
             return "";
-
-        case Positive:
-            Int append = length - size;
-            switch (append.sign) {
-            case Negative:
-                return this[0 ..< length];
-
-            case Zero:
-                return this;
-
-            case Positive:
-                return new StringBuffer(length)
-                        .addAll(this)
-                        .addAll(fill * append)
-                        .toString();
-            }
         }
+
+        Int append = length - size;
+        return switch (append.sign) {
+            case Negative: this[0 ..< length];
+            case Zero    : this;
+            case Positive: new StringBuffer(length)
+                                .addAll(chars)
+                                .addDup(fill, append)
+                                .toString();
+        };
     }
 
     /**
@@ -796,31 +786,49 @@ const String
      *         character
      */
     String! rightJustify(Int length, Char fill = ' ') {
-        switch (length.sign) {
-        case Negative:
-            assert;
-
-        case Zero:
+        if (length <= 0) {
             return "";
-
-        case Positive:
-            Int append = length - size;
-            switch (append.sign) {
-            case Negative:
-                return this.substring(-append);
-
-            case Zero:
-                return this;
-
-            case Positive:
-                val buf = new StringBuffer(length);
-                for (Int i = 0; i < append; ++i) {
-                    buf.add(fill);
-                }
-                buf.addAll(chars);
-                return buf.toString();
-            }
         }
+
+        Int append = length - size;
+        return switch (append.sign) {
+            case Negative: this.substring(-append);
+            case Zero    : this;
+            case Positive: new StringBuffer(length)
+                                .addDup(fill, append)
+                                .addAll(chars)
+                                .toString();
+        };
+    }
+
+    /**
+     * Format this String into the center of a String with the specified length, with the remainder
+     * of the new String left- and right-filled with the specified `fill` character. If the
+     * specified length is shorter than the size of this String, then the result will be a truncated copy of this
+     * String, containing only the first _length_ characters of this String.
+     *
+     * @param length  the size of the resulting String
+     * @param fill    an optional fill character to use
+     *
+     * @return this String formatted into a center-justified String filled with the specified
+     *         character
+     */
+    String! center(Int length, Char fill = ' ') {
+        if (length <= 0) {
+            return "";
+        }
+
+        Int append  = length - size;
+        Int appendL = append >> 1;
+        return switch (append.sign) {
+            case Negative: this[0 ..< length];
+            case Zero    : this;
+            case Positive: new StringBuffer(length)
+                                .addDup(fill, appendL)
+                                .addAll(chars)
+                                .addDup(fill, append-appendL)
+                                .toString();
+        };
     }
 
     /**

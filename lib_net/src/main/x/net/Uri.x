@@ -16,21 +16,16 @@ const Uri
      */
     @Override
     construct(String text) {
-        (Boolean    success,
-         String?    scheme,
-         String?    authority,
-         String?    user,
-         String?    host,
-         IPAddress? ip,
-         UInt16?    port,
-         String?    path,
-         String?    query,
-         String?    opaque,
-         String?    fragment,
-         String?    error) = parse(text);
-
-        assert:arg success as error ?: $"Illegal URI: {text.quoted()}";
-
+        assert (String?    scheme,
+                String?    authority,
+                String?    user,
+                String?    host,
+                IPAddress? ip,
+                UInt16?    port,
+                String?    path,
+                String?    query,
+                String?    opaque,
+                String?    fragment) := parse(text, s -> throw new IllegalArgument(s));
         construct Uri(text, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
     }
 
@@ -97,8 +92,8 @@ const Uri
                 assert:arg user == Null as "user cannot be specified without a host or ip";
                 assert:arg port == Null as "port cannot be specified without a host or ip";
             }
-        } else if ((String? authUser, String? authHost, IPAddress? authIp, UInt16? authPort,
-                String? error) := parseAuthority(authority)) { // attempt to parse the authority into its parts
+        } else if ((String? authUser, String? authHost, IPAddress? authIp, UInt16? authPort) :=
+                parseAuthority(authority, s -> throw new IllegalArgument(s))) {
             // verify that passed user, host, ip, port are either Null or match the authority
             if (user == Null) {
                 user = authUser;
@@ -943,34 +938,31 @@ const Uri
     /**
      * Parse URI information from a String, without relying on an exception to report failure.
      *
-     * @param text  the String containing the URI
+     * @param text    the String containing the URI
+     * @param report  (optional) the function to report a failure to, as a non-localized string
      *
-     * @return success    True iff the parsing succeeded and the URI is lexically valid
-     * @return scheme     the scheme name, or Null if none
-     * @return user       the user name, or Null if none
-     * @return authority  the entire authority string, which can be empty, or Null if none
-     * @return host       the host string (name or IP v4/v6 address), or Null if none
-     * @return ip         the parsed IP address iff the host is an IP address, otherwise Null
-     * @return port       the port number, or Null if none
-     * @return path       the '/' path portion, or Null if none
-     * @return query      the '?' query portion, or Null if none
-     * @return opaque     the opaque portion, if the URI is not of the hierarchical form
-     * @return fragment   the '#' fragment portion, or Null if none
-     * @return error      if parsing failed for any reason, this may contain an explanation of the
-     *                    parsing error
+     * @return True iff the parsing succeeded and the URI is lexically valid
+     * @return (conditional) the scheme name, or Null if none
+     * @return (conditional) the user name, or Null if none
+     * @return (conditional) the entire authority string, which can be empty, or Null if none
+     * @return (conditional) the host string (name or IP v4/v6 address), or Null if none
+     * @return (conditional) the parsed IP address iff the host is an IP address, otherwise Null
+     * @return (conditional) the port number, or Null if none
+     * @return (conditional) the '/' path portion, or Null if none
+     * @return (conditional) the '?' query portion, or Null if none
+     * @return (conditional) the opaque portion, if the URI is not of the hierarchical form
+     * @return (conditional) the '#' fragment portion, or Null if none
      */
-    static (Boolean     success,
-            String?     scheme,
-            String?     authority,
-            String?     user,
-            String?     host,
-            IPAddress?  ip,
-            UInt16?     port,
-            String?     path,
-            String?     query,
-            String?     opaque,
-            String?     fragment,
-            String?     error) parse(String text) {
+    static conditional (String?    scheme,
+                        String?    authority,
+                        String?    user,
+                        String?    host,
+                        IPAddress? ip,
+                        UInt16?    port,
+                        String?    path,
+                        String?    query,
+                        String?    opaque,
+                        String?    fragment) parse(String text, function void (String)? report = Null) {
         String?    scheme    = Null;
         String?    user      = Null;
         String?    authority = Null;
@@ -981,14 +973,14 @@ const Uri
         String?    query     = Null;
         String?    opaque    = Null;
         String?    fragment  = Null;
-        String?    error     = Null;
 
         Int offset = 0;
         Int length = text.size;
 
         // an empty URI is not legal
         if (length == 0) {
-            return False, scheme, authority, user, host, ip, port, path, query, opaque, fragment, "Empty URI";
+            report?($"Invalid URI {text.quoted()}: Empty URI");
+            return False;
         }
 
         // a Uri is either an absoluteURI or a relativeURI:
@@ -1010,6 +1002,7 @@ const Uri
         //   abs_path = "/"  path_segments
         //   rel_path = rel_segment [ abs_path ]
         //   rel_segment = 1*( unreserved | escaped | ";" | "@" | "&" | "=" | "+" | "$" | "," )
+        String? error = Null;
         if ((scheme, offset, error) := parseScheme(text, offset, error)) {
             if ((authority, user, host, ip, port, path, offset, error) := parseNetPath(text, offset, error)) {
                 (query, offset, error) := parseQuery(text, offset, error);
@@ -1039,7 +1032,7 @@ const Uri
             error = $"Unparsable URI portion: {text[offset ..< length].quoted()}";
         }
 
-        return error==Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment, error;
+        return error==Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment;
 
         /**
          * Internal: Parse a URI "scheme", if there is one.
@@ -1194,7 +1187,7 @@ const Uri
 
             // parse up to the '/' path, the '?' query, or the '#' fragment
             Int start = offset;
-            for ( ; offset < length; ++offset) {
+            EachChar: while (offset < length) {
                 Char ch = text[offset];
                 if (ch == '/' || ch == '?' || ch == '#') {
                     break;
@@ -1230,16 +1223,22 @@ const Uri
                     break;
 
                 case '%':
-                    (_, _, error) = decodeEscape(text, offset, error);
-                    escaped = True;
-                    break;
+                    if ((_, offset) := decodeEscape(text, offset)) {
+                        escaped = True;
+                        continue EachChar;
+                    } else {
+                        error ?:= $"Illegal escape in the net-path portion of {text.quoted()}";
+                        break;
+                    }
 
                 default:
                     if (!regnameValid(ch)) {
-                        error ?:= $"Illegal character {ch.quoted()} in the authority portion of {text.quoted()}";
+                        error ?:= $"Illegal character {ch.quoted()} in the net-path portion of {text.quoted()}";
                     }
                     break;
                 }
+
+            ++offset;
             }
 
             authority = text[start ..< offset];
@@ -1328,7 +1327,7 @@ const Uri
         static (String path, Int offset, String? error) parsePath(String text, Int offset, String? error) {
             Int start  = offset;
             Int length = text.size;
-            EachChar: for ( ; offset < length; ++offset) {
+            EachChar: while (offset < length) {
                 Char ch = text[offset];
                 switch (ch) {
                 case '?':   // query
@@ -1350,13 +1349,19 @@ const Uri
 
                     // escaped (requires 2 digits to follow):
                 case '%':
-                    (_, _, error) = decodeEscape(text, offset, error);
-                    break;
+                    if ((_, offset) := decodeEscape(text, offset)) {
+                        continue EachChar;
+                    } else {
+                        error ?:= $"Illegal escape sequence in the relative path of {text.quoted()}";
+                        break;
+                    }
 
                 default:
                     error ?:= $"Illegal character {ch.quoted()} in the relative path of {text.quoted()}";
-                    break;
+                    break EachChar;
                 }
+
+                ++offset;
             }
 
             return text[start ..< offset], offset, error;
@@ -1378,7 +1383,7 @@ const Uri
 
             // the query is the last thing in the URI except for the '#' fragment
             Int     start   = ++offset;
-            for ( ; offset < length; ++offset) {
+            EachChar: while (offset < length) {
                 Char ch = text[offset];
                 if (ch == '#') {
                     break;
@@ -1388,9 +1393,15 @@ const Uri
                     if (!uricValid(ch)) {
                         error = $"Illegal character {ch.quoted()} in the '?' query of {text.quoted()}";
                     } else if (ch == '%') {
-                        (_, _, error) = decodeEscape(text, offset, error);
+                        if ((_, offset) := decodeEscape(text, offset)) {
+                            continue EachChar;
+                        } else {
+                            error = $"Illegal escape sequence in the '?' query of {text.quoted()}";
+                        }
                     }
                 }
+
+                ++offset;
             }
 
             String query = text[start ..< offset];
@@ -1418,7 +1429,7 @@ const Uri
             // the opaque part is the last thing in the URI except for the '#' fragment
             Int     start   = offset;
             Boolean escaped = False;
-            Loop: for ( ; offset < length; ++offset) {
+            EachChar: while (offset < length) {
                 Char ch = text[offset];
                 if (ch == '#') {
                     break;
@@ -1428,11 +1439,17 @@ const Uri
                     if (!uricValid(ch)) {
                         error = $"Illegal character {ch.quoted()} in the opaque part of {text.quoted()}";
                     } else if (ch == '%') {
-                        (_, _, error) = decodeEscape(text, offset, error);
-                    } else if (ch == '/' && Loop.first) {
+                        if ((_, offset) := decodeEscape(text, offset)) {
+                            continue EachChar;
+                        } else {
+                            error = $"Illegal escape sequence in the relative path of {text.quoted()}";
+                        }
+                    } else if (ch == '/' && EachChar.first) {
                         error = $"The opaque portion of the URI cannot start with a '/' character: {text.quoted()}";
                     }
                 }
+
+                ++offset;
             }
 
             String opaque = text[start ..< offset];
@@ -1459,16 +1476,22 @@ const Uri
             // the fragment is the last thing in the URI, so check all the way to the end
             Int     start   = ++offset;
             Boolean escaped = False;
-            for ( ; offset < length; ++offset) {
+            EachChar: while (offset < length) {
                 Char ch = text[offset];
                 if (error == Null) {
                     if (!uricValid(ch)) {
                         error = $"Illegal character {ch.quoted()} in the '#' fragment of {text.quoted()}";
                     } else if (ch == '%') {
-                        escaped = True;
-                        (_, _, error) = decodeEscape(text, offset, error);
+                        if ((_, offset) := decodeEscape(text, offset)) {
+                            escaped = True;
+                            continue EachChar;
+                        } else {
+                            error = $"Illegal escape sequence in the '?' query of {text.quoted()}";
+                        }
                     }
                 }
+
+            ++offset;
             }
 
             String fragment = text[start ..< offset];
@@ -1499,19 +1522,35 @@ const Uri
     }
 
     /**
-     * Internal helper for parsing an authority string.
+     * Helper for parsing an authority string.
+     *
+     * @param authority  the authority string
+     * @param report     (optional) the function to report a failure to, as a non-localized string
+     *
+     * @return True iff the parsing succeeded
+     * @return user  (conditional) the user name, if any
+     * @return host  (conditional) the host string, if any
+     * @return ip    (conditional) the IP address, if any
+     * @return port  (conditional) the port number, if any
      */
-    protected static conditional (String? user, String? host, IPAddress? ip, UInt16? port, String? error)
-            parseAuthority(String authority) {
+    static conditional (String? user, String? host, IPAddress? ip, UInt16? port)
+            parseAuthority(String authority, function void (String)? report = Null) {
+        if (authority.empty) {
+            return False;
+        }
+
         Int     atSign       = -1;
         Int     leftSquare   = -1;
         Int     rightSquare  = -1;
         Int     colon        = -1;
 
-        EachChar: for (Char ch : authority) {
-            switch (ch) {
+        Int offset = 0;
+        Int length = authority.size;
+        EachChar: while (offset < length) {
+            switch (Char ch = authority[offset]) {
             case '@':
                 if (atSign >= 0 || leftSquare >= 0 || colon >= 0) {
+                    report?("Illegal authority {authority.quoted()}: Unexpected '@' sign");
                     return False;
                 }
                 atSign = EachChar.count;
@@ -1519,16 +1558,16 @@ const Uri
 
             case '[':
                 if (leftSquare >= 0 || colon >= 0) {
-                    return True, Null, Null, Null, Null,
-                            $"Authority {authority.quoted()} contains an illegal '[' character";
+                    report?("Illegal authority {authority.quoted()}: Unexpected '[' character");
+                    return False;
                 }
                 leftSquare = EachChar.count;
                 break;
 
             case ']':
                 if (leftSquare < 0 || rightSquare >= 0 || colon >= 0) {
-                    return True, Null, Null, Null, Null,
-                            $"Authority {authority.quoted()} contains an illegal ']' character";
+                    report?("Illegal authority {authority.quoted()}: Unexpected ']' character");
+                    return False;
                 }
                 rightSquare = EachChar.count;
                 break;
@@ -1536,6 +1575,7 @@ const Uri
             case ':':
                 if (leftSquare >= 0 == rightSquare >= 0) {
                     if (colon >= 0) {
+                        report?("Illegal authority {authority.quoted()}: Unexpected ':' character");
                         return False;
                     }
                     colon = EachChar.count;
@@ -1543,36 +1583,43 @@ const Uri
                 break;
 
             case '%':
-                (_, _, String? error) = decodeEscape(authority, EachChar.count);
-                if (error != Null) {
-                    return True, Null, Null, Null, Null, error;
+                if ((_, offset) := decodeEscape(authority, offset)) {
+                    continue EachChar;
                 }
-                break;
+                return False;
 
             default:
                 if (!regnameValid(ch)) {
-                    return True, Null, Null, Null, Null, $"Illegal character in authority: {ch.quoted()}";
+                    report?("Illegal authority {authority.quoted()}: Illegal character in authority: {ch.quoted()}");
+                    return False;
                 }
                 break;
             }
+
+            ++offset;
         }
 
         if (leftSquare >= 0 != rightSquare >= 0) {
-            return True, Null, Null, Null, Null,
-                    $"Authority {authority.quoted()} contains an unbalanced '[' character";
+            report?("Illegal authority {authority.quoted()}: Contains an unbalanced '[' character");
+            return False;
         }
 
         (Boolean found, String? user, String? host, IPAddress? ip, UInt16? port, String? error) =
                 parseAuthority(authority, atSign, colon, Null);
-
-        if (leftSquare >= 0 && ip == Null && error == Null) {
-            // the only use for the '[' and ']' characters is to enclose an IPv6 address
-            error = $|Square brackets are only permitted in a URI authority string to enclose\
-                     | a valid IPv6 address: {authority.quoted()}
-                    ;
+        if (error != Null) {
+            report?(error);
+            return False;
         }
 
-        return True, user, host, ip, port, error;
+        if (leftSquare >= 0 && ip == Null) {
+            // the only use for the '[' and ']' characters is to enclose an IPv6 address
+            report?($|Square brackets are only permitted in a URI authority string to enclose\
+                     | a valid IPv6 address: {authority.quoted()}
+                   );
+            return False;
+        }
+
+        return True, user, host, ip, port;
     }
 
     /**
@@ -1807,34 +1854,19 @@ const Uri
      *
      * @param text    the text containing the escape sequence
      * @param offset  the offset of the '%' character that begins the escape sequence
-     * @param error   an optional previous error (returned if
      *
-     * @return char    the unescaped character, or Null if none
-     * @return offset  the offset after the escape sequence
-     * @return error   if parsing the escape failed for any reason, this will contain an
-     *                 explanation of the parsing error
+     * @return True iff the string contains a valid escape at the specified offset
+     * @return (conditional) the unescaped character
+     * @return (conditional) the offset after the escape sequence
      */
-    static (Char ch, Int offset, String? error) decodeEscape(String text, Int offset, String? error=Null) {
-        Int length = text.size;
-        assert:arg 0 <= offset < length;
-        assert:arg text[offset] == '%';
-
-        Int nextOffset = offset + 3;
-        if (error != Null || nextOffset > length) {
-            return '?', nextOffset.notGreaterThan(length), error ?: $"The escape sequence is truncated: {text.quoted()}";
+    static conditional (Char ch, Int offset) decodeEscape(String text, Int offset) {
+        assert:arg offset >= 0;
+        if (offset+3 <= text.size && text[offset] == '%',
+                Int n1 := text[offset+1].asciiHexit(),
+                Int n2 := text[offset+2].asciiHexit()) {
+            return True, ((n1 << 4) + n2).toChar(), offset+3;
         }
-
-        Int codepoint = 0;
-        for (Int i : 1..2) {
-            Char ch = text[offset+i];
-            if (Int n := ch.asciiHexit()) {
-                codepoint = codepoint << 4 + n;
-            } else {
-                return '?', nextOffset, $"Illegal escape sequence: {text[offset ..< offset+2]}";
-            }
-        }
-
-        return codepoint.toChar(), nextOffset, Null;
+        return False;
     }
 
     /**
@@ -1844,7 +1876,8 @@ const Uri
      * To avoid exceptions, this method should only be called when the escaped contents of the
      * passed string have already been validated.
      *
-     * @param text  a String that may contain `%xx` escape sequences
+     * @param text    a String that may contain `%xx` escape sequences
+     * @param except  (optional) a function that identifies specific characters to NOT unescape
      *
      * @return the passed String, but with escape sequences replaced with their ASCII equivalents
      */
@@ -1871,7 +1904,7 @@ const Uri
         while (offset < length) {
             Char ch = text[offset];
             if (ch == '%') {
-                (ch, offset) = decodeEscape(text, offset);
+                assert (ch, offset) := decodeEscape(text, offset);
             } else {
                 ++offset;
             }
