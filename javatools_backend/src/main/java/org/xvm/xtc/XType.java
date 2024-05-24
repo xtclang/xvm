@@ -380,6 +380,8 @@ public abstract class XType {
     // Self recursive type
     case TSeqTCon tseq -> self;
 
+    case InnerDepTCon inn -> xtype(inn._child,boxed,self);
+
     default -> throw XEC.TODO();
     };
   }

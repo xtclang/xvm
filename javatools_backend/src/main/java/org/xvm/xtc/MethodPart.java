@@ -31,6 +31,7 @@ public class MethodPart extends MMethodPart {
   public final Parameter[] _args;
   public final int _nDefaults;  // Number of default arguments
   private XType[] _xargs;
+  private ClassPart _outer;     // Nested inner class's outer class
 
   // Constants for code
   public final Const[] _cons;
@@ -174,26 +175,47 @@ public class MethodPart extends MMethodPart {
   }
 
   // XTypes for all arguments.  Lazily built.
-  // Default arguments responsibility of the caller.
+  // Default arguments responsibility of the caller; they are explicit here.
 
   // Default constructors take class type parameters, but will lack explicit
-  // args here; so _args and _xargs will not necessarily be the same.
-
-  public XType[] xargs() {
-    if( _xargs != null ) return _xargs;
+  // args here; so _args and _xargs will not necessarily be the same.  XARGS
+  // is broken into sets:
+  // - Parent xargs/types, one explicit type argument per parent type var
+  // - Normal args, mapping to _args
+  // - Nested inner classes get the outer class as an arg
+  public XType[] xargs() { return _xargs==null ? (_xargs = _xargs()) : _xargs; }
+  private XType[] _xargs() {
+    // Non-constructors just walk the args (and optionally box)
     if( !is_constructor() )
-      // Dont box privates or operators
+      // Don't box privates or operators
       return (_xargs = XType.xtypes(_args, !(isPrivate() || isOperator()) ));
-    // The "free" empty constructors also take type arguments
+
+    // Constructors get all the type args from their class
     XType[] zts = clz()._tclz._xts;
-    if( _args != null ) {
-      int old = zts.length;
-      zts = Arrays.copyOf(zts,old+_args.length);
-      for( int i=0; i<_args.length; i++ )
-        // Free constructors are unboxed
-        zts[i+old] = _args[i].type(false);
+    int len = zts.length, j=len;
+    // Also get their stated args
+    if( _args != null ) len += _args.length;
+    // Nested inner classes get the outer class as an arg.
+    // self -> MMethod -> Class -> [Package or other ???]
+    ClassPart clz = clz();
+    Part outer = clz._par;
+    if( !clz.isStatic() && !clz._tclz.isa(XCons.CONST) && !(outer instanceof PackagePart) ) {
+      while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
+      _outer = outclz;          // Set outer class
     }
-    return zts.length==0 ? null : (_xargs=zts);
+    if( _outer!=null ) len++;
+
+    // Extend as needed
+    zts = Arrays.copyOf(zts,len);
+    // Copy/type actual args
+    if( _args != null )
+      for( Parameter arg : _args )
+        zts[j++] = arg.type( false );
+    // Add outer class next
+    if( _outer!=null )
+      zts[j] = XClz.make(_outer);
+
+    return zts;
   }
   public XType xarg(int idx) { return xargs()[idx]; }
 

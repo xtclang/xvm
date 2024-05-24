@@ -44,7 +44,7 @@ import java.util.Arrays;
 public class XClz extends XType {
   private static final String[] STR0 = new String[0];
 
-  // Force XCons to fill the XTpe INTERNs
+  // Force XCons to fill the XType INTERNs
   public static XClz _FORCE = XCons.JNULL;
 
   // The uniqueness is on these things: package, name, and all type parms.
@@ -56,6 +56,7 @@ public class XClz extends XType {
   public  XClz _super;           // Super xtype or null
   public  ModPart _mod;          // Self module
   public  ClassPart _clz;        // Self class, can be a module
+  public  int _depth = -99;            // Depth for LCA
 
   // Java-name, if any there exists a Java mirror implementation.
   // If the name is NOT equal to _pack,_name, then the name
@@ -119,6 +120,7 @@ public class XClz extends XType {
     _super = proto._super;
     _jpack = proto._jpack;
     _jname = proto._jname;
+    _depth = proto._depth;
     return clz;
   }
 
@@ -235,8 +237,12 @@ public class XClz extends XType {
           ClassPart iface = ((ClzCon)c._tContrib).clz();
           for( int i=0; i<iface._tnames.length; i++ ) {
             String tname = iface._tnames[i];
-            XType xt = xtype(((ParamTCon)c._tContrib)._parms[i],true);
-            xclz._xts[S.find(tns,tname)] = xt;
+            TCon tcon = ((ParamTCon)c._tContrib)._parms[i];
+            XType xt = xtype(tcon,true);
+            boolean isType = tcon instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
+            int idx = S.find(tns,tname);
+            xclz._xts[idx] = xt;
+            xclz._tns[idx] = tname; //isType ? null : tname;
           }
         }
 
@@ -249,6 +255,7 @@ public class XClz extends XType {
     xclz._clz = clz;
     xclz._jname = xclz._jpack = "";
     xclz._super = supr;
+    xclz._depth = supr==null ? 0 : supr._depth+1;
     return xclz;
   }
 
@@ -301,10 +308,10 @@ public class XClz extends XType {
     }
 
     XClz xclz = proto._mallocClone();
-    xclz._xts = ptc._parms==null ? EMPTY : new XType [ptc._parms.length];
-    xclz._tns = ptc._parms==null ? STR0  : new String[ptc._parms.length];
+    xclz._xts = proto._xts.clone();
+    xclz._tns = proto._tns.clone();
     // Override parameterized type fields
-    for( int i=0; i<xclz._tns.length; i++ ) {
+    for( int i=0; i<ptc._parms.length; i++ ) {
       // If the ptc parameter is a TermTCon - a "terminal type constant" it's a
       // type, not a type variable.  No type name, but a type directly.
       boolean isType = ptc._parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
@@ -335,6 +342,7 @@ public class XClz extends XType {
       }
     }
     assert xclz._super == get_super(iclz);
+    assert xclz._depth == (iclz._tclz==null ? 0 : iclz._tclz._depth);
     xclz._jpack = "";
     xclz._jname = "";
     XClz xclz2 = xclz._intern();
@@ -426,7 +434,41 @@ public class XClz extends XType {
   // _pack: nQueens
   // _nest: M$nQueens
   // _name: Board
-  private static String pack(Part pclz, ModPart mod) {
+
+  // Example: Collection.x, equals() method, enum NonExistent [NotAValue]
+  // _pack: ecstasy.collections
+  // _nest: ""
+  // _name: Collection.equals$NonExistent
+  // _name: Collection.equals$NonExistent.NotAValue
+  private static String pack(ClassPart pclz, ModPart mod) {
+    //String pack1 = pack1(pclz,mod);
+    String pack2 = pack2(pclz,mod.name()).intern();
+    //assert pack1==pack2;
+    return pack2;
+  }
+  private static String pack2(Part pclz, String mod) {
+    // Observed "_par" grammar:
+    // File.Mod               - Just the module directly, e.g. module tck
+    // File.Mod.Clz           - stand-alone module, no package
+    // File.Mod.Pack.Clz      - Part of a package deal, e.g. tck.array.Basic
+    // File.Mod.Pack.Clz.Clz  - Nested class (or enum), e.g. ecstasy.collections.Array.ArrayDelegate
+    // File.Mod.Pack.Pack.Clz - Nested package        , e.g. ecstasy.collections.deferred.DeferredCollection
+    // File.Mod.Pack.Clz.MMeth.Meth.Clz - Method-local class (or enum), e.g. tck.constructors.Basic.Test
+    return switch( pclz._par ) {
+    case    FilePart file -> mod;  // e.g. module tck
+    case     ModPart mod2 -> mod;  // eg. module ecstasy
+    // case PackagePart pack; EXTENDS CLASSPART             // e.g. ecstasy.collections.deferred
+    case   ClassPart clz  -> pack2(clz ,mod)+"."+clz._name; // e.g. ecstasy.collections.Array
+    case  MethodPart meth -> pack2(meth._par,mod);          // e.g. tck.constructors.Basic
+    default -> {
+      for( Part p=pclz; p!=null; p = p._par )
+        System.out.print(p.getClass().getSimpleName()+" ");
+      System.out.println();
+      throw XEC.TODO();
+    }
+    };
+  }
+  private static String pack1(Part pclz, ModPart mod) {
     assert mod!=null;
     if( pclz == mod ) return mod.name(); // XTC Modules never have a Java package
     while( !(pclz._par instanceof ClassPart clz) )
@@ -444,7 +486,7 @@ public class XClz extends XType {
   @Override public boolean needs_import(boolean self) {
     // Built-ins before being 'set' have no clz, and do not needs_import
     // Self module is also compile module.
-    if( this==XCons.XXTC ) return false;
+    if( this==XCons.XXTC  ) return false;
     if( this==XCons.JTRUE ) return false;
     if( this==XCons.JFALSE) return false;
     if( this==XCons.JNULL ) return false;
@@ -591,32 +633,18 @@ public class XClz extends XType {
   @Override boolean _isa( XType xt ) {
     XClz clz = (XClz)xt;        // Contract
     if( !subClasses(clz) ) return false;
-    if( _xts.length != clz._xts.length ) return false;
-    for( int i=0; i<_xts.length; i++ )
+    if( _xts.length < clz._xts.length ) return false;
+    for( int i=0; i<clz._xts.length; i++ )
       if( !_xts[i].isa(clz._xts[i]) )
         return false;
     return true;
   }
 
+  // Common ancestor
   static XClz lca( XClz u0, XClz u1 ) {
-    if( u0==u1 ) return u0;
-    Ary<XClz> clzs = new Ary<>(XClz.class);
-    // Collect super-class chain LHS
-    for( ; u0!=XCons.XXTC; u0 = u0._super )
-      clzs.push(u0);
-    // Find first place super chain LHS differs from RHS
-    XClz lca = u1.lca(clzs);
-    assert lca!=null;
-    return lca;
-  }
-
-  // Walk backwards via recursive unwind until this!=xclz but supers match;
-  // then return the common super
-  private XClz lca( Ary<XClz> clzs ) {
-    if( _super==XCons.XXTC ) return null;
-    XClz xclz = _super.lca(clzs);
-    if( xclz != null ) return xclz;
-    xclz = clzs.pop();
-    return xclz==_super ? null : xclz._super;
+    while( u0._depth < u1._depth ) u1 = u1._super;
+    while( u1._depth < u0._depth ) u0 = u0._super;
+    while( u0!=u1 ) { u0 = u0._super; u1 = u1._super; }
+    return u0;
   }
 }

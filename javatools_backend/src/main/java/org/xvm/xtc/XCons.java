@@ -218,8 +218,10 @@ public abstract class XCons {
       clz._xts[i>>1] = (XType)flds[i+1];
     }
     // XXTC root XClz has no XTC _clz
-    if( pack.isEmpty() && S.eq(name,"XTC") )
+    if( pack.isEmpty() && S.eq(name,"XTC") ) {
+      clz._depth = 0;
       return clz._intern();
+    }
 
     // Walk the XTC REPO in parallel, and find the matching XTC class
     String[] packs = pack.split("\\.");
@@ -235,9 +237,9 @@ public abstract class XCons {
       // Fill in XTC class details
       assert clz._xts.length == pclz._tcons.length;
       // Set the super
-      XClz sup = XClz.get_super(pclz);
-      assert supr==sup;
+      assert supr==XClz.get_super(pclz);
       clz._super = supr;
+      clz._depth = supr==null ? 0 : supr._depth+1;
       // Set mod and clz
       clz._mod = pclz.mod();
       clz._clz = pclz;

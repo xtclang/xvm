@@ -22,7 +22,7 @@ class BinOpAST extends AST {
       ? XType.xtype(X.con(),false) // Type from the AST file
       : (op==BinOp.CompOrd ? XCons.ORDERED : XCons.BOOL ); // Must be one of the ordering operators
     if( op==BinOp.Else )        // This becomes a ternary op
-      return new TernaryAST(new AST[]{null,kids[0],kids[1]},type);
+      return new TernaryAST(new AST[]{kids[0],kids[1]},type);
     return new BinOpAST(op.text,"",type,kids);
   }
 
@@ -106,10 +106,9 @@ class BinOpAST extends AST {
     // into this tree:
     //   ( ((tmp=pred)!=null) ? tmp : alt)
     if( _op0.equals("?:") ) {
-      TernaryAST tern = new TernaryAST(new AST[]{null,null, _kids[1]},_kids[0]._type);
+      TernaryAST tern = new TernaryAST(_kids,_kids[0]._type);
       tern._par = _par;
-      tern._cond = _kids[0]._cond;
-      tern._kids[1] = tern.doElvis(_kids[0]);
+      tern._kids[0] = tern.doElvis(_kids[0],_kids[0]);
       return tern;
     }
 

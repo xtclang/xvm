@@ -142,6 +142,8 @@ class AssignAST extends AST {
     if( _kids[1]!=kid ) return null;
     if( _op == AsnOp.AsnIfNotNull )
       return _type.nullable();
+    if( _op == AsnOp.AsnIfNotFalse )
+      return XCons.BOOL;
     return _type;
   }
 

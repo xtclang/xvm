@@ -82,13 +82,8 @@ class UniOpAST extends AST {
       // Find the "elvis top" - the point where we make the subexpression
       // conditional on the "elvis" existing.
       for( AST par = _par, old = this; par!=null; old = par, par = par._par )
-        switch( par ) {
-        case AssertAST  asrt: return asrt.doElvis(_kids[0],old);
-        case BlockAST   blok: return blok.doElvis(_kids[0],old);
-        case MultiAST   mtop: return mtop.doElvis(_kids[0],old);
-        case TernaryAST ttop: return ttop.doElvis(_kids[0]);
-        default: break;
-        }
+        if( par instanceof ElvisAST elvis )
+          return elvis.doElvis(_kids[0],old);
       // Cannot reach here
       throw XEC.TODO();
     } // End of Elvis

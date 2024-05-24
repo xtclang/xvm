@@ -49,14 +49,12 @@ class Basic {
         assert (a?.toInt64()+1:b) == 5;
     }
 
-    private conditional String checkPositive(Int i) = i < 0 ? False : (True, "pos");
-
     void basic3() {
+        private conditional String checkPositive(Int i) = i < 0 ? False : (True, "pos");
         if (String s := checkPositive(17)) {
             assert s=="pos";
         }
-        // BAST appears incorrect, drops the "!"
-        //assert !(String s := checkPositive(-17));
+        assert !(String s3 := checkPositive(-17));
         String s = "neg";
         s := checkPositive(-99);
         assert s=="neg";

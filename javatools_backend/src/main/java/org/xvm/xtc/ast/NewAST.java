@@ -7,6 +7,11 @@ import org.xvm.util.S;
 
 import java.util.Arrays;
 
+
+// New objects.
+// The constructor gets some explicit arguments.
+// If this is a nested inner class, it also gets the outer class.
+// If this class has some type arguments, it also gets explicit type objects.
 class NewAST extends AST {
   final MethodPart _meth;
   final boolean _isChild;
@@ -45,9 +50,9 @@ class NewAST extends AST {
 
     // Type parameters can be constants or can be function arguments passed in.
     // Function argument names are hidden in the ParamTCon.
-    ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((VirtDepTCon)type)._par;
+    ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((DepTCon)type)._par;
     int N = xt._xts.length;
-    assert ptc._parms.length==N;
+    assert ptc._parms.length>=N;
     AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+N];
     if( kids!=null ) System.arraycopy(kids,0,kids2,N,kids.length);
     for( int i=0; i<N; i++ ) {

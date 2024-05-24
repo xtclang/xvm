@@ -69,10 +69,10 @@ public class ClzBuilder {
       BASE_IMPORTS = new HashMap<>();// Top-level import base names
       AMBIGUOUS_IMPORTS = new HashSet<>();
       CMOD = mod;                 // Top-level compile unit
+      CCLZ = clz==null ? mod : clz; // Compile unit class
     }
     _is_module = mod==clz;
     _mod = mod;
-    CCLZ = clz==null ? mod : clz; // Compile unit class
     _tmod = mod==null ? null : XClz.make(mod);
     _clz = clz;
     _tclz = clz==null ? null : XClz.make(clz);
@@ -116,6 +116,13 @@ public class ClzBuilder {
   // Java Class body; can be nested (static inner class)
   @SuppressWarnings("fallthrough")
   private void jclass_body() {
+    // While XTC Enum Values are themselves a full-blown class, we're going to make
+    // an effort to limit ourselves to *Java* enums as the implementation.
+    // Emit no code here
+    if( _clz._f == Part.Format.ENUMVALUE ) {
+      assert _clz._name2kid.size()==1 && ((MethodPart)_clz.child("construct").child("construct")).is_empty_function();
+      return;
+    }
     String java_class_name = _tclz._name;
     _sb.nl();                   // Blank line
     boolean is_iface = _clz._f==Part.Format.INTERFACE;
@@ -522,9 +529,14 @@ public class ClzBuilder {
     args(m,_sb);
     _sb.p(" ) ");
     // Define argument names
-    if( m.xargs()!=null )
-      for( int i = 0; i < m.xargs().length; i++ )
-        define(m._args[i]._name,m.xarg(i));
+    XType[] xargs = m.xargs();
+    if( xargs !=null ) {
+      // xargs on constructors includes *type variables*, which are NOT in
+      // method args.  Skip those names here.
+      int ntypes = xargs.length - m._args.length;
+      for( int i = 0; i < m._args.length; i++ )
+        define(m._args[i]._name,xargs[i+ntypes]);
+    }
 
     // Abstract method, no "body"
     if( m._ast.length==0 ) {

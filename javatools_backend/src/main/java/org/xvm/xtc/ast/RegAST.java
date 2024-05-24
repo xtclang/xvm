@@ -35,7 +35,7 @@ public class RegAST extends AST {
     case -5 ->  X._tclz;     // A_THIS
     case -10 -> X._tclz;     // A_STRUCT: this as a struct
     case -11 -> X._tclz;     // A_CLASS
-    case -13 -> ((ClassPart)X._clz._par)._tclz;
+    case -13 -> X._tclz._super; // A_SUPER
     default -> X._ltypes.at(reg);
     };
     assert _type!=null;
