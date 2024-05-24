@@ -97,7 +97,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
 fun PublishingExtension.mavenLocalStagingDeploy(project: Project) = project.run {
     repositories {
         maven {
-            url = uri(layout.buildDirectory.dir("stating-deploy"))
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
@@ -207,7 +207,7 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
     fun osClassifier(): String {
         val arch = System.getProperty("os.arch")
         return when {
-            currentOs.isMacOsX -> "macos_$arch"
+            currentOs.isMacOsX -> "osx-x86_64" //"macos_$arch"
             currentOs.isLinux -> "linux_$arch"
             currentOs.isWindows -> "windows_$arch"
             else -> throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")

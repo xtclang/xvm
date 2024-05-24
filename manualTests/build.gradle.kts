@@ -80,7 +80,7 @@ plugins {
  * understand how to build a project with XTC and Gradle.
  */
 dependencies {
-    xdk(libs.xdk)
+    xdk(libs.xdk) // This is the XDK artifact, which is a zip file containing the XTC modules git release access
 }
 
 /**

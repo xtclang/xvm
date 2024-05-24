@@ -280,34 +280,226 @@ val installWithLaunchersDist by tasks.existing(Sync::class) {
     }
 }
 
+// Keep this as git assets or git releases.
+// Github artifact - release artifact as asset, add it a default setting. In the release step - every distribution and file will be pushed as a git release asset
+//
+// How do I consume this from a build? That is weird.
+// repositories {
+//   theAssetMagically()
+// }
+val platformPlatformIndependentZip: Provider<RegularFile> = distZip.flatMap { it.archiveFile }
+
 val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archiveFile }
 System.err.println("platformZip : ${platformZip.get()}")
 
+// Build everything in github workflows instead
+
+// Upload everything to github.
 jreleaser {
     gitRootSearch = true
     dryrun = true
     project {
         description = "XDK Platform"
         copyright = "(C) xtclang.org 2024"
-        license = "https://github.com/xtclang/xvm/blob/master/LICENSE.md"
+        license = "Apache-2.0"
         authors = listOf("xtclang.org")
         links {
             homepage = "https://xtclang.org"
         }
-    }
-    release {
-        github {
-            overwrite = true
-            tagName.set(xdkBuildLogic.gitHubProtocol().localTag)
+        snapshot {
+            label = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
+            fullChangelog = false
         }
     }
+
+    // This is where github publications on commits to master go (as maven artifact) https://maven.pkg.github.com/xtclang/xvm
+    // Any such thing like mavenCentral too needs deployments
+    deploy {
+        // "deployment is not enabled" The github deployer does not allow SNAPSHOTs to be deployed?
+        maven {
+            github {
+                // Run the build to stage the artifacts.
+                // Then run the release to publish the artifacts.
+                // Depending on the maven deployer, use kordamp pomchecker, otherwise take them as they are
+                // for the github maven package repository.
+                val xdk by creating {
+                    this.
+                    enabled = true // the xdk deployer regardless of snapshot or not should always be enabled.
+                    // TODO: Andres - want a special state for snapshots explicitly?
+                    url = "https://maven.pkg.github.com/xtclang/xvm"
+                    username = "xtclang-bot"
+                    password = "token"//xdkBuildLogic.getXtclangGitHubMavenPackageRepositoryToken()
+                    stagingRepository(compositeRootBuildDirectory.dir("staging-deploy").get().asFile.absolutePath)
+                }
+            }
+        }
+    }
+
+    // Deploy section to publish maven packages to github packages (both snapthos and releases I guess)
+
+    // Release
+    // for a snapshot, we want to publish
+
+    release {
+        github {
+            skipTag = false // This assumes I do all tagging manually and that the current commit during a jreleaser relase execution
+            // is the one its built from, but nothing is tagged in github by jreleaser .
+            // [INFO]  HEAD is at c1d5c3e
+            // overwrite is false means that the tagging is moved
+
+            // overwrite is set to true automatically if it's natural release, i.e. not a final release "full stuff"
+            // overwrite = true //
+            //tagName.set(xdkBuildLogic.gitHubProtocol().localTag)  // "For a snapshot snapshot/v0.1.2,for a release the standard v0.1.2"
+        }
+    }
+
+    // The platform independent zip (currently a github package publication on xtclang/xdk), will
+    // be a files block, not a distribution. We do use it, e.g. for XTC dsl like xdk(libs.xdk).version("1.0.0")
+    // but we don't want to release it as a platform independent github distribution.
+
+    // Both files and artifacts can be published as github release assets.
+    // The difference is that the only files and artifacts in the distribution section only have access to package management
+    // In the future - e.g. brew support goes into the distribution section.
+
+    // jreleaser assemble step creates binaries.
+    // dryrun lets you read from remote services.
+
+    // jreleaser: release command.
+    //    package managers, anouncements etc is full-release
+    //
+    /*
+    # These are binaries created using jpackages.
+    jreleaser-installer:
+    type: NATIVE_PACKAGE
+    winget:
+    active: RELEASE
+    continueOnError: true
+    package:
+    name: jreleaser
+    repository:
+    active: ALWAYS
+    name: jreleaser-winget
+    commitMessage: 'jreleaser {{tagName}}'
+    executable:
+    name: jreleaser
+    windowsExtension: exe
+    artifacts:
+    - path: '{{jpackageDir}}/JReleaser-{{projectVersionNumber}}-osx-x86_64.pkg'
+    transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}-osx-x86_64.pkg'
+    platform: 'osx-x86_64'
+    - path: '{{jpackageDir}}/JReleaser-{{projectVersionNumber}}-osx-aarch64.pkg'
+    transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}-osx-aarch64.pkg'
+    platform: 'osx-aarch_64'
+    - path: '{{jpackageDir}}/jreleaser_{{projectVersionNumber}}-1_amd64.deb'
+    transform: '{{distributionName}}/{{distributionName}}_{{projectEffectiveVersion}}-1_amd64.deb'
+    platform: 'linux-x86_64'
+    - path: '{{jpackageDir}}/jreleaser-{{projectVersionNumber}}-1.x86_64.rpm'
+    transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}-1.x86_64.rpm'
+    platform: 'linux-x86_64'
+    - path: '{{jpackageDir}}/jreleaser-{{projectVersionNumber}}-windows-x86_64.msi'
+    transform: '{{distributionName}}/{{distributionName}}-{{projectEffectiveVersion}}-windows-x86_64.msi'
+    platform: 'windows-x86_64'
+
+    jreleaser-native:
+    # This are my three github assets - platform dependent zips for windows, linux and mac
+    artifacts:
+    - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-osx-aarch64.zip'
+    platform: 'osx-aarch_64'
+    - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-osx-x86_64.zip'
+    platform: 'osx-x86_64'
+    - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-linux-x86_64.zip'
+    platform: 'linux-x86_64'
+    - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-windows-x86_64.zip'
+    platform: 'windows-x86_64'
+
+    files:
+    artifacts:
+    - path: VERSION
+    extraProperties:
+    skipChecksum: true
+    skipSigning: true
+    skipSbom: true
+    - path: plugins/jreleaser-ant-tasks/build/distributions/jreleaser-ant-tasks-{{projectVersion}}.zip
+    transform: 'jreleaser-ant-tasks/jreleaser-ant-tasks-{{projectEffectiveVersion}}.zip'*/
+
+    files {
+        artifact {
+            path = platformPlatformIndependentZip
+        }
+    }
+
+    /*
+    platform:
+    replacements:
+    aarch_64: aarch64
+*/
+    // The extra properties section under project (and other places) allows you to define template values
+    // For example
+    // also see https://jreleaser.org/guide/latest/reference/name-templates.html
+    /*
+    project.extraProperties {
+        someMajorVersion: 0  -> I can use as a template {{projectSomeMajorVersion}}
+    }
+     */
+
+    /*platform {
+        // Verify that windows and linux builds actually have the correct from name pattern.
+        // The to pattern is the mandated JReleaser platform description and MUST be exactly
+        // those strings.
+        replacements {
+            "macos_aarch64" to "osx-x86_64"
+            "macos_x86_64" to "osx-x86_64"
+            "linux_x86_64" to "linux-x86_64"
+            "win_amd64" to "windows-x86_64"
+        }
+    }*/
+
+    // This filters out everything that is not my current platform.
+    // ./gradlew xdk:jreleaserConf --select-current-platform
+    //gradlew xdk:jreleaserConf --select-platform=osx-x86_64
+    // We can also publish the github snapshot packages
+
+    // Assemble step is not necessary, because I already have a distribution (and platform specific versions for win, linux, mac with binary launchers added)
+
     distributions {
         // TODO - plugin?
-        create("xdk") {
+        val xdk by creating {
+        //create("xdk") {
             distributionType = DistributionType.BINARY
-            artifact {
-                path = platformZip
+            // This is the full all-platforms release config. It needs the pd independent archive as an artifact
+            // and all three specific ones.
+            // This means we know that we can only build any given platform, but we still have to list the artifacts for all platforms.
+            artifacts {
+                // In each of these, the platformZip path only exists for the current platform running ./gradlew jreleaser
+                // Github workflows will run for all three platforms, but that doesn't work locally.
+                artifact {
+                    // ANy artifactblock has a transform property for renaming as well. It's a string, not a path.
+                    // transform = "xdk/xdk-{{projectEffectiveVersion}}-osx-x86_64.zip"
+                    path = platformZip // really the mandated mac name, has to end with mac-aarch.zip something
+                    platform = "osx-x86_64"
+                }
+                /*
+                artifact {
+                    path = platformZip // really the mandated mac name, has to end with mac-aarch.zip something
+                    platform = "linux-x86_64"  // These platforms have to be exactly these. This is the only valid platform description
+                }
+                artifact {
+                    path = platformZip // really the mandated mac name, has to end with mac-aarch.zip something
+                    platform = "windows-x86_64"
+                }*/
             }
+            /*
+            jreleaser-native:
+            artifacts:
+            - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-osx-aarch64.zip'
+            platform: 'osx-aarch_64'
+            - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-osx-x86_64.zip'
+            platform: 'osx-x86_64'
+            - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-linux-x86_64.zip'
+            platform: 'linux-x86_64'
+            - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-windows-x86_64.zip'
+            platform: 'windows-x86_64'
+*/
         }
     }
 }
