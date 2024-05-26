@@ -5,7 +5,10 @@ import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.jreleaser.model.Active
 import org.jreleaser.model.Distribution.DistributionType
+import org.jreleaser.model.Http.Authorization
+import org.jreleaser.model.api.common.Activatable
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -309,6 +312,12 @@ jreleaser {
         logger.warn("$prefix JRELEASER DRY RUN IS TRU *** WILL NOT WRITE ANYTHING TO ANY DATA SOURCE (BUT MAY READ).")
     }
     gitRootSearch = true
+
+
+    /**
+     * Project configuration.
+     *    Sets up minimally required license information. Apache-2.0 is preferred for the remote validation sides, but may need to change.
+     */
     project {
         description = "XDK Platform"
         copyright = "(C) xtclang.org 2024"
@@ -318,8 +327,47 @@ jreleaser {
             homepage = "https://xtclang.org"
         }
         snapshot {
+            // XTC uses semver versioning. The Git tags that correspond to a version are the default for
+            // releases (i.e. "vx.y.z"), but snapshot tags are prefixed with snapshot/
             label = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
             fullChangelog = false
+        }
+    }
+
+    // The deploy section is used to publish package artifacts to the GitHub Maven Packages.
+    //   We have the "xdk" maven artifact, the "xtc-plugin" Gradle artifact, and its Maven version (Gradle adds some extra meta info in pseudo artifact)
+    deploy {
+        maven {
+            pomchecker {
+                version = libs.versions.kordamp
+            }
+
+            // TODO: Enable
+            // https://jreleaser.org/guide/latest/reference/deploy/maven/maven-central.html
+            mavenCentral {
+                enabled = false
+            }
+
+            // https://jreleaser.org/guide/latest/reference/deploy/maven/github.html
+            github {
+                val xdk by registering {
+                    // TODO: There has to be a way to publish snapshots.
+                    active = Active.ALWAYS
+                    url = "https://maven.pkg.github.com/xtclang/xvm"
+                    username = "xtclang-bot"
+                    password = System.getenv("GITHUB_TOKEN")
+                    authorization = Authorization.BEARER
+
+                    // TODO there needs to be a staging repository that takes a provider or we have to build lots of stuff during config
+                    stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
+                    // The defaults for the below config is already false/disabled, unless applyMavenCentralRules are in place.
+                    sign = false
+                    sourceJar = false
+                    javadocJar = false
+                    verifyPom = false
+                    applyMavenCentralRules = false
+                }
+            }
         }
     }
 }
