@@ -5,9 +5,7 @@ import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
-import org.jreleaser.model.Active
 import org.jreleaser.model.Distribution.DistributionType
-import org.jreleaser.model.Stereotype
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -21,7 +19,7 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
-    alias(libs.plugins.sonatype.publish)
+    //alias(libs.plugins.sonatype.publish)
     alias(libs.plugins.jreleaser)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
     signing
@@ -117,7 +115,7 @@ distributions {
         contentSpec(xdkDist.distributionName, xdkDist.distributionVersion)
     }
     val withLaunchers by registering {
-        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, xdkDist.osClassifier(), installLaunchers = true)
+        contentSpec(xdkDist.distributionName, xdkDist.distributionVersion, XdkDistribution.osClassifier(), installLaunchers = true)
     }
 }
 
@@ -290,14 +288,27 @@ val installWithLaunchersDist by tasks.existing(Sync::class) {
 val platformPlatformIndependentZip: Provider<RegularFile> = distZip.flatMap { it.archiveFile }
 
 val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archiveFile }
-System.err.println("platformZip : ${platformZip.get()}")
 
 // Build everything in github workflows instead
 
-// Upload everything to github.
+/**
+ * Functionality wanted:
+ *
+ *    1) Publish snapshot package artifacts to GitHub Maven Packages repo
+ *
+ * Use cases:
+ *    1) Supply releases and any other possible GitHub asset artifacts to the plugin, so we
+ *       can POC an xtc(...) configuration that does not require a GitHub token in the system
+ *       or config anywhere, just for read only.
+ *
+ *
+ */
 jreleaser {
-    gitRootSearch = true
     dryrun = true
+    if (dryrun.get()) {
+        logger.warn("$prefix JRELEASER DRY RUN IS TRU *** WILL NOT WRITE ANYTHING TO ANY DATA SOURCE (BUT MAY READ).")
+    }
+    gitRootSearch = true
     project {
         description = "XDK Platform"
         copyright = "(C) xtclang.org 2024"
@@ -311,7 +322,8 @@ jreleaser {
             fullChangelog = false
         }
     }
-
+}
+/*
     // This is where github publications on commits to master go (as maven artifact) https://maven.pkg.github.com/xtclang/xvm
     // Any such thing like mavenCentral too needs deployments
     deploy {
@@ -323,23 +335,19 @@ jreleaser {
                 // Depending on the maven deployer, use kordamp pomchecker, otherwise take them as they are
                 // for the github maven package repository.
                 val xdk by creating {
-                    this.
                     enabled = true // the xdk deployer regardless of snapshot or not should always be enabled.
                     // TODO: Andres - want a special state for snapshots explicitly?
                     url = "https://maven.pkg.github.com/xtclang/xvm"
                     username = "xtclang-bot"
                     password = "token"//xdkBuildLogic.getXtclangGitHubMavenPackageRepositoryToken()
-                    stagingRepository(compositeRootBuildDirectory.dir("staging-deploy").get().asFile.absolutePath)
+                    // TODO: This must be lazy
+                    stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
                 }
             }
         }
     }
 
-    // Deploy section to publish maven packages to github packages (both snapthos and releases I guess)
-
-    // Release
-    // for a snapshot, we want to publish
-
+    // E.g. v0.4.5 of the XDK, placed on GitHub as a Release, possibly.
     release {
         github {
             skipTag = false // This assumes I do all tagging manually and that the current commit during a jreleaser relase execution
@@ -420,7 +428,7 @@ jreleaser {
     skipSigning: true
     skipSbom: true
     - path: plugins/jreleaser-ant-tasks/build/distributions/jreleaser-ant-tasks-{{projectVersion}}.zip
-    transform: 'jreleaser-ant-tasks/jreleaser-ant-tasks-{{projectEffectiveVersion}}.zip'*/
+    transform: 'jreleaser-ant-tasks/jreleaser-ant-tasks-{{projectEffectiveVersion}}.zip'
 
     files {
         artifact {
@@ -458,6 +466,7 @@ jreleaser {
     // ./gradlew xdk:jreleaserConf --select-current-platform
     //gradlew xdk:jreleaserConf --select-platform=osx-x86_64
     // We can also publish the github snapshot packages
+    //val org.gradle.api.Project.localStagingRepoDirectory get() = compositeRootBuildDirectory.dir("repo-staging")
 
     // Assemble step is not necessary, because I already have a distribution (and platform specific versions for win, linux, mac with binary launchers added)
 
@@ -499,7 +508,7 @@ jreleaser {
             platform: 'linux-x86_64'
             - path: '{{nativeImageDir}}/{{distributionName}}-{{projectEffectiveVersion}}-windows-x86_64.zip'
             platform: 'windows-x86_64'
-*/
         }
     }
 }
+*/

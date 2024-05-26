@@ -2,6 +2,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.file.RegularFile
+import org.gradle.api.logging.Logger
 import org.gradle.api.provider.Provider
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
@@ -97,7 +98,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
 fun PublishingExtension.mavenLocalStagingDeploy(project: Project) = project.run {
     repositories {
         maven {
-            url = uri(layout.buildDirectory.dir("staging-deploy"))
+            url = uri(localStagingRepoDirectory.map { it.asFile.absolutePath })
         }
     }
 }
@@ -143,13 +144,28 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
 
         private const val CI = "CI"
 
+        val currentOs = OperatingSystem.current()
         val isCiEnabled = System.getenv(CI) == "true"
-        val currentOs: OperatingSystem = OperatingSystem.current()
         val distributionTasks = listOf("distTar", "distZip", "withLaunchersDistTar", "withLaunchersDistZip")
         val binaryLauncherNames = listOf("xcc", "xec")
 
         fun isDistributionArchiveTask(task: Task): Boolean {
             return task.group == DISTRIBUTION_TASK_GROUP && task.name in distributionTasks
+        }
+
+        fun osClassifier(): String {
+            val arch = when (val systemArch = System.getProperty("os.arch")) {
+                "amd64" -> "x86_64"
+                "aarch64" -> if (currentOs.isMacOsX) "x86_64" else systemArch // We have universal binary support, so treat aarch64 as x86_64 to lower JReleaser complexity.
+                else -> systemArch
+            }
+
+            return when {
+                currentOs.isMacOsX -> "osx-$arch"
+                currentOs.isLinux -> "linux-$arch"
+                currentOs.isWindows -> "windows-$arch"
+                else -> throw UnsupportedOperationException("Cannot resolve distribution for current OS: '$currentOs'")
+            }
         }
     }
 
@@ -197,22 +213,10 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
         }
     }
 
+    /*
     fun resolveLauncherFile(dir: Provider<Directory>): RegularFile {
         return dir.get().file("bin/${launcherFileName()}")
-    }
-
-    /*
-     * Helper for jreleaser etc.
-     */
-    fun osClassifier(): String {
-        val arch = System.getProperty("os.arch")
-        return when {
-            currentOs.isMacOsX -> "osx-x86_64" //"macos_$arch"
-            currentOs.isLinux -> "linux_$arch"
-            currentOs.isWindows -> "windows_$arch"
-            else -> throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
-        }
-    }
+    }*/
 
     override fun toString(): String {
         return "$distributionName-$distributionVersion"

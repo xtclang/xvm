@@ -1,20 +1,14 @@
-  #
+#
 # GitHub runner workflow for building, verifying and testing the XVM repo.
 #
-# TODO: Add periodic workflows (that can be manually triggered /w workflow_disspatch and also run through a cron file)
-#   1) Cleans out old workflows that have finished but not succeeded.
-#   2) Cleans Gradle and other build caches, maybe one every 24 h
-#   3) Cleans ...
-#
-# Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
-# gh auth switch --hostname enterprise.internal --user monalisa  (switch auth)
+
 name: XVM Verification and Package Updates
 
 on:
   push:
   workflow_dispatch:
     inputs:
-      extra_gradle_options:
+      gradle_options_extra:
         description: 'Extra Gradle options to pass to the build'
         required: false
       skip_manual_tests:
@@ -39,7 +33,8 @@ env:
   ORG_XTCLANG_JAVATOOLS_SANITY_CHECK_JAR: true
 
   # Secrets (TODO: Verify plugin portal and maven central/sonatype credentials)
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: |
+    ${{ secrets.GITHUB_TOKEN }}
   GRADLE_PUBLISH_KEY: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_KEY }}
   GRADLE_PUBLISH_SECRET: ${{ secrets.ORG_XTCLANG_GRADLE_PLUGIN_PORTAL_PUBLISH_SECRET }}
   GPG_SIGNING_KEY: ${{ secrets.ORG_XTCLANG_GPG_SIGNING_KEY }}
@@ -48,7 +43,14 @@ env:
   MAVEN_CENTRAL_PASSWORD: ${{ secrets.ORG_XTCLANG_MAVEN_CENTRAL_PASSWORD }}
 
   current_run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  gradle_options: "-Dorg.gradle.jvmargs=-Xmx8G -Dorg.gradle.caching.debug=false -Dorg.gradle.vfs.verbose=false --stacktrace --warning-mode=all --console=plain ${{ inputs.extra_gradle_options }}"
+  gradle_options: -> 
+    -Dorg.gradle.jvmargs=-Xmx8G
+    -Dorg.gradle.caching.debug=false 
+    -Dorg.gradle.vfs.verbose=false 
+    --stacktrace 
+    --warning-mode=all 
+    --console=plain 
+    ${{ inputs.gradle_options_extra }}
 
   # Optional flags to skip manual tests, or at least some of them.
   skip_manual_tests: ${{ github.event.inputs.skip_manual_tests || 'false' }}
