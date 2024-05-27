@@ -2,6 +2,7 @@ module TestCrypto {
     @Inject Console console;
 
     package crypto import crypto.xtclang.org;
+    package web import web.xtclang.org;
 
     import crypto.*;
 
@@ -59,6 +60,19 @@ module TestCrypto {
 
         PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.bytes(8));
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
+
+        if (False) {
+            Byte[] bytes = manager.extractKey(store, password, pairName);
+            console.print("-----BEGIN PRIVATE KEY-----");
+            String sKey = web.codecs.Base64Format.Instance.encode(bytes);
+            Int    size = sKey.size;
+            for (Int start = 0; start < size; ) {
+                Int end = size.minOf(start+64);
+                console.print(sKey[start ..< end]);
+                start = end;
+            }
+            console.print("-----END PRIVATE KEY-----");
+        }
 
         assert CryptoPassword pwd := keystore.getPassword(pwdName);
         console.print($"{pwd}; type={&pwd.actualType}");

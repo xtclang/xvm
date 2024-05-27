@@ -32,6 +32,11 @@ service RTCertificateManager
     }
 
     @Override
+    Byte[] extractKey(File keystore, Password pwd, String name) {
+        return extractKeyImpl(getPath(keystore), pwd, name);
+    }
+
+    @Override
     void changeStorePassword(File keystore, Password pwd, Password newPassword) {
         changeStorePasswordImpl(getPath(keystore), pwd, newPassword);
     }
@@ -56,6 +61,9 @@ service RTCertificateManager
         {TODO("Native");}
 
     private void createPasswordImpl(String path, Password pwd, String name, String pwdValue)
+        {TODO("Native");}
+
+    private Byte[] extractKeyImpl(String path, Password pwd, String name)
         {TODO("Native");}
 
     private void changeStorePasswordImpl(String path, Password pwd, Password newPwd)
