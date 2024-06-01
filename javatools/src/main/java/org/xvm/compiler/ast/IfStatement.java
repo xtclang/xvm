@@ -249,6 +249,7 @@ public class IfStatement
                     // "if (false) {stmtThen}" is optimized out altogether.
                     if (stmtElse == null)
                         {
+                        ctx.getHolder().setAst(this, new MultiExprAST(BinaryAST.NO_EXPRS));
                         return fReachable;
                         }
 
