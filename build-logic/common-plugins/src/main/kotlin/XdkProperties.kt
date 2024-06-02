@@ -1,4 +1,5 @@
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 import java.io.File
 import java.io.FileInputStream
 import java.util.Objects.requireNonNull
@@ -215,3 +216,9 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
 fun Project.getXtclangGitHubMavenPackageRepositoryToken(): String {
     return getXdkProperty("org.xtclang.repo.github.token", System.getenv("GITHUB_TOKEN") ?: "")
 }
+
+/*
+fun Project.getXtclangGitHubMavenPackageRepositoryToken(): Provider<String> {
+    return providers.provider { getXtclangGitHubMavenPackageRepositoryToken() }
+}
+*/

@@ -12,6 +12,7 @@ import org.gradle.kotlin.dsl.withType
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import java.io.File
+import java.net.URI
 
 /**
  * Configure all maven publications with some mandatory and helpful information.
@@ -96,10 +97,12 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
 // Configure a local repo under build for maven artifacts. This is required to be the
 // staging-deploy repo for a mavenCentral release.
 fun PublishingExtension.mavenLocalStagingDeploy(project: Project) = project.run {
+    val localStagingRepoPath = localStagingRepoDirectory.map { it.asFile.absolutePath }
     repositories {
         maven {
             name = "LocalStaging"
-            url = uri(localStagingRepoDirectory.map { it.asFile.absolutePath })
+            url = uri(localStagingRepoPath) //localStagingRepoDirectory.map { it.asFile.absolutePath })
+            logger.info("$prefix Created locals stating repository for project '${project.name}': ${localStagingRepoPath}}.")
         }
     }
 }
@@ -111,22 +114,21 @@ fun PublishingExtension.mavenLocalStagingDeploy(project: Project) = project.run 
  * cannot resolve credentials from GITHUB_TOKEN or the xtclang properties from any
  * property file.
  */
-fun PublishingExtension.mavenGitHubPackages(project: Project): Boolean = project.run {
-    val gitHubToken = project.getXtclangGitHubMavenPackageRepositoryToken()
+fun PublishingExtension.mavenGitHubPackages(gitHubToken: String): Boolean { //}: Project): Boolean = project.run {
     if (gitHubToken.isEmpty()) {
-        logger.warn("$prefix WARNING: No GitHub token found, either in config or environment. publishRemote won't work.")
+        System.err.println("No github token is present.")
         return false
     }
 
     repositories {
         maven {
             name = "GitHub"
-            url = uri("https://maven.pkg.github.com/xtclang/xvm")
+            url = URI("https://maven.pkg.github.com/xtclang/xvm")
             credentials {
                 username = "xtclang-bot"
                 password = gitHubToken
             }
-            logger.info("$prefix Configured '$name' package repository for project '${project.name}'.")
+            //logger.info("$prefix Configured '$name' package repository for project '${project.name}'.")
         }
     }
 
@@ -213,11 +215,6 @@ class XdkDistribution(project: Project): XdkProjectBuildLogic(project) {
             throw UnsupportedOperationException("Cannot build distribution for currentOs: $currentOs")
         }
     }
-
-    /*
-    fun resolveLauncherFile(dir: Provider<Directory>): RegularFile {
-        return dir.get().file("bin/${launcherFileName()}")
-    }*/
 
     override fun toString(): String {
         return "$distributionName-$distributionVersion"

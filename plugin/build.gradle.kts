@@ -5,6 +5,21 @@ plugins {
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.gradle.portal.publish)
     alias(libs.plugins.tasktree)
+    // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication.
+    //  We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or
+    //  find a better way to add the default maven publication.
+   //`maven-publish`
+}
+
+val githubToken = getXtclangGitHubMavenPackageRepositoryToken()
+
+publishing {
+    repositories {
+        //mavenLocal()
+        mavenGitHubPackages(githubToken)
+        mavenLocalStagingDeploy(project)
+    }
+    configureMavenPublications(project)
 }
 
 private val semanticVersion: SemanticVersion by extra

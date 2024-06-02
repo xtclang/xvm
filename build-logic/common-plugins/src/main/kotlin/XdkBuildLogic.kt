@@ -170,7 +170,7 @@ fun Task.considerNeverUpToDate() {
  * Extension method to flag a task as always up to date. Declaring no outputs will
  * cause a task to rerun, even an extended task.
  */
-fun Task.considerAlwaqysUpToDate() {
+fun Task.considerAlwaysUpToDate() {
     outputs.upToDateWhen { true }
 }
 

@@ -2,24 +2,10 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 
 plugins {
     id("org.xtclang.build.xdk.versioning")
-    // TODO: Adding the maven publish plugin here, will always bring with it the PluginMaven publication.
-    //  We don't always want to use that e.g. for the plugin build. Either reuse the publication there, or
-    //  find a better way to add the default maven publication.
-    `maven-publish`
-    //id("io.github.gradle-nexus.publish-plugin") version "1.0.0"
 }
 
 private val semanticVersion: SemanticVersion by extra
 private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
-
-publishing {
-    repositories {
-        mavenLocal()
-        mavenGitHubPackages(project)
-        mavenLocalStagingDeploy(project)
-    }
-    configureMavenPublications(project)
-}
 
 tasks.withType<PublishToMavenRepository>().configureEach {
     onlyIf {
@@ -30,17 +16,19 @@ tasks.withType<PublishToMavenRepository>().configureEach {
     }
 }
 
-val publishAllPublicationsToMavenLocalRepository by tasks.existing
-
 val publishLocal by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to local repositories (e.g. GitHub and mavenCentral)."
-    dependsOn(publishAllPublicationsToMavenLocalRepository)
+    dependsOn("publishAllPublicationsToMavenLocalRepository")
+    dependsOn("publishXtcPluginMarkerMavenPublicationToLocalStagingRepository")
 }
 
 val publishRemote by tasks.registering {
     group = PUBLISH_TASK_GROUP
     description = "Task that publishes project publications to remote repositories (e.g. mavenLocal)."
+
+    // The staging repository is part of the build output and jreleaser uses it for Naven deployments.
+    dependsOn("publishXtcPluginMarkerMavenPublicationToLocalStagingRepository")
 
     if (gitHubToken.isNotEmpty()) {
         dependsOn("publishAllPublicationsToGitHubRepository")
@@ -65,19 +53,29 @@ val listTags by tasks.registering {
 }
 
 val deleteLocalPublications by tasks.registering {
+    group = PUBLISH_TASK_GROUP
+    description = "Delete publications on local disk for ${project.name} (e.g. mavenLocal() and localStagingRepo)."
+
     doLast {
-        val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
-        if (!repoDir.exists()) {
-            logger.warn("$prefix No local publications found in '${repoDir.absolutePath}'.")
+        if (localStagingRepoDirectory.isPresent) {
+            logger.lifecycle("$prefix Deleting local staging repository at: '${localStagingRepoDirectory.get().asFile.absolutePath}'.")
+            delete(localStagingRepoDirectory)
+        } else {
+            logger.lifecycle("$prefix No local publications found in ${localStagingRepoDirectory}")
+        }
+
+        val mavenLocalRepoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")
+        if (!mavenLocalRepoDir.exists()) {
+            logger.lifecycle("$prefix No local publications found in '${mavenLocalRepoDir.absolutePath}'.")
             return@doLast
         }
 
-        val xtclangDir = repoDir.parentFile
+        val xtclangDir = mavenLocalRepoDir.parentFile
         require(xtclangDir.exists() && xtclangDir.isDirectory) {
-            "Illegal state: parent directory of '$repoDir' does not exist."
+            "Illegal state: parent directory of '$mavenLocalRepoDir' does not exist."
         }
-        logger.lifecycle("$prefix Deleting all local publications in '${repoDir.absolutePath}'.")
-        delete(repoDir)
+        logger.lifecycle("$prefix Deleting all local publications in '${mavenLocalRepoDir.absolutePath}'.")
+        delete(mavenLocalRepoDir)
         val xtclangFiles = xtclangDir.listFiles()
         if (xtclangFiles == null || xtclangFiles.isEmpty()) {
             logger.lifecycle("$prefix Deleting empty parent directory '${xtclangDir.absolutePath}'.")
@@ -88,7 +86,8 @@ val deleteLocalPublications by tasks.registering {
 
 val listLocalPublications by tasks.registering {
     group = PUBLISH_TASK_GROUP
-    description = "Task that lists local Maven publications for this project from the mavenLocal() repository."
+    description = "Show existing publications to local disk for ${project.name} (e.g mavenLocal() and localStagingRepo)."
+
     doLast {
         logger.lifecycle("$prefix '$name' Listing local publications (and their artifacts) for project '${project.group}:${project.name}':")
         val repoDir = File(System.getProperty("user.home"), ".m2/repository/org/xtclang/${project.name}")

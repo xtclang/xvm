@@ -5,10 +5,9 @@ import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import org.jreleaser.gradle.plugin.tasks.AbstractJReleaserTask
 import org.jreleaser.model.Active
-import org.jreleaser.model.Distribution.DistributionType
 import org.jreleaser.model.Http.Authorization
-import org.jreleaser.model.api.common.Activatable
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -22,10 +21,21 @@ plugins {
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
     alias(libs.plugins.versions)
-    //alias(libs.plugins.sonatype.publish)
     alias(libs.plugins.jreleaser)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
     signing
+    `maven-publish`
+}
+
+val githubToken = getXtclangGitHubMavenPackageRepositoryToken()
+
+publishing {
+    repositories {
+        mavenLocal()
+        mavenGitHubPackages(githubToken)
+        mavenLocalStagingDeploy(project)
+    }
+    configureMavenPublications(project)
 }
 
 val xtcLauncherBinaries by configurations.registering {
@@ -276,6 +286,7 @@ val withLaunchersDistZip by tasks.existing(Zip::class) {
 //val platformZip: Provider<RegularFile> = withLaunchersDistZip.map { it.archiveFile }
 
 val installWithLaunchersDist by tasks.existing(Sync::class) {
+    dependsOn(installDist) // ensure we also always have a platform independent distribution/install
     doLast {
         logger.lifecycle("$prefix Installing distribution with launchers: ${destinationDir.absolutePath}")
     }
@@ -308,6 +319,18 @@ val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archi
  *
  *
  */
+
+tasks.withType<AbstractJReleaserTask>().configureEach {
+    dependsOn(installDist)
+    dependsOn(installWithLaunchersDist)
+    dependsOn(tasks.named("publishXdkArchivePublicationToLocalStagingRepository"))
+    logger.info("$prefix JReleaser task'$name' configured to depend on installDist and installWithLaunchersDist.")
+}
+
+val deploy by tasks.registering {
+    dependsOn(tasks.named("jreleaserConfig"))
+    dependsOn(tasks.named("jreleaserDeploy"))
+}
 
 jreleaser {
     dryrun = true
