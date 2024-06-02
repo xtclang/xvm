@@ -10,32 +10,33 @@ pluginManagement {
 }
 
 plugins {
-    `gradle-enterprise`
+    id("com.gradle.develocity").version("3.17.4")
 }
 
-gradleEnterprise {
+develocity {
+    projectId = "xvm"
     buildScan {
         val isCi = System.getenv("CI") != null
-        val isGitHubAction = System.getenv("GITHUB_ACTIONS") == "true"
-        publishAlwaysIf(isGitHubAction)
-        publishOnFailure()
-        termsOfServiceUrl = "https://gradle.com/terms-of-service"
-        termsOfServiceAgree = "yes"
-        isUploadInBackground = isCi
+        publishing.onlyIf { isCi }
+        termsOfUseUrl = "https://gradle.com/help/legal-terms-of-use"
+        termsOfUseAgree = "yes"
+        uploadInBackground = isCi
         tag(if (isCi) "CI" else "LOCAL")
         capture {
-            isTaskInputFiles = true
-            isBuildLogging = true
-            isTestLogging = true
+            fileFingerprints = true
         }
     }
 }
 
-includeBuild("javatools")
-includeBuild("javatools_utils")
-includeBuild("javatools_unicode")
-includeBuild("plugin")
-includeBuild("xdk")
+val xvmBuilds = listOf(
+    "javatools",
+    "javatools_utils",
+    "javatools_unicode",
+    "plugin",
+    "xdk"
+)
+
+xvmBuilds.forEach(::includeBuild)
 
 /**
  * Checks if the property "includeBuildManualTests" is present, which can be set in the gradle.properties
