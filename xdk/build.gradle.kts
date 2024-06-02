@@ -294,6 +294,8 @@ val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archi
 
 // Build everything in github workflows instead
 
+
+
 /**
  * Functionality wanted:
  *
@@ -306,13 +308,10 @@ val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archi
  *
  *
  */
+
 jreleaser {
     dryrun = true
-    if (dryrun.get()) {
-        logger.warn("$prefix JRELEASER DRY RUN IS TRU *** WILL NOT WRITE ANYTHING TO ANY DATA SOURCE (BUT MAY READ).")
-    }
     gitRootSearch = true
-
 
     /**
      * Project configuration.
@@ -338,28 +337,59 @@ jreleaser {
     //   We have the "xdk" maven artifact, the "xtc-plugin" Gradle artifact, and its Maven version (Gradle adds some extra meta info in pseudo artifact)
     deploy {
         maven {
-            pomchecker {
-                version = libs.versions.kordamp
-            }
-
-            // TODO: Enable
-            // https://jreleaser.org/guide/latest/reference/deploy/maven/maven-central.html
-            mavenCentral {
-                enabled = false
-            }
-
-            // https://jreleaser.org/guide/latest/reference/deploy/maven/github.html
             github {
                 val xdk by registering {
                     // TODO: There has to be a way to publish snapshots.
                     active = Active.ALWAYS
+                    //prerelease = true
+                    //overwrite = false
+                    url = "https://maven.pkg.github.com/xtclang/xvm"
+                    username = "xtclang-bot"
+                    password = System.getenv("GITHUB_TOKEN")
+                    authorization = Authorization.BEARER
+
+                    localStagingRepoDirectory
+                    // TODO there needs to be a staging repository that takes a provider or we have to build lots of stuff during config
+                    //stagingRepository("localStagingRepoDirectory.get().asFile.absolutePath)
+                    // The defaults for the below config is already false/disabled, unless applyMavenCentralRules are in place.
+                    //stagingRepositories =  = listOf("localStagingRepoDirectory.get().asFile.absolutePath")
+                    sign = false
+                    sourceJar = false
+                    javadocJar = false
+                    verifyPom = false
+                    applyMavenCentralRules = false
+                }
+            }
+            //pomchecker {
+            //    enabled = false
+            //    version = libs.versions.kordamp
+            //}
+        }
+    }
+}
+
+/*
+
+            // TODO: Enable
+            // https://jreleaser.org/guide/latest/reference/deploy/maven/maven-central.html
+            //mavenCentral {
+            //    enabled = false
+            //}
+
+            // https://jreleaser.org/guide/latest/reference/deploy/maven/github.html
+/*            github {
+                val xdk by registering {
+                    // TODO: There has to be a way to publish snapshots.
+                    active = Active.ALWAYS
+                    //prerelease = true
+                    //overwrite = false
                     url = "https://maven.pkg.github.com/xtclang/xvm"
                     username = "xtclang-bot"
                     password = System.getenv("GITHUB_TOKEN")
                     authorization = Authorization.BEARER
 
                     // TODO there needs to be a staging repository that takes a provider or we have to build lots of stuff during config
-                    stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
+                    //stagingRepository("localStagingRepoDirectory.get().asFile.absolutePath)
                     // The defaults for the below config is already false/disabled, unless applyMavenCentralRules are in place.
                     sign = false
                     sourceJar = false
@@ -369,8 +399,8 @@ jreleaser {
                 }
             }
         }
-    }
-}
+    }*/
+ */
 /*
     // This is where github publications on commits to master go (as maven artifact) https://maven.pkg.github.com/xtclang/xvm
     // Any such thing like mavenCentral too needs deployments

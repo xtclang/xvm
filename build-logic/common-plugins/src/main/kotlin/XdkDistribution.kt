@@ -98,6 +98,7 @@ fun SigningExtension.mavenCentralSigning(): List<Sign> = project.run {
 fun PublishingExtension.mavenLocalStagingDeploy(project: Project) = project.run {
     repositories {
         maven {
+            name = "LocalStaging"
             url = uri(localStagingRepoDirectory.map { it.asFile.absolutePath })
         }
     }

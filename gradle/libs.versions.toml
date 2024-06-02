@@ -40,10 +40,10 @@ download = { id = "de.undercouch.download", version.ref = "download" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
-sonatype-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "sonatype-publish" }
+#sonatype-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "sonatype-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 jreleaser = { id = "org.jreleaser", version.ref = "jreleaser" }
-pomchecker = { id = "org.kordamp.gradle.pomchecker", version.ref = "kordamp" }
+license-report = { id = "com.github.jk1.dependency-license-report", version = "2.8" }
 
 [libraries]
 xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
