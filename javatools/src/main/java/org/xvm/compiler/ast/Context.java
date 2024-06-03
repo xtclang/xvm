@@ -1584,9 +1584,10 @@ public class Context
     protected void narrowProperty(String sName, PropertyConstant idProp,
                                   Branch branch, Argument argNarrow)
         {
-        assert argNarrow.getType().isA(idProp.getType());
-
-        replaceArgument(sName, branch, argNarrow);
+        if (argNarrow.getType().isA(idProp.getType()))
+            {
+            replaceArgument(sName, branch, argNarrow);
+            }
         }
 
     /**

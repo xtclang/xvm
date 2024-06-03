@@ -1005,21 +1005,21 @@ public abstract class TypeConstant
             ClassStructure clz2   = (ClassStructure) t2.getSingleUnderlyingClass(true).getComponent();
             TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
             boolean        fClone = false;
-            for (int i = 0, c = atype1.length; i < c; i++)
+            for (int i = 0, c = atype2.length; i < c; i++)
                 {
                 TypeConstant te1 = atype1[i];
                 TypeConstant te2 = atype2[i];
-                if (!te1.isA(te2))
+                if (!te1.equals(te2))
                     {
                     if (!fClone)
                         {
-                        atype1 = atype1.clone();
+                        atype2 = atype2.clone();
                         fClone = true;
                         }
-                    atype1[i] = te1.combine(pool, te2);
+                    atype2[i] = te1.combine(pool, te2);
                     }
                 }
-            return pool.ensureParameterizedTypeConstant(t2, atype1);
+            return pool.ensureParameterizedTypeConstant(t2, atype2);
             }
         return null;
         }
