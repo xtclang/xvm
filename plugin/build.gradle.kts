@@ -15,7 +15,7 @@ val githubToken = getXtclangGitHubMavenPackageRepositoryToken()
 
 publishing {
     repositories {
-        //mavenLocal()
+        mavenLocal()
         mavenGitHubPackages(githubToken)
         mavenLocalStagingDeploy(project)
     }

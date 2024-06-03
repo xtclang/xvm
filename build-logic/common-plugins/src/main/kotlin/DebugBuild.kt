@@ -170,12 +170,19 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
     }
 
     val projectName = project.name
+
+    val publishTasks = project.tasks.filter { it.name.startsWith("publish") }
+    logger.log(level, "$prefix Discovered ${publishTasks.size} publish task(s):")
+    publishTasks.forEach {
+        logger.log(level, "$prefix     Publish task: '${it.name}'")
+    }
+
     val publications = publicationContainer.publications
     if (publications.isEmpty()) {
         logger.log(level, "$prefix Project has no declared publications.")
     }
     val count = publications.size
-    logger.log(level, "$prefix Project '$projectName' has $count publications.")
+    logger.log(level, "$prefix Project '$projectName' has $count publication(s).")
     publications.forEachIndexed { i, it ->
         logger.log(level, "$prefix     (${i + 1} / $count) Publication: '$projectName:${it.name}' (type: ${it::class}")
         if (it is MavenPublication) {
@@ -183,6 +190,8 @@ fun Project.printPublications(level: LogLevel = LIFECYCLE) {
             it.artifacts.forEachIndexed { j, artifact ->
                 logger.log(level, "$prefix         (${j + 1} / ${it.artifacts.size}) Artifact: '$artifact'")
             }
+        } else {
+            logger.log(level, "$prefix     Publication '${projectName}.${it.name}' (non-Maven publication)")
         }
     }
 }

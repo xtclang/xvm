@@ -359,19 +359,24 @@ jreleaser {
     // The deploy section is used to publish package artifacts to the GitHub Maven Packages.
     //   We have the "xdk" maven artifact, the "xtc-plugin" Gradle artifact, and its Maven version (Gradle adds some extra meta info in pseudo artifact)
     deploy {
+        // TODO Use early-access as snapshot tag.
+        active = Active.ALWAYS
         maven {
+            active = Active.ALWAYS
             github {
+                active = Active.ALWAYS
                 val xdk by registering {
                     // TODO: There has to be a way to publish snapshots.
                     active = Active.ALWAYS
+                    snapshotSupported = true
                     //prerelease = true
                     //overwrite = false
                     url = "https://maven.pkg.github.com/xtclang/xvm"
                     username = "xtclang-bot"
                     password = System.getenv("GITHUB_TOKEN")
                     authorization = Authorization.BEARER
-
-                    localStagingRepoDirectory
+                    stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
+                    //localStagingRepoDirectory
                     // TODO there needs to be a staging repository that takes a provider or we have to build lots of stuff during config
                     //stagingRepository("localStagingRepoDirectory.get().asFile.absolutePath)
                     // The defaults for the below config is already false/disabled, unless applyMavenCentralRules are in place.

@@ -2,6 +2,11 @@ pluginManagement {
     includeBuild("../build-logic/settings-plugins")
     includeBuild("../build-logic/common-plugins")
     includeBuild("../plugin")
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 
 includeBuild("../manualTests")
