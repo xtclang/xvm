@@ -3,12 +3,16 @@ package org.xvm.runtime.template._native.crypto;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import java.nio.file.Path;
+
+import java.security.Key;
+import java.security.KeyStore;
 
 import java.util.concurrent.TimeUnit;
 
@@ -17,7 +21,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -29,6 +32,8 @@ import org.xvm.runtime.Runtime;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
+
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -59,6 +64,7 @@ public class xRTCertificateManager
         markNativeMethod("revokeCertificateImpl"  , null, VOID);
         markNativeMethod("createSymmetricKeyImpl" , null, VOID);
         markNativeMethod("createPasswordImpl"     , null, VOID);
+        markNativeMethod("extractKeyImpl"         , null, BYTES);
         markNativeMethod("changeStorePasswordImpl", null, VOID);
 
         invalidateTypeInfo();
@@ -113,6 +119,9 @@ public class xRTCertificateManager
             case "createPasswordImpl":
                 return invokeCreatePassword(frame, ahArg);
 
+            case "extractKeyImpl":
+                return invokeExtractKey(frame, ahArg, iReturn);
+
             case "changeStorePasswordImpl":
                 return invokeChangeStorePassword(frame, ahArg);
             }
@@ -132,10 +141,10 @@ public class xRTCertificateManager
         StringHandle hDName    = (StringHandle) ahArg[3];
         StringHandle hProvider = (StringHandle) hMgr.getField(0); // "provider" property
 
-        runCommand(null, null,
+        runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
 
@@ -144,7 +153,7 @@ public class xRTCertificateManager
             {
             case "self":
                 // create self-signed certificate
-                return runCommand(frame, null,
+                return runNoInputCommand(frame,
                         "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "365",
                         "-alias", hName.getStringValue(),
                         "-dname", sDName,
@@ -173,9 +182,9 @@ public class xRTCertificateManager
                         "--staging",
                         "--webroot",
                         "--webroot-path", sCertsPath,
-                        "--config-dir",   sCertsPath + "/config",
-                        "--work-dir",     sCertsPath + "/work",
-                        "--logs-dir",     sCertsPath + "/logs",
+                        "--config-dir",   sCertsPath + File.separator + "config",
+                        "--work-dir",     sCertsPath + File.separator + "work",
+                        "--logs-dir",     sCertsPath + File.separator + "logs",
                         "--register-unsafely-without-email",
                         "-d", sDomain);
                 if (iResult == Op.R_NEXT)
@@ -209,18 +218,18 @@ public class xRTCertificateManager
             runCommand(frame, "yes\nyes",
                         "certbot", "remove",
                         "--staging",
-                        "--config-dir", sCertsPath + "/config",
-                        "--work-dir",   sCertsPath + "/work",
-                        "--logs-dir",   sCertsPath + "/logs",
+                        "--config-dir", sCertsPath + File.separator + "config",
+                        "--work-dir",   sCertsPath + File.separator + "work",
+                        "--logs-dir",   sCertsPath + File.separator + "logs",
                         "--cert-name",  hName.getStringValue(),
                         "--reason",     "unspecified"
                       );
             }
 
-        runCommand(null, null,
+        runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         return Op.R_NEXT;
@@ -242,17 +251,17 @@ public class xRTCertificateManager
         StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hName = (StringHandle) ahArg[2];
 
-        runCommand(null, null,
+        runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
-        return runCommand(frame, null,
+        return runNoInputCommand(frame,
                 "keytool", "-genseckey", "-keyalg", "AES", "-keysize", "256",
-                "-alias", hName.getStringValue(),
+                "-alias",     hName.getStringValue(),
                 "-storetype", "PKCS12",
-                "-keystore", hPath.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         }
@@ -268,10 +277,10 @@ public class xRTCertificateManager
         StringHandle hName     = (StringHandle) ahArg[2];
         StringHandle hPwdValue = (StringHandle) ahArg[3];
 
-        runCommand(null, null,
+        runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         return runCommand(frame, hPwdValue.getStringValue(),
@@ -285,6 +294,42 @@ public class xRTCertificateManager
 
     /**
      * Native implementation of
+     *     "Byte[] extractKeyImpl(String path, Password pwd, String name)"
+     */
+    private int invokeExtractKey(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        {
+        StringHandle hPath = (StringHandle) ahArg[0];
+        StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName = (StringHandle) ahArg[2];
+
+        try
+            {
+            File     fileStore = new File(hPath.getStringValue());
+            KeyStore keyStore  = KeyStore.getInstance("PKCS12");
+            char[]   achPwd    = hPwd.getValue();
+            String   sKey      = hName.getStringValue();
+
+            keyStore.load(new FileInputStream(fileStore), achPwd);
+
+            Key key = keyStore.getKey(sKey, achPwd);
+            if (key == null)
+                {
+                return frame.raiseException(
+                        xException.ioException(frame, "Invalid or inaccessible key"));
+                }
+            byte[] abPrivate = key.getEncoded();
+            return frame.assignValue(iReturn,
+                    xArray.makeByteArrayHandle(abPrivate, xArray.Mutability.Constant));
+            }
+        catch (Exception e)
+            {
+            return frame.raiseException(xException.ioException(frame,
+                    Runtime.logRuntimeException("Inaccessible key: " + e.getMessage())));
+            }
+        }
+
+    /**
+     * Native implementation of
      *     "invokeChangeStorePasswordImpl(String path, Password pwd, String newPwd)"
      */
     private int invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg)
@@ -293,16 +338,30 @@ public class xRTCertificateManager
         StringHandle hPwd    = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hPwdNew = (StringHandle) ahArg[2];
 
-        return runCommand(frame, null,
+        return runNoInputCommand(frame,
                 "keytool", "-storepasswd",
-                " -keystore " + hPath.getStringValue(),
-                " -storepass " + hPwd.getStringValue() +
-                " -new " + hPwdNew.getStringValue()
+                "-keystore", hPath.getStringValue(),
+                "-storepass", hPwd.getStringValue(),
+                "-new ", hPwdNew.getStringValue()
             );
+        }
+
+    private int runSilentCommand(String... cmd)
+        {
+        return runCommand(null, null, cmd);
+        }
+
+    private int runNoInputCommand(Frame frame, String... cmd)
+        {
+        return runCommand(frame, null, cmd);
         }
 
     private int runCommand(Frame frame, String sInput, String... cmd)
         {
+        // *** IMPORTANT SECURITY NOTE***:
+        //  ProcessBuilder does not invoke a shell by default, and we should never take the command
+        //  itself (i.e. cmd[0]) from a passed-in argument, which then removes the risk of a shell
+        //  injection attack.
         ProcessBuilder builder = new ProcessBuilder(cmd);
         try
             {
@@ -313,7 +372,8 @@ public class xRTCertificateManager
                 out.write(sInput.getBytes());
                 out.close();
                 }
-System.out.println("*** running command: " + toString(cmd));
+            // TODO: remove
+            System.out.println("*** running command: " + toString(cmd));
             if (!process.waitFor(30, TimeUnit.SECONDS))
                 {
                 process.destroy();
@@ -323,11 +383,11 @@ System.out.println("*** running command: " + toString(cmd));
 
             if (frame != null && process.exitValue() != 0)
                 {
-                String sOut = checkMessage(process.getInputStream());
-                String sErr = checkMessage(process.getErrorStream());
+                String sOut = getOutput(process.getInputStream());
+                String sErr = getOutput(process.getErrorStream());
 
-                return frame.raiseException(xException.ioException(frame,
-                        Runtime.logRuntimeException(sOut + '\n' + sErr)));
+                    return frame.raiseException(xException.ioException(frame,
+                            Runtime.logRuntimeException(sOut + '\n' + sErr)));
                 }
 
             return Op.R_NEXT;
@@ -341,11 +401,11 @@ System.out.println("*** running command: " + toString(cmd));
         }
 
     /**
-     * Check the specified input stream for an error message.
+     * Get a message from the specified input stream.
      *
      * @return an error message
      */
-    private String checkMessage(InputStream streamIn)
+    private String getOutput(InputStream streamIn)
         {
         BufferedReader reader = new BufferedReader(new InputStreamReader(streamIn));
         StringBuilder  sb     = new StringBuilder();
@@ -384,9 +444,4 @@ System.out.println("*** running command: " + toString(cmd));
      * Cached canonical type.
      */
     private TypeConstant m_typeCanonical;
-
-    /**
-     * The "provider" property id.
-     */
-    private PropertyConstant m_idProvider;
     }

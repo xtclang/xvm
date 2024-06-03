@@ -72,6 +72,23 @@ interface CertificateManager {
     void createPassword(File keystore, Password pwd, String name, String pwdValue);
 
     /**
+     * Extract a key (private or secret).
+     *
+     * Note: unlike [KeyStore] methods that return [CryptoKey] objects which do not expose the
+     * underlying crypto material, this method is an exception and should be used with extreme
+     * caution.
+     *
+     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param pwd       the password for the keystore
+     * @param name      the name the key is known by the KeyStore
+     *
+     * @return the content of the key in DER format
+     *
+     * @throws IOException if anything goes wrong
+     */
+    Byte[] extractKey(File keystore, Password pwd, String name);
+
+    /**
      * Change the keystore password.
      *
      * @param keystore  the file object representing the store ('PKCS12' type)
