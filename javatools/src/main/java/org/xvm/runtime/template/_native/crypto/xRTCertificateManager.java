@@ -143,8 +143,8 @@ public class xRTCertificateManager
 
         runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
 
@@ -182,9 +182,9 @@ public class xRTCertificateManager
                         "--staging",
                         "--webroot",
                         "--webroot-path", sCertsPath,
-                        "--config-dir",   sCertsPath + "/config",
-                        "--work-dir",     sCertsPath + "/work",
-                        "--logs-dir",     sCertsPath + "/logs",
+                        "--config-dir",   sCertsPath + File.separator + "config",
+                        "--work-dir",     sCertsPath + File.separator + "work",
+                        "--logs-dir",     sCertsPath + File.separator + "logs",
                         "--register-unsafely-without-email",
                         "-d", sDomain);
                 if (iResult == Op.R_NEXT)
@@ -218,9 +218,9 @@ public class xRTCertificateManager
             runCommand(frame, "yes\nyes",
                         "certbot", "remove",
                         "--staging",
-                        "--config-dir", sCertsPath + "/config",
-                        "--work-dir",   sCertsPath + "/work",
-                        "--logs-dir",   sCertsPath + "/logs",
+                        "--config-dir", sCertsPath + File.separator + "config",
+                        "--work-dir",   sCertsPath + File.separator + "work",
+                        "--logs-dir",   sCertsPath + File.separator + "logs",
                         "--cert-name",  hName.getStringValue(),
                         "--reason",     "unspecified"
                       );
@@ -228,8 +228,8 @@ public class xRTCertificateManager
 
         runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         return Op.R_NEXT;
@@ -253,15 +253,15 @@ public class xRTCertificateManager
 
         runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         return runNoInputCommand(frame,
                 "keytool", "-genseckey", "-keyalg", "AES", "-keysize", "256",
-                "-alias", hName.getStringValue(),
+                "-alias",     hName.getStringValue(),
                 "-storetype", "PKCS12",
-                "-keystore", hPath.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         }
@@ -279,8 +279,8 @@ public class xRTCertificateManager
 
         runSilentCommand(
                 "keytool", "-delete",
-                "-alias", hName.getStringValue(),
-                "-keystore", hPath.getStringValue(),
+                "-alias",     hName.getStringValue(),
+                "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
         return runCommand(frame, hPwdValue.getStringValue(),
@@ -358,6 +358,10 @@ public class xRTCertificateManager
 
     private int runCommand(Frame frame, String sInput, String... cmd)
         {
+        // *** IMPORTANT SECURITY NOTE***:
+        //  ProcessBuilder does not invoke a shell by default, and we should never take the command
+        //  itself (i.e. cmd[0]) from a passed-in argument, which then removes the risk of a shell
+        //  injection attack.
         ProcessBuilder builder = new ProcessBuilder(cmd);
         try
             {
