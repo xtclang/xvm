@@ -385,7 +385,6 @@ public class ParameterizedTypeConstant
     public TypeConstant resolveDynamicConstraints(Register register)
         {
         TypeConstant constUnderlying = m_constType;
-        boolean      fDiff           = false;
 
         assert !constUnderlying.isDynamicType();
 
@@ -402,13 +401,12 @@ public class ParameterizedTypeConstant
                     aconstResolved = aconstOriginal.clone();
                     }
                 aconstResolved[i] = constParamResolved;
-                fDiff = true;
                 }
             }
 
-        return fDiff
-                ? getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved)
-                : this;
+        return aconstResolved == aconstOriginal
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
         }
 
     @Override
@@ -812,7 +810,6 @@ public class ParameterizedTypeConstant
     public TypeConstant widenEnumValueTypes()
         {
         TypeConstant   constUnderlying = m_constType;
-        boolean        fDiff           = false;
         TypeConstant[] aconstOriginal  = m_atypeParams;
         TypeConstant[] aconstResolved  = aconstOriginal;
 
@@ -827,13 +824,12 @@ public class ParameterizedTypeConstant
                     aconstResolved = aconstOriginal.clone();
                     }
                 aconstResolved[i] = constParamResolved;
-                fDiff = true;
                 }
             }
 
-        return fDiff
-                ? getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved)
-                : this;
+        return aconstResolved == aconstOriginal
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
         }
 
 
