@@ -396,6 +396,13 @@ public class TupleExpression
 
                     typeField = exprNew.getType();
 
+                    // if the result is an enum value, use the enumeration type instead (unless
+                    // it's exactly what is required)
+                    if (!typeField.equals(typeReq))
+                        {
+                        typeField = typeField.widenEnumValueTypes();
+                        }
+
                     if (i == 0 || aFieldVals != null)
                         {
                         Constant constVal = exprNew.toConstant();

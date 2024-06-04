@@ -49,9 +49,4 @@ const TupleMapping<Serializable extends Tuple>(Mapping[] valueMappings)
             }
         }
     }
-
-    @Override
-    <SubType extends Serializable> conditional Mapping<SubType> narrow(Schema schema, Type<SubType> type) {
-        return False;
-    }
 }

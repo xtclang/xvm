@@ -524,8 +524,7 @@ public abstract class TypeConstant
     public boolean isEnumValue()
         {
         return isExplicitClassIdentity(false) &&
-                    getExplicitClassFormat() == Component.Format.ENUMVALUE
-               || isOnlyNullable();
+               getExplicitClassFormat() == Component.Format.ENUMVALUE;
         }
 
     /**
@@ -1668,6 +1667,18 @@ public abstract class TypeConstant
                 isExplicitClassIdentity(true) &&
                 isSingleUnderlyingClass(false) &&
                 getSingleUnderlyingClass(false).isNestMateOf(idClass);
+        }
+
+    /**
+     * If the type is an enum value (except Null), widen it to its parent Enumeration.
+     *
+     * @return a widened type or this type if this type does not represent an enum value
+     */
+    public TypeConstant widenEnumValueTypes()
+        {
+        return isModifyingType()
+                ? cloneSingle(getConstantPool(), getUnderlyingType().widenEnumValueTypes())
+                : this;
         }
 
 

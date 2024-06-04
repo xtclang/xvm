@@ -400,11 +400,11 @@ module TestIO {
 
         Schema schema = Schema.DEFAULT;
 
-        Tuple<Int, String> tuple = (1, "a");
+        Tuple<Boolean, String> tuple = (True, "a");
         testSer(schema, "tuple", tuple);
         testSer(schema, "tuple", new Test(tuple));
 
-        const Test(Tuple<Int, String> tuple);
+        const Test(Tuple<Boolean, String> tuple);
     }
 
     void testMap() {

@@ -376,19 +376,15 @@ public class ParameterizedTypeConstant
                 }
             }
 
-        if (fDiff)
-            {
-            return getConstantPool().
-                    ensureParameterizedTypeConstant(constResolved, aconstResolved);
-            }
-        return this;
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
         }
 
     @Override
     public TypeConstant resolveDynamicConstraints(Register register)
         {
         TypeConstant constUnderlying = m_constType;
-        boolean      fDiff           = false;
 
         assert !constUnderlying.isDynamicType();
 
@@ -405,16 +401,12 @@ public class ParameterizedTypeConstant
                     aconstResolved = aconstOriginal.clone();
                     }
                 aconstResolved[i] = constParamResolved;
-                fDiff = true;
                 }
             }
 
-        if (fDiff)
-            {
-            return getConstantPool().
-                    ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
-            }
-        return this;
+        return aconstResolved == aconstOriginal
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
         }
 
     @Override
@@ -812,6 +804,32 @@ public class ParameterizedTypeConstant
             }
 
         return result;
+        }
+
+    @Override
+    public TypeConstant widenEnumValueTypes()
+        {
+        TypeConstant   constUnderlying = m_constType;
+        TypeConstant[] aconstOriginal  = m_atypeParams;
+        TypeConstant[] aconstResolved  = aconstOriginal;
+
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.widenEnumValueTypes();
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == aconstOriginal)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                }
+            }
+
+        return aconstResolved == aconstOriginal
+                ? this
+                : getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
         }
 
 

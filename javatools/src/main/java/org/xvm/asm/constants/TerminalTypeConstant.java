@@ -1574,6 +1574,14 @@ public class TerminalTypeConstant
                   this.getDefiningConstant().equals(getConstantPool().clzType());
         }
 
+    @Override
+    public TypeConstant widenEnumValueTypes()
+        {
+        return isEnumValue() && !isOnlyNullable()
+                ? getSingleUnderlyingClass(false).getNamespace().getType()
+                : this;
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

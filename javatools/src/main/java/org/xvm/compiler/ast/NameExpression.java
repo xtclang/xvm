@@ -534,8 +534,16 @@ public class NameExpression
 
         if (m_arg instanceof Register reg)
             {
-            TypeConstant typeOld = reg.getType();
-            TypeConstant typeNew = aTypes[0];
+            // if the R-value type is an enum value (except Null), widen it to its parent
+            // Enumeration before merging with the L-value, but don't go beyond declared type
+            TypeConstant typeOld  = reg.getType();
+            TypeConstant typeNew  = aTypes[0];
+            TypeConstant typeWide = typeNew.widenEnumValueTypes();
+
+            if (typeWide != typeNew && typeWide.isA(reg.getOriginalType()))
+                {
+                typeNew = typeWide;
+                }
 
             if (fCond)
                 {
