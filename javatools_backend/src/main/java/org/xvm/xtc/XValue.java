@@ -28,8 +28,8 @@ public abstract class XValue {
         yield ASB.p("Int128.construct(").p(ic._x).p("L)");
       yield ASB.p(ic._x).p('L');
     }
-    case Flt64Con fc ->
-      ASB.p(fc._flt);
+    case Flt64Con fc -> ASB.p(fc._flt);
+    case Flt32Con fc -> ASB.p(fc._flt);
 
     // Character constant
     case CharCon cc ->

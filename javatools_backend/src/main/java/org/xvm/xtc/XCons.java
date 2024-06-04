@@ -81,6 +81,7 @@ public abstract class XCons {
 
   public static XClz FPNUM       = make_java("ecstasy.numbers","FPNumber",NUMBER);
   public static XClz BINARYFP    = make_java("ecstasy.numbers","BinaryFPNumber",FPNUM);
+  public static XClz JFLOAT      = make_java("ecstasy.numbers","Float32" ,BINARYFP);
   public static XClz JDOUBLE     = make_java("ecstasy.numbers","Float64" ,BINARYFP);
   public static XClz FLOAT128    = make_java("ecstasy.numbers","Float128",BINARYFP);
 
@@ -214,8 +215,9 @@ public abstract class XCons {
     clz._jpack = jpack;
     clz._jname = jname;
     for( int i=0; i<flds.length; i += 2 ) {
-      clz._tns[i>>1] = (String)flds[i];
       clz._xts[i>>1] = (XType)flds[i+1];
+      clz._tns[i>>1] = (String)flds[i];
+      clz._tvs[i>>1] = i>>1;
     }
     // XXTC root XClz has no XTC _clz
     if( pack.isEmpty() && S.eq(name,"XTC") ) {
@@ -255,7 +257,8 @@ public abstract class XCons {
   // Treated as a specific instance of the generic Array class using concrete types.
   private static XClz make_java_ary( String jname, XType xelem ) {
     XClz clz = XClz.mallocLen(true, "ecstasy.collections","","Array",1);
-    clz._tns[0] = null;      // Concrete generic type
+    clz._tvs[0] = xelem == XXTC ? 0 : -1; // Concrete
+    clz._tns[0] = "Element";      // Concrete generic type
     clz._xts[0] = xelem;
     clz._intern(XCons.ARRAY);
     clz._jname = jname;

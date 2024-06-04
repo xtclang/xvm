@@ -156,12 +156,6 @@ public abstract class XType {
     return sb.fmt(zero() ? "==%0" : ".equals(%0)", name);
   }
 
-  // Only valid for Ary, Clz (Tuple???).
-  // Always arrays have 1 type parameter, the element type.
-  // Clzs mostly have 0, sometimes have 1 (e.g. Hashable<Value>), rarely have 2 or more (e.g. Map<Key,Value>)
-  public XType typeParm(int i) { return _xts[i]; }
-
-
   public final boolean isa( XType xt ) {
     return this==xt
       || (getClass() == xt.getClass() && _isa(xt))
@@ -313,6 +307,7 @@ public abstract class XType {
     case CharCon cc -> JCHAR.box(boxed);
     case ByteCon cc -> JBYTE.box(boxed);
     case Flt64Con fc -> JDOUBLE.box(boxed);
+    case Flt32Con fc -> JFLOAT.box(boxed);
 
     case StringCon sc -> STRING;
 
