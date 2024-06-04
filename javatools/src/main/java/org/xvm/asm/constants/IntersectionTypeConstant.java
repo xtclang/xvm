@@ -676,16 +676,16 @@ public class IntersectionTypeConstant
         Relation rel2 = typeRight.calculateRelation(thisLeft2);
 
         // since Enum values cannot be extended, an Enum value type cannot be combined with any
-        // other type and an intersection with a formal type doesn't actually narrow that Enum value type;
-        // this obviously applies to Nullable
-        if (typeRight.isEnumValue())
+        // other type and an intersection with a formal type doesn't actually narrow that Enum value
+        // type; this obviously applies to Nullable
+        if (isEnumOrNullable(typeRight))
             {
-            if (thisLeft1.isEnumValue() && thisLeft2.isFormalType())
+            if (isEnumOrNullable(thisLeft1) && thisLeft2.isFormalType())
                 {
                 // Nullable + Element <= Nullable (if Element's constraint is trivial)
                 return rel1.worseOf(typeRight.calculateRelation(thisLeft2.resolveConstraints()));
                 }
-            if (thisLeft1.isFormalType() && thisLeft2.isEnumValue())
+            if (thisLeft1.isFormalType() && isEnumOrNullable(thisLeft2))
                 {
                 // Element + Lesser <= Lesser (if Element's constraint is trivial)
                 return rel2.worseOf(typeRight.calculateRelation(thisLeft1.resolveConstraints()));
@@ -693,6 +693,11 @@ public class IntersectionTypeConstant
             }
 
         return rel1.worseOf(rel2);
+        }
+
+    private boolean isEnumOrNullable(TypeConstant type)
+        {
+        return type.isEnumValue() || type.isOnlyNullable();
         }
 
     @Override

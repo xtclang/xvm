@@ -813,14 +813,20 @@ public class xTuple
                     assert i > 0 && ahValue[0] == xBoolean.FALSE;
                     return type;
                     }
-                TypeConstant typeVal = hValue.getType();
-                if (!typeVal.equals(atypeOrig[i]))
+                TypeConstant typeVal  = hValue.getType();
+                TypeConstant typeOrig = atypeOrig[i];
+                if (!typeVal.equals(typeOrig))
                     {
-                    if (atypeActual == null)
+                    // if the value is an enum value, use the enumeration type instead
+                    TypeConstant typeResolved = typeVal.widenEnumValueTypes();
+                    if (typeResolved != typeOrig)
                         {
-                        atypeActual = atypeOrig.clone();
+                        if (atypeActual == null)
+                            {
+                            atypeActual = atypeOrig.clone();
+                            }
+                        atypeActual[i] = typeResolved;
                         }
-                    atypeActual[i] = typeVal;
                     }
                 }
             return super.augmentType(atypeActual == null

@@ -528,6 +528,19 @@ public abstract class RelationalTypeConstant
         return false;
         }
 
+    @Override
+    public TypeConstant widenEnumValueTypes()
+        {
+        TypeConstant constOriginal1 = m_constType1;
+        TypeConstant constOriginal2 = m_constType2;
+        TypeConstant constResolved1 = constOriginal1.widenEnumValueTypes();
+        TypeConstant constResolved2 = constOriginal2.widenEnumValueTypes();
+
+        return constResolved1 == constOriginal1 && constResolved2 == constOriginal2
+                ? this
+                : simplifyOrClone(getConstantPool(), constResolved1, constResolved2);
+        }
+
 
     // ----- TypeInfo support ----------------------------------------------------------------------
 

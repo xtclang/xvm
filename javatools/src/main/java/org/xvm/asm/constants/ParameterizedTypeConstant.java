@@ -376,12 +376,9 @@ public class ParameterizedTypeConstant
                 }
             }
 
-        if (fDiff)
-            {
-            return getConstantPool().
-                    ensureParameterizedTypeConstant(constResolved, aconstResolved);
-            }
-        return this;
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constResolved, aconstResolved)
+                : this;
         }
 
     @Override
@@ -409,12 +406,9 @@ public class ParameterizedTypeConstant
                 }
             }
 
-        if (fDiff)
-            {
-            return getConstantPool().
-                    ensureParameterizedTypeConstant(constUnderlying, aconstResolved);
-            }
-        return this;
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved)
+                : this;
         }
 
     @Override
@@ -812,6 +806,34 @@ public class ParameterizedTypeConstant
             }
 
         return result;
+        }
+
+    @Override
+    public TypeConstant widenEnumValueTypes()
+        {
+        TypeConstant   constUnderlying = m_constType;
+        boolean        fDiff           = false;
+        TypeConstant[] aconstOriginal  = m_atypeParams;
+        TypeConstant[] aconstResolved  = aconstOriginal;
+
+        for (int i = 0, c = aconstOriginal.length; i < c; ++i)
+            {
+            TypeConstant constParamOriginal = aconstOriginal[i];
+            TypeConstant constParamResolved = constParamOriginal.widenEnumValueTypes();
+            if (constParamOriginal != constParamResolved)
+                {
+                if (aconstResolved == aconstOriginal)
+                    {
+                    aconstResolved = aconstOriginal.clone();
+                    }
+                aconstResolved[i] = constParamResolved;
+                fDiff = true;
+                }
+            }
+
+        return fDiff
+                ? getConstantPool().ensureParameterizedTypeConstant(constUnderlying, aconstResolved)
+                : this;
         }
 
 
