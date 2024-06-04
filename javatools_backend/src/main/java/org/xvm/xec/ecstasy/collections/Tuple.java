@@ -79,12 +79,12 @@ public interface Tuple extends Cloneable {
     sb.ifmt("private %0(){}",tclz).nl();
     // N field declares
     for( int i=0; i<N; i++ )
-      sb.ifmt("public %0 _f%1;\n",xtt.typeParm(i).clz(),i);
+      sb.ifmt("public %0 _f%1;\n",xtt._xts[i].clz(),i);
 
     // Constructor, taking N arguments
     sb.ifmt("public %0(",tclz);
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xtt.typeParm(i).clz(),i);
+      sb.fmt("%0 f%1, ",xtt._xts[i].clz(),i);
     sb.unchar(2).p(") {\n").ii().i();
     // N arg to field assigns
     for( int i=0; i<N; i++ )
@@ -94,7 +94,7 @@ public interface Tuple extends Cloneable {
     // Factory, taking N arguments and passing them along
     sb.ifmt("public static %0 construct(",tclz);
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xtt.typeParm(i).clz(),i);
+      sb.fmt("%0 f%1, ",xtt._xts[i].clz(),i);
     sb.unchar(2).p(") {\n").ii();
     sb.ifmt("return new %0(",tclz);
     // N arg to field assigns
@@ -104,16 +104,16 @@ public interface Tuple extends Cloneable {
 
     // Abstract accessors
     for( int i=0; i<N; i++ ) {
-      XClz clz = xtt.typeParm(i).box();
+      XClz clz = xtt._xts[i].box();
       sb.ifmt("public %0 f%1() { return ",clz.clz_bare(),i);
-      if( clz==xtt.typeParm(i) )  sb.fmt("_f%0",i);
+      if( clz==xtt._xts[i] )  sb.fmt("_f%0",i);
       // Box prims
       else   sb.fmt("%0.make(_f%1)",clz.clz_bare(),i);
       sb.p("; }\n");
     }
     // Abstract setters
     for( int i=0; i<N; i++ ) {
-      XType xt = xtt.typeParm(i);
+      XType xt = xtt._xts[i];
       XType box = xt.box();
       sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box.clz(),xt==box?"":"._i");
     }
