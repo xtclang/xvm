@@ -1735,7 +1735,21 @@ public class InvocationExpression
         // it to the desired function if necessary
         TypeConstant   typeFn = argFn.getType().resolveTypedefs();
         MethodConstant idConv = m_idConvert;
-        if (idConv != null)
+        if (idConv == null)
+            {
+            if (!(argFn instanceof MethodConstant || argFn instanceof Register))
+                {
+                // the run-time logic in the interpreter (see any Call_ op-code) assumes that a
+                // function is either static (i.e. a MethodConstant) or resolved (i.e. already in
+                // the register); what is left behind is a scenario when argFn is a SingletonConstant
+                // holding a [static] property that holds a function; instead of complicating the
+                // logc there, we simply add the Move op to take care of the transition
+                Register regFn = new Register(typeFn, null, Op.A_STACK);
+                code.add(new Move(argFn, regFn));
+                argFn = regFn;
+                }
+            }
+        else
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = idConv.getRawReturns()[0];
