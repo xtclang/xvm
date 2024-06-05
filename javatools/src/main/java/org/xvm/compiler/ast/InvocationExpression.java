@@ -1743,8 +1743,8 @@ public class InvocationExpression
                 // function is either static (i.e. a MethodConstant) or resolved (i.e. already in
                 // the register); what is left behind is a scenario when argFn is a SingletonConstant
                 // holding a [static] property that holds a function; instead of complicating the
-                // logc there, we simply add the Move op to take care of the transition
-                Register regFn = new Register(typeFn, null, Op.A_STACK);
+                // logic there, we simply add the Move op to take care of the transition
+                Register regFn = code.createRegister(typeFn, fTargetOnStack);
                 code.add(new Move(argFn, regFn));
                 argFn = regFn;
                 }
@@ -1753,7 +1753,7 @@ public class InvocationExpression
             {
             // argFn isn't a function; convert whatever-it-is into the desired function
             typeFn = idConv.getRawReturns()[0];
-            Register regFn = new Register(typeFn, null, Op.A_STACK);
+            Register regFn = code.createRegister(typeFn, fTargetOnStack);
             code.add(new Invoke_01(argFn, idConv, regFn));
             argFn = regFn;
             astFn = new ConvertExprAST(astFn,
