@@ -1,5 +1,4 @@
 import org.gradle.api.Project
-import org.gradle.api.provider.Provider
 import java.io.File
 import java.io.FileInputStream
 import java.util.Objects.requireNonNull
@@ -222,3 +221,32 @@ fun Project.getXtclangGitHubMavenPackageRepositoryToken(): Provider<String> {
     return providers.provider { getXtclangGitHubMavenPackageRepositoryToken() }
 }
 */
+
+// TODO:
+// Use this to replace the complex logic for versions and properties.
+fun Project.extendProperties() {
+    fun loadPropertiesFromParentDirectories(): Properties {
+        val properties = Properties()
+        var dir = projectDir.parentFile
+        while (dir != null) {
+            val propFile = File(dir, "gradle.properties")
+            if (propFile.exists()) {
+                properties.load(FileInputStream(propFile))
+            }
+            if (dir == compositeRootProjectDirectory) {
+                break
+            }
+            dir = dir.parentFile
+        }
+        return properties
+    }
+
+    val alreadySet = mutableSetOf<String>()
+    loadPropertiesFromParentDirectories().forEach { key, value ->
+        val k = key.toString()
+        if (k !in alreadySet) {
+            alreadySet.add(k)
+            extensions.extraProperties.set(k, value)
+        }
+    }
+}

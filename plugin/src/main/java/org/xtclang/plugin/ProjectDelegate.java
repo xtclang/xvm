@@ -21,6 +21,8 @@ import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
 
+import org.slf4j.helpers.MessageFormatter;
+
 public abstract class ProjectDelegate<T, R> {
     protected final Project project;
     protected final String projectName;
@@ -69,6 +71,25 @@ public abstract class ProjectDelegate<T, R> {
 
         // add a property to the existing environment, project.setProperty assumes the property exists already
         extra.set("logPrefix", prefix);
+    }
+
+    /**
+     * Shorthand for String formatting that could be integrated into the logging, which is pretty
+     * verbose and hard to read, and gets in the way of the Plugin code.
+     *
+     * The key is allowed to contain '{}' placeholders for expansion. We should probably assert
+     * if a message has the wrong number of expansions compared to its number of args.
+     *
+     * @param key key, potentially a Bundle key if overridden in the future.
+     * @param args args to replace in key patterns
+     *
+     * @return Formatted string
+     */
+    public static String $(final String key, final Object... args) {
+        if (null == args || args.length == 0) {
+            return key;
+        }
+        return MessageFormatter.arrayFormat(key, args).getMessage();
     }
 
     @SuppressWarnings("UnusedReturnValue")

@@ -110,6 +110,7 @@ publishing {
                 name = "xdk"
                 description = "XTC Language Software Development Kit (XDK) Distribution Archive"
                 url = "https://xtclang.org"
+                packaging = "zip"
             }
             logger.info("$prefix Publication '$name' configured for '$groupId:$artifactId:$version'")
             artifact(tasks.distZip) {
@@ -358,6 +359,7 @@ jreleaser {
 
     // The deploy section is used to publish package artifacts to the GitHub Maven Packages.
     //   We have the "xdk" maven artifact, the "xtc-plugin" Gradle artifact, and its Maven version (Gradle adds some extra meta info in pseudo artifact)
+    System.err.println("Change the snapshot tag to 'early-access' for all snapshots")
     deploy {
         // TODO Use early-access as snapshot tag.
         active = Active.ALWAYS
@@ -366,32 +368,16 @@ jreleaser {
             github {
                 active = Active.ALWAYS
                 val xdk by registering {
-                    // TODO: There has to be a way to publish snapshots.
                     active = Active.ALWAYS
                     snapshotSupported = true
-                    //prerelease = true
-                    //overwrite = false
                     url = "https://maven.pkg.github.com/xtclang/xvm"
                     username = "xtclang-bot"
                     password = System.getenv("GITHUB_TOKEN")
                     authorization = Authorization.BEARER
                     stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
-                    //localStagingRepoDirectory
-                    // TODO there needs to be a staging repository that takes a provider or we have to build lots of stuff during config
-                    //stagingRepository("localStagingRepoDirectory.get().asFile.absolutePath)
-                    // The defaults for the below config is already false/disabled, unless applyMavenCentralRules are in place.
-                    //stagingRepositories =  = listOf("localStagingRepoDirectory.get().asFile.absolutePath")
-                    sign = false
-                    sourceJar = false
-                    javadocJar = false
-                    verifyPom = false
                     applyMavenCentralRules = false
                 }
             }
-            //pomchecker {
-            //    enabled = false
-            //    version = libs.versions.kordamp
-            //}
         }
     }
 }
@@ -584,7 +570,7 @@ jreleaser {
             // This is the full all-platforms release config. It needs the pd independent archive as an artifact
             // and all three specific ones.
             // This means we know that we can only build any given platform, but we still have to list the artifacts for all platforms.
-            artifacts {
+            artifacts {<
                 // In each of these, the platformZip path only exists for the current platform running ./gradlew jreleaser
                 // Github workflows will run for all three platforms, but that doesn't work locally.
                 artifact {
