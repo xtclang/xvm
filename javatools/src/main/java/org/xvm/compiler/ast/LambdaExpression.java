@@ -851,7 +851,7 @@ public class LambdaExpression
             // see if there are any assignments that would change our starting assumptions
             Map<String, Assignment> mapAsnAfter = new HashMap<>();
             Map<String, Argument>   mapArgAfter = new HashMap<>();
-            ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
+            ctxLambda.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
 
             if (!mapAsnAfter.equals(mapAsnBefore))
                 {
