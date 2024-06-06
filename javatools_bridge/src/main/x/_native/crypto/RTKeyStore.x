@@ -98,6 +98,7 @@ service RTKeyStore
         }
 
         if ((String    issuer,
+             String    subject,
              Int       version,
              Int       notBeforeYear,
              Int       notBeforeMonth,
@@ -127,7 +128,7 @@ service RTKeyStore
                     ? new RTPublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes, publicSecret)
                     : Null;
             Certificate cert = new X509Certificate(
-                                issuer, new Version(version.toString()), notBefore, notAfter,
+                                issuer, subject, new Version(version.toString()), notBefore, notAfter,
                                 keyUsage, sig, derValue, key);
             certCache.put(name, cert);
             return True, &cert.maskAs(Certificate);
@@ -189,6 +190,7 @@ service RTKeyStore
      * #return (conditional) the certificate info
      */
     private conditional (String    issuer,
+                         String    subject,
                          Int       version,
                          Int       notBeforeYear,
                          Int       notBeforeMonth,
@@ -236,6 +238,7 @@ service RTKeyStore
             implements Certificate {
 
         construct(String        issuer,
+                  String        subject,
                   Version       version,
                   Date          notBefore,
                   Date          notAfter,
@@ -244,6 +247,7 @@ service RTKeyStore
                   Byte[]        derValue,
                   CryptoKey?    key) {
             this.issuer    = issuer;
+            this.subject   = subject;
             this.version   = version;
             this.lifetime  = notBefore .. notAfter;
             this.keyUsage  = keyUsage;
@@ -260,6 +264,9 @@ service RTKeyStore
 
         @Override
         String issuer;
+
+        @Override
+        String subject;
 
         @Override
         Set<KeyUsage> keyUsage;
@@ -289,6 +296,7 @@ service RTKeyStore
             return $|Standard: {standard}
                     |Version: {version}
                     |Issuer: {issuer}
+                    |Subject: {subject}
                     |Validity: [{lifetime}]
                     |KeyUsage: {keyUsage}
                     |Signature: {signature}

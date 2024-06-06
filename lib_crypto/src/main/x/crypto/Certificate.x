@@ -1,5 +1,5 @@
 /**
- * A certificate is the combination of three things: a claimed identity, a cryptographic key, and an
+ * A certificate contains a claimed identity (the subject), a cryptographic key, and an
  * optional indication (via a "certificate chain") of how the desired trust can be verified.
  * Additionally, the certificate may contain significant related metadata.
  */
@@ -19,6 +19,11 @@ interface Certificate {
      * The issuer name, in the format defined by the certificate standard (usually X.509).
      */
     @RO String issuer;
+
+    /**
+     * The subject name, in the format defined by the certificate standard (usually X.509).
+     */
+    @RO String subject;
 
     /**
      * Possible usages of the certificate, as defined by X.509.

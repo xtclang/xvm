@@ -74,6 +74,9 @@ module TestCrypto {
             console.print("-----END PRIVATE KEY-----");
         }
 
+        assert Certificate cert := keystore.getCertificate(pairName);
+        console.print(cert);
+
         assert CryptoPassword pwd := keystore.getPassword(pwdName);
         console.print($"{pwd}; type={&pwd.actualType}");
 

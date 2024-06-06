@@ -288,6 +288,7 @@ public class xRTKeyStore
     /**
      * Native implementation of
      *   "conditional (String   issuer,
+     *                String    subject,
      *                Int       version,
      *                Int       notBeforeYear,
      *                Int       notBeforeMonth,
@@ -331,6 +332,9 @@ public class xRTKeyStore
             // issuer
             String sIssuer = cert509.getIssuerX500Principal().toString();
 
+            // issuer
+            String sSubject = cert509.getSubjectX500Principal().toString();
+
             // version
             int nVersion = cert509.getVersion();
 
@@ -360,6 +364,7 @@ public class xRTKeyStore
             List<ObjectHandle> list = new ArrayList<>(9);
             list.add(xBoolean.TRUE);
             list.add(xString.makeHandle(sIssuer));
+            list.add(xString.makeHandle(sSubject));
             list.add(xInt64.makeHandle(nVersion));
             addDate(dateNotBefore, list);
             addDate(dateNotAfter, list);
