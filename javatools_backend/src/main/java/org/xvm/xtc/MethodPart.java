@@ -223,7 +223,7 @@ public class MethodPart extends MMethodPart {
     // self -> MMethod -> Class -> [Package or other ???]
     ClassPart clz = clz();
     Part outer = clz._par;
-    if( clz.isStatic() || outer instanceof PackagePart || clz._tclz.isa(XCons.CONST) )
+    if( clz.isStatic() || outer instanceof PackagePart || XClz.make(clz).isa(XCons.CONST) )
       return null;
     while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
     return outclz;

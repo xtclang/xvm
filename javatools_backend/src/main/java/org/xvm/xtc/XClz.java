@@ -200,8 +200,30 @@ public class XClz extends XType {
     return clz;
   }
 
+  // Gather side types from Implements and Extends
+  private static Ary<ParamTCon> sides(ClassPart clz) {
+    // Collect side type variable from interfaces and extends
+    Ary<ParamTCon> ptcs	= null;
+    if( clz._contribs != null )
+      for( Contrib c : clz._contribs )
+        if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends ) {
+          if( c._tContrib instanceof TermTCon ttc ) {
+            // no extra type params
+          } else if( c._tContrib instanceof ParamTCon ptc ) {
+            if( ptcs==null ) ptcs = new Ary<>(ParamTCon.class);
+            ptcs.add(ptc);
+          } else throw XEC.TODO(); // Expecting a PTC here
+        }
+    return ptcs;
+  }
+
   // Fill in common fields.  Not interned yet.
   private static XClz _malloc( ClassPart clz ) {
+    return _malloc(clz,sides(clz));
+  }
+
+  // Fill in common fields.  Not interned yet.
+  private static XClz _malloc( ClassPart clz, Ary<ParamTCon> ptcs ) {
     // Extra useful info
     ModPart mod = clz.mod();
     // Class & package names.
@@ -246,28 +268,23 @@ public class XClz extends XType {
 
     // Collect side type variable from interfaces and extends
     HashMap<XClz,int[]> sides = null;
-    if( clz._contribs != null )
-      for( Contrib c : clz._contribs )
-        if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends ) {
-          if( c._tContrib instanceof TermTCon ttc ) {
-            // no extra type params
-          } else if( c._tContrib instanceof ParamTCon ptc ) {
-            int[] idxs = new int[ptc._parms.length];
-            for( int i=0; i<ptc._parms.length; i++ ) {
-              if( ptc._parms[i] instanceof TermTCon ttc ) {
-                int idx = S.find(clz._tnames,ttc.name()); // Matches a clz name, uses that type
-                if( idx == -1 ) {
-                  xclz._xts = xts = Arrays.copyOf(xts,(idx = xts.length)+1);
-                  xts[idx] = xtype(ttc,true,xclz);
-                }
-                idxs[i] = idx;
-              } else throw XEC.TODO();
-            }
-            XClz pclz = (XClz)xtype(ptc,true,null);
-            if( sides==null ) sides = new HashMap<>();
-            sides.put(pclz,idxs);
-          } else throw XEC.TODO(); // Expecting a PTC here
+    if( ptcs!=null )
+      for( ParamTCon ptc : ptcs ) {
+        XClz pclz = (XClz)xtype(ptc,true);
+        assert ptc._parms.length==pclz._tns.length;
+        int[] idxs = new int[pclz._tns.length];
+        for( int i=0; i<pclz._tns.length; i++ ) {
+          String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
+          int idx = S.find(clz._tnames,pname); // Matches a clz name, uses that type
+          if( idx == -1 ) {
+            xclz._xts = xts = Arrays.copyOf(xts,(idx = xts.length)+1);
+            xts[idx] = pclz._xts[i]; //xtype(ttc,true,xclz);
+          }
+          idxs[i] = idx;
         }
+        if( sides==null ) sides = new HashMap<>();
+        sides.put(pclz,idxs);
+      }
 
     // Copy sides in
     xclz._sides = sides==null ? SIDES0 : sides;
@@ -336,23 +353,12 @@ public class XClz extends XType {
   // An inner class, which gets the outer class Type variables
   public static XClz make( VirtDepTCon virt ) {
     ClassPart iclz = virt.part(); // Inner clz
-    XClz xclz = _malloc(iclz);    // Inner xclz
     ParamTCon ptc = (ParamTCon)virt._par;
-    TCon[] parms = ptc._parms;
-    if( parms != null ) {
-      ClassPart oclz = ptc.clz(); // Outer class
-      XType [] xts = xclz._xts;
-      String[] tns = xclz._tns;
-      //int len = xts==null ? 0 : xts.length;
-      //xclz._xts = xts = xts==null ? new XType [parms.length] : Arrays.copyOf(xts,len+parms.length);
-      //xclz._tns = tns = tns==null ? new String[parms.length] : Arrays.copyOf(tns,len+parms.length);
-      //for( int i=0; i<parms.length; i++ ) {
-      //  boolean isType = parms[i] instanceof TermTCon ttc && ttc.id() instanceof ClassCon;
-      //  tns[len+i] = isType ? null : oclz._tnames[i];
-      //  xts[len+i] = xtype(parms[i],true);
-      //}
-      throw XEC.TODO();
-    }
+    Ary<ParamTCon> ptcs = sides(iclz); // Any side types it has
+    if( ptcs==null ) ptcs = new Ary<>(ParamTCon.class);
+    else throw XEC.TODO("Untested");
+    ptcs.add(ptc);
+    XClz xclz = _malloc(iclz,ptcs);    // Inner xclz
     assert xclz._super == get_super(iclz);
     assert xclz._depth == (iclz._tclz==null ? 0 : iclz._tclz._depth);
     xclz._jpack = "";

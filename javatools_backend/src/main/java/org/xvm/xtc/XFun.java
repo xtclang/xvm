@@ -74,7 +74,7 @@ public class XFun extends XType {
     sb.p("Fun").p(_nargs);
     for( int i=0; i<_nargs; i++ ) {
       if( _xts[i]==XCons.JSTRING )   sb.p("XString$");
-      else _xts[i]._clz(sb,ptc).p("$");
+      else _xts[i].clz_bare(sb).p("$");
     }
     return sb.unchar();
   }
