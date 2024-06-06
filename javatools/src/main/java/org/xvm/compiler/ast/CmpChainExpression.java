@@ -264,8 +264,19 @@ public class CmpChainExpression
 
             for (int i = 0; i < cExprs; ++i)
                 {
-                Expression expr = listExprs.get(i);
-                if (expr.isConstant())
+                Expression   expr   = listExprs.get(i);
+                boolean      fConst = expr.isConstant();
+                TypeConstant type   = expr.getType();
+
+                if (fEquality
+                        ? !typeCommon.supportsEquals (type, fConst)
+                        : !typeCommon.supportsCompare(type, fConst))
+                    {
+                    log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
+                                typeCommon.getValueString(), type.getValueString());
+                    return null;
+                    }
+                if (fConst)
                     {
                     if (fAllConst)
                         {

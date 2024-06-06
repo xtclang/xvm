@@ -1,14 +1,11 @@
 module TestSimple {
-    import ecstasy.collections.CaseInsensitive;
-
-    @Inject Console console;
-
-    static function Boolean(String, String) eqInsens = CaseInsensitive.areEqual;
-
     void run() {
-        console.print(eqInsens(hello(), "hello")); // this used to blow up at run-time
     }
 
-    String hello() = "Hello";
+    void test1(Int? i) {
+        assert 2 < i;      // this used to compile, but it should not
+    }
+    void test2(Int? i) {
+        assert 2 < i < 7;  // this used to compile, but it should not
+    }
 }
-

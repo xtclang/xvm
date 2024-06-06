@@ -198,7 +198,8 @@ public class CmpExpression
             type2Orig = reg.getOriginalType();
             }
 
-        TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, type2, type2Orig);
+        TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, false,
+                                                                  type2, type2Orig, false, false);
         Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null)
             {
@@ -248,11 +249,13 @@ public class CmpExpression
                 boolean fConst2 = expr2New.isConstant();
 
                 // make sure that we can compare the left value to the right value
-                TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, true);
+                TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1,
+                                                                         type2, fConst2, true);
                 if (typeCommon == null)
                     {
                     // try to use the original types
-                    typeCommon = chooseCommonType(pool, fEqual, type1, type1Orig, type2, type2Orig);
+                    typeCommon = chooseCommonType(pool, fEqual, type1, type1Orig, fConst1,
+                                                                type2, type2Orig, fConst2, true);
                     }
                 if (typeCommon == null)
                     {
@@ -361,28 +364,28 @@ public class CmpExpression
      */
     protected static TypeConstant chooseCommonType(
             ConstantPool pool, boolean fEqual,
-            TypeConstant type1, TypeConstant type1Orig,
-            TypeConstant type2, TypeConstant type2Orig
-            )
+            TypeConstant type1, TypeConstant type1Orig, boolean fConst1,
+            TypeConstant type2, TypeConstant type2Orig, boolean fConst2,
+            boolean fCheck)
         {
         // start with the inferred types and go down to original types if that fails
-        TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, false, type2, false, false);
+        TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, fCheck);
         if (typeCommon == null)
             {
             if (type1.equals(type1Orig))
                 {
                 if (!type2.equals(type2Orig))
                     {
-                    typeCommon = chooseCommonType(pool, fEqual, type1, false, type2Orig, false, true);
+                    typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2Orig, fConst2, fCheck);
                     }
                 }
             else
                 {
-                typeCommon = chooseCommonType(pool, fEqual, type1Orig, false, type2, false, true);
+                typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2, fConst2, fCheck);
 
                 if (typeCommon == null && !type2.equals(type2Orig))
                     {
-                    typeCommon = chooseCommonType(pool, fEqual, type1Orig, false, type2Orig, false, true);
+                    typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2Orig, fConst2, fCheck);
                     }
                 }
             }
