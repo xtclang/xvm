@@ -134,11 +134,14 @@ public class ClzBuilder {
 
     _sb.ip("public ");
     if( !_is_top ) _sb.p("static ");
-    _tclz.clz_generic(_sb.p(jpart),true,true).p(" ");
+    _sb.p(jpart).p(_tclz.name());
+    _tclz.clz_generic_def(_sb).p(" ");
 
     // ... extends Const/XTC/etc
-    if( _clz._super != null ) _sb.p("extends ").p(_clz._super._name);
-    else if( is_iface ) ; // No extends
+    if( _clz._super != null ) {
+      _sb.p("extends ").p(_clz._super._name);
+      _tclz._super.clz_generic_use( _sb, _tclz );
+    } else if( is_iface ) ; // No extends
     else if( _clz._f==Part.Format.CONST ) {
       _sb.p("extends Const");
       IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
@@ -161,7 +164,8 @@ public class ClzBuilder {
           case VirtDepTCon vtc -> XClz.make(vtc.clz());
           default -> { throw XEC.TODO(); }
           };
-          iclz.clz_generic(_sb.p((once++ == 0) ? (_clz._tclz.iface() ? " extends " : " implements ") : ", "),true,false);
+          _sb.p((once++ == 0) ? " implements " : ", ").p(iclz.name());
+          iclz.clz_generic_use(_sb, _tclz);
           add_import(iclz);
         }
     }
@@ -209,8 +213,8 @@ public class ClzBuilder {
       // This is an "empty" constructor: it takes required explicit type
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
-      for( int i=0; i<_tclz._tns.length; i++ )
-        _sb.fmt("$%0 %0,",_tclz._tns[i]);
+      for( String tn : _tclz._tns )
+        _sb.fmt("$%0 %0,",tn);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
       // Init any local type variables; these appear in name2kid
@@ -228,15 +232,19 @@ public class ClzBuilder {
         // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args).$check(); }"
         _sb.nl();
         keywords(meth,true);
-        _tclz.clz_generic(_sb,false,true);
-        _sb.fmt("%0 construct( ",java_class_name); // Return type
-        for( int i=0; i<_tclz._tns.length; i++ )
-          _sb.fmt("$%0 %0,",_tclz._tns[i]);
-        _sb.unchar();
-        args(meth,_sb);
+        _tclz.clz_generic_def(_sb);
+        _sb.fmt("%0 construct(  ",java_class_name); // Return type
+        for( String tn : _tclz._tns )
+          _sb.fmt("$%0 %0, ",tn);
+        // Nested inner classes take an outer class arg
+        ClassPart outer = meth.isNestedInnerClass();
+        if( outer!=null )
+          _sb.fmt("%0 $outer, ", outer._name);
+        if( meth._args==null ) _sb.unchar(2);
+        else args(meth,_sb);
         _sb.p(") { return new ").p(java_class_name).p("( ");
-        for( int i=0; i<_tclz._tns.length; i++ )
-          _sb.fmt("%0,",_tclz._tns[i]);
+        for( String tn : _tclz._tns )
+          _sb.fmt("%0,",tn);
         _sb.unchar().p(").$construct(");
         arg_names(meth,_sb);
         _sb.p(").$check(); }").nl();
@@ -252,17 +260,21 @@ public class ClzBuilder {
       }
     }
 
-    // Property types not mentioned in name2kids; must be concrete types from
-    // interfaces.
-    for( int i=0; i<_tclz._tns.length; i++ ) {
-      String name = _tclz._tns[i];
-      Part p = _clz._name2kid.get(name);
-      if( p==null ) {
-        _sb.ip("public ");
-        _tclz._xts[i].clz(_sb);
-        _sb.p(" ").p(name).p("$get() { return ");
-        _tclz._xts[i].clz(_sb);
-        _sb.p(".GOLD; }").nl();
+    // Property types from interfaces
+    for( XClz side : _tclz._sides.keySet() ) {
+      int[] idxs = _tclz._sides.get(side);
+      for( int i=0; i<idxs.length; i++ ) {
+        String name = side._tns[i]; // Side property name
+        Part p = _clz._name2kid.get(name);
+        if( p==null ) { // Some are explicitly given in name2kids, and handled below
+          int idx = idxs[i];
+          _tclz._xts[idx].clz(_sb.ip("public "));
+          _sb.p(" ").p(name).p("$get() { return ");
+          // Either mapping an interface type to a local type OR to a constant type
+          if( idx < _tclz._tns.length ) _sb.p(_tclz._tns[idx]).p("$get()"); //  public Key$get() { return Other$get(); }
+          else _tclz._xts[idx].clz(_sb).p(".GOLD");                         //  public Key$get() { return Float32.GOLD; }
+          _sb.p("; }").nl();
+        }
       }
     }
 
@@ -496,7 +508,12 @@ public class ClzBuilder {
         m.is_cond_ret() ? m.xret(1) :
         // Tuple multi-return
         XCons.make_tuple(m.xrets());
-      xret.clz(sb).p(' ');
+      if( xret instanceof XClz xclz ) {
+        xclz.clz_bare(sb);
+        xclz.clz_generic_use(sb,m.clz()._tclz);
+      }
+      else xret.clz(sb);
+      sb.p(' ');
     }
 
     return sb;

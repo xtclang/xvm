@@ -30,7 +30,7 @@ public class DynFormalCon extends FormalCon {
   public TCon type() { return _type; }
   @Override Part _part() {
     if( _type instanceof ParamTCon pt && pt._parms!=null )
-      return pt._parms[0].part();
+      return _formal.part();
   //   _part = _type.link(repo);
     throw XEC.TODO();
   }

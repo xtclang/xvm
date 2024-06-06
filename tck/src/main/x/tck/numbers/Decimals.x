@@ -4,7 +4,7 @@
  * @see http://www.cplusplus.com/reference/cmath/round
  */
 class Decimals {
-    
+
     static Dec64[] numbers  = [2.3, 3.8, 5.5, -2.3, -3.8, -5.5];
     static Int[]   rounds   = [2,   4,   6,   -2,   -4,   -6  ];
     static Int[]   floors   = [2,   3,   5,   -3,   -4,   -6  ];
@@ -21,28 +21,28 @@ class Decimals {
         fromBits();
     }
 
-    
+
     @Test
     void round() {
         for (Int i : 0 ..< numbers.size) {
             assert numbers[i].round() == rounds[i];
         }
     }
-    
+
     @Test
     void floor() {
         for (Int i : 0 ..< numbers.size) {
             assert numbers[i].floor() == floors[i];
         }
     }
-    
+
     @Test
     void ceiling() {
         for (Int i : 0 ..< numbers.size) {
             assert numbers[i].ceil() == ceilings[i];
         }
     }
-    
+
     @Test
     void toZero() {
         for (Int i : 0 ..< numbers.size) {

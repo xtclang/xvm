@@ -126,8 +126,6 @@ public class Arylong extends Array<Int64> {
   }
 
   // --- Appender
-  @Override public Arylong appendTo( Int64 s ) { return add(s); }
-
   @Override public String toString() {
     SBX.p("[  ");
     for( int i=0; i<_len; i++ )

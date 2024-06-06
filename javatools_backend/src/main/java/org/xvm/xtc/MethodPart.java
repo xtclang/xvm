@@ -31,7 +31,6 @@ public class MethodPart extends MMethodPart {
   public final Parameter[] _args;
   public final int _nDefaults;  // Number of default arguments
   private XType[] _xargs;
-  private ClassPart _outer;     // Nested inner class's outer class
 
   // Constants for code
   public final Const[] _cons;
@@ -191,29 +190,24 @@ public class MethodPart extends MMethodPart {
       return (_xargs = XType.xtypes(_args, !(isPrivate() || isOperator()) ));
 
     // Constructors get all the type args from their class
-    XType[] zts = clz()._tclz._xts;
-    int len = zts.length, j=len;
+    XClz clz = clz()._tclz;
+    int len = clz._tns.length, j=len;
     // Also get their stated args
     if( _args != null ) len += _args.length;
     // Nested inner classes get the outer class as an arg.
-    // self -> MMethod -> Class -> [Package or other ???]
-    ClassPart clz = clz();
-    Part outer = clz._par;
-    if( !clz.isStatic() && !clz._tclz.isa(XCons.CONST) && !(outer instanceof PackagePart) ) {
-      while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
-      _outer = outclz;          // Set outer class
-    }
-    if( _outer!=null ) len++;
+    ClassPart outer = isNestedInnerClass();
+    if( outer!=null ) len++;
 
     // Extend as needed
-    zts = Arrays.copyOf(zts,len);
+    XType[] zts = Arrays.copyOf(clz._xts,len);
+
+    // Add outer class next
+    if( outer!=null )
+      zts[j++] = XClz.make(outer);
     // Copy/type actual args
     if( _args != null )
       for( Parameter arg : _args )
         zts[j++] = arg.type( false );
-    // Add outer class next
-    if( _outer!=null )
-      zts[j] = XClz.make(_outer);
 
     return zts;
   }
@@ -224,6 +218,16 @@ public class MethodPart extends MMethodPart {
     return (_xrets = XType.xtypes(_rets,false));
   }
   public XType xret(int idx) { return xrets()[idx]; }
+
+  public ClassPart isNestedInnerClass() {
+    // self -> MMethod -> Class -> [Package or other ???]
+    ClassPart clz = clz();
+    Part outer = clz._par;
+    if( clz.isStatic() || outer instanceof PackagePart || clz._tclz.isa(XCons.CONST) )
+      return null;
+    while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
+    return outclz;
+  }
 
   // Methods returning a conditional have to consume the conditional
   // immediately, or it's lost.  The returned value will be optionally assigned.

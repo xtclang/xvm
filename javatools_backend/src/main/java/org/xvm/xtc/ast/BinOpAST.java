@@ -126,7 +126,7 @@ class BinOpAST extends AST {
 
   @Override public SB jcode( SB sb ) {
     if( _op0.equals("as") ) {
-      sb.p("((").p(((XClz)_kids[1]._type).clz_bare()).p(")");
+      _kids[1]._type.clz_bare(sb.p("((")).p(")");
       return _kids[0].jcode(sb).p(")");
     }
     expr(sb,_kids[0]).p(_op0);

@@ -44,7 +44,8 @@ public abstract class XCons {
 
   // A set of common XTC classes, and their Java replacements...
   // AND these take the default import path from "org.xvm.xec.ecstasy...".
-  public static XClz APPENDERCHAR= make_java("ecstasy","Appenderchar","ecstasy","Appender",null,"Element",JCHAR);
+  public static XClz APPENDER    = make_java("ecstasy","Appender","ecstasy","Appender",null,"Element",XXTC);
+  public static XClz APPENDERCHAR= make_java("ecstasy","Appenderchar","ecstasy","Appenderchar",APPENDER,APPENDER,JCHAR);
   public static XClz CONSOLE     = make_java("ecstasy.io","Console",null);
   public static XClz FREEZABLE   = make_java("ecstasy","Freezable",null);
   public static XClz HASHABLE    = make_java("ecstasy.collections","Hashable",null);
@@ -52,13 +53,13 @@ public abstract class XCons {
   public static XClz ILLSTATEX   = make_java("XTC","IllegalState"   ,"ecstasy","IllegalState"   ,EXCEPTION);
   public static XClz UNSUPPORTED = make_java("XTC","Unsupported"    ,"ecstasy","Unsupported"    ,EXCEPTION);
   public static XClz NOTIMPL     = make_java("XTC","NotImplemented" ,"ecstasy","NotImplemented" ,UNSUPPORTED);
-  public static XClz ITERABLE    = make_java("ecstasy","Iterable",(XClz)null,"Element",XXTC);
-  public static XClz ITERATOR    = make_java("ecstasy","Iterator",(XClz)null,"Element",XXTC);
+  public static XClz ITERABLE    = make_java("ecstasy","Iterable","ecstasy","Iterable",(XClz)null,"Element",XXTC);
+  public static XClz ITERATOR    = make_java("ecstasy","Iterator","ecstasy","Iterator",(XClz)null,"Element",XXTC);
   public static XClz MUTABILITY  = make_java("ecstasy.collections.Array","Mutability",ENUM);
   public static XClz ORDERABLE   = make_java("ecstasy","Orderable",null);
   public static XClz ORDERED     = make_java("ecstasy","Ordered",ENUM);
   public static XClz STRINGBUFFER= make_java("ecstasy.text","StringBuffer",null);
-  public static XClz TYPE        = make_java("ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
+  public static XClz TYPE        = make_java("ecstasy.reflect","Type","ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
   public static XClz SIGNUM  = make_java("ecstasy.numbers.Number","Signum",ENUM);
@@ -92,9 +93,9 @@ public abstract class XCons {
   public static XClz ROUNDING    = make_java("ecstasy.numbers.FPNumber","Rounding",ENUM);
 
   public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy", "Range"  ,CONST,"Element",CONST);
-  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",RANGE,"Element",JLONG); // No Ecstasy matching class
-  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",RANGE,"Element",JLONG); // No Ecstasy matching class
-  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,"Element",JLONG); // No Ecstasy matching class
+  public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",RANGE,RANGE,JLONG); // No Ecstasy matching class
+  public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",RANGE,RANGE,JLONG); // No Ecstasy matching class
+  public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,RANGE,JLONG); // No Ecstasy matching class
 
   // This is a mixin type
   public static XClz VOLATILEVAR = make_java("ecstasy.annotations","VolatileVar","ecstasy.annotations","VolatileVar",null,"Referent",XXTC);
@@ -149,9 +150,9 @@ public abstract class XCons {
   // Type sig for Iterator<Int64>, which returns a non-XTC type "Iteratorlong"
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
-  public static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong","Iterlong","ecstasy","Iterator",null,"Element",JLONG  );
-  public static XClz ITERSTR = make_java("ecstasy.collections.AryString", "IterString","ecstasy","Iterator",null,"Element",JSTRING);
-  public static XClz ITERATORCHAR = make_java("ecstasy","Iterator",(XClz)null,"Element",XCons.CHAR);
+  public static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong",   "Iterlong",  "ecstasy","Iterator",null,"Element",JLONG  );
+  public static XClz ITERSTR      = make_java("ecstasy.collections.AryString", "IterString","ecstasy","Iterator",null,"Element",JSTRING);
+  public static XClz ITERATORCHAR = make_java("ecstasy",                       "Iterator",  "ecstasy","Iterator",null,"Element",CHAR   );
 
   // These are always expanded to some Java constant
   public static XClz INTLITERAL = make_java("ecstasy.numbers","IntLiteral","ecstasy.numbers","IntLiteral",CONST);
@@ -207,25 +208,40 @@ public abstract class XCons {
 
   // Made from a Java class directly; the XTC class shows up later.
   // Fields are hand-added and need to match the ClazzPart later.
-  public static XClz make_java( String pack, String name, XClz supr, Object... flds ) {
-    return make_java(pack,name,pack,name,supr,flds);
+  static XClz make_java( String pack, String name, XClz supr ) {
+    return _make_java(pack,name,pack,name,supr,XClz.SIDES0,XClz.STR0,XType.EMPTY);
   }
-  public static XClz make_java( String jpack, String jname, String pack, String name, XClz supr, Object... flds ) {
-    XClz clz = XClz.mallocLen(true, pack,"",name,flds.length>>1);
+
+  // Specify string/XTC for xts/tns.
+  static XClz make_java( String jpack, String jname, String pack, String name, XClz supr ) {
+    return _make_java(jpack,jname,pack,name,supr,XClz.SIDES0,XClz.STR0,XType.EMPTY);
+  }
+  static XClz make_java( String jpack, String jname, String pack, String name, XClz supr, String tvar, XType xt ) {
+    assert tvar!=null;
+    assert  xt !=null;
+    return _make_java(jpack,jname,pack,name,supr,XClz.SIDES0,new String[]{tvar},new XType[]{xt});
+  }
+  static XClz make_java( String jpack, String jname, String pack, String name, XClz supr, String tvar0, XClz xt0, String tvar1, XClz xt1 ) {
+    return _make_java(jpack,jname,pack,name,supr,XClz.SIDES0,new String[]{tvar0,tvar1},new XType[]{xt0,xt1});
+  }
+  static XClz make_java( String jpack, String jname, String pack, String name, XClz supr, XClz side_clz, XClz tvar_clz ) {
+    return _make_java(jpack,jname,pack,name,supr,new HashMap<>(){{put(side_clz,new int[]{0});}},new String[0],new XType[]{tvar_clz});
+  }
+
+  private static XClz _make_java( String jpack, String jname, String pack, String name, XClz supr, HashMap<XClz,int[]> sides, String[] tns, XType[] xts ) {
+    XClz clz = XClz.mallocBase(true, pack,"",name);
     clz._jpack = jpack;
     clz._jname = jname;
-    for( int i=0; i<flds.length; i += 2 ) {
-      clz._xts[i>>1] = (XType)flds[i+1];
-      clz._tns[i>>1] = (String)flds[i];
-      clz._tvs[i>>1] = i>>1;
-    }
+    clz._xts = xts;
+    clz._tns = tns;
+    clz._sides = sides;
     // XXTC root XClz has no XTC _clz
     if( pack.isEmpty() && S.eq(name,"XTC") ) {
       clz._depth = 0;
       return clz._intern();
     }
 
-    // Walk the XTC REPO in parallel, and find the matching XTC class
+    // Walk the XTC REPO in parallel to parsing, and find the matching XTC class
     String[] packs = pack.split("\\.");
     assert packs[0].equals("ecstasy");
     ClassPart pclz = XEC.ECSTASY;
@@ -256,11 +272,14 @@ public abstract class XCons {
   // Java primitive array classes, no corresponding XTC class.
   // Treated as a specific instance of the generic Array class using concrete types.
   private static XClz make_java_ary( String jname, XType xelem ) {
-    XClz clz = XClz.mallocLen(true, "ecstasy.collections","","Array",1);
-    clz._tvs[0] = xelem == XXTC ? 0 : -1; // Concrete
-    clz._tns[0] = "Element";      // Concrete generic type
-    clz._xts[0] = xelem;
-    clz._intern(XCons.ARRAY);
+    XClz clz = XClz.mallocBase(true, "ecstasy.collections","","Array");
+    if( clz._tns!=null && clz._tns.length==1 ) clz._tns[0] = "Element";
+    else clz._tns = new String[]{"Element"};
+    if( clz._xts!=null && clz._xts.length==1 ) clz._xts[0] = xelem;
+    else clz._xts = new XType[]{xelem};
+    clz._sides = new HashMap<>(){{put(XCons.ARRAY,new int[]{0});}};
+    XClz clz2 = clz._intern(XCons.ARRAY);
+    assert clz==clz2;
     clz._jname = jname;
     return clz;
   }

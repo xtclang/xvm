@@ -97,7 +97,6 @@ public class AryXTC<E extends XTC> extends Array<E> {
   }
 
   // --- Appender
-  @Override public AryXTC<E> appendTo( E e ) { return add(e); }
 
   public static <E extends XTC> boolean equals$AryXTC( AryXTC gold, Array<E> a0, Array<E> a1 ) {
     if( a0 == a1 ) return true;

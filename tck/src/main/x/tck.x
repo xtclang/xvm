@@ -4,7 +4,7 @@ module tck.xtclang.org {
      * This is temporary, for manual testing only; will be replaced by the xUint framework.
      */
     void run() {
-        //new clazz.Basic().run();
+        new clazz.Basic().run();
         new array.Basic().run();
         new array.Medium().run();
         new comparison.Compare().run();

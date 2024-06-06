@@ -108,7 +108,6 @@ public class AryUInt8 extends Array<UInt8> {
   }
 
   // --- Appender
-  @Override public AryUInt8 appendTo( UInt8 s ) { return add(s); }
 
   // --- text/Stringable
   @Override public long estimateStringLength() { return _len*5; }

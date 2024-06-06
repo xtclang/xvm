@@ -19,7 +19,7 @@ public class Ary<E> implements Iterable<E> {
   /** @return active list length */
   public int len() { return _len; }
   /** @param i element index
-   *  @return element being returned; throws if OOB 
+   *  @return element being returned; throws if OOB
    *  @exception AIOOBE if !(0 <= i < _len)
    */
   public E at( int i ) {
@@ -154,7 +154,8 @@ public class Ary<E> implements Iterable<E> {
   }
   public Ary<E> set_len( int len ) {
     if( len > _len )
-      while( len>= _es.length ) _es = Arrays.copyOf(_es,_es.length<<1);
+      if( _es.length==0 ) _es = Arrays.copyOf(_es,2);
+      else while( len>= _es.length ) _es = Arrays.copyOf(_es,_es.length<<1);
     _len = len;
     while( _es.length > (len<<1) ) // Shrink if hugely too large
       _es = Arrays.copyOf(_es,_es.length>>1);
