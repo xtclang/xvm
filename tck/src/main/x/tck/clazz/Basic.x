@@ -1,12 +1,16 @@
 /**
  * Very basic class nesting
  */
+import ecstasy.collections.Hasher;
+import ecstasy.collections.NaturalHasher;
 class Basic {
 
     void run() {
         basic0();
         basic1();
         //basic2();
+        basic3();
+        //basic4();
     }
 
     // -----------------------------
@@ -37,7 +41,6 @@ class Basic {
     }
 
     //void basic2() {
-    //    import ecstasy.collections.Hasher;
     //    class MyMap<A,B,C extends Hashable> extends HashMap<C,A> { // Swapping type args
     //        construct(A a, B b, C c) { construct MyMap(0); }
     //        @Override construct(MyMap<A,B,C> mm) { super(mm); } // Duplicable
@@ -47,4 +50,25 @@ class Basic {
     //    MyMap bar = new MyMap<Int64,Float64,String>(17,3.14,"abc");
     //}
 
+
+    // Interfaces
+    void basic3() {
+        interface IfaceBase<Hasher> { }
+        interface IfaceChild<SubHash extends Hasher> extends IfaceBase<SubHash> { }
+        class Foo implements IfaceChild<NaturalHasher/*concrete type, not a type variable*/> { }
+        Foo foo = new Foo();
+        Object o1 = foo.Hasher;
+        Object o2 = foo.SubHash;
+        //Object o3 = foo.NaturalHasher; // NaturalHasher is concrete, not a type variable, so no getter
+    }
+
+    //// Super in an interface
+    //void basic4() {
+    //    interface IfaceBase { void add() {} }
+    //    interface IfaceBase2 { }
+    //    interface IfaceChild extends IfaceBase, IfaceBase2 { @Override void add() { super(); } }
+    //    class Foo implements IfaceChild { }
+    //    Foo foo = new Foo();
+    //    foo.add();
+    //}
 }

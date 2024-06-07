@@ -323,8 +323,10 @@ class SwitchAST extends AST {
     for( int i=0; i<_armss.length; i++ ) {
       if( _armss[i][0]==null ) sb.ip("default"); else sb.ip("case ").p(_armss[i][0]);
       sb.p(case_sep);
-      _kids[i+1].jcode(sb);
-      if( !(_kids[i+1] instanceof BlockAST) ) sb.p(";");
+      if( _kids[i+1] != null ) { // null is fall-through case
+        _kids[i+1].jcode(sb);
+        if( !(_kids[i+1] instanceof BlockAST) ) sb.p(";");
+      }
       sb.nl();
     }
     sb.di().ip("}");

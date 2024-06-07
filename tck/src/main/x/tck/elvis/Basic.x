@@ -24,6 +24,9 @@ class Basic {
     Int?        hideI(Int?        x) = x;
     IntLiteral? hideL(IntLiteral? x) = x;
     String?     hideS(String?     x) = x;
+    private conditional String? trinary(Int x) {
+        return (x==0) ? False : ((x==1) ? (True,Null) : (True,"abc"));
+    }
 
     // -----------------------------
     void basic0() {
@@ -111,10 +114,6 @@ class Basic {
     }
 
     // -----------------------------
-
-    private conditional String? trinary(Int x) {
-        return (x==0) ? False : ((x==1) ? (True,Null) : (True,"abc"));
-    }
 
     void multi0() {
         assert !(String? s0 := trinary(0));

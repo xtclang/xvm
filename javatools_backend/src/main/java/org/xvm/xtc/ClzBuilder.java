@@ -159,12 +159,14 @@ public class ClzBuilder {
       for( Contrib c : _clz._contribs )
         if( c._comp==Part.Composition.Implements ) {
           XClz iclz = switch( c._tContrib ) {
-          case ParamTCon ptc -> XClz.make(ptc);
-          case TermTCon ttc -> XClz.make(ttc.clz());
+          case ParamTCon   ptc -> XClz.make(ptc);
+          case TermTCon    ttc -> XClz.make(ttc.clz());
           case VirtDepTCon vtc -> XClz.make(vtc.clz());
-          default -> { throw XEC.TODO(); }
+          case ImmutTCon   imm -> XClz.make(imm);
+          case InnerDepTCon inn-> XClz.make(inn.clz());
+          default -> throw XEC.TODO();
           };
-          _sb.p((once++ == 0) ? " implements " : ", ").p(iclz.name());
+          _sb.p((once++ == 0) ? (is_iface ? "extends " : " implements ") : ", ").p(iclz.name());
           iclz.clz_generic_use(_sb, _tclz);
           add_import(iclz);
         }
@@ -182,22 +184,19 @@ public class ClzBuilder {
 
     // Force native methods to now appear, so signature matching can assume a
     // method always exists.
-    for( Part part : _clz._name2kid.values() ) {
-      if( part instanceof MMethodPart mmp )
-        // Output java methods.
-        if( mmp._name2kid==null ) {
-          mmp.addNative();
-        } else {
-          MethodPart m = (MethodPart)mmp.child(mmp._name);
-          if( m._cons != null )
-            for( Const con : m._cons )
-              if( con instanceof MethodCon meth ) {
-                MMethodPart mm = (MMethodPart)meth._par.part();
-                if( mm._name2kid==null )
-                  mm.addNative();
-              }
-        }
-    }
+    if( _clz._name2kid!=null )
+      for( Part part : _clz._name2kid.values() )
+        if( part instanceof MMethodPart mmp )
+          // Output java methods.
+          if( mmp._name2kid==null ) {
+            mmp.addNative();
+          } else {
+            if( mmp.child(mmp._name) instanceof MethodPart m && m._cons != null )
+              for( Const con : m._cons )
+                if( con instanceof MethodCon meth )
+                  if( meth._par.part() instanceof MMethodPart mm && mm._name2kid==null )
+                    mm.addNative();
+          }
 
 
     // Look for a module/class init.  This will become the Java <clinit> / <init>
@@ -268,11 +267,12 @@ public class ClzBuilder {
         Part p = _clz._name2kid.get(name);
         if( p==null ) { // Some are explicitly given in name2kids, and handled below
           int idx = idxs[i];
-          _tclz._xts[idx].clz(_sb.ip("public "));
+          if( is_iface ) _sb.ip("default XTC ");
+          else _tclz._xts[idx].clz_bare(_sb.ip("public "));
           _sb.p(" ").p(name).p("$get() { return ");
           // Either mapping an interface type to a local type OR to a constant type
           if( idx < _tclz._tns.length ) _sb.p(_tclz._tns[idx]).p("$get()"); //  public Key$get() { return Other$get(); }
-          else _tclz._xts[idx].clz(_sb).p(".GOLD");                         //  public Key$get() { return Float32.GOLD; }
+          else _tclz._xts[idx].clz_bare(_sb).p(".GOLD");                         //  public Key$get() { return Float32.GOLD; }
           _sb.p("; }").nl();
         }
       }
@@ -280,95 +280,95 @@ public class ClzBuilder {
 
 
     // Output Java methods for all class methods
-    for( Part part : _clz._name2kid.values() ) {
-      switch( part ) {
-      case MMethodPart mmp:
-        // Output java methods.
-        String mname = jname(mmp._name);
-        for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
-          if( S.eq(mname,"construct") )
-            continue;           // Constructors emitted first for easy reading
-          _sb.nl(); // Blank line between methods
-          // A bunch of methods that have special dispatch rules.
-          boolean special = false;
-          switch( mname ) {
-          case "equals":
-            if( meth._args.length==3 ) {
-              special = true;
-              Comparable.make_equals(java_class_name,_sb);
-              // Add a full default method
-              if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
-              else jmethod(meth,mname+"$"+java_class_name);
+    if( _clz._name2kid!=null )
+      for( Part part : _clz._name2kid.values() )
+        switch( part ) {
+        case MMethodPart mmp:
+          // Output java methods.
+          String mname = jname(mmp._name);
+          for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
+            if( S.eq(mname,"construct") )
+              continue;           // Constructors emitted first for easy reading
+            _sb.nl(); // Blank line between methods
+            // A bunch of methods that have special dispatch rules.
+            boolean special = false;
+            switch( mname ) {
+            case "equals":
+              if( meth._args.length==3 ) {
+                special = true;
+                Comparable.make_equals(java_class_name,_sb);
+                // Add a full default method
+                if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
+                else jmethod(meth,mname+"$"+java_class_name);
+              }
+              break;
+            case "compare":
+              if( meth._args.length==3 ) {
+                special = true;
+                Orderable.make_compare(java_class_name,_sb);
+                // Add a full default method
+                if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
+                else jmethod(meth,mname+"$"+java_class_name);
+              }
+              break;
+            case "hashCode":
+              if( meth._args.length==1 ) {
+                special = true;
+                Hashable.make_hashCode(java_class_name,_sb);
+                // Add a full default method
+                if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
+                else jmethod(meth,mname+"$"+java_class_name);
+              }
+              break;
+            case "estimateStringLength":
+            case "appendTo":
+              if( meth._ast==null ) // No body, but declared.  Use the interface default.
+                special = true;
+              break;
+            default:
             }
-            break;
-          case "compare":
-            if( meth._args.length==3 ) {
-              special = true;
-              Orderable.make_compare(java_class_name,_sb);
-              // Add a full default method
-              if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
-              else jmethod(meth,mname+"$"+java_class_name);
+            // Not special, use the generic AST generator
+            if( !special ) {
+              // Generate the method from the AST
+              jmethod(meth,mname);
+              // Service classes generate $mname and $$mname wrapper methods.
+              if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
+                Service.make_methods(meth,java_class_name,_sb);
             }
-            break;
-          case "hashCode":
-            if( meth._args.length==1 ) {
-              special = true;
-              Hashable.make_hashCode(java_class_name,_sb);
-              // Add a full default method
-              if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
-              else jmethod(meth,mname+"$"+java_class_name);
-            }
-            break;
-          case "estimateStringLength":
-          case "appendTo":
-            if( meth._ast==null ) // No body, but declared.  Use the interface default.
-              special = true;
-            break;
-          default:
           }
-          // Not special, use the generic AST generator
-          if( !special ) {
-            // Generate the method from the AST
-            jmethod(meth,mname);
-            // Service classes generate $mname and $$mname wrapper methods.
-            if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
-              Service.make_methods(meth,java_class_name,_sb);
-          }
+          break;
+
+        case PackagePart pack:
+          // Will need to compile the package at the same time this module.
+          if( pack._contribs == null )
+            break;
+          // Imports
+          assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
+          // Ignore default ecstasy import
+          TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
+          if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
+            break;
+          // Other imports
+          add_import(ttc.clz());
+          break;
+
+        case PropPart pp:
+          PropBuilder.make_class(this,pp);
+          break;
+
+        case ClassPart clz_nest:
+          // Nested class.  Becomes a java static inner class
+          ClzBuilder X = new ClzBuilder(this,clz_nest);
+          X.jclass_body();
+          break;
+
+        case TDefPart typedef:
+          // TypeDef.  Hopefully already swallowed into XType/XClz
+          break;
+
+        default:
+          throw XEC.TODO();
         }
-        break;
-
-      case PackagePart pack:
-        // Will need to compile the package at the same time this module.
-        if( pack._contribs == null )
-          break;
-        // Imports
-        assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
-        // Ignore default ecstasy import
-        TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
-        if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
-          break;
-        // Other imports
-        add_import(ttc.clz());
-        break;
-
-      case PropPart pp:
-        PropBuilder.make_class(this,pp);
-        break;
-
-      case ClassPart clz_nest:
-        // Nested class.  Becomes a java static inner class
-        ClzBuilder X = new ClzBuilder(this,clz_nest);
-        X.jclass_body();
-        break;
-
-      case TDefPart typedef:
-        // TypeDef.  Hopefully already swallowed into XType/XClz
-        break;
-
-      default:
-        throw XEC.TODO();
-      }
-    }
 
     // Const classes get a specific {toString, appendTo}, although they are not
     // mentioned if default

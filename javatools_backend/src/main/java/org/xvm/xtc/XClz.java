@@ -206,21 +206,26 @@ public class XClz extends XType {
     Ary<ParamTCon> ptcs	= null;
     if( clz._contribs != null )
       for( Contrib c : clz._contribs )
-        if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends ) {
-          if( c._tContrib instanceof TermTCon ttc ) {
-            // no extra type params
-          } else if( c._tContrib instanceof ParamTCon ptc ) {
+        if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends )
+          switch( c._tContrib ) {
+          case TermTCon ttc: break;   // no extra type params
+          case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
+          case ParamTCon ptc:
             if( ptcs==null ) ptcs = new Ary<>(ParamTCon.class);
             ptcs.add(ptc);
-          } else throw XEC.TODO(); // Expecting a PTC here
+            break;
+          case InnerDepTCon dep:
+            //XType foo = make(dep.part());
+            assert dep.clz()._tnames.length==0; // No tvars here?
+            break;
+          default: throw XEC.TODO(); // Expecting a PTC here
         }
     return ptcs;
   }
 
+
   // Fill in common fields.  Not interned yet.
-  private static XClz _malloc( ClassPart clz ) {
-    return _malloc(clz,sides(clz));
-  }
+  private static XClz _malloc( ClassPart clz ) { return _malloc(clz,sides(clz)); }
 
   // Fill in common fields.  Not interned yet.
   private static XClz _malloc( ClassPart clz, Ary<ParamTCon> ptcs ) {
@@ -278,7 +283,7 @@ public class XClz extends XType {
           int idx = S.find(clz._tnames,pname); // Matches a clz name, uses that type
           if( idx == -1 ) {
             xclz._xts = xts = Arrays.copyOf(xts,(idx = xts.length)+1);
-            xts[idx] = pclz._xts[i]; //xtype(ttc,true,xclz);
+            xts[idx] = pclz._xts[i];
           }
           idxs[i] = idx;
         }
@@ -305,7 +310,6 @@ public class XClz extends XType {
     clz._tclz = xclz;           // Assign the class cache
     return xclz;
   }
-
 
   // Make from a parameterized class: like a
   // normal class but the type parms from the PTC.
@@ -348,6 +352,15 @@ public class XClz extends XType {
     for( int i=0; i<ptc._parms.length; i++ )
       xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
     return xclz._intern(proto);
+  }
+
+  // Make a R/O version
+  public static XClz make( ImmutTCon imm ) {
+    if( imm.icon() instanceof TermTCon ttc ) {
+      XClz clz = make(ttc.clz());
+      return clz.readOnly();
+    }
+    throw XEC.TODO();
   }
 
   // An inner class, which gets the outer class Type variables
@@ -506,6 +519,7 @@ public class XClz extends XType {
     if( this==XCons.JFALSE) return false;
     if( this==XCons.JNULL ) return false;
     if( this==XCons.JSTRING ) return false;
+    if( this==XCons.JSTRINGN ) return false;
     return !S.eq("java.lang",_jpack) && (!self || _clz != ClzBuilder.CCLZ);
   }
   // No java name means needs a build
@@ -572,6 +586,7 @@ public class XClz extends XType {
     // These guys need a fully qualified name to avoid name conflicts
     if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous )
       return sb.p(qualified_name());
+    ClzBuilder.add_import(this);
     return sb.p(name());
   }
 
@@ -625,9 +640,13 @@ public class XClz extends XType {
       sb.p("$").p( _tns[i]);
       sb.p(" extends " );
       XClz xclz = (XClz)_xts[i];
-      if( xclz.iface() ) sb.p("XTC & ");
-      sb.p(xclz.name());
-      xclz.clz_generic_def(sb);
+      if( xclz.iface() ) {
+        sb.p("XTC & ");
+        sb.p(xclz.name());
+      } else {
+        sb.p(xclz.name());
+        xclz.clz_generic_def(sb);
+      }
       sb.p(", ");
     }
     return sb.unchar(2).p("> ");
