@@ -35,8 +35,7 @@ const IPAddress(Byte[] bytes)
      */
     @Override
     construct(String text) {
-        (Boolean success, this.bytes, String? error) = parse(text);
-        assert:arg success as error ?: $"Illegal IP address: {text.quoted()}";
+        assert this.bytes := parse(text, s -> throw new IllegalArgument(s));
     }
 
     assert() {
@@ -168,18 +167,17 @@ const IPAddress(Byte[] bytes)
      *
      * @return success  True iff the parsing succeeded and the IPAddress is lexically valid
      * @return bytes    the bytes of the IP address
-     * @return error    if parsing failed for any reason, this may contain an explanation of the
-     *                  parsing error
      */
-    static (Boolean success, Byte[] bytes, String? error) parse(String text) {
+    static conditional Byte[] parse(String text, function void (String)? report = Null) {
         Int length = text.size;
         if (length == 0) {
-            return False, [], "Empty IP address string";
+            report?($"Illegal IP address {text.quoted()}: Empty IP address string");
+            return False;
         }
 
         return text[0] == '[' || text.indexOf(':')
-                ? parseIPv6(text)
-                : parseIPv4(text);
+                ? parseIPv6(text, report)
+                : parseIPv4(text, report);
     }
 
     /**
@@ -193,10 +191,11 @@ const IPAddress(Byte[] bytes)
      * @return error    if parsing failed for any reason, this will contain the explanation of the
      *                  parsing error
      */
-    static (Boolean success, Byte[] bytes, String? error) parseIPv4(String text) {
+    static conditional Byte[] parseIPv4(String text, function void (String)? report = Null) {
         Int length = text.size;
         if (length == 0) {
-            return False, [], "Empty IPv4 address string";
+            report?($"Illegal IP address {text.quoted()}: Empty IP address string");
+            return False;
         }
 
         Int    offset = 0;
@@ -209,15 +208,18 @@ const IPAddress(Byte[] bytes)
                 if (Int digit := ch.asciiDigit()) {
                     n = n * 10 + digit;
                     if (n > UInt32.MaxValue) {
-                        return False, [], $"Part {cell+1} of the IPv4 address is out of range: {text.quoted()}";
+                        report?($"Illegal IP address {text.quoted()}: Part {cell+1} of the IPv4 address is out of range");
+                        return False;
                     }
                 } else if (ch == '.') {
                     if (Digits.first) {
-                        return False, [], $"The IPv4 address contains a blank value: {text.quoted()}";
+                        report?($"Illegal IP address {text.quoted()}: The IPv4 address contains a blank value");
+                        return False;
                     }
 
                     if (n > 0xFF) {
-                        return False, [], $"Part {cell+1} of the IPv4 address is out of range: {n}";
+                        report?($"Illegal IP address {text.quoted()}: Part {cell+1} of the IPv4 address is out of range: {n}");
+                        return False;
                     }
 
                     bytes[cell] = n.toUInt8();
@@ -226,7 +228,8 @@ const IPAddress(Byte[] bytes)
                     ++offset;
                     continue Cells;
                 } else {
-                    return False, [], $"Part {cell+1} of the IPv4 address contains an invalid character: {ch.quoted()}";
+                    report?($"Illegal IP address {text.quoted()}: Part {cell+1} of the IPv4 address contains an invalid character: {ch.quoted()}");
+                    return False;
                 }
 
                 ++offset;
@@ -243,38 +246,41 @@ const IPAddress(Byte[] bytes)
             Int shift = (3 - cell) * 8;
             n = remain >> shift;
             if (n > 0xFF) {
-                return False, [], $"Part {cell+1} of the IPv4 address is out of range: {n} ({text.quoted()})";
+                report?($"Illegal IP address {text.quoted()}: Part {cell+1} of the IPv4 address is out of range: {n} ({text.quoted()})");
+                return False;
             }
             bytes[cell] = n.toUInt8();
             remain     &= ~(n<<shift);
         }
 
         if (offset < length) {
-            return False, [], $"More than 4 parts in the IPv4 address: {text.quoted()}";
+            report?($"Illegal IP address {text.quoted()}: More than 4 parts in the IPv4 address: {text.quoted()}");
+            return False;
         } else if (text[length-1] == '.') {
-            return False, [], $"The IPv4 address ends with a '.': {text.quoted()}";
+            report?($"Illegal IP address {text.quoted()}: The IPv4 address ends with a '.': {text.quoted()}");
+            return False;
         }
 
-        return True, bytes, Null;
+        return True, bytes;
     }
 
     /**
      * Parse IPv6 address information from a String, without relying on an exception to report
      * failure.
      *
-     * @param text  the String containing an IPv6 address
+     * @param text    the String containing an IPv6 address
+     * @param report  (optional) the function to report a failure to, as a non-localized string
      *
-     * @return success  True iff the parsing succeeded and the IPAddress is lexically valid
-     * @return bytes    the bytes of the IP address
-     * @return error    if parsing failed for any reason, this will contain the explanation of the
-     *                  parsing error
+     * @return True iff the parsing succeeded and the IPAddress is lexically valid
+     * @return (conditional) the bytes of the IP address
      *
      * @see https://www.ietf.org/rfc/rfc2732.txt
      */
-    static (Boolean success, Byte[] bytes, String? error) parseIPv6(String text) {
+    static conditional Byte[] parseIPv6(String text, function void (String)? report = Null) {
         Int length = text.size;
         if (length == 0) {
-            return False, [], "Empty IPv6 address string";
+            report?($"Illegal IP address {text.quoted()}: Empty IPv6 address string");
+            return False;
         }
 
         Int offset = 0;
@@ -285,7 +291,8 @@ const IPAddress(Byte[] bytes)
             offset += 1; // chop off '['
             length -= 1; // chop off ']'
             if (offset >= length) {
-                return False, [], $"Empty IPv6 address string: {text.quoted()}";
+                report?($"Illegal IP address {text.quoted()}: Empty IPv6 address string: {text.quoted()}");
+                return False;
             }
         }
 
@@ -298,7 +305,8 @@ const IPAddress(Byte[] bytes)
                 if (Int hexit := ch.asciiHexit()) {
                     n = n * 0x10 + hexit;
                     if (n > 0xFFFF) {
-                        return False, [], $"Part {cell+1} of the IPv6 address is out of range: {text.quoted()}";
+                        report?($"Illegal IP address {text.quoted()}: Part {cell+1} of the IPv6 address is out of range: {text.quoted()}");
+                        return False;
                     }
                 } else if (ch == ':') {
                     bytes[cell*2  ] = (n >> 8 ).toUInt8();
@@ -308,9 +316,8 @@ const IPAddress(Byte[] bytes)
                     // check for "::"
                     if (offset < length && text[offset] == ':') {
                         if (skipped) {
-                            return False, [], $|The IPv6 address contains more than one \"::\"\
-                                               | skip construct: {text.quoted()}
-                                              ;
+                            report?($"Illegal IP address {text.quoted()}: The IPv6 address contains more than one \"::\" skip construct: {text.quoted()}");
+                            return False;
                         }
 
                         // it's a "::" skip; skip the second colon
@@ -319,25 +326,20 @@ const IPAddress(Byte[] bytes)
                         // calculate the number of remaining cells
                         Int colons = text.count(':');
                         if (colons > 6) {
-                            return False, [], $|Due to the \"::\" skip construct, the IPv6 address\
-                                               | implicitly contains more than 8 parts: {text.quoted()}
-                                              ;
+                            report?($"Illegal IP address {text.quoted()}: Due to the \"::\" skip construct, the IPv6 address implicitly contains more than 8 parts: {text.quoted()}");
+                            return False;
                         }
 
                         Int remain = colons - cell - 1;
                         if (remain < 1) {
-                            return False, [], $|The IPv6 address contains an illegal \"::\"\
-                                               | skip construct that skips past the end of the\
-                                               | legal address range: {text.quoted()}
-                                              ;
+                            report?($"Illegal IP address {text.quoted()}: The IPv6 address contains an illegal \"::\" skip construct that skips past the end of the legal address range");
+                            return False;
                         }
 
                         Int skipping = 7 - remain - cell;
                         if (skipping < 2) {
-                            return False, [], $|The IPv6 address contains an illegal \"::\"\
-                                               | skip construct that skips fewer than two parts\
-                                               | of the address: {text.quoted()}
-                                              ;
+                            report?($"Illegal IP address {text.quoted()}: The IPv6 address contains an illegal \"::\" skip construct that skips fewer than two parts of the address");
+                            return False;
                         }
 
                         cell   += skipping;
@@ -346,18 +348,19 @@ const IPAddress(Byte[] bytes)
                     }
 
                     if (Hexits.first) {
-                        return False, [], $"The IPv6 address contains a blank value: {text.quoted()}";
+                        report?($"Illegal IP address {text.quoted()}: The IPv6 address contains a blank value: {text.quoted()}");
+                        return False;
                     }
 
                     if (cell == 7) {
-                        return False, [], $"The IPv6 address contains more than 8 parts: {text.quoted()}";
+                        report?($"Illegal IP address {text.quoted()}: The IPv6 address contains more than 8 parts: {text.quoted()}");
+                        return False;
                     }
 
                     continue Cells;
                 } else {
-                    return False, [], $|Part {cell+1} of the IPv6 address contains an invalid\
-                                       | character: {ch.quoted()}
-                                      ;
+                    report?($"Illegal IP address {text.quoted()}: Part {cell+1} of the IPv6 address contains an invalid character: {ch.quoted()}");
+                    return False;
                 }
 
                 ++offset;
@@ -367,14 +370,16 @@ const IPAddress(Byte[] bytes)
                 bytes[14] = (n >> 8 ).toUInt8();
                 bytes[15] = (n & 0xF).toUInt8();
             } else {
-                return False, [], $"The IPv6 address contains only {cell+1} parts: {text.quoted()}";
+                report?($"Illegal IP address {text.quoted()}: The IPv6 address contains only {cell+1} parts: {text.quoted()}");
+                return False;
             }
         }
 
         if (offset < length) {
-            return False, [], $"The IPv6 address contains more than 8 parts: {text.quoted()}";
+            report?($"Illegal IP address {text.quoted()}: The IPv6 address contains more than 8 parts: {text.quoted()}");
+            return False;
         }
 
-        return True, bytes, Null;
+        return True, bytes;
     }
 }

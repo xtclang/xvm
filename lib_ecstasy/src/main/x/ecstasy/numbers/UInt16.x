@@ -74,6 +74,169 @@ const UInt16
     }
 
 
+    // ----- parsing -------------------------------------------------------------------------------
+
+    /**
+     * Parse a UInt16 value from the passed String.
+     *
+     * @param text   the string value
+     * @param radix  (optional) the radix of the passed String value, in the range `2..36`
+     *
+     * @return True iff the passed String value represents a legal UInt16 value
+     * @return (conditional) the parsed UInt16 value
+     */
+    static conditional UInt16 parse(String text, Int? radix=Null) {
+        if (text.empty || !(2 <= radix? <= 36)) {
+            return False;
+        }
+
+        // optional leading sign
+        Int length = text.size;
+        Int offset = text[0] == '+' ? 1 : 0;
+
+        // optional radix indicator
+        if (radix == Null) {
+            // determine the radix from the string value (the default radix is decimal)
+            radix = 10;
+            if (length >= offset + 2 && text[offset] == '0') {
+                switch (text[offset+1]) {
+                case 'b', 'B':
+                    radix   = 2;
+                    offset += 2;
+                    break;
+                case 'o':
+                    radix   = 8;
+                    offset += 2;
+                    break;
+                case 'x', 'X':
+                    radix   = 16;
+                    offset += 2;
+                    break;
+                }
+            }
+        } else if (length >= offset + 2 && text[offset] == '0' && switch (radix) {
+                case  2: text[offset+1].lowercase == 'b';
+                case  8: text[offset+1].lowercase == 'o';
+                case 16: text[offset+1].lowercase == 'x';
+                default: False;
+                }) {
+            offset += 2;
+        }
+
+        // digits
+        Int magnitude = 0;
+        Int digits    = 0;
+        if (radix == 10) {
+            NextChar: while (offset < length) {
+                Char ch = text[offset];
+                if (UInt8 digit := ch.asciiDigit()) {
+                    magnitude = magnitude * radix + digit;
+                    ++digits;
+                    if (magnitude > UInt16.MaxValue) {
+                        return False;
+                    }
+                } else if (ch == '_') {
+                    if (digits == 0) {
+                        return False;
+                    }
+                } else {
+                    break;
+                }
+                ++offset;
+            }
+
+            // allow KI/KB, MI/MB, GI/GB TI/TB, PI/PB, EI/EB, ZI/ZB, YI/YB
+            PossibleSuffix: if (offset < length) {
+                Int factorIndex;
+                switch (text[offset]) {
+                case 'K', 'k':
+                    factorIndex = 0;
+                    break;
+
+                case 'M', 'm':
+                case 'G', 'g':
+                case 'T', 't':
+                case 'P', 'p':
+                case 'E', 'e':
+                case 'Z', 'z':
+                case 'Y', 'y':
+                    if (magnitude != 0) {
+                        // these would all be out of range -- with any factor -- for UInt16
+                        return False;
+                    }
+                    factorIndex = -1;
+                    break;
+
+                default:
+                    break PossibleSuffix;
+                }
+                ++offset;
+
+                IntLiteral.Factor[] factors = IntLiteral.DecimalFactor.values; // implicitly decimal, e.g. "k"
+                if (offset < length) {
+                    switch (text[offset]) {
+                    case 'B', 'b':                      // explicitly decimal, e.g. "kb"
+                        ++offset;
+                        break;
+
+                    case 'I', 'i':                      // explicitly binary, e.g. "ki"
+                        ++offset;
+                        factors = IntLiteral.BinaryFactor.values;
+
+                        if (offset < length) {          // optional trailing "b", e.g. "kib"
+                            Char optionalB = text[offset];
+                            if (optionalB == 'B' || optionalB == 'b') {
+                                ++offset;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (factorIndex >= 0) {
+                    magnitude *= factors[factorIndex].factor.toInt();
+                }
+            }
+        } else { // the number is *not* radix 10
+            NextChar: while (offset < length) {
+                Char ch = text[offset++];
+                Int digit;
+                switch (ch) {
+                case '0'..'9':
+                    digit = ch - '0';
+                    break;
+                case 'A'..'Z':
+                    digit = ch - 'A' + 10;
+                    break;
+                case 'a'..'z':
+                    digit = ch - 'a' + 10;
+                    break;
+                case '_':
+                    if (digits == 0) {
+                        return False;
+                    }
+                    continue NextChar;
+                default:
+                    return False;
+                }
+
+                if (digit >= radix) {
+                    return False;
+                }
+                magnitude = magnitude * radix + digit;
+                if (magnitude > UInt16.MaxValue) {
+                    return False;
+                }
+                ++digits;
+            }
+        }
+
+        return digits == 0 || offset < length || magnitude > MaxValue
+                ? False
+                : True, magnitude.toUInt16();
+    }
+
+
     // ----- properties ----------------------------------------------------------------------------
 
     @Override
