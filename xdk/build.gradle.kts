@@ -8,7 +8,9 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 import org.jreleaser.gradle.plugin.tasks.AbstractJReleaserTask
 import org.jreleaser.gradle.plugin.tasks.JReleaserConfigTask
 import org.jreleaser.model.Active
+import org.jreleaser.model.Active.*
 import org.jreleaser.model.Http.Authorization
+import org.jreleaser.model.Stereotype
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -373,7 +375,7 @@ jreleaser {
     val releaseTag = "v/{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
     val tag = if (isSnapshot()) "early-access" else releaseTag
 
-    //dryrun = true
+    dryrun = true
     gitRootSearch = true
 
     /**
@@ -394,18 +396,21 @@ jreleaser {
             label = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
             fullChangelog = false
         }
+        stereotype = Stereotype.CLI
     }
 
-    // The deploy section is used to publish package artifacts to the GitHub Maven Packages.
-    //   We have the "xdk" maven artifact, the "xtc-plugin" Gradle artifact, and its Maven version (Gradle adds some extra meta info in pseudo artifact)
+    platform {
+        replacements = mapOf("aarch_64" to "aarch64")
+    }
+
+    // TODO Use early-access as snapshot tag.
     System.err.println("Change the snapshot tag to 'early-access' for all snapshots")
     deploy {
-        // TODO Use early-access as snapshot tag.
         maven {
-            active = Active.ALWAYS
+            active = ALWAYS
             github {
                 val xdk by registering {
-                    active = Active.ALWAYS
+                    active = ALWAYS
                     snapshotSupported = true
                     url = "https://maven.pkg.github.com/xtclang/xvm"
                     username = "xtclang-bot"
@@ -414,6 +419,40 @@ jreleaser {
                     stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
                     applyMavenCentralRules = false
                 }
+            }
+            /*
+            https://jreleaser.org/guide/latest/examples/maven/maven-central.html
+            nexus2 {
+                val `maven-central` by registering {
+                    active = ALWAYS
+                    url = "https://s01.oss.sonatype.org/service/local"
+                    snapshotUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                    closeRepository = true
+                    releaseRepository = false
+                    stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
+                    applyMavenCentralRules = true
+                }
+            }*/
+        }
+    }
+
+    signing {
+        active = ALWAYS
+        armored = true
+    }
+
+    release {
+        // TODO prerelease
+        github {
+            draft = true
+            overwrite = true
+            changelog {
+                formatted = ALWAYS
+                preset = "conventional-commits"
+                contributors {
+                    format = "- {{contributorName}}{{#contributorUsernameAsLink}} ({{.}}){{/contributorUsernameAsLink}}"
+                }
+                contentTemplate = compositeRootProjectDirectory.file("gradle/jreleaser/changelog.tpl")
             }
         }
     }
