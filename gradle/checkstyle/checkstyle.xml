@@ -84,7 +84,9 @@
             <property name="option" value="eol"/>
         </module>
         <module name="MemberName"/>
-        <module name="MethodName"/>
+        <module name="MethodName">
+           <property name="format" value="^[a-z$](_?[a-zA-Z0-9]+)*$"/>
+        </module>
         <module name="MissingSwitchDefault"/>
         <module name="ModifierOrder"/>
         <module name="MultipleVariableDeclarations"/>

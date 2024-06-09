@@ -90,6 +90,12 @@ data class GitHubProtocol(private val project: Project) {
         return resolveTags()
     }
 
+    fun resolveBranch(): Pair<String, String> = project.run {
+        val localBranchName = git("branch", "--show-current", logger = logger).output
+        val localCommit = git("rev-parse", "HEAD", logger = logger).output
+        return localBranchName to localCommit
+    }
+
     fun resolveTags(): GitTagInfo = project.run {
         val localBranchName = git("branch", "--show-current", logger = logger).output
         val localTagMap = resolveTagMap(true, "show-ref", "--tags")

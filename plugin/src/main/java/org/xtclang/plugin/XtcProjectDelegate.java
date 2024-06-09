@@ -16,9 +16,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_OU
 import static org.xtclang.plugin.XtcPluginConstants.XDK_EXTRACT_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_FILE_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_GROUP_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_OUTGOING;
@@ -30,11 +28,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
 
-import java.io.IOException;
-
 import java.net.URL;
-
-import java.nio.file.Files;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -377,6 +371,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                 prefix(projectName, XDK_VERSION_TASK_NAME), project.getVersion(), getSemanticVersion()));
         });
 
+        /*
         tasks.register(XDK_VERSION_FILE_TASK_NAME, task -> {
             task.setGroup(XDK_VERSION_GROUP_NAME);
             task.setDescription("Generate a file containing the XDK/XTC semantic version under the build tree.");
@@ -393,7 +388,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Void, Void> {
                     throw buildException(e, "I/O error when writing VERSION file: '{}'.", e.getMessage());
                 }
             });
-        });
+        });*/
     }
 
     @SuppressWarnings("unused")

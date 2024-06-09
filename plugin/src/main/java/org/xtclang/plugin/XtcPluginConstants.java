@@ -41,7 +41,6 @@ public final class XtcPluginConstants {
     public static final String XDK_LIBRARY_ELEMENT_TYPE_XDK_CONTENTS = "xdk-contents";
     public static final String XDK_LIBRARY_ELEMENT_TYPE = "xdk-distribution-archive";
     public static final String XDK_EXTRACT_TASK_NAME = "extractXdk";
-    public static final String XDK_VERSION_FILE_TASK_NAME = "xtcVersionFile";
     public static final String XDK_VERSION_TASK_NAME = "xtcVersion";
     public static final String XDK_VERSION_GROUP_NAME = "version";
     public static final String XDK_VERSION_PATH = "VERSION";

@@ -5,7 +5,7 @@ plugins {
 }
 
 private val semanticVersion: SemanticVersion by extra
-private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken()
+private val gitHubToken = getXtclangGitHubMavenPackageRepositoryToken(writeAccess = true)
 
 tasks.withType<PublishToMavenRepository>().configureEach {
     onlyIf {

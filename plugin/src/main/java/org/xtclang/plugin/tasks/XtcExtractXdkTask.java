@@ -31,6 +31,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     private static final String XDK_ARCHIVE_DEFAULT_EXTENSION = "zip";
 
     @Inject
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass") // Has to be public for code injection to work.
     public XtcExtractXdkTask(final Project project) {
         super(project);
     }
@@ -51,7 +52,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     }
 
     @TaskAction
-    public void extractXdk() {
+    public void executeTask() {
         super.executeTask();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.

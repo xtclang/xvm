@@ -11,7 +11,8 @@ plugins {
    //`maven-publish`
 }
 
-val githubToken = getXtclangGitHubMavenPackageRepositoryToken()
+// TODO do we need write access here? Probably for GitHub, but not for the GradlePluginPortal
+val githubToken = getXtclangGitHubMavenPackageRepositoryToken(true)
 
 publishing {
     repositories {

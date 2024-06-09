@@ -212,8 +212,10 @@ class XdkPropertiesImpl(project: Project): XdkProjectBuildLogic(project), XdkPro
     }
 }
 
-fun Project.getXtclangGitHubMavenPackageRepositoryToken(): String {
-    return getXdkProperty("org.xtclang.repo.github.token", System.getenv("GITHUB_TOKEN") ?: "")
+fun Project.getXtclangGitHubMavenPackageRepositoryToken(writeAccess: Boolean): String {
+    val key = "org.xtclang.repo.github.token${if (writeAccess) ".write" else ""}"
+    println("TOKEN KEY: $key")
+    return getXdkProperty(key, System.getenv("GITHUB_TOKEN") ?: "")
 }
 
 /*

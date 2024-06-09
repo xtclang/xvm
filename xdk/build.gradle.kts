@@ -6,6 +6,7 @@ import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 import org.jreleaser.gradle.plugin.tasks.AbstractJReleaserTask
+import org.jreleaser.gradle.plugin.tasks.JReleaserConfigTask
 import org.jreleaser.model.Active
 import org.jreleaser.model.Http.Authorization
 import org.xtclang.plugin.tasks.XtcCompileTask
@@ -27,7 +28,7 @@ plugins {
     `maven-publish`
 }
 
-val githubToken = getXtclangGitHubMavenPackageRepositoryToken()
+val githubToken = getXtclangGitHubMavenPackageRepositoryToken(true)
 
 publishing {
     repositories {
@@ -218,6 +219,21 @@ val ensureTags by tasks.registering {
     }
 }
 
+val writeVersionFile by tasks.registering {
+    group = LifecycleBasePlugin.BUILD_GROUP
+    description = "Write XDK version file to build directory (VERSION)."
+    val versionFile = layout.buildDirectory.file("VERSION")
+    outputs.file(versionFile)
+/*    doLast {
+        val contents = buildString {
+            val (branch, commit) = xdkBuildLogic.gitHubProtocol().resolveBranch()
+            appendLine(semanticVersion)
+            appendLine("branch: $branch:$commit")
+        }
+        versionFile.get().asFile.writeText(contents)
+    }*/
+}
+
 /**
  * Creates distribution contents based on a distribution name, version and classifier.
  * This logic is used for the nain distribution artifact (named "xdk"), and the contents
@@ -257,7 +273,9 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
             rename("javatools-${project.version}.jar", JAVATOOLS_INSTALLATION_NAME)
             into("javatools")
         }
-        from(tasks.xtcVersionFile)
+        //from(tasks["writeVersionFile"])
+
+        //.get().outputs.files.singleFile)
         if (installLaunchers) {
             // Do we want to install launchers that work on the host system?
             assert(distClassifier.isNotEmpty()) { "No distribution given for host specific distribution, OS: ${XdkDistribution.currentOs}" }
@@ -328,13 +346,34 @@ tasks.withType<AbstractJReleaserTask>().configureEach {
     logger.info("$prefix JReleaser task'$name' configured to depend on installDist and installWithLaunchersDist.")
 }
 
+val jreleaserConfig by tasks.existing(JReleaserConfigTask::class)
+
+val cleanStagingRepo by tasks.registering {
+    doLast {
+        logger.lifecycle("$prefix Cleaning local staging repository at: '${localStagingRepoDirectory.get().asFile.absolutePath}'.")
+        delete(localStagingRepoDirectory)
+    }
+}
+
+val publishXdkArchivePublicationToLocalStagingRepository by tasks.existing {
+    // We explicitly delete any existing publications in the staging repo, as to not accumulate
+    // unncessary numbered SNAPSHOTS. We just want a new / single publication to deploy and to use
+    // as deployment or release input.
+    dependsOn(cleanStagingRepo)
+}
+
 val deploy by tasks.registering {
-    dependsOn(tasks.named("jreleaserConfig"))
+    // sync build-repo
+    dependsOn(jreleaserConfig)
     dependsOn(tasks.named("jreleaserDeploy"))
 }
 
 jreleaser {
-    dryrun = true
+    val snapshotTag = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
+    val releaseTag = "v/{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
+    val tag = if (isSnapshot()) "early-access" else releaseTag
+
+    //dryrun = true
     gitRootSearch = true
 
     /**
@@ -362,17 +401,15 @@ jreleaser {
     System.err.println("Change the snapshot tag to 'early-access' for all snapshots")
     deploy {
         // TODO Use early-access as snapshot tag.
-        active = Active.ALWAYS
         maven {
             active = Active.ALWAYS
             github {
-                active = Active.ALWAYS
                 val xdk by registering {
                     active = Active.ALWAYS
                     snapshotSupported = true
                     url = "https://maven.pkg.github.com/xtclang/xvm"
                     username = "xtclang-bot"
-                    password = System.getenv("GITHUB_TOKEN")
+                    password = githubToken
                     authorization = Authorization.BEARER
                     stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
                     applyMavenCentralRules = false
@@ -416,30 +453,7 @@ jreleaser {
     }*/
  */
 /*
-    // This is where github publications on commits to master go (as maven artifact) https://maven.pkg.github.com/xtclang/xvm
-    // Any such thing like mavenCentral too needs deployments
-    deploy {
-        // "deployment is not enabled" The github deployer does not allow SNAPSHOTs to be deployed?
-        maven {
-            github {
-                // Run the build to stage the artifacts.
-                // Then run the release to publish the artifacts.
-                // Depending on the maven deployer, use kordamp pomchecker, otherwise take them as they are
-                // for the github maven package repository.
-                val xdk by creating {
-                    enabled = true // the xdk deployer regardless of snapshot or not should always be enabled.
-                    // TODO: Andres - want a special state for snapshots explicitly?
-                    url = "https://maven.pkg.github.com/xtclang/xvm"
-                    username = "xtclang-bot"
-                    password = "token"//xdkBuildLogic.getXtclangGitHubMavenPackageRepositoryToken()
-                    // TODO: This must be lazy
-                    stagingRepository(localStagingRepoDirectory.get().asFile.absolutePath)
-                }
-            }
-        }
-    }
-
-    // E.g. v0.4.5 of the XDK, placed on GitHub as a Release, possibly.
+     // E.g. v0.4.5 of the XDK, placed on GitHub as a Release, possibly.
     release {
         github {
             skipTag = false // This assumes I do all tagging manually and that the current commit during a jreleaser relase execution
