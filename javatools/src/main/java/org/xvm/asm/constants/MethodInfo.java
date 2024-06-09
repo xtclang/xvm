@@ -989,13 +989,11 @@ public class MethodInfo
                         // all defaults should be placed below any explicit or delegating methods
                         if (listDefault == null)
                             {
-                            // check if there's anything of higher priority below this point
+                            // check if there's anything else below this point
                             boolean fAllDefaults = true;
                             for (int j = i + 1; j < c; j++)
                                 {
-                                Implementation implPrev = chain[j].getImplementation();
-                                if (implPrev == Implementation.Explicit ||
-                                    implPrev == Implementation.Delegating)
+                                if (chain[j].getImplementation() != Implementation.Default)
                                     {
                                     fAllDefaults = false;
                                     break;
@@ -1011,7 +1009,11 @@ public class MethodInfo
                                 }
                             listDefault = new ArrayList<>();
                             }
-                        listDefault.add(body);
+                        // ignore dupes
+                        if (!listDefault.contains(body))
+                            {
+                            listDefault.add(body);
+                            }
                         if (listNew == null)
                             {
                             listNew = startList(chain, i);
@@ -1050,15 +1052,13 @@ public class MethodInfo
                         break;
 
                     case Native:
-                        if (listDefault != null &&
-                            body.getIdentity().getNamespace().equals(pool().clzObject()))
-                            {
-                            // Object is the only interface with native methods; since another
-                            // interface implements that method - ignore the native one
-                            }
-                        else if (listNew != null)
+                        // interfaces cannot "super" to native implementations; if there are any
+                        // default implementations (interface), we can ignore the native one;
+                        // moreover, native never "supers" either, so it must be the last one
+                        if (listDefault == null && listNew != null)
                             {
                             listNew.add(body);
+                            break forAll;
                             }
                         break;
 
