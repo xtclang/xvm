@@ -7,6 +7,5 @@ public interface Appenderchar extends Appender<Char> {
   Appenderchar appendTo(org.xvm.xec.ecstasy.text.String s);
   Appenderchar appendTo(java.lang.String s);
   Appenderchar appendTo(long l);
-  @Override public Appenderchar appendTo(Char c);
   default Appenderchar ensureCapacity(int count) { return this; }
 }

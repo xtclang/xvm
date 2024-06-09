@@ -7,27 +7,29 @@ import org.xvm.util.S;
 
 import java.util.Arrays;
 
+
+// New objects.
+// The constructor gets some explicit arguments.
+// If this is a nested inner class, it also gets the outer class.
+// If this class has some type arguments, it also gets explicit type objects.
 class NewAST extends AST {
   final MethodPart _meth;
-  final boolean _isChild;
   static NewAST make( ClzBuilder X, boolean isChild ) {
     AST outer = isChild ? ast_term(X) : null;
     Const type = X.con();
     MethodPart meth = (MethodPart)X.con().part();
-    AST[] kids = X.kids();
-    if( isChild ) {
-      kids = Arrays.copyOf(kids,kids.length+1);
-      kids[kids.length-1] = outer;
-    }
-    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,meth,isChild);
+    assert (meth.isNestedInnerClass()!=null) == isChild;
+    AST[] kids = X.kids_bias(isChild ? 1 : 0);
+    if( isChild )
+      kids[0] = outer;
+    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,meth);
   }
   // For internal constructors like auto-boxing
   NewAST( AST[] kids, XClz xt ) {
-    this(kids,xt,null,null,null,false);
+    this(kids,xt,null,null,null);
   }
-  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodPart meth, boolean isChild ) {
+  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodPart meth ) {
     super(kids_plus_clz(kids,xt,X,type));
-    _isChild = isChild;
     _type = xt;
     _meth = meth;
     if( xt.needs_import(true) )
@@ -40,18 +42,18 @@ class NewAST extends AST {
   // "new RegAST".
   private static AST[] kids_plus_clz(AST[] kids, XClz xt, ClzBuilder X, Const type) {
     // See if there are any type parameters needing adding
-    if( xt.noTypeParms(null,false) || type==null )
-      return kids;
+    int N = xt._tns.length;
+    if( N==0 || type==null ) return kids;
+    if( !xt.printsTypeParm() ) return kids; // Java mirrors have type arg baked in already
 
     // Type parameters can be constants or can be function arguments passed in.
     // Function argument names are hidden in the ParamTCon.
-    ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((VirtDepTCon)type)._par;
-    int N = xt._xts.length;
-    assert ptc._parms.length==N;
+    ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((DepTCon)type)._par;
     AST[] kids2 = new AST[(kids==null ? 0 : kids.length)+N];
+    // Slide normal args over to make room for N type args
     if( kids!=null ) System.arraycopy(kids,0,kids2,N,kids.length);
     for( int i=0; i<N; i++ ) {
-      if( ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
+      if( i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
         // Type parameter comes from the method arguments.
         // Do a name lookup.
         int reg = X._locals.find(parm._name);
@@ -60,9 +62,9 @@ class NewAST extends AST {
       } else {
         // Type parameter is a constant; get the golden instance ".GOLD" from
         // the types boxed variant.
-        //assert ptc._parms[i] instanceof ParamTCon;
-        XType gen = xt.typeParm(i);
+        XType gen = xt._xts[i];
         XClz box = gen.box();
+        if( box!=null ) ClzBuilder.add_import(box);
         kids2[i] = new ConAST(null,null,(box==null ? gen : box).clz()+".GOLD",gen);
       }
     }
@@ -90,7 +92,7 @@ class NewAST extends AST {
   }
 
 
-  @Override void jpre ( SB sb ) { sb.p(((XClz)_type).clz_bare()).p(".construct("); }
+  @Override void jpre ( SB sb ) { _type.clz_bare(sb).p(".construct("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }
   @Override void jpost( SB sb ) {
     if( _kids!=null )  sb.unchar(2);

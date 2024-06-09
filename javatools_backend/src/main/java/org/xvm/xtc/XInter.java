@@ -20,11 +20,11 @@ public class XInter extends XType {
     _xts[1].str(sb,visit,dups).p("]");
     return sb;
   }
-  @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) {
+  @Override SB _clz( SB sb, ParamTCon ptc ) {
     if( ptc != null ) throw XEC.TODO();
     sb.p("Inter[");
-    _xts[0]._clz(sb,ptc,print).p(",");
-    _xts[1]._clz(sb,ptc,print).p("]");
+    _xts[0]._clz(sb,ptc).p(",");
+    _xts[1]._clz(sb,ptc).p("]");
     return sb;
   }
   @Override boolean eq(XType xt) { return true; }

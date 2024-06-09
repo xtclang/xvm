@@ -10,7 +10,7 @@ import org.xvm.util.SB;
   Exploring XEC Constants
  */
 public class InnerDepTCon extends DepTCon {
-  private ClassCon _child;
+  public ClassCon _child;
   public InnerDepTCon( CPool X ) {
     super(X);
     X.u31();
@@ -19,5 +19,5 @@ public class InnerDepTCon extends DepTCon {
     super.resolve(X);
     _child = (ClassCon)X.xget();
   }
-  @Override ClassPart _part() { throw XEC.TODO(); }
+  @Override ClassPart _part() { return (ClassPart)_child.part(); }
 }

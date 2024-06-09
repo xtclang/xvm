@@ -41,8 +41,10 @@ abstract class ElvisAST extends AST {
       //    A && ((tmp=elvis)!=null) && expr(tmp) && C
       AST reg = new RegAST(_tmp,_var._type);
       AST asg = new AssignAST(reg,_var);
-      ConAST con = new ConAST("null");
-      return new BinOpAST("!=","",XCons.BOOL,asg,con);
+      return new UniOpAST(new AST[]{asg},
+                          _var._cond ? "$t(" : "(",
+                          _var._cond ? ") && XRuntime.$COND" : ")!=null",
+                          XCons.BOOL);
     }
   }
   Ary<Elf> _elves;              // Elvis variable list

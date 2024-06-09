@@ -28,7 +28,7 @@ public class XBase extends XType {
     if( S.eq(_jtype,"String") && !_notNull ) sb.p("?");
     return sb;
   }
-  @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) { return sb.p(_jtype); }
+  @Override SB _clz( SB sb, ParamTCon ptc ) { return sb.p(_jtype); }
   @Override boolean eq(XType xt) { return _jtype.equals(((XBase)xt)._jtype);  }
   @Override int hash() { return _jtype.hashCode(); }
   @Override public XType e() {

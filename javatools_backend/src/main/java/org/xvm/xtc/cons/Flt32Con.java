@@ -8,7 +8,7 @@ import org.xvm.util.SB;
 /**
   Exploring XEC Constants
  */
-public class Flt32Con extends Const {
+public class Flt32Con extends TCon {
   public final float _flt;
   public Flt32Con( CPool X, Format f ) {
     _flt = switch( f ) {
@@ -23,7 +23,7 @@ public class Flt32Con extends Const {
   private static float from32( int x ) {
     return Float.intBitsToFloat(x);
   }
-  
+
   // Chopped mantissa style
   private static float from16b( int x ) {
     return Float.intBitsToFloat(x << 16);
@@ -38,19 +38,19 @@ public class Flt32Con extends Const {
    */
   public static float from16(int nHalf) {
     // notes from the IEEE-754 specification:
-  
+
     // left to right bits of a binary floating point number:
     // size        bit ids       name  description
     // ----------  ------------  ----  ---------------------------
     // 1 bit                       S   sign
     // w bits      E[0]..E[w-1]    E   biased exponent
     // t=p-1 bits  d[1]..d[p-1]    T   trailing significant field
-  
+
     // The range of the encoding's biased exponent E shall include:
     // - every integer between 1 and 2^w - 2, inclusive, to encode normal numbers
     // - the reserved value 0 to encode 0 and subnormal numbers
     // - the reserved value 2w - 1 to encode +/-infinity and NaN
-  
+
     // The representation r of the floating-point datum, and value v of the floating-point datum
     // represented, are inferred from the constituent fields as follows:
     // a) If E == 2^w-1 and T != 0, then r is qNaN or sNaN and v is NaN regardless of S
@@ -64,7 +64,7 @@ public class Flt32Con extends Const {
     //        v = (-1)^S * 2^emin * (0 + 2^(1-p) * T)
     //    thus subnormal numbers have an implicit leading significand bit of 0
     // e) If E == 0 and T ==0, then r is (S, emin, 0) and v = (-1)^S * (+0)
-  
+
     // parameter                                      bin16  bin32
     // --------------------------------------------   -----  -----
     // k, storage width in bits                         16     32
@@ -74,7 +74,7 @@ public class Flt32Con extends Const {
     // sign bit                                          1      1
     // w, exponent field width in bits                   5      8
     // t, trailing significant field width in bits      10     23
-  
+
     // a quick & dirty implementation:
     // int nS = (nHalf >>> 15) & 0x1;
     // int nE = (nHalf >>> 10) & 0x1F;
@@ -88,7 +88,7 @@ public class Flt32Con extends Const {
     // // exp E is from bit 30 to bit 23
     // // scale T by 13 binary digits (it grew from 10 to 23 bits)
     // return Float.intBitsToFloat(nS << 31 | nE << 23 | nT << 13);
-  
+
     // from: https://stackoverflow.com/questions/6162651/half-precision-floating-point-in-java
     int mant = nHalf & 0x03ff;  // 10 bits mantissa
     int exp  = nHalf & 0x7c00;  // 5 bits exponent

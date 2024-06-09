@@ -69,10 +69,10 @@ public class ClzBuilder {
       BASE_IMPORTS = new HashMap<>();// Top-level import base names
       AMBIGUOUS_IMPORTS = new HashSet<>();
       CMOD = mod;                 // Top-level compile unit
+      CCLZ = clz==null ? mod : clz; // Compile unit class
     }
     _is_module = mod==clz;
     _mod = mod;
-    CCLZ = clz==null ? mod : clz; // Compile unit class
     _tmod = mod==null ? null : XClz.make(mod);
     _clz = clz;
     _tclz = clz==null ? null : XClz.make(clz);
@@ -116,6 +116,13 @@ public class ClzBuilder {
   // Java Class body; can be nested (static inner class)
   @SuppressWarnings("fallthrough")
   private void jclass_body() {
+    // While XTC Enum Values are themselves a full-blown class, we're going to make
+    // an effort to limit ourselves to *Java* enums as the implementation.
+    // Emit no code here
+    if( _clz._f == Part.Format.ENUMVALUE ) {
+      assert _clz._name2kid.size()==1 && ((MethodPart)_clz.child("construct").child("construct")).is_empty_function();
+      return;
+    }
     String java_class_name = _tclz._name;
     _sb.nl();                   // Blank line
     boolean is_iface = _clz._f==Part.Format.INTERFACE;
@@ -127,11 +134,14 @@ public class ClzBuilder {
 
     _sb.ip("public ");
     if( !_is_top ) _sb.p("static ");
-    _tclz.clz_generic(_sb.p(jpart),true,true).p(" ");
+    _sb.p(jpart).p(_tclz.name());
+    _tclz.clz_generic_def(_sb).p(" ");
 
     // ... extends Const/XTC/etc
-    if( _clz._super != null ) _sb.p("extends ").p(_clz._super._name);
-    else if( is_iface ) ; // No extends
+    if( _clz._super != null ) {
+      _sb.p("extends ").p(_clz._super._name);
+      _tclz._super.clz_generic_use( _sb, _tclz );
+    } else if( is_iface ) ; // No extends
     else if( _clz._f==Part.Format.CONST ) {
       _sb.p("extends Const");
       IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
@@ -149,12 +159,15 @@ public class ClzBuilder {
       for( Contrib c : _clz._contribs )
         if( c._comp==Part.Composition.Implements ) {
           XClz iclz = switch( c._tContrib ) {
-          case ParamTCon ptc -> XClz.make(ptc);
-          case TermTCon ttc -> XClz.make(ttc.clz());
+          case ParamTCon   ptc -> XClz.make(ptc);
+          case TermTCon    ttc -> XClz.make(ttc.clz());
           case VirtDepTCon vtc -> XClz.make(vtc.clz());
-          default -> { throw XEC.TODO(); }
+          case ImmutTCon   imm -> XClz.make(imm);
+          case InnerDepTCon inn-> XClz.make(inn.clz());
+          default -> throw XEC.TODO();
           };
-          iclz.clz_generic(_sb.p((once++ == 0) ? (_clz._tclz.iface() ? " extends " : " implements ") : ", "),true,false);
+          _sb.p((once++ == 0) ? (is_iface ? "extends " : " implements ") : ", ").p(iclz.name());
+          iclz.clz_generic_use(_sb, _tclz);
           add_import(iclz);
         }
     }
@@ -171,22 +184,19 @@ public class ClzBuilder {
 
     // Force native methods to now appear, so signature matching can assume a
     // method always exists.
-    for( Part part : _clz._name2kid.values() ) {
-      if( part instanceof MMethodPart mmp )
-        // Output java methods.
-        if( mmp._name2kid==null ) {
-          mmp.addNative();
-        } else {
-          MethodPart m = (MethodPart)mmp.child(mmp._name);
-          if( m._cons != null )
-            for( Const con : m._cons )
-              if( con instanceof MethodCon meth ) {
-                MMethodPart mm = (MMethodPart)meth._par.part();
-                if( mm._name2kid==null )
-                  mm.addNative();
-              }
-        }
-    }
+    if( _clz._name2kid!=null )
+      for( Part part : _clz._name2kid.values() )
+        if( part instanceof MMethodPart mmp )
+          // Output java methods.
+          if( mmp._name2kid==null ) {
+            mmp.addNative();
+          } else {
+            if( mmp.child(mmp._name) instanceof MethodPart m && m._cons != null )
+              for( Const con : m._cons )
+                if( con instanceof MethodCon meth )
+                  if( meth._par.part() instanceof MMethodPart mm && mm._name2kid==null )
+                    mm.addNative();
+          }
 
 
     // Look for a module/class init.  This will become the Java <clinit> / <init>
@@ -202,8 +212,8 @@ public class ClzBuilder {
       // This is an "empty" constructor: it takes required explicit type
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
-      for( int i=0; i<_tclz._tns.length; i++ )
-        _sb.fmt("$%0 %0,",_tclz._tns[i]);
+      for( String tn : _tclz._tns )
+        _sb.fmt("$%0 %0,",tn);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
       // Init any local type variables; these appear in name2kid
@@ -221,15 +231,19 @@ public class ClzBuilder {
         // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args).$check(); }"
         _sb.nl();
         keywords(meth,true);
-        _tclz.clz_generic(_sb,false,true);
-        _sb.fmt("%0 construct( ",java_class_name); // Return type
-        for( int i=0; i<_tclz._tns.length; i++ )
-          _sb.fmt("$%0 %0,",_tclz._tns[i]);
-        _sb.unchar();
-        args(meth,_sb);
+        _tclz.clz_generic_def(_sb);
+        _sb.fmt("%0 construct(  ",java_class_name); // Return type
+        for( String tn : _tclz._tns )
+          _sb.fmt("$%0 %0, ",tn);
+        // Nested inner classes take an outer class arg
+        ClassPart outer = meth.isNestedInnerClass();
+        if( outer!=null )
+          _sb.fmt("%0 $outer, ", outer._name);
+        if( meth._args==null ) _sb.unchar(2);
+        else args(meth,_sb);
         _sb.p(") { return new ").p(java_class_name).p("( ");
-        for( int i=0; i<_tclz._tns.length; i++ )
-          _sb.fmt("%0,",_tclz._tns[i]);
+        for( String tn : _tclz._tns )
+          _sb.fmt("%0,",tn);
         _sb.unchar().p(").$construct(");
         arg_names(meth,_sb);
         _sb.p(").$check(); }").nl();
@@ -245,111 +259,116 @@ public class ClzBuilder {
       }
     }
 
-    // Property types not mentioned in name2kids; must be concrete types from
-    // interfaces.
-    for( int i=0; i<_tclz._tns.length; i++ ) {
-      String name = _tclz._tns[i];
-      Part p = _clz._name2kid.get(name);
-      if( p==null ) {
-        _sb.ip("public ");
-        _tclz._xts[i].clz(_sb);
-        _sb.p(" ").p(name).p("$get() { return ");
-        _tclz._xts[i].clz(_sb);
-        _sb.p(".GOLD; }").nl();
+    // Property types from interfaces
+    for( XClz side : _tclz._sides.keySet() ) {
+      int[] idxs = _tclz._sides.get(side);
+      for( int i=0; i<idxs.length; i++ ) {
+        String name = side._tns[i]; // Side property name
+        Part p = _clz._name2kid.get(name);
+        if( p==null ) { // Some are explicitly given in name2kids, and handled below
+          int idx = idxs[i];
+          if( is_iface ) _sb.ip("default XTC ");
+          else _tclz._xts[idx].clz_bare(_sb.ip("public "));
+          _sb.p(" ").p(name).p("$get() { return ");
+          // Either mapping an interface type to a local type OR to a constant type
+          if( idx < _tclz._tns.length ) _sb.p(_tclz._tns[idx]).p("$get()"); //  public Key$get() { return Other$get(); }
+          else _tclz._xts[idx].clz_bare(_sb).p(".GOLD");                         //  public Key$get() { return Float32.GOLD; }
+          _sb.p("; }").nl();
+        }
       }
     }
 
 
     // Output Java methods for all class methods
-    for( Part part : _clz._name2kid.values() ) {
-      switch( part ) {
-      case MMethodPart mmp:
-        // Output java methods.
-        String mname = jname(mmp._name);
-        for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
-          if( S.eq(mname,"construct") )
-            continue;           // Constructors emitted first for easy reading
-          _sb.nl(); // Blank line between methods
-          // A bunch of methods that have special dispatch rules.
-          boolean special = false;
-          switch( mname ) {
-          case "equals":
-            if( meth._args.length==3 ) {
-              special = true;
-              Comparable.make_equals(java_class_name,_sb);
-              // Add a full default method
-              if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
-              else jmethod(meth,mname+"$"+java_class_name);
+    if( _clz._name2kid!=null )
+      for( Part part : _clz._name2kid.values() )
+        switch( part ) {
+        case MMethodPart mmp:
+          // Output java methods.
+          String mname = jname(mmp._name);
+          for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
+            if( S.eq(mname,"construct") )
+              continue;           // Constructors emitted first for easy reading
+            _sb.nl(); // Blank line between methods
+            // A bunch of methods that have special dispatch rules.
+            boolean special = false;
+            switch( mname ) {
+            case "equals":
+              if( meth._args.length==3 ) {
+                special = true;
+                Comparable.make_equals(java_class_name,_sb);
+                // Add a full default method
+                if( meth._ast == null ) Comparable.make_equals_default(_clz,java_class_name,_sb);
+                else jmethod(meth,mname+"$"+java_class_name);
+              }
+              break;
+            case "compare":
+              if( meth._args.length==3 ) {
+                special = true;
+                Orderable.make_compare(java_class_name,_sb);
+                // Add a full default method
+                if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
+                else jmethod(meth,mname+"$"+java_class_name);
+              }
+              break;
+            case "hashCode":
+              if( meth._args.length==1 ) {
+                special = true;
+                Hashable.make_hashCode(java_class_name,_sb);
+                // Add a full default method
+                if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
+                else jmethod(meth,mname+"$"+java_class_name);
+              }
+              break;
+            case "estimateStringLength":
+            case "appendTo":
+              if( meth._ast==null ) // No body, but declared.  Use the interface default.
+                special = true;
+              break;
+            default:
             }
-            break;
-          case "compare":
-            if( meth._args.length==3 ) {
-              special = true;
-              Orderable.make_compare(java_class_name,_sb);
-              // Add a full default method
-              if( meth._ast == null ) Orderable.make_compare_default(_clz,java_class_name,_sb);
-              else jmethod(meth,mname+"$"+java_class_name);
+            // Not special, use the generic AST generator
+            if( !special ) {
+              // Generate the method from the AST
+              jmethod(meth,mname);
+              // Service classes generate $mname and $$mname wrapper methods.
+              if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
+                Service.make_methods(meth,java_class_name,_sb);
             }
-            break;
-          case "hashCode":
-            if( meth._args.length==1 ) {
-              special = true;
-              Hashable.make_hashCode(java_class_name,_sb);
-              // Add a full default method
-              if( meth._ast == null ) Hashable.make_hashCode_default(_clz,java_class_name,_sb);
-              else jmethod(meth,mname+"$"+java_class_name);
-            }
-            break;
-          case "estimateStringLength":
-          case "appendTo":
-            if( meth._ast==null ) // No body, but declared.  Use the interface default.
-              special = true;
-            break;
-          default:
           }
-          // Not special, use the generic AST generator
-          if( !special ) {
-            // Generate the method from the AST
-            jmethod(meth,mname);
-            // Service classes generate $mname and $$mname wrapper methods.
-            if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
-              Service.make_methods(meth,java_class_name,_sb);
-          }
+          break;
+
+        case PackagePart pack:
+          // Will need to compile the package at the same time this module.
+          if( pack._contribs == null )
+            break;
+          // Imports
+          assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
+          // Ignore default ecstasy import
+          TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
+          if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
+            break;
+          // Other imports
+          add_import(ttc.clz());
+          break;
+
+        case PropPart pp:
+          PropBuilder.make_class(this,pp);
+          break;
+
+        case ClassPart clz_nest:
+          // Nested class.  Becomes a java static inner class
+          ClzBuilder X = new ClzBuilder(this,clz_nest);
+          X.jclass_body();
+          break;
+
+        case TDefPart typedef:
+          // TypeDef.  Hopefully already swallowed into XType/XClz
+          break;
+
+        default:
+          throw XEC.TODO();
         }
-        break;
-
-      case PackagePart pack:
-        // Will need to compile the package at the same time this module.
-        if( pack._contribs == null )
-          break;
-        // Imports
-        assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
-        // Ignore default ecstasy import
-        TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
-        if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
-          break;
-        // Other imports
-        add_import(ttc.clz());
-        break;
-
-      case PropPart pp:
-        PropBuilder.make_class(this,pp);
-        break;
-
-      case ClassPart clz_nest:
-        // Nested class.  Becomes a java static inner class
-        ClzBuilder X = new ClzBuilder(this,clz_nest);
-        X.jclass_body();
-        break;
-
-      case TDefPart typedef:
-        // TypeDef.  Hopefully already swallowed into XType/XClz
-        break;
-
-      default:
-        throw XEC.TODO();
-      }
-    }
 
     // Const classes get a specific {toString, appendTo}, although they are not
     // mentioned if default
@@ -489,7 +508,12 @@ public class ClzBuilder {
         m.is_cond_ret() ? m.xret(1) :
         // Tuple multi-return
         XCons.make_tuple(m.xrets());
-      xret.clz(sb).p(' ');
+      if( xret instanceof XClz xclz ) {
+        xclz.clz_bare(sb);
+        xclz.clz_generic_use(sb,m.clz()._tclz);
+      }
+      else xret.clz(sb);
+      sb.p(' ');
     }
 
     return sb;
@@ -522,9 +546,14 @@ public class ClzBuilder {
     args(m,_sb);
     _sb.p(" ) ");
     // Define argument names
-    if( m.xargs()!=null )
-      for( int i = 0; i < m.xargs().length; i++ )
-        define(m._args[i]._name,m.xarg(i));
+    XType[] xargs = m.xargs();
+    if( xargs !=null ) {
+      // xargs on constructors includes *type variables*, which are NOT in
+      // method args.  Skip those names here.
+      int ntypes = xargs.length - m._args.length;
+      for( int i = 0; i < m._args.length; i++ )
+        define(m._args[i]._name,xargs[i+ntypes]);
+    }
 
     // Abstract method, no "body"
     if( m._ast.length==0 ) {

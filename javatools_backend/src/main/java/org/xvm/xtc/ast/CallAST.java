@@ -19,13 +19,23 @@ public class CallAST extends AST {
     // Move the function to the 0th kid slot.
     kids[0] = ast_term(X);     // Call expression first
     XType[] rets = XType.xtypes(retTypes);
-    return new CallAST(rets,X._meth._name,XFun.make(X._meth.xargs(),X._meth.xrets()),kids);
+    return new CallAST(rets,X._meth,kids);
   }
-  CallAST( XType[] rets, String mname, XFun fun, AST... kids ) {
+  CallAST( XType[] rets, MethodPart meth, AST... kids ) {
     super(kids);
-    // Check for a call to super: "super.call()" becomes "super.METHOD"
-    if( _kids[0] instanceof RegAST reg && reg._reg== -13 )
-      _kids[0] = new ConAST(null,null,"super."+mname,fun);
+    // Check for a call to super: "super(args)" becomes "super.METHOD(args)".
+    // If inside an interface (so _meth is a default method), the super
+    // also needs the correct super interface named.
+    if( _kids[0] instanceof RegAST reg && reg._reg== -13 ) {
+      XFun fun = XFun.make(meth.xargs(),meth.xrets());
+      _kids[0] = new ConAST(null,null,"super."+meth._name,fun);
+    }
+    _rets = rets;
+    _type = _type();
+  }
+  CallAST( XType[] rets, AST... kids ) {
+    super(kids);
+    assert !(_kids[0] instanceof RegAST);
     _rets = rets;
     _type = _type();
   }
@@ -33,7 +43,7 @@ public class CallAST extends AST {
     XType[] rets = new XType[]{ret};
     XFun fun = XFun.make(new XType[]{kid._type},rets);
     ConAST con = new ConAST(clzname+"."+methname,fun);
-    CallAST call = new CallAST(rets,methname,fun,con,kid);
+    CallAST call = new CallAST(rets,con,kid);
     con._par = call;
     call._type = ret;
     return call;

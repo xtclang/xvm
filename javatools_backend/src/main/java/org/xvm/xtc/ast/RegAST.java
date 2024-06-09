@@ -1,10 +1,11 @@
 package org.xvm.xtc.ast;
 
-import org.xvm.xtc.XType;
-import org.xvm.xtc.XCons;
-import org.xvm.xtc.ClzBuilder;
-import org.xvm.xtc.ClassPart;
 import org.xvm.util.SB;
+import org.xvm.xtc.ClassPart;
+import org.xvm.xtc.ClzBuilder;
+import org.xvm.xtc.XClz;
+import org.xvm.xtc.XCons;
+import org.xvm.xtc.XType;
 
 // Always replaced before writing out.
 // E.g. XTC encoded a default arg (-4) for a call.
@@ -21,6 +22,7 @@ public class RegAST extends AST {
   }
   RegAST( int reg, ClzBuilder X ) {
     super(null);
+    XClz xt = X._tclz;
     _reg  = reg ;
     _name = switch( reg ) {
     case -4 ->  "default";  // A_DEFAULT
@@ -32,10 +34,10 @@ public class RegAST extends AST {
     };
     _type = switch( reg ) {
     case -4 ->  XCons.VOID;  // A_DEFAULT
-    case -5 ->  X._tclz;     // A_THIS
-    case -10 -> X._tclz;     // A_STRUCT: this as a struct
-    case -11 -> X._tclz;     // A_CLASS
-    case -13 -> ((ClassPart)X._clz._par)._tclz;
+    case -5 ->  xt;          // A_THIS
+    case -10 -> xt;          // A_STRUCT: this as a struct
+    case -11 -> xt;          // A_CLASS
+    case -13 -> xt.iface() ? xt: xt._super; // A_SUPER
     default -> X._ltypes.at(reg);
     };
     assert _type!=null;

@@ -24,6 +24,9 @@ class Basic {
     Int?        hideI(Int?        x) = x;
     IntLiteral? hideL(IntLiteral? x) = x;
     String?     hideS(String?     x) = x;
+    private conditional String? trinary(Int x) {
+        return (x==0) ? False : ((x==1) ? (True,Null) : (True,"abc"));
+    }
 
     // -----------------------------
     void basic0() {
@@ -49,14 +52,12 @@ class Basic {
         assert (a?.toInt64()+1:b) == 5;
     }
 
-    private conditional String checkPositive(Int i) = i < 0 ? False : (True, "pos");
-
     void basic3() {
+        private conditional String checkPositive(Int i) = i < 0 ? False : (True, "pos");
         if (String s := checkPositive(17)) {
             assert s=="pos";
         }
-        // BAST appears incorrect, drops the "!"
-        //assert !(String s := checkPositive(-17));
+        assert !(String s3 := checkPositive(-17));
         String s = "neg";
         s := checkPositive(-99);
         assert s=="neg";
@@ -113,10 +114,6 @@ class Basic {
     }
 
     // -----------------------------
-
-    private conditional String? trinary(Int x) {
-        return (x==0) ? False : ((x==1) ? (True,Null) : (True,"abc"));
-    }
 
     void multi0() {
         assert !(String? s0 := trinary(0));

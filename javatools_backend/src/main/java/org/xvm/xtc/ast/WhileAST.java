@@ -10,17 +10,18 @@ class WhileAST extends AST {
   // _kids[2+] == Specials
   // _kids[2+] == Declared Regs
   final int _skids;             // Number of specials
-  static WhileAST make( ClzBuilder X ) {
+  static WhileAST make( ClzBuilder X, boolean inf ) {
     // Special Expr Ary
     AST[] skids = X.kids();
     int nskids = skids == null ? 0 : skids.length;
     // Declared Regs Ary, skipping space for special kids
-    AST[] kids = X.kids_bias(nskids+2);
+    AST[] kids = inf ? new AST[2] : X.kids_bias(nskids+2);
     // Copy specials in
     if( skids != null ) System.arraycopy(skids,0,kids,2,nskids);
     // Fixed
-    kids[0] = ast_term(X);      // Condition
-
+    kids[0] = inf
+      ? new ConAST("true")      // Infinite condition
+      : ast_term(X);            // Condition
     int nlocals = X.nlocals();  // Count of locals
     kids[1] = ast(X);           // Body
     X.pop_locals(nlocals);      // Pop scope-locals at end of scope

@@ -66,7 +66,7 @@ public class XFun extends XType {
       _xts[i].str(sb,visit,dups).p(",");
     return sb.unchar().p(" }");
   }
-  @Override SB _clz( SB sb, ParamTCon ptc, boolean print ) {
+  @Override SB _clz( SB sb, ParamTCon ptc ) {
     if( ptc != null ) {
       XClz xargs = (XClz)xtype(ptc._parms[0],true);
       if( xargs._xts.length!=_nargs ) throw XEC.TODO();
@@ -74,7 +74,7 @@ public class XFun extends XType {
     sb.p("Fun").p(_nargs);
     for( int i=0; i<_nargs; i++ ) {
       if( _xts[i]==XCons.JSTRING )   sb.p("XString$");
-      else          _xts[i]._clz(sb,ptc,print).p("$");
+      else _xts[i].clz_bare(sb).p("$");
     }
     return sb.unchar();
   }
@@ -94,7 +94,7 @@ public class XFun extends XType {
 
   // Make a callable interface with a particular signature
   public XFun make_class( ) {
-    String tclz = _clz(new SB(),null,false).toString();
+    String tclz = clz();
     String qual = (XEC.XCLZ+"."+tclz).intern();
     ClzBuilder.add_import(qual);
     if( ClzBldSet.find(qual) )

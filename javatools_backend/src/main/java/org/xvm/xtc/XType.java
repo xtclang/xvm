@@ -74,10 +74,11 @@ public abstract class XType {
   abstract SB str( SB sb, VBitSet visit, VBitSet dups );
 
     // Alternative Class flavored fancy print
-  public final String clz() { return _clz(new SB(),null,true).toString(); }
-  public final SB clz( SB sb ) { return _clz(sb,null,true); }
-  public final SB clz( SB sb, ParamTCon ptc ) { return _clz(sb,ptc,true); }
-  abstract SB _clz( SB sb, ParamTCon ptc, boolean print );
+  public final String clz() { return _clz(new SB(),null).toString(); }
+  public final SB clz( SB sb ) { return _clz(sb,null); }
+  public final SB clz( SB sb, ParamTCon ptc ) { return _clz(sb,ptc); }
+  public SB clz_bare( SB sb ) { return _clz(sb,null); }
+  abstract SB _clz( SB sb, ParamTCon ptc );
 
   // --------------------------------------------------------------------------
 
@@ -109,13 +110,13 @@ public abstract class XType {
     if( this==o ) return true;
     if( this.getClass() != o.getClass() ) return false;
     XType xt = (XType)o;
-    if( !Arrays.equals(_xts,xt._xts) ) return false;
-    if( _notNull != xt._notNull ) return false;
-    return eq(xt);
+    return _notNull == xt._notNull &&
+      Arrays.equals(_xts,xt._xts) &&
+      eq(xt);
   }
 
   private int _hash;            // Hash cache, never 0
-  abstract int hash();
+  abstract int hash();          // Subclass hash
   @Override final public int hashCode() {
     if( _hash!=0 ) return _hash;
     long hash = hash() ^ (_notNull ? 1024 : 0);
@@ -156,12 +157,6 @@ public abstract class XType {
     return sb.fmt(zero() ? "==%0" : ".equals(%0)", name);
   }
 
-  // Only valid for Ary, Clz (Tuple???).
-  // Always arrays have 1 type parameter, the element type.
-  // Clzs mostly have 0, sometimes have 1 (e.g. Hashable<Value>), rarely have 2 or more (e.g. Map<Key,Value>)
-  public XType typeParm(int i) { return _xts[i]; }
-
-
   public final boolean isa( XType xt ) {
     return this==xt
       || (getClass() == xt.getClass() && _isa(xt))
@@ -171,7 +166,6 @@ public abstract class XType {
   public boolean isVar() { return false; }
 
   public boolean isAry() { return false; }
-  public boolean generic_ary() { return false;  }
   public boolean isTuple() { return false;  }
   public XType e() { throw XEC.TODO(); }
 
@@ -226,7 +220,7 @@ public abstract class XType {
           throw XEC.TODO();
       }
 
-      // Hidden extra XTC type argument (GOLD instance of the class whos hash
+      // Hidden extra XTC type argument (GOLD instance of the class whose hash
       // implementation to use)
       case PropPart prop -> xtype(prop._con,false,self);
 
@@ -313,6 +307,7 @@ public abstract class XType {
     case CharCon cc -> JCHAR.box(boxed);
     case ByteCon cc -> JBYTE.box(boxed);
     case Flt64Con fc -> JDOUBLE.box(boxed);
+    case Flt32Con fc -> JFLOAT.box(boxed);
 
     case StringCon sc -> STRING;
 
@@ -378,7 +373,12 @@ public abstract class XType {
       xtype(acon._con,boxed,self);
 
     // Self recursive type
-    case TSeqTCon tseq -> self;
+    case TSeqTCon tseq -> {
+      assert self!=null;
+      yield self;
+    }
+
+    case InnerDepTCon inn -> xtype(inn._child,boxed,self);
 
     default -> throw XEC.TODO();
     };

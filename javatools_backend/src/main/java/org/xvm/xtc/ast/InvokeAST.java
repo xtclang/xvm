@@ -75,7 +75,17 @@ public class InvokeAST extends AST {
         else if( clz._xts[0].isa(XCons.JCHAR  ) )  _meth = "next2";
         else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
         break;
-      case "whileEach", "untilAny", "limit", "take", "forEach": break;
+      case
+        "concat",
+        "forEach",
+        "knownEmpty",
+        "knownSize",
+        "limit",
+        "take",
+        "untilAny",
+        "whileEach",
+        "ZZZZZZ":               // Just to end the sorted list
+        break;
       default: throw XEC.TODO();
       };
     }

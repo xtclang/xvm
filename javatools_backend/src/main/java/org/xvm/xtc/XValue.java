@@ -28,8 +28,8 @@ public abstract class XValue {
         yield ASB.p("Int128.construct(").p(ic._x).p("L)");
       yield ASB.p(ic._x).p('L');
     }
-    case Flt64Con fc ->
-      ASB.p(fc._flt);
+    case Flt64Con fc -> ASB.p(fc._flt);
+    case Flt32Con fc -> ASB.p(fc._flt);
 
     // Character constant
     case CharCon cc ->
@@ -91,7 +91,9 @@ public abstract class XValue {
           assert base._jtype.charAt(0)=='$';
           yield ASB.p(base._jtype.substring(1));
         }
-        yield xt.clz(ASB);
+        if( xt == XCons.XXTC )
+          yield ASB.p("((XTC)null)"); // No concrete type instance in the abstract XTC
+        yield xt.clz(ASB).p(".GOLD");
       }
       if( xt instanceof XClz clz )
         yield ClzBuilder.add_import(clz).clz(ASB).p(".GOLD");
@@ -144,7 +146,7 @@ public abstract class XValue {
     // Array constants
     case AryCon ac -> {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
-      XType ary = XType.xtype(ac.type(),false);
+      XClz ary = (XClz)XType.xtype(ac.type(),false);
       // Cannot make a zero-length instance of ARRAY, since its abstract - but
       // a zero-length version is meaningful.
       if( ary==XCons.ARRAY || ary==XCons.ARRAY_RO ) {
@@ -152,14 +154,15 @@ public abstract class XValue {
         yield ASB.p("AryXTC.EMPTY"); // Untyped array creation; cannot hold elements
       }
 
-      // new Ary<String>( "abc", "def");
-      // new Arylong( 0, 1, 2 );
+      // new AryString( .1, "abc", "def");
+      // new Arylong  ( .1, 0, 1, 2 );
       // new AryXTC<Arylong>( new Arylong(0) )
-      ary.clz   (ASB.p("new ")).p("(  ");
-      if( ary.generic_ary() )
-        ary.e().clz(ASB).p(".GOLD, ");
-      else if( !ary.isTuple() )
-        ASB.p(".1, ");
+      ary.clz(ASB.p("new ")).p("(  ");
+      if( S.eq(ary._jname,"AryXTC") )
+        ary.e().clz(ASB).p(".GOLD, "); // First arg is element type GOLD
+      else if( !ary.isTuple() ) {
+        ASB.p(".1, ");          // Double 1st arg to pick constructor
+      }                         // Else tuple no extra args
       if( ac.cons()!=null )
         for( Const con : ac.cons() )
           _val(X, con ).p(", ");
