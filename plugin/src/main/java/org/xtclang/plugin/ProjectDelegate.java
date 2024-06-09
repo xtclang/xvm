@@ -17,7 +17,6 @@ import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.configuration.ShowStacktrace;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.tasks.TaskContainer;
 
@@ -37,8 +36,6 @@ public abstract class ProjectDelegate<T, R> {
     protected final TaskContainer tasks;
     protected final ProjectLayout layout;
     protected final DirectoryProperty buildDir;
-    protected final ExtraPropertiesExtension extra;
-    protected final ExtensionContainer extensions;
     protected final VersionCatalogsExtension versionCatalogExtension;
 
     @SuppressWarnings("unused")
@@ -62,15 +59,19 @@ public abstract class ProjectDelegate<T, R> {
         this.logger = project.getLogger();
         // Even if we add tasks later, this refers to a task container, so it's fine to initialize it here, and it can be final
         this.tasks = project.getTasks();
-        this.extensions = project.getExtensions();
+        //this.extensions = project.getExtensions();
         this.buildDir = layout.getBuildDirectory();
-        this.extra = extensions.getByType(ExtraPropertiesExtension.class);
-        this.versionCatalogExtension = extensions.findByType(VersionCatalogsExtension.class);
+        //this.extra = extensions.getByType(ExtraPropertiesExtension.class);
+        this.versionCatalogExtension = project.getExtensions().findByType(VersionCatalogsExtension.class);
         this.component = component;
         this.pluginUrl = getClass().getProtectionDomain().getCodeSource().getLocation();
-
         // add a property to the existing environment, project.setProperty assumes the property exists already
-        extra.set("logPrefix", prefix);
+        //extra.set("logPrefix", prefix);
+    }
+
+    public static void addExtraProperty(final Project project, final String key, final Object value) {
+        final var extra = project.getExtensions().getByType(ExtraPropertiesExtension.class);
+        extra.set(key, value);
     }
 
     /**
