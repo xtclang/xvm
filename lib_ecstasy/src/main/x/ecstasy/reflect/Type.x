@@ -1040,4 +1040,9 @@ interface Type<DataType, OuterType>
     protected Iterator<DataType> createEmptyIterator() {
         return new iterators.EmptyIterator<DataType>();
     }
+
+    /**
+     * Temporary: dump the type info.
+     */
+    String dump();
 }

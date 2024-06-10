@@ -129,6 +129,8 @@ public class xRTType
         markNativeMethod("resolveFormalType", null, null);
         markNativeMethod("structConstructor", null, null);
 
+        markNativeMethod("dump", null, null); // temporary
+
         final String[] PARAM_TYPE    = new String[] {"reflect.Type!<>"};
         final String[] PARAM_METHODS = new String[] {"collections.Array<reflect.Method>"};
         final String[] PARAM_PROPS   = new String[] {"collections.Array<reflect.Property>"};
@@ -305,6 +307,20 @@ public class xRTType
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle[] ahArg, int iReturn)
+        {
+        TypeHandle hType = (TypeHandle) hTarget;
+        switch (method.getName())
+            {
+            case "dump":
+                return frame.assignValue(iReturn,
+                    xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().toString(true)));
+            }
+        return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
     @Override

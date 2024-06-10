@@ -27,6 +27,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.TypeConstant.Origin;
 
 import org.xvm.compiler.Compiler;
@@ -2377,6 +2378,14 @@ public class TypeInfo
     @Override
     public String toString()
         {
+        return toString(false);
+        }
+
+    /**
+     * @param fRuntime  if specified, optimize the method call chains
+     */
+    public String toString(boolean fRuntime)
+        {
         StringBuilder sb = new StringBuilder();
 
         sb.append("TypeInfo: ")
@@ -2467,6 +2476,7 @@ public class TypeInfo
                 }
             }
 
+        ConstantPool pool = pool();
         if (!f_mapProps.isEmpty())
             {
             sb.append("\n- Properties (")
@@ -2478,7 +2488,7 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (f_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(pool(), null)))
+                if (f_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(pool, null)))
                     {
                     sb.append("(v) ");
                     }
@@ -2499,13 +2509,21 @@ public class TypeInfo
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
-                if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool(), null)))
+                if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null)))
                     {
                     sb.append("(v) ");
                     }
+                MethodInfo method = entry.getValue();
+                if (fRuntime)
+                    {
+                    MethodBody[] chain = method.ensureOptimizedMethodChain(this);
+                    method = chain.length == 0
+                        ? new MethodInfo(new MethodBody(method.getHead(), Implementation.Native), 0)
+                        : new MethodInfo(chain, 0);
+                    }
                 sb.append(entry.getKey())
                   .append("=")
-                  .append(entry.getValue());
+                  .append(method);
                 }
             }
 

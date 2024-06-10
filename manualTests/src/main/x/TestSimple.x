@@ -1,5 +1,8 @@
 module TestSimple {
-    package net import net.xtclang.org;
+    package json import json.xtclang.org;
+
+    import json.*;
+    import json.ObjectOutputStream.*;
 
     @Inject Console console;
 
@@ -73,5 +76,9 @@ module TestSimple {
         for (Int i = 0; i < 1000; ++i) {
             buf.ensureCapacity(i);
         }
+    }
+
+    void dump(Type t) {
+        console.print(t.dump());
     }
 }
