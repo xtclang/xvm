@@ -372,12 +372,13 @@ val deploy by tasks.registering {
 }
 
 jreleaser {
-    // TODO: Command line argument: --select-current-platform, or --select-platform osx-aarch_64
-    val snapshotTag = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
-    val releaseTag = "v/{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
-    val tag = if (isSnapshot()) "early-access" else releaseTag
     dryrun = true
     gitRootSearch = true
+
+    // TODO: Command line argument: --select-current-platform, or --select-platform osx-aarch_64
+    val releaseTag = "v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
+    val snapshotTag = "snapshot/$releaseTag" // TODO: "early-access" for all snapshots
+    val tag = if (isSnapshot()) snapshotTag else releaseTag
 
     environment {
         properties = mapOf("artifactsDir" to layout.buildDirectory.file("distributions"))
@@ -401,7 +402,7 @@ jreleaser {
             label = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
             fullChangelog = false
         }
-        stereotype = Stereotype.CLI
+        stereotype = Stereotype.NONE
     }
 
     platform {
@@ -485,8 +486,9 @@ jreleaser {
     release {
         // TODO prerelease
         github {
-            System.err.println("TODO: Always publish draft releases unless explcitily trigeged by workflow_dispatch to do something else.")
+            // TODO: Make it possible to override draft releases, but it's mostly going to be a manual process to un-draft them.
             draft = true
+            tagName = tag
             overwrite = true
             changelog {
                 formatted = ALWAYS
@@ -500,15 +502,6 @@ jreleaser {
     }
 }
 
-/*
-
-            // TODO: Enable
-            // https://jreleaser.org/guide/latest/reference/deploy/maven/maven-central.html
-            //mavenCentral {
-            //    enabled = false
-            //}
-
-            // https://jreleaser.org/guide/latest/reference/deploy/maven/github.html
 /*
      // E.g. v0.4.5 of the XDK, placed on GitHub as a Release, possibly.
     release {
@@ -598,32 +591,6 @@ jreleaser {
         }
     }
 
-    /*
-    platform:
-    replacements:
-    aarch_64: aarch64
-*/
-    // The extra properties section under project (and other places) allows you to define template values
-    // For example
-    // also see https://jreleaser.org/guide/latest/reference/name-templates.html
-    /*
-    project.extraProperties {
-        someMajorVersion: 0  -> I can use as a template {{projectSomeMajorVersion}}
-    }
-     */
-
-    /*platform {
-        // Verify that windows and linux builds actually have the correct from name pattern.
-        // The to pattern is the mandated JReleaser platform description and MUST be exactly
-        // those strings.
-        replacements {
-            "macos_aarch64" to "osx-x86_64"
-            "macos_x86_64" to "osx-x86_64"
-            "linux_x86_64" to "linux-x86_64"
-            "win_amd64" to "windows-x86_64"
-        }
-    }*/
-
     // This filters out everything that is not my current platform.
     // ./gradlew xdk:jreleaserConf --select-current-platform
     //gradlew xdk:jreleaserConf --select-platform=osx-x86_64
@@ -632,33 +599,6 @@ jreleaser {
 
     // Assemble step is not necessary, because I already have a distribution (and platform specific versions for win, linux, mac with binary launchers added)
 
-    distributions {
-        // TODO - plugin?
-        val xdk by creating {
-        //create("xdk") {
-            distributionType = DistributionType.BINARY
-            // This is the full all-platforms release config. It needs the pd independent archive as an artifact
-            // and all three specific ones.
-            // This means we know that we can only build any given platform, but we still have to list the artifacts for all platforms.
-            artifacts {<
-                // In each of these, the platformZip path only exists for the current platform running ./gradlew jreleaser
-                // Github workflows will run for all three platforms, but that doesn't work locally.
-                artifact {
-                    // ANy artifactblock has a transform property for renaming as well. It's a string, not a path.
-                    // transform = "xdk/xdk-{{projectEffectiveVersion}}-osx-x86_64.zip"
-                    path = platformZip // really the mandated mac name, has to end with mac-aarch.zip something
-                    platform = "osx-x86_64"
-                }
-                /*
-                artifact {
-                    path = platformZip // really the mandated mac name, has to end with mac-aarch.zip something
-                    platform = "linux-x86_64"  // These platforms have to be exactly these. This is the only valid platform description
-                }
-                artifact {
-                    path = platformZip // really the mandated mac name, has to end with mac-aarch.zip something
-                    platform = "windows-x86_64"
-                }*/
-            }
             /*
             jreleaser-native:
             artifacts:
