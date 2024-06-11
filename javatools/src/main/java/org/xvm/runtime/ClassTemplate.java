@@ -468,8 +468,7 @@ public abstract class ClassTemplate
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
                                  TypeConstant typeProxy)
         {
-        ClassComposition clzTarget  = (ClassComposition) hTarget.getComposition();
-        TypeConstant     typeTarget = hTarget.getType();
+        TypeConstant typeTarget = hTarget.getType();
         if (!hTarget.isMutable())
             {
             // the only reason we need to create a ProxyHandle for an immutable object is that its
@@ -478,11 +477,12 @@ public abstract class ClassTemplate
             // the proxy to it, since the receiving service may need to cast it to a narrower
             // type that is known within its type system; an example would be passing a module
             // across the container lines that may know to cast it to the WebApp or CatalogMetadata
-            ProxyComposition clzProxy = new ProxyComposition(clzTarget, typeTarget);
-            return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
+            ProxyComposition clzProxy = new ProxyComposition(hTarget.getComposition(), typeTarget);
+            return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget, false));
             }
 
-        if (typeProxy != null && typeProxy.isInterfaceType())
+        if (typeProxy != null && typeProxy.isInterfaceType() &&
+                hTarget.getComposition() instanceof ClassComposition clzTarget)
             {
             if (typeProxy.containsGenericType(true))
                 {
@@ -493,7 +493,8 @@ public abstract class ClassTemplate
             try
                 {
                 ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
-                return frame.assignValue(Op.A_STACK, Proxy.makeHandle(clzProxy, ctxTarget, hTarget));
+                return frame.assignValue(Op.A_STACK,
+                        Proxy.makeHandle(clzProxy, ctxTarget, hTarget, false));
                 }
             catch (Throwable e)
                 {

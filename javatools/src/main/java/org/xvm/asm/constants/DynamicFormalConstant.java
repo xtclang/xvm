@@ -148,14 +148,18 @@ public class DynamicFormalConstant
             {
             try
                 {
-                // there are some rare instances (e.g. lambdas), when this FTC referes to a register
+                // there are some rare instances (e.g. lambdas), when this FTC refers to a register
                 // from a caller's frame, in which case we need to follow the call chain
                 do
                     {
                     if (getMethod().equals(frame.f_function.getIdentityConstant()))
                         {
-                        ObjectHandle hTarget = frame.getArgument(getRegisterIndex());
-                        return m_constFormal.resolve(hTarget.getType());
+                        ObjectHandle hTarget    = frame.getArgument(getRegisterIndex());
+                        TypeConstant typeTarget = hTarget.getType();
+
+                        return typeTarget.isShared(frame.poolContext())
+                                ? m_constFormal.resolve(typeTarget)
+                                : frame.poolContext().typeObject();
                         }
                     frame = frame.f_framePrev;
                     }

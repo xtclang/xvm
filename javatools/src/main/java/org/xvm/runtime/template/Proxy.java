@@ -85,7 +85,7 @@ public class Proxy
         ProxyComposition clzProxy = new ProxyComposition(
                 hProxy.getComposition().getOrigin(), typeProxy);
         return frame.assignValue(Op.A_STACK,
-                Proxy.makeHandle(clzProxy, ctxTarget, hProxy.getTarget()));
+                Proxy.makeHandle(clzProxy, ctxTarget, hProxy.getTarget(), hProxy.f_fStrict));
         }
 
     @Override
@@ -211,9 +211,9 @@ public class Proxy
         }
 
     public static ProxyHandle makeHandle(ProxyComposition clzProxy, ServiceContext ctx,
-                                          ObjectHandle hTarget)
+                                          ObjectHandle hTarget, Boolean fStrict)
         {
-        return new ProxyHandle(clzProxy, ctx, hTarget);
+        return new ProxyHandle(clzProxy, ctx, hTarget, fStrict);
         }
 
     /**
@@ -435,14 +435,25 @@ public class Proxy
     public static class ProxyHandle
             extends ServiceHandle
         {
+        /**
+         * The underlying target.
+         */
         protected final ObjectHandle f_hTarget;
 
+        /**
+         * If true, the proxy can *only* be seen/used as the "proxy type". Otherwise, if the caller
+         * [container] can cast the underlying target to a type that is a part of its type system,
+         * the proxy handle will allow it.
+         */
+        protected final boolean f_fStrict;
+
         protected ProxyHandle(ProxyComposition clazz, ServiceContext context,
-                              ObjectHandle hTarget)
+                              ObjectHandle hTarget, boolean fStrict)
             {
             super(clazz, context);
 
             f_hTarget = hTarget;
+            f_fStrict = fStrict;
             }
 
         public ObjectHandle getTarget()
@@ -461,6 +472,12 @@ public class Proxy
             {
             // don't augment the proxy type
             return type;
+            }
+
+        @Override
+        public TypeConstant getUnsafeType()
+            {
+            return f_fStrict ? super.getUnsafeType() : f_hTarget.getUnsafeType();
             }
 
         @Override
@@ -495,7 +512,8 @@ public class Proxy
         @Override
         public String toString()
             {
-            return "Proxy: " + f_hTarget.toString() + " as " + getType().getValueString();
+            return "Proxy: " + f_hTarget.toString() +
+                    (f_fStrict ? " as " + getType().getValueString() : "");
             }
         }
     }

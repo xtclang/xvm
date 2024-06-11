@@ -18,7 +18,7 @@ public class ProxyComposition
     /**
      * Construct the ProxyComposition for a given "inception" composition and a "proxy" type.
      */
-    public ProxyComposition(ClassComposition clzOrigin, TypeConstant typeProxy)
+    public ProxyComposition(TypeComposition clzOrigin, TypeConstant typeProxy)
         {
         super(clzOrigin);
 
@@ -28,9 +28,9 @@ public class ProxyComposition
     /**
      * @return the original ("inception") composition
      */
-    public ClassComposition getOrigin()
+    public TypeComposition getOrigin()
         {
-        return (ClassComposition) f_clzOrigin;
+        return f_clzOrigin;
         }
 
     @Override

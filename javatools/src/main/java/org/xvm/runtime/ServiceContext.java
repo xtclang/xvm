@@ -1213,11 +1213,11 @@ public class ServiceContext
     /**
      * Send an asynchronous Op-based message to this context with one return value.
      *
-     * @param frame   the caller's frame
-     * @param op      the op to execute
-     * @param iReturn the register id to place the result into
-     * @param typeRet (optional) the expected type of the return value which, if specified, could
-     *                be used to return a proxy
+     * @param frame    the caller's frame
+     * @param op       the op to execute
+     * @param iReturn  the register id to place the result into
+     * @param typeRet  (optional) the expected type of the return value which, if specified, could
+     *                 be used to return a proxy
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
@@ -1232,6 +1232,28 @@ public class ServiceContext
         frame.f_fiber.registerRequest(request);
 
         return frame.assignFutureResult(iReturn, request.f_future);
+        }
+
+    /**
+     * Send an asynchronous Op-based message to this context with multiple return values.
+     *
+     * @param frame     the caller's frame
+     * @param op        the op to execute
+     * @param aiReturn  the register ids to place the results into
+     * @param typeRet   (optional) the expected types of the return values which, if specified,
+     *                  could be used to return a proxy
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
+     */
+    public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet)
+        {
+        OpRequest request = new OpRequest(frame, op, aiReturn.length, () -> typeRet);
+
+        addRequest(request, false);
+
+        frame.f_fiber.registerRequest(request);
+
+        return frame.call(frame.createWaitFrame(request.f_future, aiReturn));
         }
 
     /**
@@ -1449,7 +1471,6 @@ public class ServiceContext
             return frame.assignFutureResult(aiReturn[0], cfReturn);
             }
 
-        // TODO replace with: assignFutureResults()
         return frame.call(frame.createWaitFrame(future, aiReturn));
         }
 
