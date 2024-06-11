@@ -9,12 +9,8 @@ interface DBSchema
     @RO DBSchema!? dbParent;
 
     @Override
-    @RO DBCategory dbCategory.get() {
-        return DBSchema;
-    }
+    @RO DBCategory dbCategory.get() = DBSchema;
 
     @Override
-    @RO Boolean transactional.get() {
-        return False;
-    }
+    @RO Boolean transactional.get() = False;
 }

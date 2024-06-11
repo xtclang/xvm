@@ -54,6 +54,7 @@ xdk-json = { group = "org.xtclang", name = "lib-json", version.ref = "xdk" }
 xdk-jsondb = { group = "org.xtclang", name = "lib-jsondb", version.ref = "xdk" }
 xdk-net = { group = "org.xtclang", name = "lib-net", version.ref = "xdk" }
 xdk-oodb = { group = "org.xtclang", name = "lib-oodb", version.ref = "xdk" }
+xdk-sec = { group = "org.xtclang", name = "lib-sec", version.ref = "xdk" }
 xdk-web = { group = "org.xtclang", name = "lib-web", version.ref = "xdk" }
 xdk-webauth = { group = "org.xtclang", name = "lib-webauth", version.ref = "xdk" }
 xdk-webcli = { group = "org.xtclang", name = "lib-webcli", version.ref = "xdk" }

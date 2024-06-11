@@ -25,30 +25,58 @@ interface Connection<Schema extends RootSchema>
      */
     @RO DBUser dbUser;
 
+    @Override
+    @RO (Connection<Schema> + Schema) connection.get() = this.as(Connection<Schema> + Schema);
+
     /**
      * The current [Transaction] for this Connection, or `Null` if no `Transaction` is active.
      */
+    @Override
     @RO (Transaction<Schema> + Schema)? transaction;
 
     /**
-     * Create a new transaction.
+     * Create a new [Transaction] if one does not exist, or if a `Transaction` already exists, then
+     * this creates and returns a _nested_ `Transaction`. With the `using` statement, it becomes
+     * straightforward to manage transactions, without having to check if a `Transaction` already
+     * exists:
      *
-     * @param id          (optional) an integer identifier to associate with the transaction; if
+     *     using (con.createTransaction()) {
+     *         // within this block, all db operations are performed within a transaction
+     *         // ...
+     *     }
+     *
+     * For each call to `createTransaction()`, the [Transaction.close] method must be called on the
+     * returned result; this is performed automatically by the `using` statement, as in the above
+     * example.
+     *
+     * For a nested `Transaction`:
+     *
+     * * A call to [Transaction.commit] has no effect if the `Transaction` has **not** been
+     *   marked as [Transaction.rollbackOnly], and returns a failure code otherwise;
+     * * A call to [Transaction.rollback] marks the enclosing `Transaction` as
+     *   [Transaction.rollbackOnly];
+     * * A call to [Transaction.close] will close the nested `Transaction`, and if that
+     *   `Transaction` has not already been committed or rolled back, then an attempt to do so is
+     *   performed automatically, committing in the absence of an exception and if
+     *   [Transaction.rollbackOnly] is not indicated.
+     *
+     * If a `Transaction` already exists, the parameters to this method are ignored.
+     *
+     * @param id          (optional) an integer identifier to associate with the [Transaction]; if
      *                    none is specified, then one will be automatically provided using a
      *                    persistent counter (with no guarantees regarding contiguous identities)
-     * @param name        (optional) a descriptive name to associate with the transaction
-     * @param priority    (optional) the transactional priority
-     * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
+     * @param name        (optional) a descriptive name to associate with the [Transaction]
+     * @param priority    (optional) the [Transaction]'s priority
+     * @param readOnly    (optional) pass True to indicate that [Transaction] is not going to modify
      *                    any data
      * @param timeout     (optional) the requested time-out, which allows the database to roll back
-     *                    and discard the transaction after that period of time has elapsed
-     * @param retryCount  (optional) the number of times that this same transaction has already been
-     *                    attempted
+     *                    and discard the [Transaction] after that period of time has elapsed
+     * @param retryCount  (optional) the number of times that this same [Transaction] has already
+     *                    been attempted
      *
-     * @return the [Transaction] object
-     *
-     * @throws IllegalState  if a Transaction already exists
+     * @return a new [Transaction] object
      */
+    @Override
     (Transaction<Schema> + Schema) createTransaction(UInt?                  id          = Null,
                                                      String?                name        = Null,
                                                      DBTransaction.Priority priority    = Normal,
@@ -56,6 +84,14 @@ interface Connection<Schema extends RootSchema>
                                                      Duration?              timeout     = Null,
                                                      Int                    retryCount  = 0,
                                                     );
+
+    /**
+     * Create a new `Connection` instance, which is the same as this `Connection` instance with the
+     * same `DBUser`, but **without** copying any in-flight `Transaction`.
+     *
+     * @return a new `Connection` to the same database as this `Connection`, and with the same user
+     */
+    Connection clone();
 
     @Override
     void close(Exception? e = Null) {

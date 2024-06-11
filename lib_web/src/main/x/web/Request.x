@@ -1,4 +1,5 @@
 import ecstasy.collections.CaseInsensitive;
+import ecstasy.collections.CollectImmutableArray;
 
 import net.UriTemplate;
 
@@ -30,9 +31,7 @@ interface Request
     /**
      * Corresponds to the ":scheme" pseudo-header field in HTTP/2.
      */
-    @RO Scheme scheme.get() {
-        return Scheme.byName.getOrNull(uri.scheme?)? : assert;
-    }
+    @RO Scheme scheme.get() = Scheme.byName.getOrNull(uri.scheme?)? : assert;
 
     /**
      * Corresponds to the ":authority" pseudo-header field in HTTP/2. This includes the authority
@@ -64,17 +63,22 @@ interface Request
         return Null;
     }
 
+    @RO String? userAgent.get() = header.firstOf(Header.UserAgent) ?: Null;
+
     /**
      * The accepted media types.
      */
     @RO AcceptList accepts;
 
+    private static CollectImmutableArray<Tuple<String, String>> ToTupleArray =
+            CollectImmutableArray.of(Tuple<String, String>);
+
     /**
      * @return an iterator of all cookie names and values in this request
      */
-    Iterator<Tuple<String, String>> cookies() {
+    List<Tuple<String, String>> cookies() {
         return header.valuesOf(Header.Cookie, ';')
-                     .map(kv -> (kv.extract('=', 0, "???").trim(), kv.extract('=', 1).trim()));
+                     .map(kv -> (kv.extract('=', 0, "???").trim(), kv.extract('=', 1).trim()), ToTupleArray);
     }
 
     /**
@@ -93,8 +97,8 @@ interface Request
     }
 
     @Override
-    Iterator<String> cookieNames() {
+    List<String> cookieNames() {
         return header.valuesOf(Header.Cookie, ';')
-                     .map(kv -> kv.extract('=', 0, "???").trim());
+                     .map(kv -> kv.extract('=', 0, "???").trim(), Header.ToStringArray);
     }
 }

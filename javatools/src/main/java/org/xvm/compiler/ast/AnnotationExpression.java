@@ -357,6 +357,7 @@ public class AnnotationExpression
                             }
                         }
                     exprOld.log(errs, Severity.ERROR, Compiler.CONSTANT_REQUIRED);
+                    return;
                     }
                 }
 
@@ -372,7 +373,7 @@ public class AnnotationExpression
                     }
                 }
 
-            anno.resolveParams(aconstArgs);
+            m_anno = anno.resolveParams(aconstArgs);
             }
         }
 

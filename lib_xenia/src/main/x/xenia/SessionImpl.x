@@ -5,12 +5,16 @@ import convert.formats.Base64Format;
 
 import net.IPAddress;
 
+import sec.Entitlement;
+import sec.Principal;
+
 import web.CookieConsent;
 import web.Header;
 import web.HttpStatus;
 import web.TrustLevel;
 
-import HttpServer.RequestInfo;
+import web.security.Authenticator.Attempt;
+
 import SessionCookie.CookieId;
 
 
@@ -35,41 +39,40 @@ service SessionImpl
     /**
      * Construct a SessionImpl instance.
      *
-     * @param manager      the SessionManager
-     * @param sessionId    the internal session identifier
-     * @param requestInfo  the request information
+     * @param manager    the SessionManager
+     * @param sessionId  the internal session identifier
+     * @param request    the request information
      */
-    construct(SessionManager manager, Int64 sessionId, RequestInfo requestInfo) {
-        initialize(this, manager, sessionId, requestInfo);
+    construct(SessionManager manager, Int64 sessionId, RequestIn request) {
+        initialize(this, manager, sessionId, request);
     }
 
     /**
      * Construction helper, used directly by the constructor, but also via reflection.
      *
-     * @param structure    the structure of the SessionImpl being constructed
-     * @param manager      the SessionManager
-     * @param sessionId    the internal session identifier
-     * @param requestInfo  the request information
-     * @param tls          True if the request was received over a TLS connection
+     * @param structure  the structure of the SessionImpl being constructed
+     * @param manager    the SessionManager
+     * @param sessionId  the internal session identifier
+     * @param request    the request information
+     * @param tls        True if the request was received over a TLS connection
      */
     static void initialize((struct SessionImpl) structure,
                            SessionManager       manager,
                            Int64                sessionId,
-                           RequestInfo          requestInfo) {
+                           RequestIn            request) {
         Time now = clock.now;
 
         structure.manager_        = manager;
         structure.created         = now;
         structure.lastUse         = now;
         structure.versionChanged_ = now;
-        structure.ipAddress       = requestInfo.clientAddress;
-        structure.userAgent       = requestInfo.userAgent ?: "<unknown>";
+        structure.ipAddress       = request.client;
+        structure.userAgent       = request.userAgent ?: "<unknown>";
         structure.cookieConsent   = None;
         structure.trustLevel      = None;
-        structure.roles           = [];
         structure.internalId_     = sessionId;
         structure.sessionId       = idToString_(sessionId);
-        structure.prevTLS_        = requestInfo.tls;
+        structure.prevTLS_        = request.tls;
     }
 
 
@@ -334,7 +337,10 @@ service SessionImpl
     }
 
     @Override
-    public/private String? userId;
+    public/private Principal? principal;
+
+    @Override
+    public/private Entitlement[] entitlements = [];
 
     @Override
     public/private Time? lastAuthenticated;
@@ -343,68 +349,65 @@ service SessionImpl
     TrustLevel trustLevel;
 
     @Override
-    immutable Set<String> roles;
-
-    @Override
     public/private String sessionId;
 
     @Override
-    void authenticate(String      userId,
-                      Boolean     exclusiveAgent = False,
-                      TrustLevel  trustLevel     = Highest,
-                      Set<String> roles          = [],
+    void authenticate(Principal?    principal      = Null,
+                      Entitlement[] entitlements   = [],
+                      Boolean       exclusiveAgent = False,
+                      TrustLevel    trustLevel     = Highest,
                      ) {
-        if (   this.userId         != userId
+        if (   this.principal      != principal
+            || this.entitlements   != entitlements
             || this.exclusiveAgent != exclusiveAgent
             || this.trustLevel     != trustLevel
-            || this.roles          != roles
            ) {
-            if (String oldUser ?= this.userId, oldUser != userId) {
-                issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldUser),
+            if (this.principal? != principal : False
+                    || !this.entitlements.empty && this.entitlements != entitlements) {
+                issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(this.principal, this.entitlements),
                             () -> $|An exception in session {this.internalId_} occurred during a\
-                                   | deauthentication event for user {oldUser.quoted()}
+                                   | deauthentication event
                            );
             }
 
-            this.userId            = userId;
+            this.principal         = principal;
+            this.entitlements      = entitlements;
             this.exclusiveAgent    = exclusiveAgent;
             this.trustLevel        = trustLevel;
-            this.roles             = roles.is(immutable) ? roles :
-                                     roles.is(Freezable) ? roles.freeze() :
-                                     new HashSet(roles).freeze(True);
             this.lastAuthenticated = clock.now;
 
             // reset failed attempt count since we succeeded in logging in
             // TODO
 
-            issueEvent_(SessionAuthenticated, Void, &sessionAuthenticated(userId),
+            issueEvent_(SessionAuthenticated, Void, &sessionAuthenticated(principal, entitlements),
                         () -> $|An exception in session {this.internalId_} occurred during an\
-                               | authentication event for user {userId.quoted()}
+                               | authentication event
                        );
         }
     }
 
     @Override
-    Boolean authenticationFailed(String? userId) {
+    Boolean authenticationFailed(RequestIn request, Attempt attempt) {
         // accumulate failure information, both in absolute terms (number of attempts), and per
         // user id
         // TODO
-
         return False;
     }
 
     @Override
     void deauthenticate() {
-        if (String oldUser ?= userId) {
-            userId            = Null;
+        Principal?    oldPrincipal    = principal;
+        Entitlement[] oldEntitlements = entitlements;
+        if (oldPrincipal != Null || !oldEntitlements.empty) {
+            principal         = Null;
+            entitlements      = [];
             exclusiveAgent    = False;
             trustLevel        = None;
-            roles             = [];
             lastAuthenticated = Null;
 
-            issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldUser),
+            issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldPrincipal, oldEntitlements),
                         () -> $|An exception in session {this.internalId_} occurred during a\
-                               | deauthentication event for user {oldUser.quoted()}
+                               | deauthentication event
                        );
         }
     }
@@ -444,12 +447,12 @@ service SessionImpl
     }
 
     @Override
-    void sessionAuthenticated(String user) {
+    void sessionAuthenticated(Principal? principal, Entitlement[] entitlements) {
         confirmReached_(SessionAuthenticated);
     }
 
     @Override
-    void sessionDeauthenticated(String user) {
+    void sessionDeauthenticated(Principal? principal, Entitlement[] entitlements) {
         confirmReached_(SessionDeauthenticated);
     }
 
@@ -688,15 +691,15 @@ service SessionImpl
     /**
      * Check if the session needs to be replaced.
      *
-     * @param requestInfo  the incoming request
+     * @param request  the incoming request
      *
      * @return True iff this session is abandoned
      * @return (conditional) the session object, or a `4xx`-range `HttpStatus` that indicates a
      *         failure
      */
-    conditional SessionImpl|HttpStatus isAbandoned_(RequestInfo requestInfo) {
+    conditional SessionImpl|HttpStatus isAbandoned_(RequestIn request) {
         return abandoned_
-                ? (True, split_(requestInfo))
+                ? (True, split_(request))
                 : False;
     }
 
@@ -708,12 +711,12 @@ service SessionImpl
      * two separate and subsequently diverging copies of the session), and reduces the trust level
      * to force re-authentication.
      *
-     * @param requestInfo  the incoming request
+     * @param request  the incoming request
      *
      * @return (conditional) the session object, or a `4xx`-range `HttpStatus` that indicates a
      *         failure
      */
-    HttpStatus|SessionImpl split_(RequestInfo requestInfo) {
+    HttpStatus|SessionImpl split_(RequestIn request) {
         if (!abandoned_) {
             // the first thing to do is to notify the session that an apparent theft was attempted;
             // if desired, the application can strip information out of the session or take other
@@ -731,14 +734,14 @@ service SessionImpl
         }
 
         // create the new session
-        HttpStatus|SessionImpl result = manager_.cloneSession(this, requestInfo);
+        HttpStatus|SessionImpl result = manager_.cloneSession(this, request);
 
         if (result.is(SessionImpl)) {
             // keep track of splits
-            this.splits_ += new SessionSplit_(requestInfo.clientAddress, version_, result.internalId_);
+            this.splits_ += new SessionSplit_(request.client, version_, result.internalId_);
 
             // create new cookies
-            result.ensureCookies_(desiredCookies_(requestInfo.tls));
+            result.ensureCookies_(desiredCookies_(request.tls));
 
             // notify the new session that it was forked
             result.issueEvent_(SessionForked, Void, &sessionForked(),
@@ -782,13 +785,11 @@ service SessionImpl
     }
 
     /**
-     * @param info  the current request
+     * @param request  the current request
      *
-     * @return a unique (within this session) integer identifier of the redirect, iff this session
-     *         will permit a redirect to occur; otherwise the HttpStatus for an error that must be
-     *         returned as a response to the provided `RequestInfo`
+     * @return a unique (within this session) integer identifier of the redirect
      */
-    Int|HttpStatus prepareRedirect_(RequestInfo info) {
+    Int prepareRedirect_(RequestIn request) {
         // get rid of any excess pending redirects (size limit the array of "in flight" redirects)
         if (PendingRedirect_[] pending ?= pendingRedirects_, pending.size > MaxRedirects_) {
             // keep the most recent redirects, but one less than MaxRedirects_ to make room for the
@@ -807,7 +808,7 @@ service SessionImpl
             id = rnd.int(100k).toInt64() + 1;
         } while (pendingRedirects_?.any(r -> r.id == id));
 
-        PendingRedirect_ pending = new PendingRedirect_(id, info.uri, now);
+        PendingRedirect_ pending = new PendingRedirect_(id, request.uri, now);
         pendingRedirects_ = pendingRedirects_? + pending : [pending];
 
         return id;

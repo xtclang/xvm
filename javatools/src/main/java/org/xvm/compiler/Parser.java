@@ -1855,7 +1855,7 @@ public class Parser
         {
         List<AstNode> list = new ArrayList<>(4);
         list.add(parseCondition(false));
-        while (match(Id.COMMA) != null)
+        while (match(Id.COMMA) != null && !peek(Id.R_PAREN))
             {
             list.add(parseCondition(false));
             }
@@ -1864,14 +1864,14 @@ public class Parser
 
     AstNode parseCondition(boolean fNegated)
         {
-        if (!fNegated && peek(Id.NOT) != null)
+        if (!fNegated && peek(Id.NOT))
             {
             // test for a negated conditional assignment
-            Token               tokNot  = peek();
+            Token               tokNot  = null;
             AssignmentStatement stmtAsn = null;
             try (SafeLookAhead attempt = new SafeLookAhead())
                 {
-                expect(Id.NOT);
+                tokNot = expect(Id.NOT);
                 if (match(Id.L_PAREN) != null)
                     {
                     AstNode stmtPeek = parseCondition(true);
@@ -2440,12 +2440,17 @@ public class Parser
                 listLVals.add(LVal);
                 }
 
+            Token comma = match(Id.COMMA);
             if (!fFirst && match(Id.R_PAREN) != null)
                 {
                 return new MultipleLValueStatement(listLVals);
                 }
 
-            expect(Id.COMMA);
+            if (comma == null)
+                {
+                // comma is required
+                expect(Id.COMMA);
+                }
             }
         }
 
@@ -5463,8 +5468,8 @@ public class Parser
      *     "(" Arguments-opt ")"
      *
      * Arguments
-     *     Argument
-     *     Arguments "," Argument
+     *     Argument ","-opt
+     *     Arguments "," Argument ","-opt
      *
      * Argument
      *     NamedArgument-opt ArgumentExpression
@@ -5880,7 +5885,7 @@ public class Parser
      *
      * @return true iff the next token matches
      */
-    protected Boolean peek(Token.Id id)
+    protected boolean peek(Token.Id id)
         {
         return peek().getId() == id;
         }
@@ -5891,7 +5896,7 @@ public class Parser
      *
      * @return true iff the next token is either an identifier or the "_" token
      */
-    protected Boolean peekNameOrAny()
+    protected boolean peekNameOrAny()
         {
         Token.Id id = peek().getId();
         return id == Id.IDENTIFIER || id == Id.ANY;

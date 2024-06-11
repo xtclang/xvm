@@ -30,8 +30,13 @@ static service Runner {
      * @param extras           (optional) extra objects that contain executable commands
      * @param init             (optional) function to call at the end of initialization
      */
-    void run(TerminalApp app, String[] args = [], Boolean suppressWelcome = False,
-             Object[] extras = [], function void()? init = Null) {
+    void run(TerminalApp      app,
+             String[]         args            = [],
+             Boolean          suppressWelcome = False,
+             Object[]         extras          = [],
+             function void()? init            = Null,
+             function void()? shutdown        = Null,
+            ) {
         Catalog catalog = Scanner.buildCatalog(app, extras);
 
         if (args.size == 0) {
@@ -45,9 +50,11 @@ static service Runner {
 
             init?();
             runLoop(catalog);
+            shutdown?();
         } else {
             init?();
             runOnce(catalog, args);
+            shutdown?();
         }
     }
 
@@ -246,6 +253,17 @@ static service Runner {
                         String    argStr    = command[i];
                         Parameter param     = params[i-1];
                         Type      paramType = param.ParamType;
+
+                        if (paramType.form == Union,
+                                (Type leftType, Type rightType) := paramType.relational(),
+                                leftType == Nullable) {
+                            if (argStr.empty || argStr == "-" || argStr.toLowercase() == "null") {
+                                args = args.add(Null);
+                                continue;
+                            }
+                            paramType = rightType;
+                        }
+
                         if (paramType.is(Type<Destringable>)) {
                             paramType.DataType argValue = new paramType.DataType(argStr);
                             args = args.add(argValue);

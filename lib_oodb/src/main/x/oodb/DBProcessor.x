@@ -170,6 +170,7 @@ interface DBProcessor<Message extends immutable Const>
         if (result.is(CommitResult)) {
             switch (result) {
             case Committed:
+            case PendingCommit:
             case DeferredFailed:
             case ConcurrentConflict:
                 // allow concurrency conflicts to retry indefinitely (up to the limit of the

@@ -79,13 +79,13 @@ interface DBObject {
     /**
      * The "current" Connection.
      */
-    @RO Connection dbConnection;
+    @RO Connection connection;
 
     /**
      * The "current" Transaction, if any.
      */
-    @RO Transaction? dbTransaction.get() {
-        return dbConnection.transaction;
+    @RO Transaction? transaction.get() {
+        return connection.transaction;
     }
 
     /**
@@ -158,7 +158,7 @@ interface DBObject {
                 break;
 
             case Name:
-                if (!(result := dbChildren.get(sub.name))) {
+                if (!(result := result.dbChildren.get(sub.name))) {
                     return Null;
                 }
                 break;

@@ -1,33 +1,41 @@
 /**
- * A database transaction, as viewed from outside of the database. In other words, this is the
- * client interface for managing a database transaction.
+ * A database `Transaction`, as viewed from outside of the database. In other words, this is the
+ * client interface for managing a database `Transaction`.
  *
- * A transaction represents the union of the contents of the database (the "root of the schema")
- * with the ability to commit or roll back the transaction.
+ * A `Transaction` represents the union of the contents of the database (the "root of the schema")
+ * with the ability to commit or roll back the `Transaction`.
  */
 interface Transaction<Schema extends RootSchema>
         extends RootSchema
         extends Closeable {
     /**
-     * The database connection. This property is only guaranteed to be available from within a
-     * [pending] transaction.
+     * The database [Connection]. This property is only guaranteed to be available from within a
+     * [pending] `Transaction`.
      */
+    @Override
     @RO (Connection<Schema> + Schema) connection;
 
+    @Override
+    @RO (Transaction<Schema> + Schema)? transaction.get() = connection.transaction;
+
+    @Override
+    (Transaction!<Schema> + Schema) createTransaction();
+
     /**
-     * Represents the parameters used to create a Transaction.
+     * Represents the parameters used to create a `Transaction`.
      *
-     * @param id          an integer identifier to associate with the transaction
-     * @param name        (optional) a descriptive name to associate with the transaction
-     * @param priority    (optional) the transactional priority
-     * @param readOnly    (optional) pass True to indicate that transaction is not going to modify
+     * @param id          an integer identifier to associate with the `Transaction`
+     * @param name        (optional) a descriptive name to associate with the `Transaction`
+     * @param priority    (optional) the `Transaction` priority
+     * @param readOnly    (optional) pass True to indicate that `Transaction` is not going to modify
      *                    any data
      * @param timeout     (optional) the requested time-out, which allows the database to roll back
-     *                    and discard the transaction after that period of time has elapsed; `Null`
-     *                    indicates that the database's default time-out should be used, and even if
-     *                    a time-out is specified, the database may use a shorter or longer value
-     * @param retryCount  (optional) the number of times that this same transaction has already been
-     *                    attempted
+     *                    and discard the `Transaction` after that period of time has elapsed;
+     *                    `Null` indicates that the database's default time-out should be used, and
+     *                    even if a time-out is specified, the database may use a shorter or longer
+     *                    value
+     * @param retryCount  (optional) the number of times that this same `Transaction` has already
+     *                    been attempted
      */
     static const TxInfo(UInt                   id,
                         String?                name        = Null,
@@ -72,18 +80,23 @@ interface Transaction<Schema extends RootSchema>
     }
 
     /**
-     * The transaction parameters used to create this Transaction object.
+     * The parameters used to create this `Transaction` object.
      */
     @RO TxInfo txInfo;
 
     /**
-     * True iff the transaction is active and can theoretically be committed or rolled back.
+     * `True` iff the `Transaction` is active and can theoretically be committed or rolled back.
      */
     @RO Boolean pending;
 
     /**
-     * True indicates that the transaction is not allowed to commit. Once set to True, this cannot
-     * be reset to False.
+     * `True` iff the `Transaction` is nested.
+     */
+    @RO Boolean nested;
+
+    /**
+     * `True` indicates that the `Transaction` is not allowed to commit. Once set to `True`, this
+     * cannot be reset to `False`.
      */
     Boolean rollbackOnly;
 
@@ -91,6 +104,8 @@ interface Transaction<Schema extends RootSchema>
      * Indicates the result of a transaction commit attempt:
      *
      * * Committed - the transaction committed successfully
+     * * PendingCommit - the transaction was nested, so the commit will not occur until each nested
+     *   transaction completes and closes successfully, and then the outermost transaction commits
      * * PreviouslyClosed - the commit processing did not occur because the transaction was
      *   previously committed, rolled back, or otherwise closed/abandoned
      * * RollbackOnly - the transaction cannot commit because it has been marked as rollback-only
@@ -111,6 +126,7 @@ interface Transaction<Schema extends RootSchema>
      */
     enum CommitResult {
         Committed,
+        PendingCommit,
         PreviouslyClosed,
         RollbackOnly,
         DeferredFailed,
@@ -128,6 +144,7 @@ interface Transaction<Schema extends RootSchema>
      *
      * * Verifying that the transaction has neither committed nor rolled back previously, and that
      *   it has not been marked as rollback-only;
+     * * Verifying that the transaction has not been nested (since a nested commit is a no-op);
      * * Application of [deferred processing](DBObject.defer) (which can fail, invalidating this
      *   transaction);
      * * Evaluation of the impact of concurrent transactions that have committed (any of which could
@@ -141,17 +158,24 @@ interface Transaction<Schema extends RootSchema>
      * * The remainder of the database engine's internal process of committing the data, including
      *   any I/O that it performs to achieve persistent storage of the information.
      *
-     * Failure to commit the transaction will cause the transaction to be rolled back automatically;
-     * a caller should expect that the transaction will either be committed or rolled back once this
-     * method completes.
+     * Failure to commit a non-nested `Transaction` will cause the `Transaction` to be rolled back
+     * automatically; a caller should expect that a non-nested `Transaction` will either be
+     * committed or rolled back once this method completes.
      *
-     * @return `Committed` iff the commit succeeded; otherwise an indication of the commit failure
+     * Committing a nested `Transaction` does nothing; however, the call can still fail if the
+     * `Transaction` has already been marked as [rollbackOnly].
+     *
+     * @return `Committed` iff the commit succeeded; `PendingCommit` iff the transaction is nested
+     *         and no commit failure is already known; otherwise an indication of the commit failure
      */
     CommitResult commit();
 
     /**
-     * Roll back the transaction. This allows the database to release any resources held by the
+     * Roll back the `Transaction`. This allows the database to release any resources held by the
      * transaction.
+     *
+     * If the `Transaction` is nested, then this method will mark the transaction as [rollbackOnly],
+     * but will not roll back the transaction.
      *
      * @return False iff the Transaction has already committed, or otherwise cannot be rolled back
      */

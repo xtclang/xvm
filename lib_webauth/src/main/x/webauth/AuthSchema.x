@@ -18,32 +18,44 @@ interface AuthSchema
     @RO DBValue<Configuration> config;
 
     /**
-     * Internal user id generator.
+     * The [Principal] objects that exist within the [DBRealm].
      */
-    @RO @NoTx DBCounter userId;
+    @RO DBMap<Int, Principal> principals;
 
     /**
-     * The users that can be authenticated.
+     * Internal [Principal] id generator.
      */
-    @RO Users users;
+    @RO @NoTx DBCounter principalGen;
 
     /**
-     * User contact information.
+     * A lookup table from [Credential] "locator" strings to the id of the [Principal] that contains
+     * that `Credential`.
      */
-// TODO    @RO Contacts contacts;
+    @RO DBMap<String, Int> principalLocators;
 
     /**
-     * The users that can be authenticated.
+     * The [Group] objects that exist within the [DBRealm].
      */
-    @RO UserHistory userHistory;
+    @RO DBMap<Int, Group> groups;
 
     /**
-     * Internal role id generator.
+     * Internal [Group] id generator.
      */
-    @RO @NoTx DBCounter roleId;
+    @RO @NoTx DBCounter groupGen;
 
     /**
-     * The roles that can be associated with a user.
+     * The [Entitlement] objects that exist within the [DBRealm].
      */
-    @RO Roles roles;
+    @RO DBMap<Int, Entitlement> entitlements;
+
+    /**
+     * Internal [Entitlement] id generator.
+     */
+    @RO @NoTx DBCounter entitlementGen;
+
+    /**
+     * A lookup table from [Credential] "locator" strings to the id of the [Entitlement] that
+     * contains that `Credential`.
+     */
+    @RO DBMap<String, Int> entitlementLocators;
 }

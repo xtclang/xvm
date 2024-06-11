@@ -194,18 +194,19 @@ public class Annotation
      *
      * @param aParams  the new parameters (may include default parameter values)
      */
-    public void resolveParams(Constant[] aParams)
+    public Annotation resolveParams(Constant[] aParams)
         {
         if (!Arrays.equals(aParams, m_aParams))
             {
             if (getPosition() >= 0)
                 {
                 // we must never change the hashCode/equality for already registered constants
-                throw new IllegalStateException("Annotation has already been registered: " + this);
+                return getConstantPool().ensureAnnotation(getAnnotationClass(), aParams);
                 }
 
             m_aParams = aParams;
             }
+        return this;
         }
 
     /**
