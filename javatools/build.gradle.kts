@@ -134,6 +134,8 @@ val sanityCheckJar by tasks.registering {
 
     dependsOn(jar)
 
+    System.err.println("Please remove xdk properties and just use the gradle/env compatible mechanism from the start. The only thing needed to be compatible is the eveluation order of properties files and overwrites but that is 3 lines of code.")
+
     val checkJar = getXdkPropertyBoolean("org.xtclang.javatools.sanityCheckJar")
     val expectedEntryCount = getXdkPropertyInt("org.xtclang.javatools.verifyJar.expectedFileCount", -1)
     inputs.properties("sanityCheckJarBoolean" to checkJar, "sanityCheckJarEntryCount" to expectedEntryCount)

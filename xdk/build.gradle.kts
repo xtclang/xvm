@@ -8,11 +8,11 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 import org.jreleaser.gradle.plugin.tasks.AbstractJReleaserTask
 import org.jreleaser.gradle.plugin.tasks.JReleaserConfigTask
 import org.jreleaser.model.Active
-import org.jreleaser.model.Active.*
+import org.jreleaser.model.Active.ALWAYS
+import org.jreleaser.model.Distribution.DistributionType.BINARY
 import org.jreleaser.model.Http.Authorization
 import org.jreleaser.model.Stereotype
 import org.xtclang.plugin.tasks.XtcCompileTask
-import java.io.File
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -209,11 +209,13 @@ val ensureTags by tasks.registering {
     }
     doLast {
         val snapshotOnly = snapshotOnly()
-        logger.lifecycle("""
+        logger.lifecycle(
+            """
             $prefix Ensuring that the current commit is tagged with version.
             $prefix     version: $semanticVersion
             $prefix     snapshotOnly: $snapshotOnly
-        """.trimIndent())
+        """.trimIndent()
+        )
         val tag = xdkBuildLogic.gitHubProtocol().ensureTags(snapshotOnly)
         if (GitHubProtocol.tagCreated(tag)) {
             logger.lifecycle("$prefix Created or updated tag '$tag' for version: '$semanticVersion'")
@@ -226,14 +228,14 @@ val writeVersionFile by tasks.registering {
     description = "Write XDK version file to build directory (VERSION)."
     val versionFile = layout.buildDirectory.file("VERSION")
     outputs.file(versionFile)
-/*    doLast {
-        val contents = buildString {
-            val (branch, commit) = xdkBuildLogic.gitHubProtocol().resolveBranch()
-            appendLine(semanticVersion)
-            appendLine("branch: $branch:$commit")
-        }
-        versionFile.get().asFile.writeText(contents)
-    }*/
+    /*    doLast {
+            val contents = buildString {
+                val (branch, commit) = xdkBuildLogic.gitHubProtocol().resolveBranch()
+                appendLine(semanticVersion)
+                appendLine("branch: $branch:$commit")
+            }
+            versionFile.get().asFile.writeText(contents)
+        }*/
 }
 
 /**
@@ -327,7 +329,6 @@ val platformZip: Provider<RegularFile> = withLaunchersDistZip.flatMap { it.archi
 // Build everything in github workflows instead
 
 
-
 /**
  * Functionality wanted:
  *
@@ -371,12 +372,16 @@ val deploy by tasks.registering {
 }
 
 jreleaser {
+    // TODO: Command line argument: --select-current-platform, or --select-platform osx-aarch_64
     val snapshotTag = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
     val releaseTag = "v/{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
     val tag = if (isSnapshot()) "early-access" else releaseTag
-
     dryrun = true
     gitRootSearch = true
+
+    environment {
+        properties = mapOf("artifactsDir" to layout.buildDirectory.file("distributions"))
+    }
 
     /**
      * Project configuration.
@@ -400,11 +405,13 @@ jreleaser {
     }
 
     platform {
-        replacements = mapOf("aarch_64" to "aarch64")
+        replacements = mapOf("osx-aarch_64" to "osx-x86_64")
     }
 
     // TODO Use early-access as snapshot tag.
     System.err.println("Change the snapshot tag to 'early-access' for all snapshots")
+    System.err.println("Build the XDK distribution as a JAR not a ZIP file. Tweak the extractor a bit.")
+    // https://www.baeldung.com/maven-artifact
     deploy {
         maven {
             active = ALWAYS
@@ -436,14 +443,49 @@ jreleaser {
         }
     }
 
-    signing {
-        active = ALWAYS
-        armored = true
+    // No uploaders. They are used to uopload assets eleswhere than GH releses such as AWS.
+    upload {
+        active = Active.NEVER
+    }
+
+    // xdk-0.4.4-SNAPSHOT-osx-x86_64.tar.gz  xdk-0.4.4-SNAPSHOT-osx-x86_64.zip     xdk-0.4.4-SNAPSHOT.tar.gz             xdk-0.4.4-SNAPSHOT.zip
+    // Just set the classpath to the inner jars.
+    distributions {
+        val xdk by registering {
+            distributionType = BINARY
+            stereotype = Stereotype.CLI
+            active = ALWAYS
+            artifacts {
+                artifact {
+                    path = layout.buildDirectory.file("distributions/xdk-$version.zip")
+                    extraProperties = mapOf(
+                        "universal" to true,
+                        "graalVMNativeImage" to false
+                    )
+                }
+                artifact {
+                    path = layout.buildDirectory.file("distributions/xdk-$version-osx-x86_64.zip")
+                    platform = "osx-x86_64"
+                    extraProperties = mapOf("graalVMNativeImage" to false)
+                }
+                artifact {
+                    path = layout.buildDirectory.file("distributions/xdk-$version-linux-x86_64.zip")
+                    platform = "linux-x86_64"
+                    extraProperties = mapOf("graalVMNativeImage" to false)
+                }
+                artifact {
+                    path = layout.buildDirectory.file("distribution/xdk-$version-windows-x86_64.zip")
+                    platform = "windows-x86_64"
+                    extraProperties = mapOf("graalVMNativeImage" to false)
+                }
+            }
+        }
     }
 
     release {
         // TODO prerelease
         github {
+            System.err.println("TODO: Always publish draft releases unless explcitily trigeged by workflow_dispatch to do something else.")
             draft = true
             overwrite = true
             changelog {
@@ -467,30 +509,6 @@ jreleaser {
             //}
 
             // https://jreleaser.org/guide/latest/reference/deploy/maven/github.html
-/*            github {
-                val xdk by registering {
-                    // TODO: There has to be a way to publish snapshots.
-                    active = Active.ALWAYS
-                    //prerelease = true
-                    //overwrite = false
-                    url = "https://maven.pkg.github.com/xtclang/xvm"
-                    username = "xtclang-bot"
-                    password = System.getenv("GITHUB_TOKEN")
-                    authorization = Authorization.BEARER
-
-                    // TODO there needs to be a staging repository that takes a provider or we have to build lots of stuff during config
-                    //stagingRepository("localStagingRepoDirectory.get().asFile.absolutePath)
-                    // The defaults for the below config is already false/disabled, unless applyMavenCentralRules are in place.
-                    sign = false
-                    sourceJar = false
-                    javadocJar = false
-                    verifyPom = false
-                    applyMavenCentralRules = false
-                }
-            }
-        }
-    }*/
- */
 /*
      // E.g. v0.4.5 of the XDK, placed on GitHub as a Release, possibly.
     release {
@@ -523,7 +541,6 @@ jreleaser {
     /*
     # These are binaries created using jpackages.
     jreleaser-installer:
-    type: NATIVE_PACKAGE
     winget:
     active: RELEASE
     continueOnError: true

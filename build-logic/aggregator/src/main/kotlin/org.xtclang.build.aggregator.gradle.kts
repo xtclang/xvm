@@ -58,9 +58,17 @@ private class XdkBuildAggregator(project: Project) : Runnable {
         """.trimIndent()
             )
 
-            if (taskNames.count { !it.startsWith("-") && !it.contains("taskTree") } > 1) {
-                val msg =
-                    "$prefix Multiple start parameter tasks are not guaranteed to run in order/in parallel. Please run each task individually. (task names: $taskNames)"
+            val tasks = taskNames.filter {
+                !it.startsWith("-") && !it.contains("taskTree")
+            }
+            System.err.println("** tasks: $tasks")
+            if (tasks.size > 1) {
+                val msg = """
+                    $prefix Multiple start parameters refer to task names. These are not guaranteed to run in order/in oparallel. 
+                    $prefix Please run each task individually.
+                    $prefix
+                    $prefix Matched task names: $tasks
+                """.trimIndent()
                 logger.error(msg)
                 throw GradleException(msg)
             }
