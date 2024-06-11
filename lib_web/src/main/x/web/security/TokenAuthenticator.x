@@ -31,7 +31,7 @@ service TokenAuthenticator
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(Session? session, RequestIn request) {
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
@@ -60,7 +60,7 @@ service TokenAuthenticator
                 }
 
                 if (Set<String> roles := realm.authenticate(user, token)) {
-                    session.authenticate(user, roles=roles);
+                    session?.authenticate(user, roles=roles);
                     return Allowed;
                 } else {
                     return Forbidden;

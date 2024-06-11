@@ -5,7 +5,7 @@ service NeverAuthenticator
         implements Authenticator {
 
     @Override
-    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(Session? session, RequestIn request) {
         private Boolean logged = False;
         if (!logged) {
             // log a message the first time this Authenticator has to reject a user, so the

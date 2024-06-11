@@ -70,7 +70,204 @@ const Int64
      */
     @Override
     construct(String text) {
-        construct Int64(new IntLiteral(text).toInt64().bits);
+        assert Int64 n := parse(text);
+        this.bits = n.bits;
+    }
+
+
+    // ----- parsing -------------------------------------------------------------------------------
+
+    /**
+     * Parse a Int64 value from the passed String.
+     *
+     * @param text   the string value
+     * @param radix  (optional) the radix of the passed String value, in the range `2..36`
+     *
+     * @return True iff the passed String value represents a legal Int64 value
+     * @return (conditional) the parsed Int64 value
+     */
+    static conditional Int64 parse(String text, Int? radix=Null) {
+        if (text.empty || !(2 <= radix? <= 36)) {
+            return False;
+        }
+
+        // optional leading sign
+        Int     length = text.size;
+        Int     offset = 0;
+        Boolean neg    = False;
+        switch (text[0]) {
+            case '-':
+                neg    = True;
+                offset = 1;
+                break;
+            case '+':
+                offset = 1;
+                break;
+        }
+
+        // optional radix indicator
+        if (radix == Null) {
+            // determine the radix from the string value (the default radix is decimal)
+            radix = 10;
+            if (length >= offset + 2 && text[offset] == '0') {
+                switch (text[offset+1]) {
+                case 'b', 'B':
+                    radix   = 2;
+                    offset += 2;
+                    break;
+                case 'o':
+                    radix   = 8;
+                    offset += 2;
+                    break;
+                case 'x', 'X':
+                    radix   = 16;
+                    offset += 2;
+                    break;
+                }
+            }
+        } else if (length >= offset + 2 && text[offset] == '0' && switch (radix) {
+                case  2: text[offset+1].lowercase == 'b';
+                case  8: text[offset+1].lowercase == 'o';
+                case 16: text[offset+1].lowercase == 'x';
+                default: False;
+                }) {
+            offset += 2;
+        }
+
+        // digits
+        Int     magnitude = 0;              // built as a negative value
+        Boolean digits    = False;
+        if (radix == 10) {
+            NextChar: while (offset < length) {
+                Char ch = text[offset];
+                if (UInt8 digit := ch.asciiDigit()) {
+                    Int n = magnitude * radix - digit;
+                    if (n > magnitude) {    // overflow check
+                        return False;
+                    }
+                    magnitude = n;
+                    digits    = True;
+                } else if (ch == '_') {
+                    if (!digits) {
+                        return False;
+                    }
+                } else {
+                    break;
+                }
+                ++offset;
+            }
+
+            // allow KI/KB, MI/MB, GI/GB TI/TB, PI/PB, EI/EB, ZI/ZB, YI/YB
+            PossibleSuffix: if (offset < length) {
+                Int factorIndex;
+                switch (text[offset]) {
+                case 'K', 'k':
+                    factorIndex = 0;
+                    break;
+                case 'M', 'm':
+                    factorIndex = 1;
+                    break;
+                case 'G', 'g':
+                    factorIndex = 2;
+                    break;
+                case 'T', 't':
+                    factorIndex = 3;
+                    break;
+                case 'P', 'p':
+                    factorIndex = 4;
+                    break;
+                case 'E', 'e':
+                    factorIndex = 5;
+                    break;
+
+                case 'Z', 'z':
+                case 'Y', 'y':
+                    if (magnitude != 0) {
+                        // these would all be out of range -- with any factor -- for Int64
+                        return False;
+                    }
+                    factorIndex = -1;
+                    break;
+
+                default:
+                    return False;
+                }
+                ++offset;
+
+                IntLiteral.Factor[] factors = IntLiteral.DecimalFactor.values; // implicitly decimal, e.g. "k"
+                if (offset < length) {
+                    switch (text[offset]) {
+                    case 'B', 'b':                      // explicitly decimal, e.g. "kb"
+                        ++offset;
+                        break;
+
+                    case 'I', 'i':                      // explicitly binary, e.g. "ki"
+                        ++offset;
+                        factors = IntLiteral.BinaryFactor.values;
+
+                        if (offset < length) {          // optional trailing "b", e.g. "kib"
+                            Char optionalB = text[offset];
+                            if (optionalB == 'B' || optionalB == 'b') {
+                                ++offset;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (factorIndex >= 0) {
+                    // do the factor scaling using an Int128 so we don't run out of bits (it makes
+                    // detecting overflow much easier)
+                    Int128 scaled =  magnitude * factors[factorIndex].factor.toInt128();
+                    if (scaled < Int64.MinValue) {
+                        return False;
+                    }
+                    magnitude = scaled.toInt();
+                }
+            }
+        } else { // the number is *not* radix 10
+            NextChar: while (offset < length) {
+                Char ch = text[offset++];
+                Int digit;
+                switch (ch) {
+                case '0'..'9':
+                    digit = ch - '0';
+                    break;
+                case 'A'..'Z':
+                    digit = ch - 'A' + 10;
+                    break;
+                case 'a'..'z':
+                    digit = ch - 'a' + 10;
+                    break;
+                case '_':
+                    if (digits) {
+                        continue NextChar;
+                    }
+                    return False;
+                default:
+                    return False;
+                }
+
+                if (digit >= radix) {
+                    return False;
+                }
+                Int n = magnitude * radix - digit;
+                if (n > magnitude) {    // check for overflow of the negative magnitude
+                    return False;
+                }
+                magnitude = n;
+                digits    = True;
+            }
+        }
+
+        if (!digits || offset < length) {
+            return False;
+        }
+
+        // remember: the magnitude is built as a negative value
+        return neg
+                ? (True, magnitude)
+                : (magnitude != MinValue, -magnitude);
     }
 
 

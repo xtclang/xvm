@@ -16,7 +16,7 @@ service BasicAuthenticator(Realm realm)
     public/private Realm realm;
 
     @Override
-    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(Session? session, RequestIn request) {
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
@@ -35,10 +35,10 @@ service BasicAuthenticator(Realm realm)
                     String user = auth[0 ..< colon];
                     String pwd  = auth[colon >..< auth.size];
                     if (realm.authenticate(user, pwd)) {
-                        session.authenticate(user);
+                        session?.authenticate(user);
                         return Allowed;
                     }
-                    if (session.authenticationFailed(user)) {
+                    if (session?.authenticationFailed(user)) {
                         return Forbidden;
                     }
                 }

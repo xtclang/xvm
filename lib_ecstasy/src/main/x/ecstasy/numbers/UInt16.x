@@ -70,7 +70,8 @@ const UInt16
      */
     @Override
     construct(String text) {
-        construct UInt16(new IntLiteral(text).toUInt16().bits);
+        assert UInt16 n := parse(text);
+        this.bits = n.bits;
     }
 
 
@@ -124,19 +125,19 @@ const UInt16
         }
 
         // digits
-        Int magnitude = 0;
-        Int digits    = 0;
+        Int     magnitude = 0;
+        Boolean digits    = False;
         if (radix == 10) {
             NextChar: while (offset < length) {
                 Char ch = text[offset];
                 if (UInt8 digit := ch.asciiDigit()) {
                     magnitude = magnitude * radix + digit;
-                    ++digits;
+                    digits = True;
                     if (magnitude > UInt16.MaxValue) {
                         return False;
                     }
                 } else if (ch == '_') {
-                    if (digits == 0) {
+                    if (!digits) {
                         return False;
                     }
                 } else {
@@ -168,7 +169,7 @@ const UInt16
                     break;
 
                 default:
-                    break PossibleSuffix;
+                    return False;
                 }
                 ++offset;
 
@@ -212,10 +213,10 @@ const UInt16
                     digit = ch - 'a' + 10;
                     break;
                 case '_':
-                    if (digits == 0) {
-                        return False;
+                    if (digits) {
+                        continue NextChar;
                     }
-                    continue NextChar;
+                    return False;
                 default:
                     return False;
                 }
@@ -227,11 +228,11 @@ const UInt16
                 if (magnitude > UInt16.MaxValue) {
                     return False;
                 }
-                ++digits;
+                digits = True;
             }
         }
 
-        return digits == 0 || offset < length || magnitude > MaxValue
+        return !digits || offset < length || magnitude > MaxValue
                 ? False
                 : True, magnitude.toUInt16();
     }
