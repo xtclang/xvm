@@ -198,7 +198,7 @@ public class xRTType
         {
         // a proxy for a non-shareable TypeHandle is a "foreign" handle
         return frame.assignValue(Op.A_STACK,
-            makeHandle(ctxTarget.f_container, ((TypeHandle) hTarget).getUnsafeDataType(), false));
+                makeForeignHandle(((TypeHandle) hTarget).getUnsafeDataType()));
         }
 
     @Override
@@ -1620,6 +1620,14 @@ public class xRTType
         hIter.setField(null, PROP_CALCULATE,  xNullable.NULL);
 
         return hType;
+        }
+
+    /**
+     * @return a "foreign" {@link TypeHandle} that serves as a proxy handle for the specified type.
+     */
+    public static TypeHandle makeForeignHandle(TypeConstant type)
+        {
+        return makeHandle(null, type, false);
         }
 
     /**
