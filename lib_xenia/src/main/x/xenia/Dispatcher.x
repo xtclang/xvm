@@ -18,6 +18,8 @@ import web.responses.SimpleResponse;
 
 import web.security.Authenticator;
 
+import web.sessions.Broker as SessionBroker;
+
 import net.UriTemplate.UriParameters;
 
 
@@ -29,7 +31,8 @@ service Dispatcher {
     construct(Catalog        catalog,
               BundlePool     bundlePool,
               SessionManager sessionManager,
-              Authenticator  authenticator) {
+              Authenticator  authenticator,
+              SessionBroker  sessionBroker) {
         this.catalog             = catalog;
         this.bundlePool          = bundlePool;
         this.sessionManager      = sessionManager;
@@ -37,6 +40,7 @@ service Dispatcher {
         this.encryptedCookieName = sessionManager.encryptedCookieName;
         this.consentCookieName   = sessionManager.consentCookieName;
         this.authenticator       = authenticator;
+        this.sessionBroker       = sessionBroker;
     }
 
     /**
@@ -49,30 +53,40 @@ service Dispatcher {
      */
     protected @Final BundlePool bundlePool;
 
+// TODO move to broker (???)
     /**
      * The session manager.
      */
     protected @Final SessionManager sessionManager;
 
+// TODO move to broker
     /**
      * The name of the session cookie for non-TLS traffic (copied from the session manager).
      */
     protected @Final String plainTextCookieName;
 
+// TODO move to broker
     /**
      * The name of the session cookie for TLS traffic (copied from the session manager).
      */
     protected @Final String encryptedCookieName;
 
+// TODO move to broker
     /**
      * The name of the persistent session cookie (copied from the session manager).
      */
     protected @Final String consentCookieName;
 
     /**
-     * The user authenticator.
+     * The user authenticator, which encapsulates the process of challenging a client for
+     * authentication information and validating the resulting credentials.
      */
     protected @Final Authenticator authenticator;
+
+    /**
+     * The session broker, which encapsulates the process of establishing and identifying sessions.
+     */
+    protected @Final SessionBroker sessionBroker;
 
     /**
      * Pending request counter.
@@ -83,24 +97,19 @@ service Dispatcher {
      * Dispatch the "raw" request.
      */
     void dispatch(RequestInfo requestInfo) {
-
-        // REVIEW CP
-        Boolean tls        = requestInfo.tls;
-        String  uriString  = requestInfo.uriString;
-        String  methodName = requestInfo.method.name;
-
-        FromTheTop: while (True) {
+        Boolean tls       = requestInfo.tls;
+        String  uriString = requestInfo.uriString;
+        FromTheBeginning: while (True) {
             // select the service to delegate request processing to; the service infos are sorted
             // with the most specific path first (so the first path match wins)
             Int             uriSize     = uriString.size;
             WebServiceInfo? serviceInfo = Null;
             for (WebServiceInfo info : catalog.services) {
-                // the info.path, which represents a "directory", never ends with '/' (see Catalog),
-                // but a legitimately matching uriString may or may not have '/' at the end; for
-                // example: if the path is "test", then uri values such as "test/s", "test/" and
-                // "test" should all match (the last two would be treated as equivalent), but
-                // "tests" should not
-
+                // the info.path, which represents a "directory", never ends with '/' (see the
+                // extractPath function in Catalog) -- except for the root path "/". a legitimately
+                // matching uriString may or may not have '/' at the end; for example: if the path
+                // is "test", then uri values such as "test/s", "test/" and "test" should all match
+                // (the last two would be treated as equivalent), but "tests" should not
                 String path     = info.path;
                 Int    pathSize = path.size;
                 if (uriSize == pathSize) {
@@ -119,31 +128,27 @@ service Dispatcher {
                 }
             }
 
-            ChainBundle?        bundle      = Null;
+            ChainBundle? bundle = Null;
             @Future ResponseOut response;
             ProcessRequest: if (serviceInfo == Null) {
-                RequestIn request = new Http1Request(requestInfo, []);
-                Session?  session = getSessionOrNull(requestInfo);
-
-                response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
+                RequestIn request = new Http1Request(requestInfo, sessionBroker);
+                response = catalog.webApp.handleUnhandledError^(request, HttpStatus.NotFound);
             } else {
                 Int wsid = serviceInfo.id;
                 if (wsid == 0) {
                     // this is a redirect or other system service call
                     bundle = bundlePool.allocateBundle(wsid);
-
                     SystemService svc = bundle.ensureWebService(wsid).as(SystemService);
                     HttpStatus|ResponseOut|String result = svc.handle(this, uriString, requestInfo);
                     if (result.is(String)) {
                         uriString = result;
                         bundlePool.releaseBundle(bundle);
-                        continue FromTheTop;
+                        continue FromTheBeginning;
                     }
 
                     response = result.is(ResponseOut)
                             ? result
                             : new SimpleResponse(result);
-
                     break ProcessRequest;
                 }
 
@@ -160,7 +165,7 @@ service Dispatcher {
                     uriString = uriString[0 ..< queryOffset];
                 }
 
-                if (uriString == "") {
+                if (uriString.empty) {
                     uriString = "/";
                 }
 
@@ -175,162 +180,72 @@ service Dispatcher {
                         break ProcessRequest;
                     }
 
-                    for (EndpointInfo eachEndpoint : serviceInfo.endpoints) {
-                        if (eachEndpoint.httpMethod.name == methodName,
-                                uriParams := eachEndpoint.matches(uri)) {
-                            endpoint = eachEndpoint;
+                    // find a matching endpoint
+                    String methodName = requestInfo.method.name;
+                    for (endpoint : serviceInfo.endpoints) {
+                        if (endpoint.httpMethod.name == methodName,
+                                uriParams := endpoint.matches(uri)) {
                             break FindEndpoint;
                         }
                     }
 
-                    if (methodName == "GET",
-                            EndpointInfo defaultGet ?= serviceInfo.defaultGet) {
-                        endpoint = defaultGet;
+                    // no matching endpoint; check if there is a default endpoint
+                    if (methodName == "GET", endpoint ?= serviceInfo.defaultGet) {
                         break FindEndpoint;
                     }
 
                     // there is no matching endpoint
-                    RequestIn   request     = new Http1Request(requestInfo, []);
-                    Session?    session     = getSessionOrNull(requestInfo);
-                    MethodInfo? onErrorInfo = catalog.findOnError(wsid);
-                    if (onErrorInfo != Null && session != Null) {
+                    RequestIn request = new Http1Request(requestInfo, sessionBroker);
+                    if (MethodInfo onErrorInfo ?= catalog.findOnError(wsid)) {
                         Int errorWsid = onErrorInfo.wsid;
                         bundle = bundlePool.allocateBundle(errorWsid);
-                        ErrorHandler? onError = bundle.ensureErrorHandler(errorWsid);
-                        if (onError != Null) {
-                            response = onError^(session, request, HttpStatus.NotFound);
+                        if (ErrorHandler onError ?= bundle.ensureErrorHandler(errorWsid)) {
+                            response = onError^(request, HttpStatus.NotFound);
                             break ProcessRequest;
+                        } else {
+                            bundlePool.releaseBundle(bundle);
+                            bundle = Null;
                         }
                     }
-
-                    response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
+                    response = catalog.webApp.handleUnhandledError^(request, HttpStatus.NotFound);
                     break ProcessRequest;
                 }
 
                 // if the endpoint requires HTTPS (or some other form of TLS), the server responds
-                // with a redirect to a URL that uses a TLS-enabled protocol
+                // either with an error or with a redirect to a URL that uses a TLS-enabled protocol
                 if (!tls && endpoint.requiresTls) {
-                    response = new SimpleResponse(PermanentRedirect);
-
+                    response = new SimpleResponse(endpoint.redirectTls ? PermanentRedirect : Forbidden);
                     response.header.put(Header.Location, requestInfo.httpsUrl.toString());
                     break ProcessRequest;
                 }
 
-                // either a valid existing session is identified by the request, or a session will
-                // be created and a redirect to verify the session's successful creation will occur,
-                // which will then redirect back to this same request
-                (HttpStatus|SessionImpl result, Boolean redirect, Int eraseCookies) = ensureSession(requestInfo);
+                // create a Request object to represent the incoming request, and the reason that it
+                // matched
+                RequestIn request  = new Http1Request(requestInfo, sessionBroker, endpoint.template, uriParams);
+                Session?  session  = request.session;
+                Boolean   required = endpoint.requiresSession;
 
-                // handle the error result (no session returned)
-                if (result.is(HttpStatus)) {
-                    response = new SimpleResponse(result);
-                    for (CookieId cookieId : CookieId.from(eraseCookies)) {
-                        response.header.add(Header.SetCookie, eraseCookie(cookieId));
+                FindSession: do {
+                    // if the request requires a session, then either (i) one must already exist,
+                    // whose identity is derived from the requestInfo, or (ii) one must be created;
+                    // otherwise, a session may already exist
+                    ResponseOut|Session? result = sessionBroker.findSession(request, required);
+                    if (required && result == Null) {
+                        // an implementation of a session broker should not return Null when a session
+                        // is required, but we return an error response instead of throwing an assertion
+                        response = new SimpleResponse(NotImplemented);
+                        break ProcessRequest;
                     }
-                    break ProcessRequest;
-                }
-
-                SessionImpl session = result;
-
-                // if we're already redirecting, defer the version increment that comes from an IP
-                // address or user agent change; let's first verify that the user agent has the
-                // correct cookies for the current version of the session
-                if (!redirect) {
-                    // check for any IP address and/or user agent change in the connection
-                    redirect = session.updateConnection_(requestInfo.userAgent ?: "<unknown>",
-                            requestInfo.clientAddress);
-                }
-
-                if (redirect) {
-                    Int|HttpStatus redirectResult = session.prepareRedirect_(requestInfo);
-                    if (redirectResult.is(HttpStatus)) {
-                        RequestIn request = new Http1Request(requestInfo, []);
-                        response = catalog.webApp.handleUnhandledError^(session, request, redirectResult);
+                    if (result.is(ResponseOut)) {
+                        response = result;
                         break ProcessRequest;
                     }
 
-                    response = new SimpleResponse(TemporaryRedirect);
-                    Int    redirectId = redirectResult;
-                    Header header     = response.header;
-                    Byte   desired    = session.desiredCookies_(tls);
-                    for (CookieId cookieId : CookieId.values) {
-                        if (desired & cookieId.mask != 0) {
-                            if ((SessionCookie cookie, Time? sent, Time? verified)
-                                    := session.getCookie_(cookieId), verified == Null) {
-                                header.add(Header.SetCookie, cookie.toString());
-                                session.cookieSent_(cookie);
-                            }
-                        } else if (eraseCookies & cookieId.mask != 0) {
-                            header.add(Header.SetCookie, eraseCookie(cookieId));
-                        }
-                    }
-
-                    // come back to verify that the user agent received and subsequently sent the
-                    // cookies
-                    Uri newUri = new Uri(path=
-                            $"{catalog.services[0].path}/session/{redirectId}/{session.version_}");
-                    header.put(Header.Location, newUri.toString());
-                    break ProcessRequest;
-                }
-
-                // create a Request object to represent the incoming request
-                RequestIn request = new Http1Request(requestInfo, uriParams);
-
-                // each endpoint has a required trust level, and the session knows its own trust
-                // level; if the endpoint requirement is higher, then we have to re-authenticate
-                // the user agent; the server must respond in a manner that causes the client to
-                // authenticate, including (but not limited to) any of the following manners:
-                // * with the `Unauthorized` error code (and related information) that indicates
-                //   that the client must authenticate itself
-                // * with a redirect to a URL that provides the necessary login user interface
-                if (endpoint.requiredTrust > session.trustLevel) {
-                    import Authenticator.AuthStatus;
-                    AuthStatus|ResponseOut success = authenticator.authenticate(request, session);
-                    switch (success) {
-                    case Allowed:
-                        // Authenticator has verified that the user is authenticated (the
-                        // Authenticator should have already updated the session accordingly)
-                        if (endpoint.requiredTrust > session.trustLevel) {
-                            // the user is authenticated, but the user doesn't have the necessary
-                            // security access
-                            response = new SimpleResponse(Forbidden);
-                            break ProcessRequest;
-                        }
-
-                        // the user is authenticated and has the necessary security access;
-                        // continue processing the request
-                        break;
-
-                    case Unknown:
-                        // the request didn't have any authorization information or the authorizer
-                        // didn't know how to process it
-                        response = new SimpleResponse(Unauthorized);
-                        break ProcessRequest;
-
-                    case Forbidden:
-                        // authentication didn't just fail, but it has been disallowed; respond
-                        // with an HTTP "Forbidden"
-                        response = new SimpleResponse(Forbidden);
-                        break ProcessRequest;
-
-                    default:
-                        // "success" isn't a Boolean, it's an HTTP response; send the response
-                        // back to the client as the next step in authenticating the client
-                        response = success.as(ResponseOut);
-                        break ProcessRequest;
-                    }
-                }
-
-                if (!endpoint.authorized(session.roles)) {
-                    // the user doesn't have the necessary security permissions
-                    response = new SimpleResponse(Forbidden);
-                    break ProcessRequest;
-                }
-
-                // this is the "normal" i.e. "actual" request processing
-                bundle = bundlePool.allocateBundle(wsid);
-                Handler handle = bundle.ensureCallChain(endpoint);
-                response = handle^(session, request);
+                    // this is the "normal" i.e. "actual" request processing
+                    bundle = bundlePool.allocateBundle(wsid);
+                    Handler handle = bundle.ensureCallChain(endpoint, authenticator);
+                    response = handle^(request);
+                } while (False);
             }
 
             pendingRequests++;
@@ -359,6 +274,7 @@ service Dispatcher {
         }
     }
 
+// TODO move to cookie broker
     /**
      * Use request cookies to identify an existing session, performing only absolutely necessary
      * validations. No session validation, security checks, etc. are performed. This method does not
@@ -372,8 +288,7 @@ service Dispatcher {
         if (String[] cookies := request.getHeaderValuesForName(Header.Cookie)) {
             for (String cookieHeader : cookies) {
                 for (String cookie : cookieHeader.split(';')) {
-                    if (Int      delim    := cookie.indexOf('='),
-                        CookieId cookieId := lookupCookie(cookie[0 ..< delim].trim())) {
+                    if (Int delim := cookie.indexOf('='), lookupCookie(cookie[0 ..< delim].trim())) {
                         if (SessionImpl session := sessionManager.getSessionByCookie(
                                 cookie.substring(delim+1).trim())) {
                             return session;
@@ -388,6 +303,7 @@ service Dispatcher {
         return Null;
     }
 
+// TODO move to cookie broker
     /**
      * Using the request information, look up or create the session object.
      *
@@ -625,6 +541,7 @@ service Dispatcher {
         }
     }
 
+// TODO move to cookie broker
     /**
      * Using the request information, find any session cookie values.
      *
@@ -695,6 +612,7 @@ service Dispatcher {
         return txtTemp, tlsTemp, consent, failures;
     }
 
+// TODO move to cookie broker
     /**
      * Determine if a cookie name indicates a session cookie.
      *
@@ -715,6 +633,7 @@ service Dispatcher {
         }
     }
 
+// TODO move to cookie broker
     /**
      * Obtain the session cookie name for the specified cookie id.
      *
@@ -730,6 +649,7 @@ service Dispatcher {
         };
     }
 
+// TODO move to cookie broker?
     /**
      * Obtain a header entry that will erase the session cookie for the specified cookie id.
      *
@@ -741,6 +661,7 @@ service Dispatcher {
         return $"{cookieNameFor(id)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT{id.attributes}";
     }
 
+// TODO move to cookie broker
     /**
      * Look up the session specified by the provided cookies.
      *

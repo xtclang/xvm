@@ -1,6 +1,5 @@
 import net.IPAddress;
 
-
 /**
  * `Session` represents the information that is (i) managed on a server, (ii) on behalf of a person
  * or entity, (iii) from a specific user agent (e.g. browser or client application), (iv) using a
@@ -187,6 +186,8 @@ import net.IPAddress;
  * To obtain the session for use in an [Endpoint], the endpoint method should include a parameter of
  * type session:
  *
+ * TODO CP and/or annotate using ...
+ *
  *     @Post("/{id}/items")
  *     Item addItem(Session session, @UriParam String id, @BodyParam Item item) {...}
  *
@@ -348,7 +349,6 @@ interface Session
      */
     @RO String sessionId;
 
-
     // ----- session control -----------------------------------------------------------------------
 
     /**
@@ -402,7 +402,6 @@ interface Session
      * Additionally, destruction of the session implies the revocation of cookie consent.
      */
     void destroy();
-
 
     // ----- session events ------------------------------------------------------------------------
 

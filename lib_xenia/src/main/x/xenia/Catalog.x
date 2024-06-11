@@ -4,6 +4,8 @@ import ecstasy.reflect.Argument;
 import net.UriTemplate;
 import net.UriTemplate.UriParameters;
 
+import sec.Permission;
+
 import web.*;
 
 import WebService.Constructor;
@@ -12,6 +14,17 @@ import WebService.Constructor;
  * The catalog of WebApp endpoints.
  */
 const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class[] sessionMixins) {
+
+    /**
+     * The Restriction could be one of:
+     *  - Null, indicating an absence of any restrictions;
+     *  - a static Permission object computed at Catalog creation time;
+     *  - a function that creates a Permission object at request time;
+     *  - a user defined method called at request time
+     */
+    typedef Permission? | function Permission(RequestIn) | Method<WebService, <>, <Boolean>>
+        as Restriction;
+
     /**
      * The list of [WebServiceInfo] objects describing the [WebService] classes discovered within
      * the application.
@@ -96,10 +109,11 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             extends MethodInfo {
         construct(Endpoint method, Int id, Int wsid,
                  Boolean               serviceTls,
+                 Boolean               serviceRequiresSession,
                  TrustLevel            serviceTrust,
                  MediaType|MediaType[] serviceProduces,
                  MediaType|MediaType[] serviceConsumes,
-                 String|String[]       serviceSubjects,
+                 Restriction           serviceRestriction,
                  Boolean               serviceStreamRequest,
                  Boolean               serviceStreamResponse
                  ) {
@@ -117,14 +131,28 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 : new UriTemplate(templateString);
 
             // check if the template matches UriParam's in the method
-            Int requiredParamCount = 0;
+            Int     requiredParamCount   = 0;
+            Boolean requiredSessionParam = False;
+            Boolean hasBodyParam         = False;
             for (Parameter param : method.params) {
                 // well-known types are Session and RequestIn (see ChainBundle.ensureCallChain)
-                if (param.ParamType.is(Type<Session>) ||
-                    param.ParamType == RequestIn      ||
+                if (param.ParamType == RequestIn      ||
                     param.is(QueryParam)              ||
-                    param.is(BodyParam)               ||
                     param.defaultValue()) {
+                    continue;
+                }
+                if (param.is(BodyParam)) {
+                    if (hasBodyParam) {
+                        throw new IllegalState($|The template for method "{method}" has more than \
+                                                |one "@BodyParam" annotated parameter
+                                              );
+                    }
+                    hasBodyParam = True;
+                    continue;
+                }
+
+                if (param.ParamType.is(Type<Session>)) {
+                    requiredSessionParam = True;
                     continue;
                 }
 
@@ -134,9 +162,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 }
                 if (!template.vars.contains(name)) {
                     throw new IllegalState($|The template for method "{method}" is missing \
-                                            |a variable name "{name}": \
-                                            |"{templateString}"
-                                        );
+                                            |a variable name "{name}": "{templateString}"
+                                          );
                 }
                 requiredParamCount++;
             }
@@ -145,6 +172,22 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             this.requiresTls = serviceTls
                         ? !method.is(HttpsOptional)
                         :  method.is(HttpsRequired);
+
+            if (method.is(SessionOptional)) {
+                if (requiredSessionParam) {
+                    throw new IllegalState($|Invalid "@SessionOptional" annotation for endpoint \
+                                            |"{method}"; parameters require a session
+                                          );
+                }
+                if (method.is(SessionRequired)) {
+                    throw new IllegalState($|Contradicting "@SessionRequired" and "@SessionOptional" \
+                                            |annotations for endpoint "{method}"
+                                          );
+                }
+                this.requiresSession = False;
+            } else {
+                this.requiresSession = serviceRequiresSession || method.is(SessionRequired);
+            }
 
             this.requiredTrust = switch (method.is(_)) {
                 case LoginRequired: TrustLevel.maxOf(serviceTrust, method.security);
@@ -158,12 +201,10 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             this.consumes = method.is(Consumes)
                         ? method.consumes
                         : serviceConsumes;
+            this.requiredPermission = method.is(Restrict)
+                        ? computeRestriction(method)
+                        : serviceRestriction;
 
-            String|String[] subjects = method.is(Restrict)
-                        ? method.subject
-                        : serviceSubjects;
-
-            this.restrictSubjects       = subjects.is(String) ? [subjects] : subjects;
             this.allowRequestStreaming  = method.is(StreamingRequest)  || serviceStreamRequest;
             this.allowResponseStreaming = method.is(StreamingResponse) || serviceStreamResponse;
         }
@@ -209,9 +250,19 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
         MediaType|MediaType[] produces;
 
         /**
-         * Indicates if this endpoint requires the HTTPS.
+         * Indicates if this endpoint requires a [Session].
+         */
+        Boolean requiresSession;
+
+        /**
+         * Indicates if this endpoint requires HTTPS.
          */
         Boolean requiresTls;
+
+        /**
+         * Indicates if an attempt to access the endpoint should automatically redirect to HTTPS.
+         */
+        Boolean redirectTls;
 
         /**
          *  [TrustLevel] of security that is required by the this endpoint.
@@ -219,9 +270,10 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
         TrustLevel requiredTrust;
 
         /**
-         * If not empty, contains users that this endpoint is restricted to.
+         * If not `Null` (which means there are no restrictions), contains the permission name or a
+         * method to check for permissions.
          */
-        String[] restrictSubjects;
+        Restriction requiredPermission;
 
         /**
          * Indicates if this endpoint allows the request content not to be fully buffered.
@@ -244,26 +296,6 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             if (UriParameters uriParams      := template.matches(uri),
                               uriParams.size >= requiredParamCount) {
                 return True, uriParams;
-            }
-            return False;
-        }
-
-        /**
-         * Check if any of the specified roles matches the restrictions of this endpoint.
-         *
-         * @param roles  the set of roles to check against
-         *
-         * @return True iff any of the roles matches this endpoint restrictions
-         */
-        Boolean authorized(Set<String> roles) {
-            if (restrictSubjects.empty) {
-                return True;
-            }
-
-            for (String role : restrictSubjects) {
-                if (roles.contains(role)) {
-                    return True;
-                }
             }
             return False;
         }
@@ -424,16 +456,16 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
      */
     private static WebServiceInfo[] collectEndpoints(WebApp app, ClassInfo[] classInfos) {
         typedef MediaType|MediaType[] as MediaTypes;
-        typedef String|String[]       as Subjects;
 
-        Class      clzWebApp         = &app.actualClass;
-        TrustLevel appTrustLevel     = clzWebApp.is(LoginRequired) ? clzWebApp.security : None;
-        Boolean    appTls            = clzWebApp.is(HttpsRequired);
-        MediaTypes appProduces       = clzWebApp.is(Produces) ? clzWebApp.produces : [];
-        MediaTypes appConsumes       = clzWebApp.is(Consumes) ? clzWebApp.consumes : [];
-        Subjects   appSubjects       = clzWebApp.is(Restrict) ? clzWebApp.subject  : [];
-        Boolean    appStreamRequest  = clzWebApp.is(StreamingRequest);
-        Boolean    appStreamResponse = clzWebApp.is(StreamingResponse);
+        Class       clzWebApp          = &app.actualClass;
+        TrustLevel  appTrustLevel      = clzWebApp.is(LoginRequired) ? clzWebApp.security : None;
+        Boolean     appTls             = clzWebApp.is(HttpsRequired);
+        Boolean     appRequiresSession = clzWebApp.is(SessionRequired);
+        MediaTypes  appProduces        = clzWebApp.is(Produces) ? clzWebApp.produces : [];
+        MediaTypes  appConsumes        = clzWebApp.is(Consumes) ? clzWebApp.consumes : [];
+        Restriction appRestriction     = clzWebApp.is(Restrict) ? computeRestriction(clzWebApp) : Null;
+        Boolean     appStreamRequest   = clzWebApp.is(StreamingRequest);
+        Boolean     appStreamResponse  = clzWebApp.is(StreamingResponse);
 
         Int wsid = 0;
         Int epid = 0;
@@ -446,6 +478,11 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             TrustLevel serviceTrust = appTrustLevel;
             Boolean    serviceTls   = appTls;
             if (clz.is(LoginRequired)) {
+                if (clz.is(LoginOptional)) {
+                    throw new IllegalState($|Contradicting "@LoginRequired" and "@LoginOptional" \
+                                            |annotations for service "{clz}"
+                                          );
+                }
                 serviceTrust = clz.security;
                 serviceTls   = True;
             } else {
@@ -453,16 +490,33 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     serviceTrust = None;
                 }
                 if (clz.is(HttpsOptional)) {
+                    if (clz.is(HttpsRequired)) {
+                        throw new IllegalState($|Contradicting "@HttpsRequired" and "@HttpsOptional" \
+                                                |annotations for service "{clz}"
+                                              );
+                    }
                     serviceTls = False;
                 } else if (clz.is(HttpsRequired)) {
                     serviceTls = True;
                 }
             }
-            MediaTypes serviceProduces       = clz.is(Produces) ? clz.produces : appProduces;
-            MediaTypes serviceConsumes       = clz.is(Consumes) ? clz.consumes : appConsumes;
-            Subjects   serviceSubjects       = clz.is(Restrict) ? clz.subject  : appSubjects;
-            Boolean    serviceStreamRequest  = clz.is(StreamingRequest) || appStreamRequest;
-            Boolean    serviceStreamResponse = clz.is(StreamingResponse) || appStreamResponse;
+            Boolean serviceRequiresSession = appRequiresSession;
+            if (clz.is(SessionRequired)) {
+                if (clz.is(SessionOptional)) {
+                    throw new IllegalState($|Contradicting "@SessionRequired" and "@SessionOptional" \
+                                            |annotations for service "{clz}"
+                                          );
+                }
+                serviceRequiresSession = True;
+            } else {
+                serviceRequiresSession &= !clz.is(SessionOptional);
+            }
+
+            MediaTypes  serviceProduces        = clz.is(Produces) ? clz.produces : appProduces;
+            MediaTypes  serviceConsumes        = clz.is(Consumes) ? clz.consumes : appConsumes;
+            Restriction serviceRestriction     = clz.is(Restrict) ? computeRestriction(clz) : appRestriction;
+            Boolean     serviceStreamRequest   = clz.is(StreamingRequest) || appStreamRequest;
+            Boolean     serviceStreamResponse  = clz.is(StreamingResponse) || appStreamResponse;
 
             EndpointInfo[] endpoints    = new EndpointInfo[];
             EndpointInfo?  defaultGet   = Null;
@@ -495,11 +549,11 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                         }
                         validateEndpoint(method);
                         defaultGet = new EndpointInfo(method, epid++, wsid,
-                                        serviceTls, serviceTrust,
-                                        serviceProduces, serviceConsumes, serviceSubjects,
+                                        serviceTls, serviceRequiresSession, serviceTrust,
+                                        serviceProduces, serviceConsumes, serviceRestriction,
                                         serviceStreamRequest, serviceStreamResponse);
                     } else {
-                        throw new IllegalState($|multiple "Default" endpoints on "{clz}"
+                        throw new IllegalState($|Multiple "Default" endpoints on "{clz}"
                                                 );
                     }
                     break;
@@ -508,8 +562,8 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     validateEndpoint(method);
 
                     EndpointInfo info = new EndpointInfo(method, epid++, wsid,
-                                        serviceTls, serviceTrust,
-                                        serviceProduces, serviceConsumes, serviceSubjects,
+                                        serviceTls, serviceRequiresSession, serviceTrust,
+                                        serviceProduces, serviceConsumes, serviceRestriction,
                                         serviceStreamRequest, serviceStreamResponse);
                     if (templates.addIfAbsent($"{info.httpMethod.name} {info.template}")) {
                         endpoints.add(info);
@@ -528,7 +582,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     if (onError == Null) {
                         onError = new MethodInfo(method, wsid);
                     } else {
-                        throw new IllegalState($|multiple "OnError" handlers on "{clz}"
+                        throw new IllegalState($|Multiple "OnError" handlers on "{clz}"
                                               );
                     }
                     break;
@@ -570,5 +624,49 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     endpoints, defaultGet, interceptors, observers, onError, route);
         }
         return webServiceInfos;
+    }
+
+    static Restriction computeRestriction(Restrict restrict) {
+        String?|Method<WebService, <>, <Boolean>> permission = restrict.permission;
+
+        if (permission.is(String?)) {
+            if (!restrict.is(Endpoint)) {
+                assert permission != Null as $"The @Restrict annotation must specify the permission";
+                return new Permission(permission);
+            }
+
+            String      endpointTarget   = restrict.template;
+            String      endpointAction   = restrict.httpMethod.name;
+            UriTemplate endpointTemplate = new UriTemplate(endpointTarget);
+            String[]    endpointVars     = endpointTemplate.vars;
+
+            if (permission == Null) {
+                // the permission is not specified by the Restrict; need to compute it
+                if (endpointVars.empty) {
+                    // e.g. "PUT:/accounts"
+                    return new Permission(endpointTarget, endpointAction);
+                }
+                // e.g. "GET:/accounts/{id}"
+                return (request) ->
+                    new Permission(endpointTemplate.format(request.matchResult), endpointAction);
+            }
+
+            // permission target can be parameterized; we need to resolve it at run time
+            Permission  rawPermission      = new Permission(permission);
+            String      permissionTarget   = rawPermission.target;
+            UriTemplate permissionTemplate = new UriTemplate(permissionTarget);
+            String[]    permissionVars     = permissionTemplate.vars;
+            if (permissionVars.empty) {
+                return rawPermission;
+            }
+            assert endpointVars.containsAll(permissionVars) as
+                    $|Restrict permission "{permission}" contains elements that are missing in \
+                     |the endpoint template "{endpointTarget}"
+                     ;
+            String action = rawPermission.action;
+            return (request) ->
+                new Permission(permissionTemplate.format(request.matchResult), action);
+        }
+        return permission; // Method<WebService, <>, <Boolean>>
     }
 }

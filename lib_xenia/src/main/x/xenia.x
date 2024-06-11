@@ -8,6 +8,7 @@ module xenia.xtclang.org {
     package crypto      import crypto.xtclang.org;
     package net         import net.xtclang.org;
     package json        import json.xtclang.org;
+    package sec         import sec.xtclang.org;
     package web         import web.xtclang.org;
 
     import crypto.CertificateManager;
@@ -56,7 +57,7 @@ module xenia.xtclang.org {
      *         return response;
      *     }
      */
-    typedef function ResponseOut(Session, RequestIn, Handler) as Interceptor;
+    typedef function ResponseOut(RequestIn, Handler) as Interceptor;
 
     /**
      * A function that is called with each incoming request is called an `Observer`. Despite the
@@ -68,13 +69,7 @@ module xenia.xtclang.org {
      * or alter the request processing control flow. For purposes of request processing, exceptions
      * from the `Observer` are ignored, including if the `Observer` throws a [RequestAborted].
      */
-    typedef function void(Session, RequestIn) as Observer;
-
-    /**
-     * A function that adds a parameter value to the passed-in tuple of values. Used to collect
-     * arguments for the endpoint method invocation.
-     */
-    typedef function Tuple(Session, RequestIn, Tuple) as ParameterBinder;
+    typedef function void(RequestIn) as Observer;
 
     /**
      * A function that converts a result of the endpoint method invocation into a ResponseOut object.

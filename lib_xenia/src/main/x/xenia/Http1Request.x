@@ -5,12 +5,15 @@ import net.UriTemplate.UriParameters;
 
 import web.AcceptList;
 import web.Body;
+import web.Endpoint;
 import web.Header;
 import web.HttpMessage;
 import web.HttpMethod;
 import web.MediaType;
 import web.Protocol;
 import web.Scheme;
+
+import web.sessions.Broker as SessionBroker;
 
 import HttpServer.RequestInfo;
 
@@ -19,7 +22,12 @@ import HttpServer.RequestInfo;
  * An implementation of an HTTP/1 (i.e. 0.9, 1.0, 1.1) request, as received by a server, using the
  * raw request data provided by the `HttpServer.Handler` interface.
  */
-const Http1Request(RequestInfo info, UriParameters matchResult)
+const Http1Request(RequestInfo   info,
+                   SessionBroker broker,
+                   UriTemplate   template    = UriTemplate.ROOT,
+                   UriParameters matchResult = [],
+                   Endpoint?     endpoint    = Null,
+                  )
         implements RequestIn
         implements Header
         implements Body {
@@ -39,6 +47,16 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
             this.mediaType = Text;  // whatever
         }
     }
+
+    /**
+     * The raw request information.
+     */
+    protected RequestInfo info;
+
+    /**
+     * The broker that can provide a session based on the raw request information.
+     */
+    protected SessionBroker broker;
 
     /**
      * Internal.
@@ -189,8 +207,18 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     }
 
     @Override
+    @Lazy Session? session.calc() {
+        TODO broker.extractId(this)
+    }
+
+    @Override
+    UriTemplate template;
+
+    @Override
     UriParameters matchResult;
 
+    @Override
+    Endpoint? endpoint;
 
     // ----- Header interface ----------------------------------------------------------------------
 
