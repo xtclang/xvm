@@ -75,7 +75,7 @@ mixin WebService(String path)
      * the session and the request will be available as properties on the WebService.
      *
      * @param session  the [Session] to hold onto (so that it's available for the duration of the
-     *                 request processing)
+     *                 request processing), or `Null` if no session has been created
      * @param request  the [RequestIn] to hold onto (so that it's available for the duration of the
      *                 request processing)
      * @param handler  the handler to delegate the processing to
@@ -83,7 +83,7 @@ mixin WebService(String path)
      *
      * @return the [ResponseOut] to send back to the caller
      */
-    ResponseOut route(Session session, RequestIn request, Handler handle, ErrorHandler? onError) {
+    ResponseOut route(Session? session, RequestIn request, Handler handle, ErrorHandler? onError) {
         assert this.request == Null;
 
         // store the request and session for the duration of the request processing

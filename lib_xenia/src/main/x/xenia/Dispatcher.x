@@ -83,24 +83,19 @@ service Dispatcher {
      * Dispatch the "raw" request.
      */
     void dispatch(RequestInfo requestInfo) {
-
-        // REVIEW CP
-        Boolean tls        = requestInfo.tls;
-        String  uriString  = requestInfo.uriString;
-        String  methodName = requestInfo.method.name;
-
-        FromTheTop: while (True) {
+        Boolean tls       = requestInfo.tls;
+        String  uriString = requestInfo.uriString;
+        FromTheBeginning: while (True) {
             // select the service to delegate request processing to; the service infos are sorted
             // with the most specific path first (so the first path match wins)
             Int             uriSize     = uriString.size;
             WebServiceInfo? serviceInfo = Null;
             for (WebServiceInfo info : catalog.services) {
-                // the info.path, which represents a "directory", never ends with '/' (see Catalog),
-                // but a legitimately matching uriString may or may not have '/' at the end; for
-                // example: if the path is "test", then uri values such as "test/s", "test/" and
-                // "test" should all match (the last two would be treated as equivalent), but
-                // "tests" should not
-
+                // the info.path, which represents a "directory", never ends with '/' (see the
+                // extractPath function in Catalog) -- except for the root path "/". a legitimately
+                // matching uriString may or may not have '/' at the end; for example: if the path
+                // is "test", then uri values such as "test/s", "test/" and "test" should all match
+                // (the last two would be treated as equivalent), but "tests" should not
                 String path     = info.path;
                 Int    pathSize = path.size;
                 if (uriSize == pathSize) {
@@ -119,31 +114,28 @@ service Dispatcher {
                 }
             }
 
-            ChainBundle?        bundle      = Null;
+            ChainBundle? bundle = Null;
             @Future ResponseOut response;
             ProcessRequest: if (serviceInfo == Null) {
                 RequestIn request = new Http1Request(requestInfo, []);
                 Session?  session = getSessionOrNull(requestInfo);
-
                 response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
             } else {
                 Int wsid = serviceInfo.id;
                 if (wsid == 0) {
                     // this is a redirect or other system service call
                     bundle = bundlePool.allocateBundle(wsid);
-
                     SystemService svc = bundle.ensureWebService(wsid).as(SystemService);
                     HttpStatus|ResponseOut|String result = svc.handle(this, uriString, requestInfo);
                     if (result.is(String)) {
                         uriString = result;
                         bundlePool.releaseBundle(bundle);
-                        continue FromTheTop;
+                        continue FromTheBeginning;
                     }
 
                     response = result.is(ResponseOut)
                             ? result
                             : new SimpleResponse(result);
-
                     break ProcessRequest;
                 }
 
@@ -160,7 +152,7 @@ service Dispatcher {
                     uriString = uriString[0 ..< queryOffset];
                 }
 
-                if (uriString == "") {
+                if (uriString.empty) {
                     uriString = "/";
                 }
 
@@ -175,34 +167,35 @@ service Dispatcher {
                         break ProcessRequest;
                     }
 
-                    for (EndpointInfo eachEndpoint : serviceInfo.endpoints) {
-                        if (eachEndpoint.httpMethod.name == methodName,
-                                uriParams := eachEndpoint.matches(uri)) {
-                            endpoint = eachEndpoint;
+                    // find a matching endpoint
+                    String methodName = requestInfo.method.name;
+                    for (endpoint : serviceInfo.endpoints) {
+                        if (endpoint.httpMethod.name == methodName,
+                                uriParams := endpoint.matches(uri)) {
                             break FindEndpoint;
                         }
                     }
 
-                    if (methodName == "GET",
-                            EndpointInfo defaultGet ?= serviceInfo.defaultGet) {
-                        endpoint = defaultGet;
+                    // no matching endpoint; check if there is a default endpoint
+                    if (methodName == "GET", endpoint ?= serviceInfo.defaultGet) {
                         break FindEndpoint;
                     }
 
                     // there is no matching endpoint
                     RequestIn   request     = new Http1Request(requestInfo, []);
                     Session?    session     = getSessionOrNull(requestInfo);
-                    MethodInfo? onErrorInfo = catalog.findOnError(wsid);
-                    if (onErrorInfo != Null && session != Null) {
+                    if (MethodInfo onErrorInfo ?= catalog.findOnError(wsid)) {
+//                        assert onErrorInfo != Null as TODO GG;
                         Int errorWsid = onErrorInfo.wsid;
                         bundle = bundlePool.allocateBundle(errorWsid);
-                        ErrorHandler? onError = bundle.ensureErrorHandler(errorWsid);
-                        if (onError != Null) {
+                        if (ErrorHandler onError ?= bundle.ensureErrorHandler(errorWsid)) {
                             response = onError^(session, request, HttpStatus.NotFound);
                             break ProcessRequest;
+                        } else {
+                            bundlePool.releaseBundle(bundle);
+                            bundle = Null;
                         }
                     }
-
                     response = catalog.webApp.handleUnhandledError^(session, request, HttpStatus.NotFound);
                     break ProcessRequest;
                 }
@@ -210,6 +203,7 @@ service Dispatcher {
                 // if the endpoint requires HTTPS (or some other form of TLS), the server responds
                 // with a redirect to a URL that uses a TLS-enabled protocol
                 if (!tls && endpoint.requiresTls) {
+// TODO CP if ()
                     response = new SimpleResponse(PermanentRedirect);
 
                     response.header.put(Header.Location, requestInfo.httpsUrl.toString());
@@ -219,6 +213,7 @@ service Dispatcher {
                 // either a valid existing session is identified by the request, or a session will
                 // be created and a redirect to verify the session's successful creation will occur,
                 // which will then redirect back to this same request
+// TODO
                 (HttpStatus|SessionImpl result, Boolean redirect, Int eraseCookies) = ensureSession(requestInfo);
 
                 // handle the error result (no session returned)
@@ -285,40 +280,42 @@ service Dispatcher {
                 // * with a redirect to a URL that provides the necessary login user interface
                 if (endpoint.requiredTrust > session.trustLevel) {
                     import Authenticator.AuthStatus;
-                    AuthStatus|ResponseOut success = authenticator.authenticate(request, session);
-                    switch (success) {
-                    case Allowed:
-                        // Authenticator has verified that the user is authenticated (the
-                        // Authenticator should have already updated the session accordingly)
-                        if (endpoint.requiredTrust > session.trustLevel) {
-                            // the user is authenticated, but the user doesn't have the necessary
-                            // security access
+                    AuthStatus|ResponseOut authResult = authenticator.authenticate(session, request);
+                    if (authResult.is(AuthStatus)) {
+                        switch (authResult) {
+                        case Allowed:
+                            // Authenticator has verified that the user is authenticated (the
+                            // Authenticator should have already updated the session accordingly)
+                            if (endpoint.requiredTrust > session.trustLevel) {
+                                // the user is authenticated, but the user doesn't have the
+                                // necessary security access
+                                response = new SimpleResponse(Forbidden);
+                                break ProcessRequest;
+                            }
+
+                            // the user is authenticated and has the necessary security access;
+                            // continue processing the request
+                            break;
+
+                        case Unknown:
+                            // the request didn't have any authorization information or the
+                            // authorizer didn't know how to process it
+                            response = new SimpleResponse(Unauthorized);
+                            break ProcessRequest;
+
+                        case Forbidden:
+                            // authentication didn't just fail, but it has been disallowed; respond
+                            // with an HTTP "Forbidden"
                             response = new SimpleResponse(Forbidden);
                             break ProcessRequest;
                         }
-
-                        // the user is authenticated and has the necessary security access;
-                        // continue processing the request
-                        break;
-
-                    case Unknown:
-                        // the request didn't have any authorization information or the authorizer
-                        // didn't know how to process it
-                        response = new SimpleResponse(Unauthorized);
-                        break ProcessRequest;
-
-                    case Forbidden:
-                        // authentication didn't just fail, but it has been disallowed; respond
-                        // with an HTTP "Forbidden"
-                        response = new SimpleResponse(Forbidden);
-                        break ProcessRequest;
-
-                    default:
-                        // "success" isn't a Boolean, it's an HTTP response; send the response
-                        // back to the client as the next step in authenticating the client
-                        response = success.as(ResponseOut);
+                    } else {
+                        // "authResult" is actually an HTTP response to send back to the client to
+                        // take the next step in the authentication process
+                        response = authResult;
                         break ProcessRequest;
                     }
+
                 }
 
                 if (!endpoint.authorized(session.roles)) {

@@ -592,8 +592,7 @@ public class LongLong
             return Long.compare(lThisHigh, lThatHigh);
             }
 
-        int nCompare = Long.compareUnsigned(m_lLow, ll.m_lLow);
-        return lThisHigh >= 0 ? nCompare : -nCompare;
+        return Long.compareUnsigned(m_lLow, ll.m_lLow);
         }
 
     public int compareUnsigned(LongLong ll)

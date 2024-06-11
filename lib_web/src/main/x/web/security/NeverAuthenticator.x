@@ -2,10 +2,22 @@
  * An implementation of the Authenticator interface that rejects all authentication attempts.
  */
 service NeverAuthenticator
-        implements Authenticator {
+        implements Duplicable, Authenticator {
+
+    // ----- constructors --------------------------------------------------------------------------
+
+    construct() {}
 
     @Override
-    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
+    construct(NeverAuthenticator that) {}
+
+    // ----- Authenticator API ---------------------------------------------------------------------
+
+    @Override
+    conditional Attempt[] containsSecrets(RequestIn request) = False;
+
+    @Override
+    Attempt[] authenticate(RequestIn request) {
         private Boolean logged = False;
         if (!logged) {
             // log a message the first time this Authenticator has to reject a user, so the
@@ -18,6 +30,7 @@ service NeverAuthenticator
             logged = True;
         }
 
-        return Forbidden;
+        private static Attempt Never = new Attempt(Null, NoData, Forbidden);
+        return Never;
     }
 }

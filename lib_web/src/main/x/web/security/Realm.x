@@ -158,7 +158,7 @@ interface Realm {
      * @return (conditional) the role names associated with the user, if any, otherwise `[]`
      */
     conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher) {
-        TODO User identity and password hashing are not supported by this Realm
+        TODO("User identity and password hashing are not supported by this Realm");
     }
 
     /**

@@ -10,6 +10,7 @@ module web.xtclang.org {
     package crypto      import crypto.xtclang.org;
     package json        import json.xtclang.org;
     package net         import net.xtclang.org;
+    package sec         import sec.xtclang.org;
 
     import ecstasy.reflect.Parameter;
 
@@ -18,6 +19,10 @@ module web.xtclang.org {
     import net.SocketAddress;
     import net.Uri;
 
+    import sec.Entitlement;
+    import sec.Permission;
+    import sec.User;
+
 
     // ----- request/response support --------------------------------------------------------------
 
@@ -25,13 +30,13 @@ module web.xtclang.org {
      * A function that can process an incoming request corresponding to a `Route` is called an
      * `Endpoint Handler`.
      */
-    typedef function ResponseOut(Session, RequestIn) as Handler;
+    typedef function ResponseOut(Session?, RequestIn) as Handler;
 
     /**
      * A function that is called when an exception occurs (or an internal error represented by a
      * `String` description or an HttpsStatus code) is called an `ErrorHandler`.
      */
-    typedef function ResponseOut(Session, RequestIn, Exception|String|HttpStatus) as ErrorHandler;
+    typedef function ResponseOut(RequestIn, Exception|String|HttpStatus) as ErrorHandler;
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
@@ -84,6 +89,44 @@ module web.xtclang.org {
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
+     * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing
+     * class thereof, up to the level of the web module itself -- as requiring Transport Level
+     * Security (TLS), sometimes also referred to using the obsolete term "SSL".
+     *
+     * A method (any `Endpoint`, such as `@Get` or `@Post`) that handles a web service call will
+     * require TLS iff:
+     *
+     * * the web service method is annotated with `HttpsRequired`, or
+     * * the web service method is not annotated with `HttpsOptional`, and the parent class requires
+     *   TLS.
+     *
+     * A parent class will require TLS iff:
+     *
+     * * the class is annotated with `HttpsRequired`, or
+     * * the class is not annotated with `HttpsOptional`, and there is a containing class, and the
+     *   containing class requires TLS, or
+     * * the class is a module (and thus has no containing class), and the host for the module has
+     *   been configured to require TLS by default.
+     *
+     * The purpose of this design is to allow the use of annotations for specifying the requirement
+     * for a session, but only requiring those annotations within the class hierarchy at the
+     * few points where a change occurs from "requiring a session" to "not requiring a session", or
+     * vice versa.
+     */
+    mixin SessionRequired(Boolean autoRedirect = False)
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    /**
+     * This annotation, `@SessionOptional`, is used to mark a web service call -- or any containing
+     * class thereof, up to the level of the web module itself -- as **not** requiring TODO
+     *
+     * For more information, see the detailed description of the [@SessionRequired](SessionRequired)
+     * annotation.
+     */
+    mixin SessionOptional
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as requiring authentication.
      *
@@ -110,8 +153,8 @@ module web.xtclang.org {
      * @param security  [TrustLevel] of security that is required by the annotated operation or
      *                  web service
      */
-    mixin LoginRequired(TrustLevel security=Normal)
-            extends HttpsRequired;
+    mixin LoginRequired(TrustLevel security=Normal, Boolean autoRedirect=False)
+            extends HttpsRequired(autoRedirect);
 
     /**
      * This annotation, `@LoginOptional`, is used to mark a web service endpoint, or the web service
@@ -137,7 +180,7 @@ module web.xtclang.org {
      *     @Restrict(["admin", "manager"])
      *     conditional User createUser(@UriParam String id) {...}
      */
-    mixin Restrict(String|String[] subject, TrustLevel security=Normal)
+    mixin Restrict(String|String[]|Method<WebService, <>, <Boolean>> subject, TrustLevel security=Normal)
             extends LoginRequired(security);
 
     /**
@@ -164,7 +207,7 @@ module web.xtclang.org {
      * for TLS, but only requiring those annotations within the class hierarchy at the
      * few points where a change occurs from "requiring TLS" to "not requiring TLS", or vice versa.
      */
-    mixin HttpsRequired
+    mixin HttpsRequired(Boolean autoRedirect = False)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -272,10 +315,10 @@ module web.xtclang.org {
      * Example:
      *
      *     @Intercept(GET)
-     *     ResponseOut interceptGet(Session session, RequestIn request, Handler handle) {...}
+     *     ResponseOut interceptGet(Session? session, RequestIn request, Handler handle) {...}
      */
     mixin Intercept(HttpMethod? httpMethod=Null)
-            into Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>>;
+            into Method<WebService, <Session?, RequestIn, Handler>, <ResponseOut>>;
 
     /**
      * Request observer (possibly asynchronous to the request processing itself) for all requests on
@@ -284,12 +327,12 @@ module web.xtclang.org {
      * Example:
      *
      *     @Observe
-     *     void logAllRequests(Session session, RequestIn request) {...}
+     *     void logAllRequests(Session? session, RequestIn request) {...}
      *
      * And/or:
      *
      *     @Observe(DELETE)
-     *     void logDeleteRequests(Session session, RequestIn request) {...}
+     *     void logDeleteRequests(Session? session, RequestIn request) {...}
      */
     mixin Observe(HttpMethod? httpMethod=Null)
             into Method<WebService, <Session, RequestIn>, <>>;
@@ -300,10 +343,10 @@ module web.xtclang.org {
      * Example:
      *
      *     @OnError
-     *     void handleErrors(Session session, RequestIn request, Exception|String) {...}
+     *     void handleErrors(RequestIn request, Exception|String) {...}
      */
     mixin OnError
-            into Method<WebService, <Session?, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
+            into Method<WebService, <RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
 
 
     // ----- parameter annotations -----------------------------------------------------------------

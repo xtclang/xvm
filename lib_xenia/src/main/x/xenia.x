@@ -56,7 +56,7 @@ module xenia.xtclang.org {
      *         return response;
      *     }
      */
-    typedef function ResponseOut(Session, RequestIn, Handler) as Interceptor;
+    typedef function ResponseOut(Session?, RequestIn, Handler) as Interceptor;
 
     /**
      * A function that is called with each incoming request is called an `Observer`. Despite the
@@ -68,13 +68,13 @@ module xenia.xtclang.org {
      * or alter the request processing control flow. For purposes of request processing, exceptions
      * from the `Observer` are ignored, including if the `Observer` throws a [RequestAborted].
      */
-    typedef function void(Session, RequestIn) as Observer;
+    typedef function void(Session?, RequestIn) as Observer;
 
     /**
      * A function that adds a parameter value to the passed-in tuple of values. Used to collect
      * arguments for the endpoint method invocation.
      */
-    typedef function Tuple(Session, RequestIn, Tuple) as ParameterBinder;
+    typedef function Tuple(Session?, RequestIn, Tuple) as ParameterBinder;
 
     /**
      * A function that converts a result of the endpoint method invocation into a ResponseOut object.

@@ -48,7 +48,7 @@ service DigestAuthenticator(Realm realm)
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
+    AuthStatus|ResponseOut authenticate(Session? session, RequestIn request) {
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
@@ -67,12 +67,13 @@ service DigestAuthenticator(Realm realm)
                      String uri,
                      String cnonce,
                      String ncText,
-                     Int    nc          ) := parseDigest(auth.substring(7))) {
+                     Int    nc,
+                    ) := parseDigest(auth.substring(7))) {
                     // verify that the server nonce is still acceptable; the client nonce and its
                     // count isn't checked here, since the communication is over TLS, and any
                     // noteworthy changes to the session or the connection will automatically make
                     // the server nonce stale
-                    switch (lookupNonce(session, nonce)) {
+                    switch (lookupNonce(session, request, nonce)) {
                     case Unknown:
                         continue NextAuthAttempt;
 
@@ -133,12 +134,12 @@ service DigestAuthenticator(Realm realm)
                                                 |:{cnonce}:auth:{toString(hashA2)}
                                                                                       , hasher);
                         if (responseHash == expected) {
-                            session.authenticate(user, roles=roles);
+                            session?.authenticate(user, roles=roles);
                             return Allowed;
                         }
                     }
 
-                    if (session.authenticationFailed(badUser)) {
+                    if (session?.authenticationFailed(badUser)) {
                         return Forbidden;
                     }
                 } else {
@@ -186,7 +187,12 @@ service DigestAuthenticator(Realm realm)
      *
      * @return the new nonce
      */
-    protected String createNonce(Session session) {
+    protected String createNonce(Session? session) {
+        if (session == Null) {
+            @Inject Random rnd;
+            return Base64Format.Instance.encode(rnd.bytes(9));
+        }
+
         return session.attributes.process(ActiveNonces, entry -> {
             @Inject Random rnd;
             String nonce = Base64Format.Instance.encode(rnd.bytes(9));
@@ -225,7 +231,13 @@ service DigestAuthenticator(Realm realm)
      *
      * @return the nonce status
      */
-    protected NonceStatus lookupNonce(Session session, String nonce) {
+    protected NonceStatus lookupNonce(Session? session, RequestIn request, String nonce) {
+        if (session == Null) {
+            return requiresSession(request)
+                    ? Stale
+                    : Valid;
+        }
+
         return session.attributes.process(ActiveNonces, entry -> {
             if (entry.exists, NonceTable nonces := entry.value.is(NonceTable),
                     Time nonceCreated := nonces.get(nonce)) {
@@ -317,7 +329,8 @@ service DigestAuthenticator(Realm realm)
                  String uri,
                  String cnonce,
                  String ncText,
-                 Int    nc          ) parseDigest(String text) {
+                 Int    nc,
+                ) parseDigest(String text) {
         val props = text.trim().splitMap();
 
         // realm name is optional, but it should match the name previously provided

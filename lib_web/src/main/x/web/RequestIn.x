@@ -52,7 +52,22 @@ interface RequestIn
     @RO Map<String, String|List<String>> queryParams;
 
     /**
+     * The session associated with this request, if one exists.
+     */
+    @RO Session? session;
+
+    /**
+     * The UriTemplate that matched this request.
+     */
+    @RO UriTemplate template;
+
+    /**
      * The result of matching a UriTemplate against this request.
      */
     @RO UriTemplate.UriParameters matchResult;
+
+    /**
+     * The [Endpoint] targeted by this request, if one could be determined; otherwise, `Null`.
+     */
+    @RO Endpoint? endpoint;
 }

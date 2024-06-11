@@ -187,6 +187,8 @@ import net.IPAddress;
  * To obtain the session for use in an [Endpoint], the endpoint method should include a parameter of
  * type session:
  *
+ * TODO CP and/or annotate using ...
+ *
  *     @Post("/{id}/items")
  *     Item addItem(Session session, @UriParam String id, @BodyParam Item item) {...}
  *
