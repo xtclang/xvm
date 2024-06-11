@@ -175,7 +175,7 @@ service HttpHandler
         Dispatcher[] dispatchers = this.dispatchers;
         Int          count       = dispatchers.size;
         if (count == 0) {
-            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager));
             busy.add(True);
             lastIndex = 0;
             return 0;
@@ -192,7 +192,7 @@ service HttpHandler
         }
 
         if (count < maxCount) {
-            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager));
             busy.add(True);
             return count; // don't change the lastIndex to retain some fairness
         }
@@ -220,21 +220,21 @@ service HttpHandler
         Int     mixinCount    = sessionMixins.size;
 
         if (mixinCount == 0) {
-            sessionProducer = (mgr, id, info) -> new SessionImpl(mgr, id, info);
+            sessionProducer = (mgr, id, request) -> new SessionImpl(mgr, id, request);
         } else {
             Annotation[] annotations  = new Annotation[mixinCount] (i -> new Annotation(sessionMixins[i]));
             Class        sessionClass = SessionImpl.annotate(annotations);
 
-            sessionProducer = (mgr, id, info) -> {
+            sessionProducer = (mgr, id, request) -> {
                 assert Struct structure := sessionClass.allocate();
                 assert structure.is(struct SessionImpl);
 
-                SessionImpl.initialize(structure, mgr, id, info);
+                SessionImpl.initialize(structure, mgr, id, request);
 
                 return sessionClass.instantiate(structure).as(SessionImpl);
             };
         }
 
-        return new SessionManager(new SessionStore(), sessionProducer, route.httpPort, route.httpsPort);
+        return new SessionManager(new SessionStore(), sessionProducer, route, catalog);
     }
 }

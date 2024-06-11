@@ -312,9 +312,9 @@ public class Frame
         int   cReturns  = ahFuture.length;
 
         List<CompletableFuture> listFutures = new ArrayList<>(cReturns);
-        for (int i = 0; i < cReturns; i++)
+        for (ObjectHandle handle : ahFuture)
             {
-            if (ahFuture[i] instanceof FutureHandle hFuture)
+            if (handle instanceof FutureHandle hFuture)
                 {
                 listFutures.add(hFuture.getFuture());
                 }

@@ -57,6 +57,14 @@ interface Connection<Schema extends RootSchema>
                                                      Int                    retryCount  = 0,
                                                     );
 
+    /**
+     * Create a new `Connection` instance, which is the same as this `Connection` instance with the
+     * same `DBUser`, but **without** copying any in-flight `Transaction`.
+     *
+     * @return a new `Connection` to the same database as this `Connection`, and with the same user
+     */
+    Connection clone();
+
     @Override
     void close(Exception? e = Null) {
         if (Transaction tx ?= transaction) {

@@ -1,9 +1,12 @@
 /**
  * You can run this module with or without port forwarding.
-
+ *
  * Then start the server by the command:
  *
  *    xec build/Hello.xtc [routeName:httpPort/httpsPort] [bindName:bindHttpPort/bindHttpsPort]
+ *
+ * This is an internal test for development and not an "easy to use" example. Defaults assume port
+ * forwarding (80 -> 8080, 443 -> 8090).
  */
 module Hello
         incorporates WebApp {
@@ -21,7 +24,9 @@ module Hello
     import web.responses.*;
     import web.security.*;
 
+    import xenia.CookieBroker;
     import xenia.Http1Request;
+    import xenia.SessionManager;
 
     package msg import Messages;
     import msg.Greeting;
@@ -59,8 +64,11 @@ module Hello
         @Inject Directory curDir;
         Directory dataDir = curDir.dirFor("data");
 
-        WebService.Constructor constructor = () -> new ExtraFiles(dataDir);
-        xenia.createServer(this, route=route, binding=binding, extras=[ExtraFiles=constructor],
+        xenia.createServer(this, route=route, binding=binding,
+                extras=[
+                    ExtraFiles   = () -> new ExtraFiles(dataDir),
+                    CookieBroker = () -> cookieBroker,
+                    ],
                 isTrustedProxy=isTrustedProxy);
 
         String portSuffix = route.httpPort == 80 ? "" : $":{route.httpPort}";
@@ -80,9 +88,19 @@ module Hello
                      );
     }
 
-    Authenticator createAuthenticator() {
-        return new DigestAuthenticator(new FixedRealm("Hello", ["admin"="addaya"]));
-    }
+    private @Lazy CookieBroker cookieBroker.calc() = new CookieBroker(this);
+
+    // ----- WebApp duck-type methods --------------------------------------------------------------
+
+    Authenticator createAuthenticator() =
+        new DigestAuthenticator(new FixedRealm("Hello", "admin", "addaya"));
+// TODO: test ChainAuthenticator
+//        new BasicAuthenticator(new FixedRealm("Hello", "admin", "addaya"));
+
+    sessions.Broker createSessionBroker() = cookieBroker;
+
+
+    // ----- Web services --------------------------------------------------------------------------
 
     /**
      * This service allows accessing files in the "data" directory.
@@ -112,22 +130,22 @@ module Hello
                 return ("Hi", 1);
             }
 
-            @HttpsRequired
+            @HttpsRequired(autoRedirect=True)
             @Get("s")
-            String secure() {
-                return "secure";
+            ResponseOut secure() {
+                return home();
             }
 
             @Get("user")
             @Produces(Text)
             String getUser(Session session) {
-                return session.userId ?: "";
+                return session.principal?.name : "";
             }
 
             @LoginRequired
             @Get("l")
-            ResponseOut logMeIn(Session session) {
-                return home();
+            String logMeIn(Session session) {
+                return $"user={session.principal?.name : "<anonymous>"}";
             }
 
             @Get("d")
@@ -171,7 +189,8 @@ module Hello
             String[] getEcho(String path) {
                 assert:debug path != "debug";
 
-                assert RequestIn request ?= this.request;
+                assert RequestIn request ?= this.request,
+                                 request := &request.revealAs((protected Http1Request));
 
                 Session? session = this.session;
                 return [
@@ -181,26 +200,13 @@ module Hello
                         $"originator={request.originator}",
                         $"client={request.client}",
                         $"server={request.server}",
-                        $"route={request.as(Http1Request).info.routeTrace}",
+                        $"route={request.info.routeTrace}",
                         $"authority={request.authority}",
                         $"path={request.path}",
                         $"protocol={request.protocol}",
                         $"accepts={request.accepts}",
                         $"query={request.queryParams}",
-                        $"user={session?.userId? : "<anonymous>"}",
-                       ];
-            }
-
-            @Post("anthropic")
-            JsonObject simulateClaudeAI(@BodyParam JsonObject message = []) {
-                assert Doc question := JsonPointer.from("messages/0/content").get(message);
-
-                JsonObject response = ["type"="text", "text"=$"I'm happy to help with '{question}'"];
-                return ["id"="msg_01",
-                        "type"="message",
-                        "role"="assistant",
-                        "model"="claude-3-5-sonnet-20241022",
-                        "content"=[response]
+                        $"user={session?.principal?.name : "<anonymous>"}",
                        ];
             }
         }

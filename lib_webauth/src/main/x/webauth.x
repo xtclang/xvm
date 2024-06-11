@@ -16,28 +16,33 @@
  */
 module webauth.xtclang.org {
     package crypto import crypto.xtclang.org;
-    package net    import net.xtclang.org;         // TODO "for this module, I want to override injection of ..."
+    package net    import net.xtclang.org;
     package oodb   import oodb.xtclang.org;
+    package sec    import sec.xtclang.org;
     package web    import web.xtclang.org;
 
     import crypto.Signer;
     import crypto.Signature;
-    import net.IPAddress;
-    import web.security.Realm;
-    import Realm.Hash;
-    import Realm.HashInfo;
 
-    /**
-     * Information about the use of a particular IP address.
-     */
-    const IPInfo
-            (
-            IPAddress ip,
-            Int       passCount,
-            Time?     lastPass,
-            Int       failCount,
-            Time?     lastFail,
-            );
+    import net.IPAddress;
+
+    import sec.Credential;
+    import sec.Entitlement;
+    import sec.Group;
+    import sec.Principal;
+    import sec.Realm;
+
+//    /**
+//     * Information about the use of a particular IP address.
+//     */
+//    const IPInfo
+//            (
+//            IPAddress ip,
+//            Int       passCount,
+//            Time?     lastPass,
+//            Int       failCount,
+//            Time?     lastFail,
+//            );
 
 //    /**
 //     * For a telephonic device, what type is the device?

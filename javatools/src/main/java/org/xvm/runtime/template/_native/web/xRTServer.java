@@ -357,16 +357,18 @@ public class xRTServer
     }
 
     /**
-     * Implementation of "void addRouteImpl(String hostName, HandlerWrapper wrapper,
-     *                    KeyStore keystore, String? tlsKey=Null)" method.
+     * Implementation of "void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,
+     *                     HandlerWrapper wrapper, KeyStore keystore, String? tlsKey=Null)" method.
      */
     private int invokeAddRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
-        String         sHostName = ((StringHandle) ahArg[0]).getStringValue();
-        ServiceHandle  hWrapper  = (ServiceHandle) ahArg[1];
-        KeyStoreHandle hKeystore = ahArg[2] instanceof KeyStoreHandle hK ? hK : null;
-        String         sTlsKey   = ahArg[3] instanceof StringHandle hS ? hS.getStringValue() : null;
-        Router         router    = hServer.getRouter();
+        String         sHostName  = ((StringHandle) ahArg[0]).getStringValue();
+        int            nHttpPort  = (int) ((JavaLong) ahArg[1]).getValue();
+        int            nHttpsPort = (int) ((JavaLong) ahArg[2]).getValue();
+        ServiceHandle  hWrapper   = (ServiceHandle) ahArg[3];
+        KeyStoreHandle hKeystore  = ahArg[4] instanceof KeyStoreHandle hK ? hK : null;
+        String         sTlsKey    = ahArg[5] instanceof StringHandle hS ? hS.getStringValue() : null;
+        Router         router     = hServer.getRouter();
 
         if (hKeystore != null)
             {
@@ -401,7 +403,7 @@ public class xRTServer
             }
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        RouteInfo      route   = new RouteInfo(handler, hKeystore, sTlsKey);
+        RouteInfo      route   = new RouteInfo(handler, nHttpPort, nHttpsPort, hKeystore, sTlsKey);
 
         if (hServer.getHttpServer().getAddress().getHostName().equals(sHostName))
             {
@@ -430,11 +432,10 @@ public class xRTServer
      */
     private int invokeReplaceRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg, int iResult)
         {
-        StringHandle   hHostName = (StringHandle) ahArg[0];
-        ServiceHandle  hWrapper  = (ServiceHandle) ahArg[1];
-        Router         router    = hServer.getRouter();
-        String         sHostName = hHostName.getStringValue();
-        RouteInfo      info      = router.mapRoutes.get(sHostName);
+        String        sHostName = ((StringHandle) ahArg[0]).getStringValue();
+        ServiceHandle hWrapper  = (ServiceHandle) ahArg[1];
+        Router        router    = hServer.getRouter();
+        RouteInfo     info      = router.mapRoutes.get(sHostName);
 
         if (info == null)
             {
@@ -442,7 +443,8 @@ public class xRTServer
             }
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        router.mapRoutes.put(sHostName, new RouteInfo(handler, info.hKeyStore, info.sTlsKey));
+        router.mapRoutes.put(sHostName,
+            new RouteInfo(handler, info.nHttpPort, info.nHttpPort, info.hKeyStore, info.sTlsKey));
         return frame.assignValue(iResult, xBoolean.TRUE);
         }
 
@@ -499,13 +501,15 @@ public class xRTServer
      */
     private int invokeGetHostInfo(Frame frame, HttpContextHandle hCtx, int[] aiResult)
         {
-        String sHost = getHostName(hCtx.f_exchange);
-        int    nPort = getHostPort(hCtx.f_exchange);
+        HttpExchange exchange = hCtx.f_exchange;
+        String       sHost    = exchange.getRequestHeaders().getFirst("Host");
+        String       sName    = extractHostName(sHost);
+        int          nPort    = extractHostPort(sHost, exchange);
 
-        return sHost == null
+        return sName == null
             ? frame.assignValue(aiResult[0], xBoolean.FALSE)
             : frame.assignValues(aiResult, xBoolean.TRUE,
-                    xString.makeHandle(sHost), xUInt16.INSTANCE.makeJavaLong(nPort));
+                    xString.makeHandle(sName), xUInt16.INSTANCE.makeJavaLong(nPort));
         }
 
     /**
@@ -660,9 +664,8 @@ public class xRTServer
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static String getHostName(HttpExchange exchange)
+    protected static String extractHostName(String sHost)
         {
-        String sHost = exchange.getRequestHeaders().getFirst("Host");
         if (sHost != null)
             {
             int ofPort = sHost.lastIndexOf(':');
@@ -674,9 +677,8 @@ public class xRTServer
         return sHost;
         }
 
-    protected static int getHostPort(HttpExchange exchange)
+    protected static int extractHostPort(String sHost, HttpExchange exchange)
         {
-        String sHost = exchange.getRequestHeaders().getFirst("Host");
         if (sHost == null)
             {
             return exchange.getRemoteAddress().getPort();
@@ -899,13 +901,16 @@ public class xRTServer
         public void handle(HttpExchange exchange)
                 throws IOException
             {
-            String    sHost = getHostName(exchange);
-            RouteInfo route = mapRoutes.get(sHost);
-            if (route == null)
+            String    sHost = exchange.getRequestHeaders().getFirst("Host");
+            String    sName = extractHostName(sHost);
+            int       nPort = extractHostPort(sHost, exchange);
+            boolean   fTls  = exchange instanceof HttpsExchange;
+            RouteInfo route = mapRoutes.get(sName);
+            if (route == null || nPort != (fTls ? route.nHttpsPort : route.nHttpPort))
                 {
-                System.err.println("*** Request for unknown host: " + sHost
-                        + exchange.getRequestURI());
-                exchange.sendResponseHeaders(444, -1); // HttpStatus.NoResponse
+                System.err.println("*** Request for unregistered route: "
+                    + (fTls ? "https://" : "http://") + sHost + exchange.getRequestURI());
+                exchange.sendResponseHeaders(421, -1); // HttpStatus.MisdirectedRequest
                 }
             else
                 {
@@ -934,7 +939,8 @@ public class xRTServer
             }
         }
 
-    protected record RouteInfo(RequestHandler handler, KeyStoreHandle hKeyStore, String sTlsKey) {}
+    protected record RouteInfo(RequestHandler handler, int nHttpPort, int nHttpsPort,
+                               KeyStoreHandle hKeyStore, String sTlsKey) {}
 
 
     // ----- ObjectHandles -------------------------------------------------------------------------
