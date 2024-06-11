@@ -175,7 +175,7 @@ service HttpHandler
         Dispatcher[] dispatchers = this.dispatchers;
         Int          count       = dispatchers.size;
         if (count == 0) {
-            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator, new web.sessions.NeverBroker())); // TODO
             busy.add(True);
             lastIndex = 0;
             return 0;
@@ -192,7 +192,7 @@ service HttpHandler
         }
 
         if (count < maxCount) {
-            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator));
+            dispatchers.add(new Dispatcher(catalog, bundlePool, sessionManager, authenticator, new web.sessions.NeverBroker())); // TODO
             busy.add(True);
             return count; // don't change the lastIndex to retain some fairness
         }

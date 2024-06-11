@@ -10,6 +10,7 @@ module web.xtclang.org {
     package crypto      import crypto.xtclang.org;
     package json        import json.xtclang.org;
     package net         import net.xtclang.org;
+    package sec         import sec.xtclang.org;
 
     import ecstasy.reflect.Parameter;
 
@@ -18,6 +19,11 @@ module web.xtclang.org {
     import net.SocketAddress;
     import net.Uri;
 
+    import sec.Entitlement;
+    import sec.Permission;
+    import sec.Principal;
+    import sec.Realm;
+
 
     // ----- request/response support --------------------------------------------------------------
 
@@ -25,13 +31,13 @@ module web.xtclang.org {
      * A function that can process an incoming request corresponding to a `Route` is called an
      * `Endpoint Handler`.
      */
-    typedef function ResponseOut(Session, RequestIn) as Handler;
+    typedef function ResponseOut(RequestIn) as Handler;
 
     /**
      * A function that is called when an exception occurs (or an internal error represented by a
      * `String` description or an HttpsStatus code) is called an `ErrorHandler`.
      */
-    typedef function ResponseOut(Session, RequestIn, Exception|String|HttpStatus) as ErrorHandler;
+    typedef function ResponseOut(RequestIn, Exception|String|HttpStatus) as ErrorHandler;
 
     /**
      * `TrustLevel` is an enumeration that approximates a point-in-time level of trust associated
@@ -84,6 +90,43 @@ module web.xtclang.org {
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
+     * This annotation, `@SessionRequired`, is used to mark a web service call -- or any containing
+     * class thereof, up to the level of the web module itself -- as requiring a [Session].
+     *
+     * A method (any `Endpoint`, such as `@Get` or `@Post`) that handles a web service call will
+     * require a [Session] iff:
+     *
+     * * the web service method is annotated with `SessionRequired`, or
+     * * the web service method is not annotated with `SessionOptional`, and the parent class
+     *   requires a [Session].
+     *
+     * A parent class will require a [Session] iff:
+     *
+     * * the class is annotated with `SessionRequired`, or
+     * * the class is not annotated with `SessionOptional`, and there is a containing class, and the
+     *   containing class requires a [Session], or
+     * * the class is a module (and thus has no containing class), and the host for the module has
+     *   been configured to require a [Session] by default.
+     *
+     * The purpose of this design is to allow the use of annotations for specifying the requirement
+     * for a session, but only requiring those annotations within the class hierarchy at the
+     * few points where a change occurs from "requiring a session" to "not requiring a session", or
+     * vice versa.
+     */
+    mixin SessionRequired(Boolean autoRedirect = False)
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    /**
+     * This annotation, `@SessionOptional`, is used to mark a web service call -- or any containing
+     * class thereof, up to the level of the web module itself -- as **not** requiring a [Session].
+     *
+     * For more information, see the detailed description of the [@SessionRequired](SessionRequired)
+     * annotation.
+     */
+    mixin SessionOptional
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as requiring authentication.
      *
@@ -110,8 +153,8 @@ module web.xtclang.org {
      * @param security  [TrustLevel] of security that is required by the annotated operation or
      *                  web service
      */
-    mixin LoginRequired(TrustLevel security=Normal)
-            extends HttpsRequired;
+    mixin LoginRequired(TrustLevel security=Normal, Boolean autoRedirect=False)
+            extends HttpsRequired(autoRedirect);
 
     /**
      * This annotation, `@LoginOptional`, is used to mark a web service endpoint, or the web service
@@ -126,19 +169,31 @@ module web.xtclang.org {
 
     /**
      * This annotation, `@Restrict`, is used to mark a web service endpoint, or the web service
-     * that contains it, up to the level of the web module itself -- as requiring a user to be
-     * logged in, and for that user to meet the role requirements specified by the annotation.
+     * that contains it, up to the level of the web module itself -- as requiring authorization by
+     * meeting the permission requirements specified by the annotation. This is orthogonal to
+     * the [LoginRequired]; authorization can occur without authentication, e.g. by using an API
+     * key.
      *
-     * Example:
+     * The annotation can imply or specify a required permission, or it can specify a method to be
+     * used for authorization; for example:
      *
-     *     @Restrict("admin")
-     *     void shutdown() {...}
+     *     @Restrict                    // implied @Restrict("GET:/accounts/{id}")
+     *     @Get("/accounts/{id}")
+     *     AccountInfo getAccount(Int id) {...}
      *
-     *     @Restrict(["admin", "manager"])
-     *     conditional User createUser(@UriParam String id) {...}
+     *     @Restrict("create:/accounts")
+     *     @LoginRequired
+     *     @Put
+     *     HttpStatus openBankAccount(@BodyParam AccountInfo info) {...}
+     *
+     *     @Restrict(accountAccess)     // specifies the method (below)
+     *     @Post("/accounts/{from}/transfer{?to,amount}")
+     *     ResponseOut transferFunds(Int from, Int to, Dec amount) {...}
+     *
+     *     Boolean accountAccess(RequestIn request) {...}
      */
-    mixin Restrict(String|String[] subject, TrustLevel security=Normal)
-            extends LoginRequired(security);
+    mixin Restrict(String?|Method<WebService, <>, <Boolean>> permission = Null)
+            extends HttpsRequired;
 
     /**
      * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing
@@ -161,10 +216,13 @@ module web.xtclang.org {
      *   been configured to require TLS by default.
      *
      * The purpose of this design is to allow the use of annotations for specifying the requirement
-     * for TLS, but only requiring those annotations within the class hierarchy at the
-     * few points where a change occurs from "requiring TLS" to "not requiring TLS", or vice versa.
+     * for TLS, but only requiring those annotations within the class hierarchy at the few points
+     * where a change occurs from "requiring TLS" to "not requiring TLS", or vice versa.
+     *
+     * Regarding the default of the `autoRedirect` of `False`, see the article:
+     * [Your API Shouldn't Redirect HTTP to HTTPS](https://jviide.iki.fi/http-redirects)
      */
-    mixin HttpsRequired
+    mixin HttpsRequired(Boolean autoRedirect = False)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -206,53 +264,77 @@ module web.xtclang.org {
      *
      * Example:
      *
-     *     @Endpoint(GET, "/{id}")
+     *     @Endpoint(GET, "/{id}", v:3)
      *
      * @param httpMethod  the name of the HTTP method
      * @param template    an optional URI Template describing a path to reach this endpoint
+     * @param api         the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                    that have been removed) the range of versions that the `Endpoint` _was_
+     *                    part of the API; `Null` indicates that the API is not versioned or that
+     *                    this `Endpoint` has been present since the original version of the API
      */
-    mixin Endpoint(HttpMethod httpMethod, String template = "")
+    mixin Endpoint(HttpMethod httpMethod, String template = "", Version?|Range<Version> api = Null)
             into Method<WebService>;
 
     /**
      * An HTTP `GET` method.
      *
      * @param template  an optional URI Template describing a path to reach this endpoint
+     * @param api       the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                  that have been removed) the range of versions that the `Endpoint` _was_
+     *                  part of the API; `Null` indicates that the API is not versioned or that
+     *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Get(String template = "")
-            extends Endpoint(GET, template);
+    mixin Get(String template = "", Version?|Range<Version> api = Null)
+            extends Endpoint(GET, template, api);
 
     /**
      * An HTTP `POST` method.
      *
      * @param template  an optional URI Template describing a path to reach this endpoint
+     * @param api       the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                  that have been removed) the range of versions that the `Endpoint` _was_
+     *                  part of the API; `Null` indicates that the API is not versioned or that
+     *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Post(String template = "")
-            extends Endpoint(POST, template);
+    mixin Post(String template = "", Version?|Range<Version> api = Null)
+            extends Endpoint(POST, template, api);
 
     /**
      * An HTTP `PATCH` method.
      *
      * @param template  an optional URI Template describing a path to reach this endpoint
+     * @param api       the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                  that have been removed) the range of versions that the `Endpoint` _was_
+     *                  part of the API; `Null` indicates that the API is not versioned or that
+     *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Patch(String template = "")
-            extends Endpoint(PATCH, template);
+    mixin Patch(String template = "", Version?|Range<Version> api = Null)
+            extends Endpoint(PATCH, template, api);
 
     /**
      * An HTTP `PUT` method.
      *
      * @param template  an optional URI Template describing a path to reach this endpoint
+     * @param api       the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                  that have been removed) the range of versions that the `Endpoint` _was_
+     *                  part of the API; `Null` indicates that the API is not versioned or that
+     *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Put(String template = "")
-            extends Endpoint(PUT, template);
+    mixin Put(String template = "", Version?|Range<Version> api = Null)
+            extends Endpoint(PUT, template, api);
 
     /**
      * An HTTP `DELETE` method.
      *
      * @param template  an optional URI Template describing a path to reach this endpoint
+     * @param api       the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                  that have been removed) the range of versions that the `Endpoint` _was_
+     *                  part of the API; `Null` indicates that the API is not versioned or that
+     *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Delete(String template = "")
-            extends Endpoint(DELETE, template);
+    mixin Delete(String template = "", Version?|Range<Version> api = Null)
+            extends Endpoint(DELETE, template, api);
 
     /**
      * Default route on a WebService, if no other route could be found. At the moment, it only
@@ -272,10 +354,10 @@ module web.xtclang.org {
      * Example:
      *
      *     @Intercept(GET)
-     *     ResponseOut interceptGet(Session session, RequestIn request, Handler handle) {...}
+     *     ResponseOut interceptGet(RequestIn request, Handler handle) {...}
      */
     mixin Intercept(HttpMethod? httpMethod=Null)
-            into Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>>;
+            into Method<WebService, <RequestIn, Handler>, <ResponseOut>>;
 
     /**
      * Request observer (possibly asynchronous to the request processing itself) for all requests on
@@ -284,15 +366,15 @@ module web.xtclang.org {
      * Example:
      *
      *     @Observe
-     *     void logAllRequests(Session session, RequestIn request) {...}
+     *     void logAllRequests(RequestIn request) {...}
      *
      * And/or:
      *
      *     @Observe(DELETE)
-     *     void logDeleteRequests(Session session, RequestIn request) {...}
+     *     void logDeleteRequests(RequestIn request) {...}
      */
     mixin Observe(HttpMethod? httpMethod=Null)
-            into Method<WebService, <Session, RequestIn>, <>>;
+            into Method<WebService, <RequestIn>, <>>;
 
     /**
      * Specify a method as handling all errors on (or under) the WebService.
@@ -300,10 +382,10 @@ module web.xtclang.org {
      * Example:
      *
      *     @OnError
-     *     void handleErrors(Session session, RequestIn request, Exception|String) {...}
+     *     void handleErrors(RequestIn request, Exception|String) {...}
      */
     mixin OnError
-            into Method<WebService, <Session?, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
+            into Method<WebService, <RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
 
 
     // ----- parameter annotations -----------------------------------------------------------------

@@ -9,6 +9,10 @@ import convert.codecs.Utf8Codec;
 
 import net.UriTemplate;
 
+import sec.Entity;
+import sec.Permission;
+import sec.Realm;
+
 import web.AcceptList;
 import web.Body;
 import web.BodyParam;
@@ -20,10 +24,12 @@ import web.ParameterBinding;
 import web.QueryParam;
 import web.Registry;
 import web.Response;
-import web.Session;
+import web.TrustLevel;
 import web.UriParam;
 
 import web.responses.SimpleResponse;
+
+import web.security.Authenticator;
 
 
 /**
@@ -44,6 +50,19 @@ service ChainBundle {
         chains        = new Handler?[catalog.endpointCount];
         errorHandlers = new ErrorHandler?[catalog.serviceCount];
     }
+
+    /**
+     * A function that adds a permission check to an endpoint call. It returns `False` if the
+     * endpoint invocation is not restricted and allowed to proceed. Otherwise, it returns a
+     * (conditional) [ResponseOut] indicatung a failure.
+     */
+    typedef function conditional ResponseOut(RequestIn) as RestrictionCheck;
+
+    /**
+     * A function that adds a parameter value to the passed-in tuple of values. Used to collect
+     * arguments for the endpoint method invocation.
+     */
+    typedef function Tuple(RequestIn, Tuple) as ParameterBinder;
 
     /**
      * The Catalog.
@@ -78,7 +97,7 @@ service ChainBundle {
     /**
      * Obtain a call chain for the specified endpoint.
      */
-    Handler ensureCallChain(EndpointInfo endpoint) {
+    Handler ensureCallChain(EndpointInfo endpoint, Authenticator authenticator) {
         Handler? handle = chains[endpoint.id];
         if (handle != Null) {
             return handle;
@@ -86,9 +105,14 @@ service ChainBundle {
 
         Int          wsid             = endpoint.wsid;
         HttpMethod   httpMethod       = endpoint.httpMethod;
+        WebService   webService       = ensureWebService(wsid);
         MethodInfo[] interceptorInfos = collectInterceptors(wsid, httpMethod);
         MethodInfo[] observerInfos    = collectObservers(wsid, httpMethod);
 
+        // bind the restriction (permission) check
+        RestrictionCheck? restrictCheck = generateRestrictCheck(endpoint, authenticator, webService);
+
+        // bind the parameters
         Method<WebService> method  = endpoint.method;
         ParameterBinder[]  binders = new ParameterBinder[];
 
@@ -99,19 +123,19 @@ service ChainBundle {
                 name ?= param.bindName;
 
                 if (param.is(QueryParam)) {
-                    binders += (session, request, values) ->
+                    binders += (request, values) ->
                         extractQueryValue(request, name, param, values);
                     continue;
                 }
                 if (param.is(UriParam)) {
                     assert endpoint.template.vars.contains(name);
 
-                    binders += (session, request, values) ->
+                    binders += (request, values) ->
                         extractPathValue(request, name, param, values);
                     continue;
                 }
                 if (param.is(BodyParam)) {
-                    binders += (session, request, values) ->
+                    binders += (request, values) ->
                         extractBodyValue(request, name, param, values);
                     continue;
                 }
@@ -119,43 +143,42 @@ service ChainBundle {
             }
 
             if (endpoint.template.vars.contains(name)) {
-                binders += (session, request, values) ->
+                binders += (request, values) ->
                     extractPathValue(request, name, param, values);
                 continue;
             }
 
             if (param.ParamType.is(Type<Session>)) {
-                binders += (session, request, values) -> values.add(session);
+                binders += (request, values) -> values.add(request.session? : assert);
                 continue;
             }
 
             if (param.ParamType == RequestIn) {
-                binders += (session, request, values) -> values.add(request);
+                binders += (request, values) -> values.add(request);
                 continue;
             }
 
             if (param.ParamType defaultValue := param.defaultValue()) {
-                binders += (session, request, values) -> values.add(defaultValue);
+                binders += (request, values) -> values.add(defaultValue);
                 continue;
             }
 
             throw new IllegalState($"Unresolved parameter: {name.quoted()} for method {method}");
         }
 
-        typedef Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
-        typedef Method<WebService, <Session, RequestIn>, <>>                     as ObserverMethod;
+        typedef Method<WebService, <RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
+        typedef Method<WebService, <RequestIn>, <>>                     as ObserverMethod;
 
         // start with the innermost endpoint
-        WebService webService  = ensureWebService(wsid);
-        Function   boundMethod = method.bindTarget(webService);
-        Responder  respond     = generateResponder(endpoint);
+        Function  boundMethod = method.bindTarget(webService);
+        Responder respond     = generateResponder(endpoint);
 
         handle = binders.empty
-            ? ((session, request) -> respond(request, boundMethod()))
-            : ((session, request) -> {
+            ? ((request) -> respond(request, boundMethod()))
+            : ((request) -> {
                 Tuple values = Tuple:();
                 for (ParameterBinder bind : binders) {
-                    values = bind(session, request, values);
+                    values = bind(request, values);
                 }
                 return respond(request, boundMethod.invoke(values));
             });
@@ -170,7 +193,7 @@ service ChainBundle {
                 ErrorHandler? onError = ensureErrorHandler(wsid);
 
                 Handler callNext = handle;
-                handle = (session, request) -> webService.route(session, request, callNext, onError);
+                handle = (request) -> webService.route(request, callNext, onError);
 
                 webService = ensureWebService(wsidNext);
                 wsid       = wsidNext;
@@ -192,12 +215,12 @@ service ChainBundle {
             });
 
             Handler callNext = handle;
-            handle = (session, request) -> {
+            handle = (request) -> {
                 // observers are not handlers and call asynchronously
                 for (Observer observe : observers) {
-                    observe^(session, request);
+                    observe^(request);
                 }
-                return callNext(session, request);
+                return callNext(request);
             };
         }
 
@@ -205,18 +228,125 @@ service ChainBundle {
         ErrorHandler? onError = ensureErrorHandler(wsid);
 
         Handler callNext = handle;
-        handle = (session, request) -> {
-            assert session.is(SessionImpl);
-            session.requestBegin_(request);
+        handle = (request) -> {
+            SessionImpl? session = request.session.is(SessionImpl) ?: Null;
+            session?.requestBegin_(request);
             try {
-                return webService.route(session, request, callNext, onError);
+                return webService.route(request, callNext, onError);
             } finally {
-                session.requestEnd_(request);
+                session?.requestEnd_(request);
             }
         };
 
+        // but nothing can get through unless the permission is checked
+        if (restrictCheck != Null) {
+            callNext = handle;
+            handle   = (request) -> {
+                if (ResponseOut failure := restrictCheck(request)) {
+                    return failure;
+                }
+                return callNext(request);
+            };
+        }
+
         chains[endpoint.id] = handle.makeImmutable();
         return handle;
+    }
+
+    private RestrictionCheck? generateRestrictCheck(EndpointInfo endpoint,
+                                                    Authenticator authenticator, WebService webService) {
+        import Catalog.Restriction;
+
+        TrustLevel  requiredTrust      = endpoint.requiredTrust;
+        Restriction requiredPermission = endpoint.requiredPermission;
+
+        if (requiredTrust == None || requiredPermission == Null) {
+            // no permission check is required
+            return Null;
+        }
+
+        (function Permission(RequestIn))? resolvePermission = Null;
+        (function Boolean())?             checkPermission   = Null;
+
+        if (requiredPermission.is(Permission)) {
+            resolvePermission = (_) -> requiredPermission;
+        } else if (requiredPermission.is(function Permission(RequestIn))) {
+            resolvePermission = requiredPermission;
+        } else {
+            // Method<WebService, <>, <Boolean>>
+            checkPermission = requiredPermission.bindTarget(webService).as((function Boolean()));
+            // TODO: bind necessary arguments
+        }
+
+        return (request) -> {
+            // each endpoint has a required trust level, and the session knows its own trust
+            // level; if the endpoint requirement is higher, then we have to re-authenticate
+            // the user agent; the server must respond in a manner that causes the client to
+            // authenticate, including (but not limited to) any of the following manners:
+            // * with the `Unauthorized` error code (and related information) that indicates
+            //   that the client must authenticate itself
+            // * with a redirect to a URL that provides the necessary login user interface
+            Session? session = request.session;
+            if (session == Null || requiredTrust <= session.trustLevel) {
+                return False;
+            }
+
+            import Authenticator.Attempt;
+            import Authenticator.Status as AuthStatus;
+
+            Attempt[] attempts = authenticator.authenticate(request);
+            Entity[]  entities = [];
+            if (attempts[0].status == Success) {
+//                TODO CP
+//                    switch (attempts[0].response) {
+//                    case Allowed:
+//                        // Authenticator has verified that the user is authenticated (the
+//                        // Authenticator should have already updated the session accordingly)
+//                        if (endpoint.requiredTrust > session.trustLevel) {
+//                            // the user is authenticated, but the user doesn't have the
+//                            // necessary security access
+//                            return True, new SimpleResponse(Forbidden);
+//                        }
+//
+//                        // the user is authenticated and has the necessary security access;
+//                        // continue processing the request
+//                        break;
+//
+//                    case Unknown:
+//                        // the request didn't have any authorization information or the
+//                        // authorizer didn't know how to process it
+//                        return True, new SimpleResponse(Unauthorized);
+//
+//                    case Forbidden:
+//                        // authentication didn't just fail, but it has been disallowed; respond
+//                        // with an HTTP "Forbidden"
+//                        return True, new SimpleResponse(Forbidden);
+//                    }
+            } else {
+                  // "authResult" is actually an HTTP response to send back to the client to
+                  // take the next step in the authentication process
+                  return True, attempts[0].response.as(ResponseOut);
+            }
+
+            if (resolvePermission != Null) {
+                // resolve the required endpoint permission and verify that at least one of the
+                // authenticated entities is permitted to invoke the endpoint
+                Permission permission = resolvePermission(request);
+                Realm      realm      = authenticator.realm;
+                for (Entity entity : entities) {
+                    if (entity.permitted(realm, permission)) {
+                        return False;
+                    }
+                }
+            } else {
+                if (checkPermission?()) {
+                    return False;
+                }
+            }
+
+        // the request doesn't have the necessary security permissions
+        return True, new SimpleResponse(Forbidden);
+        };
     }
 
     /**
@@ -268,7 +398,7 @@ service ChainBundle {
      * Create an error handler for the specified WebService.
      */
      ErrorHandler? ensureErrorHandler(Int wsid) {
-        typedef Method<WebService, <Session, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
+        typedef Method<WebService, <RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
                 as ErrorMethod;
 
         if (ErrorHandler onError ?= errorHandlers[wsid]) {
