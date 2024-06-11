@@ -384,16 +384,6 @@ public class NativeContainer
         TypeConstant typeServer  = templateServer.getCanonicalType();
         addResourceSupplier(new InjectionKey("server", typeServer), templateServer::ensureServer);
 
-        // +++ web:Authenticator (Nullable|Authenticator)
-        ModuleConstant moduleWeb         = pool.ensureModuleConstant("web.xtclang.org");
-        TypeConstant   typeAuthenticator = pool.ensureTerminalTypeConstant(
-                pool.ensureClassConstant(pool.ensurePackageConstant(moduleWeb, "security"), "Authenticator")).
-                    ensureNullable();
-        // the NativeContainer can only supply a trivial result; anything better than that must be
-        // done naturally by a container that hosts the calling container
-        addResourceSupplier(new InjectionKey("providedAuthenticator", typeAuthenticator),
-                (frame_, opts_) -> xNullable.NULL);
-
         // +++ mgmt.Linker
         xContainerLinker templateLinker = xContainerLinker.INSTANCE;
         TypeConstant     typeLinker     = templateLinker.getCanonicalType();
@@ -767,7 +757,10 @@ public class NativeContainer
         InjectionKey key = f_mapResourceNames.get(sName);
         if (key == null)
             {
-            return null;
+            // for "Nullable" types the NativeContainer can only supply a trivial result;
+            // anything better than that must be done naturally by a container that hosts the
+            // calling container
+            return type.isNullable() ? xNullable.NULL : null;
             }
 
         // check for equality first, but allow "congruency" or "duck type" equality as well

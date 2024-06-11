@@ -7,6 +7,8 @@ import convert.formats.Base64Format;
 
 import ecstasy.collections.CaseInsensitive;
 
+import net.Uri;
+
 import Header.Entry;
 
 
@@ -138,11 +140,11 @@ const HttpClient
                 break Authorize;
             }
 
-            Map<String, String> props = challenge.substring(realmIndex).splitMap();
-            String              realm;
-            if (!(realm := props.get("realm"))) {
-                break Authorize;
-            }
+                Map<String, String> props = challenge.substring(realmIndex).splitMap(valueQuote=ch->ch=='\"');
+                String              realm;
+                if (!(realm := props.get("realm"))) {
+                    break Authorize;
+                }
 
             realm := realm.unquote();
 
@@ -205,9 +207,7 @@ const HttpClient
         {
         // create cnonce and extract necessary properties (see DigestAuthenticator.parseDigest)
         import security.DigestAuthenticator;
-        import security.Realm.Hash;
-
-        import DigestAuthenticator.require;
+        import security.DigestCredential.Hash;
         import DigestAuthenticator.toHash;
 
         static String toString(Hash hash) {
@@ -215,9 +215,9 @@ const HttpClient
             return DigestAuthenticator.toString(hash);
         }
 
-        if (String algorithm := require(props, "algorithm", Null),
-            String opaque    := require(props, "opaque"   , True),
-            String nonce     := require(props, "nonce"    , True)) {
+        if (String algorithm := props.get("algorithm"),
+            String opaque    := props.get("opaque"),
+            String nonce     := props.get("nonce")) {
 
             @Inject Algorithms algorithms;
 
@@ -232,10 +232,13 @@ const HttpClient
             @Inject Random rnd;
             String cnonce = Base64Format.Instance.encode(rnd.bytes(9));
 
-            String qop = "auth";
-            qop := require(props, "qop", True);
-            if (qop != "auth") {
-                return False; // TODO implement auth-int
+            if (String qopList := props.get("qop")) {
+                String[] qops = qopList.split(',', trim=True);
+                if (!qops.contains("auth")) {
+                    return False; // TODO implement auth-int
+                }
+            } else {
+                return False;
             }
 
             String ncText = retryCount.toString().rightJustify(8, fill='0');
@@ -266,11 +269,11 @@ const HttpClient
             Hash hashA1   = toHash($"{toString(pwdHash)}:{nonce}:{cnonce}", hasher);
             Hash hashA2   = toHash($"{request.method.name}:{request.uri}" , hasher);
             Hash response = toHash($|{toString(hashA1)}:{nonce}:{ncText}\
-                                    |:{cnonce}:{qop}:{toString(hashA2)}
+                                    |:{cnonce}:auth:{toString(hashA2)}
                                                                           , hasher);
             return True, $|Digest username="{name}", realm="{realm}", uri="{request.uri}", \
                           |algorithm={algorithm}, nonce="{nonce}", nc={ncText}, cnonce="{cnonce}", \
-                          |qop={qop}, response="{toString(response)}", opaque="{opaque}"
+                          |qop="auth", response="{toString(response)}", opaque="{opaque}"
                           ;
         }
         return False;
@@ -352,7 +355,7 @@ const HttpClient
 
         @Override
         MediaType mediaType.get() {
-            if (String    mediaTypeName := header.firstOf("Content-Type"),
+            if (String    mediaTypeName := header.valuesOf("Content-Type").first(),
                 MediaType mediaType     := MediaType.of(mediaTypeName)) {
                 return mediaType;
             }

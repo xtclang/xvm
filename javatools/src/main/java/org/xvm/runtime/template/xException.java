@@ -302,6 +302,12 @@ public class xException
         return makeHandle(frame, "No implementation for \"" + sMethod + '"');
         }
 
+    public static ExceptionHandle unknownInjectable(Frame frame, TypeConstant type, String sName)
+        {
+        return makeHandle(frame, "Unknown injectable resource \"" + type.getValueString() +
+                ' ' + sName + '"');
+        }
+
 
     // ---- ObjectHandle helpers -------------------------------------------------------------------
 

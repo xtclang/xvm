@@ -9,6 +9,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
@@ -77,8 +78,8 @@ public class xInjector
                 ObjectHandle hValue = frame.getInjected(hName.getStringValue(), hType.getDataType(), hOpts);
                 if (hValue == null)
                     {
-                    return frame.raiseException("Unknown injectable resource \"" +
-                            hType.getDataType().getValueString() + ' ' + hName.getStringValue() + '"');
+                    return frame.raiseException(xException.unknownInjectable(frame,
+                            hType.getDataType(), hName.getStringValue()));
                     }
 
                 return Op.isDeferred(hValue)

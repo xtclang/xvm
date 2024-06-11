@@ -48,5 +48,5 @@ interface HttpMessage
     /**
      * @return an `Iterator` of all cookie names in this message
      */
-    Iterator<String> cookieNames();
+    List<String> cookieNames();
 }
