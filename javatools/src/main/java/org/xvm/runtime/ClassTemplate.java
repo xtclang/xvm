@@ -436,6 +436,10 @@ public abstract class ClassTemplate
      */
     protected int postValidate(Frame frame, ObjectHandle hStruct)
         {
+        if (hStruct.getType().isImmutabilitySpecified())
+            {
+            hStruct.makeImmutable();
+            }
         return Op.R_NEXT;
         }
 
