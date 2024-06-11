@@ -1,10 +1,17 @@
 import crypto.Signer;
 
 import oodb.Connection;
-import oodb.DBSchema;
+import oodb.DBMap;
 import oodb.DBObject;
 import oodb.DBObjectInfo;
+import oodb.DBSchema;
 import oodb.RootSchema;
+
+import sec.Credential;
+import sec.PlainTextCredential;
+import sec.Subject;
+
+import web.security.DigestCredential;
 
 /**
  * A DBRealm is a realm implementation on top of an [AuthSchema].
@@ -12,24 +19,27 @@ import oodb.RootSchema;
 const DBRealm
         implements Realm {
     /**
-     * Construct a `DBRealm` from plain text user names and passwords, using an optional list
-     * of [hashing algorithms](Signer).
+     * Construct a `DBRealm`.
      *
-     * @param realmName       the human readable name of the realm
+     * @param name            the human readable name of the realm
      * @param rootSchema      (optional) the database to look for the AuthSchema at
      * @param initConfig      (optional) the initial configuration
      * @param connectionName  (optional) the name of the injected database (in case there are more
      *                        than one) to look for the AuthSchema
      */
-    construct(String realmName, RootSchema? rootSchema = Null, Configuration? initConfig = Null,
-              String? connectionName = Null) {
+    construct(String         name,
+              RootSchema?    rootSchema     = Null,
+              Configuration? initConfig     = Null,
+              String?        connectionName = Null,
+             ) {
+        // if no schema is passed in, then request it by injection
         if (rootSchema == Null) {
             @Inject(resourceName=connectionName) Connection dbc;
             rootSchema = dbc;
         }
-        // obtain a connection to the database, and find the AuthSchema inside the database
-        String?     path       = Null;
-        AuthSchema? authSchema = Null;
+        // find the AuthSchema inside the database
+        String?     path = Null;
+        AuthSchema? db   = Null;
         for ((String pathStr, DBObjectInfo info) : rootSchema.sys.schemas) {
             // find the AuthSchema; it must occur exactly-once
             assert DBObject schema ?= info.lookupUsing(rootSchema);
@@ -38,13 +48,13 @@ const DBRealm
                                         | locations within the database:\
                                         | {pathStr.quoted()} and {path.quoted()}
                                        ;
-                path       = pathStr;
-                authSchema = schema;
+                path = pathStr;
+                db   = schema;
             }
         }
-        assert path != Null && authSchema != Null as "The database does not contain an \"AuthSchema\"";
+        assert path != Null && db != Null as "The database does not contain an \"AuthSchema\"";
 
-        Configuration cfg = authSchema.config.get();
+        Configuration cfg = db.config.get();
         if (!cfg.configured) {
             // the database has not yet been configured, so we need an initial configuration to be
             // provided or injected, and we'll configure the database in the finally block
@@ -58,43 +68,14 @@ const DBRealm
             this.createCfg = cfg;
         }
 
-        @Inject crypto.Algorithms algorithms;
-        Signer[]  hashers          = new Signer[];
-        Signer?[] supportedHashers = new Signer?[3];
-        Signer?   weakestHasher    = Null;
 
-        if (cfg.useSHA512_256) {
-            Signer hasher = hasherByName("SHA-512-256");
-            hashers            += hasher;
-            supportedHashers[2] = hasher;
-            weakestHasher       = hasher;
-        }
-
-        if (cfg.useSHA256) {
-            Signer hasher = hasherByName("SHA-256");
-            hashers            += hasher;
-            supportedHashers[1] = hasher;
-            weakestHasher       = hasher;
-        }
-
-        if (cfg.useMD5) {
-            Signer hasher = hasherByName("MD5");
-            hashers            += hasher;
-            supportedHashers[0] = hasher;
-            weakestHasher       = hasher;
-        }
-
-        assert weakestHasher != Null as "No hasher configured; at least one is required";
-
-        this.name             = realmName;
-        this.authSchema       = authSchema;
-        this.hashers          = hashers;
-        this.supportedHashers = supportedHashers;
-        this.weakestHasher    = weakestHasher;
+        this.name = name;
+        this.db   = db;
     } finally {
         if (Configuration cfg ?= this.createCfg) {
-            if (authSchema.dbConnection.transaction == Null) {
-                using (authSchema.dbConnection.createTransaction()) {
+            // TODO CP: need a: `using (schema.ensureTx()) {...}`
+            if (db.dbConnection.transaction == Null) {
+                using (db.dbConnection.createTransaction()) {
                     applyConfig(cfg);
                 }
             } else {
@@ -103,35 +84,36 @@ const DBRealm
         }
     }
 
+    // TODO GG: moving this inside "finally" block doesn't compile
     // we need this helper method since atm there is no Connection.ensureTransaction() API
     private void applyConfig(Configuration cfg) {
-        // create the user roles
-        Roles                 roles         = authSchema.roles;
-        Map<String, String[]> initUserRoles = new HashMap();
-        for ((String roleName, String[] userNames) : cfg.initRoleUsers) {
-            assert roles.createRole(roleName);
-            for (String userName : userNames) {
-                if (!initUserRoles.putIfAbsent(userName, [roleName])) {
-                    initUserRoles[userName] = initUserRoles.getOrDefault(userName, []) + roleName;
-                }
-            }
+        // create the user records
+        function Credential(String, String) createCredential;
+
+        if (cfg.credScheme == DigestCredential.Scheme) {
+            createCredential = (userName, pwd) -> new DigestCredential(name, userName, pwd);
+        } else if (cfg.credScheme == PlainTextCredential.Scheme) {
+            createCredential = (userName, pwd) -> new PlainTextCredential(userName, pwd);
+        } else {
+            throw new IllegalState("Unsupported credential scheme: {cfg.credScheme.quoted}");
         }
 
-        // create the user records
-        Users users = authSchema.users;
-        ListMap<String, String> initUserNoPass = new ListMap(cfg.initUserPass.size);
+        ListMap<String, String> initUserNoPass = new ListMap();
         for ((String userName, String password) : cfg.initUserPass) {
-            assert users.createUser(this, userName, password,
-                    initUserRoles.getOrDefault(userName, []));
+            Credential credential = createCredential(userName, password);
+            Principal  principal  = createPrincipal(
+                    new Principal(0, userName, permissions=[AllowAll], credentials=[credential]));
+            initUserNoPass.put(userName, "???");
         }
 
         // store the configuration (but remove the passwords), and specify that the database
         // has now been configured (so we don't repeat the db configuration the next time)
-        initUserNoPass.entries.forEach(e -> {e.value = "???";});
-        authSchema.config.set(cfg.with(initUserPass = initUserNoPass,
-                                       configured   = True));
+        db.config.set(cfg.with(initUserPass = initUserNoPass,
+                               configured   = True));
     }
 
+    @Override
+    public/private String name;
 
     /**
      * The configuration to write to the database the first time the database and realm are created.
@@ -141,176 +123,367 @@ const DBRealm
     /**
      * The part of the database where the authentication information is stored.
      */
-    protected AuthSchema authSchema;
+    protected AuthSchema db;
 
-    /**
-     * An array of three elements, containing up to the three supported signers, specifically:
-     *
-     * * Element `[0]` contains either an MD5 hasher or `Null`
-     * * Element `[1]` contains either an SHA-256 hasher or `Null`
-     * * Element `[2]` contains either an SHA-512-256 hasher or `Null`
-     */
-    protected Signer?[] supportedHashers;
-
-    /**
-     * The default [hashing algorithm](Signer) is the weakest one provided to this DBRealm, or
-     * the default MD5 algorithm if none was provided.
-     */
-    protected Signer weakestHasher;
-
-
-    // ----- Realm interface -----------------------------------------------------------------------
+    // ----- operations: Principals ----------------------------------------------------------------
 
     @Override
-    conditional Set<String> validUser(String userName) = loadUserRoles(userName);
+    Iterator<Principal> findPrincipals(function Boolean(Principal) match) {
+        return db.principals.filter(e -> match(e.value)).values.iterator();
+    }
 
     @Override
-    conditional Set<String> authenticate(String user, String password) {
-        if ((_, Set<String> roles) := authenticateHash(
-                user, passwordHash(user, name, password, weakestHasher), weakestHasher)) {
-            return True, roles;
+    conditional Principal findPrincipal(String scheme, String locator) {
+        if (Int id := db.principalLocators.get(munge(scheme, locator))) {
+            return readPrincipal(id);
         }
         return False;
     }
 
     @Override
-    Signer[] hashers;
+    Principal createPrincipal(Principal principal) {
+        Int principalId = db.principalGen.next();
+        principal = principal.with(principalId=principalId);
 
-    @Override
-    Hash[] hashesFor(UserId userId, Signer hasher) {
-        if (userId.is(String)) {
-            Hash? hash = Null;
-            if (User user := loadUserByName(userId)) {
-                hash := user.passwordHashes.hashFor(hasher);
+        if (db.dbConnection.transaction == Null) {
+            using (db.dbConnection.createTransaction()) {
+                return createPrincipal(principal, principalId);
             }
-            return [hash?] : [];
+        } else {
+            return createPrincipal(principal, principalId);
         }
 
-        User[] users = loadUsersByHash(userId);
-        switch (users.size) {
-        case 0:
-            return [];
-
-        case 1:
-            return [users[0].passwordHashes.hashFor(hasher)?] : [];
-
-        default:
-            Hash[] pwdHashes = new Hash[];
-            for (User user : users) {
-                if (Hash pwdHash := user.passwordHashes.hashFor(hasher)) {
-                    pwdHashes += pwdHash;
+        // we need this helper method since atm there is no Connection.ensureTransaction() API
+        private Principal createPrincipal(Principal principal, Int principalId) {
+            // verify groups
+            DBMap<Int, Group> groups = db.groups;
+            for (Int groupId : principal.groupIds) {
+                if (!groups.contains(groupId)) {
+                    throw new MissingGroup(groupId);
                 }
             }
-            return pwdHashes.freeze(inPlace=True);
+
+            // add new locators
+            DBMap<String, Int> index    = db.principalLocators;
+            HashSet<String>    locators = locatorsFor(principal);
+            for (String locator : locators) {
+                if (!index.putIfAbsent(locator, principalId)) {
+                    throw new DuplicateCredential(schemeFrom(locator), locatorFrom(locator));
+                }
+            }
+
+            // store the principal
+            if (!db.principals.putIfAbsent(principalId, principal)) {
+                throw new RealmException($"Principal id={principalId} already existed");
+            }
+            return principal;
         }
     }
 
     @Override
-    conditional (String, Set<String>) authenticateHash(UserId userId, Hash pwdHash, Signer hasher) {
-        conditional (String, Set<String>) authenticateUser(User user, Hash pwdHash, Signer hasher) {
-            if (user.enabled,
-                    Hash actualHash := user.passwordHashes.hashFor(hasher),
-                    pwdHash == actualHash) {
-                return True, user.userName, loadUserRoles(user) ?: assert;
+    conditional Principal readPrincipal(Int id) {
+        return db.principals.get(id);
+    }
+
+    @Override
+    Principal updatePrincipal(Principal principal) {
+        Int principalId = principal.principalId;
+        using (db.dbConnection.createTransaction()) {
+            Principal old;
+            if (!(old := readPrincipal(principalId))) {
+                throw new MissingPrincipal(principalId);
             }
 
-            return False;
-        }
-
-        if (userId.is(String)) {
-            if (User user := loadUserByName(userId)) {
-                return authenticateUser(user, pwdHash, hasher);
+            // verify groups
+            DBMap<Int, Group> groups = db.groups;
+            for (Int groupId : principal.groupIds) {
+                if (!groups.contains(groupId)) {
+                    throw new MissingGroup(groupId);
+                }
             }
 
-            return False;
-        }
+            // add new locators
+            DBMap<String, Int> index       = db.principalLocators;
+            HashSet<String>    oldLocators = locatorsFor(old);
+            HashSet<String>    newLocators = locatorsFor(principal);
+            for (String locator : newLocators) {
+                if (!oldLocators.contains(locator)) {
+                    if (!index.putIfAbsent(locator, principalId) && index[locator] != principalId) {
+                        throw new DuplicateCredential(schemeFrom(locator), locatorFrom(locator));
+                    }
+                }
+            }
 
-        // look up the user by the user hash
-        User[] users = loadUsersByHash(userId);
-        for (User user : users) {
-            if ((String userName, Set<String> roleNames) := authenticateUser(user, pwdHash, hasher)) {
-                return True, userName, roleNames;
+            // remove unused locators
+            for (String locator : oldLocators) {
+                if (!newLocators.contains(locator)) {
+                    index.remove(locator, principalId);
+                }
+            }
+
+            // store the principal
+            db.principals.put(principalId, principal);
+        }
+        return principal;
+    }
+
+    @Override
+    Boolean deletePrincipal(Int|Principal principal) {
+        Int     principalId = principal.is(Int) ?: principal.principalId;
+        using (db.dbConnection.createTransaction()) {
+            if (!(principal := readPrincipal(principalId))) {
+                return False;
+            }
+
+            // delete all locators for the principal
+            db.principalLocators.filter(e -> e.value == principalId).clear(); // TODO GG REVIEW
+
+// REVIEW GG - alternative?
+//          Set<String> locators    = locatorsFor(principal);
+//          DBMap<String, Int> index = db.principalLocators;
+//          for (String locator : locators) {
+//              if (Int locatorId := index.get(locator), locatorId == principalId) {
+//                  index.remove(locator);
+//              }
+//          }
+
+            // delete all entitlements for the principal
+            db.entitlements.filter(e -> e.value.principalId == principalId).clear();
+
+            // delete the principal
+            db.principals.remove(principalId);
+        }
+        return True;
+    }
+
+    // ----- operations: Groups ----------------------------------------------------------------
+
+    @Override
+    Iterator<Group> findGroups(function Boolean(Group) match) {
+        return db.groups.filter(e -> match(e.value)).values.iterator();
+    }
+
+    @Override
+    Group createGroup(Group group) {
+        Int groupId = db.groupGen.next();
+        group = group.with(groupId = groupId);
+        using (db.dbConnection.createTransaction()) {
+            // verify groups
+            DBMap<Int, Group> groups = db.groups;
+            for (Int parentId : group.groupIds) {
+                if (parentId == groupId) {
+                    throw new GroupLoop(groupId);
+                } else if (!groups.contains(parentId)) {
+                    throw new MissingGroup(parentId);
+                }
+            }
+
+            // store the group
+            if (!groups.putIfAbsent(groupId, group)) {
+                throw new RealmException($"Group id={groupId} already existed");
             }
         }
+        return group;
+    }
 
+    @Override
+    conditional Group readGroup(Int id) {
+        return db.groups.get(id);
+    }
+
+    @Override
+    Group updateGroup(Group group) {
+        Int groupId = group.groupId;
+        using (db.dbConnection.createTransaction()) {
+            Group old;
+            if (!(old := readGroup(groupId))) {
+                throw new MissingGroup(groupId);
+            }
+
+            // verify groups
+            DBMap<Int, Group> groups = db.groups;
+            for (Int parentId : group.groupIds) {
+                if (!groups.contains(parentId)) {
+                    throw new MissingGroup(parentId);
+                }
+            }
+
+            // store the group
+            db.groups.put(groupId, group);
+
+            // check for infinite loop of group dependencies
+            if (Int loopId := group.circularDependency(this)) {
+                throw new GroupLoop(loopId);
+            }
+        }
+        return group;
+    }
+
+    @Override
+    Boolean deleteGroup(Int|Group group) {
+        Int groupId = group.is(Int) ?: group.groupId;
+        return db.groups.keys.removeIfPresent(groupId);
+    }
+
+    // ----- operations: Entitlements --------------------------------------------------------------
+
+    @Override
+    Iterator<Entitlement> findEntitlements(function Boolean(Entitlement) match) {
+        return db.entitlements.filter(e -> match(e.value)).values.iterator();
+    }
+
+
+    @Override
+    conditional Entitlement findEntitlement(String scheme, String locator) {
+        if (Int id := db.entitlementLocators.get(munge(scheme, locator))) {
+            return readEntitlement(id);
+        }
         return False;
     }
 
+    @Override
+    Entitlement createEntitlement(Entitlement entitlement) {
+        Int entitlementId = db.entitlementGen.next();
+        entitlement = entitlement.with(entitlementId = entitlementId);
+        using (db.dbConnection.createTransaction()) {
+            // verify principal
+            if (!db.principals.contains(entitlement.principalId)) {
+                throw new MissingPrincipal(entitlement.principalId);
+            }
+
+            // add new locators
+            DBMap<String, Int> index    = db.entitlementLocators;
+            HashSet<String>    locators = locatorsFor(entitlement);
+            for (String locator : locators) {
+                if (!index.putIfAbsent(locator, entitlementId)) {
+                    throw new DuplicateCredential(schemeFrom(locator), locatorFrom(locator));
+                }
+            }
+
+            // store the entitlement
+            if (!db.entitlements.putIfAbsent(entitlementId, entitlement)) {
+                throw new RealmException($"Entitlement id={entitlementId} already existed");
+            }
+        }
+        return entitlement;
+    }
+
+    @Override
+    conditional Entitlement readEntitlement(Int id) {
+        return db.entitlements.get(id);
+    }
+
+    @Override
+    Entitlement updateEntitlement(Entitlement entitlement) {
+        Int entitlementId = entitlement.entitlementId;
+        using (db.dbConnection.createTransaction()) {
+            Entitlement old;
+            if (!(old := readEntitlement(entitlementId))) {
+                throw new MissingEntitlement(entitlementId);
+            }
+
+            // add new locators
+            DBMap<String, Int> index       = db.entitlementLocators;
+            HashSet<String>    oldLocators = locatorsFor(old);
+            HashSet<String>    newLocators = locatorsFor(entitlement);
+            for (String locator : newLocators) {
+                if (!oldLocators.contains(locator)) {
+                    if (!index.putIfAbsent(locator, entitlementId) && index[locator] != entitlementId) {
+                        throw new DuplicateCredential(schemeFrom(locator), locatorFrom(locator));
+                    }
+                }
+            }
+
+            // remove unused locators
+            for (String locator : oldLocators) {
+                if (!newLocators.contains(locator)) {
+                    index.remove(locator, entitlementId);
+                }
+            }
+
+            // store the entitlement
+            db.entitlements.put(entitlementId, entitlement);
+        }
+        return entitlement;
+    }
+
+    @Override
+    Boolean deleteEntitlement(Int|Entitlement entitlement) {
+        Int     entitlementId = entitlement.is(Int) ?: entitlement.entitlementId;
+        using (db.dbConnection.createTransaction()) {
+            if (!(entitlement := readEntitlement(entitlementId))) {
+                return False;
+            }
+
+            // delete all locators for the entitlement
+            db.entitlementLocators.filter(e -> e.value == entitlementId).clear(); // TODO GG REVIEW
+
+// REVIEW GG - alternative?
+//          Set<String> locators    = locatorsFor(entitlement);
+//          DBMap<String, Int> index = db.entitlementLocators;
+//          for (String locator : locators) {
+//              if (Int locatorId := index.get(locator), locatorId == entitlementId) {
+//                  index.remove(locator);
+//              }
+//          }
+
+            // delete the entitlement
+            db.entitlements.remove(entitlementId);
+        }
+        return True;
+    }
 
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Obtain a hasher (a [Signer]) by the name of the hashing algorithm.
+     * Munge a credential "scheme" and "locator" together into a string.
      *
-     * @param algorithm  one of: "SHA-512-256", "SHA-256", "MD5"
+     * @param scheme   a credential scheme
+     * @param locator  a credential locator
      *
-     * @return the requested hasher
+     * @return a string that combines the credential "scheme" and "locator"
      */
-    static protected Signer hasherByName(String algorithm) {
-        @Inject crypto.Algorithms algorithms;
-        return algorithms.hasherFor(algorithm)?;
-        TODO CP alternative if algorithm unavailable
+    static protected String munge(String scheme, String locator) = $"{scheme}:{locator}";
+
+    /**
+     * Given a previously munged string, extract the "scheme" from it.
+     *
+     * @param munged  a previous result from [munge]
+     *
+     * @return the credential "scheme"
+     */
+    static String schemeFrom(String munged) {
+        assert Int colon := munged.indexOf(':');
+        return munged[0..<colon];
     }
 
     /**
-     * Load the specified user from the database.
+     * Given a previously munged string, extract the "locator" from it.
      *
-     * @param userName  the name of the user to load
+     * @param munged  a previous result from [munge]
      *
-     * @return True iff the user was found and loaded
-     * @return (conditional) the user
+     * @return the credential "locator"
      */
-    protected conditional User loadUserByName(String userName) {
-        using (authSchema.dbConnection.createTransaction(readOnly=True)) {
-            return authSchema.users.findByName(userName);
-        }
+    static String locatorFrom(String munged) {
+        assert Int colon := munged.indexOf(':');
+        return munged.substring(colon+1);
     }
 
     /**
-     * Load any users from the database that have the specified user hash. (Some authentication
-     * mechanisms do not send plain text user names over the wire, and instead send a hashed user
-     * name.)
+     * Build a set of all "munged" scheme/locator strings for a given Principal or Entitlement.
      *
-     * @param hash  the user hash
+     * @param subject  a Principal or Entitlement
      *
-     * @return the users corresponding to the specified hash
+     * @return a set of all of the [Credential] scheme/locator strings for the specified `Subject`
      */
-    protected User[] loadUsersByHash(Hash hash) {
-        using (authSchema.dbConnection.createTransaction(readOnly=True)) {
-            return authSchema.users.findByUserHash(hash);
+    static HashSet<String> locatorsFor(Subject subject) {
+        HashSet<String> locators = new HashSet();
+        for (Credential credential : subject.credentials) {
+            String scheme = credential.scheme;
+            for (String locator : credential.locators) {
+                locators.add(munge(scheme, locator));
+            }
         }
-    }
-
-    /**
-     * Given a user name or user object, obtain a set of role names that correspond to that user.
-     *
-     * @param user  a user name or a `User` object
-     *
-     * @return True iff the specified user exists
-     * @return (conditional) a set of role names for the user
-     */
-    protected conditional Set<String> loadUserRoles(User|String user) {
-        using (authSchema.dbConnection.createTransaction(readOnly=True)) {
-            if (user.is(String)) {
-                if (!(user := authSchema.users.findByName(user))) {
-                    return False;
-                }
-            }
-
-            Int[] roleIds = user.roleIds;
-            if (roleIds.empty) {
-                return True, [];
-            }
-
-            Roles roles = authSchema.roles;
-            HashSet<String> roleNames = new HashSet();
-            for (Int roleId : roleIds) {
-                if (Role role := roles.get(roleId)) {
-                    roleNames += role.roleName;
-                    roleNames += role.altNames;
-                }
-            }
-            return True, roleNames.freeze(True);
-        }
+        return locators;
     }
 }

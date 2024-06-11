@@ -1,5 +1,6 @@
-import net.IPAddress;
+import security.Authenticator.Attempt;
 
+import net.IPAddress;
 
 /**
  * `Session` represents the information that is (i) managed on a server, (ii) on behalf of a person
@@ -64,13 +65,13 @@ import net.IPAddress;
  * When it works as designed, the `Session` corresponds exactly to the person using the application,
  * i.e. the actual person in front of the screen. There are two related but separate concepts here:
  * (i) the person (or entity) _using_ the application, via a specific "user agent" (e.g. a browser),
- * on a specific device (e.g. a computer); and (ii) the security _subject_ aka [userId] which the
+ * on a specific device (e.g. a computer); and (ii) the security _subject_ aka [Principal] which the
  * application authenticates and performs work on behalf of. While these two concepts are heavily
  * correlated, they actually represent an `m x n` matrix:
  *
  * * The person (or entity) is the one that can _consent_ to accepting cookies;
- * * The person may log in and out as different userIds, but the previous consent applies across all
- *   of those logins;
+ * * The person may log in and out as different Principals, but the previous consent applies across
+ *   all of those logins;
  * * The person indicates whether the device and user agent is shared or exclusive;
  * * Settings such as language, locale, time zone, and so on are set by and bound to the person, not
  *   to the authenticated user;
@@ -131,10 +132,11 @@ import net.IPAddress;
  * There are details related to the session that are automatically managed by the server, and are
  * visible to the application logic running on the server, and there are operations that the session
  * makes available to the application logic. For example, the application can determine if the user
- * represented by the session has been authenticated (the [userId] property), and when that
- * authentication occurred (the [lastAuthenticated] property), and the application can explicitly
- * [authenticate] or [deauthenticate] a user. There are also notifications that occur on the session
- * of significant changes and events; these require the application to provide a session mix-in.
+ * represented by the session has been authenticated (the [principal] and [entitlements]
+ * properties), and when that authentication occurred (the [lastAuthenticated] property), and the
+ * application can explicitly [authenticate] or [deauthenticate] a user. There are also
+ * notifications that occur on the session of significant changes and events; these require the
+ * application to provide a session mix-in.
  *
  * The use of custom mix-ins allows an application (or framework, etc.) to enhance a session by
  * adding state and functionality to the session that is created and managed automatically by the
@@ -186,6 +188,8 @@ import net.IPAddress;
  *
  * To obtain the session for use in an [Endpoint], the endpoint method should include a parameter of
  * type session:
+ *
+ * TODO CP and/or annotate using ...
  *
  *     @Post("/{id}/items")
  *     Item addItem(Session session, @UriParam String id, @BodyParam Item item) {...}
@@ -299,36 +303,41 @@ interface Session
     CookieConsent cookieConsent;
 
     /**
-     * This is a `String` representation of the authenticated user identity (aka "subject");
-     * otherwise `Null`.
+     * The authenticated user identity, known as a [Principal]. If the user has not been
+     * authenticated, then the value is `Null`.
+     *
+     * It is possible that the `Principal` is obtained from one or more of the [entitlements], iff
+     * there exists at least one Entitlement with `conferIdentity==True`, and there is no conflict
+     * about the identity of the `Principal`.
      */
-    @RO String? userId;
+    @RO Principal? principal;
 
     /**
-     * This is the date/time that the session was last authenticated; otherwise `Null`.
+     * The authenticated [Entitlement]s for the session.
+     */
+    @RO Entitlement[] entitlements;
+
+    /**
+     * The date/time that the session was last authenticated; otherwise `Null`.
      */
     @RO Time? lastAuthenticated;
 
     /**
-     * This is the current trust level associated with this session. Authentication will tend to
-     * set the trust level to its highest setting, and deauthentication to its lowest setting.
+     * The current trust level associated with this session. Authentication will tend to set the
+     * trust level to its highest setting, and deauthentication to its lowest setting.
      * Changes to the [ipAddress] and [userAgent] will tend to degrade the trust level.
      *
-     * It is possible for the trust level to be `None`, yet the [userId] have a value. This occurs
-     * when the residual information about the previously authenticated user is retained (the user
-     * is not explicitly deauthenticated), but when re-authentication is required to perform any
-     * [@LoginRequired](LoginRequired) activity. In other words, the application still knows who is
-     * likely to be using the application, but will force re-authentication for any operation that
-     * needs to know who is using the application.
+     * It is possible for the trust level to be `None`, yet the [principal] have a value (or
+     * [entitlements] to exist). This occurs when the residual information about the previously
+     * authenticated user is retained (the user is not explicitly deauthenticated), but when
+     * re-authentication is required to perform any [@LoginRequired](LoginRequired) activity,
+     * including all [@Restrict](Restrict)-annotated web service methods. In other words, the
+     * application knows who is likely to be using the application, but will still force
+     * re-authentication.
      *
      * This property may be modified by the application.
      */
     TrustLevel trustLevel;
-
-    /**
-     * The set of roles associated with the user associated with this session.
-     */
-    immutable Set<String> roles;
 
     /**
      * This is a `String` representation of the _internal_ identity of the `Session` itself.
@@ -348,14 +357,17 @@ interface Session
      */
     @RO String sessionId;
 
-
     // ----- session control -----------------------------------------------------------------------
 
     /**
-     * This method allows an application to explicitly configure the authentication information for
-     * the session. This method allows an application to perform its own explicit authentication.
+     * Explicitly configure the authentication information for the session. An application may
+     * call this method to explicitly authenticate a Session.
      *
-     * @param userId          the user identity to associate with the session
+     * Either the [Principal] must be non-`Null` or at least one [Entitlement] must be provided.
+     *
+     * @param principal       (optional) the authenticated [Principal] to associate with the session
+     * @param entitlements    (optional) the authenticated [Entitlement]s to associate with the
+     *                        session
      * @param exclusiveAgent  (optional) pass `True` iff the device and `User-Agent` that the login
      *                        is occurring from is used exclusively by the user being authenticated;
      *                        pass `False` for a public or shared device
@@ -365,30 +377,30 @@ interface Session
      *                        authentication scheme could specify a lower trust level by default
      *                        until additional steps (like a second factor authentication) are
      *                        performed
-     * @param roles           (optional) a set of roles that area associated with the user
      */
-    void authenticate(String      userId,
-                      Boolean     exclusiveAgent = False,
-                      TrustLevel  trustLevel     = Highest,
-                      Set<String> roles          = [],
+    void authenticate(Principal?    principal      = Null,
+                      Entitlement[] entitlements   = [],
+                      Boolean       exclusiveAgent = False,
+                      TrustLevel    trustLevel     = Highest,
                      );
 
     /**
      * This method is invoked when an authentication attempt is made, but fails; for example, when
      * an incorrect password is provided.
      *
-     * This is not a session event; like the [authenticate] method, this method allows an
-     * Authenticator and/or custom application logic to register an attempt to authenticate that
-     * did not succeed. While this is often an expected occurrence, the presence of repeated failed
-     * attempts by the same session, or failed attempts by different sessions against the same user
-     * id, can indicate the presence of a security threat.
+     * This is not a session event; like the [authenticate] method, this method allows built-in
+     * authentication logic and/or custom application logic to register an attempt to authenticate
+     * that did not succeed. While authentication failure is an expected occurrence, the presence of
+     * repeated failed attempts by the same session, or failed attempts by different sessions
+     * against the same [Principal] or other `Subject`, can indicate the presence of a security
+     * threat.
      *
-     * @param userId  the user identity that the authentication attempt specified, or `Null` if no
-     *                user identity was specified
+     * @param request  the request that included the authentication attempt
+     * @param attempt  the failed authentication [Attempt]
      *
      * @return True if the caller should abort additional attempts to authenticate at this point
      */
-    Boolean authenticationFailed(String? userId);
+    Boolean authenticationFailed(RequestIn request, Attempt attempt);
 
     /**
      * This method allows an application to explicitly de-authenticate the session. One obvious
@@ -402,7 +414,6 @@ interface Session
      * Additionally, destruction of the session implies the revocation of cookie consent.
      */
     void destroy();
-
 
     // ----- session events ------------------------------------------------------------------------
 
@@ -462,24 +473,27 @@ interface Session
      * This event is invoked when the session is authenticated. It allows the application to set up
      * information related to the user in the session.
      *
-     * Note: If a different `userId` was previously authenticated, then the [sessionDeauthenticated]
-     * event will be invoked before this event.
+     * Note: If different subject(s) were previously authenticated, then the
+     * [sessionDeauthenticated] event will be invoked before this event.
      *
      * When implementing this method, remember to invoke the `super` function.
      *
-     * @param user  the user that was is now authenticated
+     * @param principal     the Principal
+     * @param entitlements  any Entitlements
      */
-    void sessionAuthenticated(String user);
+    void sessionAuthenticated(Principal? principal, Entitlement[] entitlements);
 
     /**
-     * This event is invoked when a previously authenticated user is "logged out". It allows the
-     * application to clean up any information related to the user in the session.
+     * This event is invoked when a previously authenticated session is deauthenticated, i.e. a user
+     * is "logged out". It allows the application to clean up any information related to the user in
+     * the session, for example.
      *
      * When implementing this method, remember to invoke the `super` function.
      *
-     * @param user  the user that was previously authenticated but is being logged out
+     * @param principal     the Principal
+     * @param entitlements  any Entitlements
      */
-    void sessionDeauthenticated(String user);
+    void sessionDeauthenticated(Principal? principal, Entitlement[] entitlements);
 
     /**
      * This event is invoked when a TLS connection is re-negotiated. It is possible for non-TLS

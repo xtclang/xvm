@@ -1,30 +1,43 @@
 import Catalog.EndpointInfo;
 import Catalog.MethodInfo;
+import Catalog.Restriction;
 import Catalog.WebServiceInfo;
 
 import convert.Codec;
 import convert.Format;
-import convert.codecs.FormatCodec;
-import convert.codecs.Utf8Codec;
+
+import ecstasy.collections.CollectArray;
 
 import net.UriTemplate;
+
+import sec.Entitlement;
+import sec.Permission;
+import sec.Principal;
+import sec.Realm;
 
 import web.AcceptList;
 import web.Body;
 import web.BodyParam;
 import web.ErrorHandler;
+import web.Header;
 import web.HttpMethod;
 import web.HttpStatus;
 import web.MediaType;
 import web.ParameterBinding;
 import web.QueryParam;
 import web.Registry;
-import web.Response;
-import web.Session;
+import web.TrustLevel;
 import web.UriParam;
 
 import web.responses.SimpleResponse;
 
+import web.security.Authenticator;
+import web.security.Authenticator.Attempt;
+import web.security.Authenticator.AuthResponse;
+import web.security.Authenticator.Claim;
+import web.security.Authenticator.Status as AuthStatus;
+
+import web.sessions.Broker as SessionBroker;
 
 /**
  * The chain bundle represents a set of lazily created call chain collections.
@@ -36,24 +49,50 @@ service ChainBundle {
      * @param index  the index of this ChainBundle in the `BundlePool`
      */
     construct(Catalog catalog, Int index) {
-        this.catalog = catalog;
-        this.index   = index;
-
-        registry      = catalog.webApp.registry_;
-        services      = new WebService?[catalog.serviceCount];
-        chains        = new Handler?[catalog.endpointCount];
-        errorHandlers = new ErrorHandler?[catalog.serviceCount];
+        this.catalog       = catalog;
+        this.index         = index;
+        this.authenticator = catalog.webApp.authenticator.duplicate();
+        this.registry      = catalog.webApp.registry_;
+        this.services      = new WebService?[catalog.serviceCount];
+        this.chains        = new Handler?[catalog.endpointCount];
+        this.errorHandlers = new ErrorHandler?[catalog.serviceCount];
     }
+
+    /**
+     * A function that adds a permission check to an endpoint call. It returns `False` if the
+     * endpoint invocation is not restricted and allowed to proceed. Otherwise, it returns a
+     * (conditional) [ResponseOut] indicating a failure.
+     */
+    typedef function conditional ResponseOut(RequestIn) as RestrictionCheck;
+
+    /**
+     * A function that adds a parameter value to the passed-in tuple of values. Used to collect
+     * arguments for the endpoint method invocation.
+     */
+    typedef function Tuple(RequestIn, Tuple) as ParameterBinder;
 
     /**
      * The Catalog.
      */
-    public/private Catalog catalog;
+    protected/private Catalog catalog;
+
+    /**
+     * The application's [Authenticator]; each ChainBundle duplicates the original `Authenticator`
+     * to avoid contention on a single `Authenticator` in case it is implemented without concurrency
+     * and has high-latency (e.g. database) operations.
+     */
+    private Authenticator authenticator;
+
+    /**
+     * A lazily created duplicate of the app's session broker, created only if the authentication
+     * processing discovers that it requires a session.
+     */
+    protected @Lazy SessionBroker sessionBroker.calc() = catalog.webApp.sessionBroker.duplicate();
 
     /**
      * The index of this bundle in the BundlePool.
      */
-    public/private Int index;
+    public/private @Atomic Int index;
 
     /**
      * The Registry.
@@ -86,9 +125,11 @@ service ChainBundle {
 
         Int          wsid             = endpoint.wsid;
         HttpMethod   httpMethod       = endpoint.httpMethod;
+        WebService   webService       = ensureWebService(wsid);
         MethodInfo[] interceptorInfos = collectInterceptors(wsid, httpMethod);
         MethodInfo[] observerInfos    = collectObservers(wsid, httpMethod);
 
+        // bind the parameters
         Method<WebService> method  = endpoint.method;
         ParameterBinder[]  binders = new ParameterBinder[];
 
@@ -99,19 +140,19 @@ service ChainBundle {
                 name ?= param.bindName;
 
                 if (param.is(QueryParam)) {
-                    binders += (session, request, values) ->
+                    binders += (request, values) ->
                         extractQueryValue(request, name, param, values);
                     continue;
                 }
                 if (param.is(UriParam)) {
                     assert endpoint.template.vars.contains(name);
 
-                    binders += (session, request, values) ->
+                    binders += (request, values) ->
                         extractPathValue(request, name, param, values);
                     continue;
                 }
                 if (param.is(BodyParam)) {
-                    binders += (session, request, values) ->
+                    binders += (request, values) ->
                         extractBodyValue(request, name, param, values);
                     continue;
                 }
@@ -119,43 +160,42 @@ service ChainBundle {
             }
 
             if (endpoint.template.vars.contains(name)) {
-                binders += (session, request, values) ->
+                binders += (request, values) ->
                     extractPathValue(request, name, param, values);
                 continue;
             }
 
             if (param.ParamType.is(Type<Session>)) {
-                binders += (session, request, values) -> values.add(session);
+                binders += (request, values) -> values.add(request.session? : assert);
                 continue;
             }
 
             if (param.ParamType == RequestIn) {
-                binders += (session, request, values) -> values.add(request);
+                binders += (request, values) -> values.add(request);
                 continue;
             }
 
             if (param.ParamType defaultValue := param.defaultValue()) {
-                binders += (session, request, values) -> values.add(defaultValue);
+                binders += (request, values) -> values.add(defaultValue);
                 continue;
             }
 
             throw new IllegalState($"Unresolved parameter: {name.quoted()} for method {method}");
         }
 
-        typedef Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
-        typedef Method<WebService, <Session, RequestIn>, <>>                     as ObserverMethod;
+        typedef Method<WebService, <RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
+        typedef Method<WebService, <RequestIn>, <>>                     as ObserverMethod;
 
         // start with the innermost endpoint
-        WebService webService  = ensureWebService(wsid);
-        Function   boundMethod = method.bindTarget(webService);
-        Responder  respond     = generateResponder(endpoint);
+        Function  boundMethod = method.bindTarget(webService);
+        Responder respond     = generateResponder(endpoint);
 
         handle = binders.empty
-            ? ((session, request) -> respond(request, boundMethod()))
-            : ((session, request) -> {
+            ? ((request) -> respond(request, boundMethod()))
+            : ((request) -> {
                 Tuple values = Tuple:();
                 for (ParameterBinder bind : binders) {
-                    values = bind(session, request, values);
+                    values = bind(request, values);
                 }
                 return respond(request, boundMethod.invoke(values));
             });
@@ -170,7 +210,7 @@ service ChainBundle {
                 ErrorHandler? onError = ensureErrorHandler(wsid);
 
                 Handler callNext = handle;
-                handle = (session, request) -> webService.route(session, request, callNext, onError);
+                handle = (request) -> webService.route(request, callNext, onError);
 
                 webService = ensureWebService(wsidNext);
                 wsid       = wsidNext;
@@ -192,12 +232,12 @@ service ChainBundle {
             });
 
             Handler callNext = handle;
-            handle = (session, request) -> {
+            handle = (request) -> {
                 // observers are not handlers and call asynchronously
                 for (Observer observe : observers) {
-                    observe^(session, request);
+                    observe^(request);
                 }
-                return callNext(session, request);
+                return callNext(request);
             };
         }
 
@@ -205,18 +245,276 @@ service ChainBundle {
         ErrorHandler? onError = ensureErrorHandler(wsid);
 
         Handler callNext = handle;
-        handle = (session, request) -> {
-            assert session.is(SessionImpl);
-            session.requestBegin_(request);
+        handle = (request) -> {
+            SessionImpl? session = request.session.is(SessionImpl) ?: Null;
+            session?.requestBegin_(request);
             try {
-                return webService.route(session, request, callNext, onError);
+                return webService.route(request, callNext, onError);
             } finally {
-                session.requestEnd_(request);
+                session?.requestEnd_(request);
             }
         };
 
+        // but nothing can get through unless the permission is checked
+        if (RestrictionCheck restrictCheck ?= generateRestrictCheck(endpoint, webService)) {
+            callNext = handle;
+            handle   = (request) -> {
+                if (ResponseOut failure := restrictCheck(request)) {
+                    return failure;
+                }
+                return callNext(request);
+            };
+        }
+
         chains[endpoint.id] = handle.makeImmutable();
         return handle;
+    }
+
+    private RestrictionCheck? generateRestrictCheck(EndpointInfo endpoint, WebService webService) {
+        TrustLevel  requiredTrust      = endpoint.requiredTrust;
+        Restriction requiredPermission = endpoint.requiredPermission;
+
+        if (requiredTrust == None) {
+            // no permission check is required
+            return Null;
+        }
+
+        (function Permission(RequestIn))? resolvePermission = Null; // permission-based
+        (function Boolean())?             accessGranted     = Null; // custom app logic
+        if (requiredPermission != Null) {
+            if (requiredPermission.is(Permission)) {
+                resolvePermission = (_) -> requiredPermission;
+            } else if (requiredPermission.is(function Permission(RequestIn))) {
+                resolvePermission = requiredPermission;
+            } else {
+                // Method<WebService, <>, <Boolean>>
+                accessGranted = requiredPermission.bindTarget(webService).as((function Boolean()));
+                // TODO GG: bind necessary arguments
+            }
+        }
+
+        static CollectArray<Attempt> ToAttemptArray = new CollectArray<Attempt>();
+
+        // return a function that returns False if the request is trusted to proceed, or returns
+        // True and a ResponseOut if the request cannot proceed and the ResponseOut needs to be
+        // sent back to the user agent instead
+        return (request) -> {
+            // each endpoint has a required trust level, and the session (if there is one) knows its
+            // own trust level; if a session exists and its trust level is high enough, then use the
+            // session as a fast path to see if permission is allowed; failure to get permission
+            // just means we have to fall through to the slow path
+            Session?    session    = request.session;
+            Permission? permission = resolvePermission?(request) : Null;
+            FromTheTop: while (True) {
+                if (session != Null && requiredTrust <= session.trustLevel
+                        && checkSessionApproval(session, permission, accessGranted)) {
+                    return False;
+                }
+
+                // at this point, the endpoint's trust level requirement is higher than what the
+                // session has, or the authentication information cached on the session was not
+                // sufficient to approve the request, or there simply was no session, so we revert
+                // to the "slow path" and explicitly authenticate the request
+                Attempt[] attempts = authenticator.authenticate(request);
+                if (attempts.empty) {
+                    // this is unexpected; there should have been at least see a "NoData" Attempt;
+                    // assume that the absence of any Attempt is the same as a "NoData" Attempt
+                    return True, new SimpleResponse(Unauthorized);
+                }
+
+                // scan the attempts:
+                // 1) each Failed/Alert needs to be logged, and the presence of any of these needs
+                //    to result in a failure (even if other Attempts succeed)
+                // 2) if there's no better answer than NoSession/KnownNoSession, then ask the
+                //    Session Broker to create a session
+                // 3) NotActive Attempts are not considered attacks as long as there is a Success
+                //    with the same Principal (or for non-conferring Entitlements, there is any
+                //    Success); these are tolerated as non-errors because some clients will continue
+                //    to send expired credentials forever
+                // 4) At least one Success attempt is what we're aiming for; if there is more than
+                //    one, each Success Claims must: (i) be a Principal Claim that does not disagree
+                //    with any other claim, (ii) be an identity-conferring Entitlement Claim that
+                //    does not disagree with any other claim, or (iii) be an non-conferring
+                //    Entitlement Claim
+                Principal[]   principals   = [];
+                Entitlement[] entitlements = [];
+                Attempt[]     alerts       = [];
+                Attempt[]     failures     = [];
+                Attempt[]     inactives    = [];
+                AuthStatus    bestStatus   = NoData;
+                for (Attempt attempt : attempts) {
+                    switch (attempt.status) {
+                        case Success:
+                            // is it a principal or an entitlement?
+                            val claim = attempt.claim;
+                            if (claim.is(Principal)) {
+                                principals := principals.addIfAbsent(claim);
+                            } else {
+                                assert claim.is(Entitlement);
+                                entitlements := entitlements.addIfAbsent(claim);
+                            }
+                            break;
+
+                        case NotActive:
+                            // defer logging for these (only happens if there are other failures)
+                            inactives += attempt;
+                            break;
+
+                        case Failed:
+                            failedAuth(request, session, attempt);
+                            failures += attempt;
+                            break;
+
+                        case Alert:
+                            failedAuth(request, session, attempt);
+                            alerts += attempt;
+                            break;
+
+                        case InProgress:
+                        case KnownNoSession:
+                        case KnownNoData:
+                        case NoSession:
+                        case NoData:
+                            bestStatus = bestStatus.notLessThan(attempt.status);
+                            break;
+
+                        default:
+                            assert;
+                    }
+                }
+
+                // if there were any alerts or failures, then also log any inactive claims
+                if (!alerts.empty || !failures.empty) {
+                    for (Attempt attempt : inactives) {
+                        failedAuth(request, session, attempt);
+                    }
+
+                    // bail out immediately and stop trying to auth if there were any alerts
+                    if (!alerts.empty) {
+                        HttpStatus status = Forbidden;
+                        for (Attempt attempt : alerts) {
+                            if (ResponseOut response := attempt.response.is(ResponseOut)) {
+                                return True, response;
+                            }
+                            status := attempt.response.is(HttpStatus);
+                        }
+                        return True, new SimpleResponse(status);
+                    }
+
+                    // otherwise emit an appropriate challenge
+                    return True, buildChallenge(failures);
+                }
+
+                // check for Success
+                if (!principals.empty || !entitlements.empty) {
+                    for (Entitlement entitlement : entitlements) {
+                        Int pid = entitlement.principalId;
+                        if (entitlement.conferIdentity && !principals.any(p -> p.principalId == pid)) {
+                            if (Principal principal := authenticator.realm.readPrincipal(pid)) {
+                                principals := principals.addIfAbsent(principal);
+                            } else {
+                                // TODO log an internal error for the Realm failing to read the Principal?
+                            }
+                        }
+                    }
+                    if (principals.size > 1) {
+                        // contradicting Principals
+                        return True, new SimpleResponse(BadRequest);
+                    }
+
+                    Principal? principal = principals.empty ? Null : principals[0];
+                    if (session != Null) {
+                        session.authenticate(principal, entitlements);
+                    }
+                    // use the raw auth data we just collected
+                    if (checkApproval(principal, entitlements, permission, accessGranted)) {
+                        return False;
+                    } else {
+                        return True, new SimpleResponse(Forbidden);
+                    }
+                }
+
+                if (inactives.empty) {
+                    if (bestStatus > NoData) {
+                        // handle the "needs session" statuses
+                        if (bestStatus == NoSession || bestStatus == KnownNoSession) {
+                            if ((session, ResponseOut? response) := sessionBroker.requireSession(request)) {
+                                if (response != Null) {
+                                    return True, response;
+                                }
+                                assert session != Null;
+                                continue FromTheTop;
+                            } else {
+                                // the Broker could not create a Session; return an error response
+                                return True, new SimpleResponse(NotImplemented);
+                            }
+                        }
+                        attempts = attempts.filter(a -> a.status == bestStatus, ToAttemptArray);
+                    } else {
+                        attempts = attempts;
+                    }
+                } else {
+                    attempts = inactives;
+                }
+                return True, buildChallenge(attempts);
+            }
+        };
+
+        private ResponseOut buildChallenge(Attempt[] attempts) {
+            HttpStatus status = Unauthorized;
+            for (Attempt attempt : attempts) {
+                if (ResponseOut response := attempt.response.is(ResponseOut)) {
+                    return response;
+                }
+                status := attempt.response.is(HttpStatus);
+            }
+            SimpleResponse response = new SimpleResponse(status);
+            for (Attempt attempt : attempts) {
+                if (String header := attempt.response.is(String)) {
+                    response.header.add(Header.WWWAuthenticate, header);
+                } else if (String[] headers := attempt.response.is(String[])) {
+                    for (String header : headers) {
+                        response.header.add(Header.WWWAuthenticate, header);
+                    }
+                }
+            }
+            return response;
+        }
+
+        /**
+         * Log a failed authentication.
+         *
+         * @param request  the [RequestIn] that triggered the authentication
+         * @param session  the [Session] related to the request, if any
+         * @param attempt  the failed [Authenticator] [Attempt]
+         */
+        private void failedAuth(RequestIn request, Session? session, Attempt attempt) {
+            session?.authenticationFailed(request, attempt);
+            // TODO log a failure against the request/claim combination (request is used for the IP address)
+        }
+
+        /**
+         * Determine if the specified [Permission]/check is allowed using information from the
+         * session.
+         */
+        private Boolean checkSessionApproval(Session session,
+                Permission? permission, (function Boolean())? accessGranted) {
+            return checkApproval(session.principal, session.entitlements, permission, accessGranted);
+        }
+
+        /**
+         * Determine if the specified [Permission]/check is allowed.
+         */
+        private Boolean checkApproval(Principal? principal, Entitlement[] entitlements,
+                Permission? permission, (function Boolean())? accessGranted) {
+            if (permission != Null) {
+                Realm realm = authenticator.realm;
+                return principal?.permitted(realm, permission);
+                return entitlements.any(e -> e.permitted(realm, permission));
+            }
+            return accessGranted?();
+            return True;
+        }
     }
 
     /**
@@ -268,7 +566,7 @@ service ChainBundle {
      * Create an error handler for the specified WebService.
      */
      ErrorHandler? ensureErrorHandler(Int wsid) {
-        typedef Method<WebService, <Session, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
+        typedef Method<WebService, <RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
                 as ErrorMethod;
 
         if (ErrorHandler onError ?= errorHandlers[wsid]) {

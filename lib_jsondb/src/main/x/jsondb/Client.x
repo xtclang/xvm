@@ -1289,6 +1289,9 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
+        Connection clone() = this.Client.catalog.createConnection(dbUser).as(Connection);
+
+        @Override
         void close(Exception? e = Null) {
             super(e);
             outer.conn = Null;

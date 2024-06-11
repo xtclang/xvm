@@ -56,6 +56,7 @@ dependencies {
     xtcModule(libs.xdk.jsondb)
     xtcModule(libs.xdk.net)
     xtcModule(libs.xdk.oodb)
+    xtcModule(libs.xdk.sec)
     xtcModule(libs.xdk.web)
     xtcModule(libs.xdk.webauth)
     xtcModule(libs.xdk.webcli)

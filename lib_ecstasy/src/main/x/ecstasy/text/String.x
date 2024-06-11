@@ -310,17 +310,21 @@ const String
      * @param entrySeparator  the character that separates each entry from the next entry in the
      *                        the sequence of "map entries" represented by the String
      * @param whitespace      a function that identifies white space to strip off of keys and values
+     * @param valueQuote      a function that identifies an opening balanced quote of a quoted value
      *
-     * @return an array of Strings
+     * @return a map from `String` keys to `String` values
      */
-    Map<String!, String!> splitMap(Char                   kvSeparator    ='=',
-                                   Char                   entrySeparator =',',
-                                   function Boolean(Char) whitespace     = ch -> ch.isWhitespace()) {
+    Map<String!, String!> splitMap(
+            Char                   kvSeparator    = '=',
+            Char                   entrySeparator = ',',
+            function Boolean(Char) whitespace     = ch -> ch.isWhitespace(),
+            function Boolean(Char) valueQuote     = _ -> False,
+            ) {
         if (size == 0) {
             return [];
         }
 
-        return new StringMap(this, kvSeparator, entrySeparator, whitespace);
+        return new StringMap(this, kvSeparator, entrySeparator, whitespace, valueQuote);
     }
 
     /**
@@ -329,10 +333,13 @@ const String
      * sequential, e.g. a call to `get(k)` in the Map will return the value from the first entry
      * with that key.
      */
-    protected static const StringMap(String                 data,
-                                     Char                   kvSep,
-                                     Char                   entrySep,
-                                     function Boolean(Char) whitespace)
+    protected static const StringMap(
+            String                 data,
+            Char                   kvSep,
+            Char                   entrySep,
+            function Boolean(Char) whitespace,
+            function Boolean(Char) valueQuote,
+            )
             implements Map<String, String>
             extends maps.KeyBasedMap<String, String> {
 
@@ -343,15 +350,52 @@ const String
         @Lazy Int size.calc() = keyIterator().count();
 
         @Override
-        Boolean empty.get() = False;
+        @Lazy Boolean empty.get() = keyIterator().next();
 
         @Override
         Boolean contains(String key) = find(key);
 
         @Override
         conditional String get(String key) {
-            if ((Int keyStart, Int sepOffset, Int valueEnd) := find(key)) {
-                return True, valueEnd > sepOffset+1 ? data[sepOffset >..< valueEnd].trim(whitespace) : "";
+            if (Int delimOffset := find(key)) {
+                Int length = data.size;
+                if (delimOffset >= length || data[delimOffset] == entrySep) {
+                    return True, "";
+                }
+
+                // skip leading white space in the value
+                Int valStart = delimOffset + 1;
+                while (valStart < length && whitespace(data[valStart])) {
+                    ++valStart;
+                }
+
+                // it's possible that the entire value was whitespace
+                if (valStart >= length || data[valStart] == entrySep) {
+                    return True, "";
+                }
+
+                // check for a quoted value
+                if (valueQuote(data[valStart])) {
+                    Char quote   = data[valStart++];
+                    Int  valStop = valStart;
+                    while (valStop < length && data[valStop] != quote) {
+                        ++valStop;
+                    }
+                    return True, data[valStart..<valStop];
+                }
+
+                // otherwise, just scan until the entry separator is encountered
+                Int valStop = valStart;
+                while (valStop < length && data[valStop] != entrySep) {
+                    ++valStop;
+                }
+
+                // discard trailing whitespace
+                --valStop;  // move backwards from the delim to the last character in the value
+                while (whitespace(data[valStop])) {
+                    --valStop;
+                }
+                return True, data[valStart..valStop];
             }
             return False;
         }
@@ -367,90 +411,127 @@ const String
                 if (offset >= length) {
                     return False;
                 }
-
-                // find the end of the entry
-                Int endEntry = length;
-                endEntry := data.indexOf(entrySep, offset);
-
-                // the delimiter between key and value is optional (i.e. value assumed
-                // to be "")
-                Int endKey = endEntry;
-                if (endKey := data.indexOf(kvSep, offset), endKey > endEntry) {
-                    endKey = endEntry;
+                Int keyStart = offset;
+                Int keyEnd   = offset;
+                while (offset < length) {
+                    Char ch = data[offset++];
+                    if (ch == kvSep) {
+                        offset = skipValue(offset);
+                        break;
+                    } else if (ch == entrySep) {
+                        break;
+                    } else {
+                        ++keyEnd;
+                    }
                 }
-
-                String key = data[offset ..< endKey].trim(whitespace);
-                offset = endEntry + 1;
-
-                return True, key;
+                return True, data[keyStart..<keyEnd].trim(whitespace);
             }
         };
 
         /**
          * Internal helper to find a "key in a map" that is actually in the underlying String.
+         *
+         * @param key  the key to find
+         *
+         * @return True iff the key was found
+         * @return (conditional) the offset of the delimiter following the key (which may be OOB)
          */
-        protected conditional (Int keyStart, Int sepOffset, Int valueEnd) find(String key) {
+        protected conditional Int find(String key) {
             String data      = data;
             Int    length    = data.size;
             Int    offset    = 0;
             Int    keyLength = key.size;
-            Int    keyOffset = 0;
-            EachEntry: while (offset + keyLength <= length) {
-                keyOffset = offset;
-
+            NextEntry: while (offset + keyLength <= length) {
+                // skip leading whitespace
                 while (whitespace(data[offset])) {
                     if (++offset >= length) {
                         return False;
                     }
                 }
 
+                // first, verify that the key would even fit
+                if (offset + keyLength > length) {
+                    return False;
+                }
+
+                // match the key, character by character
                 Boolean match = True;
                 for (Char keyChar : key) {
-                    if (offset >= length) {
-                        return False;
-                    }
-
                     Char mapChar = data[offset++];
                     if (mapChar != keyChar) {
-                        if (mapChar == entrySep) {
-                            continue EachEntry;
-                        } else {
-                            match = False;
-                            break;
-                        }
+                        match = False;
+                        --offset;
+                        break;
                     }
                 }
 
-                while (offset < length && whitespace(data[offset])) {
+                // finish whatever remains of the key and the white space after it, up until the kv
+                // separator or the entry separator is encountered (or there are no more chars)
+                while (offset < length) {
+                    Char ch = data[offset];
+                    if (ch == entrySep) {
+                        if (match) {
+                            // key is followed immediately by the entry separator, so value is blank
+                            return True, offset;
+                        } else {
+                            // wasn't a match: no value to skip, so try again to find the key
+                            ++offset;
+                            continue NextEntry;
+                        }
+                    }
+
+                    if (ch == kvSep) {
+                        if (match) {
+                            // key is followed immediately by the key separator, so value is next
+                            return True, offset;
+                        } else {
+                            // wasn't a match: skip the value, then try again to find the key
+                            ++offset;
+                            break;
+                        }
+                    }
+
+                    if (match && !whitespace(ch)) {
+                        match = False;
+                    }
                     ++offset;
                 }
 
                 if (offset >= length) {
-                    // key is at the very end, with no delimiter
-                    return match, keyOffset, length, length;
+                    // we've passed the end of the data, so there is no following value, but we
+                    // might have found the key; either way, the search is done
+                    return match, offset;
                 }
 
-                Int  sepOffset = offset;
-                Char sepChar   = data[offset++];
-                if (match && sepChar == entrySep) {
-                    // key is followed immediately by the entry separator, so value is blank
-                    return True, keyOffset, sepOffset, sepOffset;
-                }
-
-                // find the separator offset
-                while (offset < length && data[offset] != entrySep) {
-                    ++offset;
-                }
-
-                if (match && sepChar == kvSep) {
-                    // we did find the key, and now we have found the end of the value
-                    return True, keyOffset, sepOffset, offset;
-                }
-
-                ++offset;
+            offset = skipValue(offset);
             }
 
             return False;
+        }
+
+        /**
+         * @param the offset of the first character of a value in the current k/v pair, i.e. one
+         *        character past the `kvSep`
+         *
+         * @return the offset of the first character of a key in the next k/v pair (or the first
+         *         index past the end of the string)
+         */
+        protected Int skipValue(Int offset) {
+            String data      = data;
+            Int    length    = data.size;
+            while (offset < length && whitespace(data[offset])) {
+                ++offset;
+            }
+
+            // skip past the quoted value (if the value is quoted)
+            if (offset < length && valueQuote(data[offset])) {
+                Char quote = data[offset++];
+                while (offset < length && data[offset++] != quote) {}
+            }
+
+            // skip everything else until one character past the entry separator
+            while (offset < length && data[offset++] != entrySep) {}
+            return offset;
         }
     }
 

@@ -15,23 +15,40 @@ import responses.SimpleResponse;
 service TokenAuthenticator
         implements Authenticator {
 
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct the `TokenAuthenticator` for the specified [Realm].
      */
     construct(Realm realm) {
-        this.realm   = realm;
+        this.realm = realm;
     }
+
+    @Override
+    construct(TokenAuthenticator that) {
+        this.realm = that.realm;
+    }
+
+
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The Realm that contains the user/token information.
      */
-    public/private Realm realm;
+    @Override
+    public/protected Realm realm;
 
 
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    AuthStatus|ResponseOut authenticate(RequestIn request, Session session) {
+    Attempt[] findAndRevokeSecrets(RequestIn request) {
+        // TODO
+        return [];
+    }
+
+    @Override
+    Attempt[] authenticate(RequestIn request) {
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
@@ -44,7 +61,7 @@ service TokenAuthenticator
                 try {
                     auth = Utf8Codec.decode(Base64Format.Instance.decode(auth.substring(7)));
                 } catch (Exception e) {
-                    return new SimpleResponse(BadRequest);
+                    return [new Attempt(Null, Failed, BadRequest)];
                 }
 
                 String user;
@@ -59,14 +76,15 @@ service TokenAuthenticator
                     token = auth;
                 }
 
-                if (Set<String> roles := realm.authenticate(user, token)) {
-                    session.authenticate(user, roles=roles);
-                    return Allowed;
-                } else {
-                    return Forbidden;
-                }
+// TODO
+//                if (Set<String> roles := realm.authenticate(user, token)) {
+//                    session?.authenticate(user, roles=roles);
+//                    return Allowed;
+//                } else {
+//                    return Forbidden;
+//                }
             }
         }
-        return Unknown;
+        return [new Attempt(Null, NoData)];
     }
 }

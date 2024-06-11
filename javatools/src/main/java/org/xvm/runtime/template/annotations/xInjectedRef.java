@@ -17,6 +17,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.text.xString;
@@ -107,8 +108,8 @@ public class xInjectedRef
             hValue = frame.getInjected(sResource, typeResource, hOpts);
             if (hValue == null)
                 {
-                return frame.raiseException("Unknown injectable resource \"" +
-                        typeResource.getValueString() + ' ' + sResource + '"');
+                return frame.raiseException(
+                        xException.unknownInjectable(frame, typeResource, sResource));
                 }
 
             if (Op.isDeferred(hValue))

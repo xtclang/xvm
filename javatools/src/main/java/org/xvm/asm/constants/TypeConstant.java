@@ -4035,7 +4035,7 @@ public abstract class TypeConstant
         if (propBase == null && propContrib.isOverride())
             {
             log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_NO_SPEC,
-                    typeContrib.getValueString(), propContrib.getName());
+                    typeContrib.removeAccess().getValueString(), propContrib.getName());
             }
 
         // the property is stored both by its absolute (fully qualified) ID and its nested
