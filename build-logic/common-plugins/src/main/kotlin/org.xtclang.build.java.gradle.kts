@@ -105,7 +105,7 @@ tasks.withType<JavaCompile>().configureEach {
         isDeprecation = lint
         isWarnings = lint
         encoding = UTF_8.toString()
-        //isFork = false
+        isFork = true
     }
 }
 

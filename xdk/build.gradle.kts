@@ -372,12 +372,13 @@ val deploy by tasks.registering {
 }
 
 jreleaser {
-    dryrun = true
+    //dryrun = true
     gitRootSearch = true
 
     // TODO: Command line argument: --select-current-platform, or --select-platform osx-aarch_64
     val releaseTag = "v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
-    val snapshotTag = "snapshot/$releaseTag" // TODO: "early-access" for all snapshots
+    //val snapshotTag = "snapshot/$releaseTag" // TODO: "early-access" for all snapshots
+    val snapshotTag = "early-access"
     val tag = if (isSnapshot()) snapshotTag else releaseTag
 
     environment {
@@ -399,7 +400,7 @@ jreleaser {
         snapshot {
             // XTC uses semver versioning. The Git tags that correspond to a version are the default for
             // releases (i.e. "vx.y.z"), but snapshot tags are prefixed with snapshot/
-            label = "snapshot/v{{projectVersionMajor}}.{{projectVersionMinor}}.{{projectVersionPatch}}"
+            label = tag
             fullChangelog = false
         }
         stereotype = Stereotype.NONE
@@ -501,6 +502,7 @@ jreleaser {
         }
     }
 }
+
 
 /*
      // E.g. v0.4.5 of the XDK, placed on GitHub as a Release, possibly.
