@@ -1,8 +1,6 @@
 package org.xvm.runtime;
 
 
-import org.xvm.util.concurrent.ConcurrentLinkedBlockingQueue;
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +11,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.util.concurrent.ConcurrentLinkedBlockingQueue;
 
 
 /**
@@ -78,6 +80,21 @@ public class Runtime
             {
             return new HashSet<>(f_containers.keySet());
             }
+        }
+
+    /**
+     * @return a container that uses the specified ConstantPool; null if not found
+     */
+    public Container findContainer(ConstantPool pool)
+        {
+        for (Container container : f_containers.keySet())
+            {
+            if (container.getConstantPool() == pool)
+                {
+                return container;
+                }
+            }
+        return null;
         }
 
     /**

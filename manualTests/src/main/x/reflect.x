@@ -58,6 +58,7 @@ module TestReflection {
 
     void testMaskReveal() {
         import ecstasy.fs.Directory;
+        import ecstasy.TypeMismatch;
 
         console.print("\n** testMaskReveal");
 
@@ -75,7 +76,7 @@ module TestReflection {
         try {
             Stringable str = tmpDir.as(Stringable);
             assert;
-        } catch (Exception e) {
+        } catch (TypeMismatch e) {
             console.print($"expected - {e.text}");
         }
 
@@ -91,7 +92,7 @@ module TestReflection {
         try {
             p = str.as(Point);
             assert;
-        } catch (Exception e) {
+        } catch (TypeMismatch e) {
             console.print($"expected - {e.text}");
         }
 

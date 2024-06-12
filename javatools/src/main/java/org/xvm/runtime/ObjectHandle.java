@@ -629,9 +629,8 @@ public abstract class ObjectHandle
                 if (!idModule.isCoreModule())
                     {
                     // even though it's a const, all calls need to be proxied
-                    ProxyComposition clzProxy = new ProxyComposition(
-                            (ClassComposition) getComposition(), typeAs);
-                    return Proxy.makeHandle(clzProxy, owner.getServiceContext(), this);
+                    ProxyComposition clzProxy = new ProxyComposition(getComposition(), typeAs);
+                    return Proxy.makeHandle(clzProxy, owner.getServiceContext(), this, true);
                     }
                 }
 

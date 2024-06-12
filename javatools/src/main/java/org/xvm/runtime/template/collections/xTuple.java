@@ -409,7 +409,7 @@ public class xTuple
             }
 
         TypeComposition clzThis = hThis.getComposition();
-        if (!hValue.getType().isA(clzThis.getType().getParamType((int) lIndex)))
+        if (!hValue.getUnsafeType().isA(clzThis.getType().getParamType((int) lIndex)))
             {
             return frame.raiseException(
                     xException.typeMismatch(frame, hValue.getType().getValueString()));

@@ -366,7 +366,7 @@ public class xClass
                 }
 
             Container       container = frame.f_context.f_container;
-            TypeComposition clzMap    = container.resolveClass(xRTType.ensureListMapType());
+            TypeComposition clzMap    = container.resolveClass(xRTType.ensureListMapType(container));
             ConstantPool    pool      = frame.poolContext();
             int iResult;
             if (cParams == 0)

@@ -21,7 +21,6 @@ import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MapConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PackageConstant;
@@ -31,7 +30,6 @@ import org.xvm.asm.constants.PseudoConstant;
 import org.xvm.asm.constants.RecursiveTypeConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.RelationalTypeConstant;
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -42,11 +40,13 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
@@ -68,8 +68,6 @@ import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
-
-import org.xvm.util.ListMap;
 
 
 /**
@@ -198,17 +196,17 @@ public class xRTType
         {
         // a proxy for a non-shareable TypeHandle is a "foreign" handle
         return frame.assignValue(Op.A_STACK,
-            makeHandle(ctxTarget.f_container, ((TypeHandle) hTarget).getUnsafeDataType(), false));
+                makeForeignHandle(((TypeHandle) hTarget).getUnsafeDataType()));
         }
 
     @Override
     public int getPropertyValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
         {
-        TypeHandle hThis = (TypeHandle) hTarget;
+        TypeHandle hType = (TypeHandle) hTarget;
 
         if (idProp instanceof FormalTypeChildConstant)
             {
-            TypeConstant typeTarget = hThis.getDataType();
+            TypeConstant typeTarget = hType.getDataType();
             TypeConstant typeValue  =
                 "OuterType".equals(idProp.getName()) && typeTarget.isVirtualChild()
                     ? typeTarget.getParentType()
@@ -222,7 +220,7 @@ public class xRTType
 
         if ("DataType".equals(idProp.getName()))
             {
-            TypeConstant typeResult = hThis.getUnsafeDataType();
+            TypeConstant typeResult = hType.getUnsafeDataType();
             return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
             }
         return super.getPropertyValue(frame, hTarget, idProp, iReturn);
@@ -530,11 +528,23 @@ public class xRTType
         {
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return Utils.constructListMap(frame, frame.f_context.f_container.resolveClass(ensureListMapType()),
-                    xString.ensureEmptyArray(), ensureEmptyTypeArray(frame.f_context.f_container), iReturn);
+            return getForeignChildTypes(frame, hType, iReturn);
             }
 
+        Container        container  = frame.f_context.f_container;
+        TypeComposition  clzListMap = container.resolveClass(ensureListMapType(container));
+        ObjectHandle[][] aah        = collectChildTypes(frame, hType);
+        StringHandle[]   ahName     = (StringHandle[]) aah[0];
+        TypeHandle[]     ahType     = (TypeHandle[])   aah[1];
+
+        return Utils.constructListMap(frame, clzListMap,
+                xArray.makeStringArrayHandle(ahName),
+                xArray.createImmutableArray(ensureTypeArrayComposition(container), ahType),
+                iReturn);
+        }
+
+    private ObjectHandle[][] collectChildTypes(Frame frame, TypeHandle hType)
+        {
         // bridge from one module to another if necessary
         TypeConstant typeTarget = hType.getDataType();
         if (typeTarget.isSingleUnderlyingClass(false))
@@ -550,18 +560,64 @@ public class xRTType
                 }
             }
 
-        TypeInfo                          infoTarget  = typeTarget.ensureTypeInfo();
-        ConstantPool                      poolCtx     = frame.poolContext();
-        Map<String, ChildInfo>            mapInfos    = infoTarget.getChildInfosByName();
-        Map<StringConstant, TypeConstant> mapResult   = new ListMap<>();
+        TypeInfo                infoTarget = typeTarget.ensureTypeInfo();
+        ConstantPool            poolCtx    = frame.poolContext();
+        Container               container  = frame.f_context.f_container;
+        Map<String, ChildInfo>  mapInfos   = infoTarget.getChildInfosByName();
+        int                     cInfos     = mapInfos.size();
+        StringHandle[]          ahName     = new StringHandle[cInfos];
+        TypeHandle[]            ahType     = new TypeHandle[cInfos];
+        int                     ix         = 0;
         for (String sName : mapInfos.keySet())
             {
-            TypeConstant typeChild = infoTarget.calculateChildType(poolCtx, sName);
-            mapResult.put(poolCtx.ensureStringConstant(sName), typeChild.getType());
+            ahName[ix  ] = xString.makeHandle(sName);
+            ahType[ix++] = infoTarget.calculateChildType(poolCtx, sName).ensureTypeHandle(container);
             }
 
-        MapConstant constResult = poolCtx.ensureMapConstant(ensureListMapType(), mapResult);
-        return frame.assignDeferredValue(iReturn, frame.getConstHandle(constResult));
+        return new ObjectHandle[][]{ahName, ahType};
+        }
+
+    private int getForeignChildTypes(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    Container        container  = frame.f_context.f_container;
+                    TypeHandle       hType      = typeForeign.ensureTypeHandle(container);
+                    ObjectHandle[][] aah        = collectChildTypes(frame, hType);
+                    TypeComposition  clzListMap = container.resolveClass(ensureListMapType(container));
+                    StringHandle[]   ahName     = (StringHandle[]) aah[0];
+                    TypeHandle[]     ahType     = (TypeHandle[])   aah[1];
+
+                    for (int i = 0, c = ahType.length; i < c; i++)
+                        {
+                        ahType[i] = xRTType.makeHandle(null, ahType[i].getDataType(), false);
+                        }
+
+                    return Utils.constructListMap(frame, clzListMap,
+                            xArray.makeStringArrayHandle(ahName),
+                            xArray.createImmutableArray(ensureTypeArrayComposition(container), ahType),
+                            0);
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignChildTypes";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty map
+        return Utils.constructListMap(frame, container.resolveClass(ensureListMapType(container)),
+                xString.ensureEmptyArray(), ensureEmptyTypeArray(container), iReturn);
         }
 
     /**
@@ -571,8 +627,7 @@ public class xRTType
         {
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(frame.f_context.f_container));
+            return getForeignConstants(frame, hType, iReturn);
             }
 
         TypeConstant                        typeTarget = hType.getDataType();
@@ -591,6 +646,51 @@ public class xRTType
         return makePropertyArray(frame, typeTarget, listInfo, iReturn);
         }
 
+    private int getForeignConstants(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    switch (getPropertyConstants(frame, hType, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return createProxyArray(frame, (ArrayHandle) frame.popStack(),
+                                    xRTFunction.INSTANCE.getCanonicalClass(), 0);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
+                                    xRTFunction.INSTANCE.getCanonicalClass(), 0));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignConstants";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty array
+        return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(container));
+        }
+
     /**
      * Implements property: constructors.get()
      */
@@ -598,8 +698,7 @@ public class xRTType
         {
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray(frame.f_context.f_container));
+            return getForeignConstructors(frame, hType, iReturn);
             }
 
         // the actual construction process uses a "construct" function as a structural initializer
@@ -696,6 +795,51 @@ public class xRTType
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahFunctions));
         }
 
+    private int getForeignConstructors(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    switch (getPropertyConstructors(frame, hType, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return createProxyArray(frame, (ArrayHandle) frame.popStack(),
+                                    xRTFunction.INSTANCE.getCanonicalClass(), 0);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
+                                    xRTFunction.INSTANCE.getCanonicalClass(), 0));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignConstructors";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty array
+        return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray(container));
+        }
+
     /**
      * Implements property: explicitlyImmutable.get()
      */
@@ -722,8 +866,7 @@ public class xRTType
         Container container = frame.f_context.f_container;
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray(container));
+            return getForeignFunctions(frame, hType, iReturn);
             }
 
         TypeConstant                    typeTarget  = hType.getDataType();
@@ -754,6 +897,51 @@ public class xRTType
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahFunctions));
         }
 
+    private int getForeignFunctions(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    switch (getPropertyFunctions(frame, hType, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return createProxyArray(frame, (ArrayHandle) frame.popStack(),
+                                    xRTFunction.INSTANCE.getCanonicalClass(), 0);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
+                                    xRTFunction.INSTANCE.getCanonicalClass(), 0));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignFunctions";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty array
+        return frame.assignValue(iReturn, xRTFunction.ensureEmptyArray(container));
+        }
+
     /**
      * Implements property: methods.get()
      */
@@ -761,8 +949,7 @@ public class xRTType
         {
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTMethod.ensureEmptyArray(frame.f_context.f_container));
+            return getForeignMethods(frame, hType, iReturn);
             }
 
         TypeConstant            typeTarget  = hType.getDataType();
@@ -791,6 +978,51 @@ public class xRTType
         return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahMethods));
         }
 
+    private int getForeignMethods(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    switch (getPropertyMethods(frame, hType, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return createProxyArray(frame, (ArrayHandle) frame.popStack(),
+                                    xRTMethod.INSTANCE.getCanonicalClass(), 0);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
+                                    xRTMethod.INSTANCE.getCanonicalClass(), 0));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignMethods";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty array
+        return frame.assignValue(iReturn, xRTMethod.ensureEmptyArray(container));
+        }
+
     /**
      * Implements property: properties.get()
      */
@@ -798,8 +1030,7 @@ public class xRTType
         {
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(frame.f_context.f_container));
+            return getForeignProperties(frame, hType, iReturn);
             }
 
         TypeConstant            typeTarget = hType.getDataType();
@@ -817,6 +1048,51 @@ public class xRTType
             }
 
         return makePropertyArray(frame, typeTarget, listProps, iReturn);
+        }
+
+    private int getForeignProperties(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    switch (getPropertyProperties(frame, hType, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return createProxyArray(frame, (ArrayHandle) frame.popStack(),
+                                    xRTProperty.INSTANCE.getCanonicalClass(), 0);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
+                                    xRTProperty.INSTANCE.getCanonicalClass(), 0));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignProperties";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty array
+        return frame.assignValue(iReturn, xRTProperty.ensureEmptyArray(container));
         }
 
     /**
@@ -863,8 +1139,7 @@ public class xRTType
         Container container = frame.f_context.f_container;
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(iReturn, ensureEmptyTypeArray(container));
+            return getForeignUnderlyingTypes(frame, hType, iReturn);
             }
 
         TypeConstant   typeTarget  = hType.getDataType();
@@ -891,6 +1166,51 @@ public class xRTType
         ObjectHandle hArray = xArray.createImmutableArray(
                                 ensureTypeArrayComposition(container), ahTypes);
         return frame.assignValue(iReturn, hArray);
+        }
+
+    private int getForeignUnderlyingTypes(Frame frame, TypeHandle hType, int iReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    switch (getForeignUnderlyingTypes(frame, hType, Op.A_STACK))
+                        {
+                        case Op.R_NEXT:
+                            return createProxyArray(frame, (ArrayHandle) frame.popStack(),
+                                    xRTProperty.INSTANCE.getCanonicalClass(), 0);
+
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
+                                    xRTProperty.INSTANCE.getCanonicalClass(), 0));
+                            return Op.R_CALL;
+
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
+                        default:
+                            throw new IllegalStateException();
+                        }
+                    }
+
+                public String toString()
+                    {
+                    return "getForeignUnderlyingTypes";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOp1Request(frame, opCall, iReturn);
+            }
+
+        // cannot find the corresponding container; just return an empty array
+        return frame.assignValue(iReturn, ensureEmptyTypeArray(container));
         }
 
 
@@ -949,8 +1269,7 @@ public class xRTType
         {
         if (hType.isForeign())
             {
-            // TODO GG: ask the type's container to answer
-            return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+            return invokeForeignAnnotated(frame, hType, aiReturn);
             }
 
         TypeConstant typeThis = hType.getDataType();
@@ -986,6 +1305,34 @@ public class xRTType
                     : resolveInvokeAnnotatedArgs(frame, (ClassHandle) hClass, ahArg, aiReturn);
             }
 
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
+
+    private int invokeForeignAnnotated(Frame frame, TypeHandle hType, int[] aiReturn)
+        {
+        TypeConstant typeForeign      = hType.getUnsafeDataType();
+        Container    container        = frame.f_context.f_container;
+        Container    containerForeign = container.f_runtime.findContainer(typeForeign.getConstantPool());
+        if (containerForeign != null)
+            {
+            Op opCall = new Op()
+                {
+                public int process(Frame frame, int iPC)
+                    {
+                    TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
+
+                    return invokeAnnotated(frame, hType, new int[] {0, 1});
+                    }
+                public String toString()
+                    {
+                    return "invokeForeignAnnotated";
+                    }
+                };
+
+            return containerForeign.ensureServiceContext().sendOpNRequest(frame, opCall, aiReturn);
+            }
+
+        // cannot find the corresponding container
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
@@ -1546,6 +1893,39 @@ public class xRTType
             }
         }
 
+    /**
+     * Convert an array or reflective objects into an array of proxies.
+     */
+    private int createProxyArray(Frame frame, ArrayHandle hArray, TypeComposition clzElement, int iReturn)
+        {
+        TypeConstant    typeElement = clzElement.getType();
+        TypeComposition clzArray    = frame.f_context.f_container.resolveClass(
+                frame.poolContext().ensureArrayType(typeElement));
+        ProxyComposition clzProxy  = new ProxyComposition(clzElement, typeElement);
+
+        int            cValues = (int) hArray.m_hDelegate.m_cSize;
+        ObjectHandle[] ahValue = new ObjectHandle[cValues];
+        for (int i = 0; i < cValues; i++)
+            {
+            switch (hArray.getTemplate().extractArrayValue(frame, hArray, i, Op.A_STACK))
+                {
+                case Op.R_NEXT:
+                    ObjectHandle hElement = frame.popStack();
+                    ahValue[i] = hElement instanceof TypeHandle hType
+                            ? xRTType.makeForeignHandle(hType.getUnsafeType())
+                            : Proxy.makeHandle(clzProxy, frame.f_context, hElement, false);
+                    break;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahValue));
+        }
+
 
     // ----- Composition and handle caching --------------------------------------------------------
 
@@ -1574,12 +1954,12 @@ public class xRTType
     /**
      * @return the TypeConstant for {@code immutable ListMap<String, Type>}
      */
-    public static TypeConstant ensureListMapType()
+    public static TypeConstant ensureListMapType(Container container)
         {
         TypeConstant type = LISTMAP_TYPE;
         if (type == null)
             {
-            ConstantPool pool = INSTANCE.pool();
+            ConstantPool pool = container.getConstantPool();
 
             type = pool.ensureEcstasyTypeConstant("collections.ListMap");
             type = pool.ensureParameterizedTypeConstant(type, pool.typeString(), pool.typeType());
@@ -1620,6 +2000,14 @@ public class xRTType
         hIter.setField(null, PROP_CALCULATE,  xNullable.NULL);
 
         return hType;
+        }
+
+    /**
+     * @return a "foreign" {@link TypeHandle} that serves as a proxy handle for the specified type.
+     */
+    public static TypeHandle makeForeignHandle(TypeConstant type)
+        {
+        return makeHandle(null, type, false);
         }
 
     /**
