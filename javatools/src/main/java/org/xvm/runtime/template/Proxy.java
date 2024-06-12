@@ -89,6 +89,20 @@ public class Proxy
         }
 
     @Override
+    public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                             ObjectHandle hArg, int iReturn)
+        {
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
+
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().invokeNative1(frame, method, hTarget, hArg, iReturn)
+            : makeAsyncNativeHandle(hTarget, method).
+                call1(frame, hProxy, new ObjectHandle[]{hArg}, iReturn);
+        }
+
+    @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn)
         {

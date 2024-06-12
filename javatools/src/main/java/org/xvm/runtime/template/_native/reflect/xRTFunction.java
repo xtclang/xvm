@@ -312,7 +312,7 @@ public class xRTFunction
         for (int i = 0; i < cArgs; i++)
             {
             TypeConstant typeParam = hFunc.getParamType(i);
-            TypeConstant typeArg   = ahArg[i].getType();
+            TypeConstant typeArg   = ahArg[i].getUnsafeType();
             if (!typeArg.isA(typeParam))
                 {
                 return frame.raiseException(
