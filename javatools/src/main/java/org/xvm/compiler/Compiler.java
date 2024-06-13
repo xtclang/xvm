@@ -1417,6 +1417,10 @@ public class Compiler
      */
     public static final String PROP_SELF_ASSIGNED                 = "COMPILER-201";
     /**
+     * Read-only property {0} cannot be initialized.
+     */
+    public static final String PROP_READONLY_INIT                 = "COMPILER-202";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

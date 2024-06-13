@@ -1056,7 +1056,8 @@ public class StatementBlock
 
                     // first attempt: ask the component to resolve the name
                     // REVIEW - shouldn't all of this resolution info be present on the TypeInfo? i.e. shouldn't we rely on the TypeInfo instead of the Component?
-                    SimpleCollector collector = new SimpleCollector(errs);
+                    SimpleCollector collector  = new SimpleCollector(errs);
+                    Constant        constFound = null;
                     if (component.resolveName(sName, access, collector) == ResolutionResult.RESOLVED)
                         {
                         Constant constant = collector.getResolvedConstant();
@@ -1066,6 +1067,7 @@ public class StatementBlock
                             case Property:
                             case Method:
                             case MultiMethod:
+                                constFound = constant;
                                 break;
 
                             default:
@@ -1131,6 +1133,21 @@ public class StatementBlock
                             return new TargetInfo(sName, idResult, fHasThis, info.getType(), cSteps);
                             }
 
+                        if (constFound != null)
+                            {
+                            // the name exists, but is not accessible
+                            if (constFound instanceof PropertyConstant)
+                                {
+                                f_stmt.log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                    sName, info.getType().getValueString());
+                                }
+                            else
+                                {
+                                f_stmt.log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                    sName, info.getType().getValueString());
+                                }
+                            return null;
+                            }
                         fHasThis &= !info.isStatic();
                         typeThis  = null;
                         ++cSteps;

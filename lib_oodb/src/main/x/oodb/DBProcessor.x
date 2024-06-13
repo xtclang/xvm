@@ -201,7 +201,7 @@ interface DBProcessor<Message extends immutable Const>
      * Unlike most members on most of the DBObject interfaces, this property may be implemented
      * (i.e. overridden) by the database developer to customize the auto-retry behavior.
      */
-    @RO Int maxAttempts = 3;
+    @RO Int maxAttempts.get() = 3;
 
     /**
      * This method is invoked by the database engine when the message has failed to be processed,

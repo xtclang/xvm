@@ -437,6 +437,14 @@ public class PropertyDeclarationStatement
 
             if (prop.hasInitialValue())
                 {
+                if (prop.isExplicitReadOnly() ||
+                        (prop.getContainingClass().getFormat() == Format.INTERFACE &&
+                        !prop.isStatic()))
+                    {
+                    log(errs, Severity.ERROR, Compiler.PROP_READONLY_INIT, prop.getName());
+                    return;
+                    }
+
                 if (isInMethod() && !isStatic())
                     {
                     // the assignment will occur as part of the execution of the method body

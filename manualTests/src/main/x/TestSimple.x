@@ -1,17 +1,12 @@
 module TestSimple {
-    package json import json.xtclang.org;
-
-    import json.*;
-    import json.ObjectOutputStream.*;
-
     @Inject Console console;
 
     void run() {
-        // dump(@CloseCap @PointerAwareElementOutput ArrayOutputStream<ElementOutputStream>);
-        dump(ListMap<String, Int>);
     }
 
-    void dump(Type t) {
-        console.print(t.dump());
+    interface Test {
+        @RO Int size;
+
+        @RO Boolean empty1 = size == 0; // this used to produce a confusing error message
     }
 }
