@@ -4465,6 +4465,14 @@ public abstract class TypeConstant
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
                 if (methodBase == null || methodBase.isCapped())
                     {
+                    if (methodBase != null && methodBase.containsBody(idContrib))
+                        {
+                        // this has already been processed and capped, which can occur when a method
+                        // on a natural contribution comes after a rebase or a mixin-into has
+                        // already provided that same method; skip the dup
+                        continue;
+                        }
+
                     Object nidBase = null;
                     for (Object nid : listMatches)
                         {
