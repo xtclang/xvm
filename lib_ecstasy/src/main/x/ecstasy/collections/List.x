@@ -1219,7 +1219,7 @@ interface List<Element>
 
         construct(Range<Int> indexes) {
             assert indexes.effectiveLowerBound >= 0;
-            assert indexes.effectiveUpperBound < size;
+            assert indexes.effectiveUpperBound < outer.size;
             this.indexes = indexes;
         }
 
