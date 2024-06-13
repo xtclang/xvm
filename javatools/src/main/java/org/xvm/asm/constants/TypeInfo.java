@@ -2506,6 +2506,11 @@ public class TypeInfo
             int i = 0;
             for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet())
                 {
+                MethodInfo method = entry.getValue();
+                if (fRuntime && method.isCapped())
+                    {
+                    continue;
+                    }
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
@@ -2513,7 +2518,6 @@ public class TypeInfo
                     {
                     sb.append("(v) ");
                     }
-                MethodInfo method = entry.getValue();
                 if (fRuntime)
                     {
                     MethodBody[] chain = method.ensureOptimizedMethodChain(this);
