@@ -39,37 +39,26 @@ service SystemService {
     /**
      * Handle a system service call. This is the "endpoint" for the service.
      *
-     * @param uriString  the URI that identifies the system service endpoint being routed to
-     * @param info       information about the request
+     * @param uri   the URI string that identifies the system service endpoint being routed to
+     * @param info  information about the request
      *
      * @return one of: an `HttpStatus` error code; a complete `Response`; or a new path to use in
-     *         place of the passed `uriString`
+     *         place of the passed `uri`
      */
     HttpStatus|ResponseOut|String handle(Dispatcher  dispatcher,
-                                         String      uriString,
+                                         String      uri,
                                          RequestInfo info,
                                         ) {
-        String[] parts = uriString.split('/');
-        switch (String command = parts.empty ? "" : parts[0]) {
-        case "session":     // e.g. "/xverify/session/12345" comes in as "session/12345"
-            if (parts.size < 3) {
-                return NotFound;
+        if (uri.startsWith("session/")) {
+            // e.g. "/xverify/session/123/456" comes in as "session/123/456"
+            if (Int slash    := uri.indexOf('/', 8),
+                Int redirect := Int.parse(uri[8 ..< slash]),
+                Int version  := Int.parse(uri.substring(slash+1))) {
+                return validateSessionCookies(dispatcher, uri, info, redirect, version);
             }
-
-            Int64 redirect;
-            Int64 version;
-            try {
-                redirect = new Int64(parts[1]);
-                version  = new Int64(parts[2]);
-            } catch (Exception e) {
-                return NotFound;
-            }
-
-            return validateSessionCookies(dispatcher, uriString, info, redirect, version);
-
-        default:
-            return NotFound;
         }
+
+        return NotFound;
     }
 
     /**

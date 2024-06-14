@@ -142,8 +142,8 @@ service ChainBundle {
             throw new IllegalState($"Unresolved parameter: {name.quoted()} for method {method}");
         }
 
-        typedef Method<WebService, <Session, RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
-        typedef Method<WebService, <Session, RequestIn>, <>>                     as ObserverMethod;
+        typedef Method<WebService, <Session?, RequestIn, Handler>, <ResponseOut>> as InterceptorMethod;
+        typedef Method<WebService, <Session?, RequestIn>, <>>                     as ObserverMethod;
 
         // start with the innermost endpoint
         WebService webService  = ensureWebService(wsid);
@@ -268,7 +268,7 @@ service ChainBundle {
      * Create an error handler for the specified WebService.
      */
      ErrorHandler? ensureErrorHandler(Int wsid) {
-        typedef Method<WebService, <Session, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
+        typedef Method<WebService, <Session?, RequestIn, Exception|String|HttpStatus>, <ResponseOut>>
                 as ErrorMethod;
 
         if (ErrorHandler onError ?= errorHandlers[wsid]) {
