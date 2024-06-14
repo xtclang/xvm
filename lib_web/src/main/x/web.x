@@ -83,6 +83,44 @@ module web.xtclang.org {
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
+     * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing
+     * class thereof, up to the level of the web module itself -- as requiring Transport Level
+     * Security (TLS), sometimes also referred to using the obsolete term "SSL".
+     *
+     * A method (any `Endpoint`, such as `@Get` or `@Post`) that handles a web service call will
+     * require TLS iff:
+     *
+     * * the web service method is annotated with `HttpsRequired`, or
+     * * the web service method is not annotated with `HttpsOptional`, and the parent class requires
+     *   TLS.
+     *
+     * A parent class will require TLS iff:
+     *
+     * * the class is annotated with `HttpsRequired`, or
+     * * the class is not annotated with `HttpsOptional`, and there is a containing class, and the
+     *   containing class requires TLS, or
+     * * the class is a module (and thus has no containing class), and the host for the module has
+     *   been configured to require TLS by default.
+     *
+     * The purpose of this design is to allow the use of annotations for specifying the requirement
+     * for a session, but only requiring those annotations within the class hierarchy at the
+     * few points where a change occurs from "requiring a session" to "not requiring a session", or
+     * vice versa.
+     */
+    mixin SessionRequired(Boolean autoRedirect = False)
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    /**
+     * This annotation, `@SessionOptional`, is used to mark a web service call -- or any containing
+     * class thereof, up to the level of the web module itself -- as **not** requiring TODO
+     *
+     * For more information, see the detailed description of the [@SessionRequired](SessionRequired)
+     * annotation.
+     */
+    mixin SessionOptional
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
+    /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as requiring authentication.
      *
@@ -163,7 +201,7 @@ module web.xtclang.org {
      * for TLS, but only requiring those annotations within the class hierarchy at the
      * few points where a change occurs from "requiring TLS" to "not requiring TLS", or vice versa.
      */
-    mixin HttpsRequired(Boolean autoRedirect=False)
+    mixin HttpsRequired(Boolean autoRedirect = False)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**

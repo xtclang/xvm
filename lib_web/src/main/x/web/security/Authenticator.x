@@ -45,6 +45,14 @@ interface Authenticator
     Boolean requiresSession(RequestIn request) = False;
 
     /**
+     *
+     * * [Allowed] indicates that a client request contains sufficient authentication information
+     * * [Unknown] indicates that a client request does not contain any authentication information required by this Auth
+     * * [Forbidden] indicates a failure to authenticate
+     */
+    enum AuthStatus {Allowed, Unknown, Forbidden}
+
+    /**
      * Authenticate the client (or user) using the provided request, session, and endpoint.
      * Authentication requires both an established session and a TLS connection, and is triggered by
      * an endpoint that is annotated by [LoginRequired] that specifies a [TrustLevel] higher than
@@ -59,8 +67,8 @@ interface Authenticator
      *
      * @return [Allowed] to indicate the client has been authenticated; [Unknown] to indicate that
      *         this Authenticator does not know how to process the specified request;
-     *         [Forbidden] to indicate that the response has bee recognized, but client is not being
-     *         permitted to authenticate for any reason; or an HTTP [ResponseOut] to deliver to the
+     *         [Forbidden] to indicate that the request has been recognized by the [Authenticator],
+     *         but that the client was not authenticated; or an HTTP [ResponseOut] to deliver to the
      *         client to indicate the next step in the process of authentication
      */
     AuthStatus|ResponseOut authenticate(Session? session, RequestIn request);
@@ -69,16 +77,20 @@ interface Authenticator
      * Check each received plain text request to make sure that it does not have any secret tokens
      * or password material in it. An implementation of `Authenticator` that normally uses secret
      * material in an HTTPS request should always check for that material being present in any plain
-     * text request, and invalidate all future use of that secret material since it must be assumed
-     * to have been leaked to malicious actors if it is ever transmitted in plain text form.
+     * text request, and if any is found, the authenticator should invalidate all future use of that
+     * secret material since it must be assumed to have been leaked to malicious actors if it is
+     * ever transmitted in plain text form.
+     *
+     * In addition to invalidating the secret material, the authenticator _may_ also need to respond
+     * to the caller with an error or with an HTTP response that modifies or deletes cookie
+     * information, for example. It may do so by returning an HttpStatus or
      *
      * @param a request that was received without TLS enabled
      *
      * @return `True` iff the request contains secret material
-     * @return (conditional) an HTTP status or response to immediately send to the client, because
-     *         the request transmitted secret material in plain text across a network
+     * @return (conditional) an optional HTTP response to send to the client, if the client needs to
+     *         be directed to erase specific cookies, etc.
      */
-    conditional HttpStatus|ResponseOut checkNonTlsRequest(RequestIn request) = False;
+    conditional ResponseOut? containsSecrets(RequestIn request) = False;
 
-    enum AuthStatus {Allowed, Unknown, Forbidden}
 }

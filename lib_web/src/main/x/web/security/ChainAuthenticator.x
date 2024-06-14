@@ -32,28 +32,15 @@ const ChainAuthenticator(List<Authenticator> chain)
     }
 
     @Override
-    conditional HttpStatus|ResponseOut checkNonTlsRequest(RequestIn request) {
-        (HttpStatus|ResponseOut)? result = Null;
+    conditional ResponseOut? containsSecrets(RequestIn request) {
+        Boolean      leaked   = False;
+        ResponseOut? response = Null;
         for (Authenticator auth : chain) {
-            if (HttpStatus|ResponseOut oneResult := auth.checkNonTlsRequest(request)) {
-                if (result == Null) {
-                    result = oneResult;
-                } else if (oneResult.is(ResponseOut) || result.is(ResponseOut)) {
-                    // one or both are an HTTP response
-                    if (!result.is(ResponseOut)) {
-                        // take the one HTTP response
-                        result = oneResult;
-                    } else if (oneResult.is(ResponseOut)) {
-                        // TODO merge? what should be done here?
-                    }
-                } else if (oneResult.code > result.code) {
-                    // two result codes; use the higher one (errors are in the 4xx and 5xx range)
-                    result = oneResult;
-                }
+            if (ResponseOut? curResponse := auth.containsSecrets(request)) {
+                leaked = True;
+                response ?:= curResponse;   // unfortunately, at most one response can be sent
             }
         }
-        return result == Null
-                ? False
-                : (True, result);
+        return leaked, response;
     }
 }
