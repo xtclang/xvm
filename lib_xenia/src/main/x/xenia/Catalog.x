@@ -117,14 +117,18 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 : new UriTemplate(templateString);
 
             // check if the template matches UriParam's in the method
-            Int requiredParamCount = 0;
+            Int     requiredParamCount   = 0;
+            Boolean requiredSessionParam = False;
             for (Parameter param : method.params) {
                 // well-known types are Session and RequestIn (see ChainBundle.ensureCallChain)
-                if (param.ParamType.is(Type<Session>) ||
-                    param.ParamType == RequestIn      ||
+                if (param.ParamType == RequestIn      ||
                     param.is(QueryParam)              ||
                     param.is(BodyParam)               ||
                     param.defaultValue()) {
+                    continue;
+                }
+                if (param.ParamType.is(Type<Session>)) {
+                    requiredSessionParam = True;
                     continue;
                 }
 
@@ -136,7 +140,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                     throw new IllegalState($|The template for method "{method}" is missing \
                                             |a variable name "{name}": \
                                             |"{templateString}"
-                                        );
+                                          );
                 }
                 requiredParamCount++;
             }
@@ -145,6 +149,13 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             this.requiresTls = serviceTls
                         ? !method.is(HttpsOptional)
                         :  method.is(HttpsRequired);
+
+            this.requiresSession = !method.is(SessionOptional);
+            if (requiredSessionParam && !requiresSession) {
+                throw new IllegalState($|Invalid "@SessionOptional" annotation for endpoint \
+                                        |"{method}"; parameters require a session
+                                      );
+            }
 
             this.requiredTrust = switch (method.is(_)) {
                 case LoginRequired: TrustLevel.maxOf(serviceTrust, method.security);
@@ -212,6 +223,11 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
          * Indicates if this endpoint requires the HTTPS.
          */
         Boolean requiresTls;
+
+        /**
+         * Indicates if this endpoint requires an http session.
+         */
+        Boolean requiresSession;
 
         /**
          *  [TrustLevel] of security that is required by the this endpoint.
