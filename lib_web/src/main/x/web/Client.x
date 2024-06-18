@@ -61,7 +61,7 @@ interface Client {
     }
 
     /**
-     * The registry for codecs an media types.
+     * The registry for codecs and media types.
      */
     Registry registry;
 

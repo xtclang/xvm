@@ -149,7 +149,7 @@ service Registry
         for (String extension : mediaType.extensions) {
             assert mediaTypeByExtension.putIfAbsent(extension, mediaType) as
                 $|Extension {extension.quoted()} has already been registered by
-                 |{mediaTypeByExtension.getOrNull(extension)}"
+                 |{mediaTypeByExtension.getOrNull(extension)}
                  ;
         }
     }
