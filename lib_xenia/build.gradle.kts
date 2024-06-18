@@ -8,6 +8,7 @@ dependencies {
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.collections)
+    xtcModule(libs.xdk.convert)
     xtcModule(libs.xdk.crypto)
     xtcModule(libs.xdk.json)
     xtcModule(libs.xdk.net)

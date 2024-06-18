@@ -4,6 +4,7 @@
 module xenia.xtclang.org {
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
+    package convert     import convert.xtclang.org;
     package crypto      import crypto.xtclang.org;
     package net         import net.xtclang.org;
     package json        import json.xtclang.org;

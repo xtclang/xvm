@@ -1,10 +1,9 @@
 import crypto.Decryptor;
 
 import web.HttpStatus;
+import web.Registry;
 
 import web.http.HostInfo;
-
-import web.codecs.Registry;
 
 import web.security.Authenticator;
 

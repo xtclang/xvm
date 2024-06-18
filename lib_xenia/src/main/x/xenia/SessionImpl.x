@@ -1,13 +1,14 @@
 import collections.CircularArray;
 import collections.IdentitySet;
 
+import convert.formats.Base64Format;
+
 import net.IPAddress;
 
 import web.CookieConsent;
 import web.Header;
 import web.HttpStatus;
 import web.TrustLevel;
-import web.codecs.Base64Format;
 
 import HttpServer.RequestInfo;
 import SessionCookie.CookieId;

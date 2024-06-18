@@ -50,6 +50,7 @@ dependencies {
     xtcModule(libs.xdk.aggregate)
     xtcModule(libs.xdk.cli)
     xtcModule(libs.xdk.collections)
+    xtcModule(libs.xdk.convert)
     xtcModule(libs.xdk.crypto)
     xtcModule(libs.xdk.json)
     xtcModule(libs.xdk.jsondb)

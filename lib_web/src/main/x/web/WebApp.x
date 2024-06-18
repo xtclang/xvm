@@ -2,8 +2,6 @@ import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.Argument;
 import ecstasy.reflect.ClassTemplate.Composition;
 
-import codecs.Registry;
-
 import security.Authenticator;
 import security.NeverAuthenticator;
 

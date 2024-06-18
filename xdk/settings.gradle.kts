@@ -21,6 +21,7 @@ listOf(
     "lib_ecstasy",
     "lib_aggregate",
     "lib_collections",
+    "lib_convert",
     "lib_cli",
     "lib_crypto",
     "lib_net",
