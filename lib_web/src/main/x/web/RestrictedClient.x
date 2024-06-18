@@ -1,5 +1,3 @@
-import codecs.Registry;
-
 /**
  * A [Client] implementation that restricts the `Client` functionality for the underlying client
  * based on the specified constraints.

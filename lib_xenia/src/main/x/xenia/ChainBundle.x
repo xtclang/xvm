@@ -2,6 +2,13 @@ import Catalog.EndpointInfo;
 import Catalog.MethodInfo;
 import Catalog.WebServiceInfo;
 
+import convert.Codec;
+import convert.Format;
+import convert.codecs.FormatCodec;
+import convert.codecs.Utf8Codec;
+
+import net.UriTemplate;
+
 import web.AcceptList;
 import web.Body;
 import web.BodyParam;
@@ -11,17 +18,10 @@ import web.HttpStatus;
 import web.MediaType;
 import web.ParameterBinding;
 import web.QueryParam;
+import web.Registry;
 import web.Response;
 import web.Session;
 import web.UriParam;
-
-import web.codecs.Codec;
-import web.codecs.Format;
-import web.codecs.FormatCodec;
-import web.codecs.Registry;
-import web.codecs.Utf8Codec;
-
-import net.UriTemplate;
 
 import web.responses.SimpleResponse;
 

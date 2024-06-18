@@ -1,8 +1,9 @@
 import crypto.Decryptor;
 import crypto.NullDecryptor;
 
+import convert.formats.Base64Format;
+
 import web.HttpStatus;
-import web.codecs.Base64Format;
 
 import HttpServer.RequestInfo;
 import SessionCookie.CookieId;

@@ -1,5 +1,4 @@
-import codecs.Codec;
-import codecs.Registry;
+import convert.Codec;
 
 /**
  * Represents a simple outgoing HTTP [Request] that can be configured and sent by a [Client].

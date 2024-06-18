@@ -1,6 +1,7 @@
 /**
  * Conversion support module.
  */
-module convert
-    {
-    }
+module convert.xtclang.org {
+    package json import json.xtclang.org;
+    package net  import net.xtclang.org;
+}

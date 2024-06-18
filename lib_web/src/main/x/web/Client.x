@@ -1,5 +1,3 @@
-import codecs.Registry;
-
 import requests.SimpleRequest;
 
 
@@ -63,7 +61,7 @@ interface Client {
     }
 
     /**
-     * The registry for codecs.
+     * The registry for codecs an media types.
      */
     Registry registry;
 

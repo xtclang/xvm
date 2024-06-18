@@ -3,10 +3,9 @@ import net.Uri;
 import crypto.Algorithms;
 import crypto.Signer;
 
-import codecs.Base64Format;
-import codecs.Codec;
-import codecs.Registry;
-import codecs.Utf8Codec;
+import convert.Codec;
+import convert.codecs.Utf8Codec;
+import convert.formats.Base64Format;
 
 import ecstasy.collections.CaseInsensitive;
 

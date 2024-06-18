@@ -1,19 +1,27 @@
 import json.Doc;
 import json.Schema;
 
+import convert.Codec;
+import convert.Format;
+
+import convert.codecs.FormatCodec;
+import convert.codecs.Utf8Codec;
+import convert.formats.JsonFormat;
 
 /**
  * A registry for codecs, formats, media types etc.
  */
-service Registry {
+service Registry
+    extends convert.Registry {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Default constructor.
      */
-    construct() {} finally {
+    construct() {
+        construct convert.Registry();
+    } finally {
         DefaultCodecs.entries.forEach(e -> registerCodec(e.key, e.value));
-        DefaultFormats.forEach(registerFormat);
         MediaType.Predefined.forEach(registerMediaType);
     }
 
@@ -21,66 +29,17 @@ service Registry {
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The internal registry-by-name of various singleton-like resources.
-     */
-    private Map<String, Shareable> resources = new HashMap();
-
-    /**
-     * The internal registry-by-name of the `Format` objects.
-     */
-    private Map<String, Codec> codecsByName = new HashMap();
-
-    /**
      * The internal registry-by-type (given a `MediaType`) of the `Codec` objects.
      */
-    private Map<MediaType, Map<Type, Codec?>> codecsByMedia = new HashMap();
-
-    /**
-     * The internal registry-by-name of the named `Format` objects.
-     */
-    private Map<String, Format> formatsByName = new HashMap();
-
-    /**
-     * The internal registry-by-type of derivative `Format` objects from a given named format.
-     */
-    private Map<String, Map<Type, Format?>> derivedFormatsByType = new HashMap();
-
-    /**
-     * The internal registry-by-type of `Format` objects.
-     */
-    private Map<Type, Format> formatsByType = new HashMap();
-
-    /**
-     * The internal registry-by-from-and-to-type of the `Converter` objects.
-     */
-    // private Map<Converter.Key, Converter> converters = new HashMap();
+    protected Map<MediaType, Map<Type, Codec?>> codecsByMedia = new HashMap();
 
     /**
      * The internal registry-by-file extension of the `MediaType` objects.
      */
-    private Map<String, MediaType> mediaTypeByExtension = new HashMap();
+    protected Map<String, MediaType> mediaTypeByExtension = new HashMap();
 
 
     // ----- well-known resources ------------------------------------------------------------------
-
-    /**
-     * The JSON Schema held by this registry.
-     */
-    Schema jsonSchema {
-        @Override
-        Schema get() {
-            if (val schema := resources.get("jsonSchema")) {
-                return schema.as(Schema);
-            }
-
-            return Schema.DEFAULT;
-        }
-
-        @Override
-        void set(Schema schema) {
-            resources.put("jsonSchema", schema);
-        }
-    }
 
     /**
      * These codecs are known to the system and automatically registered.
@@ -98,61 +57,11 @@ service Registry {
         FormURL    = Utf8Codec,
         ];
 
-    /**
-     * These formats are known to the system and automatically registered.
-     */
-    static Format[] DefaultFormats =
-        [
-        new BasicFormat<Path>(),
-        new BasicFormat<Uri>(),
-        new BasicFormat<IPAddress>(),
-
-        // REVIEW CP - should we support Time using the http.parseImfFixDate() & http.formatImfFixDate() helpers instead?
-        new BasicFormat<Time>(),
-        new BasicFormat<Date>(),
-        new BasicFormat<TimeOfDay>(),
-        new BasicFormat<Duration>(),
-
-        JsonFormat.Default,
-        BooleanFormat,
-
-        new BasicFormat<IntLiteral>(),
-        new BasicFormat<FPLiteral>(),
-
-        new BasicFormat< Int   >(),
-        new BasicFormat< Int8  >(),
-        new BasicFormat< Int16 >(),
-        new BasicFormat< Int32 >(),
-        new BasicFormat< Int64 >(),
-        new BasicFormat< Int128>(),
-        new BasicFormat< IntN  >(),
-        new BasicFormat<UInt   >(),
-        new BasicFormat<UInt8  >(),
-        new BasicFormat<UInt16 >(),
-        new BasicFormat<UInt32 >(),
-        new BasicFormat<UInt64 >(),
-        new BasicFormat<UInt128>(),
-        new BasicFormat<UIntN  >(),
-
-        new BasicFormat<Dec   >(),
-        new BasicFormat<Dec32 >(),
-        new BasicFormat<Dec64 >(),
-        new BasicFormat<Dec128>(),
-        new BasicFormat<DecN  >(),
-
-        new BasicFormat<BFloat16>(),
-        new BasicFormat<Float16 >(),
-        new BasicFormat<Float32 >(),
-        new BasicFormat<Float64 >(),
-        new BasicFormat<Float128>(),
-        new BasicFormat<FloatN  >(),
-        ];
-
 
     // ----- Codec support -------------------------------------------------------------------------
 
     /**
-     * Register the passed `Codec` for the specified `MediaType`. The `Codec` is registered by its
+     * Register the passed [Codec] for the specified [MediaType]. The `Codec` is registered by its
      * `Value` type, which must be unique, and also by its name iff the same name is not already
      * registered.
      *
@@ -163,34 +72,11 @@ service Registry {
         Map<Type, Codec?> codecsByType = codecsByMedia.computeIfAbsent(mediaType, () -> new HashMap());
         assert codecsByType.putIfAbsent(codec.Value, codec)
             || codecsByType.replace(codec.Value, Null, codec);
-        codecsByName.putIfAbsent(codec.name, codec);
+        registerCodec(codec);
     }
 
     /**
-     * Look up a `Codec` by a name.
-     *
-     * @param name  the name of the `Codec`
-     * @param type  (optional) the `Value` type for the `Codec`
-     *
-     * @return `True` iff there exists a `Codec` for the specified name
-     * @return (conditional) the `Codec` for the specified name
-     */
-    <Value> conditional Codec<Value> findCodec(String name, Type<Value>? type=Null) {
-        if (Codec codec := codecsByName.get(name)) {
-            if (type == Null) {
-                return True, codec.as(Codec<Value>);
-            }
-
-            if (codec.Value.isA(type)) {
-                return True, codec.as(Codec<Value>);
-            }
-        }
-
-        return False;
-    }
-
-    /**
-     * Look up a `Codec` first by the `MediaType` that describes the raw data, and then by the
+     * Look up a [Codec] first by the `MediaType` that describes the raw data, and then by the
      * `Type` that the `Codec` can encode and decode.
      *
      * @param mediaType  the `MediaType` that the `Codec` will operate on
@@ -236,7 +122,7 @@ service Registry {
     }
 
     /**
-     * Look up a `Codec` by the `Type` that it can encode and decode, and throw an exception if
+     * Look up a [Codec] by the `Type` that it can encode and decode, and throw an exception if
      * the codec is not found.
      *
      * @param mediaType  the `MediaType` that the `Codec` will operate on
@@ -252,82 +138,10 @@ service Registry {
     }
 
 
-    // ----- Format support ------------------------------------------------------------------------
-
-    /**
-     * Register the passed `Format`. The `Format` is registered by its `Value` type, which must be
-     * unique, and by its name iff the same name is not already registered.
-     *
-     * @param format  the `Format` to register
-     */
-    void registerFormat(Format format) {
-        formatsByName.putIfAbsent(format.name,  format);
-        formatsByType.putIfAbsent(format.Value, format);
-
-        if (!Null.is(format.Value)) {
-            registerFormat(new NullableFormat<format.Value>(format));
-        }
-    }
-
-    /**
-     * Look up a `Format` by a name.
-     *
-     * @param name  the name of the `Format`
-     * @param type  (optional) the `Value` type for the `Format`
-     *
-     * @return `True` iff there exists a `Format` for the specified name
-     * @return (conditional) the `Format` for the specified name
-     */
-    <Value> conditional Format<Value> findFormat(String name, Type<Value>? type=Null) {
-        if (Format format := formatsByName.get(name)) {
-            if (type == Null || format.Value == type) {
-                return True, format.as(Format<Value>);
-            }
-
-            Map<Type, Format?> derivedFormats =
-                    derivedFormatsByType.computeIfAbsent(name, () -> new HashMap());
-            if (Format? derivedFormat := derivedFormats.get(type)) {
-                return derivedFormat == Null
-                        ? False
-                        : (True, derivedFormat.as(Format<Value>));
-            }
-
-            if (Format<Value> newFormat := format.forType(type, this)) {
-                derivedFormats.put(type, newFormat);
-                formatsByType.putIfAbsent(type, format);
-                return True, newFormat;
-            }
-            derivedFormats.put(type, Null);
-        }
-
-        return False;
-    }
-
-    /**
-     * Look up a `Format` by its `Value` type.
-     *
-     * @param type  the `Value` type for the `Format`
-     *
-     * @return `True` iff there exists a `Format` for the specified type
-     * @return (conditional) the `Format` for the specified type
-     */
-    <Value> conditional Format<Value> findFormatByType(Type<Value> type) {
-        if (Format format := formatsByType.get(type)) {
-            return True, format.as(Format<Value>);
-        }
-        return False;
-    }
-
-
-    // ----- Converter support ---------------------------------------------------------------------
-
-    // TODO CP
-
-
     // ----- MediaType support ---------------------------------------------------------------------
 
     /**
-     * Register the passed `MediaType`.
+     * Register the passed [MediaType].
      *
      * @param mediaType  the `MediaType` to register
      */
@@ -341,9 +155,9 @@ service Registry {
     }
 
     /**
-     * Look up a `MediaType` for the file name extension.
+     * Look up a [MediaType] for the file name extension.
      *
-     * @param fileNAme  the file name
+     * @param fileName  the file name
      *
      * @return `True` iff there exists a `MediaType` for the specified file name
      * @return (conditional) the `MediaType` for the file name
@@ -356,11 +170,11 @@ service Registry {
     }
 
     /**
-     * Find a `MediaType` that best fits the specified data type.
+     * Find a [MediaType] that best fits the specified data type.
      */
     conditional MediaType inferMediaType(Object content) {
         switch (content.is(_)) {
-        case json.Doc, Number:
+        case Doc, Number:
             return True, Json;
 
         case File:
@@ -382,22 +196,5 @@ service Registry {
             }
         }
         return False;
-    }
-
-
-    // ----- resources support ---------------------------------------------------------------------
-
-    /**
-     * TODO
-     */
-    void registerResource(String name, Shareable resource) {
-        resources.put(name, resource);
-    }
-
-    /**
-     * TODO
-     */
-    conditional Shareable getResource(String name) {
-        return resources.get(name);
     }
 }

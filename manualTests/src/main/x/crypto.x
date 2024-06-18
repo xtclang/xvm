@@ -1,8 +1,8 @@
 module TestCrypto {
     @Inject Console console;
 
+    package convert import convert.xtclang.org;
     package crypto import crypto.xtclang.org;
-    package web import web.xtclang.org;
 
     import crypto.*;
 
@@ -64,7 +64,7 @@ module TestCrypto {
         if (False) {
             Byte[] bytes = manager.extractKey(store, password, pairName);
             console.print("-----BEGIN PRIVATE KEY-----");
-            String sKey = web.codecs.Base64Format.Instance.encode(bytes);
+            String sKey = convert.formats.Base64Format.Instance.encode(bytes);
             Int    size = sKey.size;
             for (Int start = 0; start < size; ) {
                 Int end = size.minOf(start+64);
