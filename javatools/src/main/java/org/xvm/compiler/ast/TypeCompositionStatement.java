@@ -1626,7 +1626,7 @@ public class TypeCompositionStatement
         if (listUnconstrained == null)
             {
             // call with non-existing name just to report missing type parameters
-            findImplicitConstraint(component, "", null, errs);
+            findImplicitConstraint(component, "", null, true, errs);
             return;
             }
 
@@ -1635,7 +1635,7 @@ public class TypeCompositionStatement
         Map<String, TypeConstant> mapConstraints = null;
         for (String sName : listUnconstrained)
             {
-            mapConstraints = findImplicitConstraint(component, sName, mapConstraints, errs);
+            mapConstraints = findImplicitConstraint(component, sName, mapConstraints, true, errs);
             }
 
         if (mapConstraints != null)
@@ -2547,7 +2547,7 @@ public class TypeCompositionStatement
      * generic type of the specified name.
      */
     private Map<String, TypeConstant> findImplicitConstraint(ClassStructure clz, String sName,
-                Map<String, TypeConstant> mapConstraints, ErrorListener errs)
+                Map<String, TypeConstant> mapConstraints, Boolean fAllowInto, ErrorListener errs)
         {
         ConstantPool pool = pool();
 
@@ -2555,10 +2555,19 @@ public class TypeCompositionStatement
             {
             switch (contrib.getComposition())
                 {
+                case Into:
+                    if (!fAllowInto)
+                        {
+                        continue;
+                        }
+                    break;
+
+                case Incorporates:
+                    fAllowInto = false;
+                    break;
+
                 case Extends:
                 case Implements:
-                case Incorporates:
-                case Into:
                     break;
 
                 default:
@@ -2586,7 +2595,7 @@ public class TypeCompositionStatement
                         {
                         // report errors only at the "top" level
                         mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            ErrorListener.BLACKHOLE);
+                                            fAllowInto, ErrorListener.BLACKHOLE);
                         }
                     else
                         {

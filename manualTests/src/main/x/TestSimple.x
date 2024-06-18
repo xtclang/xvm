@@ -1,12 +1,23 @@
-module TestSimple {
+module CompilerBug {
     @Inject Console console;
 
     void run() {
     }
 
-    interface Test {
-        @RO Int size;
+    class Base<Element> // this used to crash the compiler with an infinite loop
+            incorporates MixIn<Element> {
 
-        @RO Boolean empty1 = size == 0; // this used to produce a confusing error message
+        @Override
+        void add(Element e) {
+            console.print($"Base2 {e=}");
+            super(e);
+        }
+    }
+
+    mixin MixIn<Element>
+            into Base<Element> {
+        void add(Element e) {
+            console.print($"MixIn2 {e=}");
+        }
     }
 }
