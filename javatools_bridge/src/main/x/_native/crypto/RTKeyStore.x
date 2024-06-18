@@ -93,47 +93,58 @@ service RTKeyStore
 
     @Override
     conditional Certificate getCertificate(String name) {
-        if (Certificate cert := certCache.get(name)) {
-            return True, &cert.maskAs(Certificate);
+        Certificate[] chain = getCertificateChain(name);
+        return chain.empty ? False : (True, chain[0]);
+    }
+
+    @Override
+    Certificate[] getCertificateChain(String name) {
+        if (Certificate[] certs := certCache.get(name)) {
+            return certs;
         }
 
-        if ((String    issuer,
-             String    subject,
-             Int       version,
-             Int       notBeforeYear,
-             Int       notBeforeMonth,
-             Int       notBeforeDay,
-             Int       notAfterYear,
-             Int       notAfterMonth,
-             Int       notAfterDay,
-             Boolean[] usageFlags,
-             String    signatureAlgorithm,
-             Byte[]    signatureBytes,
-             String    publicKeyAlgorithm,
-             Int       publicKeySize,
-             Byte[]    publicKeyBytes,
-             Object    publicSecret,
-             Byte[]    derValue) := getCertificateInfo(name)) {
-            Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
-            Date notAfter  = new Date(notAfterYear,  notAfterMonth,  notAfterDay );
+        Certificate[] chain = new Certificate[];
+        for (Int index = 0; True; index++) {
+            if ((String    issuer,
+                 String    subject,
+                 Int       version,
+                 Int       notBeforeYear,
+                 Int       notBeforeMonth,
+                 Int       notBeforeDay,
+                 Int       notAfterYear,
+                 Int       notAfterMonth,
+                 Int       notAfterDay,
+                 Boolean[] usageFlags,
+                 String    signatureAlgorithm,
+                 Byte[]    signatureBytes,
+                 String    publicKeyAlgorithm,
+                 Int       publicKeySize,
+                 Byte[]    publicKeyBytes,
+                 Object    publicSecret,
+                 Byte[]    derValue) := getCertificateInfo(name, index)) {
+                Date notBefore = new Date(notBeforeYear, notBeforeMonth, notBeforeDay);
+                Date notAfter  = new Date(notAfterYear,  notAfterMonth,  notAfterDay );
 
-            Set<KeyUsage> keyUsage = new HashSet();
-            for (Int i : 0 ..< usageFlags.size) {
-                if (usageFlags[i]) {
-                    keyUsage.add(KeyUsage.values[i]);
+                Set<KeyUsage> keyUsage = new HashSet();
+                for (Int i : 0 ..< usageFlags.size) {
+                    if (usageFlags[i]) {
+                        keyUsage.add(KeyUsage.values[i]);
+                    }
                 }
+                Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
+                CryptoKey? key = publicKeyBytes.size > 0
+                        ? new RTPublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes, publicSecret)
+                        : Null;
+                Certificate cert = new X509Certificate(
+                                    issuer, subject, new Version(version.toString()), notBefore, notAfter,
+                                    keyUsage, sig, derValue, key);
+                chain += &cert.maskAs(Certificate);
+            } else {
+                break;
             }
-            Signature  sig = new Signature(signatureAlgorithm, signatureBytes);
-            CryptoKey? key = publicKeyBytes.size > 0
-                    ? new RTPublicKey(name, publicKeyAlgorithm, publicKeySize, publicKeyBytes, publicSecret)
-                    : Null;
-            Certificate cert = new X509Certificate(
-                                issuer, subject, new Version(version.toString()), notBefore, notAfter,
-                                keyUsage, sig, derValue, key);
-            certCache.put(name, cert);
-            return True, &cert.maskAs(Certificate);
         }
-        return False;
+        certCache.put(name, chain.freeze(inPlace=True));
+        return chain;
     }
 
     @Override
@@ -142,9 +153,9 @@ service RTKeyStore
     }
 
     /**
-     * The local cache of certificates (not masked).
+     * The local cache of certificate chains (masked).
      */
-    private Map<String, Certificate> certCache;
+    private Map<String, Certificate[]> certCache;
 
     /**
      * The local cache of CryptoKeys (masked).
@@ -186,7 +197,9 @@ service RTKeyStore
     private conditional String getPasswordInfo(String name) {TODO("Native");}
 
     /**
-     * @return True iff the name represents an existing certificate
+     * @param index  the index of the certificate in the chain
+     *
+     * @return True iff the name represents an existing certificate and the index is valid
      * #return (conditional) the certificate info
      */
     private conditional (String    issuer,
@@ -207,7 +220,7 @@ service RTKeyStore
                          Object    publicSecret,
                          Byte[]    derValue
                          )
-        getCertificateInfo(String name) {TODO("Native");}
+        getCertificateInfo(String name, Int index) {TODO("Native");}
 
 
     // ----- natural helper methods  ---------------------------------------------------------------

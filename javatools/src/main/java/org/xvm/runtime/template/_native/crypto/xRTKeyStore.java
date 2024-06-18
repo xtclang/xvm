@@ -52,6 +52,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.Runtime;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -102,7 +103,7 @@ public class xRTKeyStore
 
         markNativeMethod("entryType"         , STRING, null);
         markNativeMethod("getKeyInfo"        , STRING, null);
-        markNativeMethod("getCertificateInfo", STRING, null);
+        markNativeMethod("getCertificateInfo", null,   null);
         markNativeMethod("getPasswordInfo"   , STRING, null);
 
         ConstantPool pool = pool();
@@ -260,9 +261,10 @@ public class xRTKeyStore
             case "getCertificateInfo":
                 {
                 KeyStoreHandle hStore = (KeyStoreHandle) hTarget;
-                StringHandle   hName  = (StringHandle) ahArg[0];
+                StringHandle   hName  = (StringHandle)   ahArg[0];
+                JavaLong       hIndex = (JavaLong)       ahArg[1];
 
-                return invokeGetCertificateInfo(frame, hStore, hName, aiReturn);
+                return invokeGetCertificateInfo(frame, hStore, hName, hIndex, aiReturn);
                 }
 
             case "getKeyInfo":
@@ -305,20 +307,25 @@ public class xRTKeyStore
      *                Object    publicSecret,
      *                Byte[]    derValue
      *                )
-     *      getCertificateInfo(String name)"
+     *      getCertificateInfo(String name, Int index)"
      */
     private int invokeGetCertificateInfo(Frame frame, KeyStoreHandle hStore, StringHandle hName,
-                                         int[] aiReturn)
+                                         JavaLong hIndex, int[] aiReturn)
         {
+        String sName  = hName.getStringValue();
+        int    nIndex = (int) hIndex.getValue();
         try
             {
-            Certificate cert = hStore.f_keyStore.getCertificate(hName.getStringValue());
-            if (!(cert instanceof X509Certificate cert509))
+            Certificate[] aCert = hStore.f_keyStore.getCertificateChain(sName);
+            if (aCert == null || aCert.length <= nIndex)
                 {
-                return cert == null
-                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                    : frame.raiseException(xException.makeHandle(frame,
-                            "Unsupported standard: " + cert.getType()));
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                }
+
+            if (!(aCert[nIndex] instanceof X509Certificate cert509))
+                {
+                return frame.raiseException(xException.makeHandle(frame,
+                            "Unsupported standard: " + aCert[nIndex].getType()));
                 }
 
             Date dateNotBefore = cert509.getNotBefore();
