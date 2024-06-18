@@ -397,6 +397,8 @@ examples_xtc:	$(examples_x:x=xtc) $(XDK_JAR)
 
 examples_exe:	$(examples_x:x=exe) $(clazesB)
 
+examples_com:	$(examples_x:x=com) $(clazesB)
+
 
 # Build TCK
 .PHONY:	tck
@@ -412,6 +414,8 @@ manuals_x   = $(patsubst %.x,$(MANUAL_DIR)/%.x,$(MANUAL_TESTS))
 manuals_xtc:	$(manuals_x:x=xtc) $(XDK_JAR)
 
 manuals_exe:	$(manuals_x:x=exe) $(classesB)
+
+manuals_com:	$(manuals_x:x=com) $(classesB)
 
 
 #MULTI = multiModule/Lib.x multiModule/Main.x
