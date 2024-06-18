@@ -5,6 +5,7 @@ module tck.xtclang.org {
      */
     void run() {
         new clazz.Basic().run();
+        // new clazz.Medium().run();
         new array.Basic().run();
         new array.Medium().run();
         new comparison.Compare().run();
