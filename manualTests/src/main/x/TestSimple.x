@@ -1,17 +1,25 @@
-module TestSimple {
+module CompilerBug {
     @Inject Console console;
 
     void run() {
-        Ex ex = new Ex(1, "hi");
-        console.print($"{ex=}");
+        Base    b  = new Base(1);
+        Derived d  = new Derived(2);
+        Base    b2 = b.new(d);
 
-        Ex ex2 = ex.new(2, "bye"); // this used to fail at runtime
-        console.print($"{ex2=}");
+        console.print($"{&b2.actualType=} {b2=}");
     }
 
-    interface CI {
-        construct(Int n, String s);
+    const Base(Int v) implements Duplicable {
+        @Override // used to produce a weird error if Override was missing
+        construct(Base b) {
+            v = b.v;
+        }
     }
 
-    const Ex(Int n, String s) implements CI {}
+    const Derived(Int v) extends Base(v) {
+        @Override  // used to produce a weird error if Override was missing
+        construct(Derived d) {
+            v = d.v;
+        }
+    }
 }

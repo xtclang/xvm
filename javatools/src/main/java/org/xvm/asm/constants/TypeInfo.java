@@ -706,62 +706,45 @@ public class TypeInfo
             return;
             }
 
-        final int[] aiCount = new int[] {1}; // limit reporting to a small number of errors
-
-        getProperties().values().stream()
-                .filter(PropertyInfo::isExplicitlyAbstract)
-                .forEach(info ->
-                    {
-                    if (--aiCount[0] >= 0)
-                        {
-                        if (sChild == null)
-                            {
-                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_PROPERTY,
-                                sTarget, info.getName());
-                            }
-                        else
-                            {
-                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_PROPERTY,
-                                sTarget, sChild, info.getName());
-                            }
-                        }
-                    });
-        if (aiCount[0] <= 0)
+        for (PropertyInfo infoProp : f_mapProps.values())
             {
-            return;
+            if (infoProp.isExplicitlyAbstract())
+                {
+                if (sChild == null)
+                    {
+                    type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_PROPERTY,
+                        sTarget, infoProp.getName());
+                    }
+                else
+                    {
+                    type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_PROPERTY,
+                        sTarget, sChild, infoProp.getName());
+                    }
+                return;
+                }
             }
 
-        getMethods().entrySet().stream()
-                .filter(entry -> entry.getValue().isAbstract())
-                .forEach(entry ->
-                    {
-                    if (--aiCount[0] >= 0)
-                        {
-                        if (sChild == null)
-                            {
-                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_METHOD,
-                                sTarget, entry.getKey().getSignature().getValueString());
-                            }
-                        else
-                            {
-                            type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_METHOD,
-                                sTarget, sChild, entry.getKey().getSignature().getValueString());
-                            }
-                        }
-                    });
-        if (aiCount[0] <= 0)
+        for (MethodInfo infoMethod : f_mapMethods.values())
             {
-            return;
-            }
-
-        Set<MethodConstant> setConstruct = findMethods("construct", -1, MethodKind.Constructor);
-        for (MethodConstant id : setConstruct)
-            {
-            MethodInfo infoMethod = getMethodById(id);
-            if (infoMethod.isUncoveredVirtualConstructor(this))
+            if (infoMethod.isConstructor() && infoMethod.isUncoveredVirtualConstructor(this))
                 {
                 type.log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
                     sTarget, infoMethod.getIdentity().getValueString());
+                return;
+                }
+
+            if (infoMethod.isAbstract())
+                {
+                if (sChild == null)
+                    {
+                    type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_METHOD,
+                        sTarget, infoMethod.getSignature().getValueString());
+                    }
+                else
+                    {
+                    type.log(errs, Severity.ERROR, Compiler.NEW_ABSTRACT_CHILD_METHOD,
+                        sTarget, sChild, infoMethod.getSignature().getValueString());
+                    }
                 return;
                 }
             }
