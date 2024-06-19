@@ -14,8 +14,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.asm.ast.BinaryAST.NodeType.NewChildExpr;
 import static org.xvm.asm.ast.BinaryAST.NodeType.NewExpr;
-
 import static org.xvm.asm.ast.BinaryAST.NodeType.NewVirtualExpr;
+
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -28,7 +28,9 @@ public class NewExprAST
 
     private final NodeType nodeType;
 
-    private ExprAST      parent; // can be null
+    private ExprAST      parent; // for NewVirtualExpr node contains the type target;
+                                 // for NewChildExpr node contains the child's parent;
+                                 // for NewExpr node is always null
     private TypeConstant type;
     private Constant     constr;
     private ExprAST[]    args;
@@ -38,21 +40,20 @@ public class NewExprAST
     }
 
     /**
-     * Construct a NewExprAST for a non-generic top-level class or a virtual type.
+     * Construct a NewExprAST for a non-generic top-level class.
      *
      * @param type     the type
      * @param constr   the constructor
      * @param args     the arguments
-     * @param virtual  specifies a virtual constructor
      */
-    public NewExprAST(TypeConstant type, Constant constr, ExprAST[] args, boolean virtual) {
+    public NewExprAST(TypeConstant type, Constant constr, ExprAST[] args) {
         assert type != null && constr != null;
         assert args != null && Arrays.stream(args).allMatch(Objects::nonNull);
 
         this.type   = type;
         this.constr = constr;
         this.args   = args;
-        nodeType    = virtual ? NewVirtualExpr : NewExpr;
+        nodeType    = NewExpr;
     }
 
     /**
@@ -72,6 +73,23 @@ public class NewExprAST
         this.constr = constr;
         this.args   = args;
         nodeType    = NewChildExpr;
+    }
+
+    /**
+     * Construct a NewExprAST for a virtual construction.
+     *
+     * @param target   the target that should be used to compute the resulting type
+     * @param constr   the constructor
+     * @param args     the arguments
+     */
+    public NewExprAST(ExprAST target, Constant constr, ExprAST[] args) {
+        assert target != null && constr != null;
+        assert args != null && Arrays.stream(args).allMatch(Objects::nonNull);
+
+        this.parent = target;
+        this.constr = constr;
+        this.args   = args;
+        nodeType    = NewVirtualExpr;
     }
 
     public Constant getType() {
@@ -106,16 +124,18 @@ public class NewExprAST
     @Override
     public TypeConstant getType(int i) {
         assert i == 0;
-        return type;
+        return nodeType == NewVirtualExpr ? parent.getType(0) : type;
     }
 
     @Override
     protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
-        if (isChild()) {
+        if (isChild() || isVirtual()) {
             parent = readExprAST(in, res);
         }
-        type   = (TypeConstant) res.getConstant(readMagnitude(in));
+        if (!isVirtual()) {
+            type = (TypeConstant) res.getConstant(readMagnitude(in));
+        }
         constr = res.getConstant(readMagnitude(in));
         args   = readExprArray(in, res);
     }
@@ -125,7 +145,9 @@ public class NewExprAST
         if (isChild()) {
             parent.prepareWrite(res);
         }
-        type   = (TypeConstant) res.register(type);
+        if (!isVirtual()) {
+            type = (TypeConstant) res.register(type);
+        }
         constr = res.register(constr);
         prepareASTArray(args, res);
     }
@@ -133,10 +155,12 @@ public class NewExprAST
     @Override
     protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
-        if (isChild()) {
+        if (isChild() || isVirtual()) {
             parent.writeExpr(out, res);
         }
-        writePackedLong(out, res.indexOf(type));
+        if (!isVirtual()) {
+            writePackedLong(out, res.indexOf(type));
+        }
         writePackedLong(out, res.indexOf(constr));
         writeExprArray(args, out, res);
     }
@@ -145,17 +169,23 @@ public class NewExprAST
     public String toString() {
         StringBuilder buf = new StringBuilder();
 
-        if (isChild()) {
+        if (isChild() || isVirtual()) {
             buf.append(parent)
                .append('.');
         }
-        buf.append("new ")
-            .append(type)
-            .append('(');
-        for (int i = 0, c = args.length; i < c; i++) {
-            buf.append(args[i])
-                .append(", ");
+        buf.append("new");
+        if (!isVirtual()) {
+            buf.append(' ')
+               .append(type.getValueString());
         }
+        buf.append('(');
+        for (int i = 0, c = args.length; i < c; i++) {
+            if (i > 0) {
+                buf.append(", ");
+            }
+            buf.append(args[i]);
+        }
+        buf.append(')');
         return buf.toString();
     }
 }

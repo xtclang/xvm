@@ -1038,10 +1038,22 @@ public class NewExpression
                 Register regType;
                 if (m_plan == Plan.Virtual)
                     {
-                    Register regThis = new Register(ctx.getThisType(), null, Op.A_TARGET);
+                    Argument argTarget;
+                    ExprAST  astTarget;
+                    if (left == null)
+                        {
+                        argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
+                        astTarget = new ConstantExprAST(argTarget.getType());
+                        }
+                    else
+                        {
+                        argTarget = left.generateArgument(ctx, code, true, true, errs);
+                        astTarget = left.getExprAST(ctx);
+                        }
 
                     regType = new Register(pool().typeType(), null, Op.A_STACK);
-                    code.add(new MoveType(regThis, regType));
+                    code.add(new MoveType(argTarget, regType));
+                    m_astNew = new NewExprAST(astTarget, idConstruct, aAstArgs);
                     }
                 else
                     {
@@ -1054,6 +1066,7 @@ public class NewExpression
                         {
                         regType = m_regFormal;
                         }
+                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                     }
                 switch (cParams)
                     {
@@ -1069,7 +1082,6 @@ public class NewExpression
                         code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
                         break;
                     }
-                m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs, true);
                 }
             else if (isTypeRequired(typeTarget))
                 {
@@ -1100,7 +1112,7 @@ public class NewExpression
                             code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                             break;
                         }
-                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs, false);
+                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                     }
                 else
                     {
@@ -1139,7 +1151,7 @@ public class NewExpression
                             code.add(new New_N(idConstruct, aArgs, argResult));
                             break;
                         }
-                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs, false);
+                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                     }
                 else
                     {

@@ -1,23 +1,17 @@
-module CompilerBug {
+module TestSimple {
     @Inject Console console;
 
     void run() {
+        Ex ex = new Ex(1, "hi");
+        console.print($"{ex=}");
+
+        Ex ex2 = ex.new(2, "bye"); // this used to fail at runtime
+        console.print($"{ex2=}");
     }
 
-    class Base<Element> // this used to crash the compiler with an infinite loop
-            incorporates MixIn<Element> {
-
-        @Override
-        void add(Element e) {
-            console.print($"Base2 {e=}");
-            super(e);
-        }
+    interface CI {
+        construct(Int n, String s);
     }
 
-    mixin MixIn<Element>
-            into Base<Element> {
-        void add(Element e) {
-            console.print($"MixIn2 {e=}");
-        }
-    }
+    const Ex(Int n, String s) implements CI {}
 }
