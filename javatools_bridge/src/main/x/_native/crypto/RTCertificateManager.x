@@ -1,4 +1,5 @@
 import libcrypto.CertificateManager;
+import libcrypto.KeyStore;
 import libcrypto.Password;
 
 service RTCertificateManager
@@ -32,13 +33,13 @@ service RTCertificateManager
     }
 
     @Override
-    Byte[] extractKey(File keystore, Password pwd, String name) {
-        return extractKeyImpl(getPath(keystore), pwd, name);
+    void changeStorePassword(File keystore, Password pwd, Password newPassword) {
+        changeStorePasswordImpl(getPath(keystore), pwd, newPassword);
     }
 
     @Override
-    void changeStorePassword(File keystore, Password pwd, Password newPassword) {
-        changeStorePasswordImpl(getPath(keystore), pwd, newPassword);
+    Byte[] extractKey(File|KeyStore keystore, Password pwd, String name) {
+        return extractKeyImpl(keystore.is(File) ? getPath(keystore) : keystore, pwd, name);
     }
 
     private String getPath(File keystore) {
@@ -63,9 +64,9 @@ service RTCertificateManager
     private void createPasswordImpl(String path, Password pwd, String name, String pwdValue)
         {TODO("Native");}
 
-    private Byte[] extractKeyImpl(String path, Password pwd, String name)
+    private void changeStorePasswordImpl(String path, Password pwd, Password newPwd)
         {TODO("Native");}
 
-    private void changeStorePasswordImpl(String path, Password pwd, Password newPwd)
+    private Byte[] extractKeyImpl(String|KeyStore pathOrStore, Password pwd, String name)
         {TODO("Native");}
 }

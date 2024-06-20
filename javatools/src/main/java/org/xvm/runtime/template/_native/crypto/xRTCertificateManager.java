@@ -38,6 +38,8 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
+import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
+
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
@@ -64,8 +66,8 @@ public class xRTCertificateManager
         markNativeMethod("revokeCertificateImpl"  , null, VOID);
         markNativeMethod("createSymmetricKeyImpl" , null, VOID);
         markNativeMethod("createPasswordImpl"     , null, VOID);
-        markNativeMethod("extractKeyImpl"         , null, BYTES);
         markNativeMethod("changeStorePasswordImpl", null, VOID);
+        markNativeMethod("extractKeyImpl"         , null, BYTES);
 
         invalidateTypeInfo();
         }
@@ -119,11 +121,11 @@ public class xRTCertificateManager
             case "createPasswordImpl":
                 return invokeCreatePassword(frame, ahArg);
 
-            case "extractKeyImpl":
-                return invokeExtractKey(frame, ahArg, iReturn);
-
             case "changeStorePasswordImpl":
                 return invokeChangeStorePassword(frame, ahArg);
+
+            case "extractKeyImpl":
+                return invokeExtractKey(frame, ahArg, iReturn);
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -294,22 +296,30 @@ public class xRTCertificateManager
 
     /**
      * Native implementation of
-     *     "Byte[] extractKeyImpl(String path, Password pwd, String name)"
+     *     "Byte[] extractKeyImpl(String|KeyStore pathOrStore, Password pwd, String name)"
      */
     private int invokeExtractKey(Frame frame, ObjectHandle[] ahArg, int iReturn)
         {
-        StringHandle hPath = (StringHandle) ahArg[0];
-        StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
-        StringHandle hName = (StringHandle) ahArg[2];
+        ObjectHandle hPathOrStore = ahArg[0];
+        StringHandle hPwd         = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName        = (StringHandle) ahArg[2];
 
         try
             {
-            File     fileStore = new File(hPath.getStringValue());
-            KeyStore keyStore  = KeyStore.getInstance("PKCS12");
-            char[]   achPwd    = hPwd.getValue();
-            String   sKey      = hName.getStringValue();
-
-            keyStore.load(new FileInputStream(fileStore), achPwd);
+            char[]   achPwd = hPwd.getValue();
+            String   sKey   = hName.getStringValue();
+            KeyStore keyStore;
+            if (hPathOrStore instanceof StringHandle hPath)
+                {
+                File fileStore = new File(hPath.getStringValue());
+                keyStore  = KeyStore.getInstance("PKCS12");
+                keyStore.load(new FileInputStream(fileStore), achPwd);
+                }
+            else
+                {
+                KeyStoreHandle hKeyStore = (KeyStoreHandle) hPathOrStore;
+                keyStore = hKeyStore.f_keyStore;
+                }
 
             Key key = keyStore.getKey(sKey, achPwd);
             if (key == null)

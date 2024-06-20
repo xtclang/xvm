@@ -20,9 +20,9 @@ interface CertificateManager {
      *  - receive the certificate from the SA
      *  - save the private key and the certificate in the specified file using the provided password
      *
-     * @param file   the file object representing the store ('PKCS12' type)
+     * @param file   the `File` object representing the store ('PKCS12' type)
      * @param pwd    the password for the keystore
-     * @param name   the name the certificate is known by the KeyStore
+     * @param name   the name the certificate is known by the keystore
      * @param dName  the distinguished name string, which is comma-delimited string of X.509
      *               certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=host.xqiz.it)
      *
@@ -40,9 +40,9 @@ interface CertificateManager {
      *  - receive the revocation confirmation from the SA
      *  - remove the private key and the certificate from the specified keystore
      *
-     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param keystore  the `File` object representing the store ('PKCS12' type)
      * @param pwd       the password for the keystore
-     * @param name      the name the certificate is known by the KeyStore
+     * @param name      the name the certificate is known by the keystore
      *
      * @throws IOException if anything goes wrong
      */
@@ -51,9 +51,9 @@ interface CertificateManager {
     /**
      * Create a secret (symmetric) key.
      *
-     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param keystore  the `File` object representing the store ('PKCS12' type)
      * @param pwd       the password for the keystore
-     * @param name      the name the symmetric key is known by the KeyStore
+     * @param name      the name the symmetric key is known by the keystore
      *
      * @throws IOException if anything goes wrong
      */
@@ -62,14 +62,25 @@ interface CertificateManager {
     /**
      * Create a password entry.
      *
-     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param keystore  the `File` object representing the store ('PKCS12' type)
      * @param pwd       the password for the keystore
-     * @param name      the name the password entry is known by the KeyStore
+     * @param name      the name the password entry is known by the keystore
      * @param pwdValue  the value of the password entry
      *
      * @throws IOException if anything goes wrong
      */
     void createPassword(File keystore, Password pwd, String name, String pwdValue);
+
+    /**
+     * Change the keystore password.
+     *
+     * @param keystore  the `File` object representing the store ('PKCS12' type)
+     * @param pwd       the password for the keystore
+     * @param newPwd    the new password for the keystore
+     *
+     * @throws IOException if anything goes wrong
+     */
+    void changeStorePassword(File keystore, Password pwd, Password newPwd);
 
     /**
      * Extract a key (private or secret).
@@ -78,26 +89,15 @@ interface CertificateManager {
      * underlying crypto material, this method is an exception and should be used with extreme
      * caution.
      *
-     * @param keystore  the file object representing the store ('PKCS12' type)
+     * @param keystore  the `File` object representing the store or the KeyStore itself
      * @param pwd       the password for the keystore
-     * @param name      the name the key is known by the KeyStore
+     * @param name      the name the key is known by the keystore
      *
      * @return the content of the key in DER format
      *
      * @throws IOException if anything goes wrong
      */
-    Byte[] extractKey(File keystore, Password pwd, String name);
-
-    /**
-     * Change the keystore password.
-     *
-     * @param keystore  the file object representing the store ('PKCS12' type)
-     * @param pwd       the password for the keystore
-     * @param newPwd    the new password for the keystore
-     *
-     * @throws IOException if anything goes wrong
-     */
-    void changeStorePassword(File keystore, Password pwd, Password newPwd);
+    Byte[] extractKey(File|KeyStore keystore, Password pwd, String name);
 
     /**
      * Helper function to create a distinguished name in the format prescribed by the (X.509
