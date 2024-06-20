@@ -245,6 +245,7 @@ public abstract class AST {
     case NegExpr      ->    UniOpAST.make(X,"-",null);
     case NewExpr      ->      NewAST.make(X,false);
     case NewChildExpr ->      NewAST.make(X,true );
+    case NewVirtualExpr ->NewVirtAST.make(X);
     case NotExpr      ->    UniOpAST.make(X,"!",null);
     case None         ->     NoneAST.make(X);
     case NotNullExpr  ->    UniOpAST.make(X,"ELVIS",null);
