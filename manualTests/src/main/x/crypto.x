@@ -62,15 +62,10 @@ module TestCrypto {
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
 
         if (False) {
+            import convert.formats.Base64Format;
             Byte[] bytes = manager.extractKey(store, password, pairName);
             console.print("-----BEGIN PRIVATE KEY-----");
-            String sKey = convert.formats.Base64Format.Instance.encode(bytes);
-            Int    size = sKey.size;
-            for (Int start = 0; start < size; ) {
-                Int end = size.minOf(start+64);
-                console.print(sKey[start ..< end]);
-                start = end;
-            }
+            console.print(Base64Format.Instance.encode(bytes, pad=True, lineLength=64));
             console.print("-----END PRIVATE KEY-----");
         }
 

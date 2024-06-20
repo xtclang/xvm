@@ -313,7 +313,6 @@ service RTKeyStore
                     |Validity: [{lifetime}]
                     |KeyUsage: {keyUsage}
                     |Signature: {signature}
-                    |
                     ;
         }
     }
