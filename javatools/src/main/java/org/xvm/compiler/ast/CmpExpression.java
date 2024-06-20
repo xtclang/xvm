@@ -372,7 +372,7 @@ public class CmpExpression
         TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, fCheck);
         if (typeCommon == null)
             {
-            if (type1.equals(type1Orig))
+            if (type1 != null && type1.equals(type1Orig))
                 {
                 if (!type2.equals(type2Orig))
                     {
@@ -383,7 +383,7 @@ public class CmpExpression
                 {
                 typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2, fConst2, fCheck);
 
-                if (typeCommon == null && !type2.equals(type2Orig))
+                if (typeCommon == null && type2 != null && !type2.equals(type2Orig))
                     {
                     typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2Orig, fConst2, fCheck);
                     }
@@ -421,7 +421,8 @@ public class CmpExpression
                                                    TypeConstant type2, boolean fConst2,
                                                    boolean fCheck)
         {
-        if (type1 != null && type1.containsUnresolved() ||
+        if (type1 == null && type2 == null ||
+            type1 != null && type1.containsUnresolved() ||
             type2 != null && type2.containsUnresolved())
             {
             return null;
