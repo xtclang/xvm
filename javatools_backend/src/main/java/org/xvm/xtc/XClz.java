@@ -56,6 +56,42 @@ import java.util.HashMap;
 //   XClz: HashMap:2{Key/Hashable,Value/XTC}, side[]
 //   XClz:   MyMap:3[A/XTC,B/XTC,C/Hashable,/String], side[HashMap=[2,3]]
 
+/*
+Mixin thinking -
+
+- I think I can "pre-expand" all flavors of mixins into mangled javaclasses.
+
+- Mixins come either "before" or "after" the base class, and can carry
+  overloaded methods.  Conditional mixins only apply if some generic type is
+  present.
+
+Example:
+        "mixin Interval<Element extends immutable Sequential>
+        into Range<Element>
+        implements Iterable<Element>"
+
+        "const Range<Element extends Orderable>
+        incorporates conditional Interval<Element extends Sequential>"
+
+Here Range "incorporates conditional" Inteval - meaning that the base class
+Range comes before the Mixin, and the Mixin only happens if <Element extends
+Sequential> (and always <Element extends Orderable>).
+
+So we can expect these Java classes:
+Range          <E extends Orderable              > extends XTC -
+  - The Range class with no mixin
+Range$Interval <E extends Orderable & Sequential > extends Range implements Iterable<E> -
+  - The Range class WITH mixin
+  - Implements interface Iterable<E>
+  - E extends both Orderable & Sequential
+  - Some existing Range methods are overridden.
+  - Some new methods appear
+
+
+
+
+
+*/
 public class XClz extends XType {
   static final String[] STR0 = new String[0];
   static final HashMap<XClz,int[]> SIDES0 = new HashMap<>();

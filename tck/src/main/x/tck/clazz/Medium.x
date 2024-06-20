@@ -8,6 +8,12 @@ class Medium {
         incorpConditional();
     }
 
+    // Theory - can immediately expand these mixin classes into a set of Java classes.
+    // Pre/post mixins get a mangled java name, and the method defs in the correct order.
+    // Overloaded methods get all mangled names, so the "super" calls can be replaced
+    // with direct calls to the correct mangled name.
+    // Conditional mixins just immediately make one Java class per conditional.
+
 
     // Standard "incorporates":  The MixIn is "before" Base in the class tree:
     // Object <- MixIn <- Base <- Derived
@@ -36,6 +42,13 @@ class Medium {
 
     // "Annotation": the Mixin is "after" the Base in the class tree:
     // Object <- Base <- MixIn <- Derived
+
+    // I searched the XTC lib and did not find instances of this that were not
+    // also specifically runtime-specific, and thus require some kind of custom
+    // work anyways.  Mixins like @Future (requires some kind of volatile) or
+    // @Synchronized (requires runtime interaction and locking) must be
+    // directly intercepted.  Mixins like @Auto represent auto conversions from
+    // the front end.
     void annot() {
         @MixIn3 class Base3<Element> {
             String add(Element e) = $"B[{e=}]B";
