@@ -119,14 +119,24 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
             // check if the template matches UriParam's in the method
             Int     requiredParamCount   = 0;
             Boolean requiredSessionParam = False;
+            Boolean hasBodyParam         = False;
             for (Parameter param : method.params) {
                 // well-known types are Session and RequestIn (see ChainBundle.ensureCallChain)
                 if (param.ParamType == RequestIn      ||
                     param.is(QueryParam)              ||
-                    param.is(BodyParam)               ||
                     param.defaultValue()) {
                     continue;
                 }
+                if (param.is(BodyParam)) {
+                    if (hasBodyParam) {
+                        throw new IllegalState($|The template for method "{method}" has more than \
+                                                |one "@BodyParam" annotated parameter
+                                              );
+                    }
+                    hasBodyParam = True;
+                    continue;
+                }
+
                 if (param.ParamType.is(Type<Session>)) {
                     requiredSessionParam = True;
                     continue;
@@ -138,8 +148,7 @@ const Catalog(WebApp webApp, String systemPath, WebServiceInfo[] services, Class
                 }
                 if (!template.vars.contains(name)) {
                     throw new IllegalState($|The template for method "{method}" is missing \
-                                            |a variable name "{name}": \
-                                            |"{templateString}"
+                                            |a variable name "{name}": "{templateString}"
                                           );
                 }
                 requiredParamCount++;
