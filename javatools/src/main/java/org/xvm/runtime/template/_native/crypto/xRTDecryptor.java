@@ -94,6 +94,7 @@ public class xRTDecryptor
             }
         catch (GeneralSecurityException e)
             {
+            report(frame, cipher, "encrypt");
             return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
         }
@@ -105,7 +106,7 @@ public class xRTDecryptor
     private int invokeDecrypt(Frame frame, CipherHandle hCipher, ObjectHandle hKey,
                               ByteArrayHandle haData, int iReturn)
         {
-        byte[] abData  = xRTUInt8Delegate.getBytes(haData);
+        byte[] abData = xRTUInt8Delegate.getBytes(haData);
         Cipher cipher = hCipher.f_cipher;
 
         try
@@ -121,7 +122,15 @@ public class xRTDecryptor
             }
         catch (GeneralSecurityException e)
             {
+            report(frame, cipher, "decrypt");
             return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
             }
+        }
+
+    // TODO: remove
+    private void report(Frame frame, Cipher cipher, String sOp)
+        {
+        System.err.println(sOp + " operation failed for cipher " + cipher);
+        System.err.println(frame.getStackTrace());
         }
     }
