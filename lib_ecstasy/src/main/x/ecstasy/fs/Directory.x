@@ -24,7 +24,25 @@ interface Directory
      * that exist immediately under this directory, and also those contained in sub-directories
      * (at any level) under this directory.
      */
-    Iterator<File> filesRecursively();
+    Iterator<File> filesRecursively() {
+        return new Iterator<File>() {
+            Iterator<File>      filesIter = files();
+            Iterator<Directory> dirsIter  = dirs();
+
+            @Override
+            conditional Element next() {
+                if (File file := filesIter.next()) {
+                    return True, file;
+                }
+
+                if (Directory dir := dirsIter.next()) {
+                    filesIter = dir.filesRecursively();
+                    return next();
+                }
+                return False;
+            }
+        };
+    }
 
     /**
      * Obtain the Directory or File for the specified name.

@@ -42,9 +42,6 @@ const OSDirectory
     }
 
     @Override
-    Iterator<File> filesRecursively() { TODO("native"); }
-
-    @Override
     conditional Directory|File find(String name) {
         return name.size == 0
                 ? (True, this)

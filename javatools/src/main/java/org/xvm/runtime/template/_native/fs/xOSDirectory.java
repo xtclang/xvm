@@ -47,7 +47,6 @@ public class xOSDirectory
     public void initNative()
         {
         markNativeMethod("deleteRecursively", null, null);
-        markNativeMethod("filesRecursively", null, null);   // TODO as a natural implementation?
         markNativeMethod("watchRecursively", null, null);
 
         invalidateTypeInfo();

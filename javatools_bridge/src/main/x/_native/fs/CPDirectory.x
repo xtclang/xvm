@@ -72,15 +72,6 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
     }
 
     @Override
-    Iterator<File> filesRecursively() {
-        if (!exists) {
-            return files(); // an empty iterator
-        }
-
-        TODO
-    }
-
-    @Override
     conditional Directory|File find(String name) {
         return name.size == 0
                 ? (True, this)
