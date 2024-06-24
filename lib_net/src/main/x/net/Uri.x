@@ -1550,7 +1550,7 @@ const Uri
             switch (Char ch = authority[offset]) {
             case '@':
                 if (atSign >= 0 || leftSquare >= 0 || colon >= 0) {
-                    report?("Illegal authority {authority.quoted()}: Unexpected '@' sign");
+                    report?($"Illegal authority {authority.quoted()}: Unexpected '@' sign");
                     return False;
                 }
                 atSign = EachChar.count;
@@ -1558,7 +1558,7 @@ const Uri
 
             case '[':
                 if (leftSquare >= 0 || colon >= 0) {
-                    report?("Illegal authority {authority.quoted()}: Unexpected '[' character");
+                    report?($"Illegal authority {authority.quoted()}: Unexpected '[' character");
                     return False;
                 }
                 leftSquare = EachChar.count;
@@ -1566,7 +1566,7 @@ const Uri
 
             case ']':
                 if (leftSquare < 0 || rightSquare >= 0 || colon >= 0) {
-                    report?("Illegal authority {authority.quoted()}: Unexpected ']' character");
+                    report?($"Illegal authority {authority.quoted()}: Unexpected ']' character");
                     return False;
                 }
                 rightSquare = EachChar.count;
@@ -1575,7 +1575,7 @@ const Uri
             case ':':
                 if (leftSquare >= 0 == rightSquare >= 0) {
                     if (colon >= 0) {
-                        report?("Illegal authority {authority.quoted()}: Unexpected ':' character");
+                        report?($"Illegal authority {authority.quoted()}: Unexpected ':' character");
                         return False;
                     }
                     colon = EachChar.count;
@@ -1590,7 +1590,9 @@ const Uri
 
             default:
                 if (!regnameValid(ch)) {
-                    report?("Illegal authority {authority.quoted()}: Illegal character in authority: {ch.quoted()}");
+                    report?($|Illegal authority {authority.quoted()}: Illegal character in authority:\
+                             | {ch.quoted()}
+                             );
                     return False;
                 }
                 break;
@@ -1600,7 +1602,7 @@ const Uri
         }
 
         if (leftSquare >= 0 != rightSquare >= 0) {
-            report?("Illegal authority {authority.quoted()}: Contains an unbalanced '[' character");
+            report?($"Illegal authority {authority.quoted()}: Contains an unbalanced '[' character");
             return False;
         }
 
@@ -1614,7 +1616,7 @@ const Uri
         if (leftSquare >= 0 && ip == Null) {
             // the only use for the '[' and ']' characters is to enclose an IPv6 address
             report?($|Square brackets are only permitted in a URI authority string to enclose\
-                     | a valid IPv6 address: {authority.quoted()}
+                     | a valid IPv6 address: "{authority}"
                    );
             return False;
         }
