@@ -66,6 +66,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
+import org.xvm.util.concurrent.VarHandles;
 
 
 /**
@@ -2369,19 +2370,7 @@ public class ServiceContext
     /**
      * VarHandle for {@link #m_lLockScheduling}.
      */
-    static final VarHandle SCHEDULING_LOCK_HANDLE;
-    static
-        {
-        try
-            {
-            SCHEDULING_LOCK_HANDLE = MethodHandles.lookup().findVarHandle(ServiceContext.class,
-                "m_lLockScheduling", long.class);
-            }
-        catch (IllegalAccessException | NoSuchFieldException e)
-            {
-            throw new IllegalStateException(e);
-            }
-        }
+    static final VarHandle SCHEDULING_LOCK_HANDLE = VarHandles.of(ServiceContext.class, "m_lLockScheduling");
 
     /**
      * A "service-local" cache for run-time information that needs to be calculated by various ops.
