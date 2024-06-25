@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
 import java.lang.ref.WeakReference;
@@ -66,6 +65,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
+
 import org.xvm.util.concurrent.VarHandles;
 
 

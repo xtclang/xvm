@@ -396,8 +396,8 @@ public class xRTCertificateManager
                 String sOut = getOutput(process.getInputStream());
                 String sErr = getOutput(process.getErrorStream());
 
-                    return frame.raiseException(xException.ioException(frame,
-                            Runtime.logRuntimeException(sOut + '\n' + sErr)));
+                return frame.raiseException(xException.ioException(frame,
+                        Runtime.logRuntimeException(sOut + '\n' + sErr)));
                 }
 
             return Op.R_NEXT;
