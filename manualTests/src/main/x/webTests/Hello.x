@@ -23,11 +23,11 @@ module Hello
     package msg import Messages;
     import msg.Greeting;
 
-    void run(String[] args=["localhost", "0.0.0.0:8080/8090"]) {
+    void run(String[] args=["localhost", "localhost:8080/8090"]) {
         @Inject Console console;
 
         String      routeString = args.size > 0 ? args[0] : "localhost";
-        String      bindString  = args.size > 1 ? args[1] : "0.0.0.0:8080/8090";
+        String      bindString  = args.size > 1 ? args[1] : "localhost:8080/8090";
         IPAddress[] proxies     = args.size > 2 ? args[2]
                 .split(',', True, True).map(s->new IPAddress(s)).toArray(Constant) : [];
 

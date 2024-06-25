@@ -3,7 +3,7 @@ import requests.SimpleRequest;
 
 /**
  * A representation of a web client.
- * TODO how to secure? need to be able to restrict which algos can be used
+ * TODO how to secure? need to be able to restrict which algorithms can be used
  * TODO patch method
  */
 interface Client {
@@ -172,7 +172,8 @@ interface Client {
      *
      * @return the response
      *
-     * TODO document failure modes (does it return a response? or throw?)
+     * @throws TimedOut   if the request has timed out
+     * @throws Exception  if the request failed to be sent or get a response for any other reason
      */
     ResponseIn send(RequestOut request, PasswordCallback? callback = Null);
 

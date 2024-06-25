@@ -22,6 +22,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -227,19 +230,12 @@ public class xRTConnector
             mapHeaders.put(haNames.get(i), haValues.get(i));
             }
 
-        String sMethod = hMethod.getStringValue();
-
-        int cTimeoutMillis = 5_000_000;   // TODO: how to configure?
-        int cMaxSize       = 8*1024*1024;
-
-        try (var ignore = s_handlerGlobal.withHandler(hConn.m_cookieHandler))
+        try
             {
             URL               url  = new URI(hUrl.getStringValue()).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod(hMethod.getStringValue());
-            conn.setConnectTimeout(cTimeoutMillis);
-            conn.setReadTimeout(cTimeoutMillis);
             conn.setInstanceFollowRedirects(false);
 
             if (conn instanceof HttpsURLConnection connTls)
@@ -253,22 +249,75 @@ public class xRTConnector
                 conn.addRequestProperty(entry.getKey(), entry.getValue());
                 }
 
+            String sMethod = hMethod.getStringValue();
+            byte[] abData;
             if ("PUT".equals(sMethod) || "POST".equals(sMethod))
                 {
-                byte[] abData = ((ByteBasedDelegate) haBytes.getTemplate()).
+                abData = ((ByteBasedDelegate) haBytes.getTemplate()).
                                             getBytes(haBytes, 0, haBytes.m_cSize, false);
-
-                conn.setDoOutput(true);
-                conn.setDoInput(true);
-
-                OutputStream os = conn.getOutputStream();
-                os.write(abData);
-                os.flush();
+                }
+            else
+                {
+                abData = null;
                 }
 
-            // process the response
-            int nResponseStatus = conn.getResponseCode();
+            long ldtTimeout = frame.f_fiber.getTimeoutStamp();
+            if (ldtTimeout > 0)
+                {
+                long cTimeoutMillis = Math.max(1, ldtTimeout - System.currentTimeMillis());
+                if (cTimeoutMillis > Integer.MAX_VALUE)
+                    {
+                    cTimeoutMillis = Integer.MAX_VALUE;
+                    }
+                conn.setConnectTimeout((int) cTimeoutMillis);
+                conn.setReadTimeout((int) cTimeoutMillis);
+                }
 
+            Callable<Integer> task = () ->
+                {
+                try (var ignore = s_handlerGlobal.withHandler(hConn.m_cookieHandler))
+                    {
+                    if (abData != null)
+                        {
+                        conn.setDoOutput(true);
+                        conn.setDoInput(true);
+
+                        OutputStream os = conn.getOutputStream();
+                        os.write(abData);
+                        os.flush();
+                        }
+                    return conn.getResponseCode();
+                    }
+                };
+
+            CompletableFuture<Integer> cfSend = frame.f_context.f_container.scheduleIO(task);
+
+            Frame.Continuation continuation = frameCaller ->
+                {
+                try
+                    {
+                    return processResponse(frameCaller, conn, cfSend.get(), aiReturn);
+                    }
+                catch (Throwable e)
+                    {
+                    return frameCaller.raiseException(
+                        xException.ioException(frameCaller, e.getMessage()));
+                    }
+                };
+
+            return frame.waitForIO(cfSend, continuation);
+            }
+        catch (Exception e)
+            {
+            return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+        }
+
+    private int processResponse(Frame frame, HttpURLConnection conn, int nResponseCode, int[] aiReturn)
+        {
+        int cMaxSize = 8*1024*1024; // TODO: how to configure?
+        try
+            {
             Map<String, List<String>> mapResponseHeaders = conn.getHeaderFields();
 
             int          cResponseHeaders   = mapResponseHeaders.size();
@@ -312,10 +361,10 @@ public class xRTConnector
                 {
                 if (nContentLength > cMaxSize)
                     {
-                    nResponseStatus = 206; // "Partial Content"
-                    nContentLength  = cMaxSize;
+                    nResponseCode  = 206; // "Partial Content"
+                    nContentLength = cMaxSize;
                     }
-                InputStream in = nResponseStatus >= 400
+                InputStream in = nResponseCode >= 400
                         ? conn.getErrorStream()
                         : conn.getInputStream();
                 byte[] ab = new byte[nContentLength];
@@ -329,7 +378,7 @@ public class xRTConnector
                     : xArray.makeByteArrayHandle(abResponse, Mutability.Constant);
 
             return frame.assignValues(aiReturn,
-                    xInt64.makeHandle(nResponseStatus),
+                    xInt64.makeHandle(nResponseCode),
                     xString.makeArrayHandle(asResponseNames),
                     xString.makeArrayHandle(asResponseValues),
                     hResponseBytes
@@ -353,7 +402,7 @@ public class xRTConnector
     /**
      * Global CookieHandler.
      */
-    static class GlobalCookieHandler
+    protected static class GlobalCookieHandler
             extends CookieHandler
         {
         private final TransientThreadLocal<CookieHandler> f_tloHandler = new TransientThreadLocal<>();

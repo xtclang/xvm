@@ -1,7 +1,7 @@
 /**
  * The command example:
  *
- *    xec build/curl.xtc GET http://www.xqiz.it
+ *    xec build/curl.xtc GET http://www.xqiz.it 5s
  */
 module Curl {
     package net import net.xtclang.org;
@@ -11,7 +11,7 @@ module Curl {
 
     import web.*;
 
-    void run(String[] args=["GET", "http://xqiz.it"]) {
+    void run(String[] args=["GET", "http://xqiz.it", "5s"]) {
         @Inject Console console;
 
         if (args.size < 2) {
@@ -19,8 +19,9 @@ module Curl {
             return;
         }
 
-        String methodName = args[0];
-        String uriString  = args[1];
+        String   methodName = args[0];
+        String   uriString  = args[1];
+        Duration timeout    = args.size < 3 ? Duration.ofSeconds(5) : new Duration(args[2]);
 
         Client client = new HttpClient();
 
@@ -37,7 +38,11 @@ module Curl {
             return name, password;
             };
 
-        ResponseIn response = client.send(request, callback);
+
+        ResponseIn response;
+        using (new Timeout(timeout)) {
+            response = client.send(request, callback);
+        }
 
         // process the response
         console.print(response);
