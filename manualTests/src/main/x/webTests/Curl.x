@@ -38,18 +38,17 @@ module Curl {
             return name, password;
             };
 
+        try (val t = new Timeout(timeout)) {
+            ResponseIn response = client.send(request, callback);
 
-        ResponseIn response;
-        using (new Timeout(timeout)) {
-            response = client.send(request, callback);
-        }
+            console.print(response);
+            console.print($"Headers:\n{response.header}");
 
-        // process the response
-        console.print(response);
-        console.print($"Headers:\n{response.header}");
-
-        if (Body body ?= response.body) {
-            console.print(body.bytes.unpackUtf8());
+            if (Body body ?= response.body) {
+                console.print(body.bytes.unpackUtf8());
+            }
+        } catch (TimedOut e) {
+            console.print($"Request timed out after {timeout} sec");
         }
     }
 }
