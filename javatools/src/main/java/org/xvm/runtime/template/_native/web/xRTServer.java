@@ -343,7 +343,7 @@ public class xRTServer
                     SSLContext ctxSSL = getSSLContext();
                     SSLEngine  engine = ctxSSL.createSSLEngine();
 
-                    params.setNeedClientAuth(true);
+                    params.setNeedClientAuth(false);
                     params.setCipherSuites(engine.getEnabledCipherSuites());
                     params.setProtocols(engine.getEnabledProtocols());
                     params.setSSLParameters(ctxSSL.getSupportedSSLParameters());
@@ -367,7 +367,7 @@ public class xRTServer
      */
     private int invokeAddRoute(Frame frame, HttpServerHandle hServer, ObjectHandle[] ahArg)
         {
-        StringHandle   hHostName = (StringHandle) ahArg[0];
+        String         sHostName = ((StringHandle) ahArg[0]).getStringValue();
         ServiceHandle  hWrapper  = (ServiceHandle) ahArg[1];
         KeyStoreHandle hKeystore = ahArg[2] instanceof KeyStoreHandle hK ? hK : null;
         String         sTlsKey   = ahArg[3] instanceof StringHandle hS ? hS.getStringValue() : null;
@@ -400,7 +400,15 @@ public class xRTServer
             }
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
-        router.mapRoutes.put(hHostName.getStringValue(), new RouteInfo(handler, hKeystore, sTlsKey));
+        RouteInfo      route   = new RouteInfo(handler, hKeystore, sTlsKey);
+
+        if (hServer.getHttpServer().getAddress().getHostName().equals(sHostName))
+            {
+            // the "direct" route is only used by the KeyManager when a host name is missing
+            router.setDirectRoute(route);
+            }
+
+        router.mapRoutes.put(sHostName, route);
         return Op.R_NEXT;
         }
 
@@ -782,23 +790,23 @@ public class xRTServer
                 List<SNIServerName> listNames = sessionEx.getRequestedServerNames();
 
                 String sHost = listNames.isEmpty()
-                        ? sessionEx.getPeerHost()
+                        ? null
                         : ((SNIHostName) listNames.get(0)).getAsciiName();
-                if (sHost != null)
+
+                // the main reason the server name may be missing is for an HTTPS request that
+                // goes directly against the IP address (e.g. "https://129.168.1.30:8081/nginx")
+                RouteInfo route = sHost == null
+                        ? f_hServer.getRouter().getDirectRoute()
+                        : f_hServer.getRouter().mapRoutes.get(sHost);
+                if (route == null)
                     {
-                    RouteInfo route = f_hServer.getRouter().mapRoutes.get(sHost);
-                    if (route != null)
-                        {
-                        f_tloKeyStore.set(route.hKeyStore);
-                        return route.sTlsKey;
-                        }
                     // TODO: REMOVE
                     System.err.println("*** Handshake with unknown host: " + sHost);
                     }
                 else
                     {
-                    // TODO: REMOVE
-                    System.err.println("*** Handshake with unspecified host");
+                    f_tloKeyStore.set(route.hKeyStore);
+                    return route.sTlsKey;
                     }
                 }
             else
@@ -871,7 +879,10 @@ public class xRTServer
     protected static class Router
             implements HttpHandler
         {
+        public final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
+
         private ObjectHandle m_hBinding;
+        private RouteInfo    m_routeDirect;
 
         @Override
         public void handle(HttpExchange exchange)
@@ -901,7 +912,15 @@ public class xRTServer
             m_hBinding = binding;
             }
 
-        public final Map<String, RouteInfo> mapRoutes = new ConcurrentHashMap<>();
+        protected RouteInfo getDirectRoute()
+            {
+            return m_routeDirect;
+            }
+
+        protected void setDirectRoute(RouteInfo route)
+            {
+            m_routeDirect = route;
+            }
         }
 
     protected record RouteInfo(RequestHandler handler, KeyStoreHandle hKeyStore, String sTlsKey) {}
