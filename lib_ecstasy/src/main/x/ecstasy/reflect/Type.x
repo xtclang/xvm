@@ -637,7 +637,7 @@ interface Type<DataType, OuterType>
      * @return True iff the Class has a structure-based constructor
      * @return (conditional) the constructor
      *
-     * @throw IllegalArgument if this is a virtual child type, but a parent is not specified
+     * @throws IllegalArgument if this is a virtual child type, but a parent is not specified
      */
     conditional function DataType(Struct) structConstructor(OuterType? outer = Null);
 

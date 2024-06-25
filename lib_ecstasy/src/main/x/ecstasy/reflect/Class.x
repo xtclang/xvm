@@ -560,7 +560,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @return a new instance of the class
      *
      * @throws IllegalState    if the structure is illegal in any way
-     * @throw  IllegalArgument if a virtual child parent is not specified
+     * @throws IllegalArgument if a virtual child parent is not specified
      */
     PublicType instantiate(StructType structure, PublicType.OuterType? outer = Null) {
         assert function PublicType (StructType) constructor := PublicType.structConstructor(outer);
