@@ -114,19 +114,15 @@ service OSStorage {
     private Map<String, FileWatcher?[]> allWatchers = new HashMap();
 
     @Override
-    String toString() {
-        return "Storage";
-    }
+    String toString() = "Storage";
+
 
     // ----- used by the native injection logic ----------------------------------------------------
 
-    FileStore store.get() {
-        return fileStore;
-    }
+    FileStore store.get() = fileStore;
 
-    Directory rootDir.get() {
-        return fileStore.root;
-    }
+    Directory rootDir.get() = fileStore.root;
+
 
     // ----- native --------------------------------------------------------------------------------
 

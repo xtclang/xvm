@@ -18,73 +18,40 @@ const CPFileNode(Object cookie, FileStore? fileStore, Path path, Time created, T
     }
 
     @Override
-    FileStore store.get() {
-        return fileStore ?: throw new IllegalState("standalone resource") ;
-    }
+    FileStore store.get() = fileStore ?: throw new IllegalState("standalone resource");
 
     @Override
-    @RO String name.get() {
-        return path.form == Root ? "" : path.name;
-    }
+    @RO String name.get() = path.form == Root ? "" : path.name;
 
     @Override
-    @RO Boolean exists.get() {
-        return cookie != Null;
-    }
+    @RO Boolean exists.get() = cookie != Null;
 
     @Override
-    conditional File linkAsFile() {
-        return False; // not implemented yet
-    }
+    conditional File linkAsFile() = False; // no links on the Constant Pool
 
     @Override
-    @RO Time accessed.get() {
-        return Time.EPOCH;
-    }
+    @RO Time accessed.get() = Time.EPOCH;
 
     @Override
-    @RO Boolean readable.get() {
-        return True;
-    }
+    @RO Boolean readable.get() = True;
 
     @Override
-    @RO Boolean writable.get() {
-        return False;
-    }
+    @RO Boolean writable.get() = False;
 
     @Override
-    Boolean create() {
-        if (exists) {
-            return False;
-        }
-        throw new AccessDenied();
-    }
+    Boolean create() = exists ? False : throw new AccessDenied();
 
     @Override
-    FileNode ensure() {
-        if (exists) {
-            return this;
-        }
-        throw new AccessDenied();
-    }
+    FileNode ensure() = exists ? this : throw new AccessDenied();
 
     @Override
-    Boolean delete() {
-        if (!exists) {
-            return False;
-        }
-        throw new AccessDenied();
-    }
+    Boolean delete() = exists ? throw new AccessDenied() : False;
 
     @Override
-    conditional FileNode renameTo(String name) {
-        return False;
-    }
+    conditional FileNode renameTo(String name) = False;
 
     @Override
-    Cancellable watch(FileWatcher watch) {
-        return () -> {};
-    }
+    Cancellable watch(FileWatcher watch)  = () -> {};
 
 
     // ----- native support ------------------------------------------------------------------------

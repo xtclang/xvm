@@ -49,6 +49,7 @@ public class xOSFileStore
 
         markNativeMethod("dirFor", STRING, null);
         markNativeMethod("fileFor", STRING, null);
+        markNativeMethod("linkAsFile", STRING, null);
         markNativeMethod("copyOrMove", null, null);
 
         invalidateTypeInfo();
@@ -166,6 +167,28 @@ public class xOSFileStore
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn)
+        {
+        switch (method.getName())
+            {
+            case "linkAsFile": // pathString
+                {
+                StringHandle hPathString = (StringHandle) ahArg[0];
+                Path         path        = Paths.get(hPathString.getStringValue());
+
+                if (Files.isSymbolicLink(path))
+                    {
+                    // TODO: implement native support for link files
+                    System.err.println("*** File is a link: " + path);
+                    }
+                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                }
+            }
+        return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
         }
 
 

@@ -27,29 +27,21 @@ class OSFileStore
     }
 
     @Override
-    conditional Directory|File find(Path path) {
-        return storage.find(this, path.toString());
-    }
+    conditional Directory|File find(Path path) = storage.find(this, path.toString());
 
     @Override
-    Directory dirFor(Path path) {
-        return dirFor(path.toString());
-    }
+    Directory dirFor(Path path) = dirFor(path.toString());
 
     @Override
-    File fileFor(Path path) {
-        return fileFor(path.toString());
-    }
+    File fileFor(Path path) = fileFor(path.toString());
 
     @Override
-    Directory|File copy(Path source, Path dest) {
-        return copyOrMove(source, source.toString(), dest, dest.toString(), False);
-    }
+    Directory|File copy(Path source, Path dest) =
+            copyOrMove(source, source.toString(), dest, dest.toString(), False);
 
     @Override
-    Directory|File move(Path source, Path dest) {
-        return copyOrMove(source, source.toString(), dest, dest.toString(), True);
-    }
+    Directory|File move(Path source, Path dest) =
+            copyOrMove(source, source.toString(), dest, dest.toString(), True);
 
     @Override
     FileStore ensureReadOnly() {
@@ -71,18 +63,14 @@ class OSFileStore
     @RO Int bytesFree;
 
     @Override
-    String toString() {
-        return $"FileStore: {root}";
-    }
+    String toString() = $"FileStore: {root}";
 
 
     // ----- internal ------------------------------------------------------------------------------
 
     OSStorage storage;
 
-    String[] names((protected OSDirectory) dir) {
-        return storage.names(dir.pathString);
-    }
+    String[] names((protected OSDirectory) dir) = storage.names(dir.pathString);
 
     Boolean create((protected OSFileNode) node) {
         if (readOnly) {
@@ -102,19 +90,20 @@ class OSFileStore
         return storage.delete(node.pathString);
     }
 
-    Cancellable watchFile(OSFile file, FileWatcher watcher) {
-        return storage.watchFile(file.path, watcher);
-    }
+    conditional File linkAsFile((protected OSFileNode) node) = linkAsFile(node.pathString);
 
-    Cancellable watchDir(OSDirectory dir, FileWatcher watcher) {
-        return storage.watchDir(dir.path, watcher);
-    }
+    Cancellable watchFile(OSFile file, FileWatcher watcher) = storage.watchFile(file.path, watcher);
+
+    Cancellable watchDir(OSDirectory dir, FileWatcher watcher) = storage.watchDir(dir.path, watcher);
+
 
     // ----- native --------------------------------------------------------------------------------
 
     OSDirectory dirFor(String pathString) { TODO("native"); }
 
     OSFile fileFor(String pathString) { TODO("native"); }
+
+    conditional OSFile linkAsFile(String pathString) { TODO("native"); }
 
     OSDirectory|OSFile copyOrMove(Path sourcePath, String sourceStr,
                                   Path destPath,   String destStr, Boolean move) { TODO("native"); }

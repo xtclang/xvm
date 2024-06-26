@@ -2,7 +2,6 @@ import ecstasy.fs.AccessDenied;
 import ecstasy.fs.Directory;
 import ecstasy.fs.File;
 import ecstasy.fs.FileStore;
-import ecstasy.fs.FileWatcher;
 import ecstasy.fs.Path;
 
 /**
@@ -88,39 +87,25 @@ const CPFileStore(String path, Object constRoot)
     }
 
     @Override
-    Directory|File copy(Path source, Path dest) {
-        throw new AccessDenied();
-    }
+    Directory|File copy(Path source, Path dest) = throw new AccessDenied();
 
     @Override
-    Directory|File move(Path source, Path dest) {
-        throw new AccessDenied();
-    }
+    Directory|File move(Path source, Path dest) = throw new AccessDenied();
 
     @Override
-    @RO Boolean readOnly.get() {
-        return True;
-    }
+    @RO Boolean readOnly.get() = True;
 
     @Override
-    FileStore ensureReadOnly() {
-        return this;
-    }
+    FileStore ensureReadOnly() = this;
 
     @Override
-    @RO Int capacity.get() {
-        return root.size;
-    }
+    @RO Int capacity.get() = root.size;
 
     @Override
-    @RO Int bytesUsed.get() {
-        return root.size;
-    }
+    @RO Int bytesUsed.get() = root.size;
 
     @Override
-    @RO Int bytesFree.get() {
-        return 0;
-    }
+    @RO Int bytesFree.get() = 0;
 
     @Override
     Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = True) {
@@ -133,9 +118,7 @@ const CPFileStore(String path, Object constRoot)
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return 10 + path.estimateStringLength();
-    }
+    Int estimateStringLength() = 10 + path.estimateStringLength();
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {

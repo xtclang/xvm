@@ -97,17 +97,10 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
     }
 
     @Override
-    Boolean deleteRecursively() {
-        if (!exists) {
-            return False;
-        }
-        throw new AccessDenied();
-    }
+    Boolean deleteRecursively() = exists ? throw new AccessDenied() : False;
 
     @Override
-    Cancellable watchRecursively(FileWatcher watch) {
-        return () -> {};
-    }
+    Cancellable watchRecursively(FileWatcher watch) = () -> {};
 
 
     // ----- native support ------------------------------------------------------------------------

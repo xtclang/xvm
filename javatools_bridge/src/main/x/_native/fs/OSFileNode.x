@@ -18,33 +18,23 @@ const OSFileNode
     OSFileStore store;
 
     @Override
-    @Lazy Path path.calc() {
-        return new Path(pathString);
-    }
+    @Lazy Path path.calc() = new Path(pathString);
 
     @Override
     Boolean exists.get() { TODO("native"); }
 
     @Override
-    conditional File linkAsFile() {
-        return False; // TODO
-    }
+    conditional File linkAsFile() = store.linkAsFile(this:protected);
+
+    // TODO: should it be the "local" timezone?
+    @Override
+    @Lazy Time created.calc() = new Time(createdMillis*TimeOfDay.PicosPerMilli);
 
     @Override
-    @Lazy Time created.calc() {
-        // TODO: should it be the "local" timezone?
-        return new Time(createdMillis*TimeOfDay.PicosPerMilli);
-    }
+    Time modified.get() = new Time(modifiedMillis*TimeOfDay.PicosPerMilli);
 
     @Override
-    Time modified.get() {
-        return new Time(modifiedMillis*TimeOfDay.PicosPerMilli);
-    }
-
-    @Override
-    @RO Time accessed.get() {
-        return new Time(accessedMillis*TimeOfDay.PicosPerMilli);
-    }
+    @RO Time accessed.get() = new Time(accessedMillis*TimeOfDay.PicosPerMilli);
 
     @Override
     Boolean readable.get() { TODO("native"); }
@@ -53,9 +43,7 @@ const OSFileNode
     Boolean writable.get() { TODO("native"); }
 
     @Override
-    Boolean create() {
-        return !exists && store.create(this:protected);
-    }
+    Boolean create() = !exists && store.create(this:protected);
 
     @Override
     FileNode ensure() {
@@ -66,9 +54,7 @@ const OSFileNode
     }
 
     @Override
-    Boolean delete() {
-        return exists && store.delete(this:protected);
-    }
+    Boolean delete() = exists && store.delete(this:protected);
 
     @Override
     conditional FileNode renameTo(String name) {
@@ -97,7 +83,7 @@ const OSFileNode
     }
 
 
-    // ----- internal ------------------------------------------------------------------------------
+    // ----- native --------------------------------------------------------------------------------
 
     String pathString.get() { TODO("native"); }
 

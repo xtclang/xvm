@@ -25,19 +25,13 @@ const CPFile(Object cookie, FileStore? fileStore, Path path, Time created, Time 
     }
 
     @Override
-    immutable Byte[] read(Range<Int> range) {
-        return contents.slice(range);
-    }
+    immutable Byte[] read(Range<Int> range) = contents.slice(range);
 
     @Override
-    File truncate(Int newSize = 0) {
-        throw exists ? new AccessDenied() : new FileNotFound(path);
-    }
+    File truncate(Int newSize = 0) = throw exists ? new AccessDenied() : new FileNotFound(path);
 
     @Override
-    File append(Byte[] contents) {
-        throw new AccessDenied();
-    }
+    File append(Byte[] contents) = throw new AccessDenied();
 
     @Override
     conditional FileStore openArchive() {
