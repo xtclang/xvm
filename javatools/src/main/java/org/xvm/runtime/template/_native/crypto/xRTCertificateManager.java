@@ -210,10 +210,13 @@ public class xRTCertificateManager
                         "--logs-dir",       sCertsPath + File.separator + "logs",
                         "--register-unsafely-without-email",
                         "-d", sName);
-                if (iResult == Op.R_NEXT)
+
+                // the "certonly" command above could fail if there was already a valid certificate,
+                // in which case we could run the conversion routine below regardless
+                String sDestPath = sConfigPath + File.separator + "live" + File.separator + sName;
+                if (new File(sDestPath).exists())
                     {
                     // convert "pem" files into "pkcs12" format
-                    String sDestPath = sConfigPath + File.separator + "live" + File.separator + sName;
                     iResult = runCommand(frame, null,
                         "openssl", "pkcs12", "-export",
                         "-out",      sCertsPath + File.separator + sName + ".p12",
@@ -224,20 +227,20 @@ public class xRTCertificateManager
                         "-passout",  "pass:" + hPwd.getStringValue()
                         );
 
-                    }
-                if (iResult == Op.R_NEXT)
-                    {
-                    // transfer the key-pair into the target keystore
-                    iResult = runCommand(frame, null,
-                        "keytool", "-importkeystore",
-                        "-srckeystore",   sCertsPath + File.separator + sName + ".p12",
-                        "-srcstoretype",  "PKCS12",
-                        "-destkeystore",  hStorePath.getStringValue(),
-                        "-deststoretype", "PKCS12",
-                        "-alias",         sName,
-                        "-srcstorepass",  hPwd.getStringValue(),
-                        "-deststorepass", hPwd.getStringValue()
-                        );
+                    if (iResult == Op.R_NEXT)
+                        {
+                        // transfer the key-pair into the target keystore
+                        iResult = runCommand(frame, null,
+                            "keytool", "-importkeystore",
+                            "-srckeystore",   sCertsPath + File.separator + sName + ".p12",
+                            "-srcstoretype",  "PKCS12",
+                            "-destkeystore",  hStorePath.getStringValue(),
+                            "-deststoretype", "PKCS12",
+                            "-alias",         sName,
+                            "-srcstorepass",  hPwd.getStringValue(),
+                            "-deststorepass", hPwd.getStringValue()
+                            );
+                        }
                     }
                 return iResult;
                 }
