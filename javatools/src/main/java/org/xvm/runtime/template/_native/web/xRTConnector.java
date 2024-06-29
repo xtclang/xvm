@@ -369,7 +369,18 @@ public class xRTConnector
                         : conn.getInputStream();
                 byte[] ab = new byte[nContentLength];
 
-                in.read(ab, 0, nContentLength);
+                int ofStart = 0;
+                int cRemain = nContentLength;
+                while (true)
+                    {
+                    int cbRead = in.read(ab, ofStart, cRemain);
+                    if (cbRead == -1 || cbRead == cRemain)
+                        {
+                        break;
+                        }
+                    ofStart += cbRead;
+                    cRemain -= cbRead;
+                    }
                 abResponse = ab;
                 }
 
