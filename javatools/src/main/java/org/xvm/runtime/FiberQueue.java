@@ -272,7 +272,7 @@ public class FiberQueue
                 if (fiber.getStatus() == FiberStatus.Waiting)
                     {
                     if (frame.isSafeStack() ||
-                        fiberCaller != null && fiberCaller.isContinuationOf(fiber))
+                            fiberCaller != null && fiberCaller.isContinuationOf(fiber))
                         {
                         continue;
                         }

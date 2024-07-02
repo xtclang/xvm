@@ -10,7 +10,9 @@ import java.util.Map;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -36,23 +38,25 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * It implements Comparable to allow a registry of Fiber objects in a concurrent set.
  */
 public class Fiber
-        implements Comparable<Fiber>
+        implements Comparable<Fiber>, Runnable
     {
     public Fiber(ServiceContext context, Message msgCall)
         {
-        f_lId        = s_counter.getAndIncrement();
-        f_context    = context;
-        f_iCallerId  = msgCall.f_iCallerId;
-        f_fnCaller   = msgCall.f_fnCaller;
-        m_status     = FiberStatus.Initial;
+        f_lId = s_counter.getAndIncrement();
+        f_context = context;
+        f_suspendCnd = context.f_fiberExecutionLock.newCondition();
+        f_iCallerId = msgCall.f_iCallerId;
+        f_fnCaller = msgCall.f_fnCaller;
+        f_sEntryPointName = msgCall.toString();
+        m_status = FiberStatus.Initial;
 
         Fiber fiberCaller = msgCall.f_fiberCaller;
         if (fiberCaller == null)
             {
-            f_nDepth     = 0;
-            f_refCaller  = null;
+            f_nDepth = 0;
+            f_refCaller = null;
             m_ldtTimeout = 0L;
-            m_hTimeout   = xNullable.NULL;
+            m_hTimeout = xNullable.NULL;
             }
         else
             {
@@ -555,6 +559,87 @@ public class Fiber
         return sb.toString();
         }
 
+    /**
+     * Suspend this fiber.
+     *
+     * <p>This method is only meant to be called on the fiber's thread.
+     */
+    public void suspend()
+        {
+        Thread thread = Thread.currentThread();
+        String sRestore = thread.getName();
+        thread.setName(f_context.f_sName + ":" + this + " " + m_frame);
+
+        while (!m_fScheduled)
+            {
+            // TODO: make it safe to pass false; for that we need to respect fiber timeouts
+            f_context.ensureScheduled(true);
+            f_suspendCnd.awaitUninterruptibly();
+            }
+
+        f_context.m_frameCurrent = this.m_frame;
+        thread.setName(sRestore);
+        }
+
+    /**
+     * Resume the fiber, this is to be called from a different thread then the fiber's thread
+     */
+    public void schedule()
+        {
+        m_fScheduled = true;
+        if (getStatus() == FiberStatus.Initial)
+            {
+            f_context.f_executor.submit(this);
+            }
+        else
+            {
+            f_suspendCnd.signal();
+            }
+        }
+
+    // ----- Runnable (execute the frames ----------------------------------------------------------
+
+    @Override
+    public void run()
+        {
+        Thread.currentThread().setName(f_context.f_sName + ":" + this);
+        f_context.adoptCallingFiber();
+        f_context.f_fiberExecutionLock.lock();
+        Frame frame = m_frame;
+        try (var ignored = ConstantPool.withPool(frame.poolContext()))
+            {
+            // Note: this runs on a Java virtual-thread (aka fiber) and is lite-weight when suspended
+            while (true)
+                {
+                m_fScheduled = false;
+                frame = f_context.execute(frame);
+                if (frame == null)
+                    {
+                    break;
+                    }
+                f_context.suspendFiber(frame);
+                }
+            }
+        catch (Throwable e)
+            {
+            // must not happen
+            f_context.terminateFiber(this);
+            System.err.println("Unexpected service execution failure: " + f_context.f_sName);
+            e.printStackTrace(System.err);
+            }
+        finally
+            {
+            try
+                {
+                f_context.execute(true);
+                }
+            finally
+                {
+                f_context.releaseSchedulingLock();
+                }
+            }
+        }
+
 
     // ----- Comparable & Object methods -----------------------------------------------------------
 
@@ -579,7 +664,7 @@ public class Fiber
     @Override
     public String toString()
         {
-        return "Fiber " + f_lId + " (" + m_status.name() + ')';
+        return "Fiber " + f_lId + " " + f_sEntryPointName + " (" + m_status.name() + ')';
         }
 
 
@@ -641,6 +726,16 @@ public class Fiber
     final ServiceContext f_context;
 
     /**
+     * {@link Condition} used to suspend and resume a fiber within the service's executor
+     */
+    final Condition f_suspendCnd;
+
+    /**
+     * {@code true} if this fiber has been scheduled for execution
+     */
+    boolean m_fScheduled;
+
+    /**
      * A weak reference to the  caller's fiber (null for "inception" fibers).
      */
     final WeakReference<Fiber> f_refCaller;
@@ -656,6 +751,11 @@ public class Fiber
     final MethodStructure f_fnCaller;
 
     /**
+     * The name of the base function called on the service
+     */
+    final String f_sEntryPointName;
+
+    /**
      * The fiber call stack depth.
      */
     final int f_nDepth;
@@ -668,7 +768,7 @@ public class Fiber
     /**
      * If the fiber is not running, the frame it was suspended at.
      */
-    private Frame m_frame;
+    protected Frame m_frame;
 
     /**
      * This flag serves a hint that the execution could possibly be resumed; it's set by the
