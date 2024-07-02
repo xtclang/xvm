@@ -98,7 +98,7 @@ public abstract class Container
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
             try (var ignore = ConstantPool.withPool(getConstantPool())) {
-                m_contextMain = ctx = createServiceContext(getModule().getName());
+                m_contextMain = ctx = createServiceContext(null);
                 xService.INSTANCE.createServiceHandle(ctx,
                     xService.INSTANCE.getCanonicalClass(),
                     xService.INSTANCE.getCanonicalType());
@@ -110,7 +110,7 @@ public abstract class Container
     /**
      * Create a new service context for this Container.
      *
-     * @param sName  the service name
+     * @param sName  the service name, or {@code null} for the container's main service
      *
      * @return the new service context
      */
@@ -167,7 +167,12 @@ public abstract class Container
         // processing directly to the top level runtime.
 
         f_pendingWorkCount.incrementAndGet();
-        f_runtime.submitService(() -> {
+        f_runtime.touch();
+
+        // TODO: this is a bit silly; the service should just schedule itself, but we'd still need to manage
+        //       f_pendingWorkCount
+        service.f_executor.submit(() -> {
+            Thread.currentThread().setName(service.f_sName + ":scheduler");
             try {
                 service.execute(true);
             } catch (Throwable e) {

@@ -8,38 +8,19 @@ import java.util.WeakHashMap;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.util.concurrent.ConcurrentLinkedBlockingQueue;
-
 /**
  * The runtime.
  */
 public class Runtime {
     public Runtime() {
-        int parallelism = Integer.parseInt(System.getProperty("xvm.parallelism", "0"));
-        if (parallelism <= 0) {
-            parallelism = java.lang.Runtime.getRuntime().availableProcessors();
-        }
-
-        ThreadGroup groupXVM = new ThreadGroup("XVM");
-        ThreadFactory factoryXVM = r -> {
-            Thread thread = new Thread(groupXVM, r);
-            thread.setDaemon(true);
-            thread.setName("XvmWorker@" + thread.hashCode());
-            return thread;
-        };
-
-        // TODO: replace with a fair scheduling based ExecutorService
-        f_executorXVM = new ThreadPoolExecutor(parallelism, parallelism, 0, TimeUnit.SECONDS,
-                new ConcurrentLinkedBlockingQueue<>(), factoryXVM);
-
         ThreadFactory factoryIO = Thread.ofVirtual()
                 .name("IOWorker@", 0)
                 .factory();
@@ -87,21 +68,12 @@ public class Runtime {
     }
 
     /**
-     * Submit ServiceContext work for eventual processing by the runtime.
-     *
-     * @param task the task to process
-     */
-    protected void submitService(Runnable task) {
-        f_executorXVM.submit(task);
-        m_lastXvmSubmitNanos = System.nanoTime();
-    }
-
-    /**
      * Submit IO work for eventual processing by the runtime.
      *
      * @param task the task to process
      */
     protected void submitIO(Runnable task) {
+        touch();
         f_executorIO.submit(task);
     }
 
@@ -114,13 +86,19 @@ public class Runtime {
 
     public void shutdownXVM() {
         f_executorIO .shutdown();
-        f_executorXVM.shutdown();
+    }
+
+    /**
+     * "Touch" the runtime to indicate that it remains active.
+     */
+    public void touch() {
+        m_lastXvmSubmitNanos = System.nanoTime();
     }
 
     public boolean isIdle() {
         // TODO: very naive; replace
         return m_lastXvmSubmitNanos < System.nanoTime() - TimeUnit.MILLISECONDS.toNanos(10)
-            && f_executorXVM.getActiveCount() == 0;
+            && ForkJoinPool.commonPool().getActiveThreadCount() == 0;
     }
 
     public boolean isDebuggerActive() {
@@ -150,11 +128,6 @@ public class Runtime {
     }
 
     // ----- constants and fields ------------------------------------------------------------------
-
-    /**
-     * The executor for XVM services.
-     */
-    public final ThreadPoolExecutor f_executorXVM;
 
     /**
      * The executor for IO services.
