@@ -598,7 +598,7 @@ public abstract class RelationalTypeConstant
                             Collections.emptyMap(),  // mapVirtProps
                             Collections.emptyMap(),  // mapVirtMethods
                             mergeChildren(info1, info2, errs),
-                            null, // REVIEW: mergeDepends?
+                            mergeDepends(info1, info2),
                             info1 == null || info2 == null
                                     ? TypeInfo.Progress.Incomplete
                                     : info1.getProgress().worstOf(info2.getProgress())
@@ -650,6 +650,28 @@ public abstract class RelationalTypeConstant
      * @return a merged ListMap
      */
     protected abstract ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs);
+
+    /**
+     * Produce a set of the types the [incomplete] TypeInfo for this type depends on.
+     *
+     * Note, that either of the two TypeInfos can be null.
+     *
+     * @return a merged set of types
+     */
+    protected Set<TypeConstant> mergeDepends(TypeInfo info1, TypeInfo info2)
+        {
+        Set<TypeConstant> setDepends = null;
+        if (info1 != null)
+            {
+            setDepends = info1.collectDependTypes(setDepends);
+            }
+        if (info2 != null)
+            {
+            setDepends = info2.collectDependTypes(setDepends);
+            }
+
+        return setDepends;
+        }
 
 
     // ----- type comparison support ---------------------------------------------------------------

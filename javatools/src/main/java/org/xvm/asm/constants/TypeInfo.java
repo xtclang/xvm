@@ -445,14 +445,37 @@ public class TypeInfo
     /**
      * Add the types this TypeInfo depends on to the specified set.
      *
-     * @param setDepends the set to add the types to
+     * @param setDepends (optional) the set to add the types to
      */
-    public void collectDependTypes(Set<TypeConstant> setDepends)
+    public Set<TypeConstant> collectDependTypes(Set<TypeConstant> setDepends)
         {
         if (f_setDepends != null)
             {
-            setDepends.addAll(f_setDepends);
+            if (setDepends == null)
+                {
+                setDepends = new HashSet<>();
+                }
+            for (TypeConstant type : f_setDepends)
+                {
+                if (type instanceof UnionTypeConstant typeUnion)
+                    {
+                    typeUnion.decompose(setDepends);
+                    }
+                else
+                    {
+                    setDepends.add(type);
+                    }
+                }
             }
+        return setDepends;
+        }
+
+    /**
+     * @return true iff the progress of this TypeInfo depends on the specified type resolution
+     */
+    public boolean dependsOn(TypeConstant type)
+        {
+        return f_setDepends != null && f_setDepends.contains(type.removeAccess());
         }
 
     /**

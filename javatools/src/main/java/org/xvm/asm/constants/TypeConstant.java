@@ -1115,7 +1115,7 @@ public abstract class TypeConstant
             return thisResolved.andNot(pool, thatResolved);
             }
 
-        // type Type is known to have a distributive property:
+        // type "Type" is known to have a distributive property:
         // Type<X> - Type<Y> == Type<X - Y>
         return this.isTypeOfType() && this.getParamsCount() > 0 &&
                that.isTypeOfType() && that.getParamsCount() > 0
@@ -3285,21 +3285,34 @@ public abstract class TypeConstant
     private boolean computeIncomplete(Composition composition, TypeConstant typeContrib,
                                       TypeInfo infoContrib, Set<TypeConstant> setDepends)
         {
-        if (composition == Composition.Into)
+        if (composition == Composition.Into || infoContrib == null)
             {
-            // this type represents a mixin; we cannot complete until the "into" class does
-            setDepends.add(typeContrib.removeAccess());
+            // if this type represents a mixin we cannot complete until the "into" type does
+            if (typeContrib instanceof UnionTypeConstant typeUnion)
+                {
+                typeUnion.decompose(setDepends);
+                }
+            else
+                {
+                setDepends.add(typeContrib.removeAccess());
+                }
             }
-        else if (infoContrib != null)
+        else
             {
-            infoContrib.collectDependTypes(setDepends);
             if (composition == Composition.Incorporates)
                 {
-                // this type represents a class that incorporates the specified mixin; if the only
-                // unresolved TypeInfo dependency that mixin has is this class itself, disregard it
-                setDepends.remove(this.removeAccess());
-                return !setDepends.isEmpty();
+                // this type incorporates the specified mixin; if that mixin TypeInfo computation
+                // depends on this type itself, it can only mean that the mixin is "into" i) this
+                // type, or ii) "into" a union that includes this type, and in either case we can
+                // take the partial mixin's info, which contains properties and methods of the mixin
+                // itself, and may miss the information from the "into" type(s), which we already
+                // have (i) or don't care about (ii)
+                if (infoContrib.dependsOn(this.removeAccess()))
+                    {
+                    return !setDepends.isEmpty();
+                    }
                 }
+            infoContrib.collectDependTypes(setDepends);
             }
         return true;
         }
@@ -5627,7 +5640,7 @@ public abstract class TypeConstant
                     info.getContributionList(), info.getClassChain(), info.getDefaultChain(),
                     info.getProperties(), info.getMethods(),
                     info.getVirtProperties(), info.getVirtMethods(), info.getChildInfosByName(),
-                    null, Progress.Incomplete);
+                    Collections.singleton(typePrivate.removeAccess()), Progress.Incomplete);
                 }
 
             info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),

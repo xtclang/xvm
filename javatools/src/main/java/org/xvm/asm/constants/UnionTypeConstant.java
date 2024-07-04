@@ -146,6 +146,32 @@ public class UnionTypeConstant
             }
         }
 
+    /**
+     * Add the underlying types of this union type into the specified set.
+     */
+    public void decompose(Set<TypeConstant> setTypes)
+        {
+        TypeConstant type1 = m_constType1;
+        TypeConstant type2 = m_constType2;
+
+        if (type1 instanceof UnionTypeConstant typeUnion)
+            {
+            typeUnion.decompose(setTypes);
+            }
+        else
+            {
+            setTypes.add(type1);
+            }
+        if (type2 instanceof UnionTypeConstant typeUnion)
+            {
+            typeUnion.decompose(setTypes);
+            }
+        else
+            {
+            setTypes.add(type2);
+            }
+        }
+
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -632,7 +658,8 @@ public class UnionTypeConstant
 
                 // nothing worked, but if the types are identical, we can still create an implicit
                 // PropertyBody that would allow it to be accessed at run-time
-                if (type1.equals(type2) && prop1.isVirtual() && prop2.isVirtual())
+                if (type1.equals(type2) && prop1.isVirtual() && prop2.isVirtual() &&
+                        !prop1.isFormalType())
                     {
                     ModuleStructure   module         = getConstantPool().getFileStructure().getModule();
                     ClassStructure    clzSynthParent = module.ensureSyntheticInterface(getValueString());
@@ -738,7 +765,8 @@ public class UnionTypeConstant
                 // nothing worked, but if the signatures are identical, we can still create an
                 // implicit MethodBody that would allow it to be invoked at run-time
                 if (method1.getSignature().equals(method2.getSignature()) &&
-                        method1.isVirtual() && method2.isVirtual())
+                        method1.isVirtual() && method2.isVirtual() &&
+                        !sig.containsGenericTypes())
                     {
                     ModuleStructure module         = getConstantPool().getFileStructure().getModule();
                     ClassStructure  clzSynthParent = module.ensureSyntheticInterface(getValueString());
