@@ -356,7 +356,7 @@ public class TryStatement
         BinaryAST   astBlock;
 
         // using() or try()-with-resources
-        FinallyStart[] aFinallyClose = null;
+        FinallyStart[] aFinallyStart = null;
         if (resources != null)
             {
             // the first resource is declared outside of any try/finally block, but it is not
@@ -364,7 +364,7 @@ public class TryStatement
             code.add(new Enter());
 
             int c = resources.size();
-            aFinallyClose = new FinallyStart[c];
+            aFinallyStart = new FinallyStart[c];
             aAstResources = new ExprAST[c];
             for (int i = 0; i < c; ++i)
                 {
@@ -373,7 +373,7 @@ public class TryStatement
                 aAstResources[i] = (ExprAST) holder.getAst(stmt);
 
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
-                aFinallyClose[i] = opFinally;
+                aFinallyStart[i] = opFinally;
                 code.add(new GuardAll(opFinally));
                 }
             }
@@ -389,6 +389,11 @@ public class TryStatement
             opFinallyBlock = new FinallyStart(regFinallyException);
             labelCatchEnd  = new Label();
             code.add(new GuardAll(opFinallyBlock));
+            }
+        else if (resources != null)
+            {
+            // resources without "finally" add their own "FinallyStart" ops
+            labelCatchEnd = new Label();
             }
 
         // try..catch
@@ -471,12 +476,17 @@ public class TryStatement
             // skip_throw: CATCH_E
             // FINALLY_E
             // EXIT
+            if (catchall == null)
+                {
+                code.add(labelCatchEnd);
+                }
+
             TypeConstant   typeCloseable = pool.typeCloseable();
             MethodConstant methodClose   = typeCloseable.ensureTypeInfo(errs)
                     .findMethods("close", 1, MethodKind.Method).iterator().next();
             for (int i = resources.size() - 1; i >= 0; --i)
                 {
-                code.add(aFinallyClose[i]);
+                code.add(aFinallyStart[i]);
                 Register regException = code.lastRegister();
 
                 Register       regCatch  = code.createRegister(pool.typeException());

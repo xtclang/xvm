@@ -72,7 +72,7 @@ module TestTry {
 
         try {
             testThrow();
-            console.print("DIDN'T THROW!");
+            assert as "DIDN'T THROW!";
         } catch (Exception e) {
             console.print("caught: " + e);
         }
@@ -86,16 +86,16 @@ module TestTry {
         try {
             using (ByeBye bye = new ByeBye()) {
                 testThrow();
-                console.print("DIDN'T THROW!");
+                assert as "DIDN'T THROW!";
             }
         } catch (Exception e) {
             console.print("ok");
         }
 
-         try (ByeBye bye = new ByeBye()) {
-            console.print(bye);
-        } finally {
-            console.print("in finally: " + bye);
+        try (ByeBye bye = new ByeBye()) {
+            testThrow();
+            assert as "DIDN'T THROW!";
+        } catch (Exception e) {
         }
 
         console.print("done");
