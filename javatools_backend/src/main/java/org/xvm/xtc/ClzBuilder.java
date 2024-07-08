@@ -644,7 +644,7 @@ public class ClzBuilder {
 
 
   public static XClz add_import( ClassPart clz ) {
-    return add_import(XClz.make(clz));
+    return add_import(clz.tclz());
   }
   public static XClz add_import( XClz tclz ) {
     // Nested internal class; imports recorded elsewhere
