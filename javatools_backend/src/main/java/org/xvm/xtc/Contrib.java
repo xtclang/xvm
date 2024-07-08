@@ -16,7 +16,7 @@ public class Contrib {
   private final PropCon _prop;
   private final SingleCon _inject;
   public final Annot _annot;
-  private final HashMap<String, TCon> _parms;
+  final HashMap<String, TCon> _parms;
 
   public final TCon _tContrib;
 

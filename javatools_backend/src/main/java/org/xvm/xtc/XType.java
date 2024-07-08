@@ -287,7 +287,9 @@ public abstract class XType {
     // Right now, allow null unions only
     case UnionTCon utc -> {
       XType u2 = xtype(utc._con2,false,self);
-      ClassPart clz1 = ((ClzCon)utc._con1).clz();
+      if( !(utc._con1 instanceof TermTCon tcon) )
+        yield XCons.XXTC;      // Not a union+null, bail out
+      ClassPart clz1 = tcon.clz();
       if( clz1 !=null && clz1._name.equals("Nullable") )
         yield (u2.zero() ? u2.box() : u2).nullable();
       XType u1 = xtype(utc._con1,true,self);
