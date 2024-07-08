@@ -2,16 +2,18 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        // this test used to fail to call Resource.close();
-        try (val t = new Resource(1)) {
-            throw new Exception();
-        } catch (Exception e) {}
     }
 
-    class Resource(Int t) implements Closeable {
-        @Override
-        void close(Exception? e = Null) {
-            console.print($"close {t}");
-        }
+    mixin MixIn<Element> into Base1<Element> {
+        // this used to compile though it should have not - @Override is missing
+        String add(Element e) = $"M: {e}";
+    }
+
+    class Super1<Element> {
+        String add(Element e) = $"S: {e}";
+    }
+    class Base1<Element> extends Super1<Element>
+        incorporates MixIn<Element> {
+        @Override String add(Element e) = $"B: {super(e)}";
     }
 }

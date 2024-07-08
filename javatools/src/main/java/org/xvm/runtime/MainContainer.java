@@ -127,7 +127,7 @@ public class MainContainer
             }
         catch (Exception e)
             {
-            throw new RuntimeException("failed to run: " + f_idModule, e);
+            throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage());
             }
         }
 
