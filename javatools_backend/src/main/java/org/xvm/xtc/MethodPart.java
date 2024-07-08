@@ -203,7 +203,7 @@ public class MethodPart extends MMethodPart {
 
     // Add outer class next
     if( outer!=null )
-      zts[j++] = XClz.make(outer);
+      zts[j++] = outer.tclz();
     // Copy/type actual args
     if( _args != null )
       for( Parameter arg : _args )
@@ -223,7 +223,7 @@ public class MethodPart extends MMethodPart {
     // self -> MMethod -> Class -> [Package or other ???]
     ClassPart clz = clz();
     Part outer = clz._par;
-    if( clz.isStatic() || outer instanceof PackagePart || XClz.make(clz).isa(XCons.CONST) )
+    if( clz.isStatic() || outer instanceof PackagePart || clz.tclz().isa(XCons.CONST) )
       return null;
     while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
     return outclz;

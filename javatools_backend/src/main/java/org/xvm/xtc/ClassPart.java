@@ -134,4 +134,6 @@ public class ClassPart extends Part {
     return mod;
   }
 
+  // Return XClz, expected already computed
+  public XClz tclz() { assert _tclz!=null; return _tclz; }
 }
