@@ -33,14 +33,14 @@ class Medium {
         class Base1<Element> extends Super1<Element> incorporates MixIn<Element> {
             @Override String add(Element e) = $"B[{e=} " + super(e) + " ]B";
         }
+        class Derived1<Element> extends Base1<Element> {
+            @Override String add(Element e) = $"D[{e=} " + super(e) + " ]D";
+        }
 
         String baseint1 = new Base1   < Int  >().add( 123 );
         String basestr1 = new Base1   <String>().add("abc");
         assert baseint1 ==         "B[e=123 MX[e=123 S[e=123]S ]MX ]B"   ;
         assert basestr1 ==         "B[e=abc MX[e=abc S[e=abc]S ]MX ]B"   ;
-        class Derived1<Element> extends Base1<Element> {
-            @Override String add(Element e) = $"D[{e=} " + super(e) + " ]D";
-        }
         String dervint1 = new Derived1< Int  >().add( 123 );
         String dervstr1 = new Derived1<String>().add("abc");
         assert dervint1 == "D[e=123 B[e=123 MX[e=123 S[e=123]S ]MX ]B ]D";
