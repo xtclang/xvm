@@ -139,13 +139,14 @@ public class ClzBuilder {
       return;
     }
 
-    // If this is a base+mixin class, the mixin class goes first.
+    // If this is a base+mixin class, the mixin class recursively goes first.
     if( _tclz._super!=null && _tclz._super._clz._f == Part.Format.MIXIN ) {
       assert _tclz._super._name.endsWith(_tclz._name);
       new ClzBuilder(_tmod,_tclz._super,_sbhead,_sb).jclass_body();
     }
 
 
+    // Actually start emitting class headers
     String java_class_name = _tclz._name;
     _sb.nl();                   // Blank line
     if( !_is_top ) _sb.ip("//-----------------").nl();
@@ -157,6 +158,7 @@ public class ClzBuilder {
     // public static class CLZ extends ...
 
     _sb.ip("public ");
+    if( _tclz._abstrct ) _sb.p("abstract ");
     if( !_is_top ) _sb.p("static ");
     _sb.p(jpart).p(_tclz.name());
     _tclz.clz_generic_def(_sb).p(" ");
@@ -202,7 +204,8 @@ public class ClzBuilder {
     // Get a GOLDen instance for faster special dispatch rules.
     // Use the sentinel "Never" type to get a true Java no-arg constructor
     if( !is_iface ) {
-      _sb.ifmt("public static final %0 GOLD = new %0((Never)null);\n",java_class_name);
+      if( !_tclz._abstrct )
+        _sb.ifmt("public static final %0 GOLD = new %0((Never)null);\n",java_class_name);
       _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     }
 
@@ -252,24 +255,26 @@ public class ClzBuilder {
         // calling 'this' anywhere.
 
         // "public static Foo construct(typeargs,args) { return new Foo(typeargs).$construct(args).$check(); }"
-        _sb.nl();
-        keywords(meth,true);
-        _tclz.clz_generic_def(_sb);
-        _sb.fmt("%0 construct(  ",java_class_name); // Return type
-        for( String tn : _tclz._tns )
-          _sb.fmt("$%0 %0, ",tn);
-        // Nested inner classes take an outer class arg
-        ClassPart outer = meth.isNestedInnerClass();
-        if( outer!=null )
-          _sb.fmt("%0 $outer, ", outer._name);
-        if( meth._args==null ) _sb.unchar(2);
-        else args(meth,_sb);
-        _sb.p(") { return new ").p(java_class_name).p("( ");
-        for( String tn : _tclz._tns )
-          _sb.fmt("%0,",tn);
-        _sb.unchar().p(").$construct(");
-        arg_names(meth,_sb);
-        _sb.p(").$check(); }").nl();
+        if( !_tclz._abstrct ) {
+          _sb.nl();
+          keywords(meth,true);
+          _tclz.clz_generic_def(_sb);
+          _sb.fmt("%0 construct(  ",java_class_name); // Return type
+          for( String tn : _tclz._tns )
+            _sb.fmt("$%0 %0, ",tn);
+          // Nested inner classes take an outer class arg
+          ClassPart outer = meth.isNestedInnerClass();
+          if( outer!=null )
+            _sb.fmt("%0 $outer, ", outer._name);
+          if( meth._args==null ) _sb.unchar(2);
+          else args(meth,_sb);
+          _sb.p(") { return new ").p(java_class_name).p("( ");
+          for( String tn : _tclz._tns )
+            _sb.fmt("%0,",tn);
+          _sb.unchar().p(").$construct(");
+          arg_names(meth,_sb);
+          _sb.p(").$check(); }").nl();
+        }
 
         // "private Foo $construct(args) { ..."
         _sb.ip("private ").p(java_class_name).p(" ");
