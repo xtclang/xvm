@@ -16,6 +16,11 @@ public abstract class S {
       for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
     return -1;
   }
+  public static int find( int[] es, int e ) {
+    if( es != null )
+      for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
+    return -1;
+  }
 
   public static String java_class_name( String xname ) {
      return xname.replace(".","_").intern();

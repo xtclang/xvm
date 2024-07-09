@@ -33,7 +33,7 @@ public class StringBuffer extends Arychar
   }
   public StringBuffer append( java.lang.String s) { return appendTo(s); }
 
-  public StringBuffer appendTo(long x) { return appendTo(Long.toString(x)); }
+  @Override public StringBuffer appendTo(long x) { return appendTo(Long.toString(x)); }
 
   @Override public java.lang.String toString() { return new java.lang.String(_es,0,_len); }
 }

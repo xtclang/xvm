@@ -83,6 +83,21 @@ public class ClzBuilder {
     _ltypes = new Ary<>(XType .class);
   }
 
+  // For mixins
+  public ClzBuilder( XClz mod, XClz tclz, SB sbhead, SB sb ) {
+    _is_top = false;
+    _is_module = false;
+    _tmod = mod;
+    _tclz = tclz;
+    _mod = (ModPart)mod._clz;
+    _clz = tclz._clz;
+    _sbhead = sbhead;
+    _sb = sb;
+    _locals = new Ary<>(String.class);
+    _ltypes = new Ary<>(XType .class);
+
+  }
+
   // Fill in the body of the matching java class
   public void jclass( ) {
     assert _is_top;
@@ -123,8 +138,17 @@ public class ClzBuilder {
       assert _clz._name2kid.size()==1 && ((MethodPart)_clz.child("construct").child("construct")).is_empty_function();
       return;
     }
+
+    // If this is a base+mixin class, the mixin class goes first.
+    if( _tclz._super!=null && _tclz._super._clz._f == Part.Format.MIXIN ) {
+      assert _tclz._super._name.endsWith(_tclz._name);
+      new ClzBuilder(_tmod,_tclz._super,_sbhead,_sb).jclass_body();
+    }
+
+
     String java_class_name = _tclz._name;
     _sb.nl();                   // Blank line
+    if( !_is_top ) _sb.ip("//-----------------").nl();
     boolean is_iface = _clz._f==Part.Format.INTERFACE;
     String jpart = is_iface ? "interface " : "class ";
     String xpart = _is_module ? "module ": jpart;
@@ -138,17 +162,17 @@ public class ClzBuilder {
     _tclz.clz_generic_def(_sb).p(" ");
 
     // ... extends Const/XTC/etc
-    if( _clz._super != null ) {
-      _sb.p("extends ").p(_clz._super._name);
+    if( _tclz._super != null ) {
+      _sb.p("extends ").p(_tclz._super._name);
       _tclz._super.clz_generic_use( _sb, _tclz );
-    } else if( is_iface ) ; // No extends
-    else if( _clz._f==Part.Format.CONST ) {
-      _sb.p("extends Const");
-      IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
-      IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
-    } else if( _clz._f==Part.Format.SERVICE ) {
-      _sb.p("extends Service");
-      IMPORTS.add(XEC.XCLZ+".ecstasy.Service");
+      if( _clz._f==Part.Format.CONST ) {
+        IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
+        IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
+      } else if( _clz._f==Part.Format.SERVICE ) {
+        IMPORTS.add(XEC.XCLZ+".ecstasy.Service");
+      }
+    } else if( is_iface ) {
+      // No extends
     } else {
       _sb.p("extends ").p(is_runclz() ? "XRunClz" : "XTC");
     }
@@ -212,14 +236,13 @@ public class ClzBuilder {
       // This is an "empty" constructor: it takes required explicit type
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
-      for( String tn : _tclz._tns )
-        _sb.fmt("$%0 %0,",tn);
+      for( int i=0; i<_tclz._tns.length; i++ )
+        _sb.fmt("$%0 %0,",_tclz._tns[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
       _sb.ip("super((Never)null);").nl();
       // Init any local type variables; these appear in name2kid
       for( int i=0; i<_tclz._tns.length; i++ )
-        if( _clz._name2kid.get(_tclz._tns[i])!=null )
-          _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
+        _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
       _sb.di().ip("}\n");
 
       // For all other constructors
@@ -421,6 +444,7 @@ public class ClzBuilder {
 
     // End the class body
     _sb.di().ip("}").nl();
+    if( !_is_top ) _sb.ip("//-----------------").nl();
   }
 
   private boolean is_runclz() {
@@ -596,9 +620,12 @@ public class ClzBuilder {
           }
           break;
         case ClassPart clz_nest:
-          // Nested class.  Becomes a java static inner class
-          ClzBuilder X = new ClzBuilder(this,clz_nest);
-          X.jclass_body();
+          // MIXINs always need their BASE
+          if( clz_nest._f!=Part.Format.MIXIN ) {
+            // Nested class.  Becomes a java static inner class
+            ClzBuilder X = new ClzBuilder(this,clz_nest);
+            X.jclass_body();
+          }
           break;
         case TDefPart tdef:
           break;                // Do nothing, handled by the XTypes already
