@@ -27,12 +27,8 @@ public abstract class ClzBldSet {
       XClz xclz = XClz.make(clz);
       JavaC.JavaSrc jsrc = new JavaC.JavaSrc(xclz.qualified_name(),null);
       SRCS.add(jsrc);
-      // Compute Module from Class
-      ClassPart mod = clz;
-      while( !(mod instanceof ModPart) )
-        mod = (ClassPart)mod._par;
       // Generate Java source.  This might trigger more things to compile.
-      new ClzBuilder((ModPart)mod,clz,new SB(),new SB(),true).jclass();
+      new ClzBuilder(clz.mod(),clz,new SB(),new SB(),true).jclass();
       assert clz._header!=null;
       System.out.print(clz._header);
       System.out.print(clz._body);
