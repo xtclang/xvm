@@ -271,8 +271,7 @@ public class RelOpExpression
         // if there are multiple possible options, pick the unambiguously best one
         if (idBest == null && !mapBest.isEmpty())
             {
-            SignatureConstant sigBest = typeLeft.selectBest(
-                    mapBest.keySet().toArray(new SignatureConstant[0]));
+            SignatureConstant sigBest = typeLeft.selectBest(mapBest.keySet(), null);
             if (sigBest == null)
                 {
                 return null;

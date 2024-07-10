@@ -4371,20 +4371,17 @@ public abstract class TypeConstant
                     else
                         {
                         // now we need find a method that would be the unambiguously best choice;
-                        // collect the signatures into an array and a lookup map (sig->nid)
-                        int                            cMatches = listMatches.size();
-                        SignatureConstant[]            aSig     = new SignatureConstant[cMatches];
-                        Map<SignatureConstant, Object> mapNids  = new HashMap<>(cMatches);
-                        for (int i = 0; i < cMatches; i++)
+                        // collect the nids into a lookup map (sig->nid)
+                        Map<SignatureConstant, Object> mapNids  = new HashMap<>();
+                        for (Object nid : listMatches)
                             {
-                            Object            nid = listMatches.get(i);
-                            SignatureConstant sig = mapVirtMethods.get(nid).getSignature();
-
-                            aSig[i] = sig;
-                            mapNids.put(sig, nid);
+                            MethodInfo info = mapVirtMethods.get(nid);
+                            if (!info.isCapped())
+                                {
+                                mapNids.put(info.getSignature(), nid);
+                                }
                             }
-
-                        SignatureConstant sigBest = selectBest(aSig);
+                        SignatureConstant sigBest = selectBest(mapNids.keySet(), bodyContrib.getSignature());
                         if (sigBest == null)
                             {
                             if (bodyContrib.usesSuper())
@@ -4406,15 +4403,13 @@ public abstract class TypeConstant
 
                                 assert nidBase != null;
                                 listMatches.remove(sigBest);
-                                cMatches--;
                                 }
                             methodResult = methodBase.layerOn(methodContrib, fSelf, errs);
                             }
 
                         // there are multiple non-ambiguous "super" methods
-                        for (int i = 0; i < cMatches; i++)
+                        for (Object nid : listMatches)
                             {
-                            Object nid = listMatches.get(i);
                             if (nid.equals(nidBase))
                                 {
                                 continue;
@@ -4816,27 +4811,32 @@ public abstract class TypeConstant
      * Helper to select the "best" signature from an array of signatures; in other words, choose
      * the one that any other signature could "super" to.
      *
-     * Note: this method assumes that all the passed signatures have a common "sub" method, so
-     *       signatures with more parameters (representing methods with default parameters) always
-     *       take precedence.
-     *
-     * @param aSig  an array of signatures
+     * @param aSig    an array of signatures
+     * @param sigSub  (optional) if specified, it's a common "sub" method for all signatures
      *
      * @return the "best" signature to use
      */
-    public SignatureConstant selectBest(SignatureConstant[] aSig)
+    public SignatureConstant selectBest(Set<SignatureConstant> setSigs, SignatureConstant sigSub)
         {
         SignatureConstant sigBest     = null;
         int               cParamsBest = -1;
 
         nextCandidate:
-        for (int iCandidate = 0, cCandidates = aSig.length; iCandidate < cCandidates; ++iCandidate)
+        for (Iterator<SignatureConstant> iter = setSigs.iterator(); iter.hasNext();)
             {
-            SignatureConstant sigCandidate = aSig[iCandidate];
+            SignatureConstant sigCandidate = iter.next();
             int               cParams      = sigCandidate.getParamCount();
+
+            if (sigCandidate.equals(sigSub))
+                {
+                // it's definitely the best
+                return sigCandidate;
+                }
 
             if (cParams > cParamsBest)
                 {
+                // signatures with more parameters (representing methods with default parameters)
+                // always take precedence
                 sigBest     = sigCandidate;
                 cParamsBest = cParams;
                 }
@@ -4845,9 +4845,13 @@ public abstract class TypeConstant
                 if (sigBest == null) // that means that "best" is ambiguous thus far
                     {
                     // have to back-test all the ones in front of us
-                    for (int iPrev = 0; iPrev < iCandidate; ++iPrev)
+                    for (Iterator<SignatureConstant> iterPrev = setSigs.iterator(); iter.hasNext();)
                         {
-                        SignatureConstant sigPrev = aSig[iPrev];
+                        SignatureConstant sigPrev = iterPrev.next();
+                        if (sigPrev == sigCandidate)
+                            {
+                            break;
+                            }
 
                         if (sigPrev.getParamCount() == cParamsBest &&
                                 !sigPrev.isSubstitutableFor(sigCandidate, this))
