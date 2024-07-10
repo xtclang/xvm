@@ -1004,7 +1004,7 @@ const Uri
         //   rel_segment = 1*( unreserved | escaped | ";" | "@" | "&" | "=" | "+" | "$" | "," )
         String? error = Null;
         if ((scheme, offset, error) := parseScheme(text, offset, error)) {
-            if ((authority, user, host, ip, port, path, offset, error) := parseNetPath(text, offset, error)) {
+            if ((authority, user, host, ip, port, path, offset, error) := parseNetPath(text, offset)) {
                 (query, offset, error) := parseQuery(text, offset, error);
                 (fragment, offset, error) := parseFragment(text, offset, error);
             } else if ((path, offset, error) := parseAbsPath(text, offset, error)) {
@@ -1014,7 +1014,7 @@ const Uri
                 (opaque, offset, error) := parseOpaque(text, offset, error);
                 (fragment, offset, error) := parseFragment(text, offset, error);
             }
-        } else if ((authority, user, host, ip, port, path, offset, error) := parseNetPath(text, offset, error)) {
+        } else if ((authority, user, host, ip, port, path, offset, error) := parseNetPath(text, offset)) {
             (query, offset, error) := parseQuery(text, offset, error);
             (fragment, offset, error) := parseFragment(text, offset, error);
         } else if ((path, offset, error) := parseAbsPath(text, offset, error)) {
@@ -1032,6 +1032,7 @@ const Uri
             error = $"Unparsable URI portion: {text[offset ..< length].quoted()}";
         }
 
+        report?(error?);
         return error==Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment;
 
         /**
@@ -1153,16 +1154,12 @@ const Uri
          * Internal: Parse a URI "net_path", if there is one.
          */
         static (Boolean found, String? authority, String? user, String? host, IPAddress? ip,
-                UInt16? port, String? path, Int offset, String? error) parseNetPath(
-                String text, Int offset, String? error) {
-            if (error != Null) {
-                return True, Null, Null, Null, Null, Null, Null, offset, error;
-            }
-
+                UInt16? port, String? path, Int offset, String? error)
+                    parseNetPath(String text, Int offset) {
             // check for the leading "//"
             Int length = text.size;
             if (offset + 1 >= length || text[offset] != '/' || text[offset+1] != '/') {
-                return False, Null, Null, Null, Null, Null, Null, offset, error;
+                return False, Null, Null, Null, Null, Null, Null, offset, Null;
             }
 
             // move past the "//"
@@ -1174,6 +1171,7 @@ const Uri
             IPAddress? ip        = Null;
             UInt16?    port      = Null;
             String?    path      = Null;
+            String?    error     = Null;
 
             Int     atSign       = -1;
             Int     atSigns      = 0;
@@ -1248,7 +1246,7 @@ const Uri
             if (error == Null && atSigns <= 1 && leftSquares <= 1 && rightSquares == leftSquares
                     && (leftSquares == 0 || rightSquare > leftSquare > atSign)
                     && colons <= 1 && (colons == 0 || colon > rightSquare && colon > atSign)) {
-                (user, host, ip, port, error) := parseAuthority(authority, atSign-start, colon-start, error);
+                (user, host, ip, port, error) = parseAuthority(authority, atSign-start, colon-start);
                 if (error == Null && host != Null) {
                     user = unescape(user?);
                 } else {
@@ -1272,7 +1270,7 @@ const Uri
 
             (_, path, offset, error) = parseAbsPath(text, offset, error);
 
-            return True, authority, user, host, ip, port, path, offset, error;
+            return error==Null, authority, user, host, ip, port, path, offset, error;
         }
 
         /**
@@ -1536,6 +1534,7 @@ const Uri
     static conditional (String? user, String? host, IPAddress? ip, UInt16? port)
             parseAuthority(String authority, function void (String)? report = Null) {
         if (authority.empty) {
+            report?($"Empty authority");
             return False;
         }
 
@@ -1586,6 +1585,7 @@ const Uri
                 if ((_, offset) := decodeEscape(authority, offset)) {
                     continue EachChar;
                 }
+                report?($"Illegal authority {authority.quoted()}: Unexpected '%' character");
                 return False;
 
             default:
@@ -1606,8 +1606,8 @@ const Uri
             return False;
         }
 
-        (Boolean found, String? user, String? host, IPAddress? ip, UInt16? port, String? error) =
-                parseAuthority(authority, atSign, colon, Null);
+        (String? user, String? host, IPAddress? ip, UInt16? port, String? error) =
+                parseAuthority(authority, atSign, colon);
         if (error != Null) {
             report?(error);
             return False;
@@ -1627,15 +1627,11 @@ const Uri
     /**
      * Internal helper for parsing an authority string.
      */
-    protected static (Boolean found, String? user, String? host, IPAddress? ip, UInt16? port, String? error)
-            parseAuthority(String text, Int atSign, Int colon, String? error) {
-        if (error != Null) {
-            return True, Null, Null, Null, Null, error;
-        }
-
+    protected static (String? user, String? host, IPAddress? ip, UInt16? port, String? error)
+            parseAuthority(String text, Int atSign, Int colon) {
         Int length = text.size;
         if (length == 0) {
-            return True, Null, Null, Null, Null, "Authority string is blank";
+            return Null, Null, Null, Null, "Authority string is blank";
         }
 
         String?    user   = Null;
@@ -1655,8 +1651,7 @@ const Uri
         //   toplabel = alpha | alpha *( alphanum | "-" ) alphanum
         host = text[(atSign < 0 ? 0 : atSign+1) ..< (colon < 0 ? length : colon)];
         if (host.size == 0) {
-            // host string is required for this to be an authority
-            return False, Null, Null, Null, Null, error;
+            return Null, Null, Null, Null, "Host string is required for this to be an authority";
         }
 
         Char ch = host[0];
@@ -1668,7 +1663,7 @@ const Uri
             } else {
                 // we do not treat the parsing failure as an error here; it just means that the
                 // authority is a "reg_name" (basically, it's opaque)
-                return False, Null, Null, Null, Null, error;
+                return Null, Null, Null, Null, Null;
             }
         } else {
             // validate the host name
@@ -1683,8 +1678,8 @@ const Uri
                 switch (ch) {
                 case '.':
                     if (firstChar || endedWithDash) {
-                        // can't start with a dot or have two dots in a row
-                        return False, Null, Null, Null, Null, error;
+                        return Null, Null, Null, Null,
+                            "Name cannot start with a dot or have two dots in a row";
                     }
                     firstChar = True;
                     break;
@@ -1707,8 +1702,7 @@ const Uri
 
                 case '-':
                     if (firstChar) {
-                        // can't start with a dash
-                        return False, Null, Null, Null, Null, error;
+                        return Null, Null, Null, Null, "Name cannot start with a dash";
                     }
                     endedWithDash = True;
                     firstChar     = False;
@@ -1716,14 +1710,15 @@ const Uri
 
                 default:
                     // nothing else (including escapes) are allowed in a host string
-                    return False, Null, Null, Null, Null, error;
+                    return Null, Null, Null, Null, $"Invalid character in the name: {ch.quoted()}";
                 }
             }
 
-            if (endedWithDash || !startedWithAlpha) {
-                // no segment can end with a dash
-                // the last segment must start with an alpha char
-                return False, Null, Null, Null, Null, error;
+            if (endedWithDash) {
+                return Null, Null, Null, Null, "No segment cannot end with a dash";
+            }
+            if (!startedWithAlpha) {
+                return Null, Null, Null, Null, "The last segment must start with an alpha char";
             }
         }
 
@@ -1733,7 +1728,7 @@ const Uri
                 // per rfc2396, port is permitted to be blank (zero characters), but with port
                 // being an integer type that poses a problem, so require at least 1 digit to
                 // break out the authority into its parts
-                return False, Null, Null, Null, Null, error;
+                return Null, Null, Null, Null, "Invalid port segment";
             }
 
             port = 0;
@@ -1743,18 +1738,18 @@ const Uri
                     if (n > UInt16.MaxValue) {
                         // we could either treat this as an error or pretend that the entire
                         // authority is just opaque
-                        return False, Null, Null, Null, Null, error;
+                        return Null, Null, Null, Null, "Invalid port value";
                     }
                     port = n.toUInt16();
                 } else {
                     // we do not treat the parsing failure as an error here; it just means that
                     // the authority is a "reg_name" (basically, it's opaque)
-                    return False, Null, Null, Null, Null, error;
+                    return Null, Null, Null, Null, Null;
                 }
             }
         }
 
-        return True, user, host, ip, port, error;
+        return user, host, ip, port, Null;
     }
 
     /**
