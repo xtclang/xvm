@@ -6,7 +6,18 @@ module TestSimple {
     import net.Uri;
 
     void run() {
-        // that used to succeed (no failure to parse)
-        assert !Uri.parse("http://user@x%20y.com:80/", (e) -> console.print(e));
+        if (String error := checkInvalidName("a@b")) {
+            console.print(error);
+        }
+    }
+
+    conditional String checkInvalidName(String hostName) {
+        @Volatile String? error = Null;
+        if (String? user := Uri.parseAuthority(hostName, (e) -> {error = e;})) {
+            if (user != Null) {
+                error = "User section is not allowed";
+            }
+        }
+        return error == Null ? False : (True, error); // this used to fail to compile
     }
 }

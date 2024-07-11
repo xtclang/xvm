@@ -1530,15 +1530,22 @@ public class LambdaExpression
             }
 
         @Override
-        protected void promoteNonCompleting(Context ctxInner)
+        protected void promoteNarrowedTypes()
             {
-            // Lambda's non-completion has no effect on the parent's context (AAMOF, it's always
-            // non-completing), however if any changes are detected within the lambda, they *may*
-            // impact previous inferences, so we need to restore the original types. For example:
+            // Any changes are detected within the lambda *may or may not* impact previous
+            // inferences, so we need to restore the original types. For example:
             //      @Volatile String? s = Null; // we know "s" is Null here
             //      f(() -> {s=""; return;});
             // Since we cannot know whether the lambda is called, "s" may or may not be Null
             // afterward.
+            restoreOriginalTypes();
+            }
+
+        @Override
+        protected void promoteNonCompleting(Context ctxInner)
+            {
+            // Lambda's non-completion has no effect on the parent's context (AAMOF, it's always
+            // non-completing). See the example above in promoteNarrowedTypes().
 
             ctxInner.restoreOriginalTypes();
             ctxInner.promoteNarrowedTypes();

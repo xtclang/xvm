@@ -2133,7 +2133,7 @@ public class Context
                         break;
 
                     default:
-                        // already processed by the super call
+                        super.promoteNarrowedType(sName, arg, branch);
                         return;
                     }
 
