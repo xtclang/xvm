@@ -174,6 +174,12 @@ public class ConstantPool
                 return constant;
                 }
 
+            // type constants that are "foreign" to this pool cannot be held by it
+            if (constant instanceof TypeConstant type && !type.isShared(this))
+                {
+                return constant;
+                }
+
             if (constant.getContaining() != this)
                 {
                 constant = constant.adoptedBy(this);
