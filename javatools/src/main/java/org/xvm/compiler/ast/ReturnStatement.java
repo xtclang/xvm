@@ -323,7 +323,6 @@ public class ReturnStatement
             }
         else
             {
-            container.collectReturnTypes(null);
             return null;
             }
         }
