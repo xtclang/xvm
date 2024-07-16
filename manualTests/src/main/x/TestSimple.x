@@ -1,23 +1,11 @@
 module TestSimple {
     @Inject Console console;
 
-    package net import net.xtclang.org;
-
-    import net.Uri;
-
     void run() {
-        if (String error := checkInvalidName("a@b")) {
-            console.print(error);
-        }
-    }
+        Duration d = Duration.ofMinutes(21);
 
-    conditional String checkInvalidName(String hostName) {
-        @Volatile String? error = Null;
-        if (String? user := Uri.parseAuthority(hostName, (e) -> {error = e;})) {
-            if (user != Null) {
-                error = "User section is not allowed";
-            }
-        }
-        return error == Null ? False : (True, error); // this used to fail to compile
+        d *= 2; // this used to choose Duration.mul(Dec) rather than Duration.mul(Int) op method
+
+        console.print(d);
     }
 }

@@ -788,30 +788,62 @@ public class RelOpExpression
             return null;
             }
 
-        // TODO find best, not just the first
         Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
                 getDefaultMethodName(), operator.getId().TEXT, 1);
-        for (MethodConstant idMethod : setOps)
+        if (!setOps.isEmpty())
             {
-            if (typeRequired != null)
+            TypeConstant typeBest = null;
+            TypeFit      fitBest  = TypeFit.NoFit;
+            for (MethodConstant idMethod : setOps)
                 {
-                TypeConstant typeReturn = idMethod.getRawReturns()[0];
-                if (typeReturn.containsAutoNarrowing(false))
+                if (typeRequired != null)
                     {
-                    typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                    TypeConstant typeReturn = idMethod.getRawReturns()[0];
+                    if (typeReturn.containsAutoNarrowing(false))
+                        {
+                        typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                        }
+                    if (!isAssignable(ctx, typeReturn, typeRequired))
+                        {
+                        continue;
+                        }
                     }
-                if (!isAssignable(ctx, typeReturn, typeRequired))
-                    {
-                    continue;
-                    }
-                }
 
-            TypeConstant typeParam = idMethod.getRawParams()[0];
-            if (expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null).isFit() ||
-                expr2.testFitExhaustive(ctx, typeParam, null).isFit())
-                {
-                return typeParam;
+                TypeConstant typeParam = idMethod.getRawParams()[0];
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null);
+                if (!fit.isFit())
+                    {
+                    fit = expr2.testFitExhaustive(ctx, typeParam, null);
+                    }
+
+                if (fit.betterThan(fitBest))
+                    {
+                    typeBest = typeParam;
+                    fitBest  = fit;
+                    }
+                else if (fit.isFit() && !typeParam.equals(typeBest))
+                    {
+                    assert typeBest != null;
+
+                    // both types fit the expression; go with a wider one
+                    // (Note: for now we don't deal here with any ambiguity)
+                    if (fit.isConverting())
+                        {
+                        if (typeParam.ensureTypeInfo().findConversion(typeBest) != null)
+                            {
+                            typeBest = typeParam;
+                            }
+                        }
+                    else
+                        {
+                        if (typeParam.isA(typeBest))
+                            {
+                            typeBest = typeParam;
+                            }
+                        }
+                    }
                 }
+            return typeBest;
             }
 
         // no op that we could find will work, so just let the expression validate naturally and
