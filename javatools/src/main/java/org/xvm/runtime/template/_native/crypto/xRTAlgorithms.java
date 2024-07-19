@@ -28,12 +28,12 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-import org.xvm.runtime.Runtime;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xEnum.EnumHandle;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
@@ -217,7 +217,7 @@ public class xRTAlgorithms
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 

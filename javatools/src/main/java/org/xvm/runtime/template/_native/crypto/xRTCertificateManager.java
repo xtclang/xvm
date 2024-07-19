@@ -27,7 +27,6 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Runtime;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -333,8 +332,8 @@ public class xRTCertificateManager
             }
         catch (Exception e)
             {
-            return frame.raiseException(xException.ioException(frame,
-                    Runtime.logRuntimeException("Inaccessible key: " + e.getMessage())));
+            return frame.raiseException(
+                xException.obscureIoException(frame, "Inaccessible key: " + e.getMessage()));
             }
         }
 
@@ -387,8 +386,7 @@ public class xRTCertificateManager
             if (!process.waitFor(30, TimeUnit.SECONDS))
                 {
                 process.destroy();
-                return frame.raiseException(xException.timedOut(frame,
-                        Runtime.logRuntimeException("Timed out: " + toString(cmd)), xNullable.NULL));
+                return frame.raiseException(xException.timedOut(frame, "Timed out: " + cmd[0], xNullable.NULL));
                 }
 
             if (frame != null && process.exitValue() != 0)
@@ -396,8 +394,7 @@ public class xRTCertificateManager
                 String sOut = getOutput(process.getInputStream());
                 String sErr = getOutput(process.getErrorStream());
 
-                return frame.raiseException(xException.ioException(frame,
-                        Runtime.logRuntimeException(sOut + '\n' + sErr)));
+                return frame.raiseException(xException.obscureIoException(frame, sOut + '\n' + sErr));
                 }
 
             return Op.R_NEXT;
@@ -406,7 +403,7 @@ public class xRTCertificateManager
             {
             return frame == null
                 ? Op.R_NEXT
-                : frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+                : frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 

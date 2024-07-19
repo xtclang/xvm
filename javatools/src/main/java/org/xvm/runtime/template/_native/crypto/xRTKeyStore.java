@@ -53,7 +53,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
-import org.xvm.runtime.Runtime;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -215,8 +214,8 @@ public class xRTKeyStore
             }
         catch (Exception e)
             {
-            return new DeferredCallHandle(xException.makeHandle(frame,
-                    Runtime.logRuntimeException("Illegal KeyStore arguments: " + e.getMessage())));
+            return new DeferredCallHandle(
+                    xException.makeObscure(frame, "Illegal KeyStore arguments: " + e.getMessage()));
             }
         }
 
@@ -237,7 +236,7 @@ public class xRTKeyStore
                     }
                 catch (KeyStoreException e)
                     {
-                    return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+                    return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
                     }
                 }
             }
@@ -388,7 +387,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 
@@ -465,7 +464,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 
@@ -530,7 +529,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 
@@ -560,7 +559,7 @@ public class xRTKeyStore
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 

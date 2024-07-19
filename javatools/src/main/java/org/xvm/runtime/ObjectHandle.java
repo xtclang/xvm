@@ -728,17 +728,17 @@ public abstract class ObjectHandle
     public static class ExceptionHandle
             extends GenericHandle
         {
-        protected WrapperException m_exception;
+        public final String f_sRTError;
 
-        public ExceptionHandle(TypeComposition clazz, boolean fInitialize, Throwable eCause)
+        /**
+         * @param sRTError  if specified, indicates a *hidden* RT-error message to be logged to the
+         *                  system console when an [obscured] exception text is being retrieved
+         */
+        public ExceptionHandle(TypeComposition clazz, String sRTError)
             {
             super(clazz);
 
-            if (fInitialize)
-                {
-                m_exception = eCause == null ?
-                        new WrapperException() : new WrapperException(eCause);
-                }
+            f_sRTError = sRTError;
             }
 
         public WrapperException getException()

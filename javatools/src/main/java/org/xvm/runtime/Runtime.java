@@ -149,18 +149,6 @@ public class Runtime
         m_fDebugger = fActive;
         }
 
-    /**
-     * Log a runtime exception. Eventually, this will go to a log file...
-     *
-     * @return an error tag the logged exception
-     */
-    public static String logRuntimeException(String sErr)
-        {
-        String sTag = "RTError: " + System.currentTimeMillis();
-        System.err.println("*** " + sTag + '\n' + sErr);
-        return sTag;
-        }
-
 
     // ----- constants and fields ------------------------------------------------------------------
 

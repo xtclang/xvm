@@ -7,6 +7,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassComposition;
@@ -17,7 +18,9 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
+
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 
 /**
@@ -76,6 +79,23 @@ public class xException
     public ObjectHandle createStruct(Frame frame, TypeComposition clazz)
         {
         return makeMutableStruct(frame, clazz, null);
+        }
+
+    @Override
+    public int getFieldValue(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, int iReturn)
+        {
+        ExceptionHandle hException = (ExceptionHandle) hTarget;
+        if (idProp.getName().equals("text"))
+            {
+            ObjectHandle hText = hException.getField(frame, "text");
+            if (hException.f_sRTError != null)
+                {
+                String sTag = ((StringHandle) hText).getStringValue();
+                System.err.println("*** " + sTag + '\n' + hException.f_sRTError);
+                }
+            return frame.assignValue(iReturn, hText);
+            }
+        return super.getFieldValue(frame, hTarget, idProp, iReturn);
         }
 
     @Override
@@ -282,7 +302,7 @@ public class xException
 
     public static ExceptionHandle makeHandle(Frame frame, String sMessage)
         {
-        return makeHandle(frame, s_clzException, sMessage, null);
+        return makeHandle(frame, s_clzException, sMessage, (ExceptionHandle) null);
         }
 
     public static ExceptionHandle makeHandle(Frame frame, String sMessage, ExceptionHandle hCause)
@@ -292,7 +312,7 @@ public class xException
 
     public static ExceptionHandle makeHandle(Frame frame, TypeComposition clzEx, String sMessage)
         {
-        return makeHandle(frame, clzEx, sMessage, null);
+        return makeHandle(frame, clzEx, sMessage, (ExceptionHandle) null);
         }
 
     public static ExceptionHandle makeHandle(Frame frame, TypeComposition clzEx,
@@ -307,11 +327,39 @@ public class xException
         return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
         }
 
-    private static ExceptionHandle makeMutableStruct(Frame frame, TypeComposition clxEx, Throwable eCause)
+    /**
+     * Create a runtime exception that creates an obscured "tag" exception and hides the actual
+     * message to be logged to the system console.
+     *
+     * @return an exception handle with an obscured message
+     */
+    public static ExceptionHandle makeObscure(Frame frame, String sErr)
+        {
+        return makeHandle(frame, s_clzException, "RTError: " + System.currentTimeMillis(), sErr);
+        }
+
+    public static ExceptionHandle obscureIoException(Frame frame, String sErr)
+        {
+        return makeHandle(frame, s_clzIOException, "RTError: " + System.currentTimeMillis(), sErr);
+        }
+
+    public static ExceptionHandle makeHandle(Frame frame, TypeComposition clzEx,
+                                             String sMessage, String sRtError)
+        {
+        ExceptionHandle hException = makeMutableStruct(frame, clzEx, sRtError);
+
+        hException.setField(frame, "text",  sMessage == null ? xNullable.NULL : xString.makeHandle(sMessage));
+        hException.setField(frame, "cause", xNullable.NULL);
+        hException.makeImmutable();
+
+        return (ExceptionHandle) hException.ensureAccess(Access.PUBLIC);
+        }
+
+    private static ExceptionHandle makeMutableStruct(Frame frame, TypeComposition clxEx, String sRTError)
         {
         clxEx = clxEx.ensureAccess(Access.STRUCT);
 
-        ExceptionHandle hException = new ExceptionHandle(clxEx, true, eCause);
+        ExceptionHandle hException = new ExceptionHandle(clxEx, sRTError);
 
         hException.setField(frame, "stackTrace", xString.makeHandle(
                 frame == null ? "" : frame.getStackTrace()));

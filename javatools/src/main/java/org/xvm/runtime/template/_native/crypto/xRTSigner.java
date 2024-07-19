@@ -12,9 +12,9 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Runtime;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -97,7 +97,7 @@ public class xRTSigner
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 
@@ -125,7 +125,7 @@ public class xRTSigner
             }
         catch (GeneralSecurityException e)
             {
-            return frame.raiseException(Runtime.logRuntimeException(e.getMessage()));
+            return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
     }
