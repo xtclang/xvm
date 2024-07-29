@@ -241,6 +241,7 @@ public class LambdaExpression
         if (collector == null)
             {
             m_collector = collector = new TypeCollector(pool());
+            collector.setConditional(isReturnConditional());
             }
         collector.add(atypeRet);
         }
@@ -302,7 +303,7 @@ public class LambdaExpression
                 {
                 // stub out the lambda structure
                 configureLambda(TypeConstant.NO_TYPES, Handy.NO_ARGS, 0,
-                        new boolean[0], TypeConstant.NO_TYPES);
+                        new boolean[0], TypeConstant.NO_TYPES, false);
                 }
 
             mgr.deferChildren();
@@ -373,7 +374,7 @@ public class LambdaExpression
             }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, ErrorListener.BLACKHOLE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.BLACKHOLE);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -415,8 +416,9 @@ public class LambdaExpression
                 {
                 TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeFunction);
                 TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeFunction);
+                boolean        fCondReturn     = pool.isConditionalReturn(typeFunction);
 
-                fit = calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, errs);
+                fit = calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, fCondReturn, errs);
                 if (fit.isFit())
                     {
                     return fit;
@@ -428,13 +430,14 @@ public class LambdaExpression
             {
             TypeConstant[] atypeReqParams  = pool.extractFunctionParams(typeRequired);
             TypeConstant[] atypeReqReturns = pool.extractFunctionReturns(typeRequired);
-
-            return calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, errs);
+            boolean        fCondReturn     = pool.isConditionalReturn(typeRequired);
+            return calculateTypeFitImpl(ctx, atypeReqParams, atypeReqReturns, fCondReturn, errs);
             }
         }
 
     private TypeFit calculateTypeFitImpl(Context ctx, TypeConstant[] atypeReqParams,
-                                         TypeConstant[] atypeReqReturns, ErrorListener errs)
+                                         TypeConstant[] atypeReqReturns, boolean fCondReturn,
+                                         ErrorListener errs)
         {
         int cParams = getParamCount();
         if (atypeReqParams != null && atypeReqParams.length == cParams && atypeReqReturns != null)
@@ -448,7 +451,7 @@ public class LambdaExpression
                 }
 
             TypeConstant[] atypeReturns =
-                    extractReturnTypes(ctx, atypeParams, asParams, atypeReqReturns, errs);
+                    extractReturnTypes(ctx, atypeParams, asParams, atypeReqReturns, fCondReturn, errs);
             if (atypeReturns == null)
                 {
                 return TypeFit.NoFit;
@@ -475,6 +478,11 @@ public class LambdaExpression
                     }
                 return TypeFit.Fit;
                 }
+            else if (fCondReturn && cReturns == 1 &&
+                        atypeReqReturns[0].equals(pool().typeFalse()))
+                {
+                return TypeFit.Fit;
+                }
             }
         return TypeFit.NoFit;
         }
@@ -498,6 +506,7 @@ public class LambdaExpression
         TypeConstant   typeReqFn       = null;
         TypeConstant[] atypeReqParams  = null;
         TypeConstant[] atypeReqReturns = null;
+        boolean        fCondReturn;
 
         if (typeRequired != null)
             {
@@ -509,13 +518,15 @@ public class LambdaExpression
                     {
                     TypeConstant[] atypeTestP = pool.extractFunctionParams(typeFunction);
                     TypeConstant[] atypeTestR = pool.extractFunctionReturns(typeFunction);
+                    boolean        fCondTestR = pool.isConditionalReturn(typeFunction);
 
-                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR, errs).isFit())
+                    if (calculateTypeFitImpl(ctx, atypeTestP, atypeTestR, fCondTestR, errs).isFit())
                         {
                         atypeReqParams  = atypeTestP;
                         atypeReqReturns = atypeTestR;
-                        typeReqFn       = pool.buildFunctionType(atypeReqParams,
-                                            replacePending(atypeReqReturns));
+                        typeReqFn       = fCondTestR
+                            ? pool.buildConditionalFunctionType(atypeReqParams, replacePending(atypeReqReturns))
+                            : pool.buildFunctionType(atypeReqParams, replacePending(atypeReqReturns));
                         break;
                         }
                     }
@@ -524,8 +535,10 @@ public class LambdaExpression
                 {
                 atypeReqParams  = pool.extractFunctionParams(typeRequired);
                 atypeReqReturns = pool.extractFunctionReturns(typeRequired);
-                typeReqFn       = pool.buildFunctionType(atypeReqParams,
-                                    replacePending(atypeReqReturns));
+                fCondReturn     = pool.isConditionalReturn(typeRequired);
+                typeReqFn       = fCondReturn
+                    ? pool.buildConditionalFunctionType(atypeReqParams, replacePending(atypeReqReturns))
+                    : pool.buildFunctionType(atypeReqParams, replacePending(atypeReqReturns));
                 }
             }
 
@@ -622,6 +635,11 @@ public class LambdaExpression
                     // the lambda has more return values that the caller needs; adjust it
                     atypeRets = Arrays.copyOfRange(atypeRets, 0, cReqReturns);
                     }
+                else if (fCond && cReturns == 1)
+                    {
+                    // this can only be a "return False" lambda; augment the return type as required
+                    atypeRets = atypeReqReturns;
+                    }
                 }
             }
 
@@ -645,7 +663,7 @@ public class LambdaExpression
                 !ctxLambda.isLambdaMethod())
                 {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
-                configureLambda(atypeParams, asParams, 0, null, atypeRets);
+                configureLambda(atypeParams, asParams, 0, null, atypeRets, fCond);
                 constVal = m_lambda.getIdentityConstant();
                 }
             }
@@ -764,11 +782,14 @@ public class LambdaExpression
      */
     private TypeConstant[] extractReturnTypes(Context ctx,
                                               TypeConstant[] atypeParams, String[] asParams,
-                                              TypeConstant[] atypeReturns, ErrorListener errs)
+                                              TypeConstant[] atypeReturns, boolean fCondReturn,
+                                              ErrorListener errs)
         {
         TypeConstant typeReqFn = atypeReturns == null
                 ? null
-                : pool().buildFunctionType(atypeParams, replacePending(atypeReturns));
+                : fCondReturn
+                    ? pool().buildConditionalFunctionType(atypeParams, replacePending(atypeReturns))
+                    : pool().buildFunctionType(atypeParams, replacePending(atypeReturns));
 
         createContext(ctx, typeReqFn, atypeParams, asParams, errs);
         try
@@ -1122,6 +1143,7 @@ public class LambdaExpression
             String[]              asParams     = getParamNames();
             TypeConstant[]        atypeParams  = pool.extractFunctionParams(typeFn);
             TypeConstant[]        atypeReturns = pool.extractFunctionReturns(typeFn);
+            boolean               fCondReturn  = pool.isConditionalReturn(typeFn);
             Map<String, Argument> mapFormal    = ctxLambda.getFormalMap();
             Map<String, Boolean>  mapCapture   = ctxLambda.getCaptureMap();
             int                   cTypeParams  = mapFormal.size();
@@ -1326,7 +1348,7 @@ public class LambdaExpression
             m_aAstBind  = aAstBind;
 
             // store the resulting signature for the lambda
-            configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns);
+            configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns, fCondReturn);
             }
 
         return m_aBindArgs;
@@ -1340,9 +1362,10 @@ public class LambdaExpression
      * @param cFormal         the number of formal type parameters
      * @param afImpliedDeref  indicates whether each lambda parameter needs an implicit de-reference
      * @param atypeRets       the type of each lambda return value
+     * @param fCondReturn     if true, lambda has a conditional return value
      */
     protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, int cFormal,
-            boolean[] afImpliedDeref, TypeConstant[] atypeRets)
+            boolean[] afImpliedDeref, TypeConstant[] atypeRets, boolean fCondReturn)
         {
         MethodStructure   lambda = m_lambda;
         ConstantPool      pool   = pool();
@@ -1366,18 +1389,18 @@ public class LambdaExpression
                 }
             }
 
-        // TODO support "conditional"
         int cRets = atypeRets.length;
         org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
         for (int i = 0; i < cRets; ++i)
             {
-            TypeConstant type  = atypeRets[i];
+            TypeConstant type = atypeRets[i];
             assert !type.containsUnresolved();
 
             aparamRets[i] = new org.xvm.asm.Parameter(pool, type, null, null, true, i, false);
             }
 
         lambda.configureLambda(aparamParams, cFormal, aparamRets);
+        lambda.setConditionalReturn(fCondReturn);
         lambda.getIdentityConstant().setSignature(sig);
         }
 

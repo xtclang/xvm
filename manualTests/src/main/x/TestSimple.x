@@ -1,24 +1,33 @@
 module TestSimple {
     @Inject Console console;
 
-    package convert import convert.xtclang.org;
-    package crypto import crypto.xtclang.org;
-
-    import crypto.*;
-
     void run() {
-        File store = ./test_store.p12;
+        function conditional String(Int) f1 = i -> {
+            return False; // this used to fail to compile
+        };
+        function conditional String(Int) f2 = i -> {
+            return i >= 0 ? (True, "positive") : False; // this used to fail to compile
+        };
 
-        try {
-            @Inject(opts=new KeyStore.Info(store.contents, "")) KeyStore keystore;
-            console.print(keystore.keyNames);
-        } catch (Exception ignore) {} // this used to log an RT message regardless
+        if (String s := f1(0)) {
+            console.print($"f1()={s}");
+        } else {
+            console.print($"f1()=[No result]");
+        }
 
-        try {
-            @Inject(opts=new KeyStore.Info(store.contents, "")) KeyStore keystore;
-            console.print(keystore.keyNames);
-        } catch (Exception e) {
-            console.print($"{e=}");
+        if (String s := f2(0)) {
+            console.print($"f2()={s}");
+        } else {
+            console.print($"f2()=[No result]");
+        }
+
+        Map<Int, String> map = [1="a", 2="b"];
+        function conditional String(Int) f3 = map.get;
+
+        if (String s := f3(1)) {
+            console.print($"f3()={s}");
+        } else {
+            console.print($"f3()=[No result]");
         }
     }
 }

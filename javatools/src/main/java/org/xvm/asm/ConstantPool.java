@@ -3592,7 +3592,7 @@ public class ConstantPool
      */
     public TypeConstant buildConditionalFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns)
         {
-        assert atypeReturns.length > 1 && atypeReturns[0].equals(typeBoolean());
+        assert atypeReturns.length >= 1 && atypeReturns[0].equals(typeBoolean());
         return ensureParameterizedTypeConstant(typeFunction(),
                 ensureTupleType(atypeParams),
                 ensureParameterizedTypeConstant(typeCondTuple(), atypeReturns));

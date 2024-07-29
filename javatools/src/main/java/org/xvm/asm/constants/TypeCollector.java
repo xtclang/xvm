@@ -198,9 +198,6 @@ public class TypeCollector
      */
     private ArrayList<TypeConstant> ensureSingle()
         {
-        // assume that a call to ensure is a mutating call; clear the cached conditional calculation
-        m_FConditional = false;
-
         ArrayList<TypeConstant> listSingle = m_listSingle;
         if (listSingle == null)
             {
@@ -240,9 +237,6 @@ public class TypeCollector
      */
     private ArrayList<TypeConstant[]> ensureMulti()
         {
-        // assume that a call to ensure is a mutating call; clear the cached conditional calculation
-        m_FConditional = null;
-
         ArrayList<TypeConstant[]> listMulti = m_listMulti;
         if (listMulti != null)
             {
@@ -278,9 +272,6 @@ public class TypeCollector
     public TypeConstant inferSingle(TypeConstant typeRequired)
         {
         assert !isMulti();
-
-        // single type is never conditional
-        m_FConditional = false;
 
         List<TypeConstant> listTypes = getSingle();
         int cTypes = listTypes.size();
@@ -327,7 +318,7 @@ public class TypeCollector
             {
             TypeConstant typeRequired = null;
             int          cRequired    = atypeRequired == null ? 0 : atypeRequired.length;
-            boolean fPacked = false;
+            boolean      fPacked      = false;
             switch (cRequired)
                 {
                 case 0:
@@ -359,7 +350,7 @@ public class TypeCollector
                         : new TypeConstant[] {type};
             }
 
-        // assume that it's not a @Conditional until we prove otherwise
+        // assume that it's not a conditional result until we prove otherwise
         m_FConditional = false;
 
         List<TypeConstant[]> listTypes = getMulti();
@@ -521,6 +512,16 @@ public class TypeCollector
             }
 
         return m_FConditional;
+        }
+
+    /**
+     * @param fCond  if true, the resulting type is determinable, has more than one type, the first is
+     *         a boolean, and the additional types are not guaranteed to be present when the first
+     *         is false
+     */
+    public void setConditional(boolean fCond)
+        {
+        m_FConditional = fCond;
         }
 
     /**
