@@ -84,6 +84,9 @@ module web.xtclang.org {
     mixin Consumes(MediaType|MediaType[] consumes)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
+    mixin SessionOptional
+            into Class<WebApp> | Class<WebService> | Endpoint;
+
     /**
      * This annotation, `@LoginRequired`, is used to mark a web service call -- or any containing
      * class thereof, up to the level of the web module itself -- as requiring authentication.

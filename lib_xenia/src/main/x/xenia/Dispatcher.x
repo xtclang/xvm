@@ -241,7 +241,7 @@ service Dispatcher {
                             requestInfo.clientAddress);
                 }
 
-                if (redirect) {
+                if (redirect && endpoint.requiresSession) {
                     Int|HttpStatus redirectResult = session.prepareRedirect_(requestInfo);
                     if (redirectResult.is(HttpStatus)) {
                         RequestIn request = new Http1Request(requestInfo, []);
