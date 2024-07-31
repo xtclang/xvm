@@ -58,6 +58,11 @@ public class ClzBuilder {
   static HashMap<String,String> BASE_IMPORTS;
   static HashSet<XClz> AMBIGUOUS_IMPORTS;
 
+  // A collection of nested classes that all need to appear in this one Java
+  // compilation unit
+  static Ary<XClz> NESTED = new Ary<>(XClz.class);
+
+
   // Make a nested java class builder
   public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
 
@@ -70,6 +75,7 @@ public class ClzBuilder {
       AMBIGUOUS_IMPORTS = new HashSet<>();
       CMOD = mod;                 // Top-level compile unit
       CCLZ = clz==null ? mod : clz; // Compile unit class
+      assert NESTED.isEmpty();
     }
     _is_module = mod==clz;
     _mod = mod;
@@ -129,8 +135,9 @@ public class ClzBuilder {
   }
 
   // Java Class body; can be nested (static inner class)
-  @SuppressWarnings("fallthrough")
   private void jclass_body() {
+    assert !_tclz._did_gen;
+    _tclz._did_gen = true;
     // While XTC Enum Values are themselves a full-blown class, we're going to make
     // an effort to limit ourselves to *Java* enums as the implementation.
     // Emit no code here
@@ -139,12 +146,12 @@ public class ClzBuilder {
       return;
     }
 
-    // If this is a base+mixin class, the mixin class recursively goes first.
-    if( _tclz._super!=null && _tclz._super._clz._f == Part.Format.MIXIN ) {
-      assert _tclz._super._name.endsWith(_tclz._name);
-      new ClzBuilder(_tmod,_tclz._super,_sbhead,_sb).jclass_body();
-    }
-
+    // If this is a normal incorp "mixin<-base" class, make sure the mixin happens
+    if( _tclz._super!=null && _tclz._super._clz._f == Part.Format.MIXIN )
+      add_nested(_tclz._super);
+    // If this is a conditional incorp "base<-mixing" class, make sure the base happens
+    if( _tclz._clz._f == Part.Format.MIXIN && _tclz._super!=null )
+      add_nested(_tclz._super);
 
     // Actually start emitting class headers
     String java_class_name = _tclz._name;
@@ -242,11 +249,30 @@ public class ClzBuilder {
       for( int i=0; i<_tclz._tns.length; i++ )
         _sb.fmt("$%0 %0,",_tclz._tns[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
-      _sb.ip("super((Never)null);").nl();
+      _sb.ip("super( ");
+      if( _tclz._super==null || _tclz._super._tns.length==0 )
+        _sb.p("(Never)null");
+      else {
+        for( int i=0; i<_tclz._tns.length; i++ )
+          _sb.fmt("%0,",_tclz._tns[i]);
+        _sb.unchar();
+      }
+      _sb.p(");").nl();
       // Init any local type variables; these appear in name2kid
       for( int i=0; i<_tclz._tns.length; i++ )
         _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
+      // final boolean _mix;
+      // _mix = T0 instanceof String && T1 instanceof Foo;
+      if( _tclz._mixts != null ) {
+        _sb.ip("_$mix = ");
+        for( int i=0; i<_tclz._mixts.length; i++ )
+          _sb.fmt("%0 instanceof %1 && ",_tclz._tns[i],_tclz._mixts[i].clz());
+        _sb.unchar(4).p(";\n");
+      }
       _sb.di().ip("}\n");
+      if( _tclz._mixts != null )
+        _sb.ip("boolean _$mix;\n");
+
 
       // For all other constructors
       for( MethodPart meth = (MethodPart)mm.child(mm._name); meth != null; meth = meth._sibling ) {
@@ -267,12 +293,12 @@ public class ClzBuilder {
           if( outer!=null )
             _sb.fmt("%0 $outer, ", outer._name);
           if( meth._args==null ) _sb.unchar(2);
-          else args(meth,_sb);
+          else args(meth,_sb,null);
           _sb.p(") { return new ").p(java_class_name).p("( ");
           for( String tn : _tclz._tns )
             _sb.fmt("%0,",tn);
           _sb.unchar().p(").$construct(");
-          arg_names(meth,_sb);
+          arg_names(meth,_sb, null);
           _sb.p(").$check(); }").nl();
         }
 
@@ -447,9 +473,24 @@ public class ClzBuilder {
       _sb.di().ip("}").nl();
     }
 
+    // Now dump out all the nested static internal classes
+    if( _is_top )
+      while( !NESTED.isEmpty() )
+        new ClzBuilder(_tmod,NESTED.pop(),_sbhead,_sb).jclass_body();
+
     // End the class body
     _sb.di().ip("}").nl();
-    if( !_is_top ) _sb.ip("//-----------------").nl();
+    if( !_is_top )
+      _sb.ip("//-----------------").nl();
+
+    // If this is a base class with conditional mixins, recursively output them now.
+    if( _clz._contribs!=null )
+      for( Contrib c : _clz._contribs )
+        if( c._comp==Part.Composition.Incorporates && c._parms != null ) {
+
+          //new ClzBuilder(_tmod,THE_MIXED_BASE,_sbhead,_sb).jclass_body();
+          //throw XEC.TODO();
+        }
   }
 
   private boolean is_runclz() {
@@ -476,7 +517,7 @@ public class ClzBuilder {
   }
 
   // Argument with types "( int arg0, String arg1, ... )"
-  static public void args(MethodPart m, SB sb) {
+  public static void args(MethodPart m, SB sb, String xtra) {
     // Argument list
     if( m._args !=null ) {
       XType[] xargs = m.xargs();
@@ -496,17 +537,17 @@ public class ClzBuilder {
           xt.clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
 
         // Parameter name, and define it in scope
-        sb.p(' ').p(p._name).p(", ");
+        sb.p(' ').p(p._name).p(xtra).p(", ");
       }
       sb.unchar(2);
     }
   }
 
   // Argument names "arg0, arg1, ..."
-  static public void arg_names(MethodPart m, SB sb) {
+  public static void arg_names(MethodPart m, SB sb, String xtra) {
     if( m._args!=null ) {
       for( Parameter p : m._args )
-        sb.p(p._name).p(", ");
+        sb.p(p._name).p(xtra).p(", ");
       sb.unchar(2);
     }
   }
@@ -571,8 +612,9 @@ public class ClzBuilder {
   public void jmethod_body( MethodPart m, String mname, boolean constructor ) {
     // Argument list:
     // ... method_name( int arg0, String, arg1, ... ) {
+    // Mixins rename all args with a "$"
     _sb.p(mname).p("( ");
-    args(m,_sb);
+    args(m,_sb, _tclz._mixts == null ? null : "$");
     _sb.p(" ) ");
     // Define argument names
     XType[] xargs = m.xargs();
@@ -588,6 +630,26 @@ public class ClzBuilder {
     if( m._ast.length==0 ) {
       _sb.p(";").nl();
     } else {
+      if( _tclz._mixts != null ) {
+        // Conditional mixins check the condition and "super out" if they don't apply.
+        // if( !_$mix ) return super.meth(args)
+        _sb.p("{\n");
+        _sb.ii().ip("if( !_$mix )  return super.").p(mname).p("(");
+        arg_names(m,_sb,"$");
+        _sb.p(");\n");
+        // Upcast the args for the condition
+        if( m._args !=null ) {
+          int delta = xargs.length - m._args.length;
+          for( int i = 0; i < m._args.length; i++ ) {
+            String arg = m._args[i]._name;
+            XType xt = xargs[i+delta];
+            int idx = S.find(_tclz._mixts,xt);
+            if( idx== -1 ) _sb.ifmt("var %0 = %0$;\n",arg);
+            else           _sb.ifmt("%0 %1 = (%0)%1$;\n", _tclz._mixts[idx].clz(),arg);
+          }
+        }
+        _sb.i();
+      }
 
       // Parse the Body
       AST ast = ast(m);
@@ -603,6 +665,10 @@ public class ClzBuilder {
         blk = blk.add(new ReturnAST(m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
       blk.jcode(_sb);
       _sb.nl();
+
+      if( _tclz._mixts != null ) {
+        _sb.di().ip("}\n");
+      }
     }
 
     // Popped back to the original args
@@ -626,11 +692,9 @@ public class ClzBuilder {
           break;
         case ClassPart clz_nest:
           // MIXINs always need their BASE
-          if( clz_nest._f!=Part.Format.MIXIN ) {
+          if( clz_nest._f!=Part.Format.MIXIN )
             // Nested class.  Becomes a java static inner class
-            ClzBuilder X = new ClzBuilder(this,clz_nest);
-            X.jclass_body();
-          }
+            add_nested( XClz.make(clz_nest) );
           break;
         case TDefPart tdef:
           break;                // Do nothing, handled by the XTypes already
@@ -686,33 +750,36 @@ public class ClzBuilder {
     if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) )
       return tclz;
     // External; needs an import
-    if( tclz.needs_import(true) ) {
-      // Check for colliding on the base names; means we have to use the fully
-      // qualified name everywhere.
-      String tqual = tclz.qualified_name();
-      String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
-      boolean progress;
-      if( old!=null && !S.eq(old,tqual) ) {
-        tclz._ambiguous=true;   // Use fully qualified name
-        progress = ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
-      } else {
-        // Import the qualified name, but use the shortcut name everywhere
-        progress = ClzBuilder.IMPORTS.add(tqual);
-      }
-      // Needs a build also
-      if( tclz.needs_build() )
-        ClzBldSet.add(tclz._clz);
-      // Catch nested generic types
-      if( progress )
-        for( XType xt : tclz._xts )
-          if( xt instanceof XClz xclz_nest )
-            add_import(xclz_nest);
+    if( !tclz.needs_import(true) ) return tclz;
+    // Check for colliding on the base names; means we have to use the fully
+    // qualified name everywhere.
+    String tqual = tclz.qualified_name();
+    String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
+    boolean progress;
+    if( old!=null && !S.eq(old,tqual) ) {
+      tclz._ambiguous=true;   // Use fully qualified name
+      progress = ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
+    } else {
+      // Import the qualified name, but use the shortcut name everywhere
+      progress = ClzBuilder.IMPORTS.add(tqual);
     }
+    // Needs a build also
+    if( tclz.needs_build() )
+      ClzBldSet.add(tclz._clz);
+    // Catch nested generic types
+    if( progress )
+      for( XType xt : tclz._xts )
+        if( xt instanceof XClz xclz_nest )
+          add_import(xclz_nest);
     return tclz;
   }
 
-  public static void add_import( String s ) {
-    IMPORTS.add(s);
+  public static void add_import( String s ) { IMPORTS.add(s); }
+
+  static XClz add_nested( XClz xclz ) {
+    return xclz._did_gen || NESTED.find(xclz)!=-1
+            ? xclz
+            : NESTED.push(xclz);
   }
 
   // --------------------------------------------------------------------------
