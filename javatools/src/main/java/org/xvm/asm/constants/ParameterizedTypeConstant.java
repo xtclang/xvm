@@ -280,9 +280,10 @@ public class ParameterizedTypeConstant
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver)
         {
-        // don't cache results for non-constant (e.g. Frame) resolvers
+        // don't cache results for non-constant (e.g. Frame) or "foreign type" resolvers
         boolean fCache;
-        if (resolver instanceof TypeConstant typeResolver && pool == getConstantPool())
+        if (resolver instanceof TypeConstant typeResolver && pool == this.getConstantPool() &&
+                pool == typeResolver.getConstantPool())
             {
             fCache       = true;
             typeResolver = typeResolver.removeAccess();
