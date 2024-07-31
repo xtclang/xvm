@@ -11,6 +11,7 @@ import java.util.Arrays;
 
 public class CallAST extends AST {
   final XType[] _rets;
+  final String _mixin_tname;    // Call to a mixin-super
   static CallAST make( ClzBuilder X ) {
     // Read optional array of return types (not currently used)
     Const[] retTypes = X.consts();
@@ -29,7 +30,8 @@ public class CallAST extends AST {
     if( _kids[0] instanceof RegAST reg && reg._reg== -13 ) {
       XFun fun = XFun.make(meth.xargs(),meth.xrets());
       _kids[0] = new ConAST(null,null,"super."+meth._name,fun);
-    }
+      _mixin_tname = meth.clz()._f==Part.Format.MIXIN ? meth.clz()._tnames[0] : null;
+    } else _mixin_tname = null;
     _rets = rets;
     _type = _type();
   }
@@ -38,6 +40,7 @@ public class CallAST extends AST {
     assert !(_kids[0] instanceof RegAST);
     _rets = rets;
     _type = _type();
+    _mixin_tname = null;
   }
   static CallAST make(XType ret, String clzname, String methname, AST kid) {
     XType[] rets = new XType[]{ret};
@@ -69,6 +72,14 @@ public class CallAST extends AST {
     }
     return super.unBox();
   }
+
+  // True if the named argument is boxed
+  boolean boxedArg(AST arg) {
+    int idx = S.find(_kids,arg);
+    XFun fun = (XFun)_kids[0]._type;
+    return fun._xts[idx-1].box()==fun._xts[idx-1];
+  }
+
 
   @Override public AST rewrite() {
     // Try to rewrite constant calls.  This is required for e.g. "funky
@@ -141,22 +152,29 @@ public class CallAST extends AST {
   // So the Java has to return a generic Foo
   // Java: "Foo create( int len )"
   //
-  @Override void jpre( SB sb ) {
+
+  @Override public SB jcode( SB sb ) {
+
     // Assume we need a (self!) cast, from some abstract type to a more
     // specified local type.
     if( _type != XCons.VOID && !(_type instanceof XBase) &&
         _kids.length>1 && _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ptc )
       _type.clz(sb.p("(")).p(")");
-  }
-
-  @Override void jmid ( SB sb, int i ) {
-    if( i>0 ) { sb.p(", "); return; }
+    _kids[0].jcode(sb);
     AST kid = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
-    sb.p( (kid instanceof RegAST ? ".call(": "(") );
-  }
-  @Override void jpost( SB sb ) {
+    sb.p( (kid instanceof RegAST ? ".call(" : "(") );
+    for( int i=1; i<_kids.length; i++ ) {
+      // If this is a super of a mixin, all mixed args need to cast to the base
+      // type not mixin type.  In general, I've no way to track this; could be
+      // any combo of fields and locals - but the mixin can only call "supers"
+      // of some sort or another.
+      if( _mixin_tname !=null )
+        sb.p("($").p(_mixin_tname).p(")");
+      _kids[i].jcode(sb).p(", ");
+    }
     if( _kids.length > 1 )
       sb.unchar(2);
-    sb.p(")");
+    return sb.p(")");
   }
+
 }

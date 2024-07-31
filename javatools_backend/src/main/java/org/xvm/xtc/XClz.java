@@ -66,48 +66,11 @@ import java.util.HashMap;
 // Example class usage:
 //   class Super<E>
 //   XClz: Super:1{E/XTC}, side[]
-//         Since Super is conrete, no super, has concrete field for E
+//         Since Super is concrete, no super, has concrete field for E
 //   class Base<E> extends Super<E>
 //   XClz: Base:1{E/XTC}, side[Super=0]
 //         Since Base is concrete with Super and Super has field for E, no fields
 
-
-/*
-Mixin thinking -
-
-- I think I can "pre-expand" all flavors of mixins into mangled javaclasses.
-
-- Mixins come either "before" or "after" the base class, and can carry
-  overloaded methods.  Conditional mixins only apply if some generic type is
-  present.
-
-Example:
-        "mixin Interval<Element extends immutable Sequential>
-        into Range<Element>
-        implements Iterable<Element>"
-
-        "const Range<Element extends Orderable>
-        incorporates conditional Interval<Element extends Sequential>"
-
-Here Range "incorporates conditional" Inteval - meaning that the base class
-Range comes before the Mixin, and the Mixin only happens if <Element extends
-Sequential> (and always <Element extends Orderable>).
-
-So we can expect these Java classes:
-Range          <E extends Orderable              > extends XTC -
-  - The Range class with no mixin
-Range$Interval <E extends Orderable & Sequential > extends Range implements Iterable<E> -
-  - The Range class WITH mixin
-  - Implements interface Iterable<E>
-  - E extends both Orderable & Sequential
-  - Some existing Range methods are overridden.
-  - Some new methods appear
-
-
-
-
-
-*/
 public class XClz extends XType {
   static final String[] STR0 = new String[0];
   static final HashMap<XClz,int[]> SIDES0 = new HashMap<>();
@@ -141,6 +104,12 @@ public class XClz extends XType {
   // If true, in this compilation-unit use the fully qualified name
   // to avoid a name conflict.
   transient public boolean _ambiguous;
+
+  // Bit for managing file-local code-gen
+  public boolean _did_gen;
+
+  // Only for mixins, the conditional types
+  XType[] _mixts;
 
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _pack = "0xDEADBEEF"; }
@@ -320,7 +289,7 @@ public class XClz extends XType {
           // Will cause infinite loop.  Instead, just move along.
           break;             // Mixin_this is mixing into named base, any style
         case Part.Composition.Incorporates: {
-          XClz mixin0 = make((ParamTCon)c._tContrib); // The bare mixin
+          XClz mixin0 = make(c); // The bare mixin
           if( c._parms==null ) {
             // No parameters, so this is a standard "incorporates".  Make a
             // single class with fields and functions with the Base overriding
@@ -330,6 +299,7 @@ public class XClz extends XType {
             XClz mixin = _malloc(mixin0._clz,mixin0._nest,mixname,supr);
             mixin._abstrct = true;
             mixin._sides = xclz._sides;
+            mixin = mixin._intern();
             // Sides for self use mixin as the supr
             xclz._sides = new HashMap<>();
             for( XClz s : mixin._sides.keySet() )
@@ -337,11 +307,26 @@ public class XClz extends XType {
             supr = mixin;
 
           } else {
-            // Has parameters, so conditional incorporates; the Mixin, if
-            // present overrides the Base.
-            // Object <- Super <- Base <-          Derived
+            // Has parameters, so conditional incorporates; the Mixin overrides
+            // the Base.  The Mixin class always exists and requires a runtime
+            // test to actually execute.
             // Object <- Super <- Base <- Mixin <- Derived
-            throw XEC.TODO();     // Object <- incorp_Mixin <- Base_this <- Derived
+            // Finish xclz
+            xclz._super = supr;
+            xclz._depth = supr==null ? 0 : supr._depth+1;
+            xclz._abstrct = abstrct;
+            xclz = xclz._intern();
+            // Recursively make mixin with custom name and super
+            String mixname = (cname+"$"+mixin0._name).intern();
+            XClz mixin = _malloc(mixin0._clz,mixin0._nest,mixname,xclz);
+            mixin._mixts = mixin._xts;
+            mixin.  _xts = xclz ._xts;
+            // Sides for mixin use xclz as the supr
+            mixin._sides = new HashMap<>();
+            for( XClz s : xclz._sides.keySet() )
+              mixin._sides.put( s==supr ? xclz : s, xclz._sides.get(s) );
+            supr = xclz;
+            xclz = mixin;
           }
           break;
         }
@@ -455,8 +440,28 @@ public class XClz extends XType {
     // Override parameterized type fields
     for( int i=0; i<ptc._parms.length; i++ )
       xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
+
     return xclz._intern(proto);
   }
+
+  public static XClz make( Contrib c ) {
+    // Get the UNparameterized class
+    ClassPart clz = ((ClzCon)c._tContrib).clz();
+    XClz proto = make(clz);
+    if( c._parms==null ) return proto;
+
+    assert proto._xts.length>0;
+    XClz xclz = proto._mallocClone();
+    xclz._xts = proto._xts.clone();
+    xclz._tns = proto._tns.clone();
+    // Override parameterized type fields
+    for( String tn : c._parms.keySet() ) {
+      int i = S.find(xclz._tns,tn);
+      xclz._xts[i] = xtype(c._parms.get(tn),true,xclz);
+    }
+    return xclz._intern(proto);
+  }
+
 
   // Make a R/O version
   public static XClz make( ImmutTCon imm ) {
@@ -627,6 +632,20 @@ public class XClz extends XType {
     return null;
   }
 
+  // Local only find
+  public XType _find(String tn) {
+    int idx = S.find(_tns,tn);
+    return idx == -1 ? null : _xts[idx];
+  }
+
+  // Does "this" have all the right types for the conditional mixin?
+  private boolean isAMix( HashMap<String,TCon> parms, XClz mixin ) {
+    for( String tn : parms.keySet() )
+      if( !_find(tn).isa( mixin._find(tn) ) )
+        return false;
+    return true;
+  }
+
   // Prints/passes the type parameters.
   // Other than the java mirrors with types, always:
   //   Map<Key,Value>  ...  new Map(Key.GOLD,Value.GOLD,....)
@@ -732,11 +751,13 @@ public class XClz extends XType {
       sb.p("$").p( _tns[i]);
       sb.p(" extends " );
       XClz xclz = (XClz)_xts[i];
+      // Conditional incorps must weaken, no generics for the Java side
+      //if( !inCorp() ) xclz = XCons.XXTC;
       if( xclz.iface() ) {
         sb.p("XTC & ");
         sb.p(xclz.name());
       } else {
-        sb.p(xclz.name());
+        sb.p(xclz.clz());
         xclz.clz_generic_def(sb);
       }
       sb.p(", ");
