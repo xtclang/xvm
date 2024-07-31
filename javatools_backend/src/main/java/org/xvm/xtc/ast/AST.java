@@ -133,12 +133,17 @@ public abstract class AST {
         _par instanceof AssignAST asgn0 && asgn0._kids[0] == this ||
         // Assign with no uses; BAD: "{ ...; (n = boxed)._i; ... }
         this instanceof AssignAST asgn1 && asgn1._par instanceof BlockAST ||
-        this instanceof MultiAST
+        this instanceof MultiAST ||
+        (_par instanceof CallAST call && call.boxedArg(this))
         )
       return null;              // Do not unbox
     // Unbox
     return new UniOpAST(new AST[]{this},null,"._i",unbox);
   }
+
+  // Is CallAST argument 'this' boxed?
+
+
 
   // Rewrite some AST bits before Java
   public AST rewrite() { return null; }

@@ -8,7 +8,7 @@ public final class SB {
   private int _indent = 0;
   public SB(        ) { _sb = new StringBuilder( ); }
   public SB(String s) { _sb = new StringBuilder(s); }
-  public SB p( String s ) { _sb.append(s); return this; }
+  public SB p( String s ) { if( s!=null ) _sb.append(s); return this; }
   public SB p( float  s ) {
     if( Float.isNaN(s) )
       _sb.append( "Float.NaN");
