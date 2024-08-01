@@ -479,8 +479,12 @@ public class LambdaExpression
                 return TypeFit.Fit;
                 }
             else if (fCondReturn && cReturns == 1 &&
-                        atypeReqReturns[0].equals(pool().typeFalse()))
+                        atypeReqReturns[0].equals(pool().typeBoolean()))
                 {
+                // to be more precise, we would have to check against "typeFalse()" rather than
+                // "typeBoolean()" above, but {@link TypeCollector.inferFrom()} method used by
+                // extractReturnTypes() method widens ENUMVALUE types to the corresponding ENUM
+                // types, so this check should suffice
                 return TypeFit.Fit;
                 }
             }
