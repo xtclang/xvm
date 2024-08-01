@@ -155,7 +155,9 @@ class AssignAST extends AST {
       // Expression result is the boolean conditional value,
       // and the var was previously defined.
       // $t(var = expr()) && XRuntime.$COND
-      String name = _kids[0] instanceof RegAST reg ? reg._name : ((DefRegAST)_kids[0])._name;
+      AST kid0 = _kids[0];
+      if( kid0 instanceof NarrowAST n ) kid0 = n._kids[0];
+      String name = kid0 instanceof RegAST reg ? reg._name : ((DefRegAST)kid0)._name;
       if( _op == AsnOp.AsnIfNotFalse ) sb.p("$t");
       _kids[1].jcode(sb.p("(").p(name).p(" = ")).p(")");
       sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.$COND" : "!=null " );
@@ -183,6 +185,7 @@ class AssignAST extends AST {
     case MulAsn -> asn(sb);
     case DivAsn -> asn(sb);
     case  OrAsn -> asn(sb);
+    case XorAsn -> asn(sb);
     default -> throw XEC.TODO();
     };
   }

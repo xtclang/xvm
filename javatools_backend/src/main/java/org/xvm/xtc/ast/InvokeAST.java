@@ -77,10 +77,12 @@ public class InvokeAST extends AST {
         break;
       case
         "concat",
+        "filter",
         "forEach",
         "knownEmpty",
         "knownSize",
         "limit",
+        "map",
         "take",
         "untilAny",
         "whileEach",
