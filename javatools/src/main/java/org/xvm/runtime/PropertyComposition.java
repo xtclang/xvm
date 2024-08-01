@@ -4,15 +4,18 @@ import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -218,6 +221,24 @@ public class PropertyComposition
     @Override
     public CallChain getMethodCallChain(Object nidMethod)
         {
+        ConstantPool pool = getConstantPool();
+        if (nidMethod instanceof SignatureConstant sig)
+            {
+            if (sig.getConstantPool() != pool)
+                {
+                nidMethod = pool.register(sig);
+                }
+            }
+        else
+            {
+            NestedIdentity   idNested = (NestedIdentity) nidMethod;
+            IdentityConstant idParent = idNested.getIdentityConstant();
+            if (idParent.getConstantPool() != pool)
+                {
+                idParent  = (IdentityConstant) pool.register(idParent);
+                nidMethod = idParent.appendNestedIdentity(pool, idNested);
+                }
+            }
         return f_mapMethods.computeIfAbsent(nidMethod,
             nid ->
                 {
@@ -239,6 +260,11 @@ public class PropertyComposition
     @Override
     public CallChain getPropertyGetterChain(PropertyConstant idProp)
         {
+        ConstantPool pool = getConstantPool();
+        if (idProp.getConstantPool() != pool)
+            {
+            idProp = (PropertyConstant) pool.register(idProp);
+            }
         return f_mapGetters.computeIfAbsent(idProp,
             id ->
                 {
@@ -259,6 +285,11 @@ public class PropertyComposition
     @Override
     public CallChain getPropertySetterChain(PropertyConstant idProp)
         {
+        ConstantPool pool = getConstantPool();
+        if (idProp.getConstantPool() != pool)
+            {
+            idProp = (PropertyConstant) pool.register(idProp);
+            }
         return f_mapSetters.computeIfAbsent(idProp,
             id ->
                 {
