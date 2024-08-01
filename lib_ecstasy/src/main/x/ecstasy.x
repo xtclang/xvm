@@ -148,21 +148,6 @@ module ecstasy.xtclang.org {
             extends IllegalArgument(text, cause);
 
     /**
-     * The interface associated with objects that are automatically closed by the `using` and
-     * `try`-with-resources blocks.
-     */
-    interface Closeable {
-        /**
-         * This method is invoked to mark the end of the use of an object. The object may release
-         * its resources at this point, and may subsequently be cantankerous and/or unusable as a
-         * result.
-         *
-         * @param e  (optional) an exception that occurred that triggered the call to `close()`
-         */
-        void close(Exception? cause = Null);
-    }
-
-    /**
      * `Shareable` is a type that represents an object that can be passed across a service boundary,
      * from the realm of one service, passed into a different service. Specifically, it is only
      * possible to pass an immutable object or a service proxy across a service boundary; the exact
