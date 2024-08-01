@@ -64,7 +64,7 @@ public class Const extends XTC
 
 
   // Subclasses that use this must override
-  @Override public boolean equals( XTC x0, XTC x1 ) { throw XEC.TODO(); }
+  @Override public boolean equals( XTC x0, XTC x1 ) { assert x0.getClass() != x1.getClass(); return false; }
 
   public static boolean  equals$Const(XTC gold, char c0, char c1 ) { return c0==c1; }
   public static Ordered compare$Const(XTC gold, char c0, char c1 ) {

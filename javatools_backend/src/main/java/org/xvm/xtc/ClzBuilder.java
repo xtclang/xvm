@@ -537,7 +537,7 @@ public class ClzBuilder {
           xt.clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
 
         // Parameter name, and define it in scope
-        sb.p(' ').p(p._name).p(xtra).p(", ");
+        sb.p(' ').p(jname(p._name)).p(xtra).p(", ");
       }
       sb.unchar(2);
     }
@@ -623,7 +623,7 @@ public class ClzBuilder {
       // method args.  Skip those names here.
       int ntypes = xargs.length - m._args.length;
       for( int i = 0; i < m._args.length; i++ )
-        define(m._args[i]._name,xargs[i+ntypes]);
+        define(jname(m._args[i]._name),xargs[i+ntypes]);
     }
 
     // Abstract method, no "body"
@@ -847,7 +847,7 @@ public class ClzBuilder {
   public static String jname( String name ) {
     // Mangle names colliding with java keywords
     return switch( name ) {
-    case "default", "assert", "char" -> name+"0";
+    case "default", "assert", "char", "int" -> name+"0";
     case "_" -> "$ignore";
     default -> name;
     };
