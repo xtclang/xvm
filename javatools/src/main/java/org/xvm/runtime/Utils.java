@@ -190,12 +190,9 @@ public abstract class Utils
                 {
                 ObjectHandle hResource = Utils.callGetResource(frameCaller,
                         frameCaller.popStack(), type, sName);
-                if (hResource instanceof DeferredCallHandle hDeferred)
-                    {
-                    return hDeferred.proceed(frameCaller, null);
-                    }
-                frameCaller.pushStack(hResource);
-                return Op.R_NEXT;
+                return hResource instanceof DeferredCallHandle hDeferred
+                        ? hDeferred.proceed(frameCaller, null)
+                        : frameCaller.pushStack(hResource);
                 });
             }
         else

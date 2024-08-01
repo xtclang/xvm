@@ -42,10 +42,8 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
 
             @Override
             conditional Directory next() {
-                if (iter != Null) {
-                    if (FileNode node := iter?.next()) {
-                        return True, node.as(Directory);
-                    }
+                if (FileNode node := iter?.next()) {
+                    return True, node.as(Directory);
                 }
 
                 return False;
@@ -60,10 +58,8 @@ const CPDirectory(Object cookie, FileStore? fileStore, Path path, Time created, 
 
             @Override
             conditional File next() {
-                if (iter != Null) {
-                    if (FileNode node := iter?.next()) {
-                        return True, node.as(File);
-                    }
+                if (FileNode node := iter?.next()) {
+                    return True, node.as(File);
                 }
 
                 return False;

@@ -201,11 +201,7 @@ public class xRTKeyStore
 
                 case Op.R_CALL:
                     Frame frameNext = frame.m_frameNext;
-                    frameNext.addContinuation(frameCaller ->
-                        {
-                        frameCaller.pushStack(hService);
-                        return Op.R_NEXT;
-                        });
+                    frameNext.addContinuation(frameCaller -> frameCaller.pushStack(hService));
                     return new DeferredCallHandle(frameNext);
 
                 default:

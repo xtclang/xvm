@@ -103,10 +103,7 @@ public class xRTAlgorithms
                 {
                 Frame frameNext = frame.m_frameNext;
                 frameNext.addContinuation(frameCaller ->
-                    {
-                    frameCaller.pushStack(invokeCreateAlgorithms(frameCaller));
-                    return Op.R_NEXT;
-                    });
+                        frameCaller.pushStack(invokeCreateAlgorithms(frameCaller)));
                 return new DeferredCallHandle(frameNext);
                 }
 
