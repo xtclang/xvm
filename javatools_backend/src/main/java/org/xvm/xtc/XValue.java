@@ -96,7 +96,7 @@ public abstract class XValue {
         yield xt.clz(ASB).p(".GOLD");
       }
       if( xt instanceof XClz clz )
-        yield ClzBuilder.add_import(clz).clz(ASB).p(".GOLD");
+        yield ClzBuilder.add_import(clz).clz_bare(ASB).p(".GOLD");
       if( xt instanceof XBase base )
         yield base.box().clz(ASB);
       // TODO: ASSERT XClz from PTC, get the gold instance from the one type parameter?

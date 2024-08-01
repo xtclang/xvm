@@ -6,7 +6,6 @@ module tck.xtclang.org {
     void run() {
         new clazz.Basic().run();
         new array.Basic().run();
-        new array.Medium().run();
         new comparison.Compare().run();
         new comparison.Hash().run();
         new cond.Basic().run();
@@ -17,8 +16,10 @@ module tck.xtclang.org {
         new services.Basic().run();
         new constructors.Basic().run();
         new union.Basic().run();
+
         new clazz.Medium().run();
-//        new comparison.Medium().run();
+        new array.Medium().run();
+        new comparison.Medium().run();
 //        new constructors.Medium().run();
 //        new constructors.Reflect().run();
 //        new inner.Basic().run();
