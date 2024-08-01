@@ -35,13 +35,15 @@ public class NestedContainer
      *
      * @param containerParent  the parent container
      * @param idModule         the module id
+     * @param hProvider        a resource provider supplied by the parent container
      * @param listShared       a list ids for shared modules
      */
     public NestedContainer(Container containerParent, ModuleConstant idModule,
-                           List<ModuleConstant> listShared)
+                           ObjectHandle hProvider, List<ModuleConstant> listShared)
         {
         super(containerParent.f_runtime, containerParent, idModule);
 
+        f_hProvider  = hProvider;
         f_listShared = listShared;
         }
 
@@ -88,10 +90,7 @@ public class NestedContainer
                         {
                         DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
                         hDeferred.addContinuation(frameCaller ->
-                            {
-                            frameCaller.pushStack(validateResource(frameCaller, container, key));
-                            return Op.R_NEXT;
-                            });
+                            frameCaller.pushStack(validateResource(frameCaller, container, key)));
                         return hDeferred;
                         }
 
@@ -156,6 +155,11 @@ public class NestedContainer
 
 
     // ----- data fields ---------------------------------------------------------------------------
+
+    /**
+     * The resource provider object (it's known to be "Closeable").
+     */
+    public final ObjectHandle f_hProvider;
 
     /**
      * List of shared modules.

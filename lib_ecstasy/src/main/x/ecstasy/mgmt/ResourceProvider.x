@@ -1,7 +1,9 @@
 /**
  * Represents the source of injected resources.
  */
-interface ResourceProvider {
+interface ResourceProvider
+        extends Closeable {
+
     import annotations.InjectedRef.Options;
 
     /**
@@ -21,4 +23,15 @@ interface ResourceProvider {
      * exception, possibly causing the termination of the container.
      */
     Supplier getResource(Type type, String name);
+
+    /**
+     * At the point that the container (for which this ResourceProvider exists) is shut down or
+     * killed, this method will be invoked to allow closing any resources that this provider has
+     * supplied to that container.
+     *
+     * Common implementations of this method are expected to invoke the `close()` method on all
+     * previously supplied resources that implement the [Closeable] interface.
+     */
+    @Override
+    void close(Exception? cause = Null) {}
 }

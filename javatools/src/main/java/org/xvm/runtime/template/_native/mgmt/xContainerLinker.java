@@ -241,18 +241,18 @@ public class xContainerLinker
                                        ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn)
         {
         NestedContainer containerNested = new NestedContainer(container,
-                moduleApp.getIdentityConstant(), Collections.emptyList());
-        return new CollectResources(containerNested, hProvider, iReturn).doNext(frame);
+                moduleApp.getIdentityConstant(), hProvider, Collections.emptyList());
+        return new CollectResources(containerNested, iReturn).doNext(frame);
         }
 
     public static class CollectResources
                 implements Frame.Continuation
         {
-        public CollectResources(NestedContainer container, ObjectHandle hProvider, int iReturn)
+        public CollectResources(NestedContainer container, int iReturn)
             {
             this.container = container;
             this.aKeys     = container.collectInjections().toArray(InjectionKey.NO_INJECTIONS);
-            this.hProvider = hProvider;
+            this.hProvider = container.f_hProvider;
             this.iReturn   = iReturn;
             }
 

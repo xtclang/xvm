@@ -156,11 +156,44 @@ public class xContainerControl
      */
     protected int invokeKill(Frame frame, ControlHandle hCtrl, int iReturn)
         {
-        Container container = hCtrl.f_container;
-        assert container instanceof NestedContainer;
+        if (hCtrl.f_container instanceof NestedContainer container)
+            {
+            switch (closeResourceProvider(frame, container.f_hProvider))
+                {
+                case Op.R_NEXT:
+                    return completeKill(frame, iReturn);
 
-        // TODO GG: clean up
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(
+                        frameCaller -> completeKill(frameCaller, iReturn));
+                    return Op.R_CALL;
 
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        return frame.raiseException("Main container cannot be killed");
+        }
+
+    private int closeResourceProvider(Frame frame, ObjectHandle hProvider)
+        {
+        TypeComposition clazz = hProvider.getComposition();
+        CallChain       chain = clazz.getMethodCallChain(frame.poolContext().sigClose());
+        if (chain.isNative())
+            {
+            return Op.R_NEXT;
+            }
+
+        ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
+        ahVars[0] = xNullable.NULL;
+        return chain.invoke(frame, hProvider, ahVars, Op.A_IGNORE);
+        }
+
+    private int completeKill(Frame frame, int iReturn)
+        {
         // Note: the caller is async; we must return the Tuple()
         return frame.assignValue(iReturn, xTuple.H_VOID);
         }

@@ -2465,6 +2465,7 @@ public class ConstantPool
     public SignatureConstant sigToString()       {SignatureConstant c = m_sigToString;       if (c == null) {m_sigToString       = c = getSignature("Object",    "toString",  0)                        ;} return c;}
     public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
     public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
+    public SignatureConstant sigClose()          {SignatureConstant c = m_sigClose;          if (c == null) {m_sigClose          = c = getSignature("Closeable", "close",     1)                        ;} return c;}
     public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
 
 
@@ -4202,6 +4203,7 @@ public class ConstantPool
         m_sigToString       = null;
         m_sigEquals         = null;
         m_sigCompare        = null;
+        m_sigClose          = null;
         m_sigValidator      = null;
         m_infoPlaceholder   = null;
 
@@ -4256,6 +4258,7 @@ public class ConstantPool
     private transient SignatureConstant m_sigToString;
     private transient SignatureConstant m_sigEquals;
     private transient SignatureConstant m_sigCompare;
+    private transient SignatureConstant m_sigClose;
     private transient SignatureConstant m_sigValidator;
     private transient TypeInfo          m_infoPlaceholder;
 
