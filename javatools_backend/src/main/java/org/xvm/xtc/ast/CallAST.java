@@ -157,6 +157,7 @@ public class CallAST extends AST {
 
     // Assume we need a (self!) cast, from some abstract type to a more
     // specified local type.
+    sb.i();
     if( _type != XCons.VOID && !(_type instanceof XBase) &&
         _kids.length>1 && _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ptc )
       _type.clz(sb.p("(")).p(")");

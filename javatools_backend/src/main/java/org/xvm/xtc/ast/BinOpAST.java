@@ -114,7 +114,7 @@ class BinOpAST extends AST {
 
     // Cast.  Since I treat XTC "Type" as a concrete instance XTC.GOLD,
     // I do not need to cast to "Type".  Other casts can remain.
-    if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type<XTC,XTC>.GOLD") )
+    if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type.GOLD") )
       return _kids[0];          // Types already as values
 
     return null;
