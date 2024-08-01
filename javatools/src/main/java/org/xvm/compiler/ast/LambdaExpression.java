@@ -479,7 +479,7 @@ public class LambdaExpression
                 return TypeFit.Fit;
                 }
             else if (fCondReturn && cReturns == 1 &&
-                        atypeReqReturns[0].equals(pool().typeBoolean()))
+                        atypeReqReturns[0].isA(pool().typeBoolean()))
                 {
                 // to be more precise, we would have to check against "typeFalse()" rather than
                 // "typeBoolean()" above, but {@link TypeCollector.inferFrom()} method used by
