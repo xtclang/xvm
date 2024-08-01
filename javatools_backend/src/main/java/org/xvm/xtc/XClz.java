@@ -192,7 +192,7 @@ public class XClz extends XType {
     clz._name = name;
     // Default false, check if making R/O
     clz._ro = false;
-    clz._jname = clz._jpack = ""; // So toString doesnt barf on half built XClz
+    clz._jname = clz._jpack = ""; // So toString doesn't barf on half built XClz
     return clz;
   }
 
@@ -219,6 +219,8 @@ public class XClz extends XType {
     clz._xts = _xts;
     clz._tns = _tns;
     clz._sides = _sides;
+    clz._mod = _mod;
+    clz._clz = _clz;
     return clz;
   }
 
@@ -267,6 +269,24 @@ public class XClz extends XType {
     String[] tns = xclz._tns = clz._tnames==null ? STR0 : clz._tnames;
     for( int i=0; i<tns.length; i++ )
       xts[i] = xtype(clz._tcons[i],true,xclz);
+    // Inner classes pick up all outer class type variables
+    if( clz._f != Part.Format.MIXIN && clz._f != Part.Format.INTERFACE ) {
+      Part par = clz._par;
+      while( par != null && par.getClass() == ClassPart.class ) {
+        ClassPart pclz = (ClassPart) par;
+        XClz pxclz = make(pclz);
+        for( int i=0; i<pxclz._tns.length; i++ ) {
+          if( S.find(tns,pxclz._tns[i])== -1 ) {
+            int len = xts.length;
+            xclz._xts = xts = Arrays.copyOf(xts,len+1);
+            xclz._tns = tns = Arrays.copyOf(tns,len+1);
+            xts[len] = pxclz._xts[i];
+            tns[len] = pxclz._tns[i];
+          }
+        }
+        par = par._par;
+      }
+    }
 
     // Gather side types from Implements and Extends.
     // May extend the _xts array.
@@ -358,33 +378,37 @@ public class XClz extends XType {
         switch( c._tContrib ) {
         case TermTCon ttc: break;   // no extra type params
         case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
-        case ParamTCon ptc:
-          // Now I got some sides!
-          if( _sides == SIDES0 ) _sides = new HashMap<>();
-          // Setup a side array from the base type to its parameterized version
-          XClz pclz = (XClz)xtype(ptc,true);
-          assert ptc._parms.length==pclz._tns.length;
-          int[] idxs = new int[pclz._tns.length];
-          // Walk the parameterized types; refer back to the class's types
-          for( int i=0; i<pclz._tns.length; i++ ) {
-            String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
-            int idx = S.find(clz._tnames,pname); // Matches a clz name, uses that type
-            if( idx == -1 ) {                    // No match, add an entry
-              _xts = Arrays.copyOf(_xts,(idx = _xts.length)+1);
-              _xts[idx] = pclz._xts[i];
-            }
-            idxs[i] = idx;
-          }
-          _sides.put(pclz,idxs);
-          break;
-
-        case InnerDepTCon dep:
-          assert dep.clz()._tnames.length==0; // No tvars here?
-          break;
+        case ParamTCon ptc: _sides(ptc,clz._tnames);  break;
+          // No tvars here?
+        case InnerDepTCon dep:  assert dep .clz()._tnames.length==0;  break;
+        case VirtDepTCon virt:  assert virt.clz()._tnames.length==0;  break;
         default: throw XEC.TODO(); // Expecting a PTC here
         }
   }
 
+  private void sides( ParamTCon ptc, String[] tnames ) {
+    _sides = SIDES0;
+    _sides(ptc,tnames);
+  }
+  private void _sides( ParamTCon ptc, String[] tnames ) {
+    // Now I got some sides!
+    if( _sides == SIDES0 ) _sides = new HashMap<>();
+    // Setup a side array from the base type to its parameterized version
+    XClz pclz = (XClz)xtype(ptc,true);
+    assert ptc._parms.length==pclz._tns.length;
+    int[] idxs = new int[pclz._tns.length];
+    // Walk the parameterized types; refer back to the class's types
+    for( int i=0; i<pclz._tns.length; i++ ) {
+      String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
+      int idx = S.find(tnames,pname); // Matches a clz name, uses that type
+      if( idx == -1 ) {                    // No match, add an entry
+        _xts = Arrays.copyOf(_xts,(idx = _xts.length)+1);
+        _xts[idx] = pclz._xts[i];
+      }
+      idxs[i] = idx;
+    }
+    _sides.put(pclz,idxs);
+  }
 
   // Made from XTC class.
   //   Here E is the class name for a type
@@ -475,22 +499,15 @@ public class XClz extends XType {
 
   // An inner class, which gets the outer class Type variables
   public static XClz make( VirtDepTCon virt ) {
-    ClassPart iclz = virt.part(); // Inner clz
-    //ParamTCon ptc = (ParamTCon)virt._par;
-    //Ary<ParamTCon> ptcs = sides(iclz); // Any side types it has
-    //if( ptcs==null ) ptcs = new Ary<>(ParamTCon.class);
-    //else throw XEC.TODO("Untested");
-    //ptcs.add(ptc);
-    //XClz xclz = _malloc(iclz,ptcs,null,null,null);    // Inner xclz
-    //assert xclz._super == get_super(iclz);
-    //assert xclz._depth == (iclz._tclz==null ? 0 : iclz._tclz._depth);
-    //xclz._jpack = "";
-    //xclz._jname = "";
-    //XClz xclz2 = xclz._intern();
-    //if( xclz2 != xclz ) return xclz2;
-    //iclz._tclz = xclz;
-    //return xclz;
-    throw XEC.TODO();
+    ClassPart iclz = virt.part(); // Inner  clz
+    XClz xclz = make(iclz);       // Inner xclz
+    XClz vclz = xclz._mallocClone(); // Inner xclz, cloned
+    vclz.sides((ParamTCon)virt._par,iclz._tnames);
+
+    XClz vclz2 = vclz._intern();
+    if( vclz2 != vclz ) return vclz2;
+    iclz._tclz = vclz;
+    return vclz;
   }
 
   // Make a specialized FutureVar type
@@ -510,6 +527,7 @@ public class XClz extends XType {
       return make(clz._super);
     // The XTC Enum is a special interface, extending the XTC Const interface.
     // They are implemented as normal Java classes, with Enum extending Const.
+    if( clz._path==null ) { assert clz._f==Part.Format.CLASS; return null; }
     if( S.eq(clz._path._str,"ecstasy/Enum.x") ) return XCons.CONST;
     // Other enums are flagged via the Part.Format and do not have the
     // _super field set.
@@ -531,7 +549,7 @@ public class XClz extends XType {
     clz._notNull = false;
     return clz._intern(this);
   }
-  public XClz readOnly() {
+  @Override public XClz readOnly() {
     if( _ro ) return this;
     XClz clz = _mallocClone();
     clz._ro = true;

@@ -160,7 +160,7 @@ public class ClzBuilder {
     boolean is_iface = _clz._f==Part.Format.INTERFACE;
     String jpart = is_iface ? "interface " : "class ";
     String xpart = _is_module ? "module ": jpart;
-    _sb.ip("// XTC ").p(xpart).p(_clz._path._str).p(":").p(_clz._name).p(" as Java ").p(jpart).p(java_class_name).nl();
+    _sb.ip("// XTC ").p(xpart).p(_clz._path==null ? _clz._name : _clz._path._str).p(":").p(_clz._name).p(" as Java ").p(jpart).p(java_class_name).nl();
 
     // public static class CLZ extends ...
 
@@ -621,9 +621,10 @@ public class ClzBuilder {
     if( xargs !=null ) {
       // xargs on constructors includes *type variables*, which are NOT in
       // method args.  Skip those names here.
-      int ntypes = xargs.length - m._args.length;
-      for( int i = 0; i < m._args.length; i++ )
-        define(jname(m._args[i]._name),xargs[i+ntypes]);
+      int ntypes = xargs.length - (m._args==null ? 0 : m._args.length);
+      if( m._args != null )
+        for( int i = 0; i < m._args.length; i++ )
+          define(jname(m._args[i]._name),xargs[i+ntypes]);
     }
 
     // Abstract method, no "body"
@@ -728,10 +729,8 @@ public class ClzBuilder {
     // Parse the method body
     AST ast = ast(meth);
     // Strip any single-block wrapper
-    if( ast instanceof BlockAST blk ) {
-      if( blk._kids.length>1 ) throw XEC.TODO();
+    if( ast instanceof BlockAST blk && !blk.hasTemps() && blk._kids.length==1 )
       ast = blk._kids[0];
-    }
     // Strip any return wrapper, just the expression
     if( ast instanceof ReturnAST ret )
       ast = ret._kids[0];

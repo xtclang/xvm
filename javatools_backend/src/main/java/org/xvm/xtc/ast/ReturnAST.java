@@ -32,7 +32,7 @@ public class ReturnAST extends AST {
     // No returns
     if( _meth.xrets()==null )
       return XCons.VOID;
-    // Conditional returns.  The Java flavor takes the from the 2nd tuple argument.
+    // Conditional returns.  The Java flavor takes the type from the 2nd tuple argument.
     // Note the method might be flagged as having only 1 return type.
     if( _meth.is_cond_ret() ) {
       // Conditional return, always false, no other returned type
@@ -102,6 +102,7 @@ public class ReturnAST extends AST {
       break;
     case InvokeAST invk:  break;
     case CallAST call2:   break;
+    case UnpackAST unpack:break;
 
     default: throw XEC.TODO();
     }
