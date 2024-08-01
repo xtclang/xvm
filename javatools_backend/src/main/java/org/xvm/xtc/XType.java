@@ -93,7 +93,7 @@ public abstract class XType {
     if( _xts==null ) return;
     for( XType xt : _xts ) {
       XClz box = xt.box();
-      if( box.needs_import(false) ) {
+      if( box!=null && box.needs_import(false) ) {
         String tqual = box.qualified_name();
         if( !imports.contains(tqual) ) {
           imports.add(tqual);
@@ -168,6 +168,8 @@ public abstract class XType {
   public boolean isAry() { return false; }
   public boolean isTuple() { return false;  }
   public XType e() { throw XEC.TODO(); }
+
+  public XType readOnly() { throw XEC.TODO(); }
 
   // --------------------------------------------------------------------------
 
@@ -281,7 +283,7 @@ public abstract class XType {
     }
 
     case ImmutTCon itc ->
-      ((XClz)xtype(itc.icon(),boxed,self)).readOnly();
+      xtype(itc.icon(),boxed,self).readOnly();
 
     // Generalized union types gonna wait awhile.
     // Right now, allow null unions only
@@ -382,6 +384,9 @@ public abstract class XType {
 
     case InnerDepTCon inn -> xtype(inn._child,boxed,self);
 
+    // A conditional mixin class with perhaps several generic types,
+    // but one with no constraints lands here.  e.g. ListMapIndex
+    case null -> XCons.XXTC;
     default -> throw XEC.TODO();
     };
   }

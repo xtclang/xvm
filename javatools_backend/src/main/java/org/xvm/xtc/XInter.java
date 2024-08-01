@@ -32,4 +32,9 @@ public class XInter extends XType {
   @Override boolean _isa( XType xt ) {
     throw XEC.TODO();
   }
+  @Override public XInter readOnly() {
+    XType xt0 = _xts[0].readOnly();
+    XType xt1 = _xts[1].readOnly();
+    return xt0==_xts[0] && xt1 == _xts[1]? this : make(xt0,xt1);
+  }
 }

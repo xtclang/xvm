@@ -238,6 +238,7 @@ public abstract class AST {
     case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
+    case InitAst      ->     InitAST.make(X);
     case InvokeExpr   ->   InvokeAST.make(X,false);
     case InvokeAsyncExpr-> InvokeAST.make(X,true );
     case Less         ->    OrderAST.make(X,"<");

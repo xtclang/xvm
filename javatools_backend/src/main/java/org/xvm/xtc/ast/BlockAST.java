@@ -9,6 +9,8 @@ import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
 public class BlockAST extends ElvisAST {
+  HashMap<XType,Ary<String>> _tmps; // Temp names by type
+
   static BlockAST make( ClzBuilder X ) {
     int nlocals = X.nlocals();  // Count of locals
     // Parse kids in order as stmts not exprs
@@ -29,9 +31,8 @@ public class BlockAST extends ElvisAST {
     return blk;
   }
 
+  public boolean hasTemps() { return _tmps != null; }
   @Override XType _type() { return XCons.VOID; }
-
-  HashMap<XType,Ary<String>> _tmps; // Temp names by type
 
   String add_tmp(XType type) { return add_tmp(type,"$tmp"+_uid++); }
 
