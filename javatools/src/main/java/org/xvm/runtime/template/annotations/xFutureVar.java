@@ -891,7 +891,8 @@ public class xFutureVar
             }
 
         /**
-         * @return true iff the future represented by this handle completed normally
+         * @return an exception object if the future represented by this handle completed
+         *         exceptionally; null otherwise
          */
         public ExceptionHandle getException()
             {

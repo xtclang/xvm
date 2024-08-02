@@ -73,7 +73,6 @@ public class xOSFileNode
                 return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().canWrite()));
 
             case "createdMillis":
-                {
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
@@ -83,10 +82,8 @@ public class xOSFileNode
                     {
                     return raisePathException(frame, e, hNode.f_path);
                     }
-                }
 
             case "accessedMillis":
-                {
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
@@ -96,10 +93,8 @@ public class xOSFileNode
                     {
                     return raisePathException(frame, e, hNode.f_path);
                     }
-                }
 
             case "modifiedMillis":
-                {
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
@@ -109,10 +104,8 @@ public class xOSFileNode
                     {
                     return raisePathException(frame, e, hNode.f_path);
                     }
-                }
 
             case "size":
-                {
                 try
                     {
                     BasicFileAttributes attr = Files.readAttributes(hNode.f_path, BasicFileAttributes.class);
@@ -122,7 +115,6 @@ public class xOSFileNode
                     {
                     return raisePathException(frame, e, hNode.f_path);
                     }
-                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

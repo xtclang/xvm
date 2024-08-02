@@ -72,7 +72,6 @@ public class xOSFileChannel
         switch (sPropName)
             {
             case "size":
-                {
                 try
                     {
                     return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.size()));
@@ -81,10 +80,8 @@ public class xOSFileChannel
                     {
                     return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
                     }
-                }
 
             case "position":
-                {
                 try
                     {
                     return frame.assignValue(iReturn, xInt64.makeHandle(hChannel.f_channel.position()));
@@ -93,19 +90,14 @@ public class xOSFileChannel
                     {
                     return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
                     }
-                }
 
             case "readable":
-                {
                 return frame.assignValue(iReturn,
                     xBoolean.makeHandle(hChannel instanceof ReadableByteChannel));
-                }
 
             case "writable":
-                {
                 return frame.assignValue(iReturn,
                     xBoolean.makeHandle(hChannel instanceof WritableByteChannel));
-                }
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);

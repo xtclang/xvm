@@ -55,17 +55,6 @@ public class xOSDirectory
         }
 
     @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn)
-        {
-        NodeHandle hNode = (NodeHandle) hTarget;
-        switch (sPropName)
-            {
-            }
-
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
-        }
-
-    @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn)
         {
