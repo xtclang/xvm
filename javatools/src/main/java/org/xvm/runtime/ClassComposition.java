@@ -295,8 +295,10 @@ public class ClassComposition
     @Override
     public boolean isAtomic(PropertyConstant idProp)
         {
+        // we assume that all native properties are atomic by default; it's up to the native
+        // property implementation to re-route it to the corresponding context if necessary
         PropertyInfo infoProp = f_typeInception.ensureTypeInfo().findProperty(idProp, true);
-        return infoProp != null && infoProp.isAtomic();
+        return infoProp != null && (infoProp.isAtomic() || infoProp.isNative());
         }
 
     @Override

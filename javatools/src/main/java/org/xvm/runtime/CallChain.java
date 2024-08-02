@@ -67,7 +67,7 @@ public class CallChain
             return m_FAtomic.booleanValue();
             }
 
-        if (f_aMethods != null && f_aMethods[0].getImplementation() == Implementation.Delegating)
+        if (f_aMethods.length > 0 && f_aMethods[0].getImplementation() == Implementation.Delegating)
             {
             PropertyConstant  idDelegate   = f_aMethods[0].getPropertyConstant();
             PropertyStructure propDelegate = (PropertyStructure) idDelegate.getComponent();
