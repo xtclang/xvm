@@ -107,8 +107,7 @@ public class xNanosTimer
                 {
                 GenericHandle  hDuration = (GenericHandle ) ahArg[0];
                 FunctionHandle hAlarm    = (FunctionHandle) ahArg[1];
-                FunctionHandle hCancel   = hTimer.schedule(hDuration, new WeakCallback(frame, hAlarm));
-                return frame.assignValue(iReturn, hCancel);
+                return invokeSchedule(frame, hTimer, hDuration, hAlarm, iReturn);
                 }
             }
 
@@ -128,6 +127,10 @@ public class xNanosTimer
      */
     public ObjectHandle ensureTimer(Frame frame, ObjectHandle hOpts)
         {
+        // quite intentionally the NanoTimer service always belongs to the native container, holding
+        // onto Alarm objects that are registered with Java's Timer (xLocalClock.TIMER);
+        // in turn, the Alarm holds a user-supplied function via a WeakRef, allowing the
+        // corresponding container to be shut down and garbage collected
         return createServiceHandle(
                 f_container.createServiceContext("Timer"),
                     getCanonicalClass(), getCanonicalType());
@@ -142,6 +145,20 @@ public class xNanosTimer
         return ((LongLongHandle) hPicos).getValue().div(PICOS_PER_MILLI_LL).getLowValue();
         }
 
+    /**
+     * Native implementation of "Cancellable schedule(Duration delay, Alarm alarm)"
+     */
+    private int invokeSchedule(Frame frame, TimerHandle hTimer, GenericHandle hDuration,
+                               FunctionHandle hAlarm, int iReturn)
+        {
+        // Java's Timer uses millisecond scheduling, but we're given duration in picoseconds
+        LongLongHandle llPicos = (LongLongHandle) hDuration.getField(frame, "picoseconds");
+        long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
+
+        return frame.assignValue(iReturn,
+                hTimer.addAlarm(cNanos, new WeakCallback(frame, hAlarm)));
+        }
+
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
@@ -153,27 +170,6 @@ public class xNanosTimer
             super(clazz, context);
 
             m_cNanosStart = System.nanoTime();
-            }
-
-        /**
-         * @return false iff this timer has some outstanding asynchronous requests
-         */
-        public boolean isIdle()
-            {
-            if (isRunning())
-                {
-                synchronized (f_setAlarms)
-                    {
-                    for (Alarm alarm : f_setAlarms)
-                        {
-                        if (!alarm.m_fDead)
-                            {
-                            return false;
-                            }
-                        }
-                    }
-                }
-            return true;
             }
 
         // -----  Timer implementation -------------------------------------------------------------
@@ -221,29 +217,6 @@ public class xNanosTimer
                     }
                 }
             return cNanosTotal;
-            }
-
-        /**
-         * Create and schedule an alarm to go off if a specified number of nanoseconds.
-         *
-         * @param hDuration  the duration before triggering the alarm
-         * @param refAlarm   the runtime function to call when the alarm triggers
-         *
-         * @return the new Alarm
-         */
-        public FunctionHandle schedule(GenericHandle hDuration, WeakCallback refAlarm)
-            {
-            // note: the Java Timer uses millisecond scheduling, but we're given scheduling
-            // instructions in picoseconds
-            LongLongHandle llPicos = (LongLongHandle) hDuration.getField(null, "picoseconds");
-            long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
-            Alarm          alarm   = new Alarm(cNanos, refAlarm);
-
-            return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
-                {
-                alarm.cancel();
-                return Op.R_NEXT;
-                });
             }
 
         /**
@@ -305,12 +278,28 @@ public class xNanosTimer
             return hDuration;
             }
 
-        public void addAlarm(Alarm alarm)
+        /**
+         * @return a "cancel" function for the alarm
+         */
+        public FunctionHandle addAlarm(long cNanos, WeakCallback refCallback)
             {
+            Alarm alarm = new Alarm(cNanos, refCallback);
+
             synchronized (f_setAlarms)
                 {
                 f_setAlarms.add(alarm);
                 }
+
+            if (isRunning())
+                {
+                alarm.start();
+                }
+
+            return new NativeFunctionHandle((_frame, _ah, _iReturn) ->
+                {
+                alarm.cancel();
+                return Op.R_NEXT;
+                });
             }
 
         public void removeAlarm(Alarm alarm)
@@ -340,13 +329,6 @@ public class xNanosTimer
                 {
                 f_cNanosDelay = cNanosDelay;
                 f_refCallback = refCallback;
-
-                TimerHandle timer = TimerHandle.this;
-                timer.addAlarm(this);
-                if (timer.isRunning())
-                    {
-                    start();
-                    }
                 }
 
             /**
