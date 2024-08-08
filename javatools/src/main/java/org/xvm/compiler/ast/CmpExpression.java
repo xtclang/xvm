@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -26,6 +27,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Cmp;
 import org.xvm.asm.op.IsEq;
@@ -335,6 +337,11 @@ public class CmpExpression
                     checkFormalType(ctx, expr1Name, type2);
                     break CheckInference;
                     }
+                if (expr2New.isConstant() && !type2.equals(type1))
+                    {
+                    checkConstType(ctx, expr1Name, type2);
+                    break CheckInference;
+                    }
                 }
 
             if (expr2New instanceof NameExpression expr2Name)
@@ -347,6 +354,11 @@ public class CmpExpression
                 if (type1.isTypeOfType())
                     {
                     checkFormalType(ctx, expr2Name, type1);
+                    break CheckInference;
+                    }
+                if (expr1New.isConstant() && !type1.equals(type2))
+                    {
+                    checkConstType(ctx, expr2Name, type1);
                     // break CheckInference;
                     }
                 }
@@ -499,6 +511,9 @@ public class CmpExpression
         return typeCommon;
         }
 
+    /**
+     * Infer a type for a name from Null comparison.
+     */
     private boolean checkNullComparison(Context ctx, NameExpression exprTarget, ErrorListener errs)
         {
         TypeConstant typeTarget = exprTarget.getType();
@@ -535,6 +550,9 @@ public class CmpExpression
         return true;
         }
 
+    /**
+     * Infer a type for a name from a formal type comparison.
+     */
     private void checkFormalType(Context ctx, NameExpression exprTarget, TypeConstant typeType)
         {
         TypeConstant typeTarget = exprTarget.getType();
@@ -548,6 +566,33 @@ public class CmpExpression
 
                 case COMP_NEQ:
                     exprTarget.narrowType(ctx, Branch.WhenFalse, typeType);
+                    break;
+                }
+            }
+        }
+
+    /**
+     * Infer a type for a name from a comparison to a constant value.
+     */
+    private void checkConstType(Context ctx, NameExpression exprTarget, TypeConstant type)
+        {
+        // replace an enum value type with the type of the enum; see Op.selectCommonType()
+        TypeInfo info = type.ensureTypeInfo();
+        if (info.getFormat() == Component.Format.ENUMVALUE)
+            {
+            type = info.getExtends();
+            }
+
+        if (!type.equals(exprTarget.getType()))
+            {
+            switch (operator.getId())
+                {
+                case COMP_EQ:
+                    exprTarget.narrowType(ctx, Branch.WhenTrue, type);
+                    break;
+
+                case COMP_NEQ:
+                    exprTarget.narrowType(ctx, Branch.WhenFalse, type);
                     break;
                 }
             }
