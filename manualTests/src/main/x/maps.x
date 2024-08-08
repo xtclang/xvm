@@ -126,7 +126,7 @@ module TestMaps {
         // warmup
         run();
 
-        timer.reset();
+        timer.restart();
         for (Int i = 0; i < iterations; i++) {
             run();
         }
@@ -451,6 +451,7 @@ module TestMaps {
         map.process^(0, e -> {
             @Inject Timer timer;
             @Future Int   result;
+            timer.start();
             timer.schedule(Duration:0.2s, () -> {
                 result = 42;
             });
@@ -501,7 +502,7 @@ module TestMaps {
 
     void testConcurrentLoad(Map<Int, Int> map, Int concurrency, Int iterations, Int range) {
 
-        timer.reset();
+        timer.restart();
 
         Future[] futures = new Future[concurrency](i -> {
             Int n = new LoadGenerator().run^(map, iterations, i, range);

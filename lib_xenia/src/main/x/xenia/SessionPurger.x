@@ -6,8 +6,6 @@
 service SessionPurger(Duration cycleTime=Duration:1M) {
     // ----- properties ----------------------------------------------------------------------------
 
-    @Inject Timer timer;
-
     /**
      * How often to scan.
      */
@@ -16,7 +14,7 @@ service SessionPurger(Duration cycleTime=Duration:1M) {
     /**
      * The timer-cancel for the next scan.
      */
-    Timer.Cancellable? cancelNextScan;
+    Clock.Cancellable? cancelNextScan;
 
     /**
      * Session ids that have been added since the last scan began.
@@ -39,7 +37,7 @@ service SessionPurger(Duration cycleTime=Duration:1M) {
         newIds.add(id);
 
         if (cancelNextScan == Null) {
-            cancelNextScan = timer.schedule(cycleTime, scan);
+            cancelNextScan = clock.schedule(cycleTime, scan);
         }
     }
 

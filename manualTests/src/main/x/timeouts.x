@@ -143,6 +143,7 @@ module TestTimeouts {
         static void simulateSlowIO(Duration duration) {
             @Inject Timer timer;
             @Future Tuple done;
+            timer.start();
             timer.schedule(duration, () -> {done = Tuple:();});
 
             return done;

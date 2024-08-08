@@ -155,8 +155,7 @@ module xenia.xtclang.org {
                     server.close();
                 } else {
                     // wait a second (TODO: repeat a couple of times)
-                    @Inject Timer timer;
-                    timer.schedule(Second, server.close);
+                    clock.schedule(Second, server.close);
                 }};
             }
         catch (Exception e) {

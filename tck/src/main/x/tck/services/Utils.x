@@ -5,9 +5,9 @@ class Utils {
      * method *must be* `@Concurrent`. Otherwise the caller will be dead-locked.
      */
     static void simulateSlowIO(Duration duration) {
-        @Inject Timer timer;
+        @Inject Clock clock;
         @Future Tuple done;
-        timer.schedule(duration, () -> {done = Tuple:();});
+        clock.schedule(duration, () -> {done = Tuple:();});
 
         return done;
     }

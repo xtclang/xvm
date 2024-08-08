@@ -1,6 +1,5 @@
 module TestProps {
     @Inject Console console;
-    @Inject Timer   timer;
 
     void run() {
         testStandardProperty();
@@ -17,9 +16,13 @@ module TestProps {
     void testStandardProperty() {
         Standard s = new Standard(1);
         Int iterations = 100_000;
-        timer.reset();
+
+        @Inject Timer timer;
+
+        timer.start();
         for (Int i = 0; i < iterations; ++i) {}
         Duration timeBase = timer.elapsed;
+
         timer.reset();
         for (Int i = 0; i < iterations; ++i) {
             s.x += i; // 1

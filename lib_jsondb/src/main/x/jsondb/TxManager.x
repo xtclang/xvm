@@ -172,11 +172,6 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     Clock clock;
 
     /**
-     * A timer used to schedule periodic events.
-     */
-    @Inject Timer timer;
-
-    /**
      * The runtime state of the TxManager:
      * * **Initial** - the TxManager has been newly created, but has not been used yet
      * * **Enabled** - the TxManager has been [enabled](enable), and can process transactions
@@ -2971,7 +2966,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         lastCleanupTime = clock.now;
         lastCleanupTx   = lastCommitted;
 
-        cancelMaintenance = timer.schedule(MaintenanceInterval, doMaintenance);
+        cancelMaintenance = clock.schedule(MaintenanceInterval, doMaintenance);
     }
 
     /**
@@ -3016,7 +3011,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 log($"Exception occurred during background maintenance: {e}");
             } finally {
                 if (cancelMaintenance == Null && status == Enabled) {
-                    cancelMaintenance = timer.schedule(MaintenanceInterval, doMaintenance);
+                    cancelMaintenance = clock.schedule(MaintenanceInterval, doMaintenance);
                 }
             }
         }

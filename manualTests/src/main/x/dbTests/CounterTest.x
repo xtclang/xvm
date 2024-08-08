@@ -44,10 +44,10 @@ module CounterTest {
 
     void wait(Connection connection, Duration duration) {
         @Inject Console console;
-        @Inject Timer timer;
+        @Inject Clock clock;
 
         @Future Tuple<> result;
-        timer.schedule(duration, () -> {
+        clock.schedule(duration, () -> {
             console.print(dump(connection));
             try {
                 connection.close();

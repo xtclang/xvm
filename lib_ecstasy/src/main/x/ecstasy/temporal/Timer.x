@@ -33,6 +33,9 @@ interface Timer {
      *
      * Invoking the returned Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
      * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
+     *
+     * Note, that scheduling an alarm on a stopped timer has no effect until after the timer gets
+     * started and stopping a running timer will pause all previously scheduled alarms.
      */
     Cancellable schedule(Duration delay, Alarm alarm);
 

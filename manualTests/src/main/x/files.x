@@ -91,6 +91,7 @@ module TestFiles {
         @Inject Directory tmpDir;
         @Inject Timer timer;
 
+        timer.start();
         FileWatcher watcher = new FileWatcher() {
             @Override
             Boolean onEvent(Event event, Directory dir) {

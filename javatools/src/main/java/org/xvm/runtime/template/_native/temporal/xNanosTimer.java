@@ -168,8 +168,6 @@ public class xNanosTimer
         protected TimerHandle(TypeComposition clazz, ServiceContext context)
             {
             super(clazz, context);
-
-            m_cNanosStart = System.nanoTime();
             }
 
         // -----  Timer implementation -------------------------------------------------------------
@@ -179,9 +177,9 @@ public class xNanosTimer
          */
         public synchronized void start()
             {
-            if (m_cNanosStart == 0)
+            if (f_acNanos[START] == 0)
                 {
-                m_cNanosStart = System.nanoTime();
+                f_acNanos[START] = System.nanoTime();
                 }
 
             synchronized (f_setAlarms)
@@ -194,12 +192,12 @@ public class xNanosTimer
             }
 
         /**
-         * @return true if the timer is running (the last call to "start" has not been followed by a call
-         *         to "stop")
+         * @return true if the timer is running (the last call to "start" has not been followed by
+         *         a call to "stop")
          */
         public boolean isRunning()
             {
-            return m_cNanosStart != 0;
+            return f_acNanos[START] != 0;
             }
 
         /**
@@ -207,10 +205,10 @@ public class xNanosTimer
          */
         public synchronized long elapsed()
             {
-            long cNanosTotal = m_cNanosPrevSum;
-            if (m_cNanosStart != 0)
+            long cNanosTotal = f_acNanos[PREV];
+            if (f_acNanos[START] != 0)
                 {
-                long cAdd = System.nanoTime() - m_cNanosStart;
+                long cAdd = System.nanoTime() - f_acNanos[START];
                 if (cAdd > 0)
                     {
                     cNanosTotal += cAdd;
@@ -224,15 +222,15 @@ public class xNanosTimer
          */
         public synchronized void stop()
             {
-            if (m_cNanosStart != 0)
+            if (f_acNanos[START] != 0)
                 {
-                long cAdd = System.nanoTime() - m_cNanosStart;
+                long cAdd = System.nanoTime() - f_acNanos[START];
                 if (cAdd > 0)
                     {
-                    m_cNanosPrevSum += cAdd;
+                    f_acNanos[PREV] += cAdd;
                     }
 
-                m_cNanosStart = 0;
+                f_acNanos[START] = 0;
 
                 synchronized (f_setAlarms)
                     {
@@ -249,10 +247,10 @@ public class xNanosTimer
          */
         public synchronized void reset()
             {
-            m_cNanosPrevSum = 0;
-            if (m_cNanosStart != 0)
+            f_acNanos[PREV] = 0;
+            if (f_acNanos[START] != 0)
                 {
-                m_cNanosStart = System.nanoTime();
+                f_acNanos[START] = System.nanoTime();
                 }
 
             synchronized (f_setAlarms)
@@ -519,15 +517,18 @@ public class xNanosTimer
 
         // ----- data fields ---------------------------------------------------------------------
 
-        /**
-         * The number of nanoseconds previously accumulated before the timer was paused.
-         */
-        private long m_cNanosPrevSum;
 
         /**
-         * The value (in nanos) when the timer was started, or 0 if the timer is paused.
+         * We use an array rather than individual long values to avoid "splitting state" during
+         * handle cloning. All access to those values is always synchronized. Values are:
+         *
+         *  [0] The timestamp (in nanos) when the timer was started, or 0 if the timer is paused
+         *  [1] The number of nanoseconds previously accumulated before the timer was paused
          */
-        private volatile long m_cNanosStart;
+        private final long[] f_acNanos = new long[2];
+
+        private static final int START = 0;
+        private static final int PREV  = 1;
 
         /**
          * The registered alarms.

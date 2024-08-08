@@ -101,6 +101,7 @@ module TestServices {
             console.print($"{tag()} calculating for: {delay}");
             @Inject Timer timer;
             @Future Int   result;
+            timer.start();
             timer.schedule(delay, () -> {
                 console.print($"{tag()} setting result {delay.seconds}");
                 result=delay.seconds;
