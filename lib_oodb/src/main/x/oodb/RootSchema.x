@@ -11,4 +11,10 @@ interface RootSchema
         extends DBSchema {
 
     @RO SystemSchema sys;
+
+    @Override
+    @RO Connection<RootSchema> dbConnection;
+
+    @Override
+    @RO Transaction<RootSchema>? dbTransaction.get() = super();
 }
