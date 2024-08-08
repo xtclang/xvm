@@ -301,7 +301,7 @@ public class xRTServer
             httpsServer.start();
 
             // prevent the container from being terminated
-            hServer.f_context.f_container.getServiceContext().registerNotification();
+            hServer.f_context.f_container.registerNotification();
 
             Router router = hServer.getRouter();
             httpServer .createContext("/", router);
@@ -589,7 +589,7 @@ public class xRTServer
                 httpsServer.removeContext("/");
                 httpsServer.stop(0);
                 ((ExecutorService) httpServer.getExecutor()).shutdown();
-                hServer.f_context.f_container.getServiceContext().unregisterNotification();
+                hServer.f_context.f_container.unregisterNotification();
                 }
             hServer.getRouter().mapRoutes.clear();
             hServer.clear();

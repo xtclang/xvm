@@ -59,7 +59,7 @@ public class xLocalClock
         markNativeProperty("now");
         markNativeProperty("timezone");
 
-        markNativeMethod("schedule", new String[]{"temporal.Time", "temporal.Clock.Alarm"}, null);
+        markNativeMethod("schedule", null, null);
 
         invalidateTypeInfo();
         }
@@ -93,11 +93,11 @@ public class xLocalClock
             {
             case "schedule": // wakeUp, alarm
                 {
-                GenericHandle  hWakeup = (GenericHandle) ahArg[0];
+                GenericHandle  hWakeup = (GenericHandle)  ahArg[0];
                 FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
 
                 // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
-                LongLong llEpoch = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
+                LongLong llEpoch   = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
                 long     ldtNow    = System.currentTimeMillis();
                 long     ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
                 long     cDelay    = Math.max(0, ldtWakeup - ldtNow);
@@ -220,7 +220,7 @@ public class xLocalClock
             {
             f_refCallback = refFunction;
 
-            refFunction.get().registerNotification();
+            refFunction.get().f_container.registerNotification();
             }
 
         @Override
@@ -231,7 +231,7 @@ public class xLocalClock
                 {
                 WeakCallback.Callback callback = f_refCallback.extractCallback();
                 context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
-                context.unregisterNotification();
+                context.f_container.unregisterNotification();
                 }
             }
 
@@ -242,7 +242,7 @@ public class xLocalClock
             ServiceContext context    = f_refCallback.get();
             if (context != null)
                 {
-                context.unregisterNotification();
+                context.f_container.unregisterNotification();
                 }
             return fCancelled;
             }

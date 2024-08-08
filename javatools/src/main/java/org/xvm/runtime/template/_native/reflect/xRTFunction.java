@@ -824,9 +824,9 @@ public class xRTFunction
             }
 
         @Override
-        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
-            return f_op.invoke(frame, ahArg, iReturn);
+            return f_op.invoke(frame, ahVar, iReturn);
             }
 
         @Override

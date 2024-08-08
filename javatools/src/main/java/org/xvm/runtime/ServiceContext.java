@@ -19,8 +19,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import java.util.function.Supplier;
 
 import org.xvm.asm.ConstantPool;
@@ -1000,36 +998,7 @@ public class ServiceContext
      */
     public boolean isIdle()
         {
-        return getStatus() == ServiceStatus.Idle &&
-            (m_atomicNotifications == null || m_atomicNotifications.get() == 0);
-        }
-
-
-    // ----- support for native notifications (e.g. timers, file listeners, etc. -------------------
-
-    /**
-     * Register a notification for this service.
-     *
-     * Note, that this method must be called on this service thread (fiber).
-     */
-    public void registerNotification()
-        {
-        AtomicLong counter = m_atomicNotifications;
-        if (counter == null)
-            {
-            m_atomicNotifications = counter = new AtomicLong();
-            }
-        counter.getAndIncrement();
-        }
-
-    /**
-     * Unregister a notification for this service. Note, that this method can be called on any thread.
-     */
-    public void unregisterNotification()
-        {
-        AtomicLong counter = m_atomicNotifications;
-        assert counter != null;
-        counter.getAndDecrement();
+        return getStatus() == ServiceStatus.Idle;
         }
 
 
@@ -1377,7 +1346,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return hFunction.getMethodId().getPathString();
+                return hFunction.toString();
                 }
             };
 
@@ -1446,7 +1415,7 @@ public class ServiceContext
 
             public String toString()
                 {
-                return hFunction.getMethodId().getPathString();
+                return hFunction.toString();
                 }
             };
 
@@ -2291,11 +2260,6 @@ public class ServiceContext
      * Metrics: the total time (in nanos) this service has been running.
      */
     protected long m_cRuntimeNanos;
-
-    /**
-     * Support for Clock adn Timer: the count of pending timer events.
-     */
-    protected AtomicLong m_atomicNotifications;
 
     /**
      * The current frame.

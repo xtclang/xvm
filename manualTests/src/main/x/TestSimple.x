@@ -2,18 +2,15 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        console.print(test(Null));
-        console.print(test(Red));
-        console.print(test(Blue));
+        @Inject Clock clock;
+
+        Clock.Cancellable cancel = clock.schedule(Duration.ofSeconds(10), &alarm);
+        console.print("Alarm is up");
+
+        cancel(); // this used to blow up at run-time
     }
 
-    enum Color {Red, Green, Blue}
-
-    Color test(Color? c) {
-        if (c == Red || c == Green) {
-            return c; // this used to fail to compile
-        }
-
-        return Blue;
+    void alarm() {
+        assert;
     }
 }

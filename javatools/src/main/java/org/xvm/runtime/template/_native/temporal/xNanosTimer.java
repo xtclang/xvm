@@ -343,7 +343,7 @@ public class xNanosTimer
                 m_trigger     = new Trigger(this);
                 try
                     {
-                    f_refCallback.get().registerNotification();
+                    f_refCallback.get().f_container.registerNotification();
                     xLocalClock.TIMER.schedule(
                         m_trigger, Math.max(1, (f_cNanosDelay - m_cNanosBurnt) / NANOS_PER_MILLI));
                     }
@@ -424,7 +424,7 @@ public class xNanosTimer
                     {
                     WeakCallback.Callback callback = f_refCallback.extractCallback();
                     context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
-                    context.unregisterNotification();
+                    context.f_container.unregisterNotification();
                     }
                 TimerHandle.this.removeAlarm(this);
                 }
@@ -437,7 +437,7 @@ public class xNanosTimer
                 ServiceContext context = f_refCallback.get();
                 if (context != null)
                     {
-                    context.unregisterNotification();
+                    context.f_container.unregisterNotification();
                     }
                 }
 

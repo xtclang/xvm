@@ -518,8 +518,10 @@ public abstract class Container
      */
     public boolean isIdle()
         {
-        return f_pendingWorkCount.get() == 0 && m_contextMain.isIdle() &&
-                (f_parent == null || f_parent.isIdle());
+        return f_pendingWorkCount.get() == 0 &&
+               f_pendingNotificationCount.get() == 0 &&
+               m_contextMain.isIdle() &&
+               (f_parent == null || f_parent.isIdle());
         }
 
     /**
@@ -703,6 +705,27 @@ public abstract class Container
         }
 
 
+    // ----- support for native notifications (e.g. timers, file listeners, etc. -------------------
+
+    /**
+     * Register a notification for this container.
+     *
+     * Note, that this method must be called on this service thread (fiber).
+     */
+    public void registerNotification()
+        {
+        f_pendingNotificationCount.getAndIncrement();
+        }
+
+    /**
+     * Unregister a notification for this container.
+     */
+    public void unregisterNotification()
+        {
+        f_pendingNotificationCount.getAndDecrement();
+        }
+
+
     // ----- helper methods ------------------------------------------------------------------------
 
     private NativeContainer getNativeContainer()
@@ -765,6 +788,11 @@ public abstract class Container
      * considered to still have work to do and won't auto-shutdown.
      */
     private final AtomicLong f_pendingWorkCount = new AtomicLong();
+
+    /**
+     * Support for Clock and Timer: the count of pending "alarms".
+     */
+    protected final AtomicLong f_pendingNotificationCount = new AtomicLong();
 
     /**
      * Set of services that were started by this container (stored as a Map with no values).
