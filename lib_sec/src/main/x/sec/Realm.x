@@ -3,6 +3,12 @@
  * via TODO
  */
 interface Realm {
+    /**
+     * A realm usually has a human-readable name, and sometimes this name is communicated to a
+     * client as part of an authentication challenge.
+     */
+    @RO String name;
+
     // enumerate users
     // check validity of user
 

@@ -93,7 +93,11 @@ const Entitlement
     @Override
     Status calcStatus(Realm? realm, Time? at = Null) {
         Status entitlementStatus = super(Null, at);
-        Principal? principal = realm?.loadPrincipal(principalId)? : Null;
+        if (realm == Null) {
+            return entitlementStatus;
+        }
+
+        Principal? principal = realm.loadPrincipal(principalId) ?: Null;
         return minOf(entitlementStatus, principal?.calcStatus(realm, at) : NotYet);
     }
 
