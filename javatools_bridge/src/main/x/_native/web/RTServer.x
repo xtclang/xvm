@@ -65,7 +65,7 @@ service RTServer
      * HttpRequest handler. This API must be equivalent (duck-type) to [xenia.HttpServer.Handler]
      * service API.
      */
-    static interface Handler {
+    static interface Handler extends Closeable {
         void handle(RequestInfo request);
     }
 
@@ -171,6 +171,15 @@ service RTServer
     @Override
     public/private Map<HostInfo, Handler> routes = [];
 
+    @Override
+    void close(Exception? cause = Null) {
+        closeImpl();
+
+        for (Handler handler : routes.values) {
+            handler.close(cause);
+        }
+    }
+
 
     // ----- request handling ----------------------------------------------------------------------
 
@@ -218,7 +227,7 @@ service RTServer
     conditional Byte[] getBodyBytes(RequestContext context)                                                    {TODO("Native");}
     Boolean containsNestedBodies(RequestContext context)                                                       {TODO("Native");}
     void respond(RequestContext context, Int status, String[] headerNames, String[] headerValues, Byte[] body) {TODO("Native");}
-    @Override void close(Exception? cause = Null)                                                              {TODO("Native");}
+    private void closeImpl()                                                                                   {TODO("Native");}
 
 
     // ----- internal classes ----------------------------------------------------------------------

@@ -64,7 +64,7 @@ interface HttpServer
     /**
      * An HTTP request handler that the HttpServer can deliver requests to.
      */
-    static interface Handler {
+    static interface Handler extends Closeable {
         /**
          * Handle a received HTTP request.
          *

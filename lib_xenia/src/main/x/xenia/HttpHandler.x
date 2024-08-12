@@ -123,6 +123,16 @@ service HttpHandler
         });
     }
 
+    @Override
+    void close(Exception? e = Null) {
+        shutdown();
+    }
+
+    @Override
+    String toString() {
+        return $"HttpHandler@{route}";
+    }
+
 
     // ----- HttpHandler specific methods ----------------------------------------------------------
 
@@ -144,12 +154,8 @@ service HttpHandler
     @Synchronized
     Boolean shutdown() {
         closing = True;
+        sessionManager.close();
         return pendingRequests == 0;
-    }
-
-    @Override
-    String toString() {
-        return $"HttpHandler@{route}";
     }
 
 

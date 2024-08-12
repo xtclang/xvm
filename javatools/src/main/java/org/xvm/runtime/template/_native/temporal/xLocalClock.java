@@ -214,13 +214,13 @@ public class xLocalClock
         /**
          * Construct an alarm.
          *
-         * @param refFunction  the weak ref to a function to call when the alarm triggers
+         * @param refCallback  the weak ref to a function to call when the alarm triggers
          */
-        protected Alarm(WeakCallback refFunction)
+        protected Alarm(WeakCallback refCallback)
             {
-            f_refCallback = refFunction;
+            f_refCallback = refCallback;
 
-            refFunction.get().f_container.registerNotification();
+            refCallback.get().f_container.registerNotification();
             }
 
         @Override
@@ -240,7 +240,7 @@ public class xLocalClock
             {
             boolean        fCancelled = super.cancel();
             ServiceContext context    = f_refCallback.get();
-            if (context != null)
+            if (context != null && fCancelled)
                 {
                 context.f_container.unregisterNotification();
                 }

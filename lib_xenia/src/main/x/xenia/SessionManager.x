@@ -46,7 +46,8 @@ import SessionStore.IOResult;
  * either anonymity or privacy.
  */
 @Concurrent
-service SessionManager {
+service SessionManager
+        implements Closeable {
     // ----- constructors --------------------------------------------------------------------------
 
     construct(SessionStore store, SessionProducer instantiateSession,
@@ -453,6 +454,14 @@ service SessionManager {
         sessionByCookie.remove(tlsCookie?.text);
         sessionByCookie.remove(consentCookie?.text);
         store.erase^(id);
+    }
+
+
+    // ----- lifecycle -----------------------------------------------------------------------------
+
+    @Override
+    void close(Exception? e = Null) {
+        purger.stopPurging();
     }
 
 

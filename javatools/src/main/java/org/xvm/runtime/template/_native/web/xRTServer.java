@@ -108,7 +108,7 @@ public class xRTServer
         markNativeMethod("removeRouteImpl" , null, VOID);
         markNativeMethod("replaceRouteImpl", null, BOOLEAN);
         markNativeMethod("respond"         , null, VOID);
-        markNativeMethod("close"           , null, VOID);
+        markNativeMethod("closeImpl"       , VOID, VOID);
 
         markNativeMethod("getReceivedAtAddress",   null, null);
         markNativeMethod("getReceivedFromAddress", null, null);
@@ -181,15 +181,6 @@ public class xRTServer
 
             case "removeRouteImpl":
                 return invokeRemoveRoute(frame, (HttpServerHandle) hTarget, (StringHandle) hArg);
-
-            case "close":
-                {
-                HttpServerHandle hService = (HttpServerHandle) hTarget;
-                return frame.f_context == hService.f_context
-                        ? invokeClose(hService)
-                        : xRTFunction.makeAsyncNativeHandle(method).
-                                call1(frame, hService, new ObjectHandle[]{hArg}, iReturn);
-                }
             }
 
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -198,25 +189,31 @@ public class xRTServer
     public int invokeNativeN(Frame frame, MethodStructure method,
                              ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
         {
+        HttpServerHandle hServer = (HttpServerHandle) hTarget;
         switch (method.getName())
             {
             case "bindImpl":
-                return invokeBind(frame, (HttpServerHandle) hTarget, ahArg);
+                assert frame.f_context == hServer.f_context;
+                return invokeBind(frame, hServer, ahArg);
 
             case "addRouteImpl":
-                return invokeAddRoute(frame, (HttpServerHandle) hTarget, ahArg);
+                assert frame.f_context == hServer.f_context;
+                return invokeAddRoute(frame, hServer, ahArg);
 
             case "replaceRouteImpl":
-                return invokeReplaceRoute(frame, (HttpServerHandle) hTarget, ahArg, iReturn);
+                assert frame.f_context == hServer.f_context;
+                return invokeReplaceRoute(frame, hServer, ahArg, iReturn);
 
             case "respond":
-                {
-                HttpServerHandle hService = (HttpServerHandle) hTarget;
-                return frame.f_context == hService.f_context
+                return frame.f_context == hServer.f_context
                         ? invokeRespond(frame, ahArg)
                         : xRTFunction.makeAsyncNativeHandle(method).
-                                call1(frame, hService, ahArg, iReturn);
-                }
+                                call1(frame, hServer, ahArg, iReturn);
+
+            case "closeImpl":
+                assert frame.f_context == hServer.f_context;
+                return invokeClose(hServer);
+
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -565,7 +562,7 @@ public class xRTServer
         }
 
     /**
-     * Implementation of "close()" method.
+     * Implementation of "closeImpl()" method.
      */
     private int invokeClose(HttpServerHandle hServer)
         {

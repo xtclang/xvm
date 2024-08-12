@@ -714,7 +714,8 @@ public abstract class Container
      */
     public void registerNotification()
         {
-        f_pendingNotificationCount.getAndIncrement();
+        long l = f_pendingNotificationCount.getAndIncrement();
+        assert l >= 0L;
         }
 
     /**
@@ -722,7 +723,8 @@ public abstract class Container
      */
     public void unregisterNotification()
         {
-        f_pendingNotificationCount.getAndDecrement();
+        long l = f_pendingNotificationCount.getAndDecrement();
+        assert l >= 0;
         }
 
 

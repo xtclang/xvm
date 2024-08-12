@@ -42,6 +42,21 @@ public class WeakCallback
         throw new IllegalStateException();
         }
 
+    @Override
+    public String toString()
+        {
+        ServiceContext context = get();
+        if (context != null)
+            {
+            Callback callback = context.getCallbackMap().get(f_lCallbackId);
+            if (callback != null)
+                {
+                return callback.functionHandle().toString();
+                }
+            }
+        return "Empty";
+        }
+
     /**
      * The callback data.
      */
