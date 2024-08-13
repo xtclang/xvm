@@ -256,22 +256,22 @@ public abstract class Utils
             sMsg = sMsg.substring(1);
             }
 
-        ServiceContext ctx;
-        long lFiberId;
+        ServiceContext context;
+        long           lFiberId;
 
         if (frame == null)
             {
-            ctx = ServiceContext.getCurrentContext();
+            context  = ServiceContext.getCurrentContext();
             lFiberId = -1;
             }
         else
             {
-            ctx = frame.f_context;
+            context  = frame.f_context;
             lFiberId = frame.f_fiber.getId();
             }
 
-        System.out.println(new Timestamp(System.currentTimeMillis())
-            + " " + ctx + ", fiber " + lFiberId + ": " + sMsg);
+        System.out.println(new Timestamp(context.f_container.currentTimeMillis())
+            + " " + context + ", fiber " + lFiberId + ": " + sMsg);
         }
 
 

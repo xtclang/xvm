@@ -264,7 +264,8 @@ public class xRTConnector
             long ldtTimeout = frame.f_fiber.getTimeoutStamp();
             if (ldtTimeout > 0)
                 {
-                long cTimeoutMillis = Math.max(1, ldtTimeout - System.currentTimeMillis());
+                long cTimeoutMillis = Math.max(1,
+                                        ldtTimeout - frame.f_context.f_container.currentTimeMillis());
                 if (cTimeoutMillis > Integer.MAX_VALUE)
                     {
                     cTimeoutMillis = Integer.MAX_VALUE;

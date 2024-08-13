@@ -2177,7 +2177,7 @@ public class ServiceContext
         {
         protected void schedule(long ldtWakeUp)
             {
-            long ldtNow = System.currentTimeMillis();
+            long ldtNow = f_container.currentTimeMillis();
             if (f_ldtScheduled > 0)
                 {
                 if (ldtNow <= f_ldtScheduled && f_ldtScheduled <= ldtWakeUp)

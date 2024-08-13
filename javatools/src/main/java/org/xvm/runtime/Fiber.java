@@ -91,7 +91,7 @@ public class Fiber
         }
 
     /**
-     * @return the current timeout timestamp in milliseconds (using System.currentTimeMillis());
+     * @return the current timeout timestamp in milliseconds (using Container.currentTimeMillis());
      *         zero if there is no timeout
      */
     public long getTimeoutStamp()
@@ -181,13 +181,13 @@ public class Fiber
                 throw new IllegalArgumentException();
 
             case Running:
-                m_nanoStarted = System.nanoTime();
+                m_nanoStarted = f_context.f_container.nanoTime();
                 m_frame = null;
                 break;
 
             case Waiting:
             case Paused:
-                long cNanos = System.nanoTime() - m_nanoStarted;
+                long cNanos = f_context.f_container.nanoTime() - m_nanoStarted;
                 m_nanoStarted = 0;
                 f_context.m_cRuntimeNanos += cNanos;
                 m_frame = f_context.getCurrentFrame();
@@ -236,7 +236,7 @@ public class Fiber
      */
     public boolean isTimedOut()
         {
-        return m_ldtTimeout > 0 && System.currentTimeMillis() > m_ldtTimeout;
+        return m_ldtTimeout > 0 && f_context.f_container.currentTimeMillis() > m_ldtTimeout;
         }
 
     /**

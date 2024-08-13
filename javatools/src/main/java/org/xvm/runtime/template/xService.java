@@ -267,7 +267,7 @@ public class xService
                         {
                         long cRemains = xNanosTimer.millisFromDuration(frame.popStack());
                         frame.f_fiber.setTimeoutHandle(hArg,
-                                System.currentTimeMillis() + cRemains);
+                                frame.f_context.f_container.currentTimeMillis() + cRemains);
                         return Op.R_NEXT;
                         }
                     case Op.R_CALL:
@@ -275,7 +275,7 @@ public class xService
                             {
                             long cRemains = xNanosTimer.millisFromDuration(frameCaller.popStack());
                             frameCaller.f_fiber.setTimeoutHandle(hArg,
-                                    System.currentTimeMillis() + cRemains);
+                                    frame.f_context.f_container.currentTimeMillis() + cRemains);
                             return Op.R_NEXT;
                             });
                         return Op.R_CALL;

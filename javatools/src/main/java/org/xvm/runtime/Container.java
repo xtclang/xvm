@@ -49,6 +49,8 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 
+import org.xvm.runtime.template._native.temporal.xNanosTimer;
+
 
 /**
  * The base Container functionality.
@@ -507,6 +509,78 @@ public abstract class Container
         return parent != null && (this == parent || this.isParent(parent));
         }
 
+    /**
+     * @return the current time in milliseconds for this container
+     */
+    public long currentTimeMillis()
+        {
+        return System.currentTimeMillis() - getTimeFrozen();
+        }
+
+    /**
+     * @return the current value of the high-resolution time source for this container in nanoseconds
+     */
+    public long nanoTime()
+        {
+        return System.nanoTime() - getTimeFrozen() * xNanosTimer.NANOS_PER_MILLI;
+        }
+
+    /**
+     * Freeze the time passing for this container.
+     */
+    public void freezeTime()
+        {
+        assert m_ldtFrozen == 0L;
+
+        m_ldtFrozen = System.currentTimeMillis();
+        }
+
+    /**
+     * Unfreeze the time passing for this container.
+     */
+    public void unfreezeTime()
+        {
+        if (m_ldtFrozen != 0L)
+            {
+            m_cFrozen   += Math.max(0L, System.currentTimeMillis() - m_ldtFrozen);
+            m_ldtFrozen  = 0L;
+            }
+        }
+
+    /**
+     * @return true iff the container's time is "frozen", which means that any time related readings
+     *         make no sense at the moment
+     */
+    public boolean isTimeFrozen()
+        {
+        Container container = this;
+        do
+            {
+            if (container.m_ldtFrozen != 0L)
+                {
+                return true;
+                }
+            container = container.f_parent;
+            } while (container != null);
+
+        return false;
+        }
+
+    /**
+     * @return the time (in milliseconds) this container has been frozen for
+     */
+    private long getTimeFrozen()
+        {
+        long      cFrozen   = 0L;
+        Container container = this;
+        do
+            {
+            cFrozen  += container.m_cFrozen;
+            container = container.f_parent;
+            } while (container != null);
+        return cFrozen;
+        }
+
 
     // ----- x:Container API helpers ---------------------------------------------------------------
 
@@ -714,8 +788,8 @@ public abstract class Container
      */
     public void registerNotification()
         {
-        long l = f_pendingNotificationCount.getAndIncrement();
-        assert l >= 0L;
+        long c = f_pendingNotificationCount.getAndIncrement();
+        assert c >= 0;
         }
 
     /**
@@ -723,14 +797,14 @@ public abstract class Container
      */
     public void unregisterNotification()
         {
-        long l = f_pendingNotificationCount.getAndDecrement();
-        assert l >= 0;
+        long c = f_pendingNotificationCount.getAndDecrement();
+        assert c > 0;
         }
 
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    private NativeContainer getNativeContainer()
+    public NativeContainer getNativeContainer()
         {
         Container container = this;
         while (true)
@@ -742,6 +816,7 @@ public abstract class Container
             container = container.f_parent;
             }
         }
+
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -813,4 +888,15 @@ public abstract class Container
      * A cache of ClassTemplates loaded by this Container keyed by type.
      */
     protected final Map<TypeConstant, ClassTemplate> f_mapTemplatesByType = new ConcurrentHashMap<>();
+
+    /**
+     * Time period in milliseconds that this container has been "frozen" (and that fact should be
+     * concealed.)
+     */
+    private long m_cFrozen;
+
+    /**
+     * The time stamp when the container was frozen.
+     */
+    private long m_ldtFrozen;
     }

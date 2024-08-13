@@ -1,16 +1,11 @@
 - CP: implement RTServer.backTrace.get() and tls.get(); test it with nginx
 
-- GG: deal with a potential leak at ClassComposition.ensureGetterChain
-
 - CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
 
 - CP: dedicated Realm and/or Authenticator; for OAth and TokenAuth; chaining of Authenticators
     - consider multiple users for the session
 
 - CP: make DigestAuthenticator.NonceTable into a service
-
-- GG: add support for runtime constants that cross the module line; may need to restore the removed
-      delegation logic in ConverterExpression
 
 - CP: a content-type header for FormData has the following format:
     multipart/form-data; boundary=---------------------------1612195806993123533773008794
@@ -38,8 +33,6 @@
     - readBytes() methods need to return the number of bytes read
     - would be nice to have an "eof" indicator
 
-- GG: entering the debugger should stop time
-
 - GG: consider allowing to debug an eval expression (debug eval)
 
 - GG: consider changing Service.callLater() API to
@@ -50,8 +43,6 @@
 
 - add a method to Map API to evaluate the "worst lookup cost" based on the current content
   (Mark's suggestion to evaluated keys' hashCode distribution)
-
-- GG: implement timeout for IO operations (interrupt IO executor threads)
 
 - how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
 

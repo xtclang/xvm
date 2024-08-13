@@ -273,6 +273,21 @@ public final class DebugConsole
      */
     private int enterCommand(Frame frame, int iPC, boolean fRender)
         {
+        // for now, let's freeze *all* containers
+        Container container = frame.f_context.f_container.getNativeContainer();
+        container.freezeTime();
+        try
+            {
+            return enterCommandInternal(frame, iPC, fRender);
+            }
+        finally
+            {
+            container.unfreezeTime();
+            }
+        }
+
+    private int enterCommandInternal(Frame frame, int iPC, boolean fRender)
+        {
         m_frame    = frame;
         m_iPC      = iPC;
         m_stepMode = StepMode.None;
