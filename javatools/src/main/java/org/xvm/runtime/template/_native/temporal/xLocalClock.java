@@ -98,14 +98,14 @@ public class xLocalClock
 
                 // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
                 LongLong llEpoch   = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
-                long     ldtNow    = System.currentTimeMillis();
+                long     ldtNow    = frame.f_context.f_container.currentTimeMillis();
                 long     ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
                 long     cDelay    = Math.max(0, ldtWakeup - ldtNow);
 
-                Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm));
+                Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup);
                 try
                     {
-                    TIMER.schedule(alarm, cDelay);
+                    TIMER.schedule(alarm.getTrigger(), cDelay);
                     }
                 catch (Exception e)
                     {
@@ -162,7 +162,8 @@ public class xLocalClock
         TypeComposition clzTime = ensureTimeClass();
         GenericHandle   hTime   = new GenericHandle(clzTime);
 
-        LongLong llNow = new LongLong(System.currentTimeMillis()).mul(xNanosTimer.PICOS_PER_MILLI_LL);
+        LongLong llNow = new LongLong(frame.f_context.f_container.currentTimeMillis()).
+                            mul(xNanosTimer.PICOS_PER_MILLI_LL);
         hTime.setField(frame, "epochPicos", xInt128.INSTANCE.makeHandle(llNow));
         hTime.setField(frame, "timezone", timezone(frame));
         hTime.makeImmutable();
@@ -208,37 +209,74 @@ public class xLocalClock
         return clz;
         }
 
+    /**
+     * Represents a pending alarm.
+     */
     protected static class Alarm
-            extends TimerTask
         {
         /**
          * Construct an alarm.
          *
          * @param refCallback  the weak ref to a function to call when the alarm triggers
+         * @param ldtWakeUp    the wakeup timestamp in milliseconds (using
+         *                     Container.currentTimeMillis())
          */
-        protected Alarm(WeakCallback refCallback)
+        protected Alarm(WeakCallback refCallback, long ldtWakeUp)
             {
             f_refCallback = refCallback;
+            f_ldtWakeup   = ldtWakeUp;
+            m_trigger     = new Trigger(this);
 
             refCallback.get().f_container.registerNotification();
             }
 
-        @Override
+        /**
+         * @return the current trigger
+         */
+        public Trigger getTrigger()
+            {
+            return m_trigger;
+            }
+
+        /**
+         * Called when the alarm is triggered by the Java timer.
+         */
         public void run()
             {
             ServiceContext context = f_refCallback.get();
             if (context != null)
                 {
-                WeakCallback.Callback callback = f_refCallback.extractCallback();
-                context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
-                context.f_container.unregisterNotification();
+                Container container = context.f_container;
+                if (container.isTimeFrozen())
+                    {
+                    // if the time is currently frozen, we have no way of knowing when it's going to
+                    // be ready (how long will someone be looking at the debugger screen); so
+                    // re-checking in a second seems like a reasonable compromise
+                    TIMER.schedule(m_trigger = new Trigger(this), 1000);
+                    return;
+                    }
+
+                long ldtNow = container.currentTimeMillis();
+                if (ldtNow >= f_ldtWakeup)
+                    {
+                    WeakCallback.Callback callback = f_refCallback.extractCallback();
+                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
+                    container.unregisterNotification();
+                    }
+                else
+                    {
+                    // reschedule
+                    TIMER.schedule(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
+                    }
                 }
             }
 
-        @Override
+        /**
+         * Called when the alarm is canceled by the natural code.
+         */
         public boolean cancel()
             {
-            boolean        fCancelled = super.cancel();
+            boolean        fCancelled = m_trigger.cancel();
             ServiceContext context    = f_refCallback.get();
             if (context != null && fCancelled)
                 {
@@ -247,7 +285,29 @@ public class xLocalClock
             return fCancelled;
             }
 
+        /**
+         * A TimerTask that is scheduled on the Java timer and is used to trigger the alarm.
+         */
+        protected static class Trigger
+                extends TimerTask
+            {
+            protected Trigger(Alarm alarm)
+                {
+                f_alarm = alarm;
+                }
+
+            @Override
+            public void run()
+                {
+                f_alarm.run();
+                }
+
+            private final Alarm f_alarm;
+            }
+
         private final WeakCallback f_refCallback;
+        private final long         f_ldtWakeup;
+        private       Trigger      m_trigger;
         }
 
 

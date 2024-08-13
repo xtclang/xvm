@@ -335,12 +335,14 @@ public class xException
      */
     public static ExceptionHandle makeObscure(Frame frame, String sErr)
         {
-        return makeHandle(frame, s_clzException, "RTError: " + System.currentTimeMillis(), sErr);
+        return makeHandle(frame, s_clzException, "RTError: " +
+                frame.f_context.f_container.currentTimeMillis(), sErr);
         }
 
     public static ExceptionHandle obscureIoException(Frame frame, String sErr)
         {
-        return makeHandle(frame, s_clzIOException, "RTError: " + System.currentTimeMillis(), sErr);
+        return makeHandle(frame, s_clzIOException, "RTError: " +
+                frame.f_context.f_container.currentTimeMillis(), sErr);
         }
 
     public static ExceptionHandle makeHandle(Frame frame, TypeComposition clzEx,
