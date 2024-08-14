@@ -12,14 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.xvm.asm.Component;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
 
-import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
@@ -5986,7 +5982,7 @@ public class Parser
             }
         }
 
-    private static class Mark
+    protected static class Mark
         {
         long    pos;
         Token   token;

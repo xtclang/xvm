@@ -766,12 +766,6 @@ public abstract class RelationalTypeConstant
         return n;
         }
 
-    @Override
-    public String getValueString()
-        {
-        return m_constType1.getValueString() + " - " + m_constType2.getValueString();
-        }
-
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

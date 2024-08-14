@@ -11,8 +11,6 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
-import org.xvm.runtime.template.xException;
-
 
 /**
  * The abstract base for RTDelegate<Int64> and RTDelegate<UInt64> implementations.

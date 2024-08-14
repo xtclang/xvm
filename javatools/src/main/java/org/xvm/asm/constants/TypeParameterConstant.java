@@ -70,12 +70,6 @@ public class TypeParameterConstant
         f_iReg = readMagnitude(in);
         }
 
-    @Override
-    protected void resolveConstants()
-        {
-        super.resolveConstants();
-        }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 

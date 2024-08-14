@@ -107,12 +107,6 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public boolean containsUnresolved()
-        {
-        return false;
-        }
-
-    @Override
     public boolean isImmutabilitySpecified()
         {
         return false;

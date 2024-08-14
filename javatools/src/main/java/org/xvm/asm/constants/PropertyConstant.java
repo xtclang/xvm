@@ -79,12 +79,6 @@ public class PropertyConstant
             }
         }
 
-    @Override
-    protected void resolveConstants()
-        {
-        super.resolveConstants();
-        }
-
 
     // ----- FormalConstant methods ----------------------------------------------------------------
 
