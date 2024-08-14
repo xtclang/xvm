@@ -46,6 +46,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.NamedConstant;
+import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -906,6 +907,12 @@ public class InvocationExpression
                 for (int i = 0, c = atypeParams.length; i < c; i++)
                     {
                     TypeConstant type = atypeParams[i];
+                    if (type instanceof PendingTypeConstant)
+                        {
+                        log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE,
+                            method.getParam(i).getName());
+                        return null;
+                        }
                     if (type.containsFormalType(true))
                         {
                         // choose the wider type between the original and resolved ones
