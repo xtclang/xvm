@@ -1,6 +1,6 @@
 /**
- * A natural hasher uses the object's own hash code and the relational equality operator associated
- * with the object's type to determine equality.
+ * A natural hasher uses the hash code and the relational equality operator associated with the
+ *`Value` type to determine equality.
  *
  * The purpose of the NaturalHasher class is to allow an implementation of a hashed data structure
  * to easily switch between working with objects that provide their own hashing and equality, and

@@ -21,6 +21,7 @@ module TestMaps {
         testEquals(new ConcurrentHashMap());
 
         testHasher();
+        testVirtualHasher();
 
         function void () run = &testFill100();
         profile(run, 10);
@@ -113,6 +114,31 @@ module TestMaps {
         Map<immutable Int[], Int> map2 = new HashMap();
         map2.put(array, 0);
         assert map2.get(array);
+    }
+
+    void testVirtualHasher() {
+        import ecstasy.collections.Hasher;
+        import ecstasy.collections.HasherMap;
+        import ecstasy.collections.VirtualHasher;
+
+        Map<Point2D, String> map = new HashMap();
+        map.put(new Point2D(0, 0),    "2D");
+        map.put(new Point3D(0, 0, 1), "3D");
+
+        assert map.size == 1;
+        assert map.get(new Point2D(0, 0))? == "3D";
+
+        Hasher<Hashable>      hasher = new VirtualHasher();
+        Map<Hashable, String> mapV   = new HasherMap(hasher);
+
+        mapV.put(new Point2D(0, 0),    "2D");
+        mapV.put(new Point3D(0, 0, 1), "3D");
+
+        assert mapV.size == 2;
+        assert mapV.get(new Point2D(0, 0))? == "2D";
+
+        const Point2D(Int x, Int y);
+        const Point3D(Int x, Int y, Int z) extends Point2D(x, y);
     }
 
     static void testFill100() {
