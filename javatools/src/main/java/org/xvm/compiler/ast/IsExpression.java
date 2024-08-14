@@ -30,7 +30,7 @@ import org.xvm.util.Severity;
 
 
 /**
- * Expression for "expression is expression" or "expression instanceof type".
+ * Expression for "expression.is(expression)".
  */
 public class IsExpression
         extends BiExpression
@@ -68,7 +68,9 @@ public class IsExpression
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx)
         {
-        return new TypeConstant[] {pool().typeBoolean(), expr2.getImplicitType(ctx)};
+        TypeConstant type = expr2.getImplicitType(ctx);
+        return new TypeConstant[]
+                {pool().typeBoolean(), type == null ? pool().typeObject() : type.getParamType(0)};
         }
 
     @Override

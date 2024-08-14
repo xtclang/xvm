@@ -142,18 +142,8 @@ public class NotNullExpression
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
-        if (typeRequired != null && typeRequired.isTypeOfType())
-            {
-            Expression exprType = validateAsType(ctx, typeRequired, errs);
-            if (exprType != null)
-                {
-                return exprType;
-                }
-            }
-
-        // at this point, we have to make a decision: either this expression takes a "T?" and strips
-        // the null off and returns the T, or it takes a "conditional T" / "(Boolean, T)" and
-        // returns the T
+        // we have to make a decision: either this expression takes a "T?" and strips the null off
+        // and returns the T, or it takes a "conditional T" / "(Boolean, T)" and returns the T
         ConstantPool   pool      = pool();
         boolean        fCond     = false;
         TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
@@ -170,6 +160,15 @@ public class NotNullExpression
             }
         else
             {
+            if (typeRequired != null && typeRequired.isTypeOfType())
+                {
+                Expression exprType = validateAsType(ctx, typeRequired, errs);
+                if (exprType != null)
+                    {
+                    return exprType;
+                    }
+                }
+
             TypeConstant typeRequest = typeRequired == null ? null : typeRequired.ensureNullable();
             exprNew = expr.validate(ctx, typeRequest, errs);
             }
