@@ -75,7 +75,7 @@ public class PropertyBody
         else if (fConstant && constInitVal == null && constInitFunc == null && !struct.isInjected())
             {
             // this can only happen when we're building the TypeInfo for a partially compiled class,
-            // so we will need to invalidate the TypeInfo afterwards;
+            // so we will need to invalidate the TypeInfo afterward;
             // mark the implementation as "Implicit" just to assert it gets replaced later
             impl = Implementation.Implicit;
             }
@@ -322,15 +322,6 @@ public class PropertyBody
         }
 
     /**
-     * @return true iff the property is annotated with one or more annotations that alter the Ref or
-     *         Var functionality
-     */
-    public boolean hasRefAnnotations()
-        {
-        return m_structProp != null && m_structProp.getRefAnnotations().length > 0;
-        }
-
-    /**
      * @return the property's Ref/Var annotations
      */
     public Annotation[] getRefAnnotations()
@@ -562,7 +553,7 @@ public class PropertyBody
     /**
      * Represents the presence and effect of a "get()" or "set()" method.
      */
-    enum Effect {None, BlocksSuper, MayUseSuper}
+    public enum Effect {None, BlocksSuper, MayUseSuper}
 
     /**
      * The property's underlying structure.
@@ -618,9 +609,8 @@ public class PropertyBody
 
     /**
      * True iff the property requires a field. A field is assumed to exist iff the property is a
-     * non-constant, non-type-parameter, non-interface property, @Abstract is not specified, @Inject
-     * is not specified, @RO is not specified, @Override is not specified, and the Ref.get() does
-     * not block its super.
+     * non-constant, non-type-parameter, non-interface property, neither one of @Abstract, @Inject,
+     * @RO or @Override is specified, and the Ref.get() does not block its super.
      */
     private final boolean m_fField;
 

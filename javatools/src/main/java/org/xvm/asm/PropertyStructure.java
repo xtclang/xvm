@@ -107,7 +107,8 @@ public class PropertyStructure
         {
         return isConstant() ||
                getParent() instanceof ClassStructure clzParent &&
-               clzParent.isSingleton() && (hasInitialValue() || getInitializer() != null);
+               clzParent.isSingleton() && (hasInitialValue() || getInitializer() != null) &&
+               !isTransient();
         }
 
     /**
@@ -233,6 +234,14 @@ public class PropertyStructure
     public boolean isExplicitOverride()
         {
         return containsPropertyAnnotation(getConstantPool().clzOverride());
+        }
+
+    /**
+     * @return true if the property is annotated by "@Transient"
+     */
+    public boolean isTransient()
+        {
+        return containsPropertyAnnotation(getConstantPool().clzTransient());
         }
 
     /**

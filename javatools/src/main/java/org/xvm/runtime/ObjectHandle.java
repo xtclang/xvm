@@ -1121,6 +1121,12 @@ public abstract class ObjectHandle
             return f_nHash;
             }
 
+        @Override
+        public String toString()
+            {
+            return "Transient";
+            }
+
         private final int f_nHash;
 
         private static final AtomicInteger s_hashCode = new AtomicInteger();
