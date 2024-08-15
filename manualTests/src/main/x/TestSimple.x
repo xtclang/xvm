@@ -1,14 +1,23 @@
 module TestSimple {
     @Inject Console console;
+    @Inject Clock clock;
+    @Inject Timer timer;
 
     void run() {
+        timer.start();
+        doMaintenance();
     }
 
-    interface Cmp {
-        Boolean equals(Cmp that) {
-            Ref  ref    = &this;
-            Type shared = ref.actualClass.PublicType;
-            return this.is(shared.DataType)? == that.is(shared.DataType)? : False; // used to fail to compile
+    protected void doMaintenance() {
+        if (count++ % 2 == 0) {
+            console.print($"Maintenance with clock... {count}");
+            clock.schedule(Duration.ofSeconds(2), &doMaintenance, count <= 5);
+        } else {
+            console.print($"Maintenance with timer... {count}");
+            timer.schedule(Duration.ofSeconds(2), &doMaintenance, count <= 5);
         }
     }
+
+    @Transient Int count;
 }
+

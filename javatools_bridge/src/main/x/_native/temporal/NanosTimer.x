@@ -11,7 +11,7 @@ service NanosTimer
     @RO Duration elapsed;
 
     @Override
-    Cancellable schedule(Duration delay, Alarm alarm);
+    Cancellable schedule(Duration delay, Alarm alarm, Boolean keepAlive = False);
 
     @Override
     void stop();
@@ -20,12 +20,8 @@ service NanosTimer
     void reset();
 
     @Override
-    Duration resolution.get() {
-        return Duration.Nanosec;
-    }
+    Duration resolution.get() = Duration.Nanosec;
 
     @Override
-    String toString() {
-        return "Timer";
-    }
+    String toString() = "Timer";
 }

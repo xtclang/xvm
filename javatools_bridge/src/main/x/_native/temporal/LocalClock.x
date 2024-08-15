@@ -16,15 +16,11 @@ service LocalClock
     }
 
     @Override
-    Boolean monotonic.get() {
-        return False;
-    }
+    Boolean monotonic.get() = False;
 
     @Override
-    Cancellable schedule(Time when, Alarm alarm);
+    Cancellable schedule(Time when, Alarm alarm, Boolean keepAlive = False);
 
     @Override
-    String toString() {
-        return "Clock";
-    }
+    String toString() = "Clock";
 }

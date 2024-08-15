@@ -32,17 +32,22 @@ interface Timer {
      * Schedule an Alarm that will be invoked after the specified Duration has elapsed.
      *
      * Invoking the returned Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
-     * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
+     * cancellation is not guaranteed, since the Timer may have already invoked the Alarm.
      *
      * Note, that scheduling an alarm on a stopped timer has no effect until after the timer gets
      * started and stopping a running timer will pause all previously scheduled alarms.
+     *
+     * @param delay      the duration to wait before triggering the alarm
+     * @param alarm      the alarm function
+     * @param keepAlive  (optional) pass `True` to indicate that pending alarm is not a "daemon
+     *                   process", i.e. the container should not terminate while the timer is
+     *                   running and the alarm is pending
      */
-    Cancellable schedule(Duration delay, Alarm alarm);
+    Cancellable schedule(Duration delay, Alarm alarm, Boolean keepAlive = False);
 
     /**
      * If the Timer is started, then this method stops the Timer, such that the elapsed time stops
-     * accumulating. If the Timer is already stopped, then this
-     * method has no effect.
+     * accumulating. If the Timer is already stopped, then this method has no effect.
      *
      * This method also affects any previously registered alarms that have not already triggered,
      * such that the accumulation of elapsed time for those alarms is also stopped until the Timer

@@ -593,7 +593,7 @@ public abstract class Container
     public boolean isIdle()
         {
         return f_pendingWorkCount.get() == 0 &&
-               f_pendingNotificationCount.get() == 0 &&
+               f_callbackCount.get() == 0 &&
                m_contextMain.isIdle() &&
                (f_parent == null || f_parent.isIdle());
         }
@@ -779,25 +779,23 @@ public abstract class Container
         }
 
 
-    // ----- support for native notifications (e.g. timers, file listeners, etc. -------------------
+    // ----- support for native notifications (e.g. timers, file listeners, etc.) ------------------
 
     /**
-     * Register a notification for this container.
-     *
-     * Note, that this method must be called on this service thread (fiber).
+     * Register a native callback that should keep the container alive.
      */
-    public void registerNotification()
+    public void registerNativeCallback()
         {
-        long c = f_pendingNotificationCount.getAndIncrement();
+        long c = f_callbackCount.getAndIncrement();
         assert c >= 0;
         }
 
     /**
-     * Unregister a notification for this container.
+     * Unregister a native callback for this container.
      */
-    public void unregisterNotification()
+    public void unregisterNativeCallback()
         {
-        long c = f_pendingNotificationCount.getAndDecrement();
+        long c = f_callbackCount.getAndDecrement();
         assert c > 0;
         }
 
@@ -867,9 +865,9 @@ public abstract class Container
     private final AtomicLong f_pendingWorkCount = new AtomicLong();
 
     /**
-     * Support for Clock and Timer: the count of pending "alarms".
+     * Support for Clock and Timer: the count of native callbacks that should keep the container alive.
      */
-    protected final AtomicLong f_pendingNotificationCount = new AtomicLong();
+    protected final AtomicLong f_callbackCount = new AtomicLong();
 
     /**
      * Set of services that were started by this container (stored as a Map with no values).

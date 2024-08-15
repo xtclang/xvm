@@ -20,6 +20,8 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.WeakCallback;
 
+import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
@@ -59,7 +61,8 @@ public class xLocalClock
         markNativeProperty("now");
         markNativeProperty("timezone");
 
-        markNativeMethod("schedule", null, null);
+        // LocalClock has more than one "schedule" method; need to be specific
+        markNativeMethod("schedule",  new String[]{"temporal.Time", "temporal.Clock.Alarm", "Boolean"}, null);
 
         invalidateTypeInfo();
         }
@@ -91,39 +94,50 @@ public class xLocalClock
         {
         switch (method.getName())
             {
-            case "schedule": // wakeUp, alarm
+            case "schedule":
                 {
                 GenericHandle  hWakeup = (GenericHandle)  ahArg[0];
                 FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
+                BooleanHandle  hKeep   = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.FALSE;
 
-                // assert (hWakeup.timezone == NoTZ) == (this.timezone == NoTZ)
-                LongLong llEpoch   = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
-                long     ldtNow    = frame.f_context.f_container.currentTimeMillis();
-                long     ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
-                long     cDelay    = Math.max(0, ldtWakeup - ldtNow);
-
-                Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup);
-                try
-                    {
-                    TIMER.schedule(alarm.getTrigger(), cDelay);
-                    }
-                catch (Exception e)
-                    {
-                    alarm.cancel();
-                    return frame.raiseException(e.getMessage());
-                    }
-
-                FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
-                    {
-                    alarm.cancel();
-                    return Op.R_NEXT;
-                    });
-
-                return frame.assignValue(iReturn, hCancel);
+                return invokeSchedule(frame, hWakeup, hAlarm, hKeep, iReturn);
                 }
             }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
+        }
+
+    /**
+     * Native implementation of
+     *  "Cancellable schedule(Time when, Alarm alarm, Boolean keepAlive = False)"
+     */
+    private int invokeSchedule(Frame frame, GenericHandle hWhen,
+                               FunctionHandle hAlarm, BooleanHandle hKeepAlive, int iReturn)
+        {
+        // assert (hWhen.timezone == NoTZ) == (this.timezone == NoTZ)
+        LongLong llEpoch    = ((LongLongHandle) hWhen.getField(null, "epochPicos")).getValue();
+        long     ldtNow     = frame.f_context.f_container.currentTimeMillis();
+        long     ldtWakeup  = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
+        long     cDelay     = Math.max(0, ldtWakeup - ldtNow);
+
+        Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
+        try
+            {
+            TIMER.schedule(alarm.getTrigger(), cDelay);
+            }
+        catch (Exception e)
+            {
+            alarm.cancel();
+            return frame.raiseException(e.getMessage());
+            }
+
+        FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) ->
+            {
+            alarm.cancel();
+            return Op.R_NEXT;
+            });
+
+        return frame.assignValue(iReturn, hCancel);
         }
 
     /**
@@ -220,14 +234,19 @@ public class xLocalClock
          * @param refCallback  the weak ref to a function to call when the alarm triggers
          * @param ldtWakeUp    the wakeup timestamp in milliseconds (using
          *                     Container.currentTimeMillis())
+         * @param fKeepAlive   if true, the alarm needs to be registered with the container
          */
-        protected Alarm(WeakCallback refCallback, long ldtWakeUp)
+        protected Alarm(WeakCallback refCallback, long ldtWakeUp, boolean fKeepAlive)
             {
             f_refCallback = refCallback;
             f_ldtWakeup   = ldtWakeUp;
             m_trigger     = new Trigger(this);
+            f_Registered  = fKeepAlive;
 
-            refCallback.get().f_container.registerNotification();
+            if (fKeepAlive)
+                {
+                refCallback.get().f_container.registerNativeCallback();
+                }
             }
 
         /**
@@ -261,7 +280,10 @@ public class xLocalClock
                     {
                     WeakCallback.Callback callback = f_refCallback.extractCallback();
                     context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
-                    container.unregisterNotification();
+                    if (f_Registered)
+                        {
+                        container.unregisterNativeCallback();
+                        }
                     }
                 else
                     {
@@ -278,9 +300,9 @@ public class xLocalClock
             {
             boolean        fCancelled = m_trigger.cancel();
             ServiceContext context    = f_refCallback.get();
-            if (context != null && fCancelled)
+            if (context != null && fCancelled && f_Registered)
                 {
-                context.f_container.unregisterNotification();
+                context.f_container.unregisterNativeCallback();
                 }
             return fCancelled;
             }
@@ -307,6 +329,7 @@ public class xLocalClock
 
         private final WeakCallback f_refCallback;
         private final long         f_ldtWakeup;
+        private final boolean      f_Registered;
         private       Trigger      m_trigger;
         }
 

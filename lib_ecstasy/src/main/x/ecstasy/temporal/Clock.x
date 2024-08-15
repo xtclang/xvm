@@ -48,16 +48,28 @@ interface Clock {
      *
      * Invoking the returned #Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
      * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
+     *
+     * @param when       the time to trigger the alarm at
+     * @param alarm      the alarm function
+     * @param keepAlive  (optional) pass `True` to indicate that pending alarm is not a "daemon
+     *                   process", i.e. the container should not terminate while the timer is
+     *                   running and the alarm is pending
      */
-    Cancellable schedule(Time when, Alarm alarm);
+    Cancellable schedule(Time when, Alarm alarm, Boolean keepAlive = False);
 
     /**
      * Request an Alarm to be scheduled on the Clock to go off after a specified period of time.
      *
      * Invoking the returned #Cancellable will _attempt_ to cancel the invocation of the #Alarm, but
      * cancellation is not guaranteed, since the Clock may have already invoked the Alarm.
+     *
+     * @param delay      the duration to wait before triggering the alarm
+     * @param alarm      the alarm function
+     * @param keepAlive  (optional) pass `True` to indicate that pending alarm is not a "daemon
+     *                   process", i.e. the container should not terminate while the timer is
+     *                   running and the alarm is pending
      */
-    Cancellable schedule(Duration delay, Alarm alarm) {
-        return schedule(now+delay, alarm);
+    Cancellable schedule(Duration delay, Alarm alarm, Boolean keepAlive = False) {
+        return schedule(now+delay, alarm, keepAlive);
     }
 }
