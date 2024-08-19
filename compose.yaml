@@ -1,0 +1,9 @@
+# Here the instructions define your application as a service called "xtc".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+services:
+  xdk:
+    build:
+      context: .

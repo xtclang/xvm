@@ -24,7 +24,7 @@ val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     dependsOn(xdk.task(":$name"))
-
+    dependsOn(xdk.task(":installWithLaunchersDist"))
 }
 
 /**
