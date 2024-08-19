@@ -17,7 +17,6 @@ plugins {
     alias(libs.plugins.xdk.build.publish)
     alias(libs.plugins.xtc)
     alias(libs.plugins.tasktree)
-    alias(libs.plugins.versions)
     alias(libs.plugins.sonatype.publish)
     distribution // TODO: If we turn this into an application plugin instead, we can automatically get third party dependency jars with e.g. javatools resolved.
     signing
@@ -259,5 +258,9 @@ private fun Distribution.contentSpec(distName: String, distVersion: String, dist
 }
 
 val installDist by tasks.existing {
+    dependsOn(tasks.compileXtc)
+}
+
+val installWithLaunchersDist by tasks.existing {
     dependsOn(tasks.compileXtc)
 }

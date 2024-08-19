@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.xdk.build.versioning)
     alias(libs.plugins.xdk.build.aggregator)
     alias(libs.plugins.tasktree)
+    alias(libs.plugins.versions)
 }
 
 /**
@@ -23,6 +24,7 @@ val installDist by tasks.registering {
     group = DISTRIBUTION_TASK_GROUP
     description = "Install the XDK distribution in the xdk/build/distributions and xdk/build/install directories."
     dependsOn(xdk.task(":$name"))
+
 }
 
 /**

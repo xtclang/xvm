@@ -54,7 +54,7 @@ class XdkBuildLogic private constructor(project: Project) : XdkProjectBuildLogic
     }
 
     companion object {
-        const val DEFAULT_JAVA_BYTECODE_VERSION = 20 // TODO: We still have to compile to 20 bytecode, because Kotlin 1.9 does not support 21.
+        const val DEFAULT_JAVA_BYTECODE_VERSION = 21 // TODO: Kotlin still only supports JDK 21 Target.
         const val XDK_TASK_GROUP_DEBUG = "debug"
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
         const val XDK_ARTIFACT_NAME_JAVATOOLS_FATJAR = "javatools-fatjar"
@@ -98,6 +98,7 @@ val Project.compositeRootBuildDirectory: DirectoryProperty get() = gradle.rootLa
 
 val Project.userInitScriptDirectory: File get() = File(gradle.gradleUserHomeDir, "init.d")
 
+@Suppress("unused")
 val Project.buildRepoDirectory get() = compositeRootBuildDirectory.dir("repo")
 
 val Project.xdkBuildLogic: XdkBuildLogic get() = XdkBuildLogic.instanceFor(this)
@@ -108,6 +109,7 @@ val Task.prefix: String get() = "[${project.name}:$name]"
 
 // TODO: A little bit hacky: use a config, but there is a mutual dependency between the lib_xtc and javatools.
 //  Better to add the resource directory as a source set?
+@Suppress("unused")
 val Project.xdkIconFile: String get() = "$compositeRootProjectDirectory/javatools_launcher/src/main/c/x.ico"
 
 // TODO: A little bit hacky, for same reason as above; Better to add the resource directory as a source set?
@@ -160,6 +162,7 @@ fun Project.buildException(msg: String, level: LogLevel = LIFECYCLE): Throwable 
  * Extension method that can be called during the configuration phase, marking its
  * task instance as forever out of date.
  */
+@Suppress("unused")
 fun Task.considerNeverUpToDate() {
     outputs.cacheIf { false }
     outputs.upToDateWhen { false }
@@ -170,7 +173,8 @@ fun Task.considerNeverUpToDate() {
  * Extension method to flag a task as always up to date. Declaring no outputs will
  * cause a task to rerun, even an extended task.
  */
-fun Task.considerAlwaqysUpToDate() {
+@Suppress("unused")
+fun Task.considerAlwaysUpToDate() {
     outputs.upToDateWhen { true }
 }
 

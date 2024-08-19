@@ -19,7 +19,7 @@ group-xdk = "unspecified"
 group-xtc-plugin = "unspecified"
 
 download = "5.5.0"
-versions = "0.50.0"
+versions = "0.51.0"
 tasktree = "2.1.1"
 gradle-portal-publish = "1.2.1"
 sonatype-publish = "2.0.0"

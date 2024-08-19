@@ -59,7 +59,7 @@ env:
 
 # Concurrency settings: group by workflow and ref, cancel intermediate builds, but only if it's a pull request build.
 concurrency:
-  group: "${{ github.workflow }}-${{ github.ref }}"
+  group: "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}"
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 21
+          java-version: 22
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -168,7 +168,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 21
+          java-version: 22
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
