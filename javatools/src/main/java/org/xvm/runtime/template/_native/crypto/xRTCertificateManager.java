@@ -242,7 +242,7 @@ public class xRTCertificateManager
 
                 // the "certonly" command above could fail if there was already a valid certificate,
                 // in which case we could run the conversion routine below regardless
-                String sDestPath = sConfigPath + File.separator + "live" + File.separator + sName;
+                String sDestPath = sConfigPath + File.separator + "live" + File.separator + sDomain;
                 if (new File(sDestPath).exists())
                     {
                     // convert "pem" files into "pkcs12" format
@@ -270,6 +270,12 @@ public class xRTCertificateManager
                             "-deststorepass", hPwd.getStringValue()
                             );
                         }
+                    }
+                else if (hFailure == null)
+                    {
+                    // something is amiss; since the command succeeded, the "config/live/{domain}"
+                    // directory must exist
+                    hFailure = xException.ioException(frame, "Cannot locate directory: " + sDestPath);
                     }
                 return hFailure;
                 }

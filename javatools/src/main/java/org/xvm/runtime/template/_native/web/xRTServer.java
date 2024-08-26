@@ -368,29 +368,35 @@ public class xRTServer
         String         sTlsKey   = ahArg[3] instanceof StringHandle hS ? hS.getStringValue() : null;
         Router         router    = hServer.getRouter();
 
-        if (hKeystore != null && sTlsKey == null && router.mapRoutes.isEmpty())
+        if (hKeystore != null)
             {
-            // find a public/private key pair that could be used to encrypt tls communications
-            try
+            KeyStore keystore = hKeystore.f_keyStore;
+            if (sTlsKey != null && !isValidPair(hKeystore, sTlsKey))
                 {
-                KeyStore keystore = hKeystore.f_keyStore;
-                for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();)
+                return frame.raiseException("Invalid or missing entry for Tls key: \"" + sTlsKey + '"');
+                }
+
+            if (sTlsKey == null && router.mapRoutes.isEmpty())
+                {
+                // find a public/private key pair that could be used to encrypt tls communications
+                try
                     {
-                    String sName = it.nextElement();
-                    if (keystore.isKeyEntry(sName) &&
-                            hKeystore.getKey(sName) instanceof PrivateKey &&
-                            keystore.getCertificate(sName) != null)
+                    for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();)
                         {
-                        sTlsKey = sName;
-                        break;
+                        String sName = it.nextElement();
+                        if (isValidPair(hKeystore, sName))
+                            {
+                            sTlsKey = sName;
+                            break;
+                            }
                         }
                     }
-                }
-            catch (GeneralSecurityException ignore) {}
+                catch (KeyStoreException ignore) {}
 
-            if (sTlsKey == null)
-                {
-                return frame.raiseException("The Tls key name must be specified");
+                if (sTlsKey == null)
+                    {
+                    return frame.raiseException("The Tls key name must be specified");
+                    }
                 }
             }
 
@@ -405,6 +411,18 @@ public class xRTServer
 
         router.mapRoutes.put(sHostName, route);
         return Op.R_NEXT;
+        }
+
+    private boolean isValidPair(KeyStoreHandle hKeystore, String sName)
+        {
+        KeyStore keystore = hKeystore.f_keyStore;
+        try
+            {
+            return keystore.isKeyEntry(sName) &&
+                   hKeystore.getKey(sName) instanceof PrivateKey &&
+                   keystore.getCertificate(sName) != null;
+            }
+        catch (GeneralSecurityException e) {return false;}
         }
 
     /**
