@@ -6,9 +6,11 @@ service RTCertificateManager
         implements CertificateManager{
 
     /**
-     * The name for the certificate provider. Potential values are:
+     * The name for the certificate provider, which is only used by the native implementation.
+     * Potential values are:
      *   - "self" for the self-signed certificates
-     *   - "certbot" for certificates signed by "Let's Encrypt" using certbot utility
+     *   - "certbot-staging" for test certificates signed by "Let's Encrypt" using certbot utility
+     *   - "certbot" for production certificates signed by "Let's Encrypt" using certbot utility
      */
     private String provider = "self";
 

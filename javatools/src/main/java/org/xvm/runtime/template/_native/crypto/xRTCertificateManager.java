@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.security.Key;
 import java.security.KeyStore;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.xvm.asm.ClassStructure;
@@ -27,6 +29,7 @@ import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -109,19 +112,24 @@ public class xRTCertificateManager
         switch (method.getName())
             {
             case "createCertificateImpl":
-                return invokeCreateCertificate(frame, (ServiceHandle) hTarget, ahArg);
+                return invokeAsIOTask(frame, () ->
+                        invokeCreateCertificate(frame, (ServiceHandle) hTarget, ahArg));
 
             case "revokeCertificateImpl":
-                return invokeRevokeCertificate(frame, ahArg);
+                return invokeAsIOTask(frame, () ->
+                        invokeRevokeCertificate(frame, ahArg));
 
             case "createSymmetricKeyImpl":
-                return invokeCreateSymmetricKey(frame, ahArg);
+                return invokeAsIOTask(frame, () ->
+                        invokeCreateSymmetricKey(frame, ahArg));
 
             case "createPasswordImpl":
-                return invokeCreatePassword(frame, ahArg);
+                return invokeAsIOTask(frame, () ->
+                        invokeCreatePassword(frame, ahArg));
 
             case "changeStorePasswordImpl":
-                return invokeChangeStorePassword(frame, ahArg);
+                return invokeAsIOTask(frame, () ->
+                        invokeChangeStorePassword(frame, ahArg));
 
             case "extractKeyImpl":
                 return invokeExtractKey(frame, ahArg, iReturn);
@@ -130,74 +138,145 @@ public class xRTCertificateManager
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
         }
 
+    private int invokeAsIOTask(Frame frame, Callable<ExceptionHandle> task)
+        {
+        CompletableFuture<ExceptionHandle> cfResult =
+                frame.f_context.f_container.scheduleIO(task);
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                ExceptionHandle hFailure = cfResult.get();
+                return hFailure == null ? Op.R_NEXT : frameCaller.raiseException(hFailure);
+                }
+            catch (Throwable e)
+                {
+                return frameCaller.raiseException("Unexpected execution failure " + e);
+                }
+            };
+
+        return frame.waitForIO(cfResult, continuation);
+        }
+
     /**
      * Native implementation of
      *     "createCertificateImpl(String path, Password pwd, String name, String dName)"
      */
-    private int invokeCreateCertificate(Frame frame, ServiceHandle hMgr, ObjectHandle[] ahArg)
+    private ExceptionHandle invokeCreateCertificate(Frame frame, ServiceHandle hMgr, ObjectHandle[] ahArg)
         {
-        StringHandle hPath     = (StringHandle) ahArg[0];
-        StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
-        StringHandle hName     = (StringHandle) ahArg[2];
-        StringHandle hDName    = (StringHandle) ahArg[3];
-        StringHandle hProvider = (StringHandle) hMgr.getField(0); // "provider" property
+        StringHandle hStorePath = (StringHandle) ahArg[0];
+        StringHandle hPwd       = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName      = (StringHandle) ahArg[2];
+        StringHandle hDName     = (StringHandle) ahArg[3];
+        StringHandle hProvider  = (StringHandle) hMgr.getField(0); // "provider" property
 
         runSilentCommand(
                 "keytool", "-delete",
                 "-alias",     hName.getStringValue(),
-                "-keystore",  hPath.getStringValue(),
+                "-keystore",  hStorePath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
 
-        String sDName = hDName.getStringValue();
+        String  sDName   = hDName.getStringValue();
+        String  sName    = hName.getStringValue();
+        boolean fStaging = false;
         switch (hProvider.getStringValue())
             {
             case "self":
                 // create self-signed certificate
                 return runNoInputCommand(frame,
-                        "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "365",
-                        "-alias", hName.getStringValue(),
+                        "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "90",
+                        "-alias", sName,
                         "-dname", sDName,
                         "-storetype", "PKCS12",
-                        "-keystore", hPath.getStringValue(),
+                        "-keystore", hStorePath.getStringValue(),
                         "-storepass", hPwd.getStringValue()
                         );
 
+            case "certbot-staging":
+                fStaging = true;
+                // fall-through
             case "certbot":
                 {
-                File   dirCerts   = getCertsPath(hPath);
+                File   dirCerts   = getCertsPath(hStorePath);
                 String sCertsPath = dirCerts.getAbsolutePath();
-
                 if (!dirCerts.exists() && !dirCerts.mkdir() || !dirCerts.isDirectory())
                     {
-                    return frame.raiseException(xException.ioException(frame,
-                            "Cannot create directory: " + sCertsPath));
+                    return xException.ioException(frame, "Cannot create directory: " + sCertsPath);
+                    }
+
+                File   dirChallenge   = getChallengePath(hStorePath);
+                String sChallengePath = dirChallenge.getAbsolutePath();
+                if (!dirChallenge.exists() && !dirChallenge.mkdir() || !dirChallenge.isDirectory())
+                    {
+                    return xException.ioException(frame, "Cannot create directory: " + sChallengePath);
                     }
 
                 int ofDomain = sDName.indexOf("CN=");
                 assert ofDomain > 0;
                 String sDomain = sDName.substring(ofDomain + 3);
 
-                int iResult = runCommand(frame, "yes\nyes",
+                // the "-key-path" and "--fullchain-path" options don't have any effect, so we
+                // need to rely on the default behavior placing the pem files under "config/live"
+                String sConfigPath = sCertsPath + File.separator + "config";
+                ExceptionHandle hFailure = fStaging
+                    ? runCommand(frame, "yes\nyes",
                         "certbot", "certonly",
                         "--staging",
                         "--webroot",
-                        "--webroot-path", sCertsPath,
-                        "--config-dir",   sCertsPath + File.separator + "config",
-                        "--work-dir",     sCertsPath + File.separator + "work",
-                        "--logs-dir",     sCertsPath + File.separator + "logs",
+                        "--webroot-path",   sChallengePath,
+                        "--config-dir",     sConfigPath,
+                        "--work-dir",       sCertsPath + File.separator + "work",
+                        "--logs-dir",       sCertsPath + File.separator + "logs",
+                        "--register-unsafely-without-email",
+                        "-d", sDomain)
+                    : runCommand(frame, "yes\nyes",
+                        "certbot", "certonly",
+                        "--webroot",
+                        "--webroot-path",   sChallengePath,
+                        "--config-dir",     sConfigPath,
+                        "--work-dir",       sCertsPath + File.separator + "work",
+                        "--logs-dir",       sCertsPath + File.separator + "logs",
                         "--register-unsafely-without-email",
                         "-d", sDomain);
-                if (iResult == Op.R_NEXT)
+
+                // the "certonly" command above could fail if there was already a valid certificate,
+                // in which case we could run the conversion routine below regardless
+                String sDestPath = sConfigPath + File.separator + "live" + File.separator + sName;
+                if (new File(sDestPath).exists())
                     {
-                    // TODO: process further
+                    // convert "pem" files into "pkcs12" format
+                    hFailure = runCommand(frame, null,
+                        "openssl", "pkcs12", "-export",
+                        "-out",      sCertsPath + File.separator + sName + ".p12",
+                        "-inkey",    sDestPath + File.separator + "privkey.pem",
+                        "-in",       sDestPath + File.separator + "fullchain.pem",
+                        "-name",     sName,
+                        "-passin",   "pass:" + hPwd.getStringValue(),
+                        "-passout",  "pass:" + hPwd.getStringValue()
+                        );
+
+                    if (hFailure == null)
+                        {
+                        // transfer the key-pair into the target keystore
+                        hFailure = runCommand(frame, null,
+                            "keytool", "-importkeystore",
+                            "-srckeystore",   sCertsPath + File.separator + sName + ".p12",
+                            "-srcstoretype",  "PKCS12",
+                            "-destkeystore",  hStorePath.getStringValue(),
+                            "-deststoretype", "PKCS12",
+                            "-alias",         sName,
+                            "-srcstorepass",  hPwd.getStringValue(),
+                            "-deststorepass", hPwd.getStringValue()
+                            );
+                        }
                     }
-                return iResult;
+                return hFailure;
                 }
 
             default:
-                return frame.raiseException(
-                        "Unsupported certificate provider: " + hProvider.getStringValue());
+                return xException.makeHandle(frame,
+                    "Unsupported certificate provider: " + hProvider.getStringValue());
             }
         }
 
@@ -205,11 +284,11 @@ public class xRTCertificateManager
      * Native implementation of
      *     "revokeCertificateImpl(String path, Password pwd, String name)"
      */
-    private int invokeRevokeCertificate(Frame frame, ObjectHandle[] ahArg)
+    private ExceptionHandle invokeRevokeCertificate(Frame frame, ObjectHandle[] ahArg)
         {
-        StringHandle hPath  = (StringHandle) ahArg[0];
-        StringHandle hPwd   = xRTKeyStore.getPassword(frame, ahArg[1]);
-        StringHandle hName  = (StringHandle) ahArg[2];
+        StringHandle hPath = (StringHandle) ahArg[0];
+        StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName = (StringHandle) ahArg[2];
 
         File   dirCerts   = getCertsPath(hPath);
         String sCertsPath = dirCerts.getAbsolutePath();
@@ -217,7 +296,7 @@ public class xRTCertificateManager
         if (dirCerts.isDirectory())
             {
             runCommand(frame, "yes\nyes",
-                        "certbot", "remove",
+                        "certbot", "revoke",
                         "--staging",
                         "--config-dir", sCertsPath + File.separator + "config",
                         "--work-dir",   sCertsPath + File.separator + "work",
@@ -233,7 +312,7 @@ public class xRTCertificateManager
                 "-keystore",  hPath.getStringValue(),
                 "-storepass", hPwd.getStringValue()
                 );
-        return Op.R_NEXT;
+        return null;
         }
 
     private File getCertsPath(StringHandle hPath)
@@ -242,11 +321,17 @@ public class xRTCertificateManager
         return new File(fileKeystore.getParentFile(), ".certs");
         }
 
+    private File getChallengePath(StringHandle hPath)
+        {
+        File fileKeystore = Path.of(hPath.getStringValue()).toFile();
+        return new File(fileKeystore.getParentFile(), ".challenge");
+        }
+
     /**
      * Native implementation of
      *     "invokeCreateSymmetricKeyImpl(String path, Password pwd, String name)"
      */
-    private int invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg)
+    private ExceptionHandle invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath = (StringHandle) ahArg[0];
         StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
@@ -271,7 +356,7 @@ public class xRTCertificateManager
      * Native implementation of
      *     "invokeCreatePasswordImpl(String path, Password pwd, String name, String pwdValue)"
      */
-    private int invokeCreatePassword(Frame frame, ObjectHandle[] ahArg)
+    private ExceptionHandle invokeCreatePassword(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath     = (StringHandle) ahArg[0];
         StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
@@ -341,7 +426,7 @@ public class xRTCertificateManager
      * Native implementation of
      *     "invokeChangeStorePasswordImpl(String path, Password pwd, String newPwd)"
      */
-    private int invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg)
+    private ExceptionHandle invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg)
         {
         StringHandle hPath   = (StringHandle) ahArg[0];
         StringHandle hPwd    = xRTKeyStore.getPassword(frame, ahArg[1]);
@@ -355,17 +440,20 @@ public class xRTCertificateManager
             );
         }
 
-    private int runSilentCommand(String... cmd)
+    private ExceptionHandle runSilentCommand(String... cmd)
         {
         return runCommand(null, null, cmd);
         }
 
-    private int runNoInputCommand(Frame frame, String... cmd)
+    private ExceptionHandle runNoInputCommand(Frame frame, String... cmd)
         {
         return runCommand(frame, null, cmd);
         }
 
-    private int runCommand(Frame frame, String sInput, String... cmd)
+    /**
+     * @return a exception handler or null if operation succeeded
+     */
+    private ExceptionHandle runCommand(Frame frame, String sInput, String... cmd)
         {
         // *** IMPORTANT SECURITY NOTE***:
         //  ProcessBuilder does not invoke a shell by default, and we should never take the command
@@ -374,6 +462,9 @@ public class xRTCertificateManager
         ProcessBuilder builder = new ProcessBuilder(cmd);
         try
             {
+            // TODO: remove
+            System.out.println("*** running command: " + toString(cmd));
+
             Process process = builder.start();
             if (sInput != null)
                 {
@@ -381,12 +472,11 @@ public class xRTCertificateManager
                 out.write(sInput.getBytes());
                 out.close();
                 }
-            // TODO: remove
-            System.out.println("*** running command: " + toString(cmd));
-            if (!process.waitFor(30, TimeUnit.SECONDS))
+
+            if (!process.waitFor(300, TimeUnit.SECONDS))
                 {
                 process.destroy();
-                return frame.raiseException(xException.timedOut(frame, "Timed out: " + cmd[0], xNullable.NULL));
+                return xException.timedOut(frame, "Timed out: " + cmd[0], xNullable.NULL);
                 }
 
             if (frame != null && process.exitValue() != 0)
@@ -394,16 +484,14 @@ public class xRTCertificateManager
                 String sOut = getOutput(process.getInputStream());
                 String sErr = getOutput(process.getErrorStream());
 
-                return frame.raiseException(xException.obscureIoException(frame, sOut + '\n' + sErr));
+                return xException.obscureIoException(frame, sOut + '\n' + sErr);
                 }
 
-            return Op.R_NEXT;
+            return null;
             }
         catch (Exception e)
             {
-            return frame == null
-                ? Op.R_NEXT
-                : frame.raiseException(xException.makeObscure(frame, e.getMessage()));
+            return frame == null ? null : xException.makeObscure(frame, e.getMessage());
             }
         }
 
