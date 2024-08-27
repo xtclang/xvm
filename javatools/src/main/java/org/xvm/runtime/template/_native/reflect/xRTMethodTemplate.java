@@ -5,6 +5,7 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -137,9 +138,9 @@ public class xRTMethodTemplate
         {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
 
-        Parameter parameter = method.getParam((int) hIndex.getValue());
-        String    sName     = parameter.getName();
-        boolean   fDefault  = parameter.hasDefaultValue();
+        Parameter parameter    = method.getParam((int) hIndex.getValue());
+        String    sName        = parameter.getName();
+        boolean   fDefault     = parameter.hasDefaultValue();
 
         ObjectHandle[] ahReturn = new ObjectHandle[5];
 
@@ -147,7 +148,24 @@ public class xRTMethodTemplate
         ahReturn[1] = xRTTypeTemplate.makeHandle(frame.f_context.f_container, parameter.getType());
         ahReturn[2] = xBoolean.makeHandle(parameter.isTypeParameter());
         ahReturn[3] = xBoolean.makeHandle(fDefault);
-        ahReturn[4] = fDefault ? frame.getConstHandle(parameter.getDefaultValue()) : xNullable.NULL;
+
+        if (fDefault)
+            {
+            ObjectHandle hDefault = frame.getConstHandle(parameter.getDefaultValue());
+            if (Op.isDeferred(hDefault))
+                {
+                return hDefault.proceed(frame, frameCaller ->
+                    {
+                    ahReturn[4] = frameCaller.popStack();
+                    return frameCaller.assignValues(aiReturn, ahReturn);
+                    });
+                }
+            ahReturn[4] = hDefault;
+            }
+        else
+            {
+            ahReturn[4] = xNullable.NULL;
+            }
 
         return frame.assignValues(aiReturn, ahReturn);
         }

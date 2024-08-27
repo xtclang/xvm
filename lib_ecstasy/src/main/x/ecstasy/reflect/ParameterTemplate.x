@@ -23,7 +23,7 @@ interface ParameterTemplate
      * The default value, which may be Null, or Null if there is no default. This should only be
      * used if `Category == DefaultParameter`.
      */
-    Const defaultValue;
+    (immutable Object) defaultValue;
 
     /**
      * The Category enum.
@@ -51,7 +51,11 @@ interface ParameterTemplate
         if (name != Null) {
             length += name.size;
             if (category == DefaultParameter) {
-                length += 3 + defaultValue.estimateStringLength();
+                if (Stringable s := defaultValue.is(Stringable)) {
+                    length += 3 + s.estimateStringLength();
+                } else {
+                    length += 10;
+                }
             }
         }
         return length;
@@ -66,8 +70,12 @@ interface ParameterTemplate
             buf.add(' ');
             name.appendTo(buf);
             if (category == DefaultParameter) {
-                " = "       .appendTo(buf);
-                defaultValue.appendTo(buf);
+                " = ".appendTo(buf);
+                if (Stringable s := defaultValue.is(Stringable)) {
+                    s.appendTo(buf);
+                } else {
+                    defaultValue.toString().appendTo(buf);
+                }
             }
         }
         return buf;

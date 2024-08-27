@@ -25,8 +25,8 @@ class RTMethodTemplate
     @Override
     ParameterTemplate[] parameters.get() {
         return new ParameterTemplate[parameterCount](index -> {
-            (String? name, TypeTemplate type, Boolean formal, Boolean hasDefault, Const? defaultValue) =
-                    getParameter(index);
+            (String? name, TypeTemplate type, Boolean formal, Boolean hasDefault,
+             (immutable Object) defaultValue) = getParameter(index);
             Category category = formal
                     ? TypeParameter
                     : hasDefault
@@ -50,7 +50,8 @@ class RTMethodTemplate
     private Int parameterCount.get() { TODO("native"); }
     private Int returnCount.get()    { TODO("native"); }
 
-    private (String? name, TypeTemplate type, Boolean formal, Boolean hasDefault, Const? defaultValue)
+    private (String? name, TypeTemplate type, Boolean formal, Boolean hasDefault,
+             (immutable Object) defaultValue)
         getParameter(Int index) { TODO("native"); }
 
     private (String? name, TypeTemplate type, Boolean cond)

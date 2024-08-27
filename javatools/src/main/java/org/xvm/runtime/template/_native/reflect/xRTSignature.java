@@ -193,8 +193,10 @@ public class xRTSignature
      */
     public int invokeHasTemplate(Frame frame, SignatureHandle hFunc, int[] aiReturn)
         {
-        // TODO
-        throw new UnsupportedOperationException();
+        MethodStructure method = hFunc.getMethod();
+        return method == null
+                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                : frame.assignValues(aiReturn, xBoolean.TRUE, xRTMethodTemplate.makeHandle(method));
         }
 
 
@@ -543,7 +545,15 @@ public class xRTSignature
         @Override
         public int proceed(Frame frameCaller)
             {
-            ahElement[index] = frameCaller.popStack();
+            if (fDeferred)
+                {
+                ahParams[4] = frameCaller.popStack();
+                fDeferred   = false;
+                }
+            else
+                {
+                ahElement[index] = frameCaller.popStack();
+                }
             return doNext(frameCaller);
             }
 
@@ -551,12 +561,8 @@ public class xRTSignature
             {
             while (++index < cElements)
                 {
-                Parameter        param = fRetVals ? hMethod.getReturn(index)     : hMethod.getParam(index);
-                TypeConstant     type  = fRetVals ? hMethod.getReturnType(index) : hMethod.getParamType(index);
-                String           sName = param.getName();
-                TypeComposition clz    = fRetVals
-                        ? ensureRTReturn(frameCaller, type)
-                        : ensureRTParameter(frameCaller, type, param.getAnnotations());
+                Parameter param = fRetVals ? hMethod.getReturn(index) : hMethod.getParam(index);
+                String sName = param.getName();
 
                 ahParams[0] = xInt64.makeHandle(index);
                 ahParams[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
@@ -566,7 +572,14 @@ public class xRTSignature
                     if (param.hasDefaultValue())
                         {
                         ahParams[3] = xBoolean.TRUE;
-                        ahParams[4] = frameCaller.getConstHandle(param.getDefaultValue());
+                        ObjectHandle hDefault = frameCaller.getConstHandle(param.getDefaultValue());
+                        if (Op.isDeferred(hDefault))
+                            {
+                            index--;
+                            fDeferred = true;
+                            return hDefault.proceed(frameCaller, this);
+                            }
+                        ahParams[4] = hDefault;
                         }
                     else
                         {
@@ -575,6 +588,12 @@ public class xRTSignature
                         }
                     }
 
+                TypeConstant type = fRetVals
+                        ? hMethod.getReturnType(index)
+                        : hMethod.getParamType(index);
+                TypeComposition clz   = fRetVals
+                        ? ensureRTReturn(frameCaller, type)
+                        : ensureRTParameter(frameCaller, type, param.getAnnotations());
                 switch (template.construct(frameCaller, construct, clz, null, ahParams, Op.A_STACK))
                     {
                     case Op.R_NEXT:
@@ -607,5 +626,6 @@ public class xRTSignature
         private final ObjectHandle[]  ahParams;
         private final int             iReturn;
         private       int             index;
+        private       boolean         fDeferred; // indicates a deferred computation of default value
         }
     }
