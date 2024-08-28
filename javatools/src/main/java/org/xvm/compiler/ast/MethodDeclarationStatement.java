@@ -697,6 +697,19 @@ public class MethodDeclarationStatement
                 }
             }
 
+        if (!errs.isSilent() && !method.isConstructor())
+            {
+            TypeConstant   type = pool.ensureAccessTypeConstant(clzParent.getFormalType(), Access.PRIVATE);
+            TypeInfo       info = type.ensureTypeInfo(errs);
+            PropertyInfo   prop = info.findProperty(method.getName());
+            if (prop != null &&
+                prop.getIdentity().getNestedDepth() == method.getIdentityConstant().getNestedDepth() - 1)
+                {
+                log(errs, Severity.ERROR, Compiler.METHOD_NAME_COLLISION,
+                        method.getName(), prop.getIdentity().getNamespace().getPathString());
+                }
+            }
+
         // check for invalid method annotations
         Annotation[] aAnno  = method.getAnnotations();
         int          cAnnos = aAnno.length;
@@ -992,20 +1005,6 @@ public class MethodDeclarationStatement
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
             return;
-            }
-
-        if (!errs.isSilent() && !method.isConstructor())
-            {
-            ClassStructure clz  = method.getContainingClass();
-            TypeConstant   type = pool().ensureAccessTypeConstant(clz.getFormalType(), Access.PRIVATE);
-            TypeInfo       info = type.ensureTypeInfo(errs);
-            PropertyInfo   prop = info.findProperty(method.getName());
-            if (prop != null &&
-                prop.getIdentity().getNestedDepth() == method.getIdentityConstant().getNestedDepth() - 1)
-                {
-                log(errs, Severity.ERROR, Compiler.METHOD_NAME_COLLISION,
-                        method.getName(), prop.getIdentity().getNamespace().getPathString());
-                }
             }
 
         int cDefaults = method.getDefaultParamCount();
