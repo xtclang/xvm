@@ -36,6 +36,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -117,7 +118,7 @@ public class xRTCertificateManager
 
             case "revokeCertificateImpl":
                 return invokeAsIOTask(frame, () ->
-                        invokeRevokeCertificate(frame, ahArg));
+                        invokeRevokeCertificate(frame, (ServiceHandle) hTarget, ahArg));
 
             case "createSymmetricKeyImpl":
                 return invokeAsIOTask(frame, () ->
@@ -177,108 +178,24 @@ public class xRTCertificateManager
                 "-storepass", hPwd.getStringValue()
                 );
 
-        String  sDName   = hDName.getStringValue();
-        String  sName    = hName.getStringValue();
-        boolean fStaging = false;
         switch (hProvider.getStringValue())
             {
             case "self":
                 // create self-signed certificate
                 return runNoInputCommand(frame,
                         "keytool", "-genkeypair", "-keyalg", "RSA", "-keysize", "2048", "-validity", "90",
-                        "-alias", sName,
-                        "-dname", sDName,
+                        "-alias", hName.getStringValue(),
+                        "-dname", hDName.getStringValue(),
                         "-storetype", "PKCS12",
                         "-keystore", hStorePath.getStringValue(),
                         "-storepass", hPwd.getStringValue()
                         );
 
             case "certbot-staging":
-                fStaging = true;
-                // fall-through
+                return createCertificateWithCertbot(frame, hStorePath, hPwd, hName, hDName, true);
+
             case "certbot":
-                {
-                File   dirCerts   = getCertsPath(hStorePath);
-                String sCertsPath = dirCerts.getAbsolutePath();
-                if (!dirCerts.exists() && !dirCerts.mkdir() || !dirCerts.isDirectory())
-                    {
-                    return xException.ioException(frame, "Cannot create directory: " + sCertsPath);
-                    }
-
-                File   dirChallenge   = getChallengePath(hStorePath);
-                String sChallengePath = dirChallenge.getAbsolutePath();
-                if (!dirChallenge.exists() && !dirChallenge.mkdir() || !dirChallenge.isDirectory())
-                    {
-                    return xException.ioException(frame, "Cannot create directory: " + sChallengePath);
-                    }
-
-                int ofDomain = sDName.indexOf("CN=");
-                assert ofDomain > 0;
-                String sDomain = sDName.substring(ofDomain + 3);
-
-                // the "-key-path" and "--fullchain-path" options don't have any effect, so we
-                // need to rely on the default behavior placing the pem files under "config/live"
-                String sConfigPath = sCertsPath + File.separator + "config";
-                ExceptionHandle hFailure = fStaging
-                    ? runCommand(frame, "yes\nyes",
-                        "certbot", "certonly",
-                        "--staging",
-                        "--webroot",
-                        "--webroot-path",   sChallengePath,
-                        "--config-dir",     sConfigPath,
-                        "--work-dir",       sCertsPath + File.separator + "work",
-                        "--logs-dir",       sCertsPath + File.separator + "logs",
-                        "--register-unsafely-without-email",
-                        "-d", sDomain)
-                    : runCommand(frame, "yes\nyes",
-                        "certbot", "certonly",
-                        "--webroot",
-                        "--webroot-path",   sChallengePath,
-                        "--config-dir",     sConfigPath,
-                        "--work-dir",       sCertsPath + File.separator + "work",
-                        "--logs-dir",       sCertsPath + File.separator + "logs",
-                        "--register-unsafely-without-email",
-                        "-d", sDomain);
-
-                // the "certonly" command above could fail if there was already a valid certificate,
-                // in which case we could run the conversion routine below regardless
-                String sDestPath = sConfigPath + File.separator + "live" + File.separator + sDomain;
-                if (new File(sDestPath).exists())
-                    {
-                    // convert "pem" files into "pkcs12" format
-                    hFailure = runCommand(frame, null,
-                        "openssl", "pkcs12", "-export",
-                        "-out",      sCertsPath + File.separator + sName + ".p12",
-                        "-inkey",    sDestPath + File.separator + "privkey.pem",
-                        "-in",       sDestPath + File.separator + "fullchain.pem",
-                        "-name",     sName,
-                        "-passin",   "pass:" + hPwd.getStringValue(),
-                        "-passout",  "pass:" + hPwd.getStringValue()
-                        );
-
-                    if (hFailure == null)
-                        {
-                        // transfer the key-pair into the target keystore
-                        hFailure = runCommand(frame, null,
-                            "keytool", "-importkeystore",
-                            "-srckeystore",   sCertsPath + File.separator + sName + ".p12",
-                            "-srcstoretype",  "PKCS12",
-                            "-destkeystore",  hStorePath.getStringValue(),
-                            "-deststoretype", "PKCS12",
-                            "-alias",         sName,
-                            "-srcstorepass",  hPwd.getStringValue(),
-                            "-deststorepass", hPwd.getStringValue()
-                            );
-                        }
-                    }
-                else if (hFailure == null)
-                    {
-                    // something is amiss; since the command succeeded, the "config/live/{domain}"
-                    // directory must exist
-                    hFailure = xException.ioException(frame, "Cannot locate directory: " + sDestPath);
-                    }
-                return hFailure;
-                }
+                return createCertificateWithCertbot(frame, hStorePath, hPwd, hName, hDName, false);
 
             default:
                 return xException.makeHandle(frame,
@@ -286,30 +203,204 @@ public class xRTCertificateManager
             }
         }
 
+    private ExceptionHandle createCertificateWithCertbot(
+            Frame frame, StringHandle hStorePath, StringHandle hPwd, StringHandle hName,
+            StringHandle hDName, boolean fStaging)
+        {
+        String sDName = hDName.getStringValue();
+        String sName  = hName.getStringValue();
+
+        // ensure the
+        File   dirCerts  = getCertsPath(hStorePath);
+        String sCertsDir = dirCerts.getAbsolutePath();
+        if (!dirCerts.exists() && !dirCerts.mkdir() || !dirCerts.isDirectory())
+            {
+            return xException.ioException(frame, "Cannot create directory: " + sCertsDir);
+            }
+
+        File   dirChallenge  = getChallengePath(hStorePath);
+        String sChallengeDir = dirChallenge.getAbsolutePath();
+        if (!dirChallenge.exists() && !dirChallenge.mkdir() || !dirChallenge.isDirectory())
+            {
+            return xException.ioException(frame, "Cannot create directory: " + sChallengeDir);
+            }
+
+        int ofDomain = sDName.indexOf("CN=");
+        assert ofDomain > 0;
+        String sDomain = sDName.substring(ofDomain + 3);
+
+        String sKeyPath  = sCertsDir + File.separator + sDomain + ".key";
+        String sCsrPath  = sCertsDir + File.separator + sDomain + ".csr";
+
+        try {
+            ExceptionHandle hFailure;
+
+            // create the key
+            hFailure = runCommand(frame, null,
+                "openssl", "genpkey", "-algorithm", "RSA",
+                "-out", sKeyPath,
+                "-pkeyopt", "rsa_keygen_bits:2048");
+            if (hFailure != null)
+                {
+                return hFailure;
+                }
+
+            // create the CSR; note that openssl requires a DName in a '/'-delimited format
+            //
+            // Note: since we're using Let's Encrypt, only the "CN" and "SAN" fields will be filled
+            // based on the CSR; the rest gets filtered out
+            hFailure = runCommand(frame, null,
+                "openssl", "req", "-new",
+                "-key",  sKeyPath,
+                "-out",  sCsrPath,
+                "-subj", '/' + sDName.replace(',', '/'));
+            if (hFailure != null)
+                {
+                return hFailure;
+                }
+
+            // we don't use the "cert" and "chain" files, but need to specify the path regardless
+            // to avoid them being placed at some random location
+            String sConfigDir    = sCertsDir + File.separator + "config";
+            String sWorkDir      = sCertsDir + File.separator + "work";
+            String sLogDir       = sCertsDir + File.separator + "logs";
+            String sCertPath     = sCertsDir + File.separator + "cert.pem";
+            String sChainPath    = sCertsDir + File.separator + "chain.pem";
+            String sFullCertPath = sCertsDir + File.separator + "fullchain.pem";
+
+            // remove existing files (certbot doesn't override anything)
+            new File(sCertPath).delete();
+            new File(sChainPath).delete();
+            new File(sFullCertPath).delete();
+
+            // ask Let's Encrypt now!
+            hFailure = fStaging
+                ? runCommand(frame, "yes\nyes",
+                    "certbot", "certonly",
+                    "--staging",
+                    "--webroot",
+                    "--webroot-path",   sChallengeDir,
+                    "--config-dir",     sConfigDir,
+                    "--work-dir",       sWorkDir,
+                    "--logs-dir",       sLogDir,
+                    "--key-path",       sKeyPath,
+                    "--cert-path",      sCertPath,
+                    "--chain-path",     sChainPath,
+                    "--fullchain-path", sFullCertPath,
+                    "-d",               sDomain,
+                    "--csr",            sCsrPath,
+                    "--register-unsafely-without-email")
+                : runCommand(frame, "yes\nyes",
+                    "certbot", "certonly",
+                    "--webroot",
+                    "--webroot-path",   sChallengeDir,
+                    "--config-dir",     sConfigDir,
+                    "--work-dir",       sWorkDir,
+                    "--logs-dir",       sLogDir,
+                    "--key-path",       sKeyPath,
+                    "--cert-path",      sCertPath,
+                    "--chain-path",     sChainPath,
+                    "--fullchain-path", sFullCertPath,
+                    "-d",               sDomain,
+                    "--csr",            sCsrPath,
+                    "--register-unsafely-without-email");
+
+            if (hFailure != null)
+                {
+                return hFailure;
+                }
+
+            // convert certificates from "pem" to "pkcs12" format
+            String sTempStorePath = sCertsDir + File.separator + sName + ".p12";
+            hFailure = runCommand(frame, null,
+                "openssl", "pkcs12", "-export",
+                "-out",      sTempStorePath,
+                "-inkey",    sKeyPath,
+                "-in",       sFullCertPath,
+                "-name",     sName,
+                "-passin",   "pass:" + hPwd.getStringValue(),
+                "-passout",  "pass:" + hPwd.getStringValue()
+                );
+
+            if (hFailure != null)
+                {
+                return hFailure;
+                }
+
+            // transfer the key-pair into the target keystore
+            hFailure = runCommand(frame, null,
+                "keytool", "-importkeystore",
+                "-srckeystore",   sTempStorePath,
+                "-srcstoretype",  "PKCS12",
+                "-destkeystore",  hStorePath.getStringValue(),
+                "-deststoretype", "PKCS12",
+                "-alias",         sName,
+                "-srcstorepass",  hPwd.getStringValue(),
+                "-deststorepass", hPwd.getStringValue()
+                );
+
+            new File(sTempStorePath).delete(); // it's encrypted, but still no reason to leave
+            return hFailure;
+            }
+        finally
+            {
+            try
+                {
+                // no matter what; don't leave the unencrypted key file
+                new File(sKeyPath).delete();
+                }
+            catch (Exception ignore) {}
+            }
+        }
+
     /**
      * Native implementation of
      *     "revokeCertificateImpl(String path, Password pwd, String name)"
      */
-    private ExceptionHandle invokeRevokeCertificate(Frame frame, ObjectHandle[] ahArg)
+    private ExceptionHandle invokeRevokeCertificate(Frame frame, ServiceHandle hMgr, ObjectHandle[] ahArg)
         {
-        StringHandle hPath = (StringHandle) ahArg[0];
-        StringHandle hPwd  = xRTKeyStore.getPassword(frame, ahArg[1]);
-        StringHandle hName = (StringHandle) ahArg[2];
+        StringHandle hPath     = (StringHandle) ahArg[0];
+        StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
+        StringHandle hName     = (StringHandle) ahArg[2];
+        StringHandle hProvider = (StringHandle) hMgr.getField(0); // "provider" property
 
-        File   dirCerts   = getCertsPath(hPath);
-        String sCertsPath = dirCerts.getAbsolutePath();
-
+        File dirCerts  = getCertsPath(hPath);
         if (dirCerts.isDirectory())
             {
-            runCommand(frame, "yes\nyes",
-                        "certbot", "revoke",
-                        "--staging",
-                        "--config-dir", sCertsPath + File.separator + "config",
-                        "--work-dir",   sCertsPath + File.separator + "work",
-                        "--logs-dir",   sCertsPath + File.separator + "logs",
-                        "--cert-name",  hName.getStringValue(),
-                        "--reason",     "unspecified"
-                      );
+            String sCertsDir = dirCerts.getAbsolutePath();
+
+            switch (hProvider.getStringValue())
+                {
+                case "self":
+                    break;
+
+                case "certbot-staging":
+                    runCommand(frame, "yes\nyes",
+                                "certbot", "revoke",
+                                "--staging",
+                                "--config-dir", sCertsDir + File.separator + "config",
+                                "--work-dir",   sCertsDir + File.separator + "work",
+                                "--logs-dir",   sCertsDir + File.separator + "logs",
+                                "--cert-name",  hName.getStringValue(),
+                                "--reason",     "unspecified"
+                              );
+                    break;
+
+                case "certbot":
+                    runCommand(frame, "yes\nyes",
+                                "certbot", "revoke",
+                                "--config-dir", sCertsDir + File.separator + "config",
+                                "--work-dir",   sCertsDir + File.separator + "work",
+                                "--logs-dir",   sCertsDir + File.separator + "logs",
+                                "--cert-name",  hName.getStringValue(),
+                                "--reason",     "unspecified"
+                              );
+                    break;
+
+                default:
+                    return xException.makeHandle(frame,
+                        "Unsupported certificate provider: " + hProvider.getStringValue());
+                }
             }
 
         runSilentCommand(
@@ -394,15 +485,40 @@ public class xRTCertificateManager
         StringHandle hPwd         = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hName        = (StringHandle) ahArg[2];
 
+        CompletableFuture<Key> cfResult = frame.f_context.f_container.scheduleIO(
+                () -> loadKey(hPathOrStore, hPwd, hName));
+        Frame.Continuation continuation = frameCaller ->
+            {
+            try
+                {
+                Key key = cfResult.get();
+                return key == null
+                    ? frameCaller.raiseException(xException.ioException(frameCaller,
+                        "Invalid or inaccessible key \"" + hName.getStringValue() + '"'))
+                    : frameCaller.assignValue(iReturn,
+                        xArray.makeByteArrayHandle(key.getEncoded(), Mutability.Constant));
+                }
+            catch (Throwable e)
+                {
+                return frameCaller.raiseException("Unexpected execution failure " + e);
+                }
+            };
+
+        return frame.waitForIO(cfResult, continuation);
+        }
+
+    private Key loadKey(ObjectHandle hPathOrStore, StringHandle hPwd, StringHandle hName)
+        {
         try
             {
-            char[]   achPwd = hPwd.getValue();
-            String   sKey   = hName.getStringValue();
+            char[] achPwd = hPwd.getValue();
+            String sKey   = hName.getStringValue();
+
             KeyStore keyStore;
             if (hPathOrStore instanceof StringHandle hPath)
                 {
                 File fileStore = new File(hPath.getStringValue());
-                keyStore  = KeyStore.getInstance("PKCS12");
+                keyStore = KeyStore.getInstance("PKCS12");
                 keyStore.load(new FileInputStream(fileStore), achPwd);
                 }
             else
@@ -411,20 +527,11 @@ public class xRTCertificateManager
                 keyStore = hKeyStore.f_keyStore;
                 }
 
-            Key key = keyStore.getKey(sKey, achPwd);
-            if (key == null)
-                {
-                return frame.raiseException(
-                        xException.ioException(frame, "Invalid or inaccessible key"));
-                }
-            byte[] abPrivate = key.getEncoded();
-            return frame.assignValue(iReturn,
-                    xArray.makeByteArrayHandle(abPrivate, xArray.Mutability.Constant));
+            return keyStore.getKey(sKey, achPwd);
             }
         catch (Exception e)
             {
-            return frame.raiseException(
-                xException.obscureIoException(frame, "Inaccessible key: " + e.getMessage()));
+            return null;
             }
         }
 
@@ -457,7 +564,7 @@ public class xRTCertificateManager
         }
 
     /**
-     * @return a exception handler or null if operation succeeded
+     * @return an exception handler or null if operation succeeded
      */
     private ExceptionHandle runCommand(Frame frame, String sInput, String... cmd)
         {

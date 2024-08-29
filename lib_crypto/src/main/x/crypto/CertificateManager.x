@@ -125,8 +125,8 @@ interface CertificateManager {
         return $|{{if (country.size  > 0) {$.addAll($"C={country}," );}}}\
                 |{{if (state.size    > 0) {$.addAll($"S={state},"   );}}}\
                 |{{if (locality.size > 0) {$.addAll($"L={locality},");}}}\
-                |{{if (orgUnit.size  > 0) {$.addAll($"OU={orgUnit},");}}}\
                 |{{if (org.size      > 0) {$.addAll($"O={org},"     );}}}\
+                |{{if (orgUnit.size  > 0) {$.addAll($"OU={orgUnit},");}}}\
                 |CN={domain}
                 ;
     }
