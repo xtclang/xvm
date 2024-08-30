@@ -2,16 +2,12 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        new FixedRealm(""); // this used to assert in the compiler
-    }
-
-    interface Realm {
-        @RO Boolean readOnly.get() = False;
-    }
-
-    const FixedRealm(String name) implements Realm {
-        <T> conditional T readOnly() {
-            return False;
+        String? failure = Null;
+        for (Int i : 0..10) {
+            if (i > 8) {
+                failure ?:= "bug"; // this used to fail to compile
+                continue;
+            }
         }
     }
 }

@@ -87,16 +87,20 @@ public class ForEachStatement
         Context ctxDest = ensureValidationContext();
 
         // generate a delta of assignment information for the jump
-        Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+        Map<String, Assignment> mapAsn = new HashMap<>();
+        Map<String, Argument>   mapArg = new HashMap<>();
+
+        ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listContinues == null)
             {
             m_listContinues = new ArrayList<>();
             }
-        m_listContinues.add(mapAsn);
 
-        return getContinueLabel();
+        Label label = getContinueLabel();
+        m_listContinues.add(new Break(this, mapAsn, mapArg, label));
+        return label;
         }
 
     /**
@@ -602,12 +606,12 @@ public class ForEachStatement
                     }
                 }
 
-            List<Map<String, Assignment>> listContinues = m_listContinues;
+            List<Break> listContinues = m_listContinues;
             if (listContinues != null)
                 {
-                for (Map<String, Assignment> mapAsn : listContinues)
+                for (Break continueInfo : listContinues)
                     {
-                    ctx.merge(mapAsn);
+                    ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
                     }
                 ctx.setReachable(true);
                 }
@@ -1550,7 +1554,7 @@ public class ForEachStatement
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Map<String, Assignment>> m_listContinues;
+    private transient List<Break> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
     }

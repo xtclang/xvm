@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -81,7 +80,12 @@ public class SwitchStatement
             // record the jump that will either fall-through to the next case group or (if this is
             // the last case group) break out of this switch statement by recording its assignment
             // impact (a delta of assignment information)
-            m_listContinues.add(new SimpleEntry<>(nodeOrigin, ctxOrigin.prepareJump(ctxDest)));
+            Map<String, Assignment> mapAsn = new HashMap<>();
+            Map<String, Argument>   mapArg = new HashMap<>();
+
+            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
+
+            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, m_labelContinue));
             }
 
         return m_labelContinue;
@@ -197,11 +201,11 @@ public class SwitchStatement
                     if (m_labelContinue != null)
                         {
                         boolean fContinues = false;
-                        for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
+                        for (Break continueInfo : m_listContinues)
                             {
-                            if (!entry.getKey().isDiscarded())
+                            if (!continueInfo.node().isDiscarded())
                                 {
-                                ctxBlock.merge(entry.getValue());
+                                ctxBlock.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
                                 fContinues = true;
                                 }
                             }
@@ -254,7 +258,7 @@ public class SwitchStatement
                 }
             else
                 {
-                m_listContinues.get(0).getKey().
+                m_listContinues.get(0).node().
                     log(errs, Severity.ERROR, Compiler.SWITCH_CONTINUE_NOT_EXPECTED);
                 fValid = false;
                 }
@@ -268,11 +272,11 @@ public class SwitchStatement
         if (m_listContinues != null)
             {
             // the last "continue" is translated as a "break"
-            for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
+            for (Break continueInfo : m_listContinues)
                 {
-                if (!entry.getKey().isDiscarded())
+                if (!continueInfo.node().isDiscarded())
                     {
-                    addBreak(entry.getKey(), entry.getValue(), Collections.emptyMap(), m_labelContinue);
+                    addBreak(continueInfo);
                     }
                 }
             m_listContinues = null;
@@ -290,13 +294,13 @@ public class SwitchStatement
         }
 
     @Override
-    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn,
-                            Map<String, Argument> mapArgs, Label label)
+    protected void addBreak(Break breakInfo)
         {
         // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
-        m_listBreaks.add(mapAsn);
+        m_listBreaks.add(breakInfo.mapAssign());
 
-        super.addBreak(nodeOrigin, Collections.emptyMap(), mapArgs, label);
+        super.addBreak(new Break(breakInfo.node(), Collections.emptyMap(),
+                                 breakInfo.mapNarrow(), breakInfo.label()));
         }
 
     @Override
@@ -616,7 +620,8 @@ public class SwitchStatement
          * Merge a list of previously prepared set of variable assignment information into this
          * context by collecting assignments that were defined by *every* block.
          *
-         * @param listAdd a list of maps of assignments from a previous calls to {@link Statement#addBreak)}
+         * @param listAdd  a list of maps of assignments from a previous calls to
+         *                 {@link Statement#addBreak)}
          */
         protected void mergeBreaks(List<Map<String, Assignment>> listAdd)
             {
@@ -773,7 +778,7 @@ public class SwitchStatement
      * "continue" statement within that group; it's null until the first continue statement is
      * encountered in the group.
      */
-    private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
+    private transient List<Break> m_listContinues;
 
     /**
      * This collects the assignment information that comes from each "break" statement.

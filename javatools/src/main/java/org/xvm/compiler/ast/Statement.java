@@ -81,21 +81,20 @@ public abstract class Statement
 
             ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
-            addBreak(nodeOrigin, mapAsn, mapArg, label);
+            addBreak(new Break(nodeOrigin, mapAsn, mapArg, label));
             }
 
         return label;
         }
 
-    protected void addBreak(AstNode nodeOrigin, Map<String, Assignment> mapAsn,
-                            Map<String, Argument> mapArgs, Label label)
+    protected void addBreak(Break breakInfo)
         {
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listBreaks == null)
             {
             m_listBreaks = new ArrayList<>();
             }
-        m_listBreaks.add(new Break(nodeOrigin, mapAsn, mapArgs, label));
+        m_listBreaks.add(breakInfo);
         }
 
     /**
@@ -159,7 +158,7 @@ public abstract class Statement
                     }
                 else
                     {
-                    ctx.merge(breakInfo.mapAssign, breakInfo.mapNarrow);
+                    ctx.merge(breakInfo.mapAssign(), breakInfo.mapNarrow());
 
                     if (breakInfo.label != null)
                         {
@@ -249,23 +248,10 @@ public abstract class Statement
     protected abstract boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs);
 
     /**
-     * The break info.
+     * The "break" info (also used for "continue" and "short circuit" info).
      */
-    private static class Break
-        {
-        Break(AstNode node, Map<String, Assignment> mapAssign, Map<String, Argument> mapNarrow,
-              Label label)
-            {
-            this.node      = node;
-            this.mapAssign = mapAssign;
-            this.mapNarrow = mapNarrow;
-            this.label     = label;
-            }
-        public final AstNode node;
-        public final Map<String, Assignment> mapAssign;
-        public final Map<String, Argument> mapNarrow;
-        public final Label label;
-        }
+    public record Break(AstNode node, Map<String, Assignment> mapAssign,
+                         Map<String, Argument> mapNarrow, Label label) {}
 
     /**
      * Holder for BinaryAST objects as they percolate up the emit() call tree.

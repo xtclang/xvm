@@ -3,12 +3,12 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -86,6 +86,7 @@ public class IfStatement
         assert allowsShortCircuit(nodeChild);
 
         Context ctxDest = ensureValidationContext();
+        Label   label   = getElseLabel();
         if (ctxOrigin.isReachable())
             {
             // generate a delta of assignment information for the jump
@@ -93,10 +94,15 @@ public class IfStatement
                 {
                 m_listShorts = new ArrayList<>();
                 }
-            m_listShorts.add(new SimpleEntry<>(nodeOrigin, ctxOrigin.prepareJump(ctxDest)));
+            Map<String, Assignment> mapAsn = new HashMap<>();
+            Map<String, Argument>   mapArg = new HashMap<>();
+
+            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
+
+            m_listShorts.add(new Break(nodeOrigin, mapAsn, mapArg, label));
             }
 
-        return getElseLabel();
+        return label;
         }
 
     @Override
@@ -203,11 +209,11 @@ public class IfStatement
             if (m_listShorts != null)
                 {
                 boolean fContinues = false;
-                for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
+                for (Break shortInfo : m_listShorts)
                     {
-                    if (!entry.getKey().isDiscarded())
+                    if (!shortInfo.node().isDiscarded())
                         {
-                        ctx.merge(entry.getValue());
+                        ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
                         fContinues = true;
                         }
                     }
@@ -451,9 +457,9 @@ public class IfStatement
     private transient Label m_labelElse;
 
     /**
-     * Generally null, unless there is a short that jumps to this statement's else label.
+     * Generally null, unless there is a short-circuit that jumps to this statement's else label.
      */
-    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listShorts;
+    private transient List<Break> m_listShorts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
     }

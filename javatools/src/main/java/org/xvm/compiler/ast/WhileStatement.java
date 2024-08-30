@@ -3,13 +3,11 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -90,21 +88,24 @@ public class WhileStatement
     public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         Context ctxDest = ensureValidationContext();
+        Label   label   = getContinueLabel();
 
         if (ctxOrigin.isReachable())
             {
             // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+            Map<String, Assignment> mapAsn = new HashMap<>();
+            Map<String, Argument>   mapArg = new HashMap<>();
+            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
             // record the jump that landed on this statement by recording its assignment impact
             if (m_listContinues == null)
                 {
                 m_listContinues = new ArrayList<>();
                 }
-            m_listContinues.add(new SimpleEntry<>(nodeOrigin, mapAsn));
+            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
             }
 
-        return getContinueLabel();
+        return label;
         }
 
     /**
@@ -416,18 +417,17 @@ public class WhileStatement
                     boolean fContinues = false;
                     if (m_listContinues != null)
                         {
-                        for (Iterator<Entry<AstNode, Map<String, Assignment>>> iter = m_listContinues.iterator();
-                                iter.hasNext(); )
+                        for (Iterator<Break> iter = m_listContinues.iterator(); iter.hasNext();)
                             {
-                            Entry<AstNode, Map<String, Assignment>> entry = iter.next();
-                            if (entry.getKey().isDiscarded())
+                            Break continueInfo = iter.next();
+                            if (continueInfo.node().isDiscarded())
                                 {
                                 iter.remove();
                                 }
                             else
                                 {
                                 fContinues = true;
-                                ctx.merge(entry.getValue());
+                                ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
                                 }
                             }
 
@@ -932,7 +932,7 @@ public class WhileStatement
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Entry<AstNode, Map<String, Assignment>>> m_listContinues;
+    private transient List<Break> m_listContinues;
 
     /**
      * ExprAST produced by {@link #emitConditionTest}.

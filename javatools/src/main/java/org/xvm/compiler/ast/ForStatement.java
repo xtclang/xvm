@@ -3,13 +3,11 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -80,21 +78,25 @@ public class ForStatement
     public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin)
         {
         Context ctxDest = ensureValidationContext();
+        Label   label   = getContinueLabel();
 
         if (ctxOrigin.isReachable())
             {
             // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = ctxOrigin.prepareJump(ctxDest);
+            Map<String, Assignment> mapAsn = new HashMap<>();
+            Map<String, Argument>   mapArg = new HashMap<>();
+
+            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
 
             // record the jump that landed on this statement by recording its assignment impact
             if (m_listContinues == null)
                 {
                 m_listContinues = new ArrayList<>();
                 }
-            m_listContinues.add(new SimpleEntry<>(nodeOrigin, mapAsn));
+            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
             }
 
-        return getContinueLabel();
+        return label;
         }
 
     /**
@@ -165,7 +167,13 @@ public class ForStatement
                 {
                 m_listShorts = new ArrayList<>();
                 }
-            m_listShorts.add(new SimpleEntry<>(nodeOrigin, ctxOrigin.prepareJump(ctxDest)));
+
+            Map<String, Assignment> mapAsn = new HashMap<>();
+            Map<String, Argument>   mapArg = new HashMap<>();
+
+            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
+
+            m_listShorts.add(new Break(nodeOrigin, mapAsn, mapArg, null));
             }
 
         // create, store, and return a label for this specific init/update node
@@ -314,11 +322,11 @@ public class ForStatement
             if (m_listShorts != null)
                 {
                 boolean fContinues = false;
-                for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
+                for (Break shortInfo : m_listShorts)
                     {
-                    if (!entry.getKey().isDiscarded())
+                    if (!shortInfo.node().isDiscarded())
                         {
-                        ctx.merge(entry.getValue());
+                        ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
                         fContinues = true;
                         }
                     }
@@ -474,11 +482,11 @@ public class ForStatement
                 {
                 // the last "continue" is translated as a "break"
                 boolean fContinues = false;
-                for (Entry<AstNode, Map<String, Assignment>> entry : m_listContinues)
+                for (Break continueInfo : m_listContinues)
                     {
-                    if (!entry.getKey().isDiscarded())
+                    if (!continueInfo.node().isDiscarded())
                         {
-                        ctx.merge(entry.getValue());
+                        ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
                         fContinues = true;
                         }
                     }
@@ -507,11 +515,11 @@ public class ForStatement
                 if (m_listShorts != null)
                     {
                     boolean fContinues = false;
-                    for (Entry<AstNode, Map<String, Assignment>> entry : m_listShorts)
+                    for (Break shortInfo : m_listShorts)
                         {
-                        if (!entry.getKey().isDiscarded())
+                        if (!shortInfo.node().isDiscarded())
                             {
-                            ctx.merge(entry.getValue());
+                            ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
                             fContinues = true;
                             }
                         }
@@ -873,12 +881,12 @@ public class ForStatement
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Map.Entry<AstNode,Map<String, Assignment>>> m_listContinues;
+    private transient List<Break> m_listContinues;
 
     /**
      * The short-circuits from inside of the most recent "init" or "update".
      */
-    private transient List<Map.Entry<AstNode, Map<String, Assignment>>> m_listShorts;
+    private transient List<Break> m_listShorts;
 
     /**
      * The short-circuit grounding label for each "init". (Array or elements may be null.)
