@@ -2892,15 +2892,10 @@ public class Frame
 
                 assert frame.f_iReturn == A_MULTI;
 
-                FutureHandle[] ahFuture = new FutureHandle[cValues];
                 for (int i = 0; i < cValues; i++)
                     {
                     FutureHandle hFuture = (FutureHandle) frame.f_ahVar[i];
-                    if (hFuture.isAssigned())
-                        {
-                        ahFuture[i] = hFuture;
-                        }
-                    else
+                    if (!hFuture.isAssigned())
                         {
                         return R_REPEAT;
                         }
@@ -2908,8 +2903,7 @@ public class Frame
 
                 boolean[] afDynamic = new boolean[cValues];
                 Arrays.fill(afDynamic, true);
-
-                return frame.returnValues(ahFuture, afDynamic);
+                return frame.returnValues(frame.f_ahVar, afDynamic);
                 }
 
             public String toString()
