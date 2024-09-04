@@ -30,6 +30,9 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 **/vendor
-**/build
 LICENSE
 README.md
+
+# Added by xtclang.org
+**/build
+**/.gradle
