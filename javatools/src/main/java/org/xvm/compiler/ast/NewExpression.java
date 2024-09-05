@@ -891,6 +891,40 @@ public class NewExpression
         }
 
     @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        switch (super.mightAffect(exprLeft, arg))
+            {
+            case DefNo:
+                return SideEffect.DefNo;
+
+            case AnyCompute:
+                return SideEffect.DefYes;
+
+            case Unknown:
+                SideEffect effect = SideEffect.DefNo;
+                for (Expression expr : args)
+                    {
+                    switch (expr.mightAffect(exprLeft, arg))
+                        {
+                        case DefNo, Unknown:
+                            break; // keep going
+
+                        case AnyCompute:
+                            throw new IllegalStateException(); // cannot get here
+
+                        case DefYes:
+                            return SideEffect.DefYes;
+                        }
+                    }
+                return effect;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    @Override
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs)
         {
         // 1. To avoid an out-of-order execution, we cannot allow the use of local properties
@@ -909,9 +943,7 @@ public class NewExpression
                 {
                 Expression expr = listArgs.get(i);
                 Argument   arg  = expr.generateArgument(ctx, code, false, true, errs);
-                aArgs[i] = i == cArgs-1
-                        ? arg
-                        : ensurePointInTime(code, arg);
+                aArgs[i] = expr.ensurePointInTime(code, arg, listArgs, i);
                 aAstArgs[i] = expr.getExprAST(ctx);
                 }
 

@@ -242,6 +242,12 @@ public class NotNullExpression
         }
 
     @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        return expr.mightAffect(exprLeft, arg);
+        }
+
+    @Override
     protected boolean allowsConditional(Expression exprChild)
         {
         return m_fCond;

@@ -1902,6 +1902,12 @@ public class StatementBlock
             }
 
         @Override
+        public boolean isEffectivelyFinal()
+            {
+            return false;
+            }
+
+        @Override
         public Argument registerConstants(ConstantRegistry registry)
             {
             throw new IllegalStateException();

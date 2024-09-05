@@ -116,6 +116,12 @@ public class Register
         }
 
     @Override
+    public boolean isEffectivelyFinal()
+        {
+        return m_fEffectivelyFinal || isStack();
+        }
+
+    @Override
     public Register registerConstants(Op.ConstantRegistry registry)
         {
         if (m_typeReg != null)
@@ -419,14 +425,6 @@ public class Register
         {
         m_fRO               = true;
         m_fEffectivelyFinal = true;
-        }
-
-    /**
-     * @return true iff this register has been marked as being effectively final
-     */
-    public boolean isEffectivelyFinal()
-        {
-        return m_fEffectivelyFinal;
         }
 
     /**
@@ -737,6 +735,12 @@ public class Register
             }
 
         @Override
+        public boolean isEffectivelyFinal()
+            {
+            return Register.this.isEffectivelyFinal();
+            }
+
+        @Override
         public boolean isVar()
             {
             return Register.this.isVar();
@@ -837,12 +841,6 @@ public class Register
         public void markEffectivelyFinal()
             {
             Register.this.markEffectivelyFinal();
-            }
-
-        @Override
-        public boolean isEffectivelyFinal()
-            {
-            return Register.this.isEffectivelyFinal();
             }
 
         @Override

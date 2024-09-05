@@ -604,8 +604,8 @@ public class CmpExpression
         if (LVal.isLocalArgument())
             {
             // evaluate the sub-expressions
-            Argument arg1      = ensurePointInTime(code,
-                                 expr1.generateArgument(ctx, code, true, true, errs));
+            Argument arg1      = expr1.ensurePointInTime(code,
+                                 expr1.generateArgument(ctx, code, true, true, errs), expr2);
             Argument arg2      = expr2.generateArgument(ctx, code, true, true, errs);
             Argument argResult = LVal.getLocalArgument();
             OpTest   op = switch (operator.getId())
@@ -645,8 +645,8 @@ public class CmpExpression
         if (!isConstant() && producesBoolean())
             {
             // evaluate the sub-expressions
-            Argument   arg1 = ensurePointInTime(code,
-                              expr1.generateArgument(ctx, code, true, true, errs));
+            Argument   arg1 = expr1.ensurePointInTime(code,
+                              expr1.generateArgument(ctx, code, true, true, errs), expr2);
             Argument   arg2 = expr2.generateArgument(ctx, code, true, true, errs);
             OpCondJump op = switch (operator.getId())
                 {

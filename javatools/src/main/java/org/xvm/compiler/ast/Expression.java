@@ -1342,6 +1342,37 @@ public abstract class Expression
         }
 
     /**
+     * Determine if this expression can potentially affect (mutate the expected value of) a
+     * preceding expression. In a sequence of expressions, such as a sequence of arguments for a
+     * function call, the arguments must each be evaluated, but the behavior must be guaranteed to
+     * occur "left to right", such that trailing (i.e. "to the right") expressions cannot cause the
+     * value represented by any preceding (i.e. "to the left") expression to be modified. When a
+     * possibility of mutation exists, the preceding expression must make a "point in time
+     * snapshot".
+     *
+     * @param exprLeft the expression to assess the impact for
+     * @param arg      the value of the specified expression
+     *
+     * @return one of the {@link SideEffect} values
+     */
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        // constants cannot affect anything or be affected
+        if (isConstant() || exprLeft.isConstant())
+            {
+            return SideEffect.DefNo;
+            }
+
+        if (arg instanceof PropertyConstant)
+            {
+            // any computation (e.g. an invocation or a property access) may impact a property
+            return SideEffect.AnyCompute;
+            }
+
+        return SideEffect.Unknown;
+        }
+
+    /**
      * (Post-validation) Determine if the expression can generate a compact variable initialization
      * (constant, sequence or tuple).
      *
@@ -2060,15 +2091,64 @@ public abstract class Expression
         }
 
     /**
+     * Given that this expression sits in a list of expressions at the specified index, determine if
+     * any of the expressions "on the right" of it have a potential of changing this expression's
+     * value as a side effect and if so, replace the specified argument with a "point-in-time" value.
+     *
+     * @param arg       the argument representing this expression's value
+     * @param listExprs the lists of expressions
+     * @param iExpr     the index of this expression in the list
+     *
+     * @return a "point-in-time" value, if necessary
+     */
+    protected Argument ensurePointInTime(Code code, Argument arg, List<Expression> listExprs, int iExpr)
+        {
+        // clearly, the last expression in a list cannot have any side effects, as well as an
+        // effectively final argument
+        int cExprs = listExprs.size();
+        if (iExpr < cExprs-1 && !arg.isEffectivelyFinal())
+            {
+            for (int iRight = iExpr + 1; iRight < cExprs; ++iRight)
+                {
+                if (listExprs.get(iRight).mightAffect(this, arg) == SideEffect.DefYes)
+                    {
+                    return ensurePointInTime(code, arg);
+                    }
+                }
+            }
+        return arg;
+        }
+
+    /**
+     * Check it the specified expression has a potential of changing this expression's value (as a
+     * side effect) and if so, replace the specified argument with a "point-in-time" value.
+     *
+     * @param arg        the argument representing this expression's value
+     * @param exprRight  the expression to check for side effect on this expression
+     *
+     * @return a "point-in-time" value, if necessary
+     */
+    protected Argument ensurePointInTime(Code code, Argument arg, Expression exprRight)
+        {
+        return !arg.isEffectivelyFinal() && exprRight.mightAffect(this, arg) == SideEffect.DefYes
+                ? ensurePointInTime(code, arg)
+                : arg;
+        }
+
+     /**
      * Check if the specified argument's value can be changed externally and replace it with a
      * "point-in-time" value if necessary.
      */
-    protected Argument ensurePointInTime(Code code, Argument arg)
+    private Argument ensurePointInTime(Code code, Argument arg)
         {
-        if (arg instanceof Register reg && reg.isVar())
+        // if the register is a @Future, no need to take a snapshot
+        if (arg instanceof PropertyConstant ||
+            arg instanceof Register reg &&
+                (!reg.isVar() || !reg.ensureRegType(true).isA(pool().clzFuture().getType())))
             {
             Register regTemp = code.createRegister(arg.getType());
-            code.add(new Var_I(regTemp, reg));
+            regTemp.markEffectivelyFinal();
+            code.add(new Var_I(regTemp, arg));
             arg = regTemp;
             }
         return arg;
@@ -3329,6 +3409,21 @@ public abstract class Expression
          * Represents the state of the TypeFit.
          */
         public final int FLAGS;
+        }
+
+
+    /**
+     * Return values for the {@link #mightAffect} method.
+     */
+    public enum SideEffect
+        {
+        DefNo,      // there is definitely no side effect
+        Unknown,    // there is no information one way or another
+        AnyCompute, // an expression "on the left" is a property, which could be affected by any
+                    // computation "on the right" (anything but a register access)
+        AnySeqOp,   // an expression "on the left" is a register, which could be affected by any
+                    // sequential operation on the same register "on the right"
+        DefYes      // side effects are likely
         }
 
 

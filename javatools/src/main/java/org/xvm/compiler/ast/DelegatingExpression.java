@@ -207,6 +207,12 @@ public abstract class DelegatingExpression
         return expr.getExprAST(ctx);
         }
 
+    @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        return expr.mightAffect(exprLeft, arg);
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

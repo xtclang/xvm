@@ -154,6 +154,19 @@ public class SequentialAssignExpression
         }
 
     @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        switch (expr.mightAffect(exprLeft, arg))
+            {
+            case AnySeqOp, DefYes:
+                return SideEffect.DefYes;
+
+            default:
+                return SideEffect.DefNo;
+            }
+        }
+
+    @Override
     protected void selectTraceableExpressions(Map<String, Expression> mapExprs)
         {
         // do not go inside of this expression (it's the result of this expression that matters)

@@ -579,6 +579,12 @@ public abstract class Constant
         }
 
     @Override
+    public boolean isEffectivelyFinal()
+        {
+        return false;
+        }
+
+    @Override
     public Constant registerConstants(Op.ConstantRegistry registry)
         {
         return registry.register(this);

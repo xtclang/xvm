@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.ast.ExprAST;
@@ -223,6 +224,12 @@ public abstract class PrefixExpression
             }
 
         return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
+        }
+
+    @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        return expr.mightAffect(exprLeft, arg);
         }
 
 

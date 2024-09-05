@@ -916,6 +916,35 @@ public class NameExpression
         }
 
     @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        switch (super.mightAffect(exprLeft, arg))
+            {
+            case DefNo:
+                return SideEffect.DefNo;
+
+            case AnyCompute:
+                return getMeaning() == Meaning.Property && !isSuppressDeref()
+                        ? SideEffect.DefYes
+                        : SideEffect.DefNo;
+
+            case Unknown:
+                // we know that "left" expression is not a property, so "this" expression can only
+                // impact the left one if both refer to the same register and "this" expression is
+                // held by a SequentialAssignmentExpression
+                return exprLeft instanceof NameExpression that &&
+                       this.getMeaning() == Meaning.Variable &&
+                       that.getMeaning() == Meaning.Variable &&
+                       this.getName().equals(that.getName())
+                            ? SideEffect.AnySeqOp
+                            : SideEffect.DefNo;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    @Override
     public boolean isTraceworthy()
         {
         if (!isCompletable())

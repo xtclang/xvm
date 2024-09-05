@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -278,6 +279,17 @@ public class StatementExpression
         return new StmtExprAST(m_astBody, getTypes());
         }
 
+    @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        // theoretically speaking, we can go through the list of statements; check for invocations,
+        // property access or assignments and compute the effect, but since i) the use of
+        // StatementExpressions is very limited; ii) the cost of the defensive copy is extremely low
+        // let's just respond pessimistically
+        return super.mightAffect(exprLeft, arg) == SideEffect.DefNo
+                ? SideEffect.DefNo
+                : SideEffect.DefYes;
+        }
 
     // ----- compilation helpers -------------------------------------------------------------------
 

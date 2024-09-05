@@ -345,10 +345,9 @@ public class CmpChainExpression
         // and only the last argument is allowed to be on stack
         for (int i = 0; i < cExprs; i++)
             {
-            Argument arg = listExprs.get(i).generateArgument(ctx, code, false, i == cExprs-1, errs);
-            aArgs[i] = i == cExprs-1
-                    ? arg
-                    : ensurePointInTime(code, arg);
+            Expression expr = listExprs.get(i);
+            Argument   arg  = expr.generateArgument(ctx, code, false, i == cExprs-1, errs);
+            aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
             }
 
         if (constVal == null)
@@ -448,10 +447,9 @@ public class CmpChainExpression
 
         for (int i = 0; i < cExprs; i++)
             {
-            Argument arg = listExprs.get(i).generateArgument(ctx, code, false, i == cExprs-1, errs);
-            aArgs[i] = i == cExprs-1
-                    ? arg
-                    : ensurePointInTime(code, arg);
+            Expression expr = listExprs.get(i);
+            Argument   arg  = expr.generateArgument(ctx, code, false, i == cExprs-1, errs);
+            aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
             }
 
         if (constVal != null)

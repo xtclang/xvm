@@ -1018,6 +1018,13 @@ public class LambdaExpression
                 : m_astLambda;
         }
 
+    @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        // lambda is a function reference, not an invocation; definitely doesn't affect anything
+        return SideEffect.DefNo;
+        }
+
 
     // ----- compilation helpers -------------------------------------------------------------------
 

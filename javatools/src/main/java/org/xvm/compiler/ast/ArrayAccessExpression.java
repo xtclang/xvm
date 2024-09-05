@@ -716,10 +716,9 @@ public class ArrayAccessExpression
                 Argument[] aIndexArgs = new Argument[cIndexes];
                 for (int i = 0; i < cIndexes; ++i)
                     {
-                    Argument arg = listIndexExprs.get(i).generateArgument(ctx, code, true, true, errs);
-                    aIndexArgs[i] = i == cIndexes-1
-                            ? arg
-                            : ensurePointInTime(code, arg);
+                    Expression expr = listIndexExprs.get(i);
+                    Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                    aIndexArgs[i] = expr.ensurePointInTime(code, arg, listIndexExprs, i);
                     }
 
                 if (m_idGet == null)
@@ -758,10 +757,9 @@ public class ArrayAccessExpression
             Argument[] aArgIndexes = new Argument[cIndexes];
             for (int i = 0; i < cIndexes; ++i)
                 {
-                Argument arg = listIndex.get(i).generateArgument(ctx, code, true, true, errs);
-                aArgIndexes[i] = i == cIndexes-1
-                        ? arg
-                        : ensurePointInTime(code, arg);
+                Expression expr = listIndex.get(i);
+                Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                aArgIndexes[i] = expr.ensurePointInTime(code, arg, listIndex, i);
                 }
             return new Assignable(argArray, aArgIndexes);
             }

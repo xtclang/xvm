@@ -722,7 +722,39 @@ module TestMisc {
             assert fn() == 3 as "unpacked side-effect";
         }
 
-        // return
+        // return a register
+        {
+            static (Int, Int) fn(Int x) {
+                return x, x++;
+            }
+            (Int x, Int y) = fn(3);
+            assert x == 3 as "return side-effect";
+        }
+
+        // return a property
+        {
+            static class TestP(Int x) {
+                (Int, Int) fn() {
+                    return x, ++x;
+                }
+            }
+            (Int x, Int y) = new TestP(3).fn();
+            assert x == 3 as "return side-effect";
+        }
+
+        // return an assignment
+        {
+            static class TestA(Int x) {
+                (Int, Int) fn() {
+                    return x, (x <- 7);
+                }
+            }
+
+            (Int x, Int y) = new TestA(3).fn();
+            assert x == 3 as "return side-effect";
+        }
+
+        // return a var
         {
             static (Int, Int) fn() {
                 function void (Int) log = (Int v) -> {};

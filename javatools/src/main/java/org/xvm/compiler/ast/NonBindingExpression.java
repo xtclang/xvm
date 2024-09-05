@@ -134,6 +134,12 @@ public class NonBindingExpression
         return RegisterAST.defaultReg(getType());
         }
 
+    @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        return SideEffect.DefNo;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

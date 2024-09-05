@@ -92,6 +92,12 @@ public class IgnoredNameExpression
         return new RegisterAST(Op.A_IGNORE, pool().typeObject(), null);
         }
 
+    @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        return SideEffect.DefNo;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 

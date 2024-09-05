@@ -501,10 +501,7 @@ public class ReturnStatement
                         {
                         Expression expr = listExprs.get(i);
                         Argument   arg  = expr.generateArgument(ctx, code, true, !fConditional || i > 0, errs);
-
-                        aArgs[i] = i == cExprs-1
-                                ? arg
-                                : expr.ensurePointInTime(code, arg);
+                        aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
                         aASTs[i] = expr.getExprAST(ctx);
                         }
 

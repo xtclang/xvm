@@ -1288,6 +1288,40 @@ public class InvocationExpression
         }
 
     @Override
+    protected SideEffect mightAffect(Expression exprLeft, Argument arg)
+        {
+        switch (super.mightAffect(exprLeft, arg))
+            {
+            case DefNo:
+                return SideEffect.DefNo;
+
+            case AnyCompute:
+                if (!isSuppressCall())
+                    {
+                    return SideEffect.DefYes;
+                    }
+                // fall through
+            case Unknown:
+                SideEffect effect = SideEffect.DefNo;
+                for (Expression expr : args)
+                    {
+                    switch (expr.mightAffect(exprLeft, arg))
+                        {
+                        case DefNo, Unknown, AnyCompute:
+                            break; // keep going
+
+                        case DefYes:
+                            return SideEffect.DefYes;
+                        }
+                    }
+                return effect;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    @Override
     public boolean isConditionalResult()
         {
         return m_fCondResult;
@@ -1522,7 +1556,7 @@ public class InvocationExpression
                                     Expression expr = args.get(i);
                                     Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
                                     int        iArg = cTypeParams + i;
-                                    aArgs[iArg] = i == cArgs-1 ? arg : ensurePointInTime(code, arg);
+                                    aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
                                     aAsts[iArg] = expr.getExprAST(ctx);
                                     }
 
@@ -1830,7 +1864,7 @@ public class InvocationExpression
                         Expression expr = args.get(i);
                         Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
                         int        iArg = cTypeParams + i;
-                        aArgs[iArg] = i == cArgs-1 ? arg : ensurePointInTime(code, arg);
+                        aArgs[iArg] = expr.ensurePointInTime(code, arg, args, i);
                         aAsts[iArg] = expr.getExprAST(ctx);
                         }
 
@@ -2022,9 +2056,9 @@ public class InvocationExpression
                 Expression exprArg = args.get(i);
                 if (!exprArg.isNonBinding())
                     {
+                    Argument arg = exprArg.generateArgument(ctx, code, false, true, errs);
                     aiArg[iBind] = cTypeParams + i;
-                    aArg [iBind] = ensurePointInTime(code,
-                            exprArg.generateArgument(ctx, code, false, true, errs));
+                    aArg [iBind] = exprArg.ensurePointInTime(code, arg, args, i);
                     aAst [iBind] = exprArg.getExprAST(ctx);
 
                     iBind++;

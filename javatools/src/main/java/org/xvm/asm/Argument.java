@@ -22,6 +22,11 @@ public interface Argument
     boolean isStack();
 
     /**
+     * @return true iff this argument is known to represent an effectively final value
+     */
+    boolean isEffectivelyFinal();
+
+    /**
      * Register all constants that this Argument depends on into the passed registry.
      *
      * @param registry  the code-local constant registry

@@ -103,15 +103,14 @@ public class UnpackExpression
 
         if (expr instanceof TupleExpression exprTuple)
             {
-            List<Expression> exprs  = exprTuple.getExpressions();
-            int              cExprs = exprs.size();
-            Argument[]       aArgs  = new Argument[cExprs];
+            List<Expression> listExprs = exprTuple.getExpressions();
+            int              cExprs    = listExprs.size();
+            Argument[]       aArgs     = new Argument[cExprs];
             for (int i = 0; i < cExprs; ++i)
                 {
-                Argument arg = exprs.get(i).generateArgument(ctx, code, false, false, errs);
-                aArgs[i] = i == cExprs-1
-                        ? arg
-                        : ensurePointInTime(code, arg);
+                Expression expr = listExprs.get(i);
+                Argument   arg  = expr.generateArgument(ctx, code, false, false, errs);
+                aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
                 }
 
             return aArgs;

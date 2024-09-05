@@ -450,18 +450,16 @@ public class MapExpression
      */
     private Argument[] collectArguments(Context ctx, Code code, boolean fKeys, ErrorListener errs)
         {
-        List<Expression> list  = fKeys ? keys : values;
-        int              cArgs = list.size();
-        Argument[]       aArg  = new Argument[cArgs];
-        ExprAST[]        aAST  = new ExprAST[cArgs];
+        List<Expression> listArgs = fKeys ? keys : values;
+        int              cArgs    = listArgs.size();
+        Argument[]       aArg     = new Argument[cArgs];
+        ExprAST[]        aAST     = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i)
             {
-            Expression expr = list.get(i);
+            Expression expr = listArgs.get(i);
             Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
-            aArg[i] = i == cArgs-1
-                    ? arg
-                    : ensurePointInTime(code, arg);
+            aArg[i] = expr.ensurePointInTime(code, arg, listArgs, i);
             aAST[i] = expr.getExprAST(ctx);
             }
 
