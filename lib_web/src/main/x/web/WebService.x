@@ -32,7 +32,7 @@ mixin WebService(String path)
             if (assigned) {
                 app = super();
             } else {
-                assert var moduleObject := this:class.baseTemplate.containingModule.ensureClass().isSingleton()
+                assert val moduleObject := this:class.baseTemplate.containingModule.ensureClass().isSingleton()
                         as $"Unable to obtain containing module for {this}";
                 assert app := moduleObject.is(WebApp) as $"Unable to obtain the WebApp for {this}";
                 set(app);

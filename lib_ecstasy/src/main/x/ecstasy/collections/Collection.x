@@ -1073,7 +1073,7 @@ interface Collection<Element>
         Int displayCount = limit?.notGreaterThan(elementCount) : elementCount;
 
         if (render == Null && Element.is(Type<Stringable>)) {
-            val iter = this.iterator();
+            var iter = this.iterator();
             if (displayCount < elementCount) {
                 iter   = iter.limit(displayCount);
                 count += trunc.size;

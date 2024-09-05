@@ -148,14 +148,19 @@ public class VariableDeclarationStatement
         assert aTypes != null && aTypes.length >= 1;
 
         TypeExpression exprType = this.type;
-        if (exprType instanceof VariableTypeExpression)
+        if (exprType instanceof VariableTypeExpression exprVar)
             {
             TypeConstant type = aTypes[0];
             exprType.setTypeConstant(type);
 
-            if (m_reg != null)
+            Register reg = m_reg;
+            if (reg != null)
                 {
-                m_reg.specifyActualType(type);
+                reg.specifyActualType(type);
+                if (exprVar.    getToken().getId() == Token.Id.VAL)
+                    {
+                    reg.markEffectivelyFinal();
+                    }
                 }
             }
         getLValueExpression().updateLValueFromRValueTypes(ctx, branch, fCond, aTypes);

@@ -56,7 +56,7 @@ module TestIO {
 
         File    file   = ./IO.x;
         Byte[]  raw    = file.contents;
-        var     in     = new ByteArrayInputStream(raw);
+        val     in     = new ByteArrayInputStream(raw);
         Boolean dotdot = False;
         loop: while (!in.eof) {
             Byte b = in.readByte();

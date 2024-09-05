@@ -648,7 +648,7 @@ interface Map<Key, Value>
 
         if (keyRender == Null && valueRender == Null &&
                 Key.is(Type<Stringable>) && Value.is(Type<Stringable>)) {
-            val iter = entries.iterator();
+            var iter = entries.iterator();
             if (displayCount < entryCount) {
                 iter   = iter.limit(displayCount);
                 count += trunc?.size : 0;

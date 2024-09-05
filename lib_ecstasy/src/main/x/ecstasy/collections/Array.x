@@ -763,7 +763,7 @@ class Array<Element>
 
         switch (mutability) {
         case Mutable:
-            val newDelegate = new Element[];
+            var newDelegate = new Element[];
             if (lo > 0) {
                 newDelegate += this[0 ..< lo];
             }
