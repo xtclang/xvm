@@ -81,7 +81,7 @@ const EmptyIterator<Element>
     }
 
     @Override
-    Iterator<Element> filter(function Boolean (Element) include) {
+    Iterator<Element> filter(function Boolean(Element) include) {
         return this;
     }
 

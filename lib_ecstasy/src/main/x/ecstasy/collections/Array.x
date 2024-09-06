@@ -511,7 +511,7 @@ class Array<Element>
     }
 
     @Override
-    (Array, Int) removeAll(function Boolean (Element) shouldRemove) {
+    (Array, Int) removeAll(function Boolean(Element) shouldRemove) {
         Int[]? indexes = Null;
         loop: for (Element value : this) {
             if (shouldRemove(value)) {

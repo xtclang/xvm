@@ -82,12 +82,12 @@ interface Type<DataType, OuterType>
     /**
      * "Comparer" is a function that compares two objects of this type for equality.
      */
-    typedef function Boolean (DataType, DataType) as Comparer;
+    typedef function Boolean(DataType, DataType) as Comparer;
 
     /**
      * "Orderer" is a function that compares two objects of this type for order.
      */
-    typedef function Ordered (DataType, DataType) as Orderer;
+    typedef function Ordered(DataType, DataType) as Orderer;
 
 
     // ----- state representation ------------------------------------------------------------------

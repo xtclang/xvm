@@ -333,7 +333,7 @@ interface Iterator<Element> {
      *
      * @return a new iterator representing the filtered contents of this iterator
      */
-    Iterator! filter(function Boolean (Element) include) {
+    Iterator! filter(function Boolean(Element) include) {
         if (knownEmpty()) {
             return this;
         }

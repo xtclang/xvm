@@ -757,7 +757,7 @@ interface List<Element>
     }
 
     @Override
-    (List, Int) removeAll(function Boolean (Element) shouldRemove) {
+    (List, Int) removeAll(function Boolean(Element) shouldRemove) {
         List<Element> result = this;
         Int           count  = 0;
 

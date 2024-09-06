@@ -567,6 +567,8 @@ interface Collection<Element>
      * thus _reducing_ the collection to a single value.
      *
      * @param aggregator  the mechanism for the reduction
+     *
+     * @return the result of the reduction
      */
     @Concurrent
     <Result> Result reduce(Aggregator<Element, Result> aggregator) {
@@ -995,7 +997,7 @@ interface Collection<Element>
      * @throws ReadOnly  if the collection does not support element removal
      */
     @Concurrent
-    (Collection, Int) removeAll(function Boolean (Element) shouldRemove) {
+    (Collection, Int) removeAll(function Boolean(Element) shouldRemove) {
         @Volatile Element[]? values = Null;
         forEach(value -> {
             if (shouldRemove(value)) {
