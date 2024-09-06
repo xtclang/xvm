@@ -41,6 +41,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
+import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
@@ -397,8 +399,21 @@ public abstract class Utils
                     return hDeferred.proceed(frameCaller, this);
                     }
 
-                switch (frameCaller.returnValue(aiReturn[index], ahValue[index],
-                        afDynamic != null && afDynamic[index]))
+                boolean fDynamic = afDynamic != null && afDynamic[index];
+                int     iReturn  = aiReturn[index];
+                if (fDynamic && !((FutureHandle) hValue).isAssigned() &&
+                        iReturn != Op.A_IGNORE_ASYNC)
+                    {
+                    Frame framePrev = frameCaller.f_framePrev;
+                    if (!framePrev.isDynamicVar(iReturn))
+                        {
+                        // dynamic -> regular will need to wait
+                        fAllAssigned = false;
+                        continue;
+                        }
+                    }
+
+                switch (frameCaller.returnValue(iReturn, hValue, fDynamic))
                     {
                     case Op.R_RETURN:
                         break;
@@ -415,7 +430,17 @@ public abstract class Utils
                     }
                 }
 
-            return Op.R_RETURN;
+            if (fAllAssigned)
+                {
+                return Op.R_RETURN;
+                }
+
+            // at this point we have all deferred values resolved and some (not yet completed)
+            // future returns that the caller (previous frame) expects to be "realized" and
+            // therefore needs to wait for
+            Frame framePrev = frameCaller.f_framePrev;
+            framePrev.call(framePrev.createWaitFrame(ahValue, aiReturn));
+            return Op.R_RETURN_CALL;
             }
 
         protected int updateDeferredValue(Frame frameCaller)
@@ -424,11 +449,12 @@ public abstract class Utils
             return Op.R_NEXT;
             }
 
-        private final int[] aiReturn;
+        private final int[]          aiReturn;
         private final ObjectHandle[] ahValue;
-        private final boolean[] afDynamic;
+        private final boolean[]      afDynamic;
 
-        private int index = -1;
+        private int     index        = -1;
+        private boolean fAllAssigned = true;
         }
 
 

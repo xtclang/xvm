@@ -12,7 +12,7 @@ module TestServices {
         console.print($|{tag()} calling service async/wait-style\
                          | {svc.serviceName} {svc.serviceControl.statusIndicator}
                          );
-        Int n = svc.calcSomethingBig(Duration.None);
+        Int n = svc.simulateSlowIO(Duration.None);
         console.print($"{tag()} async/wait-style result={n}");
 
         Int n0 = svc.terminateExceptionally^("n0");
@@ -60,16 +60,24 @@ module TestServices {
         import ecstasy.Timeout;
         try {
             using (Timeout timeout = new Timeout(Duration:0.5S, True)) {
-                svc.calcSomethingBig(Duration:30S);
+                svc.simulateSlowIO(Duration:30S);
                 assert;
             }
         } catch (TimedOut e) {}
+
+        // test multi return
+        (@Future Int v1, @Future Int v2) = svc.multiReturn(Duration:0.01S, 42);
+        assert !&v1.assigned;
+        &v2.whenComplete((r, e) -> {
+            assert r == 43;
+        });
 
         @Volatile Int responded = 0;
         Int           count     = 5;
         for (Int i : 0 ..< count) {
             console.print($"{tag()} calling service future-style: {i}");
-            @Future Int result = svc.calcSomethingBig(Duration.ofSeconds(i));
+            @Future Int result = svc.simulateSlowIO(Duration.ofSeconds(i), log=True);
+            assert !&result.assigned;
             &result.whenComplete((n, e) -> {
                 console.print($"{tag()} result={(n ?: e ?: "???")}");
                 // when the last result comes back - shut down
@@ -83,7 +91,7 @@ module TestServices {
         console.print($"{tag()} done={done}; shutting down");
 
         // without the left side an exception would be reported by the default handler
-        Int ignoreException = svc.calcSomethingBig^(Duration:45S);
+        Int ignoreException = svc.simulateSlowIO^(Duration:45S);
         svc.serviceControl.shutdown();
 
         try {
@@ -95,15 +103,19 @@ module TestServices {
     }
 
     service TestService {
-        Int calcSomethingBig(Duration delay) {
+        Int simulateSlowIO(Duration delay, Boolean log = False) {
             @Inject Console console;
 
-            console.print($"{tag()} calculating for: {delay}");
+            if (log) {
+                console.print($"{tag()} calculating for: {delay}");
+            }
             @Inject Timer timer;
             @Future Int   result;
             timer.start();
             timer.schedule(delay, () -> {
-                console.print($"{tag()} setting result {delay.seconds}");
+                if (log) {
+                    console.print($"{tag()} setting result {delay.seconds}");
+                }
                 result=delay.seconds;
             });
 
@@ -128,6 +140,18 @@ module TestServices {
 
         Boolean waitForCompletion() {
             return done;
+        }
+
+        (Int, Int) multiReturn(Duration delay, Int i) {
+            @Future Int v1;
+            @Future Int v2;
+
+            @Inject Clock clock;
+            clock.schedule(delay, () -> {
+                v1 = i;
+                v2 = i+1;
+            });
+            return v1, v2;
         }
     }
 

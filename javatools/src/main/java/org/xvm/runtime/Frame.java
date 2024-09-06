@@ -3,7 +3,6 @@ package org.xvm.runtime;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 
@@ -294,6 +293,35 @@ public class Frame
             }
 
         // add a wait completion notification; the service is responsible for timing out
+        cfResult.whenComplete((r, x) -> f_fiber.onResponse());
+
+        return frameNext;
+        }
+
+    /**
+     * Create a new pseudo frame that will wait on multiple specified future handles.
+     *
+     * @param ahFuture  the future handles to wait for completion of
+     * @param aiReturn  the return registers for the results
+     *
+     * @return a new frame
+     */
+    public Frame createWaitFrame(ObjectHandle[] ahFuture, int[] aiReturn)
+        {
+        Frame frameNext = createNativeFrame(WAIT_FOR_FUTURE, ahFuture, Op.A_MULTI, aiReturn);
+        int   cReturns  = ahFuture.length;
+
+        List<CompletableFuture> listFutures = new ArrayList<>(cReturns);
+        for (int i = 0; i < cReturns; i++)
+            {
+            if (ahFuture[i] instanceof FutureHandle hFuture)
+                {
+                listFutures.add(hFuture.getFuture());
+                }
+            }
+
+        CompletableFuture<Void> cfResult = CompletableFuture.allOf(
+                                            listFutures.toArray(new CompletableFuture[0]));
         cfResult.whenComplete((r, x) -> f_fiber.onResponse());
 
         return frameNext;
@@ -2892,17 +2920,23 @@ public class Frame
 
                 assert frame.f_iReturn == A_MULTI;
 
+                boolean[] afDynamic = new boolean[cValues];
                 for (int i = 0; i < cValues; i++)
                     {
-                    FutureHandle hFuture = (FutureHandle) frame.f_ahVar[i];
-                    if (!hFuture.isAssigned())
+                    if (frame.f_ahVar[i] instanceof FutureHandle hFuture)
                         {
-                        return R_REPEAT;
+                        if (!hFuture.isAssigned())
+                            {
+                            return R_REPEAT;
+                            }
+                        afDynamic[i] = true;
+                        }
+                    else
+                        {
+                        afDynamic[i] = false;
                         }
                     }
 
-                boolean[] afDynamic = new boolean[cValues];
-                Arrays.fill(afDynamic, true);
                 return frame.returnValues(frame.f_ahVar, afDynamic);
                 }
 

@@ -1207,6 +1207,9 @@ public class ServiceContext
     /**
      * Send an asynchronous Op-based message to this context with multiple return values.
      *
+     * Note: at the moment, this is only called by a native (synchronous) method. If that changes,
+     *       and we need to go async here, the logic from "sendInvokeNRequest" needs to be re-used.
+     *
      * @param frame     the caller's frame
      * @param op        the op to execute
      * @param aiReturn  the register ids to place the results into
@@ -1423,7 +1426,17 @@ public class ServiceContext
         OpRequest                         request  = new OpRequest(frame, opCall, cReturns, supplier);
         CompletableFuture<ObjectHandle[]> future   = request.f_future;
 
-        boolean fOverwhelmed = addRequest(request, false);
+        boolean fAllAsync = true;
+        for (int i = 0; i < cReturns; i++)
+            {
+            if (!frame.isFutureVar(aiReturn[i]))
+                {
+                fAllAsync = false;
+                break;
+                }
+            }
+
+        boolean fOverwhelmed = addRequest(request, fAllAsync);
 
         if (cReturns == 0)
             {
@@ -1439,6 +1452,18 @@ public class ServiceContext
             CompletableFuture<ObjectHandle> cfReturn =
                     future.thenApply(ahResult -> ahResult[0]);
             return frame.assignFutureResult(aiReturn[0], cfReturn);
+            }
+
+        if (fAllAsync)
+            {
+            for (int i = 0; i < cReturns; i++)
+                {
+                final int iReturn = i;
+                int iResult =
+                        frame.assignFutureResult(aiReturn[i], future.thenApply(ah -> ah[iReturn]));
+                assert iResult == Op.R_NEXT;
+                }
+            return Op.R_NEXT;
             }
 
         return frame.call(frame.createWaitFrame(future, aiReturn));
