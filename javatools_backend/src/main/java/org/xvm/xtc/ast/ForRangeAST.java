@@ -4,9 +4,8 @@ import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 
-class ForRangeAST extends AST {
-  String _label;
-  String _tmp;                  // For exploded iterator
+class ForRangeAST extends ForAST {
+  private String _prim_iter;    // For exploded primitive iterator
   // _kids[0] == Var
   // _kids[1] == Iter
   // _kids[2] == Body
@@ -20,11 +19,7 @@ class ForRangeAST extends AST {
     X.pop_locals(nlocals);     // Pop scope-locals at end of scope
     return new ForRangeAST(kids);
   }
-  private ForRangeAST( AST[] kids ) { super(kids); }
-
-  @Override boolean is_loopswitch() { return true; }
-
-  @Override XType _type() { return XCons.VOID; }
+  private ForRangeAST( AST[] kids ) { super(kids,3); }
 
   @Override public AST unBox() {
     AST k0 = _kids[0], k1 = _kids[1];
@@ -35,21 +30,19 @@ class ForRangeAST extends AST {
   }
 
   @Override public AST rewrite() {
+    super.rewrite();
     // Primitive iterator?
     // Get a tmp
     if( _kids[0]._type.zero() ) {
       if( _kids[1]._type instanceof XClz xclz )
         ClzBuilder.add_import(xclz);
-      _tmp = enclosing_block().add_tmp(_kids[1]._type);
+      _prim_iter = enclosing_block().add_tmp(_kids[1]._type);
     }
     return null;
   }
-  @Override void add_label() { if( _label==null ) _label = "label"; }
-  @Override String label() { return _label; }
 
   @Override public SB jcode( SB sb ) {
-    if( sb.was_nl() ) sb.i();
-    if( _tmp == null ) {
+    if( _prim_iter == null ) {
       // for( long x : new XRange(1,100) ) {
       if( _label!=null ) sb.p(_label).p(":").nl().i();
       _kids[0].jcode(sb.p("for( "));
@@ -57,13 +50,13 @@ class ForRangeAST extends AST {
       sb.p(" ) ");
     } else {
       // Range tmp = new XRange(1,100);
-      // for( long x = tmp._lo; x < tmp._hi; x++ )
-      sb.p(_tmp).p(" = ");
+      // Label: for( long x = tmp._lo; x < tmp._hi; x++ )
+      sb.p(_prim_iter).p(" = ");
       _kids[1].jcode(sb).p(";").nl().i();
       if( _label!=null ) sb.p(_label).p(":  ");
       DefRegAST def = (DefRegAST)_kids[0];
       def._type.clz(sb.p("for( "));
-      sb.fmt(" %0 = %1._start; %1.in(%0); %0 += %1._incr ) ",def._name,_tmp);
+      sb.fmt(" %0 = %1._start; %1.in(%0); %0 += %1._incr ) ",def._name,_prim_iter);
     }
     // Body
     _kids[2].jcode(sb);

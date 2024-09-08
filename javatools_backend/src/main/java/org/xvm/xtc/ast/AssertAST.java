@@ -22,7 +22,7 @@ class AssertAST extends ElvisAST {
   }
 
   @Override public SB jcode( SB sb ) {
-    sb.ip("XTC.xassert(");
+    sb.p("XTC.xassert(");
     int len = _kids.length;
     for( int i=0; i<len-2; i++ )
       _kids[i].jcode(sb).p(" && ");

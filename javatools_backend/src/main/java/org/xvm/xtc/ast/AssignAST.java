@@ -151,7 +151,7 @@ class AssignAST extends AST {
     return switch( _op ) {
     case AsnIfNotFalse, AsnIfNotNull -> {
       // var := (true,val)  or  var ?= not_null;
-      if( _cond_asgn!=null ) sb.ip("if( ");
+      if( _cond_asgn!=null ) sb.p("if( ");
       // Expression result is the boolean conditional value,
       // and the var was previously defined.
       // $t(var = expr()) && XRuntime.$COND
@@ -196,7 +196,7 @@ class AssignAST extends AST {
   }
 
   private SB asnIf(SB sb, String pre, String post) {
-    sb.ip("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
+    sb.p("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
     return _kids[1].jcode(sb);
   }
 }

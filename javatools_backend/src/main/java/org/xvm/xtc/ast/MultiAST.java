@@ -41,6 +41,12 @@ public class MultiAST extends ElvisAST {
     return xt;
   }
 
+  @Override public AST rewrite() {
+    if( !_expr && _par instanceof WhileAST && _elves==null )
+      return new BlockAST(_kids);
+    return super.rewrite();
+  }
+
   @Override public SB jcode(SB sb) {
     XType xt;
     if( _expr ) {
