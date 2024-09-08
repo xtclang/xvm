@@ -95,6 +95,7 @@ public abstract class XCons {
   public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy", "Range"  ,CONST,"Element",CONST);
   public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",RANGE,RANGE,JLONG); // No Ecstasy matching class
   public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",RANGE,RANGE,JLONG); // No Ecstasy matching class
+  public static XClz RANGEEI     = make_java("ecstasy","RangeEI"      ,"ecstasy","XRangeEI",RANGE,RANGE,JLONG); // No Ecstasy matching class
   public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,RANGE,JLONG); // No Ecstasy matching class
 
   // This is a mixin type

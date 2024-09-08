@@ -23,8 +23,8 @@ public abstract class S {
   }
 
   public static String java_class_name( String xname ) {
-     return xname.replace(".","_").intern();
-   }
+    return xname.replace('.','_').replace(':','_').intern();
+  }
 
   public static <X> X[] swap( X[] ary, int i, int j ) {
     X tmp = ary[i];

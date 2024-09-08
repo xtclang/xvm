@@ -21,7 +21,7 @@ class IfAST extends AST {
   @Override XType _type() { return XCons.VOID; }
 
   @Override public SB jcode( SB sb ) {
-    _kids[0].jcode(sb.ip("if( ")).p(") ");
+    _kids[0].jcode(sb.p("if( ")).p(") ");
     if( _kids[1] instanceof BlockAST ) {
       // if( pred ) {
       //   BLOCK;
@@ -35,7 +35,7 @@ class IfAST extends AST {
     } else {
       // if( pred )
       //   STMT<<<---- Cursor here
-      sb.ii().nl();
+      sb.ii().nl().i();
       _kids[1].jcode(sb);
       sb.di();
       if( _kids.length==2 ) return sb;
@@ -50,7 +50,7 @@ class IfAST extends AST {
     if( _kids[2] instanceof BlockAST ) {
       _kids[2].jcode(sb);
     } else {
-      sb.ii().nl();
+      sb.ii().nl().i();
       _kids[2].jcode(sb);
       sb.di();
     }

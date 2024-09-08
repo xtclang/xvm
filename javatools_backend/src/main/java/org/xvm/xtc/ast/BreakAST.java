@@ -10,7 +10,6 @@ class BreakAST extends AST {
   private BreakAST( int d ) { super(null); _d = d; }
   @Override XType _type() { return XCons.VOID; }
   @Override public SB jcode ( SB sb ) {
-    if( _d > 0 ) throw XEC.TODO();
-    return sb.ip("break");
+    return sb.p("break");
   }
 }

@@ -72,7 +72,7 @@ public class BlockAST extends ElvisAST {
     return null;
   }
 
-  @Override void jpre( SB sb ) {
+  @Override public SB jcode( SB sb ) {
     sb.p("{").ii().nl();
     // Print tmps used by enclosing expressions
     if( _tmps!=null ) {
@@ -80,14 +80,20 @@ public class BlockAST extends ElvisAST {
         Ary<String> tmps = _tmps.get(type);
         type.clz(sb.i()).p(" ");
         for( String tmp : tmps )
-          sb.p(tmp).p(", ");
+          sb.p(tmp).p("= ").p(type.ztype()).p(", ");
         sb.unchar(2).p(";").nl();
       }
     }
     if( _finals!=null )
       for( RegAST reg : _finals )
         sb.ifmt("var f$%0 = %0;",reg._name).nl();
+    if( _kids!=null )
+      for( int i=0; i<_kids.length; i++ ) {
+        if( _kids[i]==null ) continue;
+        _kids[i].jcode(sb.i());
+        if( !sb.was_nl() )
+          sb.p(";").nl();
+      }
+    return sb.di().ip("}");
   }
-  @Override void jmid( SB sb, int i ) { if( !sb.was_nl() ) sb.p(";").nl(); }
-  @Override void jpost  ( SB sb ) { sb.di().ip("}"); }
 }

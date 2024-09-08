@@ -75,9 +75,6 @@ public class XClz extends XType {
   static final String[] STR0 = new String[0];
   static final HashMap<XClz,int[]> SIDES0 = new HashMap<>();
 
-  // Force XCons to fill the XType INTERNs
-  public static XClz _FORCE = XCons.JNULL;
-
   // The uniqueness is on these things: package, name, and all type parms.
   public String _pack, _nest, _name; // Package name, nested class name, short name
   public String[] _tns;         // Type names, matching up to _xts, but might be short
@@ -100,7 +97,7 @@ public class XClz extends XType {
   //          XTC Array<Int>  vs Java Arylong
   public  String _jpack, _jname;
 
-  // This is a tempory field; set and cleared per-compilation unit.
+  // This is a temporary field; set and cleared per-compilation unit.
   // If true, in this compilation-unit use the fully qualified name
   // to avoid a name conflict.
   transient public boolean _ambiguous;
@@ -204,10 +201,8 @@ public class XClz extends XType {
   static XClz mallocLen( boolean notNull, String pack, String nest, String name, int len ) {
     XClz clz = mallocBase(notNull,pack,nest,name);
     // See if we can reuse the xts,flds
-    if( clz._xts==null || clz._xts.length != len ) {
-      clz._xts = len==0 ? EMPTY : new XType [len];
-      clz._tns = len==0 ? STR0  : new String[len];
-    }
+    if( clz._xts==null || clz._xts.length != len )  clz._xts = len==0 ? EMPTY : new XType [len];
+    if( clz._tns==null || clz._tns.length != len )  clz._tns = len==0 ? STR0  : new String[len];
     clz._sides = SIDES0;
     return clz;
   }
@@ -760,7 +755,6 @@ public class XClz extends XType {
 
   // "Foo<Value extends Hashable>"
   public SB clz_generic_def( SB sb ) {
-    assert !_ambiguous;
     // No named type arguments
     if( _tns.length==0 ) return sb;
 

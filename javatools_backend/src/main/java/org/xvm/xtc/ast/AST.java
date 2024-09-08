@@ -155,7 +155,7 @@ public abstract class AST {
     // Assigns RHS and Returns LHS might need to box
     XType lhs = _par.reBox(this);
     // Desired flavor is no-change or not-boxed or already isa
-    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) ) return null;
+    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) || lhs.isTuple() ) return null;
     XClz rhs = _type.box();
     if( rhs == null || rhs == _type ) return null; // Always going to the box, so this is a noop
     // Never box to an interface, caller had already better be a boxed implementer
@@ -180,7 +180,7 @@ public abstract class AST {
     if( _kids!=null )
       for( int i=0; i<_kids.length; i++ ) {
         if( _kids[i]==null ) continue;
-        _kids[i].jcode(sb );
+        _kids[i].jcode(sb);
         jmid(sb, i);
       }
     jpost(sb);

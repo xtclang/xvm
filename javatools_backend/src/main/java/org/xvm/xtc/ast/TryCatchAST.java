@@ -51,14 +51,14 @@ class TryCatchAST extends AST {
   @Override XType _type() { return XCons.VOID; }
 
   @Override public SB jcode( SB sb ) {
-    sb.ip("try");
+    sb.p("try");
     if( _xbody > 0 ) {
       sb.p("(");
       for( int i=0; i<_xbody; i++ )
         _kids[i].jcode(sb.p("AUTOCLOSE ")).p(";");
       sb.p(")");
     }
-    sb.p(" {").nl().ii();
+    sb.p(" {").nl().ii().i();
     _kids[_xbody].jcode(sb);
     // 1-line body:            // block-body
     //                         try {

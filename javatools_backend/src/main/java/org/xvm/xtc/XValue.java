@@ -187,6 +187,8 @@ public abstract class XValue {
       ClassPart clz = ttc.clz();
       if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".console()");
+      if( clz._name.equals("Random") && clz._path._str.equals("ecstasy/numbers/Random.x") )
+        yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".random()");
       if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
         yield ASB.p(NativeTimer.make_timer(XClz.make(clz)));
       throw XEC.TODO();

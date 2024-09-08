@@ -60,6 +60,7 @@ class UniOpAST extends AST {
     if( S.eq("!",_pre) )  return _type;
     if( is_elvis() )      return _type;
     if( S.eq("&",_pre) )  return _type;
+    if( S.eq("--",_pre))  return XCons.LONG;
     // Other operators carry through from the child
     return _kids[0]._type;
   }

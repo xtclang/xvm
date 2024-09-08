@@ -29,25 +29,37 @@ public class ReturnAST extends AST {
     // get the type.  Instead, cached here.
     if( _expr !=null )
       return _expr._type;
-    // No returns
+    // No returns; note that you can have children and still be void: "return void_fcn();"
     if( _meth.xrets()==null )
       return XCons.VOID;
     // Conditional returns.  The Java flavor takes the type from the 2nd tuple argument.
     // Note the method might be flagged as having only 1 return type.
     if( _meth.is_cond_ret() ) {
-      // Conditional return, always false, no other returned type
-      if( _kids.length==1 )
-        return XCons.VOID;
-      assert _kids.length==2;
+
       // Report the non-boolean type
-      if( _kids[0] instanceof MultiAST )
-        return _kids[0]._kids[1]._type;
-      // False returns have no other value
+      if( _kids.length==1 ) {
+        // kids[FALSE] -- VOID type
+        if( _kids[0] instanceof ConAST con && S.eq(con._con,"false") )
+          return XCons.VOID;
+        // kids[Multi(True,RETURN)]
+        if( _kids[0] instanceof MultiAST ) {
+          assert _kids[0]._kids.length==2;
+          return _kids[0]._kids[1]._type;
+        }
+        // kids[COND_RETURN_EXPR]
+        return _kids[0]._type;
+      }
+
+      // kids[TRUE,RETURN]
+      // kids[TRUE,RET1,RET2,...,RETN] -- TUPLE return
       assert _kids[0] instanceof ConAST con && S.eq(con._con,"true");
-      return _kids[1]._type;
+      if( _kids.length==2 )
+        return _kids[1]._type;
     }
 
-    // Single normal return
+    // Normal return
+    // kids[RETURN]
+    // kids[RET0,RET1,RET2,...,RETN]
     if( _meth.xrets().length==1 )
       return _meth.xret(0);
 
@@ -74,8 +86,9 @@ public class ReturnAST extends AST {
         ret._cond = true;
         return ret;
       }
-      assert _kids.length==1;
-      cond_rewrite(this,0,_meth.xret(1).ztype());
+      // Try to get a better version for single conditional return
+      if( _kids.length==1 )
+        cond_rewrite(this,0,_meth.xret(1).ztype());
     }
     return null;
   }
@@ -112,5 +125,16 @@ public class ReturnAST extends AST {
   // Box as needed
   @Override XType reBox( AST kid ) { return _kids[0]==kid ? _type : null; }
 
-  @Override public void jpre( SB sb ) { sb.p("return "); }
+  @Override public void jpre( SB sb ) {
+    sb.p("return ");
+    if( _kids!=null && _kids.length>= 2 ) sb.p("( ");
+  }
+  @Override public void jmid( SB sb, int i ) { sb.p(", "); }
+  @Override public void jpost( SB sb ) {
+    if( _kids!=null ) {
+      sb.unchar(2);
+      if( _kids.length >= 2 ) sb.p(" )");
+    }
+  }
+
 }

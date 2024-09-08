@@ -4,7 +4,7 @@ import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.util.SB;
 
-class ForStmtAST extends AST {
+class ForStmtAST extends ForAST {
   // _kids[0] == init
   // _kids[1] == cond
   // _kids[2] == next
@@ -19,17 +19,11 @@ class ForStmtAST extends AST {
     kids[3] = ast(X);           // body
     return new ForStmtAST(kids);
   }
-  private ForStmtAST( AST[] kids ) { super(kids); }
-
-  @Override boolean is_loopswitch() { return true; }
-
-  @Override XType _type() { return XCons.VOID; }
+  private ForStmtAST( AST[] kids ) { super(kids,4); }
 
   @Override public SB jcode( SB sb ) {
-    if( sb.was_nl() ) sb.i();
-    for( int i=4; i<_kids.length; i++ )
-      _kids[i].jcode(sb).nl().i(); // Special regs
     // for( init; cond; update ) body
+    if( _label!=null ) sb.p(_label).p(":").nl().i();
     _kids[0].jcode(sb.p("for( ")); // for( init
     _kids[1].jcode(sb.p("; "   )); // for( init; cond
     _kids[2].jcode(sb.p("; "   )); // for( init; cond; next

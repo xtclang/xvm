@@ -167,7 +167,7 @@ public class ClzBuilder {
     _sb.ip("public ");
     if( _tclz._abstrct ) _sb.p("abstract ");
     if( !_is_top ) _sb.p("static ");
-    _sb.p(jpart).p(_tclz.name());
+    _sb.p(jpart).p(_tclz.clz_bare());
     _tclz.clz_generic_def(_sb).p(" ");
 
     // ... extends Const/XTC/etc
@@ -775,10 +775,9 @@ public class ClzBuilder {
 
   public static void add_import( String s ) { IMPORTS.add(s); }
 
-  static XClz add_nested( XClz xclz ) {
-    return xclz._did_gen || NESTED.find(xclz)!=-1
-            ? xclz
-            : NESTED.push(xclz);
+  static void add_nested( XClz xclz ) {
+    if( !xclz._did_gen && NESTED.find( xclz ) == -1 )
+      NESTED.push( xclz );
   }
 
   // --------------------------------------------------------------------------
@@ -844,6 +843,9 @@ public class ClzBuilder {
 
   // Name mangle for java rules
   public static String jname( String name ) {
+    // Replace "." with "_" e.g. Loop.count becomes Loop_count
+    if( name.contains( "." ) )
+      name = name.replace(".","_");
     // Mangle names colliding with java keywords
     return switch( name ) {
     case "default", "assert", "char", "int" -> name+"0";

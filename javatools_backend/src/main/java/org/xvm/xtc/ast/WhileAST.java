@@ -45,10 +45,9 @@ class WhileAST extends AST {
   }
 
   @Override public SB jcode( SB sb ) {
-    if( sb.was_nl() ) sb.i();
     // while( cond ) body;
     _kids[0].jcode(sb.p("while( "));
-    _kids[1].jcode(sb.p(" ) ").nl().ii()).di();
+    _kids[1].jcode(sb.p(" ) "));
     return sb;
   }
 }

@@ -120,6 +120,7 @@ public class InvokeAST extends AST {
       case "shiftAllRight"-> llbin( ">>>" );
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
+      case "exTo" -> BinOpAST.do_range( _kids, XCons.RANGEEI );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
       case "valueOf", "equals", "toInt128", "estimateStringLength", "abs" ->
         new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
