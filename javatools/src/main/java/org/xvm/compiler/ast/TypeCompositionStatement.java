@@ -1651,6 +1651,12 @@ public class TypeCompositionStatement
     public void resolveNames(StageMgr mgr, ErrorListener errs)
         {
         ClassStructure component = (ClassStructure) getComponent();
+        if (component == null)
+            {
+            // there must've been an error already reported
+            assert errs.hasSeriousErrors();
+            return;
+            }
 
         // all of the contributions need to be resolved before we can proceed (because we're
         // going to have to "follow" those contributions
