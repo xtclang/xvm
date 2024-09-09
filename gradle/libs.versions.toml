@@ -41,6 +41,7 @@ tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
 sonatype-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "sonatype-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+jreleaser = { id = "org.jreleaser", version = "1.14.0" }
 
 [libraries]
 xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }

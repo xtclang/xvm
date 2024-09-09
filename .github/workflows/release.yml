@@ -1,0 +1,58 @@
+name: Build, Release, and Publish
+
+on:
+  workflow_dispatch: # Allows manual triggering from GitHub Actions UIon:
+  push:
+    branches:
+      - simplify-tasks
+
+jobs:
+  build:
+    name: Build and Create Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # Cross platform build.
+        # The existing binary launchers are for windowx x64, linux x64 and macos multi-binary x64/aarch64
+        # Hence, we can get away with skipping the "arch" filter, I tbink, as long as we don't use the
+        # jreelaser templates.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        #arch: [x64, arm64]
+        #exclude:
+       #   - os: windows-latest
+       #     arch: arm64
+       #   - os: linux-latest
+       #     arch: arm64
+       #   -
+       #   - os: mac-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      - name: Read VERSION file
+        id: read_version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
+            echo "This is a SNAPSHOT version. Skipping release."
+            exit 0
+
+      - name: Build distribution with Gradle
+        run: | 
+          ./gradlew xdk:wthLaunchersDistTar
+          ./gradlew xdk:withLaunchersDistZip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          path: |
+            xdk/distributions/xdk*${{ matrix.os }}*.zip
