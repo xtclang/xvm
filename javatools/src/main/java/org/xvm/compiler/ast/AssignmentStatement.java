@@ -557,23 +557,30 @@ public class AssignmentStatement
                         //      Int i = svc.f^();
                         // into
                         //      @Future Int i = svc.f^();
-                        Argument argLeft = ctxLValue.getVar(exprName.getName());
-                        if (argLeft instanceof Register regLeft)
-                            {
-                            TypeConstant typeRef = regLeft.ensureRegType(false);
-
-                            if (!typeRef.containsAnnotation(pool.clzFuture()))
-                                {
-                                regLeft.specifyRegType(pool.ensureAnnotatedTypeConstant(
-                                        typeRef, pool.ensureAnnotation(pool.clzFuture())));
-                                }
-                            }
+                        addFutureAnnotation(ctxLValue, exprName);
                         }
                     }
                 else
                     {
                     // (LVal0, LVal1, ..., LValN) = RVal
                     exprRightNew = exprRight.validateMulti(ctxRValue, exprLeft.getTypes(), errs);
+
+                    if (exprRight instanceof InvocationExpression exprInvoke && exprInvoke.isAsync() &&
+                            exprLeft instanceof MultipleLValueStatement.MultipleLValueExpression exprLMulti)
+                        {
+                        // if all LValues are variables (registers), auto-convert their types to
+                        // @Future registers, e.g.
+                        //      (Int i, Int i2) = svc.f^();
+                        // into
+                        //      (@Future Int i, @Future Int) i = svc.f^();
+                        for (Expression expr : exprLMulti.ensureExpressions())
+                            {
+                            if (expr instanceof NameExpression exprName)
+                                {
+                                addFutureAnnotation(ctxLValue, exprName);
+                                }
+                            }
+                        }
                     }
 
                 merge(ctxRValue, ctxLValue);
@@ -736,6 +743,22 @@ public class AssignmentStatement
             }
 
         return this;
+        }
+
+    private void addFutureAnnotation(Context ctxLValue, NameExpression exprName)
+        {
+        Argument argLeft = ctxLValue.getVar(exprName.getName());
+        if (argLeft instanceof Register regLeft)
+            {
+            ConstantPool pool    = pool();
+            TypeConstant typeRef = regLeft.ensureRegType(false);
+
+            if (!typeRef.containsAnnotation(pool.clzFuture()))
+                {
+                regLeft.specifyRegType(pool.ensureAnnotatedTypeConstant(
+                        typeRef, pool.ensureAnnotation(pool.clzFuture())));
+                }
+            }
         }
 
     @Override
