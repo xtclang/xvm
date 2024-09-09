@@ -9,26 +9,29 @@ on:
 jobs:
   build:
     name: Build and Create Release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
+    runs-on: [ ubuntu-latest ]
+    #runs-on: ${{ matrix.os }}
+    #strategy:
+    #  matrix:
+    #    os: [ubuntu-latest, windows-latest, macos-latest]
         # Cross platform build.
         # The existing binary launchers are for windowx x64, linux x64 and macos multi-binary x64/aarch64
         # Hence, we can get away with skipping the "arch" filter, I tbink, as long as we don't use the
         # jreelaser templates.
-        os: [ubuntu-latest, windows-latest, macos-latest]
         #arch: [x64, arm64]
         #exclude:
-       #   - os: windows-latest
-       #     arch: arm64
-       #   - os: linux-latest
-       #     arch: arm64
-       #   -
-       #   - os: mac-latest
+        #   - os: windows-latest
+        #     arch: arm64
+        #   - os: linux-latest
+        #     arch: arm64
+        #   -
+        #   - os: mac-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          show-progress: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -38,7 +41,9 @@ jobs:
 
       - name: Read VERSION file
         id: read_version
+        shell: bash
         run: |
+          cat VERSION
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
