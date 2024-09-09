@@ -1264,8 +1264,9 @@ public class LambdaExpression
 
                     regCapture = regCapture.getOriginalRegister(); // remove any inferences
 
-                    boolean fAllowRefCapture = regCapture.isVar() &&
-                            regCapture.ensureRegType(true).isA(pool.clzVolatile().getType());
+                    boolean      fVar             = regCapture.isVar();
+                    TypeConstant typeVar          = fVar ? regCapture.ensureRegType(true) : null;
+                    boolean      fAllowRefCapture = fVar && typeVar.isA(pool.clzVolatile().getType());
                     if (entry.getValue())
                         {
                         // it's a read/write capture; capture the Var
@@ -1273,24 +1274,26 @@ public class LambdaExpression
                             {
                             log(errs, Severity.ERROR, Compiler.WRITEABLE_CAPTURE, sCapture);
                             }
-                        typeCapture = regCapture.isVar()
-                                ? regCapture.ensureRegType(true)
+                        typeCapture = fVar
+                                ? typeVar
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, null, Op.A_STACK);
                         code.add(new MoveVar(regVal, regVar));
-                        regCapture = regVar;
+                        regCapture     = regVar;
                         fImplicitDeref = true;
 
                         aAstBind[iParam] = new UnaryOpExprAST(
                                 regVal.getRegisterAST(), Operator.Var, typeCapture);
                         }
-                    else if (fAllowRefCapture && !regCapture.isEffectivelyFinal())
+                    else if (fVar && !typeVar.isA(pool.clzInject().getType()) ||
+                            !regCapture.isEffectivelyFinal() && fAllowRefCapture)
                         {
-                        // it's a read-only capture, but since we were unable to prove that the
-                        // register was effectively final, we need to capture the Ref
-                        typeCapture = regCapture.isVar()
-                                ? regCapture.ensureRegType(true)
+                        // we have a read-only non-injected capture; if it's a Var already, use that
+                        // type; otherwise, since we were unable to prove that the register was
+                        // effectively final, we need to capture the Ref implicitly
+                        typeCapture = fVar
+                                ? typeVar
                                 : pool.ensureParameterizedTypeConstant(pool.typeVar(), typeCapture);
                         Register regVal = regCapture;
                         Register regVar = new Register(typeCapture, null, Op.A_STACK);
