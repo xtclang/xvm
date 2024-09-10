@@ -52,12 +52,13 @@ jobs:
 
       - name: Build distribution with Gradle
         run: | 
-          ./gradlew xdk:wthLaunchersDistTar
+          ./gradlew xdk:withLaunchersDistTar
           ./gradlew xdk:withLaunchersDistZip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.os }}
-          path: |
-            xdk/distributions/xdk*${{ matrix.os }}*.zip
+          name: xdk-${{ env.VERSION }}-linux.tar.gz
+          path: xdk/distributions/xdk*linux*.tar.gz
+          #name: build-${{ matrix.os }}
+          #path: xdk/distributions/xdk*${{ matrix.os }}*.zip
