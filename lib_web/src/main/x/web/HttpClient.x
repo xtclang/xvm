@@ -87,7 +87,7 @@ const HttpClient
                     exception = e;
                 }
             }
-            &response.completeExceptionally(exception ?: assert); // TODO GG: unnecessary assert
+            &response.completeExceptionally(exception);
         });
         return response;
     }

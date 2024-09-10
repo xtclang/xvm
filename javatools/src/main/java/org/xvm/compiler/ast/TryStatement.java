@@ -205,27 +205,29 @@ public class TryStatement
             // prevents any narrowing assumptions from "catch" scopes percolating up to the original
             // context
 
-            Context ctxNext = new Context.IfContext(ctxOrig)
-                {
-                @Override
-                protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
+            boolean fReachable = ctxTryBlock.isReachable();
+            Context ctxNext    = fReachable
+                ? new Context.IfContext(ctxOrig)
                     {
-                    // this is only called when the context is reachable; since the exception may or
-                    // may not happen, we need to restore the original type
-                    if (!isVarDeclaredInThisScope(sName))
+                    @Override
+                    protected void promoteNarrowedType(String sName, Argument arg, Branch branch)
                         {
-                        getOuterContext().restoreOriginalType(sName);
+                        // this is only called when the "try" context is reachable; since the
+                        // exception may or may not happen, we need to restore the original type
+                        if (!isVarDeclaredInThisScope(sName))
+                            {
+                            getOuterContext().restoreOriginalType(sName);
+                            }
+                        }
+
+                    @Override
+                    protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant type,
+                                                              Branch branch)
+                        {
                         }
                     }
+                : new Context.IfContext(ctxOrig);
 
-                @Override
-                protected void promoteNarrowedGenericType(FormalConstant constFormal, TypeConstant type,
-                                                          Branch branch)
-                    {
-                    }
-                };
-
-            boolean fReachable = ctxTryBlock.isReachable();
             if (fReachable)
                 {
                 ctxNext.merge(mapTryAsn);
