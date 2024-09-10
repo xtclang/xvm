@@ -52,9 +52,9 @@ const RestrictedClient(Client underlying)
     Registry registry.get() = underlying.registry;
 
     @Override
-    ResponseIn send(RequestOut request, PasswordCallback? callback = Null) {
+    ResponseIn send(RequestOut request, PasswordCallback? callback = Null, Int redirectLimit = 16) {
         return allowed(request.uri)
-                ? underlying.send(request, callback)
+                ? underlying.send(request, callback, redirectLimit)
                 : new responses.SimpleResponse(Forbidden);
     }
 

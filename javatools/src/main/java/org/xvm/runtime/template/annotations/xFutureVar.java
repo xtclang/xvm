@@ -924,20 +924,19 @@ public class xFutureVar
             {
             CompletableFuture<ObjectHandle> cf = getFuture();
 
-            if (cf.isDone())
+            if (!cf.isDone())
                 {
-                return Op.R_NEXT;
+                if (hException == null)
+                    {
+                    assert hValue != null;
+                    cf.complete(hValue);
+                    }
+                else
+                    {
+                    cf.completeExceptionally(hException.getException());
+                    }
                 }
-
-            if (hException == null)
-                {
-                assert hValue != null;
-                cf.complete(hValue);
-                return Op.R_NEXT;
-                }
-
-            cf.completeExceptionally(hException.getException());
-            return Op.R_EXCEPTION;
+            return Op.R_NEXT;
             }
 
         /**

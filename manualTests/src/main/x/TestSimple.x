@@ -1,20 +1,21 @@
 module TestSimple {
+    @Inject Console console;
 
-    void run() {
-        @Inject Console console;
+    package web import web.xtclang.org;
 
-        (Int x2, Int y2) = new Test().test2^();
-        assert !&x2.assigned;
+    import web.*;
 
-        &x2.whenComplete((r, e) -> {
-            console.print($"{x2=} {y2=}");
-        });
-        assert !&x2.assigned; // used to fail
-    }
+    void run(String[] args=["http://localhost"]) {
+        HttpClient client = new HttpClient();
 
-    service Test {
-        (Int, Int) test2() {
-            return 42, 43;
-        }
+        String uri = args[0] + "/hello";
+
+        ResponseIn response1 = client.get^(uri);
+        &response1.whenComplete((r, e) -> console.print($"GET: {e==Null ? r : e}"));
+        assert !&response1.assigned; // this used to fail
+
+        ResponseIn response2 = client.delete^(uri);
+        &response2.whenComplete((r, e) -> console.print($"DELETE: {e==Null ? r : e}"));
+        assert !&response2.assigned;  // this used to fail
     }
 }

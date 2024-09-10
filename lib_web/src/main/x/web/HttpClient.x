@@ -40,7 +40,7 @@ const HttpClient
     }
 
     @Override
-    ResponseIn send(RequestOut request, PasswordCallback? callback = Null) {
+    ResponseIn send(RequestOut request, PasswordCallback? callback = Null, Int redirectLimit = 16) {
         List<Entry> entries = request.header.entries;
 
         Int      headerCount  = entries.size;
@@ -52,98 +52,134 @@ const HttpClient
             headerNames  += entry[0];
             headerValues += entry[1];
         }
+        headerNames .freeze(inPlace=True);
+        headerValues.freeze(inPlace=True);
 
-        String  method    = request.method.name;
-        Uri     uri       = request.uri;
-        Byte[]  bytes     = request.body?.bytes : [];
+        return sendAsync^(request, request.uri, headerNames, headerValues, callback,
+                          redirectLimit, 0);
+    }
 
-        // TODO: allow these to be configurable
-        Boolean autoRedirect = True;
-        Int     retryLimit   = 8;
+    /**
+     * Send the request asynchronously (non-blocking).
+     */
+    private ResponseIn sendAsync(RequestOut request, Uri uri,
+            String[] headerNames, String[] headerValues, PasswordCallback? callback,
+            Int redirectLimit, Int redirectCount) {
 
-        for (Int retryCount = 0; True; retryCount++) {
-            (Int      statusCode,
-             String[] responseHeaderNames,
-             String[] responseHeaderValues,
-             Byte[]   responseBytes) =
-                connector.sendRequest(method, uri.toString(), headerNames, headerValues, bytes);
+        (Int      statusCode,
+         String[] responseHeaderNames,
+         String[] responseHeaderValues,
+         Byte[]   responseBytes) =
+            connector.sendRequest^(request.method.name, uri.toString(),
+                                   headerNames, headerValues, request.body?.bytes : []);
 
-            if (autoRedirect && 300 <= statusCode < 400 && retryCount < retryLimit,
-                    Int index := responseHeaderNames.indexOf("Location")) {
-                Uri redirect = new Uri(responseHeaderValues[index]);
-                uri = uri.apply(redirect);
-                continue;
+        @Future ResponseIn response;
+        &statusCode.whenComplete((status, exception) -> {
+            if (exception == Null) {
+                assert status != Null;
+                try {
+                    response = processResponse(
+                            status, request, headerNames, headerValues, callback,
+                            redirectLimit, redirectCount,
+                            responseHeaderNames, responseHeaderValues, responseBytes);
+                    return;
+                } catch (Exception e) {
+                    exception = e;
+                }
             }
+            &response.completeExceptionally(exception ?: assert); // TODO GG: unnecessary assert
+        });
+        return response;
+    }
 
-            HttpStatus status = HttpStatus.of(statusCode);
-            Authorize:
-            if (status == Unauthorized && retryCount < retryLimit,
-                Int challengeIx := responseHeaderNames.indexOf(
-                        CaseInsensitive.areEqual(_, "WWW-Authenticate"))) {
+    private ResponseIn processResponse(Int statusCode, RequestOut request,
+            String[] headerNames, String[] headerValues, PasswordCallback? callback,
+            Int redirectLimit, Int redirectCount,
+            String[] responseHeaderNames, String[] responseHeaderValues, Byte[] responseBytes) {
 
-                // RFC 9110 allows for multiple challenges - see section 11.6.1 WWW-Authenticate
-                // https://datatracker.ietf.org/doc/html/rfc9110#name-authenticating-users-to-ori
-                // For now, however, we assume a single challenge, which is either "Basic" or
-                // "Digest"
-                String challenge = responseHeaderValues[challengeIx];
+        String  method = request.method.name;
+        Uri     uri    = request.uri;
+        Byte[]  bytes  = request.body?.bytes : [];
 
-                enum Auth {Basic, Digest}
-
-                Auth authMethod;
-                Int  realmIndex;
-                if (challenge.startsWith("Basic ")) {
-                    authMethod = Basic;
-                    realmIndex = 6; // "Basic ".size;
-                } else if (challenge.startsWith("Digest ")) {
-                    authMethod = Digest;
-                    realmIndex = 7; // "Digest ".size;
-                } else {
-                    break Authorize;
-                }
-
-                Map<String, String> props = challenge.substring(realmIndex).splitMap();
-                String              realm;
-                if (!(realm := props.get("realm"))) {
-                    break Authorize;
-                }
-
-                realm := realm.unquote();
-
-                String name;
-                String password;
-                if (String userInfo ?= uri.user, Int delim := userInfo.indexOf(':')) {
-                    name     = userInfo[0 ..< delim];
-                    password = userInfo[delim >..< userInfo.size];
-                } else if (callback != Null) {
-                    (name, password) = callback(realm);
-                } else {
-                    break Authorize;
-                }
-
-                String authorization;
-                switch (authMethod) {
-                case Basic:
-                    authorization = authorizeBasic(name, password);
-                    break;
-
-                case Digest:
-                    if (authorization :=
-                            authorizeDigest(request, realm, name, password, retryCount, props)) {
-                        break;
-                    } else {
-                        break Authorize;
-                    }
-                }
-
-                headerNames  += "Authorization";
-                headerValues += authorization;
-                continue; // resend the request with the "Authorization" header
-            }
-
-            Header     responseHeader = new ResponseHeader(responseHeaderNames, responseHeaderValues);
-            ResponseIn response       = new Response(registry, status, &responseHeader.maskAs(Header), responseBytes);
-            return &response.maskAs(ResponseIn);
+        if (300 <= statusCode < 400 && redirectCount < redirectLimit,
+                Int index := responseHeaderNames.indexOf("Location")) {
+            Uri redirect = new Uri(responseHeaderValues[index]);
+            uri = uri.apply(redirect);
+            return sendAsync^(request, uri, headerNames, headerValues, callback,
+                              redirectLimit, redirectCount + 1);
         }
+
+        HttpStatus status = HttpStatus.of(statusCode);
+        Authorize:
+        if (status == Unauthorized && redirectCount < redirectLimit,
+            Int challengeIx := responseHeaderNames.indexOf(
+                    CaseInsensitive.areEqual(_, "WWW-Authenticate"))) {
+
+            // RFC 9110 allows for multiple challenges - see section 11.6.1 WWW-Authenticate
+            // https://datatracker.ietf.org/doc/html/rfc9110#name-authenticating-users-to-ori
+            // For now, however, we assume a single challenge, which is either "Basic" or
+            // "Digest"
+            String challenge = responseHeaderValues[challengeIx];
+
+            enum Auth {Basic, Digest}
+
+            Auth authMethod;
+            Int  realmIndex;
+            if (challenge.startsWith("Basic ")) {
+                authMethod = Basic;
+                realmIndex = 6; // "Basic ".size;
+            } else if (challenge.startsWith("Digest ")) {
+                authMethod = Digest;
+                realmIndex = 7; // "Digest ".size;
+            } else {
+                break Authorize;
+            }
+
+            Map<String, String> props = challenge.substring(realmIndex).splitMap();
+            String              realm;
+            if (!(realm := props.get("realm"))) {
+                break Authorize;
+            }
+
+            realm := realm.unquote();
+
+            String name;
+            String password;
+            if (String userInfo ?= uri.user, Int delim := userInfo.indexOf(':')) {
+                name     = userInfo[0 ..< delim];
+                password = userInfo[delim >..< userInfo.size];
+            } else if (callback != Null) {
+                (name, password) = callback(realm);
+            } else {
+                break Authorize;
+            }
+
+            String authorization;
+            switch (authMethod) {
+            case Basic:
+                authorization = authorizeBasic(name, password);
+                break;
+
+            case Digest:
+                if (authorization :=
+                        authorizeDigest(request, realm, name, password, 1, props)) {
+                    break;
+                } else {
+                    break Authorize;
+                }
+            }
+
+            headerNames  += "Authorization";
+            headerValues += authorization;
+
+            // resend the request with the "Authorization" header; no further redirects are allowed
+            return sendAsync^(request, uri, headerNames, headerValues, callback,
+                              redirectLimit, redirectLimit);
+        }
+
+        Header     responseHeader = new ResponseHeader(responseHeaderNames, responseHeaderValues);
+        ResponseIn response       = new Response(registry, status, &responseHeader.maskAs(Header), responseBytes);
+        return &response.maskAs(ResponseIn);
     }
 
     /**

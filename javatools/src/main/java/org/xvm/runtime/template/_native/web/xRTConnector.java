@@ -63,6 +63,8 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate;
 import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.ByteArrayHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.StringArrayHandle;
 
+import org.xvm.runtime.template._native.reflect.xRTFunction;
+
 import org.xvm.util.ListMap;
 import org.xvm.util.TransientThreadLocal;
 
@@ -188,9 +190,15 @@ public class xRTConnector
                 return invokeGetDefaultHeaders(frame, aiReturn);
 
             case "sendRequest":
-                return invokeSendRequest(frame, (ConnectorHandle) hTarget, (StringHandle) ahArg[0],
-                    (StringHandle) ahArg[1], (ArrayHandle) ahArg[2], (ArrayHandle) ahArg[3],
-                    (ArrayHandle) ahArg[4], aiReturn);
+                {
+                ConnectorHandle hConnector = (ConnectorHandle) hTarget;
+                return frame.f_context == hConnector.f_context
+                        ? invokeSendRequest(frame, hConnector, (StringHandle) ahArg[0],
+                            (StringHandle) ahArg[1], (ArrayHandle) ahArg[2],
+                            (ArrayHandle) ahArg[3], (ArrayHandle) ahArg[4], aiReturn)
+                        : xRTFunction.makeAsyncNativeHandle(method).
+                            callN(frame, hConnector, ahArg, aiReturn);
+                }
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);

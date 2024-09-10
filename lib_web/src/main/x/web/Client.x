@@ -82,7 +82,7 @@ interface Client {
      */
     ResponseIn get(String | Uri uri) {
         RequestOut request = createRequest(GET, uri.is(String) ? new Uri(uri) : uri);
-        return send(request);
+        return send^(request);
     }
 
     /**
@@ -96,7 +96,7 @@ interface Client {
      */
     ResponseIn put(String | Uri uri, Object content, MediaType? mediaType=Null) {
         RequestOut request = createRequest(PUT, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
-        return send(request);
+        return send^(request);
     }
 
     /**
@@ -111,7 +111,7 @@ interface Client {
      */
     ResponseIn post(String | Uri uri, Object content, MediaType? mediaType=Null) {
         RequestOut request = createRequest(POST, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
-        return send(request);
+        return send^(request);
     }
 
     /**
@@ -123,7 +123,7 @@ interface Client {
      */
     ResponseIn delete(String | Uri uri) {
         RequestOut request = createRequest(DELETE, uri.is(String) ? new Uri(uri) : uri);
-        return send(request);
+        return send^(request);
     }
 
 
@@ -166,16 +166,19 @@ interface Client {
     /**
      * Send a request.
      *
-     * @param request   the request to send
-     * @param callback  (optional) a function that provides used name and password if authentication
-     *                  is required
+     * @param request        the request to send
+     * @param callback       (optional) a function that provides used name and password if authentication
+     *                       is required
+     * @param redirectLimit  (optional) the maximum number of times the request can be resent to a
+     *                       new location if the server reports that the requested page has moved;
+     *                       pass zero to disable the redirects altogether
      *
      * @return the response
      *
      * @throws TimedOut   if the request has timed out
      * @throws Exception  if the request failed to be sent or get a response for any other reason
      */
-    ResponseIn send(RequestOut request, PasswordCallback? callback = Null);
+    ResponseIn send(RequestOut request, PasswordCallback? callback = Null, Int redirectLimit = 16);
 
     /**
      * Represents a low-level web Connector.
