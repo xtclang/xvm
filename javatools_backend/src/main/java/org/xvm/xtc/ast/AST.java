@@ -232,6 +232,7 @@ public abstract class AST {
     case DivRemExpr   ->   DivRemAST.make(X);
     case DoWhileStmt  ->  DoWhileAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
+    case ForMapStmt   -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForIterableStmt -> ForIterStmtAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);

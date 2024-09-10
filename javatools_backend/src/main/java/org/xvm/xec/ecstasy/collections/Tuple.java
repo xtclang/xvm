@@ -117,7 +117,7 @@ public interface Tuple extends Cloneable {
     for( int i=0; i<N; i++ ) {
       XType xt = xtt._xts[i];
       XType box = xt.box();
-      sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box==null ? xt.clz() : box.clz(),xt==box || xt==null?"":"._i");
+      sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box==null ? xt.clz() : box.clz(),xt==box ?"":"._i");
     }
 
     // public static boolean equals$Tuple3$...(XTC gold, Tuple0, t0, Tuple0 t1)...
@@ -128,8 +128,7 @@ public interface Tuple extends Cloneable {
       XType xt = xtt._xts[i];
       xt.do_eq(sb.p("x0._f"+i), "x1._f"+i).p(" && ");
     }
-    if( N>0 ) sb.unchar(4);
-    else sb.p("true");
+    sb.unchar(4);
     sb.p(";\n").di();
     sb.ip("}\n");
 

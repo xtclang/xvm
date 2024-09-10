@@ -288,6 +288,7 @@ public abstract class XCons {
 
   public static XClz make_tuple( XType... clzs ) {
     XClz clz = XClz.mallocLen(true,"ecstasy.collections","","Tuple",clzs.length);
+    clz._tns = new String[clzs.length];
     for( int i=0; i<clzs.length; i++ )
       clz._tns[i] = (""+i).intern();
     clz._xts = clzs;
