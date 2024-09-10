@@ -72,21 +72,7 @@ public class AnnotatedTypeConstant
             throw new IllegalArgumentException("annotated type required");
             }
 
-        switch (constType.getFormat())
-            {
-            case TerminalType:
-            case VirtualChildType:
-            case InnerChildType:
-            case ParameterizedType:
-            case AnnotatedType:
-            case AnonymousClassType:
-            case UnresolvedType:
-                break;
-
-            default:
-                throw new IllegalArgumentException("Invalid format: " + constType);
-            }
-
+        // the applicability of the annotated class will be checked by the "validate" method
         m_annotation = pool.ensureAnnotation(constClass, aconstParam);
         m_constType  = constType;
         }
@@ -112,6 +98,7 @@ public class AnnotatedTypeConstant
             throw new IllegalArgumentException("annotated type required");
             }
 
+        // the applicability of the annotated type will be checked by the "validate" method
         m_annotation = annotation;
         m_constType  = constType;
         }

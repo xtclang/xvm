@@ -57,9 +57,9 @@ public class Parameter
     @Override
     public long getStartPosition()
         {
-        return type == null
-                ? name.getStartPosition()
-                : Math.min(type.getStartPosition(), name.getStartPosition());
+        return type == null ? name.getStartPosition() :
+               name == null ? type.getStartPosition() :
+                              Math.min(type.getStartPosition(), name.getStartPosition());
         }
 
     @Override

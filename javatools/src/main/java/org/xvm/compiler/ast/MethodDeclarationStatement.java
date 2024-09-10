@@ -891,7 +891,10 @@ public class MethodDeclarationStatement
             TypeConstant typeRet = (aReturns[0].isConditionalReturn()
                     ? aReturns[1]
                     : aReturns[0]).getType();
-            typeRet.validate(errs);
+
+            ErrorListener errsTemp = errs.branch(returns == null ? this : returns.get(0));
+            typeRet.validate(errsTemp);
+            errsTemp.merge();
             }
         }
 
