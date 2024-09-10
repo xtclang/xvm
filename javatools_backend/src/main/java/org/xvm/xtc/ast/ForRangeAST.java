@@ -33,7 +33,7 @@ class ForRangeAST extends ForAST {
     super.rewrite();
     // Primitive iterator?
     // Get a tmp
-    if( _kids[0]._type.zero() ) {
+    if( _kids[0]._type.zero() && !(_kids[0] instanceof MultiAST) ) {
       if( _kids[1]._type instanceof XClz xclz )
         ClzBuilder.add_import(xclz);
       _prim_iter = enclosing_block().add_tmp(_kids[1]._type);
@@ -48,15 +48,16 @@ class ForRangeAST extends ForAST {
       _kids[0].jcode(sb.p("for( "));
       _kids[1].jcode(sb.p(" : "  ));
       sb.p(" ) ");
-    } else {
+    } else if( _kids[0] instanceof DefRegAST def ) {
       // Range tmp = new XRange(1,100);
       // Label: for( long x = tmp._lo; x < tmp._hi; x++ )
       sb.p(_prim_iter).p(" = ");
       _kids[1].jcode(sb).p(";").nl().i();
       if( _label!=null ) sb.p(_label).p(":  ");
-      DefRegAST def = (DefRegAST)_kids[0];
       def._type.clz(sb.p("for( "));
       sb.fmt(" %0 = %1._start; %1.in(%0); %0 += %1._incr ) ",def._name,_prim_iter);
+    } else {
+      throw XEC.TODO();
     }
     // Body
     _kids[2].jcode(sb);

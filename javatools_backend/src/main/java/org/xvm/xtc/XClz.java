@@ -297,7 +297,8 @@ public class XClz extends XType {
         case Part.Composition.Annotation:
           ClassPart annot = ((ClassCon)c._annot._par).clz();
           if( annot._name.equals("Abstract") ) { abstrct = true; break; }
-          else  throw XEC.TODO();
+          else if( annot._name.equals("Override") ) { break; } // Ignore overrides
+          else throw XEC.TODO();
 
         case Part.Composition.Into:
           // Don't ask for the base, because the base is asking for the mixin!
@@ -390,10 +391,9 @@ public class XClz extends XType {
     if( _sides == SIDES0 ) _sides = new HashMap<>();
     // Setup a side array from the base type to its parameterized version
     XClz pclz = (XClz)xtype(ptc,true);
-    assert ptc._parms.length==pclz._tns.length;
-    int[] idxs = new int[pclz._tns.length];
+    int[] idxs = new int[ptc._parms.length];
     // Walk the parameterized types; refer back to the class's types
-    for( int i=0; i<pclz._tns.length; i++ ) {
+    for( int i=0; i<ptc._parms.length; i++ ) {
       String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
       int idx = S.find(tnames,pname); // Matches a clz name, uses that type
       if( idx == -1 ) {                    // No match, add an entry
@@ -403,6 +403,7 @@ public class XClz extends XType {
       idxs[i] = idx;
     }
     _sides.put(pclz,idxs);
+    //assert ptc._parms.length==pclz._tns.length;
   }
 
   // Made from XTC class.

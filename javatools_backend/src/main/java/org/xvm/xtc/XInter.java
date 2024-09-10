@@ -22,9 +22,9 @@ public class XInter extends XType {
   }
   @Override SB _clz( SB sb, ParamTCon ptc ) {
     if( ptc != null ) throw XEC.TODO();
-    sb.p("Inter[");
-    _xts[0]._clz(sb,ptc).p(",");
-    _xts[1]._clz(sb,ptc).p("]");
+    sb.p("Inter_");
+    _xts[0]._clz(sb,ptc).p("_");
+    _xts[1]._clz(sb,ptc).p("");
     return sb;
   }
   @Override boolean eq(XType xt) { return true; }
