@@ -146,12 +146,11 @@ public class ClzBuilder {
       return;
     }
 
-    // If this is a normal incorp "mixin<-base" class, make sure the mixin happens
-    if( _tclz._super!=null && _tclz._super._clz._f == Part.Format.MIXIN )
-      add_nested(_tclz._super);
-    // If this is a conditional incorp "base<-mixing" class, make sure the base happens
-    if( _tclz._clz._f == Part.Format.MIXIN && _tclz._super!=null )
-      add_nested(_tclz._super);
+    if( _tclz._super!=null )
+      // If this is a normal incorp "mixin<-base" class, make sure the mixin happens
+      if( _tclz.       _clz._f == Part.Format.MIXIN ||
+          _tclz._super._clz._f == Part.Format.MIXIN )
+        if( _tclz._clz._par instanceof MethodPart ) add_nested(_tclz._super ); else add_import(_tclz._super);
 
     // Actually start emitting class headers
     String java_class_name = _tclz._name;
@@ -213,7 +212,7 @@ public class ClzBuilder {
     if( !is_iface ) {
       if( !_tclz._abstrct )
         _sb.ifmt("public static final %0 GOLD = new %0((Never)null);\n",java_class_name);
-      _sb.ifmt("private %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
+      _sb.ifmt("protected %0(Never n){super(n);} // A no-arg-no-work constructor\n",java_class_name);
     }
 
     // Force native methods to now appear, so signature matching can assume a
@@ -482,15 +481,6 @@ public class ClzBuilder {
     _sb.di().ip("}").nl();
     if( !_is_top )
       _sb.ip("//-----------------").nl();
-
-    // If this is a base class with conditional mixins, recursively output them now.
-    if( _clz._contribs!=null )
-      for( Contrib c : _clz._contribs )
-        if( c._comp==Part.Composition.Incorporates && c._parms != null ) {
-
-          //new ClzBuilder(_tmod,THE_MIXED_BASE,_sbhead,_sb).jclass_body();
-          //throw XEC.TODO();
-        }
   }
 
   private boolean is_runclz() {
@@ -748,6 +738,7 @@ public class ClzBuilder {
     // same source code
     if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) )
       return tclz;
+
     // External; needs an import
     if( !tclz.needs_import(true) ) return tclz;
     // Check for colliding on the base names; means we have to use the fully
@@ -775,9 +766,10 @@ public class ClzBuilder {
 
   public static void add_import( String s ) { IMPORTS.add(s); }
 
-  static void add_nested( XClz xclz ) {
+  static XClz add_nested( XClz xclz ) {
     if( !xclz._did_gen && NESTED.find( xclz ) == -1 )
       NESTED.push( xclz );
+    return xclz;
   }
 
   // --------------------------------------------------------------------------
