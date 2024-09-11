@@ -49,6 +49,14 @@ abstract public class Part {
     _cond = null;
     _cslen = 0;
   }
+  Part( Part par, String name, Const id, int nFlags ) {
+    _id = id;
+    _par = par;
+    _name = name;
+    _nFlags = nFlags;
+    _cond = null;
+    _cslen = 0;
+  }
 
   @Override public String toString() { return str(new SB()).toString(); }
   public SB str(SB sb) {

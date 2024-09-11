@@ -132,10 +132,7 @@ public class MethodPart extends MMethodPart {
   // Match against signature.
   public boolean match_sig(SigCon sig) {
     assert sig._name.equals(_name);
-    boolean rez = match_sig(_args,sig._args, true);
-    if( !rez ) return false;
-    //assert match_sig(_rets,sig._rets, false); // No selection based on return, it just needs to match
-    return true;
+    return match_sig(_args,sig._args);
   }
   private boolean match_sig(Parameter[] ps, TCon[] ts, boolean box) {
     if( ps==null && ts==null ) return true;
@@ -149,18 +146,6 @@ public class MethodPart extends MMethodPart {
         return false;
     }
     return true;
-  }
-
-  // Link method constants
-  void _cons( XEC.ModRepo repo ) {
-    if( _cons !=null )
-      for( Const con : _cons )
-        if( con instanceof MethodCon meth )
-          // Link signature, but not the method proper
-          ; //meth._sig.link(repo);
-        else
-          //con.link(repo);
-          throw XEC.TODO();
   }
 
   public boolean is_empty_function() {

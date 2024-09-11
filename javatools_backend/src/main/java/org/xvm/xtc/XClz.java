@@ -316,6 +316,10 @@ public class XClz extends XType {
             mixin._abstrct = true;
             mixin._sides = xclz._sides;
             mixin = mixin._intern();
+            ClassPart mixclass = new ClassPart(mixin0._clz,mixname);
+            mixclass._tclz = mixin;
+            mixin._clz = mixclass;
+
             // Sides for self use mixin as the supr
             xclz._sides = new HashMap<>();
             for( XClz s : mixin._sides.keySet() )
@@ -364,17 +368,17 @@ public class XClz extends XType {
     return xclz;
   }
 
-  // Gather side types from Implements and Extends.
+  // Gather side types from Implements and Extends and Incorporates.
   private void sides( ClassPart clz ) {
     _sides = SIDES0;
     if( clz==null || clz._contribs == null ) return;
 
     for( Contrib c : clz._contribs )
-      if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends )
+      if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends || c._comp == Part.Composition.Incorporates )
         switch( c._tContrib ) {
         case TermTCon ttc: break;   // no extra type params
         case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
-        case ParamTCon ptc: _sides(ptc,clz._tnames);  break;
+        case ParamTCon ptc: _sides(ptc,_tns);  break;
           // No tvars here?
         case InnerDepTCon dep:  assert dep .clz()._tnames.length==0;  break;
         case VirtDepTCon virt:  assert virt.clz()._tnames.length==0;  break;

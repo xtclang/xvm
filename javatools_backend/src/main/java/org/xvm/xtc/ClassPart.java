@@ -69,6 +69,19 @@ public class ClassPart extends Part {
     _contribs = null;
   }
 
+  // Mixin-as-super class from the mixin class
+  ClassPart( ClassPart mix, String name ) {
+    super(mix._par,name,mix._id,mix._nFlags);
+    assert mix._f==Part.Format.MIXIN;
+    assert name.contains("$");  // The generated mixin name
+    _f        = Part.Format.MIXIN;
+    _path     = mix._path;
+    _tnames   = mix._tnames;
+    _tcons    = mix._tcons;
+    _contribs = mix._contribs;
+    _name2kid = mix._name2kid;
+  }
+
   // Tok, kid-specific internal linking.
   @Override void link_innards( XEC.ModRepo repo ) {
     // This Class may extend another one.
