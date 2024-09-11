@@ -59,7 +59,22 @@ jobs:
           echo "LAST_RELEASE=$last_release" >> $GITHUB_ENV
           if [ "$current_release" == "$last_release" ]; then
             echo "This version has already been released. Skipping release."
-            exit 0
+            exit 1
+          fi
+          echo "ARTIFACT_SUFFIX=tar.gz" >> $GITHUB_ENV
+          if ${{ matrix.os }} == 'windows-latest'; then
+            echo "This is a Windows build."
+            echo "OS_NAME=windows" >> $GITHUB_ENV
+            echo "ARTIFACT_SUFFIX=zip" >> $GITHUB_ENV
+          elif ${{ matrix.os }} == 'macos-latest'; then
+            echo "This is a MacOS build."
+            echo "OS_NAME=macos" >> $GITHUB_ENV
+          elif ${{ matrix.os }} == 'ubuntu-latest'; then
+            echo "This is a Linux build."
+            echo "OS_NAME=linux" >> $GITHUB_ENV
+          else
+            echo "Fatal error - cannot resolve ${{ matrix.os }} to a known OS."
+            exit 1
           fi
 
       - name: Build distribution with Gradle
@@ -73,8 +88,5 @@ jobs:
         if: env.CURRENT_RELEASE != ''
         uses: actions/upload-artifact@v4
         with:
-          name: xdk-${{ env.VERSION }}-artifacts
-          path: |
-            xdk/build/distributions/xdk*windows*.zip
-            xdk/build/distributions/xdk*linux*.tar.gz
-            xdk/build/distributions/xdk*macos*.tar.gz
+          name: xdk-${{ env.VERSION }}-${{ env.OS_NAME }}-artifact
+          path: xdk/build/distributions/xdk*${{ env.OS_NAME }}*.${{ env.ARTIFACT_SUFFIX }}
