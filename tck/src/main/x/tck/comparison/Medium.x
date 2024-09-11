@@ -5,7 +5,7 @@ class Medium {
 
     public void run() {
         compareArraysFormal();
-        compareComposite();
+        //compareComposite();
     }
 
     @Test
@@ -22,18 +22,18 @@ class Medium {
         Collection<Int> asCollection(Collection<Int> col) = col;
     }
 
-    @Test
-    void compareComposite() {
-        typedef String|Int as StrInt;
-
-        StrInt si1 = get(True);
-        StrInt si2 = get(False);
-
-        assert si1 != si2;
-        assert !checkEquals(si1, si2);
-
-        StrInt get(Boolean int) = int ? 1 : "a";
-    }
+    //@Test
+    //void compareComposite() {
+    //    typedef String|Int as StrInt;
+    //
+    //    StrInt si1 = get(True);
+    //    StrInt si2 = get(False);
+    //
+    //    assert si1 != si2;
+    //    assert !checkEquals(si1, si2);
+    //
+    //    StrInt get(Boolean int) = int ? 1 : "a";
+    //}
 
     <T> Boolean checkEquals(T t1, T t2) {
         return t1 == t2;

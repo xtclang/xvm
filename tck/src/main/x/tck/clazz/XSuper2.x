@@ -1,3 +1,3 @@
-class XSuper2<Element> {
-    String add(Element e) = $"s[{e=}]s";
+class XSuper2<S2> {
+    String add(S2 e) = $"s[{e=}]s";
 }

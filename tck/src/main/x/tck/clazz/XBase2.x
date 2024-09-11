@@ -1,3 +1,3 @@
-class XBase2<Element> extends XSuper2<Element> incorporates XMixIn<Element> {
-    @Override String add(Element e) = $"b[{e=} " + super(e) + " ]b";
+class XBase2<B2> extends XSuper2<B2> incorporates XMixIn<B2> {
+    @Override String add(B2 e) = $"b[{e=} " + super(e) + " ]b";
 }

@@ -1,3 +1,3 @@
-class XDerived1<Element> extends XBase1<Element> {
-    @Override String add(Element e) = $"D[{e=} " + super(e) + " ]D";
+class XDerived1<D> extends XBase1<D> {
+    @Override String add(D e) = $"D[{e=} " + super(e) + " ]D";
 }

@@ -15,11 +15,54 @@ import java.util.HashMap;
 // We can map from an XTC ClassPart to a generified/erased Java class.
 // We can map from a ParamTCon to a true generic XType, with XType generic classes.
 // An XType carries the ClassPart it came from, but not the PTC (if any).
+// XClz tracks super-class
 
-// XClz tracks super-class but NOT the set of implemented interfaces.
+/*
+  current plan is broken when type names collide when coming from different sources.
+  Canonical fail:
+  - Outer class HasherMap<Key,Value>
+  - Inner class CollectionImpl<Element> // has visible 3 type names: Element,Key,Value
+  - KeySet extends CollectionImpl<Key>
+  - - Here the "Key" is "HasherMap.Key" and is punning "CI.Element"
+  - KeySetFreezer<Element extends X> mixins to KeySet<Key extends X>
+  - - Here "Element" is a local name,
+  - - punning "KeySet.Key" thus "HasherMap.Key" AND "CI.Element"
+
+  Tentative New Plan
+  - Class has self TNames, TVars only, no parents
+  - - Rename strat for self-names to parent is "aligned,null name for concrete"
+  - - Example: Base<Key,Value>            [Key   /XTC   , Value/XTC]
+  - - - then   Derived<String,Value>      [null  /String, Value/XTC]
+  - - - then   new Derived<String,Int>    [null  /String, null /Int]
+  - Sides: map Interface names to self type index
+  - - Example: IFace<Elem,QQQ>
+  - - - Base<Key,Value> implements IFace<Value,Key>
+  - - - Base.sides{ IFace -> [1,0] } // IFace.Elem maps to Base.type[1]/Value
+  - Mixin standard gets cloned into a full Class;
+  - Mixin conditional is Just Another Class with some code-gen rules on when to override
+
+  Counter to New Plan:
+  - - Example: Base<B1,B2,B3>
+  - -          Derived<D1,D2,D3,D4> extends Base<D2,D3,Int>
+
+  Tentative New Plan#B
+  - Class has a set of local tvars, which are either renames of parent or standalone
+  - - Inner class has all Outer directly (no rename, no subtype)
+  - - Need a rename strat
+  - All local tvars also have a type; this is a subtype of parent if renamed parent
+  - IFaces - perhaps can ignore tvars...???? xcc has confirmed ok
+  - Mixins are *just Classes*.  Normal for conditional, custom-per-base for standard.
+
+  3 things per-type, so now kinda want Ary-of-Struct instead of Struct-of-Ary
+  - local name
+  - local type (subtype of parent, if any)
+  - super class map (or null if new here)
+
+ */
+
 
 // XClz has a set of self-tvar-names in TNS, and a set of XTypes; a #of local
-// TVars (length of _tns), a side mapping from super/interface XClz type
+// TVars (length of _tns), a side mapping from interface XClz type
 // indices into the XTS.
 
 // Example class def:
