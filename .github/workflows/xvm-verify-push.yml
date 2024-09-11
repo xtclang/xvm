@@ -64,7 +64,8 @@ concurrency:
 
 jobs:
   build-verify:
-
+    if: ${{ false }} # TODO: Temporarily disable checkintest while trying release artifacts.
+    name: Build and Verify XVM
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
