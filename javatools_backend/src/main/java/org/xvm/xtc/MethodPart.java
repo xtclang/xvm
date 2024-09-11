@@ -132,7 +132,7 @@ public class MethodPart extends MMethodPart {
   // Match against signature.
   public boolean match_sig(SigCon sig) {
     assert sig._name.equals(_name);
-    return match_sig(_args,sig._args);
+    return match_sig(_args,sig._args,true);
   }
   private boolean match_sig(Parameter[] ps, TCon[] ts, boolean box) {
     if( ps==null && ts==null ) return true;
