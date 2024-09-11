@@ -1,4 +1,3 @@
-
-mixin XMixIn<Element> into XBase1<Element> | XBase2<Element> {
-    @Override String add(Element e) = $"MX[{e=} " + super(e) + " ]MX";
+mixin XMixIn<Q> into XBase1<Q> | XBase2<Q> {
+    @Override String add(Q e) = $"MX[{e=} " + super(e) + " ]MX";
 }

@@ -3,10 +3,10 @@ class Medium {
     @Inject Console console;
 
     void run() {
-        xincorp();
-        incorp();
-        ic();
-        //typevars();
+        //xincorp();
+        //incorp();
+        //ic();
+        typevars();
         //annot();
     }
 
@@ -30,32 +30,32 @@ class Medium {
       assert dervstr2 == "d[e=abc b[e=abc MX[e=abc s[e=abc]s ]MX ]b ]d";
     }
 
-    // Standard "incorporates":  The MixIn is "before" Base in the class tree:
-    //        /- Super1 <-\       /-< Base1 <- Derived1
-    // Object               MixIn
-    //        \- Super2 <-/       \-< Base2 <- Derived2
+    //// Standard "incorporates":  The MixIn is "before" Base in the class tree:
+    ////        /- Super1 <-\       /-< Base1 <- Derived1
+    //// Object               MixIn
+    ////        \- Super2 <-/       \-< Base2 <- Derived2
+    ////
+    //// Clone theory:
+    //// - Clone Mixin's code "above" the Base1's:
+    ////            /- Super1 <- Mix$Base1 <- Base1 <- Derived1
+    ////     Object
+    ////            \- Super2 <- Mix$Base2 <- Base2 <- Derived2
+    ////- The clones are abstract, and mostly there to allow "super" methods to call correctly.
+    ////
     //
-    // Clone theory:
-    // - Clone Mixin's code "above" the Base1's:
-    //            /- Super1 <- Mix$Base1 <- Base1 <- Derived1
-    //     Object
-    //            \- Super2 <- Mix$Base2 <- Base2 <- Derived2
-    //- The clones are abstract, and mostly there to allow "super" methods to call correctly.
-    //
-
     void incorp() {
-        mixin MixIn<Element> into Base1<Element> | Base2<Element> {
-            @Override String add(Element e) = $"MX[{e=} " + super(e) + " ]MX";
+        mixin MixIn<Q> into Base1<Q> | Base2<Q> {
+            @Override String add(Q e) = $"MX[{e=} " + super(e) + " ]MX";
         }
 
-        class Super1<Element> {
-            String add(Element e) = $"S[{e=}]S";
+        class Super1<S> {
+            String add(S e) = $"S[{e=}]S";
         }
-        class Base1<Element> extends Super1<Element> incorporates MixIn<Element> {
-            @Override String add(Element e) = $"B[{e=} " + super(e) + " ]B";
+        class Base1<B> extends Super1<B> incorporates MixIn<B> {
+            @Override String add(B e) = $"B[{e=} " + super(e) + " ]B";
         }
-        class Derived1<Element> extends Base1<Element> {
-            @Override String add(Element e) = $"D[{e=} " + super(e) + " ]D";
+        class Derived1<D> extends Base1<D> {
+            @Override String add(D e) = $"D[{e=} " + super(e) + " ]D";
         }
 
         String baseint1 = new Base1   < Int  >().add( 123 );
@@ -67,14 +67,14 @@ class Medium {
         assert dervint1 == "D[e=123 B[e=123 MX[e=123 S[e=123]S ]MX ]B ]D";
         assert dervstr1 == "D[e=abc B[e=abc MX[e=abc S[e=abc]S ]MX ]B ]D";
 
-        class Super2<Element> {
-            String add(Element e) = $"s[{e=}]s";
+        class Super2<Z> {
+            String add(Z e) = $"s[{e=}]s";
         }
-        class Base2<Element> extends Super2<Element> incorporates MixIn<Element> {
-            @Override String add(Element e) = $"b[{e=} " + super(e) + " ]b";
+        class Base2<ZB> extends Super2<ZB> incorporates MixIn<ZB> {
+            @Override String add(ZB e) = $"b[{e=} " + super(e) + " ]b";
         }
-        class Derived2<Element> extends Base2<Element> {
-            @Override String add(Element e) = $"d[{e=} " + super(e) + " ]d";
+        class Derived2<D> extends Base2<D> {
+            @Override String add(D e) = $"d[{e=} " + super(e) + " ]d";
         }
 
         String baseint2 = new Base2   < Int  >().add( 123 );
@@ -197,6 +197,7 @@ class Medium {
     //    assert sfoo == "IFaceRep x=abc";
     //    assert ifoo == "IFaceRep x=123";
     //}
+
     // "Annotation": the Mixin is "after" the Base in the class tree:
     // Object <- Base <- MixIn <- Derived
 
