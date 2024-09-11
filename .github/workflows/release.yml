@@ -58,7 +58,7 @@ jobs:
           else
             echo "This is a release version. Proceeding with release."
             current_release="$VERSION"
-            echo "CURRENT_RELEASE=$VERSION" >> $GITHUB_ENV
+            echo "CURRENT_RELEASE=v$VERSION" >> $GITHUB_ENV
           fi 
           last_release=$(gh release view --json tagName  -q '.tagName')
           echo "LAST_RELEASE=$last_release" >> $GITHUB_ENV
@@ -94,5 +94,5 @@ jobs:
         if: env.CURRENT_RELEASE != ''
         uses: actions/upload-artifact@v4
         with:
-          name: xdk-${{ env.VERSION }}-${{ env.OS_NAME }}-artifact
+          name: xdk-${{ env.VERSION }}-${{ env.OS_NAME }}.${{ env.ARTIFACT_SUFFIX }}
           path: xdk/build/distributions/xdk*${{ env.OS_NAME }}*.${{ env.ARTIFACT_SUFFIX }}
