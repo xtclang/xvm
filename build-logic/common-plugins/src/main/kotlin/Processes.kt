@@ -22,6 +22,7 @@ data class ProcessResult(val execResult: Pair<Int, String>, val failure: Throwab
     val output: String = execResult.second
     fun lines(): List<String> = output.lines()
     fun isSuccessful(): Boolean = exitValue == 0
+    fun isFailure(): Boolean = !isSuccessful()
     fun rethrowFailure() {
         if (failure != null) {
             throw failure
@@ -52,11 +53,13 @@ fun spawn(command: String, vararg args: String, throwOnError: Boolean = true, lo
     val commandLine = listOf(commandPath, *args)
     val builder = ProcessBuilder(commandLine).redirectErrorStream(true)
 
+    System.err.println("[processes] Spawning process: '${commandLine.joinToString(" ")}'")
     logger?.info("[processes] Spawning process: '${commandLine.joinToString(" ")}'")
 
     val processResult = try {
         val process = builder.start() // can throw IOException
         val exitValue = process.waitFor()
+        System.err.println("Spawn finished: exitValue=$exitValue")
         val result = process.inputStream.readTextAndClose()
         var failure: IllegalStateException? = null
         if (exitValue != 0) {

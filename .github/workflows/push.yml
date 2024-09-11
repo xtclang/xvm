@@ -8,10 +8,13 @@
 #
 # Check if "pull-request" makes it possible to add a branch protection status check requirement on master.
 # gh auth switch --hostname enterprise.internal --user monalisa  (switch auth)
-name: XVM Verification and Package Updates
+name: XVM Push Workflow
 
 on:
   push:
+  #branches:
+  #  - simpify-tasks
+  #  - master
   workflow_dispatch:
     inputs:
       extra_gradle_options:
@@ -64,7 +67,7 @@ concurrency:
 
 jobs:
   build-verify:
-
+    name: Build and Verify XVM
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
@@ -151,7 +154,7 @@ jobs:
     name: Publish to GitHub packages iff snapshot + non-redundant build platform + branch is master
     needs: build-verify
     runs-on: ubuntu-latest
-    #if: ${{ (github.ref == 'refs/heads/master') }}
+    if: ${{ (github.ref == 'refs/heads/master') }}
     steps:
       - name: Maximize Build Space
         uses: jlumbroso/free-disk-space@main

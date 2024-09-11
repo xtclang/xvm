@@ -32,6 +32,7 @@ data class GitHubProtocol(private val project: Project) {
     }
 
     private val semanticVersion = project.property("semanticVersion") as SemanticVersion
+    private val releaseVersion = project.releaseVersion()
     private val artifactBaseVersion = semanticVersion.artifactVersion.removeSuffix("-SNAPSHOT")
     private val tagPrefix = if (semanticVersion.isSnapshot()) "snapshot/" else "release/"
     private val localTag = "${tagPrefix}v$artifactBaseVersion"
@@ -84,7 +85,7 @@ data class GitHubProtocol(private val project: Project) {
     /**
      * Make sure any local tags out of sync with remote are clobbered and/or updated.
      */
-    private fun fetch(): GitTagInfo = project.run {
+    private fun fetchTags(): GitTagInfo = project.run {
         git("fetch", "--tags", "--prune-tags", "--force", "--verbose", logger = logger)
         return resolveTags()
     }
@@ -114,7 +115,7 @@ data class GitHubProtocol(private val project: Project) {
      */
     fun ensureTags(snapshotOnly: Boolean = false): Pair<String, String> = project.run {
         // Fetch and prune remote tags, making sure that we have all remote tags locally, and no local tags that aren't on the remote.
-        val tags = fetch()
+        val tags = fetchTags()
         assert(tags.verifySync())
         val isSnapshot = semanticVersion.isSnapshot()
         val isRelease = !isSnapshot
@@ -135,10 +136,15 @@ data class GitHubProtocol(private val project: Project) {
 
         if (isSnapshot) {
             git("tag", "-d", localTag, throwOnError = false, logger = logger)
+            logger.info("$prefix Deleted tag: $localTag (locally), if it existed.")
             git("push", "--delete", "origin", localTag, throwOnError = false, logger = logger)
+            logger.info("$prefix Deleted tag: $localTag (remotely).")
         }
         git("tag", localTag, logger = logger)
+        logger.info("$prefix Created $localTag (locally).")
+
         git("push", "origin", localTag, logger = logger)
+        logger.info("$prefix Pushed $localTag to remote.")
 
         return localTag to tags.localLastCommit
     }
@@ -160,6 +166,51 @@ data class GitHubProtocol(private val project: Project) {
             }
         }
         return false
+    }
+
+    fun isReleased(): Boolean = project.run {
+        // gh release view <version> return if release already exists.
+        //currentVersion = senamticVersion.ar
+        var currentVersion = semanticVersion.artifactVersion
+        val releaseVersion = project.releaseVersion()
+        val desc = if (releaseVersion != currentVersion) "'$releaseVersion'" else "the same."
+        logger.lifecycle("$prefix Current project version is '$currentVersion', release version would be $desc")
+        val result = gh("release", "view", releaseVersion, throwOnError = false)
+        if (result.isSuccessful()) {
+            logger.error("$prefix Release '$releaseVersion' already exists. Aborting release.")
+            return true
+        }
+        logger.lifecycle("$prefix Release '$releaseVersion' has not been released.")
+        return false
+    }
+
+    fun triggerRelease(): Boolean = project.run {
+        // TODO: Will trigger a remote workflow on GitHub so we can build all our platforms regardless of what machine we are on.
+        val info = fetchTags()
+        logger.lifecycle("$prefix Triggering Release GitHub Actions workflow for $semanticVersion.")
+        val inputs = mapOf(
+            "semanticVersion" to semanticVersion,
+            "releaseVersion" to releaseVersion()
+        )
+        // Command to trigger GitHub Actions workflow using gh CLI
+        val workflowId = "release.yml"
+        val branch = info.localBranchName
+        val cmdLineArgs = buildList {
+            add("gh")
+            add("workflow")
+            add("run")
+            add(workflowId)
+            add("--ref")
+            add(info.localBranchName)
+            inputs.forEach { (key, value) ->
+                add("--field")
+                add("$key=$value")
+            }
+        }
+        print(cmdLineArgs)
+        gh(*cmdLineArgs.toTypedArray(), logger = logger)
+        logger.info("Triggered GitHub workflow $workflowId on branch $branch.")
+        return true
     }
 
     /**

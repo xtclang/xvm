@@ -1,4 +1,5 @@
 import XdkBuildLogic.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
+import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import XdkDistribution.Companion.JAVATOOLS_INSTALLATION_NAME
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
@@ -199,6 +200,46 @@ val ensureTags by tasks.registering {
         if (GitHubProtocol.tagCreated(tag)) {
             logger.lifecycle("$prefix Created or updated tag '$tag' for version: '$semanticVersion'")
         }
+    }
+}
+
+// If we have a snapshot version, create the release for the verison with the snapshot stripped.
+//
+// If the release already exists, this will fail. If the release exists but is draft, or with an override, we
+//  may allow overwriting it.
+//
+// We trigger a GitHub workflow that uploads release artifacts for all our platforms, and then collect them
+// and call GH release from here. The default is that the release is in draft mode.
+// We can also have a mode where we create a separate pull request after the release, that contains
+// e.g. a new entry about the release in some REAADME.md or something, as well as comitting a new VERSION
+// file with the next snapshot.
+//
+// TODO: Figure out the best place to do the tagging. It may be enough and simplest just to do publishRemote
+//   when the release has been created, and let the existing ensureTagging logic just solve it with 100% existing
+//   code. Should be safe enough given enough state checks like the checkReleased tasks and so on before we start
+//   weaving the actual artifacts and release specificaiton.
+//
+// TODO: Figure out where to hook up publishing the plugin and the XDK artifact to gradlePluinPortal and
+//    mavenCentral. Verify our mavenCentral credentials again, by publishing a removable normal Java-Maven artifact
+//    so that we confirm that the XDK artifact is equally legal, even if we don't look 100% like a Java artifact
+//    For mavenCentral this may still involve faking a jar file, or shipping XDK as a jar file with all other
+//    stuff as reasources. It should not be a big problem and can be wrapped in abstraction.
+val relaseXvm by tasks.registering {
+    description = "Trigger a GitHub workflow that builds and releases the current branch at the last commit."
+    doLast {
+        xdkBuildLogic.gitHubProtocol().triggerRelease()
+    }
+}
+
+val checkUnreleased by tasks.registering {
+    group = DISTRIBUTION_TASK_GROUP
+    description = "Fail if we already have a release with the current release version."
+    doLast {
+        val releaseVersion = releaseVersion()
+        if (xdkBuildLogic.gitHubProtocol().isReleased()) {
+            throw buildException("Release already exists for version: '$releaseVersion'")
+        }
+        logger.info("$prefix Successfully resolved new release version: $releaseVersion")
     }
 }
 

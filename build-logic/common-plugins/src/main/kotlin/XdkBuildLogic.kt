@@ -185,6 +185,10 @@ fun Task.considerAlwaysUpToDate() {
  */
 fun Project.isDryRun() = project.findProperty("dryRun")?.toString()?.toBoolean() ?: false
 
+fun Project.releaseVersion(): String {
+    return project.version.toString().replace("-SNAPSHOT", "")
+}
+
 fun Project.isSnapshot(): Boolean {
     return project.version.toString().endsWith("-SNAPSHOT")
 }
