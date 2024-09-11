@@ -41,6 +41,11 @@ jobs:
           distribution: zulu
           java-version: 21
 
+      - name: Reset release state
+        shell: bash
+        run: |
+          echo "TODO: Here we should reset the release state, delete existng prereleases etc, if necessary."
+
       - name: Read VERSION file
         id: read_version
         shell: bash
@@ -62,14 +67,14 @@ jobs:
             exit 1
           fi
           echo "ARTIFACT_SUFFIX=tar.gz" >> $GITHUB_ENV
-          if ${{ matrix.os }} == 'windows-latest'; then
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
             echo "This is a Windows build."
             echo "OS_NAME=windows" >> $GITHUB_ENV
             echo "ARTIFACT_SUFFIX=zip" >> $GITHUB_ENV
-          elif ${{ matrix.os }} == 'macos-latest'; then
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "This is a MacOS build."
             echo "OS_NAME=macos" >> $GITHUB_ENV
-          elif ${{ matrix.os }} == 'ubuntu-latest'; then
+          elif [ "${{ matrix.os }}" == "windows-latest" ]; then
             echo "This is a Linux build."
             echo "OS_NAME=linux" >> $GITHUB_ENV
           else
@@ -79,7 +84,8 @@ jobs:
 
       - name: Build distribution with Gradle
         if: env.CURRENT_RELEASE != ''
-        run: | 
+        run: |
+          echo "OS_NAME: ${{ env.OS_NAME }}, ARTIFACT_SUFFIX: ${{ env.ARTIFACT_SUFFIX }}"
           ./gradlew xdk:withLaunchersDistTar
           ./gradlew xdk:withLaunchersDistZip
           # TODO: Also publish release artifact. Copy credentials from other file
