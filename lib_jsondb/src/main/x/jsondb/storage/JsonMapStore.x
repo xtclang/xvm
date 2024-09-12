@@ -842,7 +842,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Int desired = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
-        private function Int (Map<Object, Int>.Entry) incrementCount(Int delta) {
+        private function Int (Map.Entry<Object, Int>) incrementCount(Int delta) {
             return entry -> {
                 Int newValue = entry.exists ? delta + entry.value : delta;
                 entry.value = newValue;

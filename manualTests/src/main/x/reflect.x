@@ -47,7 +47,7 @@ module TestReflection {
     const Point(Int x, Int y);
 
     void testInstanceOf() {
-        import ecstasy.collections.HashMap;
+        import ecstasy.maps.HashMap;
 
         console.print("\n** testInstanceOf");
 
@@ -314,7 +314,7 @@ module TestReflection {
     }
 
     void testBind() {
-        import ecstasy.collections.ListMap;
+        import ecstasy.maps.ListMap;
         import ecstasy.reflect.Parameter;
 
         console.print("\n** testBind");
@@ -351,7 +351,7 @@ module TestReflection {
     void testChildTypes() {
         console.print("\n** testChildTypes");
 
-        Type[] types = [Nullable, Map, ecstasy.collections.HashMap, Type, Class];
+        Type[] types = [Nullable, Map, ecstasy.maps.HashMap, Type, Class];
         for (Type type : types) {
             console.print($"{type} children: {type.childTypes}");
         }
@@ -395,19 +395,19 @@ module TestReflection {
         Class c1 = Map;
         analyzeClass(c1);
 
-        Class c2 = ecstasy.collections.ListMap;
+        Class c2 = ecstasy.maps.ListMap;
         analyzeClass(c2);
 
         Class c3 = Map<Int, String>;
         analyzeClass(c3);
 
-        Class c4 = ecstasy.collections.ListMap<Date, TimeOfDay>;
+        Class c4 = ecstasy.maps.ListMap<Date, TimeOfDay>;
         analyzeClass(c4);
 
-        Class c7 = ecstasy.collections.ListMap<Date, TimeOfDay>.Entries;
+        Class c7 = ecstasy.collections.List<Date>.Cursor;
         analyzeClass(c7);
 
-        Map<Int, String> map = new ecstasy.collections.ListMap();
+        Map<Int, String> map = new ecstasy.maps.ListMap();
         analyzeStructure(map);
 
         Boolean f = True;
@@ -419,12 +419,10 @@ module TestReflection {
         console.print($"Analyzing: {clz}");
     }
 
-
     void analyzeStructure(Object o) {
-        console.print($"Analyzing: {o}");
-
+        // don't "toString" the object; it may change the lazy properties' state
         Type t = &o.actualType;
-        console.print($"Type={t}");
+        console.print($"Analyzing: {t}");
 
         if (Class c := t.fromClass()) {
             console.print($"Class={c}");
@@ -436,9 +434,9 @@ module TestReflection {
             for (val prop : ts.properties) {
                 // property must have a field, must not be injected, not constant/formal
                 console.print($|prop={prop.name}, constant={prop.isConstant()}, readOnly={prop.readOnly}
-                                 |     hasUnreachableSetter={prop.hasUnreachableSetter}, formal={prop.formal}
-                                 |     hasField={prop.hasField}, injected={prop.injected}, lazy={prop.lazy}
-                                 |     atomic={prop.atomic}, abstract={prop.abstract},
+                               |     hasUnreachableSetter={prop.hasUnreachableSetter}, formal={prop.formal}
+                               |     hasField={prop.hasField}, injected={prop.injected}, lazy={prop.lazy}
+                               |     atomic={prop.atomic}, abstract={prop.abstract},
                                );
 
                 // need to get a Ref for the property:
@@ -447,8 +445,8 @@ module TestReflection {
                 assert val s := &o.revealAs(c.StructType);
                 val ref = prop.of(s);
                 console.print($|     assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
-                                 |     isService={ref.isService}, isConst={ref.isConst}
-                                 |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
+                               |     isService={ref.isService}, isConst={ref.isConst}
+                               |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
                                );
             }
 
@@ -485,14 +483,14 @@ module TestReflection {
                 "bob",                         // shouldn't find it
                 "Point.Bob",                   // shouldn't find it
                 "TestReflection:Point",        // with explicit module name
-                "ecstasy:collections.HashMap",
-                "ecstasy.xtclang.org:collections.HashMap",
+                "ecstasy:maps.HashMap",
+                "ecstasy.xtclang.org:maps.HashMap",
                 "TestReflection:",             // just explicit module name
                 "ecstasy:",
                 "ecstasy.xtclang.org:",
                 "@AutoFreezable Array<Int64>",
                 "HashMap<String?, @AutoFreezable Array<Int64>>",
-                "HashMap<String?, @AutoFreezable Array<Int64>>.Entry",
+                "HashMap.Entry<String?, @AutoFreezable Array<Int64>>",
                 ];
 
         for (String name : names) {

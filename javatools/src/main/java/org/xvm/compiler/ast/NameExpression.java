@@ -537,6 +537,7 @@ public class NameExpression
             // if the R-value type is an enum value (except Null), widen it to its parent
             // Enumeration before merging with the L-value, but don't go beyond declared type
             TypeConstant typeOld  = reg.getType();
+            TypeConstant typeOrig = reg.getOriginalType();
             TypeConstant typeNew  = aTypes[0];
             TypeConstant typeWide = typeNew.widenEnumValueTypes();
 
@@ -550,7 +551,13 @@ public class NameExpression
                 typeNew = typeNew.union(pool(), typeOld);
                 }
 
-            ctx.narrowLocalRegister(getName(), reg, branch, typeNew);
+            // there is no reason to be too smart and make unnecessary inferences; one example
+            // is a consumer-only type C<T> that would be widened if the formal type T has been
+            // narrowed by another inference
+            if (typeNew.isA(typeOld) || typeNew.isA(typeOrig))
+                {
+                ctx.narrowLocalRegister(getName(), reg, branch, typeNew);
+                }
             }
         }
 

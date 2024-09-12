@@ -71,7 +71,7 @@ public class xRTFunction
         EMPTY_FUNCTION_ARRAY = pool.ensureArrayConstant(FUNCTION_ARRAY_TYPE, Constant.NO_CONSTS);
 
         markNativeMethod("bind", new String[] {"reflect.Type<Object>", "reflect.Parameter", "Object"}, null);
-        markNativeMethod("bind", new String[] {"collections.Map<reflect.Parameter, Object>"}, null);
+        markNativeMethod("bind", new String[] {"maps.Map<reflect.Parameter, Object>"}, null);
         markNativeMethod("invoke", null, null);
         markNativeMethod("isFunction", null, null);
         markNativeMethod("isMethod", null, null);
@@ -1728,7 +1728,7 @@ public class xRTFunction
             {
             ConstantPool pool = INSTANCE.pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeParameter(), pool.typeObject());
             }
         return type;

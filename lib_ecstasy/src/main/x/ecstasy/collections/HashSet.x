@@ -1,13 +1,15 @@
+import maps.CopyableMap;
+
 /**
- * An implementation of a Set that is backed by a HashMap.
- *
- * TODO variably mutable implementations to match HashMap
+ * An implementation of a [Set] that is backed by a [HashMap].
  */
 class HashSet<Element extends Hashable>
         extends MapSet<Element>
         implements Replicable {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
-     * Construct the HashSet with an (optional) initial capacity.
+     * Construct the `HashSet` with an (optional) initial capacity.
      *
      * @param initCapacity  (optional) the number of expected element values
      */
@@ -17,9 +19,9 @@ class HashSet<Element extends Hashable>
     }
 
     /**
-     * Construct a HashSet that optionally contains an initial set of values.
+     * Construct a `HashSet` that contains the specified values.
      *
-     * @param values  initial values to store in the HashSet
+     * @param values  initial values to store in the `HashSet`
      */
     construct(Iterable<Element> values) {
         if (values.is(HashSet<Element>)) {
@@ -36,5 +38,23 @@ class HashSet<Element extends Hashable>
     @Override
     construct(HashSet that) {
         super(that);
+    }
+
+    /**
+     * Construct a `HashSet` that uses the specified [HashMap] for storage.
+     *
+     * @param map  the [HashMap] to use for storage
+     */
+    protected construct(HashMap<Element, Nullable> map) {
+        construct MapSet(map);
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    @Override
+    protected HashSet ensureMapSet(CopyableMap<Element, Nullable> map) {
+        return &map == &contents
+                ? this
+                : new HashSet(map.as(HashMap<Element, Nullable>));
     }
 }

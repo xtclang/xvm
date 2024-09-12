@@ -1,5 +1,3 @@
-import collections.ListMap;
-
 /**
  * An iterator that only iterates a sub-set of the underlying iterator, as defined by a filter.
  */

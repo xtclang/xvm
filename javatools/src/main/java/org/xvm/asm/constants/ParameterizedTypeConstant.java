@@ -514,7 +514,7 @@ public class ParameterizedTypeConstant
                 {
                 TypeConstant typeAdopt = atypeParams[i];
                 TypeConstant typeCurr  = m_atypeParams[i];
-                if (!typeAdopt.isA(typeCurr))
+                if (!typeAdopt.isA(typeCurr) && !typeCurr.isFormalType())
                     {
                     // unfortunately, there is no way to merge the adoptees and current types
                     // in a predictable manner; need to discard the entire batch in favor of the

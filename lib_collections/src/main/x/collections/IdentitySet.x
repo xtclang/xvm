@@ -1,15 +1,21 @@
 import ecstasy.collections.MapSet;
 
+import ecstasy.maps.CopyableMap;
+
 /**
- * An implementation of a Set that is backed by an IdentityMap.
+ * An implementation of a [Set] that is backed by an [IdentityMap].
  */
 class IdentitySet<Element>
         extends MapSet<Element>
         implements Replicable {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
-     * Construct the IdentitySet with an (optional) initial capacity.
+     * Construct the `IdentitySet` with an optionally-specified capacity.
      *
-     * @param initCapacity  (optional) the number of expected element values
+     * This is the [Replicable] constructor.
+     *
+     * @param initCapacity  (optional) the number of expected `Element` values
      */
     @Override
     construct(Int initCapacity = 0) {
@@ -17,9 +23,9 @@ class IdentitySet<Element>
     }
 
     /**
-     * Construct a IdentitySet that optionally contains an initial set of values.
+     * Construct a `IdentitySet` that contains an initial set of values.
      *
-     * @param values  initial values to store in the IdentitySet
+     * @param values  initial values to store in the `IdentitySet`
      */
     construct(Iterable<Element> values) {
         if (values.is(IdentitySet<Element>)) {
@@ -33,8 +39,33 @@ class IdentitySet<Element>
         }
     }
 
+    /**
+     * Construct the `IdentitySet` as a duplicate of another `IdentitySet`.
+     *
+     * This is the [Duplicable] constructor.
+     *
+     * @param that  the `IdentitySet` object to duplicate from
+     */
     @Override
     construct(IdentitySet that) {
         super(that);
+    }
+
+    /**
+     * Construct a `IdentitySet` that uses the specified [IdentityMap] for storage.
+     *
+     * @param map  the [IdentityMap] to use for storage
+     */
+    protected construct(IdentityMap<Element, Nullable> map) {
+        construct MapSet(map);
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    @Override
+    protected IdentitySet ensureMapSet(CopyableMap<Element, Nullable> map) {
+        return &map == &contents
+                ? this
+                : new IdentitySet(map.as(IdentityMap<Element, Nullable>));
     }
 }

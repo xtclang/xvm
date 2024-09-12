@@ -1,10 +1,7 @@
-import maps.EntryValues;
-import maps.OrderedMapSlice;
-
 import text.Log;
 
 /**
- * The SkiplistMap is an OrderedMap implementation using a "Skip List" data structure.
+ * The `SkiplistMap` is an [OrderedMap] implementation using a "Skip List" data structure.
  *
  * A skip list is a data structure that has logN average time for data retrieval, insertion,
  * update, and deletion. It behaves like a balanced binary tree, yet without the costs normally
@@ -18,11 +15,11 @@ class SkiplistMap<Key extends Orderable, Value>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a SkiplistMap, with an optional initial capacity and an optional non-natural
+     * Construct a `SkiplistMap`, with an optional initial capacity and an optional non-natural
      * ordering.
      *
      * @param initialCapacity  the initial capacity, in terms of the number of expected entries
-     * @param orderer          the Orderer for this Map, or `Null` to use natural order
+     * @param orderer          the [Orderer] for this Map, or `Null` to use natural order
      */
     @Override
     construct(Int initialCapacity = 0, Orderer? orderer = Null) {
@@ -47,16 +44,15 @@ class SkiplistMap<Key extends Orderable, Value>
         putAll(that);
     }
 
-
     // ----- internal state ------------------------------------------------------------------------
 
     /**
-     * The actual Orderer used internally.
+     * The actual [Orderer] used internally.
      */
     protected/private Orderer compare;
 
     /**
-     * Storage for the nodes. The actual storage may be Null, but if it is, it should never be
+     * Storage for the nodes. The actual storage may be `Null`, but if it is, it should never be
      * requested, and thus it is asserted.
      */
     protected IndexStore nodes.get() {
@@ -65,7 +61,7 @@ class SkiplistMap<Key extends Orderable, Value>
     private IndexStore? actualNodes;
 
     /**
-     * Storage for the keys. The actual storage may be Null, but if it is, it should never be
+     * Storage for the keys. The actual storage may be `Null`, but if it is, it should never be
      * requested, and thus it is asserted.
      */
     protected ElementStore<Key> keyStore.get() {
@@ -74,7 +70,7 @@ class SkiplistMap<Key extends Orderable, Value>
     private ElementStore<Key>? actualKeys;
 
     /**
-     * Storage for the values. The actual storage may be Null, but if it is, it should never be
+     * Storage for the values. The actual storage may be `Null`, but if it is, it should never be
      * requested, and thus it is asserted.
      */
     protected ElementStore<Value> valueStore.get() {
@@ -108,48 +104,16 @@ class SkiplistMap<Key extends Orderable, Value>
      */
     private Boolean cacheMiss;
 
-
     // ----- Map interface -------------------------------------------------------------------------
 
     @Override
     public/protected Int size;
 
     @Override
-    @RO Boolean empty.get() {
-        return size == 0;
-    }
+    @RO Boolean empty.get() = size == 0;
 
     @Override
-    @Lazy public/private OrderedSet<Key> keys.calc() {
-        KeySet keys = new KeySet();
-        if (this.SkiplistMap.is(immutable)) {
-            keys.makeImmutable();
-        }
-        return keys;
-    }
-
-    @Override
-    @Lazy public/private Collection<Value> values.calc() {
-        EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
-        if (this.SkiplistMap.is(immutable)) {
-            values.makeImmutable();
-        }
-        return values;
-    }
-
-    @Override
-    @Lazy public/private Collection<Entry> entries.calc() {
-        EntrySet entries = new EntrySet();
-        if (this.SkiplistMap.is(immutable)) {
-            entries.makeImmutable();
-        }
-        return entries;
-    }
-
-    @Override
-    Boolean contains(Key key) {
-        return !empty && findNode(key);
-    }
+    Boolean contains(Key key) = !empty && findNode(key);
 
     @Override
     conditional Value get(Key key) {
@@ -158,6 +122,18 @@ class SkiplistMap<Key extends Orderable, Value>
         }
         return False;
     }
+
+    @Override
+    Iterator<Entry<Key, Value>> iterator() = new EntryIterator();
+
+    @Override
+    @Lazy public/private OrderedSet<Key> keys.calc() = new OrderedMapKeys<Key, Value>(this);
+
+    @Override
+    @Lazy public/private Collection<Value> values.calc() = new MapValues<Key, Value>(this);
+
+    @Override
+    @Lazy public/private Collection<Entry<Key, Value>> entries.calc() = new MapEntries<Key, Value>(this);
 
     @Override
     SkiplistMap put(Key key, Value value) {
@@ -223,13 +199,10 @@ class SkiplistMap<Key extends Orderable, Value>
         return this;
     }
 
-
     // ----- OrderedMap interface ------------------------------------------------------------------
 
     @Override
-    conditional Orderer ordered() {
-        return True, compare;
-    }
+    conditional Orderer ordered() = (True, compare);
 
     @Override
     conditional Key first() {
@@ -362,7 +335,6 @@ class SkiplistMap<Key extends Orderable, Value>
                 : (True, keyStore.load(prev, nodes.heightOf(prev)));
     }
 
-
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
@@ -371,302 +343,182 @@ class SkiplistMap<Key extends Orderable, Value>
     }
 
     @Override
-    OrderedMap<Key, Value> reify() {
-        return this;
-    }
+    OrderedMap<Key, Value> reify() = this;
 
-
-    // ----- CollectionImpl base class for KeySet and EntrySet -------------------------------------
+    // ----- EntryIterator for cursor entries ------------------------------------------------------
 
     /**
-     * An abstract representation of a collection of Key or Entry objects in the Map.
+     * An `Entry` iterator implementation with the following guarantees:
+     *
+     * * Resilient to underlying changes in the `SkiplistMap`, including additions and removals;
+     * * Resilient to the `SkiplistMap` resizing;
+     * * Iterates in the underlying `SkiplistMap`'s order;
+     * * Regardless of the order of changes, does not ever emit the same element twice;
+     * * Regardless of the order of changes, does not ever emit an element that is no longer
+     *   present in the underlying `SkiplistMap`;
+     * * For elements added to the underlying `SkiplistMap`, those that occur in the order before
+     *   the most recently emitted element will never be emitted, and those that occur in the order
+     *   after the most recently emitted element _will_ be emitted.
      */
-    protected class CollectionImpl<Element>
-            implements Collection<Element> {
-        @Override
-        Int size.get() {
-            return outer.size;
+    protected class EntryIterator
+            implements Iterator<Entry<Key, Value>> {
+        construct() {
+            if (empty) {
+                finished = True;
+            }
         }
 
-        @Override
-        Iterator<Element> iterator() {
-            return empty
-                    ? Element.emptyIterator
-                    : new IteratorImpl();
+        // ----- properties ---------------------------------------------------------------
+
+        /**
+         * Once iteration has started, this is the previously iterated node id.
+         */
+        protected/private Int prevNode;
+
+        /**
+         * Once iteration has started, this is the previously iterated node height.
+         */
+        protected/private Int prevHeight;
+
+        /**
+         * Once iteration has started, this is the previously iterated key.
+         */
+        @Unassigned
+        protected/private Key prevKey;
+
+        /**
+         * Set to true once iteration has begun.
+         */
+        protected/private Boolean started;
+
+        /**
+         * Set to true once the `Iterator` has been exhausted.
+         */
+        protected/private Boolean finished.set(Boolean done) {
+            // make sure that the iterator has been marked as having started if it is finished
+            if (done) {
+                started = True;
+            }
+
+            super(done);
         }
 
         /**
-         * An iterator implementation with the following guarantees:
-         *
-         * * Resilient to underlying changes in the map, including additions and removals;
-         * * Resilient to map resizing;
-         * * Iterates in the underlying map's order;
-         * * Regardless of the order of changes, does not ever emit the same element twice;
-         * * Regardless of the order of changes, does not ever emit an element that is no longer
-         *   present in the underlying map;
-         * * For elements added to the underlying map, those that occur in the order before the
-         *   most recently emitted element will never be emitted, and those that occur in the order
-         *   after the most recently emitted element _will_ be emitted.
+         * Expected modification count. If the map changes, we reset the iterator to start after
+         * the previously iterated key.
          */
-        protected class IteratorImpl
-                implements Iterator<Element> {
-            construct() {
-                if (outer.empty) {
-                    finished = True;
-                }
-            }
+        protected/private Int expectedCount = -1;
 
+        /**
+         * The fake entry that gets used over and over during iteration.
+         */
+        protected/private CursorEntry entry = new CursorEntry();
 
-            // ----- properties ---------------------------------------------------------------
+        // ----- Iterator interface -------------------------------------------------------
 
-            /**
-             * Once iteration has started, this is the previously iterated node id.
-             */
-            protected/private Int prevNode;
-
-            /**
-             * Once iteration has started, this is the previously iterated node height.
-             */
-            protected/private Int prevHeight;
-
-            /**
-             * Once iteration has started, this is the previously iterated key.
-             */
-            @Unassigned
-            protected/private Key prevKey;
-
-            /**
-             * Set to true once iteration has begun.
-             */
-            protected/private Boolean started;
-
-            /**
-             * Set to true once the iterator has been exhausted.
-             */
-            protected/private Boolean finished.set(Boolean done) {
-                // make sure that the iterator has been marked as having started if it is finished
-                if (done) {
-                    started = True;
-                }
-
-                super(done);
-            }
-
-            /**
-             * Expected modification count. If the map changes, we reset the iterator to start after
-             * the previously iterated key.
-             */
-            protected/private Int expectedCount = -1;
-
-
-            // ----- Iterator interface -------------------------------------------------------
-
-            @Override
-            conditional Element next() {
-                if (finished) {
-                    return False;
-                }
-
-                IndexStore nodes = this.SkiplistMap.nodes;
-
-                if (started) {
-                    // make sure that the skip list map's structure has not changed
-                    if (modCount != expectedCount) {
-                        // iteration has already begun, so we have a record of the last key that we
-                        // iterated; re-initialize this iterator to begin iterations after that key
-                        Work work = readWriteWork();
-                        if (!((prevNode, prevHeight) := this.SkiplistMap.findNode(prevKey, work))) {
-                            // we did not find the previous key, but the work area is set to the
-                            // nodes after which that key would be inserted, so use those as a
-                            // starting point
-                            prevNode   = work.getWork(0);
-                            prevHeight = nodes.heightOf(prevNode);
-                        }
-
-                        // the iterator is now adjusted to be in sync with reality
-                        expectedCount = modCount;
-                    }
-                } else {
-                    prevNode      = nodes.headNode;
-                    prevHeight    = nodes.maxHeight;
-                    expectedCount = modCount;
-                    started       = True;
-                }
-
-                // verify that the iterator can advance to the next node
-                Int next = nodes.getIndex(prevNode, prevHeight, 0);
-                if (next == nodes.nil) {
-                    finished = True;
-                    return False;
-                }
-
-                // store that next node off so that the iterator will know what it already iterated
-                prevNode   = next;
-                prevHeight = nodes.heightOf(next);
-                Key key    = keyStore.load(prevNode, prevHeight);
-                prevKey    = key;
-
-                return True, toElement(key, prevNode, prevHeight);
-            }
-
-            @Override
-            Boolean knownDistinct() {
-                return True;
-            }
-
-            @Override
-            conditional Int knownSize() {
-                if (!started) {
-                    return True, outer.size;
-                }
-
-                if (finished) {
-                    return True, 0;
-                }
-
+        @Override
+        conditional Entry<Key, Value> next() {
+            if (finished) {
                 return False;
             }
 
-            @Override
-            (IteratorImpl, IteratorImpl) bifurcate() {
-                return finished
-                        ? (this, this)
-                        : (this, clone());
-            }
+            IndexStore nodes = this.SkiplistMap.nodes;
 
+            if (started) {
+                // make sure that the skip list map's structure has not changed
+                if (modCount != expectedCount) {
+                    // iteration has already begun, so we have a record of the last key that we
+                    // iterated; re-initialize this iterator to begin iterations after that key
+                    Work work = readWriteWork();
+                    if (!((prevNode, prevHeight) := this.SkiplistMap.findNode(prevKey, work))) {
+                        // we did not find the previous key, but the work area is set to the
+                        // nodes after which that key would be inserted, so use those as a
+                        // starting point
+                        prevNode   = work.getWork(0);
+                        prevHeight = nodes.heightOf(prevNode);
+                    }
 
-            // ----- internal -----------------------------------------------------------------
-
-            /**
-             * Given the specified key and skip list node, produce the corresponding element of this
-             * collection.
-             *
-             * @param key     the key associated with the node
-             * @param node    the node index
-             * @param height  the node height
-             *
-             * @return the corresponding element
-             */
-            protected Element toElement(Key key, Int node, Int height);
-
-            /**
-             * Copy constructor.
-             */
-            protected IteratorImpl clone() {
-                IteratorImpl that  = new IteratorImpl();
-
-                that.prevNode      = this.prevNode;
-                that.prevHeight    = this.prevHeight;
-                that.started       = this.started;
-                that.finished      = this.finished;
-                that.expectedCount = this.expectedCount;
-
-                if (started) {
-                    that.prevKey = this.prevKey;
+                    // the iterator is now adjusted to be in sync with reality
+                    expectedCount = modCount;
                 }
-
-                return that;
-            }
-        }
-    }
-
-
-    // ----- KeySet implementation -----------------------------------------------------------------
-
-    /**
-     * A representation of all of the Keys in the Map.
-     */
-    protected class KeySet
-            extends CollectionImpl<Key>
-            implements OrderedSet<Key>
-            incorporates conditional KeySetFreezer<Key extends Shareable> {
-        @Override
-        protected class IteratorImpl {
-            @Override
-            protected Key toElement(Key key, Int node, Int height) {
-                return key;
-            }
-        }
-
-        @Override
-        conditional Orderer ordered() {
-            return True, this.SkiplistMap.compare;
-        }
-
-        @Override
-        Boolean contains(Key key) {
-            return this.SkiplistMap.contains(key);
-        }
-
-        @Override
-        KeySet remove(Key key) {
-            this.SkiplistMap.remove(key);
-            return this;
-        }
-
-        /**
-         * Conditional Freezable implementation.
-         */
-        private static mixin KeySetFreezer<Element extends Orderable+Shareable>
-                into SkiplistMap<Element>.KeySet
-                implements Freezable {
-            @Override
-            immutable Freezable+Set<Key> freeze(Boolean inPlace = False) {
-                if (this.is(immutable)) {
-                    return this;
-                }
-
-                return new ListSet<Key>(this).freeze(True);
-            }
-        }
-    }
-
-
-    // ----- EntrySet implementation ---------------------------------------------------------------
-
-    /**
-     * A representation of all of the Entry objects in the Map.
-     */
-    protected class EntrySet
-            extends CollectionImpl<Entry>
-            implements Collection<Entry> {
-        @Override
-        protected class IteratorImpl {
-            @Override
-            protected Entry toElement(Key key, Int node, Int height) {
-                return entry.advance(prevKey.as(Key), prevNode, prevHeight);
+            } else {
+                prevNode      = nodes.headNode;
+                prevHeight    = nodes.maxHeight;
+                expectedCount = modCount;
+                started       = True;
             }
 
-            /**
-             * The fake entry that gets used over and over during iteration.
-             */
-            protected/private CursorEntry entry = new CursorEntry();
+            // verify that the iterator can advance to the next node
+            Int next = nodes.getIndex(prevNode, prevHeight, 0);
+            if (next == nodes.nil) {
+                finished = True;
+                return False;
+            }
+
+            // store that next node off so that the iterator will know what it already iterated
+            prevNode   = next;
+            prevHeight = nodes.heightOf(next);
+            Key key    = keyStore.load(prevNode, prevHeight);
+            prevKey    = key;
+
+            return True, entry.advance(prevKey.as(Key), prevNode, prevHeight);
         }
 
         @Override
-        Boolean contains(Entry entry) {
-            if (Value value := this.SkiplistMap.get(entry.key)) {
-                return value == entry.value;
+        Boolean knownDistinct() {
+            return True;
+        }
+
+        @Override
+        conditional Int knownSize() {
+            if (!started) {
+                return True, outer.size;
             }
+
+            if (finished) {
+                return True, 0;
+            }
+
             return False;
         }
 
         @Override
-        EntrySet remove(Entry entry) {
-            this.SkiplistMap.remove(entry.key, entry.value);
-            return this;
+        (EntryIterator, EntryIterator) bifurcate() {
+            return finished
+                    ? (this, this)
+                    : (this, clone());
+        }
+
+        // ----- internal -----------------------------------------------------------------
+
+        /**
+         * Copy constructor.
+         */
+        protected EntryIterator clone() {
+            EntryIterator that  = new EntryIterator();
+
+            that.prevNode      = this.prevNode;
+            that.prevHeight    = this.prevHeight;
+            that.started       = this.started;
+            that.finished      = this.finished;
+            that.expectedCount = this.expectedCount;
+
+            if (started) {
+                that.prevKey = this.prevKey;
+            }
+
+            return that;
         }
     }
-
 
     // ----- Entry implementation ------------------------------------------------------------------
 
     /**
-     * An implementation of Entry that can be used as a cursor over any number of keys, and
-     * delegates back to the map for its functionality.
+     * An implementation of [Map.Entry] that can be used as a cursor over any number of keys, and
+     * delegates back to the [SkiplistMap] for its functionality.
      */
     protected class CursorEntry
-            implements Entry {
+            implements Entry<Key, Value> {
         @Override
         public/private @Unassigned Key key;
 
@@ -728,11 +580,10 @@ class SkiplistMap<Key extends Orderable, Value>
         }
 
         @Override
-        Entry reify() {
+        Entry<Key, Value> reify() {
             return reifyEntry(key);
         }
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -1203,8 +1054,8 @@ class SkiplistMap<Key extends Orderable, Value>
     /**
      * Instantiate a reified entry, which must be a child of the map.
      */
-    private Entry reifyEntry(Key key) {
-        return new @maps.KeyEntry(key) Entry() {};
+    private Entry<Key, Value> reifyEntry(Key key) {
+        return new KeyEntry(this, key);
     }
 
     /**
@@ -1219,7 +1070,6 @@ class SkiplistMap<Key extends Orderable, Value>
         actualKeys?.dump(log, "keys")     : log.add("- No ElementStore for keys");
         actualValues?.dump(log, "values") : log.add("- No ElementStore for values");
     }
-
 
     // ----- IndexStore ----------------------------------------------------------------------------
 
@@ -1277,7 +1127,6 @@ class SkiplistMap<Key extends Orderable, Value>
             elements[2*maxHeight-1] = toIndex(-nil);
         }
 
-
         // ----- properties -------------------------------------------------------------------
 
         /**
@@ -1326,7 +1175,6 @@ class SkiplistMap<Key extends Orderable, Value>
          * The `nil` value used in this IndexStore.
          */
         @Abstract @RO Int nil;
-
 
         // ----- node management --------------------------------------------------------------
 
@@ -1403,7 +1251,6 @@ class SkiplistMap<Key extends Orderable, Value>
             assert height <= maxHeight;
             return height;
         }
-
 
         // ----- node contents ----------------------------------------------------------------
 
@@ -1519,7 +1366,6 @@ class SkiplistMap<Key extends Orderable, Value>
             assert i >= 0 && i < maxHeight && (n == nil || n >= 0 && n <= elements.size);
             elements[2*maxHeight+i] = toIndex(n);
         }
-
 
         // ----- helpers ----------------------------------------------------------------------
 
@@ -1733,7 +1579,6 @@ class SkiplistMap<Key extends Orderable, Value>
         @Override Int64 toIndex(Int n) {return n.toInt64();}
     }
 
-
     // ----- Work space ----------------------------------------------------------------------------
 
     /**
@@ -1827,7 +1672,6 @@ class SkiplistMap<Key extends Orderable, Value>
                 : nodes;
     }
 
-
     // ----- ElementStore --------------------------------------------------------------------------
 
     /**
@@ -1895,7 +1739,6 @@ class SkiplistMap<Key extends Orderable, Value>
         void dump(Log log, String desc);
     }
 
-
     // ----- ElementStore: Null value only ---------------------------------------------------------
 
     /**
@@ -1914,7 +1757,6 @@ class SkiplistMap<Key extends Orderable, Value>
 
         @Override void dump(Log log, String desc) {log.add($"{desc}=NullStore");}
     }
-
 
     // ----- AbstractStore -------------------------------------------------------------------------
 
@@ -1935,7 +1777,6 @@ class SkiplistMap<Key extends Orderable, Value>
          * and at this value-offset within the node.
          */
         protected Int valueOffset;
-
 
         // ----- ElementStore interface -------------------------------------------------------
 
@@ -1967,7 +1808,6 @@ class SkiplistMap<Key extends Orderable, Value>
             log.add($"{desc}={&this.actualClass.name}<{Element}> valueOffset={valueOffset}, height={height}");
         }
 
-
         // ----- internal ---------------------------------------------------------------------
 
         /**
@@ -1995,7 +1835,6 @@ class SkiplistMap<Key extends Orderable, Value>
             nodes?.setValue(node, height, valueOffset, index) : assert;
         }
     }
-
 
     // ----- SingleIndexStore: bits that squeeze inside an index -----------------------------------
 
@@ -2032,7 +1871,6 @@ class SkiplistMap<Key extends Orderable, Value>
          */
         protected function Element(Int) fromIndex;
 
-
         // ----- ElementStore interface -------------------------------------------------------
 
         @Override
@@ -2057,7 +1895,6 @@ class SkiplistMap<Key extends Orderable, Value>
         }
     }
 
-
     // ----- CharStore: a character stored as a numeric --------------------------------------------
 
     /**
@@ -2069,7 +1906,6 @@ class SkiplistMap<Key extends Orderable, Value>
          * The ElementStore that holds the code-points for this CharStore.
          */
         private NumberStore<UInt32, Index> actualStore = new NumberStore();
-
 
         // ----- ElementStore interface -------------------------------------------------------
 
@@ -2109,7 +1945,6 @@ class SkiplistMap<Key extends Orderable, Value>
             actualStore.dump(log, desc);
         }
 
-
         // ----- internal ---------------------------------------------------------------------
 
         static UInt32 NullChar = 0x7FFEFFFF;
@@ -2124,7 +1959,6 @@ class SkiplistMap<Key extends Orderable, Value>
                     : NullChar;
         }
     }
-
 
     // ----- EnumStore: enumerated values ----------------------------------------------------------
 
@@ -2151,7 +1985,6 @@ class SkiplistMap<Key extends Orderable, Value>
                     : (new NumberStore<Int8, Index>(), n -> n.toInt8());
         }
 
-
         // ----- properties -------------------------------------------------------------------
 
         /**
@@ -2168,8 +2001,6 @@ class SkiplistMap<Key extends Orderable, Value>
          * A function that converts to whatever the
          */
         private function IntNumber(Int) toStorageForm;
-
-
 
         // ----- ElementStore interface -------------------------------------------------------
 
@@ -2209,7 +2040,6 @@ class SkiplistMap<Key extends Orderable, Value>
             actualStore.dump(log, desc);
         }
 
-
         // ----- internal ---------------------------------------------------------------------
 
         static Int NullEnum = -1;
@@ -2223,7 +2053,6 @@ class SkiplistMap<Key extends Orderable, Value>
             return toStorageForm(e?.as(Enum).ordinal : NullEnum);
         }
     }
-
 
     // ----- NumberStore: built-in numeric types ---------------------------------------------------
 
@@ -2282,7 +2111,6 @@ class SkiplistMap<Key extends Orderable, Value>
             };
         }
 
-
         // ----- properties -------------------------------------------------------------------
 
         /**
@@ -2318,7 +2146,6 @@ class SkiplistMap<Key extends Orderable, Value>
          * The function that converts a sequence of bytes to the value.
          */
         function Element(Byte[]) fromBytes;
-
 
         // ----- ElementStore interface -------------------------------------------------------
 
@@ -2364,7 +2191,6 @@ class SkiplistMap<Key extends Orderable, Value>
             getBytes(node, height).fill(0);
         }
 
-
         // ----- internal ---------------------------------------------------------------------
 
         /**
@@ -2374,7 +2200,6 @@ class SkiplistMap<Key extends Orderable, Value>
             return nodes?.valueAsBytes(node, height, valueOffset, valueHeight) : assert;
         }
     }
-
 
     // ----- ExternalStore: Any object -------------------------------------------------------------
 
@@ -2389,7 +2214,6 @@ class SkiplistMap<Key extends Orderable, Value>
             construct AbstractStore();
             contents = new Array<Element|Int>(initCapacity);
         }
-
 
         // ----- properties -------------------------------------------------------------------
 
@@ -2409,7 +2233,6 @@ class SkiplistMap<Key extends Orderable, Value>
          * A reserved marker that means "none".
          */
         static Int nil = -1;
-
 
         // ----- ElementStore interface -------------------------------------------------------
 

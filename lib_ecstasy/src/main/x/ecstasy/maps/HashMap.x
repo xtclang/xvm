@@ -1,10 +1,7 @@
-import maps.EntryKeys;
-import maps.EntryValues;
-import maps.KeyEntry;
-
+import collections.Hasher;
 
 /**
- * HashMap is a hashed implementation of the Map interface. It uses the natural [Hasher] of the
+ * `HashMap` is a hashed implementation of the [Map] interface. It uses the natural [Hasher] of the
  * `Key` type for hashing and comparing keys.
  */
 class HashMap<Key extends Hashable, Value>
@@ -14,7 +11,7 @@ class HashMap<Key extends Hashable, Value>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct the HashMap with the specified hasher and (optional) initial capacity.
+     * Construct the `HashMap` with an (optional) initial capacity.
      *
      * @param initCapacity  the number of expected entries
      */
@@ -40,7 +37,7 @@ class HashMap<Key extends Hashable, Value>
     }
 
     /**
-     * [HasherMap] virtual constructor: Construct the HashMap with the specified hasher and
+     * [HasherMap] virtual constructor: Construct the `HashMap` with the specified [Hasher] and
      * (optional) initial capacity.
      *
      * @param hasher        the [Hasher] to use

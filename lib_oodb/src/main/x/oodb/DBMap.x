@@ -25,7 +25,7 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
      *
      * @return the `Result` of evaluating the function against the specified entry
      */
-    <Result extends immutable Const> Result require(Key key, function Result(Entry) test) {
+    <Result extends immutable Const> Result require(Key key, function Result(Map.Entry<Key, Value>) test) {
         return require(map -> map.process(key, test));
     }
 
@@ -39,7 +39,7 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
      * @param key     the key of the entry to apply the blind adjustment to
      * @param adjust  a function that operates against (and may both read and modify) the entry
      */
-    void defer(Key key, function Boolean(Entry) adjust) {
+    void defer(Key key, function Boolean(Map.Entry<Key, Value>) adjust) {
         defer(map -> map.process(key, adjust));
     }
 
@@ -47,7 +47,8 @@ interface DBMap<Key extends immutable Const, Value extends immutable Const>
     // ----- Map.Entry extensions ------------------------------------------------------------------
 
     @Override
-    interface Entry {
+    static interface Entry<Key, Value>
+            extends Map.Entry<Key, Value> {
         /**
          * The Entry as it existed at the start of the current transaction; if no transaction is
          * active, then this will be the same Entry as `this`. No changes are possible through the

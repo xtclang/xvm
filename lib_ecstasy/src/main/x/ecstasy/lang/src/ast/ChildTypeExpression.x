@@ -9,7 +9,7 @@ import src.Lexer.Token;
 /**
  * Represents a child of a NamedTypeExpression, for example:
  *
- *     ecstasy.collections.HashMap<String?, IntLiteral>.Entry
+ *    ecstasy.collections.List<String>.Cursor
  */
 const ChildTypeExpression(TypeExpression          parent,
                           AnnotationExpression[]? annotations,

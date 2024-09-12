@@ -384,7 +384,7 @@ public class xModule
             {
             ConstantPool pool = INSTANCE.pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), pool.typeModule());
             }
         return type;

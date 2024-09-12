@@ -1961,7 +1961,7 @@ public class xRTType
             {
             ConstantPool pool = container.getConstantPool();
 
-            type = pool.ensureEcstasyTypeConstant("collections.ListMap");
+            type = pool.ensureEcstasyTypeConstant("maps.ListMap");
             type = pool.ensureParameterizedTypeConstant(type, pool.typeString(), pool.typeType());
             LISTMAP_TYPE = type = pool.ensureImmutableTypeConstant(type);
             }

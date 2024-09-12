@@ -7,10 +7,11 @@ module SockShopCatalogApi
     package json import json.xtclang.org;
     package web  import web.xtclang.org;
 
-    import ecstasy.collections.HashMap;
     import ecstasy.io.ByteArrayInputStream;
     import ecstasy.io.InputStream;
     import ecstasy.io.UTF8Reader;
+
+    import ecstasy.maps.HashMap;
 
     import db.Connection;
     import db.Sock;

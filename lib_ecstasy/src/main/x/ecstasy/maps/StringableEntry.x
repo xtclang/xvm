@@ -3,10 +3,10 @@
  *
  * This mixin can be used as part of an Entry implementation as follows:
  *
- *     incorporates conditional EntryStringer<Key extends Stringable, Value extends Stringable>
+ *     incorporates conditional StringableEntry<Key extends Stringable, Value extends Stringable>
  */
-mixin EntryStringer<MapKey extends Stringable, MapValue extends Stringable>
-        into Map<MapKey, MapValue>.Entry
+mixin StringableEntry<MapKey extends Stringable, MapValue extends Stringable>
+        into Map.Entry<MapKey, MapValue>
         implements Stringable {
 
     @Override

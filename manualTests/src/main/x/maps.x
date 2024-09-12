@@ -118,7 +118,7 @@ module TestMaps {
 
     void testVirtualHasher() {
         import ecstasy.collections.Hasher;
-        import ecstasy.collections.HasherMap;
+        import ecstasy.maps.HasherMap;
         import ecstasy.collections.VirtualHasher;
 
         Map<Point2D, String> map = new HashMap();
@@ -191,7 +191,7 @@ module TestMaps {
         }
 
         console.print("entries:");
-        loop: for (Map<String,String>.Entry entry : map.entries) {
+        loop: for (Map.Entry<String,String> entry : map.entries) {
             console.print($"[{loop.count}]:{entry.key}={entry.value}");
         }
 
@@ -250,9 +250,9 @@ module TestMaps {
             map[i] = i + 1;
         }
 
-        Iterator<Map<Int, Int>.Entry> iter = map.entries.iterator();
+        Iterator<Map.Entry<Int, Int>> iter = map.entries.iterator();
         Map<Int, Int> control = new HashMap();
-        if (Map<Int, Int>.Entry next := iter.next()) {
+        if (Map.Entry<Int, Int> next := iter.next()) {
             assert(!control.contains(next.key));
             control.put(next.key, next.value);
         }
@@ -262,7 +262,7 @@ module TestMaps {
         }
 
         for (Int i : 0..20) {
-            if (Map<Int, Int>.Entry next := iter.next()) {
+            if (Map.Entry<Int, Int> next := iter.next()) {
                 assert(!control.contains(next.key));
                 control.put(next.key, next.value);
             }
@@ -272,7 +272,7 @@ module TestMaps {
             map[i] = i;
         }
 
-        while (Map<Int, Int>.Entry next := iter.next()) {
+        while (Map.Entry<Int, Int> next := iter.next()) {
             assert(!control.contains(next.key));
             control.put(next.key, next.value);
         }

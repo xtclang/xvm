@@ -589,7 +589,7 @@ public class TypeInfo
         }
 
     /**
-     * @return true if this type represents and instantiable singleton class
+     * @return true if this type represents an instantiable singleton class
      */
     public boolean isInstantiableSingleton()
         {
@@ -642,22 +642,32 @@ public class TypeInfo
      */
     public boolean isNewable(boolean fSingleton, ErrorListener errs)
         {
+        if (!isClass() || fSingleton ? !isInstantiableSingleton() : isSingleton())
+            {
+            return false;
+            }
+
         if (isVirtualChildClass())
             {
             if (isExplicitlyAbstract())
                 {
                 return false;
                 }
+            TypeConstant typeParent = f_type.getParentType();
+            if (!typeParent.ensureTypeInfo(errs).isNewable(false, ErrorListener.BLACKHOLE))
+                {
+                // the parent is abstract, so the virtual child "new-ability" will be checked
+                // by concrete parent's subclasses
+                return true;
+                }
             }
-        else if (fSingleton ? !isInstantiableSingleton() : isSingleton())
+
+        if (isAbstract())
             {
             return false;
             }
-        else if (isAbstract() || !isClass())
-            {
-            return false;
-            }
-        else if (!m_fChildrenChecked && !f_mapChildren.isEmpty())
+
+        if (!m_fChildrenChecked && !f_mapChildren.isEmpty())
             {
             ConstantPool pool = pool();
 

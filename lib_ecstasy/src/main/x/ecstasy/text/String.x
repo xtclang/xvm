@@ -334,27 +334,19 @@ const String
                                      Char                   entrySep,
                                      function Boolean(Char) whitespace)
             implements Map<String, String>
-            incorporates collections.maps.KeySetBasedMap<String, String> {
+            extends maps.KeyBasedMap<String, String> {
 
         @Override
-        conditional Orderer? ordered() {
-            return True, Null;
-        }
+        conditional Orderer? ordered() = (True, Null);
 
         @Override
-        @Lazy Int size.calc() {
-            return data.count(entrySep) + 1;
-        }
+        @Lazy Int size.calc() = keyIterator().count();
 
         @Override
-        Boolean empty.get() {
-            return False;
-        }
+        Boolean empty.get() = False;
 
         @Override
-        Boolean contains(String key) {
-            return find(key);
-        }
+        Boolean contains(String key) = find(key);
 
         @Override
         conditional String get(String key) {
@@ -363,6 +355,36 @@ const String
             }
             return False;
         }
+
+        @Override
+        protected Iterator<String> keyIterator() = new Iterator<String>() {
+            String data   = this.StringMap.data;
+            Int    offset = 0;
+
+            @Override
+            conditional String next() {
+                Int length = data.size;
+                if (offset >= length) {
+                    return False;
+                }
+
+                // find the end of the entry
+                Int endEntry = length;
+                endEntry := data.indexOf(entrySep, offset);
+
+                // the delimiter between key and value is optional (i.e. value assumed
+                // to be "")
+                Int endKey = endEntry;
+                if (endKey := data.indexOf(kvSep, offset), endKey > endEntry) {
+                    endKey = endEntry;
+                }
+
+                String key = data[offset ..< endKey].trim(whitespace);
+                offset = endEntry + 1;
+
+                return True, key;
+            }
+        };
 
         /**
          * Internal helper to find a "key in a map" that is actually in the underlying String.
@@ -429,66 +451,6 @@ const String
             }
 
             return False;
-        }
-
-        @Override
-        @Lazy Set<String> keys.calc() {
-            return new KeySet();
-        }
-
-        const KeySet
-                implements Set<String> {
-            @Override
-            conditional Orderer? ordered() {
-                return True, Null;
-            }
-
-            @Override
-            Int size.get() {
-                return this.StringMap.size;
-            }
-
-            @Override
-            Boolean empty.get() {
-                return False;
-            }
-
-            @Override
-            Boolean contains(String value) {
-                return this.StringMap.contains(value);
-            }
-
-            @Override
-            Iterator<String> iterator() {
-                return new Iterator<String>() {
-                    String data   = this.StringMap.data;
-                    Int    offset = 0;
-
-                    @Override
-                    conditional String next() {
-                        Int length = data.size;
-                        if (offset >= length) {
-                            return False;
-                        }
-
-                        // find the end of the entry
-                        Int endEntry = length;
-                        endEntry := data.indexOf(entrySep, offset);
-
-                        // the delimiter between key and value is optional (i.e. value assumed
-                        // to be "")
-                        Int endKey = endEntry;
-                        if (endKey := data.indexOf(kvSep, offset), endKey > endEntry) {
-                            endKey = endEntry;
-                        }
-
-                        String key = data[offset ..< endKey].trim(whitespace);
-                        offset = endEntry + 1;
-
-                        return True, key;
-                    }
-                };
-            }
         }
     }
 

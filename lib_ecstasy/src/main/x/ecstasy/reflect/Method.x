@@ -1,5 +1,3 @@
-import collections.HashSet;
-
 /**
  * A Method represents a method of a particular class or type. A method has a name, a number of
  * parameter types, and a number of return types. A method can be bound to a particular target (of

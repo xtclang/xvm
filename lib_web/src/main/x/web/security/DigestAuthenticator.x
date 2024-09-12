@@ -197,7 +197,7 @@ service DigestAuthenticator(Realm realm)
                     nonces = nonces.remove(nonces.keys.iterator().take());
                 }
             } else {
-                nonces = new NonceTable().freeze();
+                nonces = new NonceTable().freeze(inPlace=True);
             }
 
             @Inject Clock clock;

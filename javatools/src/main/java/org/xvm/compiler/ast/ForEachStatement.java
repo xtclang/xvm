@@ -26,6 +26,7 @@ import org.xvm.asm.ast.ForEachStmtAST;
 import org.xvm.asm.ast.RegAllocAST;
 import org.xvm.asm.ast.StmtBlockAST;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -180,9 +181,9 @@ public class ForEachStatement
      */
     private TypeConstant getEntryType()
         {
-        ConstantPool pool    = pool();
-        TypeConstant typeMap = pool.ensureMapType(getKeyType(), getValueType());
-        return pool.ensureVirtualChildTypeConstant(typeMap, "Entry");
+        ConstantPool  pool    = pool();
+        ClassConstant idEntry = pool.ensureEcstasyClassConstant("maps.Map.Entry");
+        return pool.ensureClassTypeConstant(idEntry, null, getKeyType(), getValueType());
         }
 
     /**
@@ -1218,7 +1219,7 @@ public class ForEachStatement
         TypeConstant typeKey   = getKeyType();
         TypeConstant typeValue = getValueType();
         TypeConstant typeMap   = pool.ensureMapType(typeKey, typeValue);
-        TypeConstant typeEntry = pool.ensureVirtualChildTypeConstant(typeMap, "Entry");
+        TypeConstant typeEntry = getEntryType();
         TypeInfo     infoMap   = typeMap.ensureTypeInfo(errs);
 
         boolean      fKeysOnly = m_exprLValue.getValueCount() == 1 && m_regEntry == null;

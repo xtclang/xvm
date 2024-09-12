@@ -42,7 +42,7 @@ class JsonMergePatch(Doc patch) {
             }
 
             JsonObjectBuilder builder = new JsonObjectBuilder(target);
-            for (Map<String, Doc>.Entry entry : patch.entries) {
+            for (Map.Entry<String, Doc> entry : patch.entries) {
                 String key   = entry.key;
                 Doc    value = entry.value;
                 if (value == Null) {
@@ -84,7 +84,7 @@ class JsonMergePatch(Doc patch) {
         if (source.is(JsonObject) && target.is(JsonObject)) {
             JsonObjectBuilder builder = new JsonObjectBuilder();
             // Find the source entries to be removed or replaced
-            for (Map<String, Doc>.Entry entry : source.entries) {
+            for (Map.Entry<String, Doc> entry : source.entries) {
                 String key = entry.key;
                 if (Doc targetValue := target.get(key)) {
                     // key is in both
@@ -98,7 +98,7 @@ class JsonMergePatch(Doc patch) {
                 }
             }
             // Find entries to be added from the target to the source
-            for (Map<String, Doc>.Entry entry : target.entries) {
+            for (Map.Entry<String, Doc> entry : target.entries) {
                 String key = entry.key;
                 if (!source.contains(entry.key)) {
                     builder.add(key, entry.value);

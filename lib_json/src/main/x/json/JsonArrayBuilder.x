@@ -142,7 +142,7 @@ class JsonArrayBuilder
     @Override
     protected void mergeObject(JsonObject o) {
         Map<JsonPointer, Doc> map = new ListMap();
-        for (Map<String, Doc>.Entry entry : o.entries) {
+        for (Map.Entry<String, Doc> entry : o.entries) {
             JsonPointer pointer = JsonPointer.from(entry.key);
             Int?        index   = pointer.index;
             assert index != Null as "Cannot merge JSON Object with non-Int keys into a JSON array";
@@ -153,7 +153,7 @@ class JsonArrayBuilder
             map.put(pointer, entry.value);
         }
 
-        for (Map<JsonPointer, Doc>.Entry entry : map.entries) {
+        for (Map.Entry<JsonPointer, Doc> entry : map.entries) {
             deepMerge(entry.key, entry.value);
         }
     }

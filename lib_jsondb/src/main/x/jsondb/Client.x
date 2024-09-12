@@ -1,8 +1,14 @@
 import collections.SparseIntSet;
 
 import ecstasy.collections.CollectImmutableArray;
-import ecstasy.collections.maps.KeyEntry;
-import ecstasy.collections.maps.KeySetBasedMap;
+
+import ecstasy.maps.CursorEntry;
+import ecstasy.maps.DiscreteEntry;
+import ecstasy.maps.KeySetBasedMap;
+import ecstasy.maps.KeyEntry;
+import ecstasy.maps.MapEntries;
+import ecstasy.maps.MapValues;
+
 import ecstasy.reflect.Annotation;
 
 import json.Doc;
@@ -44,6 +50,7 @@ import storage.ProcessorStore;
 import storage.ValueStore;
 
 import Catalog.BuiltIn;
+
 import TxManager.NO_TX;
 import TxManager.Requirement;
 
@@ -880,18 +887,32 @@ service Client<Schema extends RootSchema> {
                     }
 
                     return False;
-                    }
-
-                @Override
-                @Lazy Set<String> keys.calc() {
-                    return infos.keys;
                 }
 
                 @Override
-                Set<DBObject> values.get() = TODO("dbChildren.values.get()");
+                Iterator<Entry<String, DBObject>> iterator() {
+                    return new Iterator() {
+                        Iterator<String>              keyIterator = keys.iterator();
+                        CursorEntry<String, DBObject> entry       = new CursorEntry(this.Map);
+
+                        @Override
+                        conditional Entry<String, DBObject> next() {
+                            if (String key := keyIterator.next()) {
+                                return True, entry.advance(key);
+                            }
+                            return False;
+                        }
+                    };
+                }
 
                 @Override
-                Set<Map<String, DBObject>.Entry> entries.get() = TODO("dbChildren.entries.get()");
+                @Lazy Set<String> keys.calc() = infos.keys;
+
+                @Override
+                @Lazy Collection<DBObject> values.get() = new MapValues<String, DBObject>(this);
+
+                @Override
+                @Lazy Collection<Entry<String, DBObject>> entries.get() = new MapEntries<String, DBObject>(this);
 
                 @Lazy Map<String, DboInfo> infos.calc() {
                     Int[] childIds = info_.childIds;
@@ -900,7 +921,7 @@ service Client<Schema extends RootSchema> {
                         return [];
                     }
 
-                    import ecstasy.collections.CollectImmutableMap;
+                    import ecstasy.maps.CollectImmutableMap;
                     static CollectImmutableMap<String, DboInfo> collector = new CollectImmutableMap();
                     return childIds.associate(i -> {val info = infoFor(i); return info.name, info;}, collector);
                 }
@@ -957,8 +978,8 @@ service Client<Schema extends RootSchema> {
                         failure = True;
 
                         // log the exception (otherwise the information would be lost)
-                        log($|While attempting to execute a deferred adjustment on\
-                             | {dbPath.toString().substring(1)}, an exception occurred: {e}
+                        log($|While attempting to execute a deferred adjustment on \
+                             |{dbPath.toString().substring(1)}, an exception occurred: {e}
                            );
                     }
 
@@ -991,8 +1012,8 @@ service Client<Schema extends RootSchema> {
          */
         Transaction requireTransaction_(String method) {
             // this DBObject must be transactional
-            assert this.transactional as $|DBObject {dbPath.toString().substring(1)} is not a\
-                                          | transactional object; {method} requires a transaction
+            assert this.transactional as $|DBObject {dbPath.toString().substring(1)} is not a \
+                                          |transactional object; {method} requires a transaction
                                          ;
 
             // there must already be a transaction
@@ -1016,7 +1037,9 @@ service Client<Schema extends RootSchema> {
                         return False;
                     }
                 } catch (Exception e) {
-                    this.Client.log($"An exception occurred while evaluating Validator \"{&validator.actualClass.displayName}\": {e}");
+                    this.Client.log($|An exception occurred while evaluating Validator \
+                                     |"{&validator.actualClass.displayName}": {e}
+                                     );
                     return False;
                 }
             }
@@ -1038,7 +1061,9 @@ service Client<Schema extends RootSchema> {
                         return False;
                     }
                 } catch (Exception e) {
-                    this.Client.log($"An exception occurred while processing Rectifier \"{&rectifier.actualClass.displayName}\": {e}");
+                    this.Client.log($|An exception occurred while processing Rectifier \
+                                     |"{&rectifier.actualClass.displayName}": {e}
+                                     );
                     return False;
                 }
             }
@@ -1060,7 +1085,9 @@ service Client<Schema extends RootSchema> {
                         return False;
                     }
                 } catch (Exception e) {
-                    this.Client.log($"An exception occurred while processing Distributor \"{&distributor.actualClass.displayName}\": {e}");
+                    this.Client.log($|An exception occurred while processing Distributor \
+                                     |"{&distributor.actualClass.displayName}": {e}
+                                     );
                     return False;
                 }
             }
@@ -1822,54 +1849,23 @@ service Client<Schema extends RootSchema> {
             }
         }
 
-        @Override
-        protected class CursorEntry
-                implements Entry {
-
-            @Override
-            Entry reify() {
-                return new ReifiedEntry(key);
-            }
-
-            @Override
-            Entry original.get() {
-                TODO CP
-            }
-        }
-
-        /**
-         * An implementation of the Entry interface suitable for use as the "original" entry.
-         */
-        protected const ReifiedEntry(Key key)
-                implements Entry
-                incorporates KeyEntry<Key, Value>(key) {}
-
         /**
          * An implementation of the Entry interface suitable for use as the "original" entry.
          */
         protected const HistoricalEntry
-                implements Entry {
+                extends DiscreteEntry<Key, Value>
+                implements DBMap.Entry<Key, Value> {
 
             construct(Key key) {
-                this.key    = key;
-                this.exists = False;
+                construct DiscreteEntry(key, readOnly=True);
             }
 
             construct(Key key, Value value) {
-                this.key    = key;
-                this.value  = value;
-                this.exists = True;
+                construct DiscreteEntry(key, value, readOnly=True);
             }
 
             @Override
-            immutable Value value.get() {
-                return assigned
-                        ? super()
-                        : throw new OutOfBounds($"A value for the key \"{key}\" does not exist");
-            }
-
-            @Override
-            Entry original.get() {
+            DBMap.Entry<Key, Value> original.get() {
                 return this;
             }
         }
@@ -1904,7 +1900,7 @@ service Client<Schema extends RootSchema> {
                 DboInfo info = infoFor(id);
                 map.put(info.path.toString(), id);
             }
-            return map.freeze();
+            return map.freeze(inPlace=True);
         }
 
         @Override
@@ -1926,13 +1922,13 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
+        Set<Key> keys.get() = pathToId_.keys;
+
+        @Override
         SysMapImpl put(Key key, Value value) = throw new ReadOnly();
 
         @Override
         SysMapImpl remove(Key key) = throw new ReadOnly();
-
-        @Override
-        Set<Key> keys.get() = pathToId_.keys;
     }
 
 

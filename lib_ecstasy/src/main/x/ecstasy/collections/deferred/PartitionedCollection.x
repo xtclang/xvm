@@ -95,12 +95,11 @@ class PartitionedCollection<Element>
 
     @Override
     protected void postReifyCleanup() {
-        data  = Null;
+        data = Null;
         // if we're the non-primary, then we're always allowed to forget the primary after
         // reification because it never relies on us; if we're the primary, our buddy relies on us
         // until it has reified
         if (!primary || buddy?.alreadyReified) {
-            buddy = Null;
             match = Null;
             super();
         }

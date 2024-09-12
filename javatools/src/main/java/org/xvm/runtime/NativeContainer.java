@@ -578,7 +578,7 @@ public class NativeContainer
             ConstantPool pool       = getConstantPool();
             TypeConstant typeReveal = pool.ensureMapType(pool.typeString(), pool.typeString());
             TypeConstant typeActual = pool.ensureParameterizedTypeConstant(
-                                        pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                                        pool.ensureEcstasyTypeConstant("maps.ListMap"),
                                         pool.typeString(), pool.typeString());
 
             switch (Utils.constructListMap(frame,
@@ -888,7 +888,7 @@ public class NativeContainer
                 break;
 
             case Map:
-                sComponent = "collections.ListMap";
+                sComponent = "maps.ListMap";
                 break;
 
             case Set:

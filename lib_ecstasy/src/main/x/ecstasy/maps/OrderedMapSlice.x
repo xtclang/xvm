@@ -3,26 +3,26 @@
  */
 class OrderedMapSlice<Key extends Orderable, Value>
         implements OrderedMap<Key, Value>
-        incorporates KeySetBasedMap<Key, Value> {
+        extends KeyBasedMap<Key, Value> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an OrderedMapSlice map, which provides view a slice (defined by a range of keys)
-     * of an underlying map.
+     * Construct an `OrderedMapSlice`, which provides a `OrderedMap` view of a slice (defined by a
+     * range of keys) of an underlying `OrderedMap`.
      *
-     * @param map    the underlying map to create a slice from
-     * @param range  the range of keys to include in the slice; the keys specified by the range do
-     *               not have to actually exist in the underlying map
+     * @param orig   the underlying `OrderedMap` to create a slice from
+     * @param range  the [Range] of keys to include in the slice; the keys specified by the `Range`
+     *               do not have to actually exist in the underlying `OrderedMap`
      */
-    construct(OrderedMap<Key, Value> map, Range<Key> range) {
+    construct(OrderedMap<Key, Value> orig, Range<Key> range) {
         // while this implementation could be altered to support persistent map implementations, it
         // currently assumes that the underlying map will mutate in-place
-        assert map.inPlace;
+        assert orig.inPlace;
 
-        this.map   = map;
+        this.orig   = orig;
         this.range = range;
 
-        assert Orderer compare := map.ordered();
+        assert Orderer compare := orig.ordered();
         Key first = range.first;
         Key last  = range.last;
         if (compare(first, last) == Greater) {
@@ -47,45 +47,44 @@ class OrderedMapSlice<Key extends Orderable, Value>
         }
 
         findFirst = switch (descending, range.firstExclusive) {
-            case (False, False): map.&ceiling(range.first);
-            case (False, True ): map.&next(range.first);
-            case (True , False): map.&floor(range.first);
-            case (True , True ): map.&prev(range.first);
+            case (False, False): orig.&ceiling(range.first);
+            case (False, True ): orig.&next(range.first);
+            case (True , False): orig.&floor(range.first);
+            case (True , True ): orig.&prev(range.first);
         };
 
         findLast = switch (descending, range.lastExclusive) {
-            case (False, False): map.&floor(range.last);
-            case (False, True ): map.&prev(range.last);
-            case (True , False): map.&ceiling(range.last);
-            case (True , True ): map.&next(range.last);
+            case (False, False): orig.&floor(range.last);
+            case (False, True ): orig.&prev(range.last);
+            case (True , False): orig.&ceiling(range.last);
+            case (True , True ): orig.&next(range.last);
         };
 
         (findNext, findPrev) = descending
-                ? (map.prev, map.next)
-                : (map.next, map.prev);
+                ? (orig.prev, orig.next)
+                : (orig.next, orig.prev);
     } finally {
-        if (&map.isImmutable || &map.isService) {
+        if (&orig.isImmutable || &orig.isService) {
             makeImmutable();
         }
     }
 
-
     // ----- internal state ------------------------------------------------------------------------
 
     /**
-     * The underlying map.
+     * The underlying [OrderedMap].
      */
-    protected/private OrderedMap<Key, Value> map;
+    protected/private OrderedMap<Key, Value> orig;
 
     /**
-     * The actual Orderer used internally.
+     * The actual [Orderer] used internally.
      */
     protected/private Orderer compare;
 
     /**
-     * The key range that defines the slice. Note that the order of the range is always based on
+     * The key [Range] that defines the slice. Note that the order of the `Range` is always based on
      * the natural order of the `Key` type, and so the `Range` logic has to be overridden
-     * (re-implemented here) to use the map's specified `Orderer`.
+     * (re-implemented here) to use the [Orderer] from [OrderedMap.ordered].
      */
     protected/private Range<Key> range;
 
@@ -123,13 +122,10 @@ class OrderedMapSlice<Key extends Orderable, Value>
      */
     function conditional Key(Key) findPrev;
 
-
     // ----- Map interface -------------------------------------------------------------------------
 
     @Override
-    conditional Int knownSize() {
-        return empty ? (True, 0) : False;
-    }
+    conditional Int knownSize() = empty ? (True, 0) : False;
 
     @Override
     Int size.get() {
@@ -162,23 +158,16 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     @RO Boolean empty.get() {
         // the assumption is that it's faster to find the first than the last in the underlying map
-        return map.empty || (descending ? !last() : !first());
+        return orig.empty || (descending ? !last() : !first());
     }
 
     @Override
-    @Lazy public/private KeySet keys.calc() {
-        return new KeySet();
-    }
-
-    @Override
-    Boolean contains(Key key) {
-        return map.contains(key) && include(key);
-    }
+    Boolean contains(Key key) = orig.contains(key) && include(key);
 
     @Override
     conditional Value get(Key key) {
         if (include(key)) {
-            return map.get(key);
+            return orig.get(key);
         }
 
         return False;
@@ -187,34 +176,30 @@ class OrderedMapSlice<Key extends Orderable, Value>
     @Override
     OrderedMapSlice put(Key key, Value value) {
         assert:bounds include(key);
-        map.put(key, value);
+        orig.put(key, value);
         return this;
     }
 
     @Override
     OrderedMapSlice remove(Key key) {
         if (include(key)) {
-            map.remove(key);
+            orig.remove(key);
         }
-
         return this;
     }
 
     @Override
     OrderedMapSlice clear() {
         while (Key key := first()) {
-            map.remove(key);
+            orig.remove(key);
         }
         return this;
     }
 
-
     // ----- OrderedMap interface ------------------------------------------------------------------
 
     @Override
-    conditional Orderer ordered() {
-        return True, compare;
-    }
+    conditional Orderer ordered() = (True, compare);
 
     @Override
     conditional Key first() {
@@ -250,7 +235,7 @@ class OrderedMapSlice<Key extends Orderable, Value>
 
     @Override
     conditional Key ceiling(Key key) {
-        if (key := descending ? map.floor(key) : map.ceiling(key), include(key)) {
+        if (key := descending ? orig.floor(key) : orig.ceiling(key), include(key)) {
             return True, key;
         }
 
@@ -259,13 +244,12 @@ class OrderedMapSlice<Key extends Orderable, Value>
 
     @Override
     conditional Key floor(Key key) {
-        if (key := descending ? map.ceiling(key) : map.floor(key), include(key)) {
+        if (key := descending ? orig.ceiling(key) : orig.floor(key), include(key)) {
             return True, key;
         }
 
         return False;
     }
-
 
     // ----- Sliceable interface -------------------------------------------------------------------
 
@@ -350,142 +334,65 @@ class OrderedMapSlice<Key extends Orderable, Value>
                 ? upper..lower
                 : lower..upper;
 
-        return new OrderedMapSlice(map, indexes);
+        return new OrderedMapSlice(orig, indexes);
     }
 
     @Override
-    OrderedMap<Key, Value> reify() {
-        return new SkiplistMap<Key, Value>(size, compare).putAll(this);
-    }
+    OrderedMap<Key, Value> reify() = new SkiplistMap<Key, Value>(size, compare).putAll(this);
 
+    // ----- KeyBasedMap support -------------------------------------------------------------------
 
-    // ----- KeySet implementation -----------------------------------------------------------------
+    @Override
+    protected Iterator<Key> keyIterator() = new KeyIterator();
 
     /**
-     * A representation of all of the Keys in the Map.
+     * An [Iterator] implementation with the following guarantees:
+     *
+     * * Resilient to changes in the original [Map], including additions and removals;
+     * * Iterates in the original `Map`'s order;
+     * * Regardless of the order of changes, does not ever emit the same element twice;
+     * * Regardless of the order of changes, does not ever emit an element that is no longer
+     *   present in the underlying `Map`;
+     * * For elements added to the original `Map`, those that occur in the order before the
+     *   most recently emitted element will never be emitted, and those that occur in the order
+     *   after the most recently emitted element _will_ be emitted.
      */
-    protected class KeySet
-            implements OrderedSet<Key>
-            implements Freezable {
-        @Override
-        conditional Orderer ordered() {
-            return this.OrderedMapSlice.ordered();
-        }
-
-        @Override
-        Int size.get() {
-            return outer.size;
-        }
-
-        @Override
-        Boolean empty.get() {
-            return outer.empty;
-        }
-
-        @Override
-        conditional Key first() {
-            return this.OrderedMapSlice.first();
-        }
-
-        @Override
-        conditional Key last() {
-            return this.OrderedMapSlice.last();
-        }
-
-        @Override
-        conditional Key next(Key key) {
-            return this.OrderedMapSlice.next(key);
-        }
-
-        @Override
-        conditional Key prev(Key key) {
-            return this.OrderedMapSlice.prev(key);
-        }
-
-        @Override
-        conditional Key ceiling(Key key) {
-            return this.OrderedMapSlice.ceiling(key);
-        }
-
-        @Override
-        conditional Key floor(Key key) {
-            return this.OrderedMapSlice.floor(key);
-        }
-
-        @Override
-        Iterator<Key> iterator() {
-            return new KeyIterator();
-        }
-
-        @Override
-        @Op("[..]") KeySet slice(Range<Key> keys) {
-            return this.OrderedMapSlice.slice(keys).keys;
-        }
-
-        @Override
-        OrderedSet<Key> reify() {
-            return new SkiplistSet<Key>(size, this.OrderedMapSlice.compare).addAll(this);
-        }
+    protected class KeyIterator
+            implements Iterator<Key> {
+        // ----- properties ---------------------------------------------------------------
 
         /**
-         * An iterator implementation with the following guarantees:
-         *
-         * * Resilient to changes in the original map, including additions and removals;
-         * * Iterates in the original map's order;
-         * * Regardless of the order of changes, does not ever emit the same element twice;
-         * * Regardless of the order of changes, does not ever emit an element that is no longer
-         *   present in the underlying map;
-         * * For elements added to the original map, those that occur in the order before the
-         *   most recently emitted element will never be emitted, and those that occur in the order
-         *   after the most recently emitted element _will_ be emitted.
+         * Set to true once iteration has begun.
          */
-        protected class KeyIterator
-                implements Iterator<Key> {
-            // ----- properties ---------------------------------------------------------------
+        protected/private Boolean started;
 
-            /**
-             * Set to true once iteration has begun.
-             */
-            protected/private Boolean started;
+        /**
+         * Once iteration has started, this is the previously iterated key.
+         */
+        protected/private Key? prevKey = Null;
 
-            /**
-             * Once iteration has started, this is the previously iterated key.
-             */
-            protected/private Key? prevKey = Null;
-
-            /**
-             * Set to true once the iterator has been exhausted.
-             */
-            protected/private Boolean finished.set(Boolean done) {
-                // make sure that the iterator has been marked as having started if it is finished
-                if (done) {
-                    started = True;
-                }
-
-                super(done);
+        /**
+         * Set to true once the iterator has been exhausted.
+         */
+        protected/private Boolean finished.set(Boolean done) {
+            // make sure that the iterator has been marked as having started if it is finished
+            if (done) {
+                started = True;
             }
 
+            super(done);
+        }
 
-            // ----- Iterator interface -------------------------------------------------------
+        // ----- Iterator interface -------------------------------------------------------
 
-            @Override
-            conditional Element next() {
-                if (finished) {
-                    return False;
-                }
+        @Override
+        conditional Element next() {
+            if (finished) {
+                return False;
+            }
 
-                if (started) {
-                    if (Key key := this.OrderedMapSlice.next(prevKey.as(Key))) {
-                        prevKey = key;
-                        return True, key;
-                    } else {
-                        finished = True;
-                        return False;
-                    }
-                }
-
-                if (Key key := this.OrderedMapSlice.first()) {
-                    started = True;
+            if (started) {
+                if (Key key := this.OrderedMapSlice.next(prevKey.as(Key))) {
                     prevKey = key;
                     return True, key;
                 } else {
@@ -494,59 +401,48 @@ class OrderedMapSlice<Key extends Orderable, Value>
                 }
             }
 
-            @Override
-            Boolean knownDistinct() {
-                return True;
-            }
-
-            @Override
-            conditional Int knownSize() {
-                if (finished) {
-                    return True, 0;
-                }
-
+            if (Key key := this.OrderedMapSlice.first()) {
+                started = True;
+                prevKey = key;
+                return True, key;
+            } else {
+                finished = True;
                 return False;
             }
+        }
 
-            @Override
-            (KeyIterator, KeyIterator) bifurcate() {
-                return finished
-                        ? (this, this)
-                        : (this, clone());
+        @Override
+        Boolean knownDistinct() = True;
+
+        @Override
+        conditional Int knownSize() {
+            if (finished) {
+                return True, 0;
             }
 
-
-            // ----- internal -----------------------------------------------------------------
-
-            /**
-             * Copy constructor.
-             */
-            protected KeyIterator clone() {
-                KeyIterator that = new KeyIterator();
-
-                that.started  = this.started;
-                that.prevKey  = this.prevKey;
-                that.finished = this.finished;
-
-                return that;
-            }
+            return False;
         }
 
         @Override
-        Boolean contains(Key key) {
-            return outer.contains(key);
+        (KeyIterator, KeyIterator) bifurcate() {
+            return finished
+                    ? (this, this)
+                    : (this, clone());
         }
 
-        @Override
-        KeySet remove(Key key) {
-            outer.remove(key);
-            return this;
-        }
+        // ----- internal -----------------------------------------------------------------
 
-        @Override
-        immutable KeySet freeze(Boolean inPlace = False) {
-            assert outer.is(immutable Map);
-            return makeImmutable();
+        /**
+         * Copy constructor.
+         */
+        protected KeyIterator clone() {
+            KeyIterator that = new KeyIterator();
+
+            that.started  = this.started;
+            that.prevKey  = this.prevKey;
+            that.finished = this.finished;
+
+            return that;
         }
     }
 }

@@ -1,11 +1,10 @@
+import collections.CollectArray;
+import collections.Hasher;
+
 import iterators.EmptyIterator;
 
-import maps.KeyEntry;
-import maps.EntryValues;
-
-
 /**
- * HasherMap is a hashed implementation of the Map interface. It uses the supplied [Hasher] to
+ * `HasherMap` is a hashed implementation of the [Map] interface. It uses the supplied [Hasher] to
  * support hashing and comparison for the `Key` type.
  *
  * In theory, hashing provides _on the order of_ `O(1)` access, update, insertion, and deletion
@@ -39,7 +38,7 @@ import maps.EntryValues;
  * arbitrarily large tree of nodes that hash to the same bucket. The existence of these two
  * specialized nodes allow the general case to be optimized to a bare minimum structure.
  *
- * This Map's iterators:
+ * This `Map`'s iterators:
  *
  * * will return entries that are present at iterator creation and not removed during iteration
  *   exactly once;
@@ -51,14 +50,16 @@ class HasherMap<Key, Value>
         implements HasherReplicable<Key>
         implements CopyableMap<Key, Value>
         implements Hashable
-        incorporates conditional MapFreezer<Key extends immutable Object, Value extends Shareable> {
+        incorporates conditional MapFreezer<Key extends immutable, Value extends Shareable> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct the HasherMap with the specified hasher and (optional) initial capacity.
+     * Construct the `HasherMap` with the specified [Hasher] and (optional) initial capacity.
+     *
+     * This is the [HasherReplicable] constructor.
      *
      * @param hasher        the [Hasher] to use
-     * @param initCapacity  the number of expected entries
+     * @param initCapacity  (optional) the number of expected entries
      */
     @Override
     construct(Hasher<Key> hasher, Int initCapacity = 0) {
@@ -76,14 +77,14 @@ class HasherMap<Key, Value>
      * @param that    another map to copy the contents from when constructing this HasherMap
      */
     construct(Hasher<Key> hasher, Map<Key, Value> that) {
-        if (that.is(HasherMap) && hasher == that.hasher) {
-            // optimization:
+        if (that.is(HasherMap) && &hasher == that.&hasher) {
+            // optimization: use the dedicated copy-from-HasherMap constructor
             construct HasherMap(that);
         } else {
             construct HasherMap(hasher, that.size);
         }
     } finally {
-        if (!(that.is(HasherMap) && hasher == that.hasher)) {
+        if (!(that.is(HasherMap) && &hasher == that.&hasher)) {
             putAll(that);
         }
     }
@@ -98,12 +99,11 @@ class HasherMap<Key, Value>
         this.removeCount = that.removeCount;
     }
 
-
     // ----- internal state ------------------------------------------------------------------------
 
     /**
-     * The Hasher is the thing that knows how to take a key and provide a hash code, or compare two
-     * keys for equality -- even if the keys don't know how to do that themselves.
+     * The [Hasher] is the thing that knows how to take a key and provide a hash code, or compare
+     * two keys for equality -- even if the keys don't know how to do that themselves.
      */
     public/private Hasher<Key> hasher;
 
@@ -132,11 +132,10 @@ class HasherMap<Key, Value>
      */
     private Int removeCount = 0;
 
-
     // ----- HashBucket structure ------------------------------------------------------------------
 
     /**
-     * Represents one or more key/value pairs. A HashBucket is basically a miniature map, a subset
+     * Represents one or more key/value pairs. A `HashBucket` is basically a miniature map, a subset
      * of a hash map that covers at least one key/value pair, and at most one hash bucket.
      */
     protected static @Abstract class HashBucket<Key, Value>
@@ -224,13 +223,13 @@ class HasherMap<Key, Value>
         }
 
         /**
-         * The hash code represented by this HashBucket. (If the HashBucket represents more than one
-         * hash code, then accessing this property will throw an exception.)
+         * The hash code represented by this `HashBucket`. If the `HashBucket` represents more than
+         * one hash code, then accessing this property will throw an exception.
          */
         @RO Int hash;
 
         /**
-         * How many key/value pairs are within this HashBucket.
+         * How many key/value pairs are within this `HashBucket`.
          */
         @RO Int size;
 
@@ -268,33 +267,36 @@ class HasherMap<Key, Value>
 
         /**
          * Obtain the value associated with the specified key.
+         TODO
          */
         conditional Value get(Hasher<Key> hasher, Int hash, Key key);
 
         /**
          * Modify the value associated with the specified key.
          *
-         * @return True iff an entry for the key was not in the map and now is
-         * @return the HashBucket to keep instead of this HashBucket; otherwise this HashBucket
+         * @return `True` iff an `Entry` for the key was not in the map and now is
+         * @return (conditional) the `HashBucket` to keep instead of this `HashBucket`; otherwise
+         *         this `HashBucket`
          */
         conditional HashBucket! put(Hasher<Key> hasher, Int hash, Key key, Value value);
 
         /**
          * Remove the specified key/value pairing.
          *
-         * @return True iff an entry for the key was in the map and now is not
-         * @return the HashBucket or Null to keep instead of this HashBucket; otherwise this HashBucket
+         * @return `True` iff an entry for the key was in the map and now is not
+         * @return (conditional) the `HashBucket` or `Null` to keep instead of this `HashBucket`;
+         *         otherwise this `HashBucket`
          */
         conditional HashBucket!? remove(Hasher<Key> hasher, Int hash, Key key);
 
         /**
-         * Redistribute this HashBucket as part of re-hashing the HasherMap.
+         * Redistribute this `HashBucket` as part of re-hashing the [HasherMap].
          *
-         * @param buckets  the new array of HashBuckets being re-hashed into
+         * @param buckets  the new `HashBucket[]` being re-hashed into
          */
         void redistribute(HashBucket!?[] buckets) {
-            Int                     index     = hash % buckets.size;
-            HashBucket<Key, Value>? oldBucket = buckets[index];
+            Int index     = hash % buckets.size;
+            val oldBucket = buckets[index];
             if (oldBucket == Null) {
                 buckets[index] = this;
             } else if (HashBucket<Key, Value> newBucket := oldBucket.adopt(this)) {
@@ -303,12 +305,12 @@ class HasherMap<Key, Value>
         }
 
         /**
-         * Add the node to this HashBucket.
+         * Add the node to this `HashBucket`.
          *
          * @param node  the node to adopt
          *
-         * @return True iff the HashBucket needs to be replaced
-         * @return the new HashBucket to use in lieu of this
+         * @return `True` iff the `HashBucket` needs to be replaced
+         * @return (conditional) the new `HashBucket` to use in lieu of this
          */
         conditional HashBucket! adopt(HashBucket! node) {
             return True, new TreeNode(this, node);
@@ -503,8 +505,8 @@ class HasherMap<Key, Value>
         /**
          * Find the specified key in this node.
          *
-         * @return True iff the key is found in this node
-         * @return the internal index of the key
+         * @return `True` iff the key is found in this node
+         * @return (conditional) the internal index of the key
          */
         protected conditional Int find(Hasher<Key> hasher, Key key) {
             EachKey: for (Key each : keys) {
@@ -693,7 +695,7 @@ class HasherMap<Key, Value>
         /**
          * Find the sub-node in the tree that has the specified hash.
          *
-         * @return True iff the node with the specified hash is found
+         * @return `True` iff the node with the specified hash is found
          * @return the index where the node was found, or the index at which to insert the node if
          *         it does not exist
          */
@@ -703,12 +705,13 @@ class HasherMap<Key, Value>
     }
 
     /**
-     * This is the primary means to find a HashBucket in the HasherMap.
+     * This is the primary means to find a [HashBucket] in the `HasherMap`.
      *
-     * @param key  the key to find in the map
+     * @param key  the key to find a [HashBucket] for in the `HasherMap`
      *
-     * @return True iff the key is in the map
-     * @return the HashBucket identified by the key
+     * @return `True` iff a [HashBucket] for the key (but not necessarily the key itself) is in the
+     *         `HasherMap`
+     * @return (conditional) the [HashBucket] that by the key
      */
     protected conditional HashBucket<Key, Value> bucketFor(Int hash) {
         if (empty) {
@@ -723,12 +726,11 @@ class HasherMap<Key, Value>
         return False;
     }
 
-
     // ----- HasherReplicable interface ------------------------------------------------------------
 
     /**
-     * This is the equivalent of the [Replicable] interface, but specific to the HasherMap, because
-     * it requires a Hasher for its construction. It allows a HasherMap to replicate itself without
+     * This is the equivalent of the [Replicable] interface, but specific to the [HasherMap],
+     * because it requires a [Hasher] for its construction. It allows a HasherMap to replicate itself without
      * having to resort to reflection, and enforces the contract on sub-classes.
      */
     static interface HasherReplicable<Key> {
@@ -741,12 +743,11 @@ class HasherMap<Key, Value>
         construct(Hasher<Key> hasher, Int initCapacity = 0);
     }
 
-
     // ----- Duplicable interface ------------------------------------------------------------------
 
     @Override
     HasherMap duplicate(function (Key, Value)(Key, Value)? transform = Null) {
-        if (this.is(immutable HasherMap) && transform == Null) {
+        if (this.is(immutable) && transform == Null) {
             return this;
         }
 
@@ -762,36 +763,39 @@ class HasherMap<Key, Value>
         return that;
     }
 
-
     // ----- Map interface -------------------------------------------------------------------------
 
     /**
-     * The size of the map is maintained internally.
+     * The size of the `Map` is maintained internally.
      */
     @Override
-    Int size.get() {
-        return addCount - removeCount;
-    }
+    Int size.get() = addCount - removeCount;
 
     @Override
-    Boolean empty.get() {
-        return addCount == removeCount;
-    }
-
-    @Override
-    Boolean contains(Key key) {
-        return get(key);
-    }
+    Boolean empty.get() = addCount == removeCount;
 
     @Override
     conditional Value get(Key key) {
         Int64 hash = hasher.hashOf(key);
-        if (HashBucket<Key, Value> bucket := bucketFor(hash), Value value := bucket.get(hasher, hash, key)) {
+        if (HashBucket<Key, Value> bucket := bucketFor(hash),
+                Value value := bucket.get(hasher, hash, key)) {
             return True, value;
         }
 
         return False;
     }
+
+    @Override
+    Iterator<Entry<Key, Value>> iterator() = new EntryIterator();
+
+    @Override
+    @Lazy public/private Set<Key> keys.calc() = new MapKeys<Key, Value>(this);
+
+    @Override
+    @Lazy public/private Collection<Value> values.calc() = new MapValues<Key, Value>(this);
+
+    @Override
+    @Lazy public/private Collection<Entry<Key, Value>> entries.calc() = new MapEntries<Key, Value>(this);
 
     @Override
     HasherMap put(Key key, Value value) {
@@ -866,402 +870,264 @@ class HasherMap<Key, Value>
     }
 
     @Override
-    <Result> Result process(Key key, function Result (Entry) compute) {
-        return compute(reifyEntry(key));
+    <Result> Result process(Key key, function Result (Entry<Key, Value>) compute) {
+        return compute(new KeyEntry<Key, Value>(this, key));
     }
 
-    @Override
-    @Lazy public/private Set<Key> keys.calc() {
-        KeySet keys = new KeySet();
-        if (this.HasherMap.is(immutable)) {
-            keys.makeImmutable();
-        }
-        return keys;
-    }
-
-    @Override
-    @Lazy public/private Collection<Value> values.calc() {
-        EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
-        if (this.HasherMap.is(immutable)) {
-            values.makeImmutable();
-        }
-        return values;
-    }
-
-    @Override
-    @Lazy public/private Collection<Entry> entries.calc() {
-        EntrySet entries = new EntrySet();
-        if (this.HasherMap.is(immutable)) {
-            entries.makeImmutable();
-        }
-        return entries;
-    }
-
-
-    // ----- CollectionImpl base class for KeySet and EntrySet -------------------------------------
+    // ----- cursor-based Entry iterator -----------------------------------------------------------
 
     /**
-     * An abstract representation of a collection of Key or Entry objects in the Map.
+     * An [Iterator] over the `Map`'s contents, stable in the presence of both concurrent
+     * modification and rehashing. Specifically, this `Iterator` **will not**: throw
+     * [ConcurrentModification], return duplicate keys, or skip keys which remain present over
+     * the course of iteration. The `Iterator` **may** return keys which were added _after_ the
+     * creation of the `Iterator`.
      */
-    protected class CollectionImpl<Element>
-            implements Collection<Element> {
-        @Override
-        Int size.get() {
-            return this.HasherMap.size;
+    protected class EntryIterator
+            implements Iterator<Entry<Key, Value>> {
+        /**
+         * Construct an iterator over all of the keys in the HasherMap.
+         */
+        // TODO GG how did this break? or is it correct that it shouldn't have worked?
+        // protected construct() {
+        construct() {
+            oldBucketCount = this.HasherMap.buckets.size;
+        } finally {
+            advanceWithinBucketArray();
         }
 
-        @Override
-        Iterator<Element> iterator() {
-            return empty
-                    ? Element.emptyIterator
-                    : new IteratorImpl();
-        }
+
+        // ----- properties --------------------------------------------------------------------
 
         /**
-         * An iterator over the map's contents, stable in the presence of both concurrent
-         * modification and rehashing. Specifically, this iterator **will not**: throw
-         * [ConcurrentModification], return duplicate keys, or skip keys which remain present over
-         * the course of iteration. The iterator **may** return keys which were added _after_ the
-         * creation of the iterator.
+         * The index of the next hash bucket to process.
          */
-        protected class IteratorImpl
-                implements Iterator<Element> {
-            /**
-             * Construct an iterator over all of the keys in the HasherMap.
-             */
-            protected construct() {
-                oldBucketCount = this.HasherMap.buckets.size;
-            } finally {
-                advanceWithinBucketArray();
-            }
+        private Int nextBucket = 0;
 
+        /**
+         * The current tree-node being iterated, or `Null` if none.
+         */
+        private TreeNode<Key, Value>? treeNode = Null;
 
-            // ----- properties ---------------------------------------------------------------
+        /**
+         * The count of leaf buckets in the tree node.
+         */
+        private Int leafCount = 0;
 
-            /**
-             * The index of the next hash bucket to process.
-             */
-            private Int nextBucket = 0;
+        /**
+         * The index of the next leaf bucket in the tree to process.
+         */
+        private Int nextLeaf = 0;
 
-            /**
-             * The current tree-node being iterated, or Null if none.
-             */
-            private TreeNode<Key, Value>? treeNode = Null;
+        /**
+         * The current leaf node (single or list) being iterated, or `Null` if none.
+         */
+        private HashBucket<Key, Value>? leafNode = Null;
 
-            /**
-             * The count of leaf buckets in the tree node.
-             */
-            private Int leafCount = 0;
+        /**
+         * The number of keys within the [leafNode].
+         */
+        private Int keyCount = 0;
 
-            /**
-             * The index of the next leaf bucket in the tree to process.
-             */
-            private Int nextLeaf = 0;
+        /**
+         * The index of the next key within the [leafNode].
+         */
+        private Int nextKey = 0;
 
-            /**
-             * The current leaf node (single or list) being iterated, or Null if none.
-             */
-            private HashBucket<Key, Value>? leafNode = Null;
+        /**
+         * The number of hash buckets in the map at the time that the current bucket was
+         * advanced to. This is used to detect when a map re-hash (capacity change) has
+         * occurred.
+         */
+        private Int oldBucketCount;
 
-            /**
-             * The number of keys within the [leaf node](bucket).
-             */
-            private Int keyCount = 0;
+        /**
+         * A function that indicates exclusion of a hash value from the iteration.
+         */
+        private function Boolean(Int)? exclude = Null;
 
-            /**
-             * The index of the next key within the [leaf node](bucket).
-             */
-            private Int nextKey = 0;
+        /**
+         * The fake entry that gets used over and over during iteration.
+         */
+        protected/private CursorEntry entry = new CursorEntry();
 
-            /**
-             * The number of hash buckets in the map at the time that the current bucket was
-             * advanced to. This is used to detect when a map re-hash (capacity change) has
-             * occurred.
-             */
-            private Int oldBucketCount;
+        // ----- Iterator implementation -------------------------------------------------------
 
-            /**
-             * A function that indicates exclusion of a hash value from the iteration.
-             */
-            private function Boolean(Int)? exclude = Null;
-
-
-            // ----- Iterator implementation --------------------------------------------------
-
-            @Override
-            conditional Element next() {
-                if (HashBucket<Key, Value> leafNode ?= this.leafNode) {
+        @Override
+        conditional Entry<Key, Value> next() {
+            if (HashBucket<Key, Value> leafNode ?= this.leafNode) {
+                do {
                     do {
-                        do {
-                            while (nextKey < keyCount) {
-                                Int index = nextKey++;
-                                if (leafNode.discarded && !this.HasherMap.contains(leafNode.keyAt(index))) {
-                                    continue;
-                                }
-                                return True, toElement(leafNode, index);
-                            }
-                        } while (leafNode := advanceWithinTree(leafNode));
-                    } while (leafNode := advanceWithinBucketArray());
-                }
-                return False;
-
-                /**
-                 * Internal method to advance to the next bucket of keys within the current tree
-                 * bucket.
-                 */
-                private conditional HashBucket<Key, Value> advanceWithinTree(HashBucket<Key, Value> leafNode) {
-                    leafNode.exitIteration();
-
-                    while (TreeNode<Key, Value> treeNode ?= this.treeNode, nextLeaf < leafCount) {
-                        leafNode = treeNode.leafNodeAt(nextLeaf++);
-                        if (exclude?(leafNode.hash)) {
-                            continue;
-                        }
-
-                        leafNode.enterIteration();
-
-                        this.leafNode = leafNode;
-                        this.keyCount = leafNode.size;
-                        this.nextKey  = 0;
-                        return True, leafNode;
-                    }
-
-                    this.leafNode = Null;
-                    return False;
-                }
-            }
-
-            /**
-             * Internal method to advance to the next bucket of keys within the map's array of
-             * buckets.
-             */
-            private conditional HashBucket<Key, Value> advanceWithinBucketArray() {
-                if (TreeNode<Key, Value> treeNode ?= this.treeNode) {
-                    treeNode.exitIteration();
-                }
-
-                // it's possible that while we were iterating over the previous bucket of keys
-                // that the map changed its modulo, which is hugely disruptive because the
-                // iterator proceeds linearly through the buckets, which is far different from
-                // it going linearly through the 2^64 hash codes
-                HasherMap<Key, Value>     map     = this.HasherMap;
-                HashBucket<Key, Value>?[] buckets = map.buckets;
-                if (buckets.size != oldBucketCount) {
-                    // at this point, we have detected a resize of the map, which changes the
-                    // number of buckets, and that number is the hash modulo. what happens now
-                    // is that we start again from the first bucket in the newly resized map,
-                    // but we introduce a filter that ignores all of the hash codes that this
-                    // iterator had already successfully iterated
-                    Int prevModulo = oldBucketCount;    // local snap-shot (for lambda capture)
-                    Int completed  = nextBucket - 1;    // local snap-shot (for lambda capture)
-                    if (completed >= 0) {
-                        if (function Boolean(Int) oldExclude ?= exclude) {
-                            exclude = hash -> hash % prevModulo <= completed || oldExclude(hash);
-                        } else {
-                            exclude = hash -> hash % prevModulo <= completed;
-                        }
-                    }
-
-                    // unfortunately, we have to start over at the first bucket, because all of
-                    // the buckets have been reshuffled
-                    nextBucket     = 0;
-                    oldBucketCount = buckets.size;
-                }
-
-                // advance the modulo until we find a modulo that has any keys
-                Int bucketCount = buckets.size;
-                NextHashBucket: while (nextBucket < bucketCount) {
-                    if (HashBucket<Key, Value> bucket ?= buckets[nextBucket++]) {
-                        if (bucket.is(TreeNode)) {
-                            HashBucket<Key, Value> leafNode = bucket.leafNodeAt(0);
-                            Int                    index    = 1;
-                            Int                    count    = bucket.leafNodeCount;
-
-                            CheckExcluded: if (function Boolean(Int) exclude ?= this.exclude) {
-                                NextLeafNode: do {
-                                    if (exclude(leafNode.hash)) {
-                                        leafNode = bucket.leafNodeAt(index++);
-                                        continue NextLeafNode;
-                                    }
-
-                                    break CheckExcluded;
-                                } while (index < count);
-                                continue NextHashBucket;
-                            }
-
-                            this.treeNode  = bucket;
-                            this.leafCount = count;
-                            this.nextLeaf  = index;
-                            bucket.enterIteration();
-
-                            bucket = leafNode;
-                        } else {
-                            this.treeNode = Null;
-                            if (exclude?(bucket.hash)) {
+                        while (nextKey < keyCount) {
+                            Int index = nextKey++;
+                            if (leafNode.discarded && !this.HasherMap.contains(leafNode.keyAt(index))) {
                                 continue;
                             }
+                            return True, entry.advance(leafNode, index);
                         }
+                    } while (leafNode := advanceWithinTree(leafNode));
+                } while (leafNode := advanceWithinBucketArray());
+            }
+            return False;
 
-                        this.leafNode = bucket;
-                        this.keyCount = bucket.size;
-                        this.nextKey  = 0;
-                        bucket.enterIteration();
-                        return True, bucket;
+            /**
+             * Internal method to advance to the next bucket of keys within the current tree
+             * bucket.
+             */
+            private conditional HashBucket<Key, Value> advanceWithinTree(HashBucket<Key, Value> leafNode) {
+                leafNode.exitIteration();
+
+                while (TreeNode<Key, Value> treeNode ?= this.treeNode, nextLeaf < leafCount) {
+                    leafNode = treeNode.leafNodeAt(nextLeaf++);
+                    if (exclude?(leafNode.hash)) {
+                        continue;
                     }
+
+                    leafNode.enterIteration();
+
+                    this.leafNode = leafNode;
+                    this.keyCount = leafNode.size;
+                    this.nextKey  = 0;
+                    return True, leafNode;
                 }
 
+                this.leafNode = Null;
                 return False;
             }
-
-            @Override
-            Boolean knownDistinct() {
-                return True;
-            }
-
-            @Override
-            conditional Int knownSize() {
-                return leafNode == Null
-                        ? (True, 0)         // already done iterating
-                        : False;
-            }
-
-            @Override
-            (IteratorImpl, IteratorImpl) bifurcate() {
-                return this, this.clone();
-            }
-
-
-            // ----- internal -----------------------------------------------------------------
-
-            /**
-             * Given the specified bucket and index, produce the corresponding element of this
-             * collection.
-             *
-             * @param bucket  the leaf bucket reference
-             * @param index   the index into the bucket of the key/value pair
-             *
-             * @return the corresponding element
-             */
-            protected Element toElement(HashBucket<Key, Value> bucket, Int index);
-
-            /**
-             * Construct a clone of this KeyIterator.
-             */
-            protected IteratorImpl clone() {
-                IteratorImpl that  = new IteratorImpl();
-
-                that.nextBucket     = this.nextBucket;
-                that.treeNode       = this.treeNode;
-                that.leafCount      = this.leafCount;
-                that.nextLeaf       = this.nextLeaf;
-                that.leafNode       = this.leafNode;
-                that.keyCount       = this.keyCount;
-                that.nextKey        = this.nextKey;
-                that.oldBucketCount = this.oldBucketCount;
-                that.exclude        = this.exclude;
-
-                that.treeNode?.enterIteration();
-                that.leafNode?.enterIteration();
-
-                return that;
-            }
-        }
-    }
-
-
-    // ----- KeySet implementation -----------------------------------------------------------------
-
-    /**
-     * A representation of all of the HashBucket objects in the Map.
-     */
-    protected class KeySet
-            extends CollectionImpl<Key>
-            implements Set<Key>
-            incorporates conditional KeySetFreezer<Key extends Shareable> {
-
-        @Override
-        protected class IteratorImpl {
-            @Override
-            protected Key toElement(HashBucket<Key, Value> bucket, Int index) {
-                return bucket.keyAt(index);
-            }
-        }
-
-        @Override
-        Boolean contains(Key key) {
-            return this.HasherMap.contains(key);
-        }
-
-        @Override
-        KeySet remove(Key key) {
-            this.HasherMap.remove(key);
-            return this;
         }
 
         /**
-         * Conditional Freezable implementation.
+         * Internal method to advance to the next bucket of keys within the map's array of
+         * buckets.
          */
-        private static mixin KeySetFreezer<Element extends Shareable>
-                into HasherMap<Element>.KeySet
-                implements Freezable {
+        private conditional HashBucket<Key, Value> advanceWithinBucketArray() {
+            if (TreeNode<Key, Value> treeNode ?= this.treeNode) {
+                treeNode.exitIteration();
+            }
 
-            @Override
-            immutable Freezable+Set<Key> freeze(Boolean inPlace = False) {
-                if (this.is(immutable)) {
-                    return this;
+            // it's possible that while we were iterating over the previous bucket of keys
+            // that the map changed its modulo, which is hugely disruptive because the
+            // iterator proceeds linearly through the buckets, which is far different from
+            // it going linearly through the 2^64 hash codes
+            HasherMap<Key, Value>     map     = this.HasherMap;
+            HashBucket<Key, Value>?[] buckets = map.buckets;
+            if (buckets.size != oldBucketCount) {
+                // at this point, we have detected a resize of the map, which changes the
+                // number of buckets, and that number is the hash modulo. what happens now
+                // is that we start again from the first bucket in the newly resized map,
+                // but we introduce a filter that ignores all of the hash codes that this
+                // iterator had already successfully iterated
+                Int prevModulo = oldBucketCount;    // local snap-shot (for lambda capture)
+                Int completed  = nextBucket - 1;    // local snap-shot (for lambda capture)
+                if (completed >= 0) {
+                    if (function Boolean(Int) oldExclude ?= exclude) {
+                        exclude = hash -> hash % prevModulo <= completed || oldExclude(hash);
+                    } else {
+                        exclude = hash -> hash % prevModulo <= completed;
+                    }
                 }
 
-                return new ListSet<Key>(this).freeze(True);
-            }
-        }
-    }
-
-
-    // ----- EntrySet implementation ---------------------------------------------------------------
-
-    /**
-     * A representation of all of the Entry objects in the Map.
-     */
-    protected class EntrySet
-            extends CollectionImpl<Entry> {
-
-        @Override
-        protected class IteratorImpl {
-            @Override
-            protected Entry toElement(HashBucket<Key, Value> bucket, Int index) {
-                return entry.advance(bucket, index);
+                // unfortunately, we have to start over at the first bucket, because all of
+                // the buckets have been reshuffled
+                nextBucket     = 0;
+                oldBucketCount = buckets.size;
             }
 
-            /**
-             * The fake entry that gets used over and over during iteration.
-             */
-            protected/private CursorEntry entry = new CursorEntry();
-        }
+            // advance the modulo until we find a modulo that has any keys
+            Int bucketCount = buckets.size;
+            NextHashBucket: while (nextBucket < bucketCount) {
+                if (HashBucket<Key, Value> bucket ?= buckets[nextBucket++]) {
+                    if (bucket.is(TreeNode)) {
+                        HashBucket<Key, Value> leafNode = bucket.leafNodeAt(0);
+                        Int                    index    = 1;
+                        Int                    count    = bucket.leafNodeCount;
 
-        @Override
-        Boolean contains(Entry entry) {
-            if (Value value := this.HasherMap.get(entry.key)) {
-                return value == entry.value;
+                        CheckExcluded: if (function Boolean(Int) exclude ?= this.exclude) {
+                            NextLeafNode: do {
+                                if (exclude(leafNode.hash)) {
+                                    leafNode = bucket.leafNodeAt(index++);
+                                    continue NextLeafNode;
+                                }
+
+                                break CheckExcluded;
+                            } while (index < count);
+                            continue NextHashBucket;
+                        }
+
+                        this.treeNode  = bucket;
+                        this.leafCount = count;
+                        this.nextLeaf  = index;
+                        bucket.enterIteration();
+
+                        bucket = leafNode;
+                    } else {
+                        this.treeNode = Null;
+                        if (exclude?(bucket.hash)) {
+                            continue;
+                        }
+                    }
+
+                    this.leafNode = bucket;
+                    this.keyCount = bucket.size;
+                    this.nextKey  = 0;
+                    bucket.enterIteration();
+                    return True, bucket;
+                }
             }
+
             return False;
         }
 
         @Override
-        EntrySet remove(Entry entry) {
-            this.HasherMap.remove(entry.key, entry.value);
-            return this;
+        Boolean knownDistinct() {
+            return True;
+        }
+
+        @Override
+        conditional Int knownSize() {
+            return leafNode == Null
+                    ? (True, 0)         // already done iterating
+                    : False;
+        }
+
+        @Override
+        (EntryIterator, EntryIterator) bifurcate() {
+            return this, this.clone();
+        }
+
+        // ----- internal --------------------------------------------------------------------------
+
+        /**
+         * Construct a clone of this EntryIterator.
+         */
+        protected EntryIterator clone() {
+            EntryIterator that  = new EntryIterator();
+
+            that.nextBucket     = this.nextBucket;
+            that.treeNode       = this.treeNode;
+            that.leafCount      = this.leafCount;
+            that.nextLeaf       = this.nextLeaf;
+            that.leafNode       = this.leafNode;
+            that.keyCount       = this.keyCount;
+            that.nextKey        = this.nextKey;
+            that.oldBucketCount = this.oldBucketCount;
+            that.exclude        = this.exclude;
+
+            that.treeNode?.enterIteration();
+            that.leafNode?.enterIteration();
+
+            return that;
         }
     }
-
 
     // ----- Entry implementation ------------------------------------------------------------------
 
     /**
-     * An implementation of Entry that can be used as a cursor over any number of keys, and
-     * delegates back to the map for its functionality.
+     * An implementation of [Map.Entry] that can be used as a cursor over any number of keys, and
+     * delegates back to the enclosing [HasherMap] for its functionality.
      */
     protected class CursorEntry
-            implements Entry {
+            implements Entry<Key, Value> {
 
         protected/private @Unassigned HashBucket<Key, Value> bucket;
         protected/private Int index;
@@ -1313,11 +1179,10 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        Entry reify() {
-            return reifyEntry(key);
+        Entry<Key, Value> reify() {
+            return new KeyEntry<Key, Value>(this.Map, key);
         }
     }
-
 
     // ----- Hashable functions --------------------------------------------------------------------
 
@@ -1336,11 +1201,10 @@ class HasherMap<Key, Value>
         return Map.equals(value1, value2);
     }
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Check to see if the HasherMap needs to grow or shrink based on the current capacity need.
+     * Check to see if the `HasherMap` needs to grow or shrink based on the current capacity need.
      */
     private void checkCapacity() {
         Int size = this.size;
@@ -1354,9 +1218,9 @@ class HasherMap<Key, Value>
     }
 
     /**
-     * Check to see if the HasherMap needs to grow or shrink based on a planned capacity need.
+     * Check to see if the `HasherMap` needs to grow or shrink based on a planned capacity need.
      *
-     * @param plannedSize  the capacity to assume that the map will need
+     * @param plannedSize  the capacity to assume that the `Map` will need
      */
     private void checkCapacity(Int plannedSize) {
         // check if a resize is necessary
@@ -1367,9 +1231,9 @@ class HasherMap<Key, Value>
     }
 
     /**
-     * Resize the HasherMap based on the assumed capacity need.
+     * Resize the `HasherMap` based on the assumed capacity need.
      *
-     * @param plannedSize  the capacity to assume that the map will need
+     * @param plannedSize  the capacity to assume that the `Map` will need
      */
     private void resize(Int plannedSize) {
         (Int bucketCount, Int growAt, Int shrinkAt) = selectBucketCount(plannedSize);
@@ -1380,13 +1244,6 @@ class HasherMap<Key, Value>
         this.buckets  = newBuckets;
         this.growAt   = growAt;
         this.shrinkAt = shrinkAt;
-    }
-
-    /**
-     * Instantiate a reified entry, which must be a child of the map.
-     */
-    private Entry reifyEntry(Key key) {
-        return new @KeyEntry(key) Entry() {};
     }
 
     /**

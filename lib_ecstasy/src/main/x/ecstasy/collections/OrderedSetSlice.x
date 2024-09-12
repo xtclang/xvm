@@ -69,7 +69,6 @@ class OrderedSetSlice<Element extends Orderable>
         }
     }
 
-
     // ----- internal state ------------------------------------------------------------------------
 
     /**
@@ -96,7 +95,7 @@ class OrderedSetSlice<Element extends Orderable>
     protected/private function Boolean(Element) include;
 
     /**
-     * True iff the slice appears to be in the reversed order of the original set.
+     * `True` iff the slice appears to be in the reversed order of the original set.
      */
     protected/private Boolean descending;
 
@@ -128,9 +127,7 @@ class OrderedSetSlice<Element extends Orderable>
     // ----- Set interface -------------------------------------------------------------------------
 
     @Override
-    conditional Int knownSize() {
-        return empty ? (True, 0) : False;
-    }
+    conditional Int knownSize() = empty ? (True, 0) : False;
 
     @Override
     @RO Boolean empty.get() {
@@ -167,19 +164,17 @@ class OrderedSetSlice<Element extends Orderable>
     }
 
     @Override
-    Iterator<Element> iterator() {
-        return new ElementIterator();
-    }
+    Iterator<Element> iterator() = new ElementIterator();
 
     /**
-     * An iterator implementation with the following guarantees:
+     * An [Iterator] implementation with the following guarantees:
      *
-     * * Resilient to changes in the original set, including additions and removals;
-     * * Iterates in the original set's order;
+     * * Resilient to changes in the original `OrderedSet`, including additions and removals;
+     * * Iterates in the original `OrderedSet`'s order;
      * * Regardless of the order of changes, does not ever emit the same element twice;
      * * Regardless of the order of changes, does not ever emit an element that is no longer
-     *   present in the underlying set;
-     * * For elements added to the original set, those that occur in the order before the
+     *   present in the underlying `OrderedSet`;
+     * * For elements added to the original `OrderedSet`, those that occur in the order before the
      *   most recently emitted element will never be emitted, and those that occur in the order
      *   after the most recently emitted element _will_ be emitted.
      */
@@ -188,7 +183,7 @@ class OrderedSetSlice<Element extends Orderable>
         // ----- properties ---------------------------------------------------------------
 
         /**
-         * Set to true once iteration has begun.
+         * Set to `True` once iteration has begun.
          */
         protected/private Boolean started;
 
@@ -198,7 +193,7 @@ class OrderedSetSlice<Element extends Orderable>
         protected/private Element? previous = Null;
 
         /**
-         * Set to true once the iterator has been exhausted.
+         * Set to `True` once the iterator has been exhausted.
          */
         protected/private Boolean finished.set(Boolean done) {
             // make sure that the iterator has been marked as having started if it is finished
@@ -238,9 +233,7 @@ class OrderedSetSlice<Element extends Orderable>
         }
 
         @Override
-        Boolean knownDistinct() {
-            return True;
-        }
+        Boolean knownDistinct() = True;
 
         @Override
         conditional Int knownSize() {
@@ -275,9 +268,7 @@ class OrderedSetSlice<Element extends Orderable>
     }
 
     @Override
-    Boolean contains(Element value) {
-        return set.contains(value) && include(value);
-    }
+    Boolean contains(Element value) = set.contains(value) && include(value);
 
     @Override
     @Op("+") OrderedSetSlice add(Element value) {
@@ -303,13 +294,10 @@ class OrderedSetSlice<Element extends Orderable>
         return this;
     }
 
-
     // ----- OrderedSet interface ------------------------------------------------------------------
 
     @Override
-    conditional Orderer ordered() {
-        return True, compare;
-    }
+    conditional Orderer ordered() = (True, compare);
 
     @Override
     conditional Element first() {
@@ -360,7 +348,6 @@ class OrderedSetSlice<Element extends Orderable>
 
         return False;
     }
-
 
     // ----- Sliceable interface -------------------------------------------------------------------
 
@@ -449,7 +436,5 @@ class OrderedSetSlice<Element extends Orderable>
     }
 
     @Override
-    OrderedSet<Element> reify() {
-        return new SkiplistSet<Element>(size, compare).addAll(this);
-    }
+    OrderedSet<Element> reify() = new SkiplistSet<Element>(size, compare).addAll(this);
 }

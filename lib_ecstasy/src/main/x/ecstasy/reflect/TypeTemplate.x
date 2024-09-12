@@ -1,7 +1,3 @@
-import collections.Collection;
-import collections.ListMap;
-import collections.Set;
-
 import reflect.Access;
 import reflect.AnnotationTemplate;
 import reflect.Class;

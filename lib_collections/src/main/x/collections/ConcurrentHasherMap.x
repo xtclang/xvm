@@ -1,12 +1,12 @@
 import ecstasy.iterators.CompoundIterator;
 
-import ecstasy.collections.maps.EntryKeys;
-import ecstasy.collections.maps.EntryValues;
-
 import ecstasy.collections.Hasher;
-import ecstasy.collections.HasherMap;
 
-import ecstasy.collections.maps.KeyEntry;
+import ecstasy.maps.HasherMap;
+import ecstasy.maps.KeyEntry;
+import ecstasy.maps.MapEntries;
+import ecstasy.maps.MapKeys;
+import ecstasy.maps.MapValues;
 
 /**
  * A hash based map which allows for parallel and concurrent access with scalable performance.
@@ -121,21 +121,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     // ----- Map interface -------------------------------------------------------------------------
 
     @Override
-    @Lazy public/private Set<Key> keys.calc() {
-        return new EntryKeys(this);
-    }
-
-    @Override
-    @Lazy public/private Collection<Value> values.calc() {
-        return new EntryValues(this);
-    }
-
-    @Override
-    @Lazy public/private Collection<Entry> entries.calc() {
-        return new Entries();
-    }
-
-    @Override
     @RO Int size.get() {
         Int sum = 0;
         Int step = computeRandomStep();
@@ -178,6 +163,37 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     }
 
     @Override
+    Iterator<Entry<Key, Value>> iterator() {
+        Partition<Key,Value>[] partitions = this.ConcurrentHasherMap.partitions;
+        if (partitions.size == 1) {
+            return partitions[0].entries.iterator();
+        }
+
+        Int step = computeRandomStep();
+        Int first = step % partitions.size;
+        Int second = (first + step) % partitions.size;
+
+        GrowableCompoundIterator<Entry<Key, Value>> iter = new GrowableCompoundIterator(
+                partitions[first].entries.iterator(),
+                partitions[second].entries.iterator());
+
+        for (Int i = (second + step) % partitions.size; i != first; i = (i + step) % partitions.size) {
+            iter.add(partitions[i].entries.iterator());
+        }
+
+        return iter;
+    }
+
+    @Override
+    @Lazy public/private Set<Key> keys.calc() = new MapKeys(this);
+
+    @Override
+    @Lazy public/private Collection<Value> values.calc() = new MapValues(this);
+
+    @Override
+    @Lazy public/private Collection<Entry<Key, Value>> entries.calc() = new MapEntries(this);
+
+    @Override
     ConcurrentHasherMap put(Key key, Value value) {
         return partitionOf(key).putOrdered^(this, key, value);
     }
@@ -217,12 +233,12 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     }
 
     @Override
-    <Result> Result process(Key key, function Result(Entry) compute) {
+    <Result> Result process(Key key, function Result(Entry<Key, Value>) compute) {
         return partitionOf(key).process^(key, compute);
     }
 
     @Override
-    <Result> conditional Result processIfPresent(Key key, function Result(Entry) compute) {
+    <Result> conditional Result processIfPresent(Key key, function Result(Entry<Key, Value>) compute) {
         return partitionOf(key).processIfPresent^(key, compute);
     }
 
@@ -230,7 +246,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     (Value, Boolean) computeIfAbsent(Key key, function Value() compute) {
         return partitionOf(key).computeIfAbsent^(key, compute);
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 
@@ -253,125 +268,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         return step == partitions.size ? 1 : step;
     }
 
-
-    // ----- Entries implementation ----------------------------------------------------------------
-
-    /**
-     * A collection of the map's entries, backed by the map.
-     */
-    protected const Entries
-            implements Collection<Entry> {
-
-        @Override
-        @RO Int size.get() {
-            return this.ConcurrentHasherMap.size;
-        }
-
-        @Override
-        @RO Boolean empty.get() {
-            return this.ConcurrentHasherMap.empty;
-        }
-
-        @Override
-        Boolean contains(Element entry) {
-            if (Value value := this.ConcurrentHasherMap.get(entry.key)) {
-                return value == entry.value;
-            }
-
-            // TODO MF: future?
-            return False;
-        }
-
-        @Override
-        Boolean containsAll(Collection<Element> that) {
-            for (val entry : that) {
-                if (!contains(entry)) {
-                    return False;
-                }
-            }
-
-            // TODO MF: future?
-            return True;
-        }
-
-        @Override
-        @Op("+")
-        Entries add(Element entry) {
-            put(entry.key, entry.value);
-            return this;
-        }
-
-        @Override
-        @Op("+")
-        Entries addAll(Iterable<Element> that) {
-            for (Element entry : that) {
-                put(entry.key, entry.value);
-            }
-
-            return this;
-        }
-
-        @Override
-        Entries addAll(Iterator<Element> iter) {
-            while (val entry := iter.next()) {
-                put(entry.key, entry.value);
-            }
-
-            return this;
-        }
-
-        @Override
-        conditional Entries addIfAbsent(Element entry) {
-            return putIfAbsent(entry.key, entry.value) ? (True, this) : False;
-        }
-
-        @Override
-        @Op("-")
-        Entries remove(Element entry) {
-            this.ConcurrentHasherMap.remove(entry.key, entry.value);
-            return this;
-        }
-
-        @Override
-        conditional Entries removeIfPresent(Element entryThat) {
-            return processIfPresent(entryThat.key, entry -> {
-                if (entry.value == entryThat.value) {
-                    entry.delete();
-                }
-            })
-                ? (True, this) : False;
-        }
-
-        @Override
-        Entries clear() {
-            this.ConcurrentHasherMap.clear();
-            return this;
-        }
-
-        @Override
-        Iterator<Map<Key, Value>.Entry> iterator() {
-            Partition<Key,Value>[] partitions = this.ConcurrentHasherMap.partitions;
-            if (partitions.size == 1) {
-                return partitions[0].entries.iterator();
-            }
-
-            Int step = computeRandomStep();
-            Int first = step % partitions.size;
-            Int second = (first + step) % partitions.size;
-
-            GrowableCompoundIterator<Map<Key, Value>.Entry> iter = new GrowableCompoundIterator(
-                    partitions[first].entries.iterator(),
-                    partitions[second].entries.iterator());
-
-            for (Int i = (second + step) % partitions.size; i != first; i = (i + step) % partitions.size) {
-                iter.add(partitions[i].entries.iterator());
-            }
-
-            return iter;
-        }
-    }
-
-
     // ----- GrowableCompoundIterator --------------------------------------------------------------
 
     /**
@@ -384,7 +280,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             construct CompoundIterator(iter1, iter2);
         }
     }
-
 
     // ----- Partition implementation --------------------------------------------------------------
 
@@ -417,7 +312,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             super(that);
         }
 
-
         // ----- properties ------------------------------------------------------------------------
 
         /**
@@ -431,7 +325,6 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         protected/private @Lazy HasherMap<Key, FutureVar> pendingByKey.calc() {
             return new HasherMap(hasher);
         }
-
 
         // ----- Partition methods -----------------------------------------------------------------
 
@@ -586,13 +479,12 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             return parent;
         }
 
-
         // ----- HasherMap methods -------------------------------------------------------------------
 
         @Override
         @Concurrent
-        <Result> Result process(Key key, function Result (Map<Key, Value>.Entry) compute) {
-            Entry entry = new @KeyEntry(key) Entry() {};
+        <Result> Result process(Key key, function Result (Entry<Key, Value>) compute) {
+            Entry<Key, Value> entry = new KeyEntry(this, key);
             @Future Result result;
             FutureVar<Result> rVar = &result;
 
@@ -621,7 +513,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         @Override
         @Concurrent
-        <Result> conditional Result processIfPresent(Key key, function Result(Entry) compute) {
+        <Result> conditional Result processIfPresent(Key key, function Result(Entry<Key, Value>) compute) {
             if (contains(key)) {
                 enum Exist {Not}
                 Result|Exist result = process(key, e -> e.exists ? compute(e) : Not);

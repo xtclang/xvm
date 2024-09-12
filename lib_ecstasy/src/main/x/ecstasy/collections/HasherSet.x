@@ -1,10 +1,13 @@
+import maps.CopyableMap;
+import maps.HasherMap;
+
 /**
  * An implementation of a Set that is backed by a HasherMap.
- *
- * TODO variably mutable implementations to match HasherMap
  */
 class HasherSet<Element>
         extends MapSet<Element> {
+    // ----- constructors --------------------------------------------------------------------------
+
     /**
      * Construct the HasherSet with the specified hasher and (optional) initial capacity.
      *
@@ -39,14 +42,34 @@ class HasherSet<Element>
      * @param that  another HasherSet to copy the contents from when constructing this HasherSet
      */
     @Override
-    construct(HasherSet<Element> that) {
+    construct(HasherSet that) {
         super(that);
     }
+
+    /**
+     * Construct a `HasherSet` that uses the specified [HasherMap] for storage.
+     *
+     * @param map  the [HasherMap] to use for storage
+     */
+    protected construct(HasherMap<Element, Nullable> map) {
+        construct MapSet(map);
+    }
+
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The [Hasher] is used to hash and compare element values.
      */
     Hasher<Element> hasher.get() {
         return contents.as(HasherMap<Element, Nullable>).hasher;
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    @Override
+    protected HasherSet ensureMapSet(CopyableMap<Element, Nullable> map) {
+        return &map == &contents
+                ? this
+                : new HasherSet(map.as(HasherMap<Element, Nullable>));
     }
 }

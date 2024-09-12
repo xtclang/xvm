@@ -15,7 +15,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
-import org.xvm.runtime.template.collections.xListMap;
+import org.xvm.runtime.template.maps.xListMap;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 

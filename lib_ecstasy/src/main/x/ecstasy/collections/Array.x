@@ -91,7 +91,7 @@ class Array<Element>
         construct Array(new Element[](capacity), Mutable);
     }
 
-    /**
+    /**s
      * Construct a fixed size array with the specified size and initial value. An initial value is
      * always required
      *
@@ -583,9 +583,25 @@ class Array<Element>
         }
     }
 
+    /**
+     * @param inPlace  (optional) if `True`, this indicates that the `Array` should attempt to avoid
+     *                 making a copy of itself, iff it is safe to avoid doing so; the `Array` must
+     *                 always make a copy in order to provide a result that has a _higher_
+     *                 [mutability] than this `Array` has, but an `Array` can avoid making a copy if
+     *                 the requested `mutability` is the same as or lower than this `Array`'s
+     *                 `mutability`
+     */
     @Override
     Array! toArray(Mutability? mutability = Null, Boolean inPlace = False) {
-        if (mutability == Null || mutability == this.mutability) {
+        // either the caller is explicitly asking for an "in place" option (i.e. do NOT copy) if
+        // possible -- which is only possible if the caller knows that this is an array -- or this
+        // array is already safe (because its own mutability setting already stipulates that no
+        // changes can occur to this array)
+        // ***AND***
+        // the caller is willing to accept any mutability (i.e. mutability==Null), or the mutability
+        // that the caller is asking for is the same as the mutability that this array already has
+        if ((inPlace || this.mutability <= Persistent)
+                && (mutability == Null || mutability == this.mutability)) {
             return this;
         }
 
@@ -593,8 +609,9 @@ class Array<Element>
             return freeze(inPlace);
         }
 
-        if (!inPlace || mutability > this.mutability) {
-            return new Array(mutability, this);  // return a copy that has the desired mutability
+        if (!inPlace || mutability == Null || mutability > this.mutability) {
+            // make a copy of this array, but with the desired mutability
+            return new Array(mutability ?: Mutable, this);
         }
 
         this.mutability = mutability;

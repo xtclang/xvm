@@ -1,4 +1,3 @@
-import collections.ListMap;
 import ClassTemplate.Composition;
 
 /**
@@ -126,6 +125,6 @@ const Enumeration<Value extends Enum>
                 map.put(name, instance);
             }
         }
-        return map.freeze();
+        return map.freeze(inPlace=True);
     }
 }

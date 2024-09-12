@@ -55,8 +55,7 @@
      * Clean up any references that can hold memory that were only necessary up until and including
      * the process of reification.
      */
-    protected void postReifyCleanup()
-        {
+    protected void postReifyCleanup() {
         original = Null;
         }
 

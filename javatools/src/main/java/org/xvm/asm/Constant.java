@@ -852,8 +852,8 @@ public abstract class Constant
         Array     ("collections"),
         UInt8Array,         // byte[]
         Set       ("collections"),
-        MapEntry  ("collections"),
-        Map       ("collections"),
+        MapEntry  ("maps"),
+        Map       ("maps"),
         Range,
         RangeInclusive,
         RangeExclusive,

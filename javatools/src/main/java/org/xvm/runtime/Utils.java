@@ -34,6 +34,7 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
+import org.xvm.runtime.template.maps.xListMap;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -1496,7 +1497,7 @@ public abstract class Utils
         }
 
     /**
-     * Construct a {@code collections.ListMap} based on the arrays of keys and values.
+     * Construct a {@code maps.ListMap} based on the arrays of keys and values.
      *
      * @param frame     the current frame
      * @param clzMap    the ListMap class
@@ -1689,7 +1690,7 @@ public abstract class Utils
         ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
         ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
         RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = container.getClassStructure("collections.ListMap").findMethod("construct", 2);
+        LIST_MAP_CONSTRUCT            = xListMap.INSTANCE.ensureConstructor();
         ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
         ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
         CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");

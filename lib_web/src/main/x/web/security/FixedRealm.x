@@ -46,7 +46,7 @@ const FixedRealm
         HashMap<String, HashSet<String>> rolesByUser = new HashMap(userRoles.size);
         HashMap<Hash, String|String[]>   usersByHash = new HashMap(userCount * hasherCount);
 
-        static Boolean addUser(HashMap<Hash, String|String[]>.Entry entry, String user) {
+        static Boolean addUser(HashMap.Entry<Hash, String|String[]> entry, String user) {
             if (entry.exists) {
                 String|String[] users = entry.value;
                 entry.value = users.is(String[]) ? users + user : [users, user];

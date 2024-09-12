@@ -9,7 +9,7 @@ import src.Lexer.Token;
  * Represents a named type, including optional access, non-narrowing designation, and
  * parameters. For example:
  *
- *     ecstasy.collections.HashMap!<String?, IntLiteral>
+ *     ecstasy.maps.HashMap!<String?, IntLiteral>
  */
 const NamedTypeExpression(Token[]?          moduleNames,
                           Token[]           names,

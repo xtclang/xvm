@@ -130,7 +130,7 @@ public class xRTModuleTemplate
             {
             ConstantPool pool = INSTANCE.pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("collections.ListMap"),
+                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
                     pool.typeString(), pool.typeString());
             }
         return type;

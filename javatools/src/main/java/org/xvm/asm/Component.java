@@ -2172,6 +2172,10 @@ public abstract class Component
                 ClassStructure clzContrib =
                         (ClassStructure) typeContrib.getSingleUnderlyingClass(true).getComponent();
 
+                if (clzContrib == null)
+                    {
+                    return ResolutionResult.UNKNOWN;
+                    }
                 if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto)
                     {
                     // recursive contribution

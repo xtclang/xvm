@@ -1,10 +1,10 @@
-
-import ecstasy.collections.CopyableMap;
-
-import ecstasy.collections.maps.EntryKeys;
-import ecstasy.collections.maps.EntryValues;
-
 import ecstasy.iterators.EmptyIterator;
+
+import ecstasy.maps.CopyableMap;
+import ecstasy.maps.CursorEntry;
+import ecstasy.maps.MapEntries;
+import ecstasy.maps.MapKeys;
+import ecstasy.maps.MapValues;
 
 import ecstasy.reflect.Ref.Identity;
 
@@ -49,23 +49,17 @@ class IdentityMap<Key, Value>
         }
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     private Replicable + Duplicable + Map<Identity, Tuple<Key, Value>> storage;
 
-
     // ----- Map interface -------------------------------------------------------------------------
 
     @Override
-    @RO Int size.get() {
-        return storage.size;
-    }
+    @RO Int size.get() = storage.size;
 
     @Override
-    @RO Boolean empty.get() {
-        return storage.empty;
-    }
+    @RO Boolean empty.get() = storage.empty;
 
     @Override
     conditional Value get(Key key) {
@@ -79,6 +73,13 @@ class IdentityMap<Key, Value>
     @Override
     Boolean contains(Key key) {
         return storage.contains(&key.identity);
+    }
+
+    @Override
+    Iterator<Entry<Key, Value>> iterator() {
+        return empty
+                ? Entry.as(Type<Entry<Key, Value>>).emptyIterator
+                : new EntryIterator(storage.iterator());
     }
 
     @Override
@@ -100,189 +101,74 @@ class IdentityMap<Key, Value>
     }
 
     @Override
-    @Lazy public/private Set<Key> keys.calc() {
-        EntryKeys<Key, Value> keys = new EntryKeys<Key, Value>(this);
-        if (this.IdentityMap.is(immutable)) {
-            keys = keys.makeImmutable();
-        }
-        return keys;
-    }
+    @Lazy public/private Set<Key> keys.calc() = new MapKeys<Key, Value>(this);
 
     @Override
-    @Lazy public/private Collection<Value> values.calc() {
-        EntryValues<Key, Value> values = new EntryValues<Key, Value>(this);
-        if (this.IdentityMap.is(immutable)) {
-            values = values.makeImmutable();
-        }
-        return values;
-    }
+    @Lazy public/private Collection<Value> values.calc() = new MapValues<Key, Value>(this);
 
     @Override
-    @Lazy public/private Collection<Entry> entries.calc() {
-        EntrySet entries = new EntrySet();
-        if (this.IdentityMap.is(immutable)) {
-            entries = entries.makeImmutable();
-        }
-        return entries;
-    }
+    @Lazy public/private Collection<Entry<Key, Value>> entries.calc() = new MapEntries<Key, Value>(this);
 
+    // ----- EntryIterator -------------------------------------------------------------------------
 
-    // ----- EntrySet implementation ---------------------------------------------------------------
-
-    typedef Map<Identity, Tuple<Key, Value>>.Entry as StorageEntry;
+    typedef Entry<Identity, Tuple<Key, Value>> as StorageEntry;
 
     /**
-     * A representation of all of the HashEntry objects in the Map.
+     * An iterator over the map's entries.
      */
-    class EntrySet
-            implements Collection<Entry> {
-        @Override
-        Int size.get() {
-            return this.IdentityMap.size;
-        }
+    class EntryIterator(Iterator<StorageEntry> storageIterator)
+            implements Iterator<Entry<Key, Value>> {
 
         @Override
-        Boolean contains(Entry entry) {
-            if (Value value := this.IdentityMap.get(entry.key)) {
-                return value == entry.value;
+        conditional Element next() {
+            if (val storageEntry := storageIterator.next()) {
+                return True, cursorEntry.advance(storageEntry.value[0]);
             }
 
             return False;
         }
 
+        private CursorEntry<Key, Value> cursorEntry = new CursorEntry(this.Map);
+
         @Override
-        Collection<Entry> remove(Entry entry) {
-            this.IdentityMap.remove(entry.key, entry.value);
+        Int count() = storageIterator.count();
+
+        @Override
+        Boolean knownDistinct() = storageIterator.knownDistinct();
+
+        @Override
+        Boolean knownEmpty() = storageIterator.knownEmpty();
+
+        @Override
+        conditional Int knownSize() = storageIterator.knownSize();
+
+        @Override
+        Iterator<Element> skip(Int count) {
+            storageIterator = storageIterator.skip(count);
             return this;
         }
 
         @Override
-        Iterator<Entry> iterator() {
-            return empty
-                    ? Entry.as(Type<Entry>).emptyIterator
-                    : new EntryIterator(storage.entries.iterator());
-        }
-
-        /**
-         * An iterator over the map's entries.
-         */
-        class EntryIterator(Iterator<StorageEntry> storageIterator)
-                implements Iterator<Entry> {
-
-            @Override
-            conditional Element next() {
-                if (val storageEntry := storageIterator.next()) {
-                    return True, cursorEntry.advance(storageEntry);
-                }
-
-                return False;
-            }
-
-            private CursorEntry cursorEntry = new CursorEntry();
-
-            @Override
-            Int count() {
-                return storageIterator.count();
-            }
-
-            @Override
-            Boolean knownDistinct() {
-                return storageIterator.knownDistinct();
-            }
-
-            @Override
-            Boolean knownEmpty() {
-                return storageIterator.knownEmpty();
-            }
-
-            @Override
-            conditional Int knownSize() {
-                return storageIterator.knownSize();
-            }
-
-            @Override
-            Iterator<Element> skip(Int count) {
-                storageIterator = storageIterator.skip(count);
-                return this;
-            }
-
-            @Override
-            Iterator<Element> limit(Int count) {
-                storageIterator = storageIterator.skip(count);
-                return this;
-            }
-
-            @Override
-            Iterator<Element> extract(Interval<Int> interval) {
-                storageIterator = storageIterator.extract(interval);
-                return this;
-            }
-
-            @Override
-            (Iterator<Element>, Iterator<Element>) bifurcate() {
-                (val iter1, val iter2) = storageIterator.bifurcate();
-                this.storageIterator = iter1;
-                return this, new EntryIterator(iter2);
-            }
-        }
-    }
-
-
-    // ----- Entry implementation ------------------------------------------------------------------
-
-    /**
-     * An implementation of Entry that can be used as a cursor.
-     */
-    protected class CursorEntry
-            implements Entry {
-
-        protected/private @Unassigned StorageEntry storageEntry;
-
-        protected/private Boolean reified;
-
-        protected CursorEntry advance(StorageEntry storageEntry) {
-            this.key          = storageEntry.value[0];
-            this.storageEntry = storageEntry;
+        Iterator<Element> limit(Int count) {
+            storageIterator = storageIterator.skip(count);
             return this;
         }
 
         @Override
-        public/private @Unassigned Key key;
-
-        @Override
-        public Boolean exists.get() {
-            return storageEntry.exists;
+        Iterator<Element> extract(Interval<Int> interval) {
+            storageIterator = storageIterator.extract(interval);
+            return this;
         }
 
         @Override
-        Value value {
-            @Override
-            Value get() {
-                return storageEntry.value[1];
-            }
-
-            @Override
-            void set(Value value) {
-                storageEntry.value = (key, value);
-            }
-        }
-
-        @Override
-        void delete() {
-            storageEntry.delete();
-        }
-
-        @Override
-        Entry reify() {
-            if (reified) {
-                return this;
-            }
-
-            CursorEntry entry = new CursorEntry().advance(storageEntry.reify());
-            entry.reified = True;
-            return entry;
+        (Iterator<Element>, Iterator<Element>) bifurcate() {
+            (val iter1, val iter2) = storageIterator.bifurcate();
+            this.storageIterator = iter1;
+            return this, new EntryIterator(iter2);
         }
     }
+
+    // ----- IdentityMapFreezer --------------------------------------------------------------------
 
     /**
      * Mixin that makes IdentityMap Freezable if both Key and Value are Shareable.

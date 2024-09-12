@@ -1,11 +1,11 @@
-import ecstasy.collections.ListMap;
-
 import ecstasy.fs.AccessDenied;
 import ecstasy.fs.Directory;
 import ecstasy.fs.File;
 import ecstasy.fs.FileNode;
 import ecstasy.fs.FileWatcher;
 import ecstasy.fs.Path;
+
+import ecstasy.maps.ListMap;
 
 /**
  * Constant Pool Directory implementation.

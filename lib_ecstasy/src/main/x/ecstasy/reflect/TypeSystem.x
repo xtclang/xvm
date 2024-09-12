@@ -128,7 +128,7 @@ const TypeSystem {
      * This could occur if a module that is not depended upon is explicitly loaded as part of the
      * type system, for whatever reason. In such a case, the classes within the module would only be
      * identifiable using the explicit module qualification format, such as
-     * `"ecstasy.xtclang.org:collections.HashMap"`.
+     * `"ecstasy.xtclang.org:maps.HashMap"`.
      */
     ListMap<Module, String> modulePaths;
 

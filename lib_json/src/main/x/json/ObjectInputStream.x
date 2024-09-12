@@ -708,7 +708,7 @@ class ObjectInputStream(Schema schema, Parser parser)
          * Take the `Token[]` value of the entry identified by the `String` key, removing the entry
          * in the process.
          */
-        private static Token[] takeTokens(Map<String, Token[]>.Entry entry) {
+        private static Token[] takeTokens(Map.Entry<String, Token[]> entry) {
             val result = entry.value;
             entry.delete();
             return result;

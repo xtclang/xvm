@@ -829,7 +829,7 @@ interface Collection<Element>
      * @return a reified Collection, which may be `this`
      */
     @Concurrent
-    Collection reify() {
+    Collection! reify() {
         // this method must be overridden by any implementing Collection that may return a view of
         // itself as a Collection, such that mutations to one might be visible from the other
         return this;

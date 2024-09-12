@@ -1,4 +1,4 @@
-package org.xvm.runtime.template.collections;
+package org.xvm.runtime.template.maps;
 
 
 import java.util.Map;
@@ -20,6 +20,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
+
+import org.xvm.runtime.template.collections.xArray;
 
 
 /**
@@ -43,7 +45,7 @@ public class xListMap
     @Override
     public void initNative()
         {
-        CONSTRUCTOR = getStructure().findMethod("construct", 2);
+        ensureConstructor();
         }
 
     @Override
@@ -134,5 +136,16 @@ public class xListMap
         }
 
 
+    /**
+     * @return structure for "construct(Key[] keys, Value[] vals)"
+     */
+    public MethodStructure ensureConstructor()
+        {
+        if (CONSTRUCTOR == null)
+            {
+            CONSTRUCTOR = getStructure().findMethod("construct", m -> m.getParamCount() == 3);
+            }
+        return CONSTRUCTOR;
+        }
     private static MethodStructure CONSTRUCTOR;
     }

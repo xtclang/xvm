@@ -72,7 +72,7 @@ class JsonBuilderTest {
     void assertDeepCopyObject(JsonObject source, JsonObject copy) {
         assert &copy != &source as "source and copy should be different object references";
         assert copy.inPlace == True as "copy should be mutable";
-        for (Map<String, Doc>.Entry entry : source.entries) {
+        for (Map.Entry<String, Doc> entry : source.entries) {
             assert Doc copyValue := copy.get(entry.key);
             assertDeepCopy(entry.value, copyValue);
         }

@@ -110,7 +110,7 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      * @param o  the `JsonObject` to merge
      */
     protected void mergeObject(JsonObject o) {
-        for (Map<String, Doc>.Entry entry : o.entries) {
+        for (Map.Entry<String, Doc> entry : o.entries) {
             deepMerge(JsonPointer.from(entry.key), entry.value);
         }
     }
@@ -196,7 +196,7 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      */
     static JsonObject deepCopyObject(JsonObject o) {
         JsonObject copy = json.newObject();
-        for (Map<String, Doc>.Entry entry : o.entries) {
+        for (Map.Entry<String, Doc> entry : o.entries) {
             copy.put(entry.key, deepCopy(entry.value));
         }
         return copy;

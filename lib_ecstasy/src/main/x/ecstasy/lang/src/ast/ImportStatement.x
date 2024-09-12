@@ -6,7 +6,7 @@ import Lexer.Token;
 /**
  * Represents a child of a NamedTypeExpression, for example:
  *
- *     ecstasy.collections.HashMap<String?, IntLiteral>.Entry
+ *     ecstasy.collections.List<String>.Cursor
  */
 const ImportStatement(Token   keyword,
                       Token[] names,

@@ -147,7 +147,7 @@ mixin ByteArray<Element extends Byte>
             len     += chLen;
         }
 
-        return new String(chars.freeze()), index + len;
+        return new String(chars.freeze(inPlace=True)), index + len;
     }
 
 

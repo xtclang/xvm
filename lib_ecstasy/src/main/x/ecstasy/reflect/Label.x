@@ -63,7 +63,7 @@ interface Label<Key, Value> {
      * For a non-loop Label, or a Label that identifies a loop in which there is no current Entry,
      * an attempt to access this property is illegal.
      */
-    @RO Map<Key, Value>.Entry entry;
+    @RO Map.Entry<Key, Value> entry;
 
     /**
      * In the "finally" block of a "try" statement, this property provides the Exception that

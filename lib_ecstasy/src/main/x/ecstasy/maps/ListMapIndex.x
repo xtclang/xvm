@@ -1,16 +1,16 @@
 /**
- * The ListMapIndex is a hashing data structure that exists solely to optimizes the
- * [ListMap.indexOf] method. Its design is predicated on the general assumptions of the ListMap:
+ * The `ListMapIndex` is a hashing data structure that exists solely to optimizes the
+ * [ListMap.indexOf] method. Its design is predicated on the general assumptions of the `ListMap`:
  *
  * * The data structure is either in an initial append-intensive mode in which queries do not
  *   occur, or in post-append query-intensive mode, in which mutations are rare;
- * * Deletions (_particularly_ deletions of any entry other than the most recent entry added)
+ * * Deletions (_particularly_ deletions of any `Entry` other than the most recent `Entry` added)
  *   are _extremely_ rare, and are allowed to be expensive.
  */
 mixin ListMapIndex<Key extends Hashable, Value>
         into ListMap<Key, Value> {
     /**
-     * For keys with the same hash value, the indexes of those keys in the map are stored
+     * For keys with the same hash value, the indexes of those keys in the `Map` are stored
      * together. If there is only one key with the hash value, then its index is stored as a
      * simple `Int`. If there are multiple keys with the same hash value, then their indexes
      * are stored as an `Int[]`.
@@ -19,25 +19,25 @@ mixin ListMapIndex<Key extends Hashable, Value>
 
     /**
      * When multiple hash values modulo to the same bucket id, the `OneOrN` values for each
-     * hash value are stored as a binary tree of `OneOrN` values in an array.
+     * hash value are stored as a binary tree of `OneOrN` values in an `Array`.
      */
     protected typedef OneOrN[] as HashTree;
 
     /**
-     * A bucket is either empty (`Null`), contains indexes of one or more keys (`OneOrN`) for a
+     * A bucket is either empty (`Null`), contains indexes of one or more keys ([OneOrN]) for a
      * single hash value, or contains one or more keys for multiple different hash values (a
-     * `HashTree`).
+     * [HashTree]).
      */
     protected typedef (HashTree | OneOrN)? as Bucket;
 
     /**
-     * ListMaps smaller than this number of entries are not indexed; the assumption is that it is
-     * faster just to linearly scan the map up to a certain size.
+     * `ListMap`s smaller than this number of entries are not indexed; the assumption is that it is
+     * faster just to linearly scan the `Map` up to a certain size.
      */
     protected static Int MINSIZE = 10;
 
     /**
-     * The sole information managed by the HashIndex is an array of buckets.
+     * The sole information managed by the `ListMapIndex` is an array of buckets.
      */
     private Bucket[]? buckets;
 
@@ -357,13 +357,13 @@ mixin ListMapIndex<Key extends Hashable, Value>
     }
 
     /**
-     * Because the HashIndex is a structure full of indexes into the ListMap's underlying array
-     * of keys, when one of those keys is removed from the ListMap, all of the indexes in the
-     * HashIndex with a value greater than the index of the removed key will now be off-by-one.
-     * Adjust all of those indexes accordingly.
+     * Because the `ListMapIndex` is a structure full of indexes into the [ListMap]'s underlying
+     * array of keys, when one of those keys is removed from the `ListMap`, all of the indexes in
+     * the `ListMapIndex` with a value greater than the index of the removed key will now be
+     * off-by-one. Adjust all of those indexes accordingly.
      *
      * @param deleted  the index of the key that was removed (or is being removed) from the
-     *                 ListMap
+     *                 `ListMap`
      */
     protected void decrementIndexesAbove(Int deleted) {
         Bucket[]? buckets = this.buckets;
