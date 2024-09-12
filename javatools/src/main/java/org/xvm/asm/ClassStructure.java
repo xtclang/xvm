@@ -1581,10 +1581,14 @@ public class ClassStructure
                                     typeSuper = typeSuper.adoptParameters(pool, clzSuper.getFormalType());
                                     }
                                 }
+                            else if (compSuper instanceof ClassStructure clz)
+                                {
+                                clzSuper  = clz;
+                                typeSuper = clzSuper.getFormalType();
+                                }
                             else
                                 {
-                                clzSuper  = (ClassStructure) compSuper;
-                                typeSuper = clzSuper.getFormalType();
+                                return false;
                                 }
                             Composition composition = clzSuper.getFormat() == Format.INTERFACE
                                     ? Composition.Implements : Composition.Extends;
