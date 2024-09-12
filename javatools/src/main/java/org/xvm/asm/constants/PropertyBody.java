@@ -233,6 +233,14 @@ public class PropertyBody
         }
 
     /**
+     * @return the constraint type for this property (only if a formal type)
+     */
+    public TypeConstant getConstraintType()
+        {
+        return m_infoFormal == null ? null : m_infoFormal.getConstraintType();
+        }
+
+    /**
      * @return the Access required for the Ref form of the property
      */
     public Access getRefAccess()

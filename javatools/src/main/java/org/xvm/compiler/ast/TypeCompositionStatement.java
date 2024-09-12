@@ -2899,28 +2899,40 @@ public class TypeCompositionStatement
             typeContrib = typeContrib.getUnderlyingType();
             }
 
-        ClassStructure clzThis       = ctx.getThisClass();
-        TypeConstant[] atypeResolved = new TypeConstant[clzThis.getTypeParamCount()];
-        int            ix            = 0;
-        for (Map.Entry<StringConstant, TypeConstant> entry : clzThis.getTypeParams().entrySet())
-            {
-            StringConstant constName = entry.getKey();
+        assert typeContrib.isSingleUnderlyingClass(false); // we know it's a mixin
+        ClassStructure clzContrib =
+                (ClassStructure) typeContrib.getSingleUnderlyingClass(false).getComponent();
 
-            TypeConstant typeConstraint = mapConstraints.get(constName);
-            if (typeConstraint == null)
+        // this method is only called when the TypeInfo already fully computable
+        ConstantPool pool     = pool();
+        TypeInfo     infoThis = ctx.getThisClass().getFormalType().ensureTypeInfo();
+
+        TypeConstant[] atypeResolved = new TypeConstant[clzContrib.getTypeParamCount()];
+        int            ix            = 0;
+        for (Map.Entry<StringConstant, TypeConstant> entry : mapConstraints.entrySet())
+            {
+            StringConstant constName      = entry.getKey();
+            TypeConstant   typeConstraint = entry.getValue();
+
+            PropertyInfo infoFormal = infoThis.findProperty(constName.getValue());
+            if (infoFormal == null)
                 {
-                atypeResolved[ix++] = entry.getValue();
+                // this shouldn't happen, but it's not our role to report errors
+                atypeResolved[ix++] = typeConstraint == null ? pool.typeObject() : typeConstraint;
                 }
             else
                 {
+                typeConstraint = typeConstraint == null
+                        ? infoFormal.getConstraintType()
+                        : typeConstraint.combine(pool, infoFormal.getConstraintType());
+
                 atypeResolved[ix++] = typeConstraint;
 
-                PropertyConstant idFormal = clzThis.getFormalType().ensureTypeInfo().
-                        findProperty(constName.getValue()).getIdentity();
-                ctx.replaceGenericType(idFormal, Branch.Always, typeConstraint.getType());
+                ctx.replaceGenericType(
+                        infoFormal.getIdentity(), Branch.Always, typeConstraint.getType());
                 }
             }
-        return pool().ensureParameterizedTypeConstant(typeContrib, atypeResolved);
+        return pool.ensureParameterizedTypeConstant(typeContrib, atypeResolved);
         }
 
     /**

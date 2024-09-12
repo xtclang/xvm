@@ -770,6 +770,14 @@ public class PropertyInfo
         }
 
     /**
+     * @return the constraint type for this property (only if a formal type)
+     */
+    public TypeConstant getConstraintType()
+        {
+        return getHead().getConstraintType();
+        }
+
+    /**
      * @return the Existence of the property
      */
     public Existence getExistence()
