@@ -46,10 +46,17 @@ public class MainContainer
         // check the custom injections
         if (m_mapInjections != null)
             {
-            String sValue = m_mapInjections.get(sName);
-            if (sValue != null && type.equals(frame.poolContext().typeString()))
+            Object oValue = m_mapInjections.get(sName);
+            if (oValue != null)
                 {
-                return xString.makeHandle(sValue);
+                if (type.equals(frame.poolContext().typeString()))
+                    {
+                    return xString.makeHandle(String.valueOf(oValue));
+                    }
+                if (type.equals(frame.poolContext().typeStringArray()))
+                    {
+                    return xString.makeArrayHandle((String[]) oValue);
+                    }
                 }
             }
         return null;
@@ -60,10 +67,12 @@ public class MainContainer
 
     /**
      * Start the main container.
+     * <p/>
+     * The injection map values must be either {@code String} or {@code String[]}.
      *
-     * @param (optional) a map of custom injections
+     * @param mapInjections (optional) a map of custom injections
      */
-    public void start(Map<String, String> mapInjections)
+    public void start(Map<String, ?> mapInjections)
         {
         if (m_contextMain != null)
             {
@@ -132,7 +141,62 @@ public class MainContainer
         }
 
     /**
-     * Map of custom injections.
+     * Invoke the test entry point.
+     * <p/>
+     * The entry point for executing tests is the {@code test} method in the core
+     * Ecstasy module, not the module being tested.
+     *
+     * @return {@code true} if XUnit was present to execute tests, otherwise {@code false}
      */
-    private Map<String, String> m_mapInjections;
+    public boolean invokeTest0()
+        {
+        try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool()))
+            {
+            ConstantPool   pool     = ConstantPool.getCurrentPool();
+            ModuleConstant modXUnit = pool.ensureModuleConstant("xunit.xtclang.org");
+            if (modXUnit == null || modXUnit.getComponent() == null)
+                {
+                return false;
+                }
+
+            TypeInfo       infoModule  = modXUnit.getType().ensureTypeInfo();
+            MethodConstant idMethod    = findModuleMethod(infoModule, "test", Utils.OBJECTS_NONE);
+            if (idMethod == null)
+                {
+                // we should not get here as we know there is the correct method in XUnit.
+                System.err.println("Missing: test method for " + modXUnit.getName());
+                return false;
+                }
+
+            TypeConstant    typeModule = modXUnit.getType();
+            TypeComposition clzModule  = resolveClass(typeModule);
+            CallChain       chain      = clzModule.getMethodCallChain(idMethod.getSignature());
+
+            FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
+                {
+                SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(modXUnit);
+                ObjectHandle      hModule  = frame.getConstHandle(idModule);
+                ObjectHandle[]    ahArg    = new ObjectHandle[]{frame.getConstHandle(f_idModule)};
+
+                return Op.isDeferred(hModule)
+                        ? hModule.proceed(frame, frameCaller ->
+                            chain.invoke(frameCaller, frameCaller.popStack(), ahArg, Op.A_IGNORE))
+                        : chain.invoke(frame, hModule, ahArg, Op.A_IGNORE);
+                });
+
+            m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
+            return true;
+            }
+        catch (Exception e)
+            {
+            throw new RuntimeException("failed to run: " + f_idModule, e);
+            }
+        }
+
+    /**
+     * Map of custom injections.
+     * <p/>
+     * The map values will either be {@code String} or {@code String[]}.
+     */
+    private Map<String, ?> m_mapInjections;
     }

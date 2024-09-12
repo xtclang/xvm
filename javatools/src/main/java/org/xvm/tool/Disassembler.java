@@ -12,7 +12,6 @@ import java.time.ZoneOffset;
 import java.time.format.TextStyle;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,6 +28,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 
+import org.xvm.tool.flag.FlagSet;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
@@ -41,12 +41,13 @@ import static org.xvm.util.Handy.readFileChars;
 
 
 /**
- * The "disassemble" command:
- *
+ * This is the command-line Ecstasy disassembler command "xam" or "xtc info":
+ * <pre>
  *  java org.xvm.tool.Disassembler xtc_path
+ * </pre>
  */
 public class Disassembler
-        extends Launcher
+        extends AbstractCommand
     {
     /**
      * Entry point from the OS.
@@ -57,7 +58,7 @@ public class Disassembler
         {
         try
             {
-            new Disassembler(asArg).run();
+            Launcher.launch(CMD_DISASSEMBLER, asArg);
             }
         catch (LauncherException e)
             {
@@ -67,30 +68,39 @@ public class Disassembler
 
     /**
      * Disassembler constructor.
-     *
-     * @param asArg command line arguments
      */
-    public Disassembler(String[] asArg)
+    public Disassembler()
         {
-        this(asArg, null);
+        this(null);
         }
 
     /**
      * Disassembler constructor.
      *
-     * @param asArg    command line arguments
      * @param console  representation of the terminal within which this command is run
      */
-    public Disassembler (String[] asArg, Console console)
+    public Disassembler (Console console)
         {
-        super(asArg, console);
+        this(CMD_DISASSEMBLER, console);
+        }
+
+    /**
+     * Disassembler constructor.
+     *
+     * @param sName    the name of this command (as specified on the command line)
+     * @param console  representation of the terminal within which this command is run
+     */
+    public Disassembler (String sName, Console console)
+        {
+        super(sName, console);
         }
 
     @Override
     protected void process()
         {
-        File      fileModule = options().getTarget();
-        String    sModule    = fileModule.getName();
+        File    fileModule = getTarget();
+        FlagSet flags      = flags();
+        String  sModule    = fileModule.getName();
         Component component  = null;
         if (sModule.endsWith(".xtc"))
             {
@@ -112,7 +122,7 @@ public class Disassembler
             {
             // it's a module; set up the repository
             log(Severity.INFO, "Creating and pre-populating library and build repositories");
-            ModuleRepository repo = configureLibraryRepo(options().getModulePath());
+            ModuleRepository repo = configureLibraryRepo(flags.getModulePath());
             checkErrors();
 
             log(Severity.INFO, "Loading module: " + sModule);
@@ -125,13 +135,13 @@ public class Disassembler
             }
         checkErrors();
 
-        if (options().specified("files"))
+        if (flags.getBoolean(ARG_FILES))
             {
             dumpFiles(component);
             }
-        else if (options().specified("findfile"))
+        else if (flags.wasSpecified(ARG_FIND_FILES))
             {
-            findFile(component, (File) options().values().get("findfile"));
+            findFile(component, flags.getFile(ARG_FIND_FILES));
             }
         else
             {
@@ -351,7 +361,7 @@ public class Disassembler
         buf.append(' ');
         if (linked)
             {
-            if (indent.length() > 0)
+            if (!indent.isEmpty())
                 {
                 buf.append(indent.substring(0, indent.length()-4))
                    .append(" |  ");
@@ -363,7 +373,7 @@ public class Disassembler
             buf.append(indent);
             }
         String name = fsNode.getName();
-        if (name.length() == 0)
+        if (name.isEmpty())
             {
             buf.append('/');
             }
@@ -388,7 +398,7 @@ public class Disassembler
                     FSNodeConstant[] aKidNodes  = fsNode.getDirectoryContents();
                     int              cKidNodes  = aKidNodes.length;
                     String           nextIndent = " |- ";
-                    if (indent.length() > 0)
+                    if (!indent.isEmpty())
                         {
                         nextIndent = indent.substring(0, indent.length()-4)
                                    + (last ? "    " : " |  ")
@@ -515,97 +525,91 @@ public class Disassembler
     public String desc()
         {
         return """
-            Ecstasy disassembler:
+            The Ecstasy disassembler:
 
-            Examines a compiled Ecstasy module.
-            
-            Note: The xam command will be removed, and replaced with an option on the xtc command.
-
-            Usage:
-
-                xam <options> <modulename>
-            or:
-                xam <options> <filename>.xtc
-            """;
-        }
-
-
-    // ----- options -------------------------------------------------------------------------------
-
-    @Override
-    public Options options()
-        {
-        return (Options) super.options();
+            Examines a compiled Ecstasy module.""";
         }
 
     @Override
-    protected Options instantiateOptions()
+    protected String getShortDescription()
         {
-        return new Options();
+        return "Examines a compiled Ecstasy module.";
+        }
+
+    @Override
+    protected String getUsageLine(String sName)
+        {
+        return sName + " [flags] <filename>.x ...";
+        }
+
+    // ----- command line flags --------------------------------------------------------------------
+
+    @Override
+    protected FlagSet instantiateFlags(String sName)
+        {
+        return new FlagSet()
+                .withModulePath()
+                .withBoolean(ARG_FILES, "List all files embedded in the module")
+                .withFile(ARG_FIND_FILES, "File to search for in the module");
+        }
+
+    @Override
+    protected void validate(FlagSet flagSet)
+        {
+        super.validate(flagSet);
+
+        // validate the trailing file (to execute)
+        File fileModule = getTarget();
+        if (fileModule == null || fileModule.length() == 0)
+            {
+            log(Severity.ERROR, "Module file required");
+            }
+        else if (fileModule.getName().endsWith(".xtc"))
+            {
+            if (!fileModule.exists())
+                {
+                log(Severity.ERROR, "Specified module file does not exist");
+                }
+            else if (!fileModule.isFile())
+                {
+                log(Severity.ERROR, "Specified module file is not a file");
+                }
+            else if (!fileModule.canRead())
+                {
+                log(Severity.ERROR, "Specified module file cannot be read");
+                }
+            }
         }
 
     /**
-     * Disassembler command-line options implementation.
+     * @return the file to execute
      */
-    public class Options
-        extends Launcher.Options
+    public File getTarget()
         {
-        /**
-         * Construct the Disassembler Options.
-         */
-        public Options()
+        FlagSet      flags    = flags();
+        List<String> listArgs = flags.getArgumentsBeforeDashDash();
+        if (listArgs.isEmpty())
             {
-            super();
-
-            addOption("L" ,     null,      Form.Repo, true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption(null,     "files",    Form.Name, false, "List all files embedded in the module");
-            addOption(null,     "findfile",  Form.File, false, "File to search for in the module");
-            addOption(Trailing, null,      Form.File, false, "Module file name (.xtc) to disassemble");
+            return null;
             }
-
-        /**
-         * @return the list of files in the module path (empty list if none specified)
-         */
-        public List<File> getModulePath()
-            {
-            return (List<File>) values().getOrDefault("L", Collections.emptyList());
-            }
-
-        /**
-         * @return the file to execute
-         */
-        public File getTarget()
-            {
-            return (File) values().get(Trailing);
-            }
-
-        @Override
-        public void validate()
-            {
-            super.validate();
-
-            // validate the trailing file (to execute)
-            File fileModule = getTarget();
-            if (fileModule == null || fileModule.length() == 0)
-                {
-                log(Severity.ERROR, "Module file required");
-                }
-            else if (fileModule.getName().endsWith(".xtc"))
-                {
-                if (!fileModule.exists())
-                    {
-                    log(Severity.ERROR, "Specified module file does not exist");
-                    }
-                else if (!fileModule.isFile())
-                    {
-                    log(Severity.ERROR, "Specified module file is not a file");
-                    }
-                else if (!fileModule.canRead())
-                    {
-                    log(Severity.ERROR, "Specified module file cannot be read");
-                    }
-                }
-            }
+        return new File(listArgs.getFirst());
         }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * The Ecstasy disassemble executable name.
+     */
+    public static final String CMD_DISASSEMBLER = "xam";
+
+    /**
+     * The "files" command line argument.
+     */
+    public static final String ARG_FILES = "files";
+
+    /**
+     * The "findfile" command line argument.
+     */
+    public static final String ARG_FIND_FILES = "findfile";
     }
 

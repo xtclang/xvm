@@ -57,6 +57,7 @@ xdk-oodb = { group = "org.xtclang", name = "lib-oodb", version.ref = "xdk" }
 xdk-web = { group = "org.xtclang", name = "lib-web", version.ref = "xdk" }
 xdk-webauth = { group = "org.xtclang", name = "lib-webauth", version.ref = "xdk" }
 xdk-xenia = { group = "org.xtclang", name = "lib-xenia", version.ref = "xdk" }
+xdk-xunit = { group = "org.xtclang", name = "lib-xunit", version.ref = "xdk" }
 
 javatools = { group = "org.xtclang", name = "javatools", version.ref = "xdk" }
 javatools-unicode = { group = "org.xtclang", name = "javatools-unicode", version.ref = "xdk" }
@@ -64,10 +65,12 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
+hamcrest = {module = "org.hamcrest:hamcrest", version = "2.2"}
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jakarta" }
 jline = { module = "org.jline:jline", version.ref = "jline" }
+mockito = {module = "org.mockito:mockito-core", version = "5.11.0"}
 
 [bundles]
 unicode = ["javax-activation", "jakarta-xml-bind-api", "jaxb-runtime"]
