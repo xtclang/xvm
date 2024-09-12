@@ -68,7 +68,7 @@ class Basic {
         static String? foolCompiler(String s) = s;
         s2 = foolCompiler(s2); // reintroduce possibility that s2 is Null
         assert s2=="pos";
-        assert s2?.size>=0, True;
+        assert s2.size>=0, True;
     }
 
     void basic4() {

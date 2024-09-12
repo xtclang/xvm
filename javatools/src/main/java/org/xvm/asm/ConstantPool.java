@@ -2396,6 +2396,7 @@ public class ConstantPool
     public TypeConstant      typeFPLiteral()     {TypeConstant      c = m_typeFPLiteral;     if (c == null) {m_typeFPLiteral     = c = ensureTerminalTypeConstant(clzFPLiteral()                       );} return c;}
     public TypeConstant      typeRegEx()         {TypeConstant      c = m_typeRegEx;         if (c == null) {m_typeRegEx         = c = ensureTerminalTypeConstant(clzRegEx()                           );} return c;}
     public TypeConstant      typeString()        {TypeConstant      c = m_typeString;        if (c == null) {m_typeString        = c = ensureTerminalTypeConstant(clzString()                          );} return c;}
+    public TypeConstant      typeStringArray()   {TypeConstant      c = m_typeStringArray;   if (c == null) {m_typeStringArray   = c = ensureClassTypeConstant(clzArray(), null, typeString()             );} return c;}
     public TypeConstant      typeStringable()    {TypeConstant      c = m_typeStringable;    if (c == null) {m_typeStringable    = c = ensureTerminalTypeConstant(clzStringable()                      );} return c;}
     public TypeConstant      typeStringBuffer()  {TypeConstant      c = m_typeStringBuffer;  if (c == null) {m_typeStringBuffer  = c = ensureTerminalTypeConstant(clzStringBuffer()                    );} return c;}
     public TypeConstant      typeBit()           {TypeConstant      c = m_typeBit;           if (c == null) {m_typeBit           = c = ensureTerminalTypeConstant(clzBit()                             );} return c;}
@@ -3993,6 +3994,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeFPLiteral;
     private transient TypeConstant      m_typeRegEx;
     private transient TypeConstant      m_typeString;
+    private transient TypeConstant      m_typeStringArray;
     private transient TypeConstant      m_typeStringable;
     private transient TypeConstant      m_typeStringBuffer;
     private transient TypeConstant      m_typeString१;
@@ -4142,6 +4144,7 @@ public class ConstantPool
         m_typeStringable    = null;
         m_typeStringBuffer  = null;
         m_typeString१       = null;
+        m_typeStringArray   = null;
         m_typeBit           = null;
         m_typeNibble        = null;
         m_typeBitArray      = null;

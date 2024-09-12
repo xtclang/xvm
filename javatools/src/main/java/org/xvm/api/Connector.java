@@ -128,8 +128,12 @@ public class Connector
 
     /**
      * Start the Runtime and the main Container.
+     * <p/>
+     * The injection map values must be either {@code String} or {@code String[]}.
+     *
+     * @param mapInjections (optional) a map of custom injections
      */
-    public void start(Map<String, String> mapInjections)
+    public void start(Map<String, ?> mapInjections)
         {
         if (!m_fStarted)
             {
@@ -153,6 +157,20 @@ public class Connector
             throw new IllegalStateException("The container has not been started");
             }
         m_containerMain.invoke0(sMethodName, ahArg);
+        }
+
+    /**
+     * Invoke the test method with the specified arguments.
+     *
+     * @return {@code true} if XUnit was present to execute tests, otherwise {@code false}
+     */
+    public boolean invokeTest0()
+        {
+        if (!m_fStarted)
+            {
+            throw new IllegalStateException("The container has not been started");
+            }
+        return m_containerMain.invokeTest0();
         }
 
     /**
