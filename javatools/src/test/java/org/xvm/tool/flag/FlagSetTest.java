@@ -11,6 +11,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.ArrayMatching.arrayContaining;
 
 public class FlagSetTest
     {
@@ -419,5 +420,56 @@ public class FlagSetTest
         assertThat(flag.getNoArgDefault(), is(nullValue()));
 
         assertThat(flagSet.getFile(name), is(dfltValue));
+        }
+
+    @Test
+    public void shouldHavePassThruFlags() throws Exception
+        {
+        FlagSet flagSet = new FlagSet()
+                .withString("one", Flag.NO_SHORTHAND, "testing", null, null, false, true, null)
+                .withString("two", Flag.NO_SHORTHAND, "testing", null, null, false, false, null)
+                .withString("three", Flag.NO_SHORTHAND, "testing", null, null, false, true, "arg.three");
+
+        flagSet.parse("--one", "value-one", "--two", "value-two", "--three", "value-three");
+
+        Map<String, ?> map = flagSet.getPassThruArguments();
+        assertThat(map, is(notNullValue()));
+        assertThat(map.get("one"), is("value-one"));         // one is pass-thru
+        assertThat(map.get("two"), is(nullValue()));               // two is not pass-thru
+        assertThat(map.get("arg.three"), is("value-three")); // three is pass-thru with alternate name
+        }
+
+    @Test
+    public void shouldHaveStringArrayPassThruFlag() throws Exception
+        {
+        FlagSet flagSet = new FlagSet()
+                .withStringList("one", Flag.NO_SHORTHAND, "testing", false, true, null)
+                .withStringList("two", Flag.NO_SHORTHAND, "testing", false, true, "arg.two");
+
+        flagSet.parse("--one", "value-one-1", "--two", "value-two", "--one", "value-one-2");
+
+        Map<String, ?> map = flagSet.getPassThruArguments();
+        assertThat(map, is(notNullValue()));
+        assertThat(map.get("one"), is(instanceOf(String[].class)));
+        assertThat((String[]) map.get("one"), is(arrayContaining("value-one-1", "value-one-2")));
+        assertThat(map.get("arg.two"), is(instanceOf(String[].class)));
+        assertThat((String[]) map.get("arg.two"), is(arrayContaining("value-two")));
+        }
+
+    @Test
+    public void shouldNotUseBlankPassThruName() throws Exception
+        {
+        FlagSet flagSet = new FlagSet()
+                .withString("one", Flag.NO_SHORTHAND, "testing", null, null, false, true, "")
+                .withString("two", Flag.NO_SHORTHAND, "testing", null, null, false, true, " ")
+                .withString("three", Flag.NO_SHORTHAND, "testing", null, null, false, true, "\t");
+
+        flagSet.parse("--one", "value-one", "--two", "value-two", "--three", "value-three");
+
+        Map<String, ?> map = flagSet.getPassThruArguments();
+        assertThat(map, is(notNullValue()));
+        assertThat(map.get("one"), is("value-one"));
+        assertThat(map.get("two"), is("value-two"));
+        assertThat(map.get("three"), is("value-three"));
         }
     }
