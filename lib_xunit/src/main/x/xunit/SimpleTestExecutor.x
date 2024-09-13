@@ -110,18 +110,19 @@ const SimpleTestExecutor
     }
 
     /**
-     * Produce a test filter `RegEx` from a pattern string.
+     * Produce a test filter `RegEx` from a pattern string
+     * for the "class" part of a filter.
      *
      * @param pattern  the pattern to turn into a filter `RegEx`
-     * @param m        an optional module containing the tests
+     * @param m        the module containing the tests
      */
-    RegEx? toRegEx(String pattern, Module? m = Null) {
+    RegEx? toRegEx(String pattern, Module m) {
         if (pattern.empty) {
             return Null;
         }
 
         String prefix;
-        if (m.is(Module) && m.qualifiedName == pattern) {
+        if (m.qualifiedName == pattern) {
             pattern = pattern + ":";
             prefix  = "";
         } else if (pattern.indexOf(':')) {
@@ -132,6 +133,21 @@ const SimpleTestExecutor
 
         String regex = dot.replaceAll(pattern, "\\\\.");
         regex = prefix + star.replaceAll(regex, "(.*)");
+        return new RegEx(regex);
+    }
+
+    /**
+     * Produce a test filter `RegEx` from a pattern string
+     * for the "method" part of a filter.
+     *
+     * @param pattern  the pattern to turn into a filter `RegEx`
+     */
+    RegEx? toRegEx(String pattern) {
+        if (pattern.empty) {
+            return Null;
+        }
+        String regex = dot.replaceAll(pattern, "\\\\.");
+        regex = star.replaceAll(regex, "(.*)");
         return new RegEx(regex);
     }
 
