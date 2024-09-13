@@ -1216,11 +1216,11 @@ public class FlagSet
                 Flag.Value<?> value = flag.getValue();
                 if (value.isMultiValue())
                     {
-                    map.put(flag.getName(), value.asStrings());
+                    map.put(flag.getPassThruName(), value.asStrings());
                     }
                 else
                     {
-                    map.put(flag.getName(), value.asString());
+                    map.put(flag.getPassThruName(), value.asString());
                     }
                 }
             }
