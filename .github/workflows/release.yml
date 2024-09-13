@@ -2,54 +2,54 @@ name: Build, Release, and Publish
 
 on:
   workflow_dispatch: # Allows manual triggering from GitHub Actions UIon:
+    inputs:
+      trigger_manual_release:
+        type: choice
+        required: true
+        default: 'false'
+        options:
+          - 'true'
+          - 'false'
+        description: Trigger a manual release
   push:
+    # TODO let the xvm-build-verify action ensure release tags too. It should already be doing that.
+    #tags:
+    #  - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10'
     branches:
+      # TODO: MASTER
       - simplify-tasks
 
 env:
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  build:
+  build-release-artifacts:
     name: Build and Create Release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        # Cross platform build.
-        # The existing binary launchers are for windowx x64, linux x64 and macos multi-binary x64/aarch64
-        # Hence, we can get away with skipping the "arch" filter, I tbink, as long as we don't use the
-        # jreelaser templates.
-        #arch: [x64, arm64]
-        #exclude:
-        #   - os: windows-latest
-        #     arch: arm64
-        #   - os: linux-latest
-        #     arch: arm64
-        #   -
-        #   - os: mac-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           show-progress: true
-
+          fetch-depth: 0 # Full depth for accurate tags
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: zulu
           java-version: 21
-
       - name: Reset release state
         shell: bash
         run: |
-          echo "TODO: Here we should reset the release state, delete existng prereleases etc, if necessary."
-
-      - name: Read VERSION file
+          echo "TODO: Here we should reset the release state, delete existing draft releases etc, if necessary."
+      - name: Read VERSION File
         id: read_version
         shell: bash
         run: |
+          echo "Checking ref_name: ${{ github.ref_name }}"
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
@@ -81,7 +81,7 @@ jobs:
             echo "Fatal error - cannot resolve ${{ matrix.os }} to a known OS."
             exit 1
           fi
-
+          # TODO: Ensure tag is created
       - name: Build distribution with Gradle
         if: env.CURRENT_RELEASE != ''
         run: |
@@ -89,10 +89,55 @@ jobs:
           ./gradlew xdk:withLaunchersDistTar
           ./gradlew xdk:withLaunchersDistZip
           # TODO: Also publish release artifact. Copy credentials from other file
-
+      - name: Check if commit is tagged
+        id: check_tag
+        shell: bash
+        run: |
+          # TODO: Just use github.ref like a normal person
+          if git tag --contains ${{ github.sha }} | grep -q ${{ env.VERSION }}"; then
+            echo "Tag release version tag already exists for the latest commit."
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "Tag release version tag already exists for the latest commit."
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+            exit 1 # Should have been created in build with -PsnapshotOnly = false
+          fi
       - name: Upload artifacts
-        if: env.CURRENT_RELEASE != ''
         uses: actions/upload-artifact@v4
         with:
           name: xdk-${{ env.VERSION }}-${{ env.OS_NAME }}.${{ env.ARTIFACT_SUFFIX }}
           path: xdk/build/distributions/xdk*${{ env.OS_NAME }}*.${{ env.ARTIFACT_SUFFIX }}
+      - name: Install GitHub CLI (if necessary)
+        run: |
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            sudo apt-get update
+            sudo apt-get install gh
+          fi
+
+  create-release:
+    name: Create Release
+    if: env.CURRENT_RELEASE != ''
+    runs-on: ubuntu-latest
+    needs: build-release-artifacts  # This job will wait for all builds to complete
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          show-progress: true
+          fetch-depth: 0
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      - name: Create Release
+        run: |
+          gh release create ${{ env.VERSION }} \
+            --title "XDK ${{ env.VERSION }}" \
+            --notes "Release notes for XDK ${{ env.VERSION }}" \
+            --prerelease false \
+            --draft
+      - name: Upload Release Assets
+        run: |
+          gh release upload ${{ env.VERSION }} \
+            ./artifacts/xdk-${{ env.VERSION }}-*.${{ env.ARTIFACT_SUFFIX }}
