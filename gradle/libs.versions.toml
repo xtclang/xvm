@@ -65,7 +65,7 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils", version.ref
 javatools-turtle = { group = "org.xtclang", name = "javatools-turtle", version.ref = "xdk" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge", version.ref = "xdk" }
 
-hamcrest = {module = "org.hamcrest:hamcrest", version = "2.2"}
+hamcrest = { module = "org.hamcrest:hamcrest", version = "2.2" }
 javax-activation = { module = "com.sun.activation:javax.activation", version = "1.2.0" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jakarta" }
