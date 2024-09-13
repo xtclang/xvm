@@ -6,7 +6,7 @@ class Medium {
         //xincorp();
         //incorp();
         //ic();
-        typevars();
+        //typevars();
         //annot();
     }
 
