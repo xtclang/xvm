@@ -659,15 +659,25 @@ public class UnionTypeConstant
                 // nothing worked, but if the types are identical, we can still create an implicit
                 // PropertyBody that would allow it to be accessed at run-time
                 if (type1.equals(type2) && prop1.isVirtual() && prop2.isVirtual() &&
-                        !prop1.isFormalType())
+                        prop1.isFormalType() == prop2.isFormalType())
                     {
                     ModuleStructure   module         = getConstantPool().getFileStructure().getModule();
                     ClassStructure    clzSynthParent = module.ensureSyntheticInterface(getValueString());
-                    PropertyStructure propSynth      = clzSynthParent.ensureSyntheticProperty(sName, type1);
+                    PropertyStructure propSynth      = clzSynthParent.ensureSyntheticProperty(sName, type1.getType());
+                    PropertyBody      bodySynth;
 
-                    PropertyBody bodySynth = new PropertyBody(propSynth, Implementation.Implicit,
-                        null, type1, /*fRO*/ false, /*fRO*/ true, /*fCustom*/ false,
-                        Effect.None, Effect.None, /*fReqField*/ false, /*fConst*/ false, null, null);
+                    if (prop1.isFormalType())
+                        {
+                        propSynth.markAsGenericTypeParameter();
+                        bodySynth = new PropertyBody(propSynth,
+                                new ParamInfo(sName, prop1.getConstraintType(), prop1.getType()));
+                        }
+                    else
+                        {
+                        bodySynth = new PropertyBody(propSynth, Implementation.Implicit,
+                            null, type1, /*fRO*/ false, /*fRO*/ true, /*fCustom*/ false,
+                            Effect.None, Effect.None, /*fReqField*/ false, /*fConst*/ false, null, null);
+                        }
                     map.put(propSynth.getIdentityConstant(), new PropertyInfo(bodySynth, 0));
                     }
                 }

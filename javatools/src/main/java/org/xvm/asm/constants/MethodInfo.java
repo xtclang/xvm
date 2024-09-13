@@ -898,17 +898,23 @@ public class MethodInfo
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods)
         {
-        int cDepth = idMethod.getNestedDepth();
-        for (MethodBody body : m_aBody)
+        MethodConstant id = getHead().getIdentity();
+        if (id.getNestedDepth() == idMethod.getNestedDepth())
             {
-            MethodConstant id = body.getIdentity();
-            if (id.getNestedDepth() == cDepth)
+            mapMethods.putIfAbsent(id, this);
+            // TODO GG: there is some unpredictability in what MethodInfo gets into the cache first,
+            //          which could change the result of the compilation; need to figure out the
+            //          best way making it deterministic; after that we may want to restore the
+            //          old logic of priming the cache using **all bodies**, not just the head
+
+//            MethodInfo infoOld = mapMethods.putIfAbsent(id, this);
+//            if (infoOld != null && !infoOld.equals(this))
+//                {
+//                System.err.println("*** choose best info for " + idMethod.getValueString());
+//                }
+            if (isVirtual())
                 {
-                mapMethods.putIfAbsent(id, this);
-                if (isVirtual())
-                    {
-                    mapVirtMethods.putIfAbsent(id.getNestedIdentity(), this);
-                    }
+                mapVirtMethods.putIfAbsent(id.getNestedIdentity(), this);
                 }
             }
         }

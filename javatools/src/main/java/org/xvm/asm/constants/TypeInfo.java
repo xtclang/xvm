@@ -2568,13 +2568,11 @@ public class TypeInfo
                 if (info.isAbstract())
                     {
                     fImplicitAbstract = true;
-                    break;
                     }
 
                 if (info.isUncoveredVirtualConstructor(this))
                     {
                     fImplicitAbstract = true;
-                    break;
                     }
                 }
 
