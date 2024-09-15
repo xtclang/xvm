@@ -15,9 +15,13 @@ rename_branch() {
   branch_new=$2
   echo "Renaming $branch to $branch_new"
   echo git branch -m "$branch" "$branch_new"
+  git branch -m "$branch" "$branch_new"
   echo git push origin "$branch_new"
+  git push origin "$branch_new"
   echo git push origin --delete "$branch"
+  git push origin --delete "$branch"  
   echo git push --set-upstream origin "$branch_new"
+  git push --set-upstream origin "$branch_new" 
 }
 
 nargs=$#
