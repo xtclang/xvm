@@ -224,7 +224,7 @@ val ensureTags by tasks.registering {
 //    so that we confirm that the XDK artifact is equally legal, even if we don't look 100% like a Java artifact
 //    For mavenCentral this may still involve faking a jar file, or shipping XDK as a jar file with all other
 //    stuff as reasources. It should not be a big problem and can be wrapped in abstraction.
-val relaseXvm by tasks.registering {
+val releaseXvm by tasks.registering {
     description = "Trigger a GitHub workflow that builds and releases the current branch at the last commit."
     doLast {
         xdkBuildLogic.gitHubProtocol().triggerRelease()

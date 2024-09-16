@@ -9,14 +9,14 @@ name: XVM Release Workflow
 on:
   workflow_dispatch: # Allows manual triggering from GitHub Actions UIon:
     inputs:
-      trigger_manual_release:
-        type: choice
+      branch:
+        description: 'Branch to release from'
+        default: 'simplify-tasks' # TODO: Change to master
         required: true
-        default: 'false'
-        options:
-          - 'true'
-          - 'false'
-        description: Trigger a manual release
+      version:
+        description: 'Overriding version for the release'
+        default: ''
+        required: false
     #push:
     # TODO let the xvm-build-verify action ensure release tags too. It should already be doing that.
     #tags:
@@ -37,41 +37,71 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          show-progress: true
-          fetch-depth: 0 # Full depth for accurate tags
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: zulu
           java-version: 21
+      - name: Setup GitHub CLI (if necessary)
+        shell: bash
+        run: |
+          if ! command -v gh &> /dev/null; then
+            echo "Installing GitHub CLI..."
+            sudo apt-get update
+            sudo apt-get install gh
+          fi
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          show-progress: true
+          fetch-depth: 0 # Full depth for accurate tags
+          ref: ${{ github.event.inputs.version }}
       - name: Reset release state
         shell: bash
         run: |
+          current_branch=$(git branch --show-current)
+          VERSION=$(cat VERSION)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Generating a release:"
+          echo "    Workflow dispatch inputs:
+          echo "        Input branch  : ${{ github.event.inputs.branch }}"
+          echo "        Input version : ${{ github.event.inputs.version }}"          
+          echo "    VERSION file parsed from branch:"
+          echo "        Current branch (from checkout): $current_branch"
+          echo "        XDK Version: $VERSION"
+          echo ""
           echo "TODO: Here we should reset the release state, delete existing draft releases etc, if necessary."
       - name: Read VERSION File
         id: read_version
         shell: bash
         run: |
           echo "Checking ref_name: ${{ github.ref_name }}"
-          VERSION=$(cat VERSION)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
           if [[ "$VERSION" == *"SNAPSHOT"* ]]; then
-            echo "This is a SNAPSHOT version. Skipping release."
+            current_release=${VERSION%-SNAPSHOT}          
+            echo "This is a SNAPSHOT version. Release version will be: $current_release"
             exit 0
           else
-            echo "This is a release version. Proceeding with release."
+            echo "This is a release version. If the release exists already, it may not be overwritten for some situations."
             current_release="$VERSION"
             echo "CURRENT_RELEASE=v$VERSION" >> $GITHUB_ENV
           fi 
           last_release=$(gh release view --json tagName  -q '.tagName')
           echo "LAST_RELEASE=$last_release" >> $GITHUB_ENV
           if [ "$current_release" == "$last_release" ]; then
+            #
+            # TODO: This may actually be replaced by a Gradle check, like xdk:checkUnreleased
+            # We want to write as little build logic as possible in bash scripts and GitHub
+            # workflows, and as much as possible in Kotlin and Gradle.          
+            #
             echo "This version has already been released. Skipping release."
             exit 1
           fi
+          #
+          # Resolve artifact suffix. On Windows it'z "zip" right now, previously we had .exe files for a self
+          # extracting installer. 
+          # TODO: This can easily be reverted to that behavior again, later.
+          # TODO: Ensure brew hook works again.
+          #
           echo "ARTIFACT_SUFFIX=tar.gz" >> $GITHUB_ENV
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
             echo "This is a Windows build."
@@ -100,31 +130,49 @@ jobs:
         shell: bash
         run: |
           # TODO: Just use github.ref like a normal person
-          if git tag --contains ${{ github.sha }} | grep -q ${{ env.VERSION }}"; then
+          echo "RELEASE_TAG=release/v${{ env.VERSION }}" >> $GITHUB_ENV
+          echo "Added release tag to environment: $RELEASE_TAG"
+          if git tag --contains ${{ github.sha }} | grep -q ${{ env.RELEASE_TAG }}"; then
             echo "Tag release version tag already exists for the latest commit."
             echo "TAG_EXISTS=true" >> $GITHUB_ENV
           else
-            echo "Tag release version tag already exists for the latest commit."
+            echo "Tag release version tag does not exist for the last commit."
             echo "TAG_EXISTS=false" >> $GITHUB_ENV
-            exit 1 # Should have been created in build with -PsnapshotOnly = false
+            # exit 1 # Should have been created in build with -PsnapshotOnly = false
           fi
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: xdk-${{ env.VERSION }}-${{ env.OS_NAME }}.${{ env.ARTIFACT_SUFFIX }}
-          path: xdk/build/distributions/xdk*${{ env.OS_NAME }}*.${{ env.ARTIFACT_SUFFIX }}
-      - name: Install GitHub CLI (if necessary)
+        # If this is run after the publish artifacts, and we do allow writing release artifacts from the push flow, these
+        # may be included in the release too, and the tag should exist.
+      - name: Check if release already exists
+        id: check_release
+        shell: bash
         run: |
-          if ! command -v gh &> /dev/null; then
-            echo "Installing GitHub CLI..."
-            sudo apt-get update
-            sudo apt-get install gh
+          if gh release view ${{ env.VERSION }}; then
+            echo "Release already exists."
+            echo "CURRENT_RELEASE=$VERSION" >> $GITHUB_ENV
+          else
+            echo "Release does not exist."
+            echo "CURRENT_RELEASE=" >> $GITHUB_ENV
           fi
+      - name: Create GitHub release skeleton
+        if: env.CURRENT_RELEASE != ''
+        shell: bash
+        run: |
+            echo "Attempting to create release skeleton for tag ${{ env.RELEASE_TAG }} and "
+            gh release create ${{ env.VERSION }} --title "XDK ${{ env.VERSION }}" --draft --target
+        #- name: Upload release assets
+        #uses: actions/upload-artifact@v4
+        #uses: actions/upload-artifact@v4
+        #with:
+        #  name: xdk-${{ env.VERSION }}-${{ env.OS_NAME }}.${{ env.ARTIFACT_SUFFIX }}
+        #  path: xdk/build/distributions/xdk*${{ env.OS_NAME }}*.${{ env.ARTIFACT_SUFFIX }}
 
+  # TODO: Disabled for now, but is meant to consume the release artifacts created in the previous job, for all our
+  # platforms.
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: build-release-artifacts  # This job will wait for all builds to complete
+    if: ${{ false }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -148,3 +196,51 @@ jobs:
         run: |
           gh release upload ${{ env.VERSION }} \
             ./artifacts/xdk-${{ env.VERSION }}-*.${{ env.ARTIFACT_SUFFIX }}
+
+#
+#  USAGE
+#  gh release create [<tag>] [<files>...]
+#
+#  ALIASES
+#  gh release new
+#
+#  FLAGS
+#  --discussion-category string   Start a discussion in the specified category
+#  -d, --draft                        Save the release as a draft instead of publishing it
+#  --generate-notes               Automatically generate title and notes for the release
+#  --latest                       Mark this release as "Latest" (default [automatic based on date and version]). --latest=false to explicitly NOT set as latest
+#  -n, --notes string                 Release notes
+#  -F, --notes-file file              Read release notes from file (use "-" to read from standard input)
+#  --notes-from-tag               Automatically generate notes from annotated tag
+#  --notes-start-tag string       Tag to use as the starting point for generating release notes
+#  -p, --prerelease                   Mark the release as a prerelease
+#  --target branch                Target branch or full commit SHA (default [main branch])
+#  -t, --title string                 Release title
+#  --verify-tag                   Abort in case the git tag doesn't already exist in the remote repository
+#
+#  INHERITED FLAGS
+#  --help                     Show help for command
+#  -R, --repo [HOST/]OWNER/REPO   Select another repository using the [HOST/]OWNER/REPO format
+#
+#  EXAMPLES
+#  Interactively create a release
+#     gh release create
+#  Interactively create a release from specific tag
+#     gh release create v1.2.3
+#  Non-interactively create a release
+#     gh release create v1.2.3 --notes "bugfix release"
+#  Use automatically generated release notes
+#     gh release create v1.2.3 --generate-notes
+#  Use release notes from a file
+#     gh release create v1.2.3 -F release-notes.md
+#  Use annotated tag notes
+#     gh release create v1.2.3 --notes-from-tag
+#  Don't mark the release as latest
+#     gh release create v1.2.3 --latest=false
+#  Upload all tarballs in a directory as release assets
+#     gh release create v1.2.3 ./dist/*.tgz
+#  Upload a release asset with a display label
+#     gh release create v1.2.3 '/path/to/asset.zip#My display label'
+#  Create a release and start a discussion
+#     gh release create v1.2.3 --discussion-category "General"
+#

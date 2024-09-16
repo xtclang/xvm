@@ -32,7 +32,6 @@ data class GitHubProtocol(private val project: Project) {
     }
 
     private val semanticVersion = project.property("semanticVersion") as SemanticVersion
-    private val releaseVersion = project.releaseVersion()
     private val artifactBaseVersion = semanticVersion.artifactVersion.removeSuffix("-SNAPSHOT")
     private val tagPrefix = if (semanticVersion.isSnapshot()) "snapshot/" else "release/"
     private val localTag = "${tagPrefix}v$artifactBaseVersion"
@@ -171,7 +170,8 @@ data class GitHubProtocol(private val project: Project) {
     fun isReleased(): Boolean = project.run {
         // gh release view <version> return if release already exists.
         //currentVersion = senamticVersion.ar
-        var currentVersion = semanticVersion.artifactVersion
+        // TODO: We could also do it with "gh release view --json tagName  -q '.tagName'"
+        val currentVersion = semanticVersion.artifactVersion
         val releaseVersion = project.releaseVersion()
         val desc = if (releaseVersion != currentVersion) "'$releaseVersion'" else "the same."
         logger.lifecycle("$prefix Current project version is '$currentVersion', release version would be $desc")
