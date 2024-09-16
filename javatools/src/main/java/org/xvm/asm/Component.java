@@ -1032,6 +1032,7 @@ public abstract class Component
         String                 sName = child.getName();
 
         Component sibling = kids.remove(sName);
+        child.getIdentityConstant().resetCachedInfo();
 
         unlinkSibling(kids, sName, child, sibling);
         }
@@ -1052,6 +1053,7 @@ public abstract class Component
 
         // warning: brute force
         ensureChildByNameMap().put(childNew.getName(), childNew);
+        childNew.getIdentityConstant().resetCachedInfo();
         }
 
     /**
@@ -2064,6 +2066,7 @@ public abstract class Component
         {
         Component parent = (Component) this.getContaining();
         parent.replaceChild(this, that);
+        getIdentityConstant().resetCachedInfo();
         }
 
     /**

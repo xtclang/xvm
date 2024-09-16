@@ -117,6 +117,7 @@ public class MultiMethodStructure
             if (child != null)
                 {
                 map.put((MethodConstant) idNew, child);
+                idNew.resetCachedInfo();
                 }
             }
         }
