@@ -881,11 +881,16 @@ public class Register
         @Override
         public ExprAST getRegisterAST()
             {
-            NarrowedExprAST astNarrowed = m_astNarrowed;
+            ExprAST astNarrowed = m_astNarrowed;
             if (astNarrowed == null)
                 {
-                astNarrowed = m_astNarrowed = new NarrowedExprAST(
-                        Register.this.getRegisterAST(), getType());
+                TypeConstant typeNarrowed = getType();
+                TypeConstant typeOrig     = getOriginalType();
+                ExprAST      astOrig      = Register.this.getRegisterAST();
+
+                astNarrowed = m_astNarrowed = typeNarrowed.equals(typeOrig)
+                    ? astOrig
+                    : new NarrowedExprAST(astOrig, typeNarrowed);
                 }
             return astNarrowed;
             }
@@ -921,9 +926,9 @@ public class Register
         private boolean m_fInPlace = false;
 
         /**
-         * Cached NarrowedExprAST.
+         * Cached ExprAST for shadow register (could be the same as for the original register).
          */
-        private NarrowedExprAST m_astNarrowed;
+        private ExprAST m_astNarrowed;
         }
 
 

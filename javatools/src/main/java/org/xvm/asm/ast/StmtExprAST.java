@@ -15,7 +15,6 @@ import static org.xvm.asm.ast.BinaryAST.NodeType.StmtExpr;
 import static org.xvm.util.Handy.indentLines;
 
 
-
 /**
  * A statement expression.
  */

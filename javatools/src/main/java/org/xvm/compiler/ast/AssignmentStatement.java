@@ -813,8 +813,14 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                     }
 
+                // for now, we only "unwrap" rvalue if it's a ConvertExpression; if necessary, we
+                // should create a corresponding abstract method on Expression an implement
+                // as required
                 astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST(ctx));
-                astAssign = new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST(ctx));
+                astAssign = rvalue instanceof ConvertExpression exprConv &&
+                            !exprConv.isSingle() && !exprConv.isConstant()
+                        ? exprConv.unwrapConverAST(ctx, astLVal)
+                        : new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST(ctx));
                 break;
                 }
 

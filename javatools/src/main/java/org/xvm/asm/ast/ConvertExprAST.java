@@ -35,6 +35,15 @@ public class ConvertExprAST
         this.convMethods = convMethods;
     }
 
+    public ConvertExprAST(ExprAST expr, TypeConstant type, MethodConstant convMethod) {
+        super(expr);
+
+        assert type != null && convMethod != null;
+
+        this.types       = new TypeConstant[] {type};
+        this.convMethods = new MethodConstant[] {convMethod};
+    }
+
     public Constant[] getConvMethods() {
         return convMethods;
     }
