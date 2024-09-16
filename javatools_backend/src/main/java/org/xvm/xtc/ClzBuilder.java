@@ -410,9 +410,11 @@ public class ClzBuilder {
           break;
 
         case ClassPart clz_nest:
-          // Nested class.  Becomes a java static inner class
-          ClzBuilder X = new ClzBuilder(this,clz_nest);
-          X.jclass_body();
+          if( !clz_nest.isSynthetic() ) {
+            // Nested class.  Becomes a java static inner class
+            ClzBuilder X = new ClzBuilder(this,clz_nest);
+            X.jclass_body();
+          }
           break;
 
         case TDefPart typedef:
@@ -715,7 +717,8 @@ public class ClzBuilder {
   // From: "{ return expr }"
   // To:   "         expr   "
   public void jmethod_body_inline( MethodPart meth ) {
-    if( meth._name2kid != null ) throw XEC.TODO();
+    if( meth._name2kid != null )
+      System.out.println("field init method has more parts");
     // Parse the method body
     AST ast = ast(meth);
     // Strip any single-block wrapper

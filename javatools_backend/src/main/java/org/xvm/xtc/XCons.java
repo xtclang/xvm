@@ -4,7 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.S;
 import org.xvm.xtc.cons.Const;
 
-import static org.xvm.XEC. TODO;
+import static org.xvm.XEC.TODO;
 
 import java.util.HashMap;
 

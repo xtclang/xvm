@@ -6,6 +6,8 @@ import org.xvm.xtc.cons.*;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 
+import java.math.BigInteger;
+
 // Concrete java values from XTC values.
 public abstract class XValue {
   // Produce a java value from a TCon
@@ -23,9 +25,18 @@ public abstract class XValue {
     return switch( tc ) {
       // Integer constants in XTC are Java Longs
     case IntCon ic -> {
+      if( ic._f==Const.Format.Int128 ) {
+        ASB.p("Int128.construct(");
+        if( ic._big != null ) {
+          long lo = ic._big.longValue();
+          BigInteger big = ic._big.shiftRight(64);
+          long hi = big.longValueExact();
+          ASB.p(lo).p("L,").p(hi).p("L");
+        }
+        else ASB.p(ic._x).p("L");
+        yield ASB.p(")");
+      }
       if( ic._big != null ) throw XEC.TODO();
-      if( ic._f==Const.Format.Int128 )
-        yield ASB.p("Int128.construct(").p(ic._x).p("L)");
       yield ASB.p(ic._x).p('L');
     }
     case Flt64Con fc -> ASB.p(fc._flt);
@@ -191,6 +202,8 @@ public abstract class XValue {
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".random()");
       if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
         yield ASB.p(NativeTimer.make_timer(XClz.make(clz)));
+      if( clz._name.equals("Clock") && clz._path._str.equals("ecstasy/temporal/Clock.x") )
+        yield ASB.p(NativeTimer.make_clock(XClz.make(clz)));
       throw XEC.TODO();
     }
 

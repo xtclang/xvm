@@ -133,8 +133,8 @@ public class InvokeAST extends AST {
     // Handle all the Char to "char" calls
     if( k0t == XCons.CHAR ) {
       return switch( _meth ) {
-      case "add" -> new BinOpAST( "+", "", XCons.CHAR, _kids );
-      case "sub" -> new BinOpAST( "-", "", XCons.CHAR, _kids );
+      case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
+      case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "toInt64" -> _kids[0]; // no-op cast
       case "asciiDigit" -> {
         InvokeAST inv = new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
@@ -158,7 +158,7 @@ public class InvokeAST extends AST {
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
       case "quoted", "iterator" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
-      case "equals", "split", "endsWith", "startsWith" -> null;
+      case "equals", "split", "endsWith", "startsWith", "substring" -> null;
       case "indexOf" -> {
         castInt(2);                         // Force index to be an int not a long
         if( _type!=XCons.BOOL ) yield null; // Return int result
@@ -166,6 +166,10 @@ public class InvokeAST extends AST {
         _type = XCons.LONG;   // Back to producing an int result
         // But insert compare to -1 for boolean
         yield new BinOpAST( "!=", "", XCons.BOOL, this, new ConAST( "-1", XCons.LONG ) );
+      }
+      case "slice" -> {
+        _slice_tmp = enclosing_block().add_tmp(XCons.RANGE);
+        yield null;
       }
       default -> throw XEC.TODO();
       };
@@ -210,7 +214,7 @@ public class InvokeAST extends AST {
 
     // Sharp tuple slices are special in all kinds of ways.
     // I have to explode the fields directly.
-    if( _type instanceof XClz clz && clz.isTuple() && _meth.equals("slice") ) {
+    if( _meth.equals("slice") && _type instanceof XClz clz && clz.isTuple() ) {
       assert _kids[1] instanceof NewAST && _kids[1]._type.isa(XCons.RANGE);
       AbstractRange rng = AbstractRange.range(_kids[1]);
       // new Tuple((tmp=kid0)._f2,tmp._f3,tmp._f4);
@@ -223,6 +227,14 @@ public class InvokeAST extends AST {
         sb.p("._f").p(i).p(",").p(_slice_tmp);
       sb.unchar(_slice_tmp.length()).unchar(1);
       sb.p(")");
+      return sb;
+    }
+
+    // Print "str.slice( RangeExpr )" as
+    // "str.substring((tmp=RangeExpr)._start,tmp._end)"
+    if( _meth.equals("slice") && _type==XCons.STRING ) {
+      _kids[0].jcode(sb).p(".substring((").p(_slice_tmp).p("=");
+      _kids[1].jcode(sb).p(")._start,").p(_slice_tmp).p("._end)");
       return sb;
     }
 

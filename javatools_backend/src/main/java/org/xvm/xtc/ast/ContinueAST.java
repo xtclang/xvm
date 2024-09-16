@@ -23,7 +23,7 @@ class ContinueAST extends AST {
       if( _par instanceof BlockAST blk &&
           blk._par==enclosing &&
           blk._kids[blk._kids.length-1]==this )
-        return sb.ip("// Fall-through");
+        return sb.p("// Fall-through");
       // Requires fall-thru semantics from the middle complex expressions which
       // amounts to a GOTO.
       throw XEC.TODO();

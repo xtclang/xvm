@@ -653,12 +653,14 @@ public class XClz extends XType {
     // File.Mod.Pack.Clz.Clz  - Nested class (or enum), e.g. ecstasy.collections.Array.ArrayDelegate
     // File.Mod.Pack.Pack.Clz - Nested package        , e.g. ecstasy.collections.deferred.DeferredCollection
     // File.Mod.Pack.Clz.MMeth.Meth.Clz - Method-local class (or enum), e.g. tck.constructors.Basic.Test
+    // File.Mod.Pack.Clz.Prop.MMeth.Meth.Clz - Method-local class (or enum) as a property init
     return switch( pclz._par ) {
     case    FilePart file -> mod;  // e.g. module tck
     case     ModPart mod2 -> mod;  // eg. module ecstasy
     // case PackagePart pack; EXTENDS CLASSPART             // e.g. ecstasy.collections.deferred
     case   ClassPart clz  -> _pack(clz ,mod)+"."+clz._name; // e.g. ecstasy.collections.Array
     case  MethodPart meth -> _pack(meth._par,mod);          // e.g. tck.constructors.Basic
+    case    PropPart prop -> prop._name+"$"+_pack(prop,mod);
     default -> {
       for( Part p=pclz; p!=null; p = p._par )
         System.out.print(p.getClass().getSimpleName()+" ");
@@ -677,7 +679,7 @@ public class XClz extends XType {
     if( this==XCons.JNULL ) return false;
     if( this==XCons.JSTRING ) return false;
     if( this==XCons.JSTRINGN ) return false;
-    return !S.eq("java.lang",_jpack) && (!self || _clz != ClzBuilder.CCLZ);
+    return !S.eq("java.lang",_jpack) && (!self || _clz != ClzBuilder.CCLZ) && (_clz==null || _clz._par instanceof PackagePart);
   }
   // No java name means needs a build
   public boolean needs_build() { return _jname.isEmpty(); }
