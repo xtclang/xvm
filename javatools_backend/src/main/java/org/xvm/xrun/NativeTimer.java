@@ -33,7 +33,7 @@ public class NativeTimer {
         }
       };
     timer.schedule(task, msec);
-    
+
     return alarm;
   }
 
@@ -80,5 +80,9 @@ public class NativeTimer {
     sb.p("// ---------------------------------------------------------------").nl();
     ClzBldSet.add(qual,sb.toString());
     return nnn;
+  }
+
+  public static String make_clock(XClz xclock) {
+    return make_timer(xclock);
   }
 }

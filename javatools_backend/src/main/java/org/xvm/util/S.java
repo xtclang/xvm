@@ -23,7 +23,21 @@ public abstract class S {
   }
 
   public static String java_class_name( String xname ) {
-    return xname.replace('.','_').replace(':','_').intern();
+    int idx = findBad(xname);
+    if( idx == -1 ) return xname;
+    char[] cs = xname.toCharArray();
+    for( int i=idx; i<cs.length; i++ )
+      if( bad(cs[i]) ) cs[i] = '_';
+    return new String(cs).intern();
+  }
+  private static int findBad( String xname ) {
+    for( int i=0; i<xname.length(); i++ )
+      if( bad(xname.charAt(i)) )
+        return i;
+    return -1;
+  }
+  private static boolean bad(char c) {
+    return c=='.' || c==':' || c=='=';
   }
 
   public static <X> X[] swap( X[] ary, int i, int j ) {

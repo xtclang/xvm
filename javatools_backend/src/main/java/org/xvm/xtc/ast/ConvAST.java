@@ -35,7 +35,7 @@ class ConvAST extends AST {
   @Override XType _type() { return _type; }
 
   @Override public AST rewrite() {
-    if( _type==_kids[0]._type ) // No change
+    if( _type.isa(_kids[0]._type) )// No change
       return _kids[0];          // Drop the Conv
     // Converting from a Java primitive will always need some kind of conversion call
     if( _kids[0]._type.is_jdk() )

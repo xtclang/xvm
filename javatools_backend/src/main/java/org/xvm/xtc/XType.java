@@ -358,6 +358,7 @@ public abstract class XType {
     case Dec128Con dcon -> DEC128;
 
     case ClassCon ccon ->  XClz.make(ccon.clz());
+    case AnonClzTCon anon -> XClz.make(anon.clz());
 
     case ServiceTCon service -> XCons.SERVICE;
 

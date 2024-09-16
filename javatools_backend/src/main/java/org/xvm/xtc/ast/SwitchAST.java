@@ -6,6 +6,8 @@ import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
 
+import java.util.Arrays;
+
 // Print as a switch expression.
 class SwitchAST extends AST {
 
@@ -37,6 +39,9 @@ class SwitchAST extends AST {
     AST cond = ast_term(X);
     long isa = X.pack64();
     Const[] cases = X.consts();
+    // Last case is null for default.  If no default listed, make one now.
+    if( cases[cases.length-1]!=null )
+      cases = Arrays.copyOf(cases,cases.length+1);
     int clen = cases.length;
     AST[] kids = new AST[clen+1];
     // Condition
@@ -295,13 +300,14 @@ class SwitchAST extends AST {
         do sb.p( _armss[i][0] ).p( ", " );
         while( _kids[++i] == null );
       } else {
-        sb.ip("default, ");
-        i++;
+        if( _kids[++i]!=null ) sb.ip("default, ");
       }
-      sb.unchar(2).p(case_sep);
-      _kids[i].jcode(sb);
-      if( !(_kids[i] instanceof BlockAST) ) sb.p(";");
-      sb.nl();
+      if( _kids[i]!=null ) {
+        sb.unchar( 2 ).p( case_sep );
+        _kids[i].jcode( sb );
+        if( !(_kids[i] instanceof BlockAST) ) sb.p( ";" );
+        sb.nl();
+      }
     }
     sb.di().ip("}");
     return sb;
