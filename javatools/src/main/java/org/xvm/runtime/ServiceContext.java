@@ -355,7 +355,7 @@ public class ServiceContext
 
             if (frame != null)
                 {
-                try (var ignored = ConstantPool.withPool(frame.poolContext()))
+                try (var ignored = ConstantPool.withPool(f_pool))
                     {
                     frame = execute(frame);
 
@@ -1060,7 +1060,7 @@ public class ServiceContext
             else
                 {
                 int ix = i;
-                if (hArg.getType().isA(frame.poolContext().typeAutoFreezable()))
+                if (hArg.getType().isA(f_pool.typeAutoFreezable()))
                     {
                     return Utils.callFreeze(frame, hArg, null, frameCaller ->
                         {
@@ -1568,7 +1568,8 @@ public class ServiceContext
                 }
             };
 
-        return sendOp1Request(frame, opGet, iReturn, idProp.getType());
+        return sendOp1Request(frame, opGet, iReturn,
+                idProp.getType().resolveGenerics(f_pool, hTarget.getType()));
         }
 
     /**
@@ -1600,8 +1601,9 @@ public class ServiceContext
             return frame.raiseException(xException.mutableObject(frame, hValue.getType()));
             }
 
-        ObjectHandle[] ahValue = new ObjectHandle[] {hValue};
-        TypeConstant[] atype   = new TypeConstant[] {idProp.getType()};
+        TypeConstant   typeProp = idProp.getType().resolveGenerics(f_pool, hTarget.getType());
+        ObjectHandle[] ahValue  = new ObjectHandle[] {hValue};
+        TypeConstant[] atype    = new TypeConstant[] {typeProp};
         switch (frame.f_context.validatePassThrough(frame, this, atype, ahValue, 1))
             {
             case Op.R_NEXT:
