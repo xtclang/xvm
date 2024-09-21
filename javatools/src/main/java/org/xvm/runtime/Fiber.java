@@ -108,14 +108,23 @@ public class Fiber
         }
 
     /**
-     * @return true iff this fiber is waiting or currently running and points back (as a logical
-     *         thread of execution) to a waiting or running fiber on the specified service
+     * @return true iff this fiber is waiting, terminating or currently running and points back (as
+     *         a logical thread of execution) to a waiting or running fiber on the specified service
      */
     public boolean isContinuationOf(Fiber fiberOrig)
         {
-        if (m_status != FiberStatus.Waiting && this != f_context.getCurrentFiber())
+        switch (m_status)
             {
-            return false;
+            case Initial, Running, Paused:
+                if (this != f_context.getCurrentFiber())
+                    {
+                    return false;
+                    }
+                break;
+
+            case Waiting:
+            case Terminating:
+                break;
             }
 
         Fiber fiberCaller = getCaller();

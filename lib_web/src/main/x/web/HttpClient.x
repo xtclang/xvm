@@ -78,13 +78,10 @@ const HttpClient
             if (exception == Null) {
                 assert status != Null;
                 try {
-                    // TODO GG: make async recursion work; if uncomment, the PlatformCLI hangs
-                    //  response = processResponse(
-                    ResponseIn r = processResponse(
+                    response = processResponse^(
                             status, request, headerNames, headerValues, callback,
                             redirectLimit, redirectCount,
                             responseHeaderNames, responseHeaderValues, responseBytes);
-                    response = r;
                     return;
                 } catch (Exception e) {
                     exception = e;
