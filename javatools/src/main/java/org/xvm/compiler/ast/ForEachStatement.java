@@ -1224,17 +1224,9 @@ public class ForEachStatement
 
         boolean      fKeysOnly = m_exprLValue.getValueCount() == 1 && m_regEntry == null;
         TypeConstant typeEach  = fKeysOnly ? typeKey : typeEntry;
-        TypeConstant typeAble  = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeEach);
         TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeEach);
 
-        TypeInfo       infoAble   = typeAble.ensureTypeInfo(errs);
-        MethodConstant idIterator = findWellKnownMethod(infoAble, "iterator", errs);
-        if (idIterator == null)
-            {
-            return false;
-            }
-        TypeInfo       infoIter = pool.typeIterator().ensureTypeInfo(errs);
-        MethodConstant idNext   = findWellKnownMethod(infoIter, "next", errs);
+        MethodConstant idNext  = findWellKnownMethod(typeIter.ensureTypeInfo(errs), "next", errs);
         if (idNext == null)
             {
             return false;
@@ -1245,9 +1237,14 @@ public class ForEachStatement
         Label labelRepeat = new Label("repeat_foreach_" + getLabelId());
         if (m_exprLValue.getValueCount() == 2 || m_regEntry != null)
             {
+            MethodConstant idIterator = findWellKnownMethod(infoMap, "iterator", errs);
+            if (idIterator == null)
+                {
+                return false;
+                }
+
             // VAR     iter Iterator<Entry>     ; the entry Iterator
-            // P_GET   Map.entries, map -> set  ; get the "entries" property from the [RValue] map
-            // NVOK_01 set iterator() -> iter   ; get the iterator
+            // NVOK_01 Map.iterator() -> iter   ; get the iterator
             //
             // VAR     cond Boolean             ; hidden variable that holds the conditional result
             // VAR     entry Entry              ; the entry
@@ -1267,16 +1264,13 @@ public class ForEachStatement
             // JMP Repeat                       ; loop
             // Exit:
 
-            PropertyConstant idEntries = infoMap.findProperty("entries").getIdentity();
             TypeInfo         infoEntry = typeEntry.ensureTypeInfo(errs);
             PropertyConstant idKey     = infoEntry.findProperty("key").getIdentity();
             PropertyConstant idValue   = infoEntry.findProperty("value").getIdentity();
 
-            Register regSet = new Register(typeAble, null, Op.A_STACK);
-            code.add(new P_Get(idEntries, argMap, regSet));
             Register regIter = code.createRegister(typeIter);
             code.add(new Var(regIter));
-            code.add(new Invoke_01(regSet, idIterator, regIter));
+            code.add(new Invoke_01(argMap, idIterator, regIter));
 
             Register regCond = code.createRegister(pool.typeBoolean());
             code.add(new Var(regCond));
@@ -1347,6 +1341,13 @@ public class ForEachStatement
             }
         else
             {
+            TypeConstant   typeSet    = pool.ensureParameterizedTypeConstant(pool.typeSet(), typeEach);
+            MethodConstant idIterator = findWellKnownMethod(typeSet.ensureTypeInfo(errs), "iterator", errs);
+            if (idIterator == null)
+                {
+                return false;
+                }
+
             // VAR     iter Iterator<Key>       ; the key Iterator
             // P_GET   Map.keys, map -> set     ; get the "keys" property from the [RValue] map
             // NVOK_01 set iterator() -> iter   ; get the iterator
@@ -1365,7 +1366,7 @@ public class ForEachStatement
             // JMP Repeat                       ; loop
             // Exit:
             PropertyConstant idKeys = infoMap.findProperty("keys").getIdentity();
-            Register         regSet = new Register(typeAble, null, Op.A_STACK);
+            Register         regSet = new Register(typeSet, null, Op.A_STACK);
             code.add(new P_Get(idKeys, argMap, regSet));
 
             Register regIter = code.createRegister(typeIter);
