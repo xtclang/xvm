@@ -207,26 +207,20 @@ public class NotNullExpression
             {
             typeResult = typeResult.removeNullable();
 
-            if (exprNew instanceof NameExpression exprName)
+            if (exprNew instanceof NameExpression exprName && exprName.left == null)
                 {
-                if (exprName.left == null)
+                String   sName = exprName.getName();
+                Argument arg   = ctx.getVar(sName);
+                if (arg instanceof Register regCurr)
                     {
-                    String   sName = exprName.getName();
-                    Argument arg   = ctx.getVar(sName);
-                    if (arg instanceof Register)
+                    TypeConstant typeCurr = regCurr.getType();
+
+                    if (!typeCurr.isA(typeResult))
                         {
-                        TypeConstant typeCurr = arg.getType();
+                        assert typeResult.isA(typeCurr);
 
-                        if (!typeCurr.isA(typeResult))
-                            {
-                            assert typeResult.isA(typeCurr);
-
-                            Register regCurr = (Register) arg;
-
-                            // add the narrowing for this context and save off the current register
-                            ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeResult);
-                            m_labelShort.addRestore(sName, regCurr);
-                            }
+                        ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeResult);
+                        m_labelShort.addRestore(sName, regCurr);
                         }
                     }
                 }

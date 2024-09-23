@@ -2450,8 +2450,8 @@ public class Context
             // retain only our "false" entries in the parent's "false" context;
             // consider an example:
             //    Int? a; Int? b;
-            //    if (a != null &&  // IfContext : "a" is Int for "true"; null for "false"
-            //        b != null)    // AndContext: "b" is Int for "true"; null for "false"
+            //    if (a != Null &&  // IfContext : "a" is Int for "true"; Null for "false"
+            //        b != Null)    // AndContext: "b" is Int for "true"; Null for "false"
             //      {
             //                      // exit from AndContext infers "a" and "b" are Int into
             //      }               // the "true" branch of the parent IfContext
