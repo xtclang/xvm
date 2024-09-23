@@ -150,7 +150,7 @@ class ListMap<Key, Value>
                         : vals.mutability > Persistent ? vals.toArray(Persistent) : vals;
             }
         }
-        return keys, vals == Null || vals.empty ? Null : vals;
+        return keys, vals == Null || vals.empty && Value.is(Type<Nullable>) ? Null : vals;
     }
 
     /**
