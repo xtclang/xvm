@@ -303,7 +303,7 @@ public class xConst
                             // verify that "freeze" didn't widen the type
                             FieldInfo    field   = aFieldInfo[i];
                             ObjectHandle hNew    = ahValueNew[i];
-                            TypeConstant typeOld = atype[i];
+                            TypeConstant typeOld = field.getType();
                             TypeConstant typeNew = hNew.getType();
                             if (typeNew.isA(typeOld))
                                 {
