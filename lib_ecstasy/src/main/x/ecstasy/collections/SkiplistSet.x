@@ -18,7 +18,8 @@ class SkiplistSet<Element extends Orderable>
      * Construct a `SkiplistSet`, with an optional initial capacity and an optional non-natural
      * ordering.
      *
-     * @param initialCapacity  the initial capacity, in terms of the number of expected elements
+     * @param initialCapacity  (optional) the initial capacity, in terms of the number of expected
+     *                         elements
      * @param orderer          (optional) the Orderer for this Set, or `Null` to use natural order
      */
     @Override

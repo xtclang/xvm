@@ -19,8 +19,8 @@ class ArrayDeque<Element>
     /**
      * Construct an ArrayDeque with an initial and maximum capacity.
      *
-     * @param initialCapacity  the number of elements to initially allocate storage for
-     * @param maxCapacity      the maximum number of elements to allow storage for
+     * @param initialCapacity  (optional) the number of elements to initially allocate storage for
+     * @param maxCapacity      (optional) the maximum number of elements to allow storage for
      */
     construct(Int initialCapacity = 0, Int maxCapacity = MaxValue) {
         array = new CircularArray(initialCapacity);

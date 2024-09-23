@@ -5,8 +5,6 @@ import ecstasy.fs.FileStore;
 import ecstasy.fs.FileWatcher;
 import ecstasy.fs.Path;
 
-import ecstasy.maps.HashMap;
-
 /**
  * Native OSStorage service.
  */

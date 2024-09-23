@@ -57,7 +57,7 @@
      */
     protected void postReifyCleanup() {
         original = Null;
-        }
+    }
 
     /**
      * Indicate whether this Collection has already cached its reified contents.

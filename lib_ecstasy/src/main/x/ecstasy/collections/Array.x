@@ -91,7 +91,7 @@ class Array<Element>
         construct Array(new Element[](capacity), Mutable);
     }
 
-    /**s
+    /**
      * Construct a fixed size array with the specified size and initial value. An initial value is
      * always required
      *

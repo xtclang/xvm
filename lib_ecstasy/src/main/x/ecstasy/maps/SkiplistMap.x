@@ -18,8 +18,9 @@ class SkiplistMap<Key extends Orderable, Value>
      * Construct a `SkiplistMap`, with an optional initial capacity and an optional non-natural
      * ordering.
      *
-     * @param initialCapacity  the initial capacity, in terms of the number of expected entries
-     * @param orderer          the [Orderer] for this Map, or `Null` to use natural order
+     * @param initialCapacity  (optional) the initial capacity, in terms of the number of expected
+     *                          entries
+     * @param orderer          (optional) the [Orderer] for this Map, or `Null` to use natural order
      */
     @Override
     construct(Int initialCapacity = 0, Orderer? orderer = Null) {

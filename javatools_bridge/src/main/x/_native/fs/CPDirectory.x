@@ -5,8 +5,6 @@ import ecstasy.fs.FileNode;
 import ecstasy.fs.FileWatcher;
 import ecstasy.fs.Path;
 
-import ecstasy.maps.ListMap;
-
 /**
  * Constant Pool Directory implementation.
  */

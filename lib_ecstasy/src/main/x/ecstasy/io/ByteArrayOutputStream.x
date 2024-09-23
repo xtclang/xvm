@@ -9,7 +9,7 @@
      * Construct a ByteArrayOutputStream with an optional initial capacity. The stream will
      * construct its own mutable array internally.
      *
-     * @param initialCapacity  the initial byte array capacity (optional)
+     * @param initialCapacity  (optional) the initial byte array capacity
      */
     construct(Int initialCapacity = 0) {
         this.bytes = new Array<Byte>(initialCapacity);

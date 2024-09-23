@@ -47,8 +47,6 @@ module TestReflection {
     const Point(Int x, Int y);
 
     void testInstanceOf() {
-        import ecstasy.maps.HashMap;
-
         console.print("\n** testInstanceOf");
 
         Object o = new HashMap<Int, String>();
@@ -314,7 +312,6 @@ module TestReflection {
     }
 
     void testBind() {
-        import ecstasy.maps.ListMap;
         import ecstasy.reflect.Parameter;
 
         console.print("\n** testBind");
@@ -401,7 +398,7 @@ module TestReflection {
         Class c3 = Map<Int, String>;
         analyzeClass(c3);
 
-        Class c4 = ecstasy.maps.ListMap<Date, TimeOfDay>;
+        Class c4 = ListMap<Date, TimeOfDay>;
         analyzeClass(c4);
 
         Class c7 = ecstasy.collections.List<Date>.Cursor;

@@ -267,7 +267,9 @@ class HasherMap<Key, Value>
 
         /**
          * Obtain the value associated with the specified key.
-         TODO
+         *
+         * @return `True` iff an `Entry` for the key is in the map
+         * @return  (conditional) the corresponding value
          */
         conditional Value get(Hasher<Key> hasher, Int hash, Key key);
 

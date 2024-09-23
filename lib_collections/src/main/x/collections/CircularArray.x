@@ -23,7 +23,7 @@ class CircularArray<Element>
     /**
      * Construct an CircularArray with an initial capacity.
      *
-     * @param initialCapacity  the number of elements to initially allocate storage for
+     * @param initialCapacity  (optional) the number of elements to initially allocate storage for
      */
     construct(Int initialCapacity = 0) {
         // calculate the smallest power of 2 greater than the specified initial capacity
