@@ -492,7 +492,13 @@ public abstract class ClassTemplate
                 {
                 typeProxy = typeProxy.resolveGenerics(frame.poolContext(), typeTarget);
                 }
-            assert typeTarget.isA(typeProxy);
+
+            if (!typeTarget.isA(typeProxy))
+                {
+                return frame.raiseException(
+                    "Failed to resolve a proxy type " + typeProxy.getValueString() +
+                    " to match the proxied object " + typeTarget.getValueString());
+                }
 
             try
                 {
