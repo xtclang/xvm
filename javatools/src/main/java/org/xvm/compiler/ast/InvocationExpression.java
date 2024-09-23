@@ -1797,8 +1797,7 @@ public class InvocationExpression
             Register regFn = code.createRegister(typeFn, fTargetOnStack);
             code.add(new Invoke_01(argFn, idConv, regFn));
             argFn = regFn;
-            astFn = new ConvertExprAST(astFn,
-                        new TypeConstant[]{typeFn}, new MethodConstant[]{idConv});
+            astFn = new ConvertExprAST(astFn, typeFn, idConv);
             }
 
         TypeConstant[] atypeParams = pool.extractFunctionParams(typeFn);

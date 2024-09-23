@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
@@ -9,9 +12,14 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.ast.AssignAST;
+import org.xvm.asm.ast.AssignAST.Operator;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ConvertExprAST;
 import org.xvm.asm.ast.ExprAST;
+import org.xvm.asm.ast.InvokeExprAST;
+import org.xvm.asm.ast.MultiExprAST;
+import org.xvm.asm.ast.StmtExprAST;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -61,7 +69,7 @@ public class ConvertExpression
 
         if (expr.isSingle())
             {
-            assert aidConv[0] != null;
+            assert aidConv.length == 1 && aidConv[0] != null;
 
             TypeConstant type = aidConv[0].getRawReturns()[0];
             Constant     val  = null;
@@ -275,6 +283,69 @@ public class ConvertExpression
         return isConstant()
                 ? new ConstantExprAST(toConstant())
                 : new ConvertExprAST(expr.getExprAST(ctx), getTypes(), m_aidConv);
+        }
+
+    /**
+     * Unwrap multi-conversion assignment into an equivalent statement expression.
+     *
+     * In a way of example, let's say we have a function:
+     * <pre><code>
+     *     (Int32, Int32) f() {...}
+     * </code></pre>
+     * and we call it like this:
+     * <pre><code>
+     *     (Int x, Int y) = f();
+     * </code></pre>
+     * The BAST that we are going to create will look like a standard compilation of the following:
+     * <pre><code>
+     *     (Int32 tmpX, Int32 tmpY) = f();
+     *     Int x = tmpX.toInt64();
+     *     Int y = tmpY.toInt64();
+     * </code></pre>
+     */
+    public ExprAST unwrapConverAST(Context ctx, ExprAST astLVal)
+        {
+        ExprAST astFrom = expr.getExprAST(ctx);
+        int     cVals   = expr.getValueCount();
+
+        assert cVals > 1 && cVals == m_aidConv.length;
+
+        TypeConstant[] atypeFrom = expr.getTypes();
+        TypeConstant[] atypeTo   = this.getTypes();
+
+        Register[] aRegFrom    = new Register[cVals];
+        ExprAST[]  aAstRegFrom = new ExprAST[cVals];
+        for (int i = 0; i < cVals; i++)
+            {
+            aRegFrom[i]    = ctx.createRegister(atypeFrom[i], null);
+            aAstRegFrom[i] = aRegFrom[i].getRegAllocAST();
+            }
+
+        List<ExprAST> listAst = new ArrayList<>();
+        listAst.add(new AssignAST(new MultiExprAST(aAstRegFrom), Operator.Asn, astFrom));
+
+        ExprAST[] aAstRegTo = new ExprAST[cVals];
+        for (int i = 0; i < cVals; i++)
+            {
+            MethodConstant idConv  = m_aidConv[i];
+            Register       regFrom = aRegFrom[i];
+            if (idConv == null)
+                {
+                aAstRegTo[i] = regFrom.getRegisterAST();
+                }
+            else
+                {
+                Register regTo      = ctx.createRegister(atypeTo[i], null);
+                ExprAST  astConvert = new InvokeExprAST(idConv,
+                        new TypeConstant[] {atypeTo[i]}, regFrom.getRegisterAST(),
+                        ExprAST.NO_EXPRS, false);
+                listAst.add(new AssignAST(regTo.getRegAllocAST(), Operator.Asn, astConvert));
+                aAstRegTo[i] = regTo.getRegisterAST();
+                }
+            }
+        listAst.add(new AssignAST(astLVal, Operator.Asn, new MultiExprAST(aAstRegTo)));
+
+        return new StmtExprAST(new MultiExprAST(listAst.toArray(ExprAST.NO_EXPRS)), atypeTo);
         }
 
 
