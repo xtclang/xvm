@@ -143,8 +143,8 @@ public class MainContainer
     /**
      * Invoke the test entry point.
      * <p/>
-     * The entry point for executing tests is the {@code test} method in the core
-     * Ecstasy module, not the module being tested.
+     * The entry point for executing tests is the {@code test} method in "xunit.xtclang.org" module,
+     * not the module being tested.
      *
      * @return {@code true} if XUnit was present to execute tests, otherwise {@code false}
      */
@@ -153,31 +153,32 @@ public class MainContainer
         try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool()))
             {
             ConstantPool   pool     = ConstantPool.getCurrentPool();
-            ModuleConstant modXUnit = pool.ensureModuleConstant("xunit.xtclang.org");
-            if (modXUnit == null || modXUnit.getComponent() == null)
+            ModuleConstant idXUnit = pool.ensureModuleConstant("xunit.xtclang.org");
+            if (idXUnit == null || idXUnit.getComponent() == null)
                 {
                 return false;
                 }
 
-            TypeInfo       infoModule  = modXUnit.getType().ensureTypeInfo();
-            MethodConstant idMethod    = findModuleMethod(infoModule, "test", Utils.OBJECTS_NONE);
+            TypeInfo       infoModule = idXUnit.getType().ensureTypeInfo();
+            MethodConstant idMethod   = findModuleMethod(infoModule, "test", Utils.OBJECTS_NONE);
             if (idMethod == null)
                 {
                 // we should not get here as we know there is the correct method in XUnit.
-                System.err.println("Missing: test method for " + modXUnit.getName());
+                System.err.println("Missing: test method for " + idXUnit.getName());
                 return false;
                 }
 
-            TypeConstant    typeModule = modXUnit.getType();
+            TypeConstant    typeModule = idXUnit.getType();
             TypeComposition clzModule  = resolveClass(typeModule);
             CallChain       chain      = clzModule.getMethodCallChain(idMethod.getSignature());
 
             FunctionHandle hInstantiateModuleAndRun = new NativeFunctionHandle((frame, ah, iReturn) ->
                 {
-                SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(modXUnit);
+                SingletonConstant idModule = frame.poolContext().ensureSingletonConstConstant(idXUnit);
                 ObjectHandle      hModule  = frame.getConstHandle(idModule);
                 ObjectHandle[]    ahArg    = new ObjectHandle[]{frame.getConstHandle(f_idModule)};
 
+                // TODO: ahArg[0] can also be deferred; need to safeguard that
                 return Op.isDeferred(hModule)
                         ? hModule.proceed(frame, frameCaller ->
                             chain.invoke(frameCaller, frameCaller.popStack(), ahArg, Op.A_IGNORE))
