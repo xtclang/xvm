@@ -104,10 +104,9 @@ public class FlagTest
         BooleanValue  noOptValue   = new BooleanValue();
         boolean       hidden       = false;
         boolean       passThru     = true;
-        String        passThruName = null;
 
         Flag<Boolean> flag    = new Flag<>(name, shortcut, usage, value, dfltValue, noOptValue,
-                hidden, passThru, passThruName);
+                hidden, passThru, null);
 
         assertThat(flag.getName(), is(name));
         assertThat(flag.hasShorthand(), is(true));
@@ -118,7 +117,7 @@ public class FlagTest
         assertThat(flag.getNoArgDefault(), is(sameInstance(noOptValue)));
         assertThat(flag.isHidden(), is(hidden));
         assertThat(flag.isPassThru(), is(passThru));
-        assertThat(flag.getPassThruName(), is(passThruName));
+        assertThat(flag.getPassThruName(), is(name));
         }
 
     @Test

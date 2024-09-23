@@ -137,7 +137,11 @@ public class Flag<Type>
      */
     public String getPassThruName()
         {
-        return passThruName == null || passThruName.isBlank() ? name : passThruName;
+        if (passThru)
+            {
+            return passThruName == null || passThruName.isBlank() ? name : passThruName;
+            }
+        return null;
         }
 
     /**
