@@ -1,5 +1,3 @@
-import Type.Constructor;
-
 /**
  * A mapping for Range values.
  */

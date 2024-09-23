@@ -1,9 +1,5 @@
-import ecstasy.fs.Directory;
-import ecstasy.fs.File;
 import ecstasy.fs.FileNotFound;
-import ecstasy.fs.FileStore;
 import ecstasy.fs.FileWatcher;
-import ecstasy.fs.Path;
 
 /**
  * Native OSStorage service.

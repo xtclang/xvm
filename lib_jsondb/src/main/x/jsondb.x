@@ -288,8 +288,6 @@ module jsondb.xtclang.org {
      */
     static oodb.Connection createConnection(String dbModuleName, Directory dataDir, Directory buildDir,
                                             oodb.DBUser? user = Null) {
-        import ecstasy.annotations.InjectedRef;
-
         import ecstasy.lang.src.Compiler;
 
         import ecstasy.mgmt.BasicResourceProvider;

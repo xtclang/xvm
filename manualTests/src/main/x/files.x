@@ -1,9 +1,5 @@
 module TestFiles {
-    import ecstasy.fs.Directory;
-    import ecstasy.fs.File;
     import ecstasy.fs.FileWatcher;
-    import ecstasy.fs.Path;
-    import ecstasy.fs.FileStore;
 
     @Inject            Console   console;
     @Inject("storage") FileStore store;

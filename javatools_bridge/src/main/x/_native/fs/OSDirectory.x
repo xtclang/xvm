@@ -1,7 +1,4 @@
-import ecstasy.fs.Directory;
-import ecstasy.fs.File;
 import ecstasy.fs.FileWatcher;
-import ecstasy.fs.Path;
 
 /**
  * Native OS Directory implementation.

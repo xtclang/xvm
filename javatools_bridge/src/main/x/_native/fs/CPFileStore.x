@@ -1,8 +1,4 @@
 import ecstasy.fs.AccessDenied;
-import ecstasy.fs.Directory;
-import ecstasy.fs.File;
-import ecstasy.fs.FileStore;
-import ecstasy.fs.Path;
 
 /**
  * Constant Pool FileStore implementation.

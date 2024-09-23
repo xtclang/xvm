@@ -1,9 +1,6 @@
 import ecstasy.fs.AccessDenied;
-import ecstasy.fs.File;
 import ecstasy.fs.FileChannel;
 import ecstasy.fs.FileNotFound;
-import ecstasy.fs.FileStore;
-import ecstasy.fs.Path;
 
 /**
  * Constant Pool File implementation.
