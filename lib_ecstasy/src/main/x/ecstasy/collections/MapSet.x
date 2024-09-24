@@ -142,8 +142,9 @@ class MapSet<Element>
                 return this;
             }
 
-            if (inPlace, val freezableMap := contents.is(Freezable)) {
-                return ensureMapSet(freezableMap.freeze(inPlace=True)).makeImmutable();
+            if (var freezableMap := contents.is(Freezable)) {
+                return ensureMapSet((inPlace ? freezableMap : freezableMap.duplicate())
+                        .freeze(inPlace=True)).makeImmutable();
             }
 
             // just use a light-weight ListSet in lieu of making a copy of the Map and this MapSet
