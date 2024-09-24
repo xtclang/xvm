@@ -2,12 +2,12 @@
  * An implementation of the [Collection] for the [Map.entries] property that delegates back to the
  * `Map`.
  */
-class MapEntries<MapKey, MapValue>(Map<MapKey, MapValue> contents)
+class MapEntries<Key, Value>(Map<Key, Value> contents)
         implements Collection<Entry>
-        incorporates conditional MapEntriesFreezer<MapKey extends Shareable, MapValue extends Shareable> {
+        incorporates conditional MapEntriesFreezer<Key extends Shareable, Value extends Shareable> {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Map<MapKey, MapValue> contents) {
+    construct(Map<Key, Value> contents) {
         this.contents = contents;
     } finally {
         if (contents.is(immutable)) {
@@ -20,12 +20,12 @@ class MapEntries<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     /**
      * The [Map] for which this `entries` [Collection] representation exists.
      */
-    protected/private Map<MapKey, MapValue> contents;
+    protected/private Map<Key, Value> contents;
 
     /**
      * The type of the [Map.Entry].
      */
-    protected typedef Map.Entry<MapKey, MapValue> as Entry;
+    protected typedef Map.Entry<Key, Value> as Entry;
 
     /**
      * Iterator that relies on an iterator of entries to produce a corresponding sequence of values.
@@ -124,10 +124,10 @@ class MapEntries<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     // ----- Freezable implementation --------------------------------------------------------------
 
     /**
-     * Mixin that makes `MapEntries` Freezable if `MapKey` and `MapValue` are Shareable.
+     * Mixin that makes `MapEntries` Freezable if `Key` and `Value` are Shareable.
      */
-    static mixin MapEntriesFreezer<MapKey extends Shareable, MapValue extends Shareable>
-            into MapEntries<MapKey, MapValue>
+    static mixin MapEntriesFreezer<Key extends Shareable, Value extends Shareable>
+            into MapEntries<Key, Value>
             implements Freezable {
 
         @Override
