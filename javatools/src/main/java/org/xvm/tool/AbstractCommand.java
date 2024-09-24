@@ -122,7 +122,9 @@ public abstract class AbstractCommand
             }
         catch (FlagSet.ParseException e)
             {
-            throw new RuntimeException("Error " + this, e);
+            out(e.getMessage());
+            out();
+            displayHelp();
             }
         }
 
