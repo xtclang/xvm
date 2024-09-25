@@ -1,16 +1,15 @@
 module TestSimple {
     @Inject Console console;
 
+    package agg import aggregate.xtclang.org;
+
+    import agg.*;
+
     void run() {
-        console.print(test());
-    }
+        Int[] ints = [1, 3, 2, 5, 8, 9];
 
-    Int test() {
-        (Int year, _, Int day, _) = calcDate();
-        return year;
-    }
-
-    static (Int32 year, Int32 month, Int32 day, Int32 dayOfYear) calcDate() {
-        return 2024, 9, 16, 276;
+        Int? r2 = ints.filter(i -> i%2 == 0).reduce(new Max()); // this used to complain to std err
+        Int? r7 = ints.filter(i -> i%7 == 0).reduce(new Max());
+        console.print($"{r2=} {r7=}");
     }
 }

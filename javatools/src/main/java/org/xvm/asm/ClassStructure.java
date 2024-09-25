@@ -4250,13 +4250,12 @@ public class ClassStructure
                 {
                 int cFormal = getTypeParamCount();
                 int cActual = listActual.size();
-                if (cFormal < cActual)
-                    {
-                    // soft assert; this should have already been reported
-                    System.err.println("Too many parameters: " + listActual +
-                                       " passed to " + ClassStructure.this);
-                    }
-                else if (cFormal > cActual)
+
+                // it's possible that cFormal is less than cActual; for example:
+                //      Max<Element> implements Aggregator<Element, Element?>
+                // and a call to "normalizeParameters" would pass a list of "Int, Int?" to the
+                // SimpleTypeResolver for Max; there is not much we can do at this point
+                if (cFormal > cActual)
                     {
                     m_listActual = listActual = new ArrayList<>(listActual); // clone
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
