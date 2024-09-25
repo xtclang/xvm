@@ -223,8 +223,13 @@ public class PropertyInfo
                 }
             }
 
-        // determine whether a field is required
-        boolean fRequireField = this.m_fRequireField | that.m_fRequireField;
+        // determine whether a field is required; note that synthetic properties created by shorthand
+        // constructors assume a reachable setter; if the setter is blocked, no field is necessary
+        boolean fRequireField =
+                    this.m_fRequireField ||
+                    that.m_fRequireField && !(that.getHead().isSynthetic() &&
+                                              this.getHead().isSetterBlockingSuper());
+
         if (!fRequireField && Arrays.stream(aBase).allMatch(
                 body -> body.getImplementation().compareTo(Implementation.Delegating) <= 0))
             {
@@ -1018,11 +1023,6 @@ public class PropertyInfo
         }
 
     /**
-     * Cached "ImplicitlyAssigned" flag.
-     */
-    private Boolean m_FImplicitlyAssigned;
-
-    /**
      * @return an array of the annotations that apply to the Ref/Var of the property
      */
     public Annotation[] getRefAnnotations()
@@ -1175,6 +1175,38 @@ public class PropertyInfo
         Annotation[] aAnnos = getRefAnnotations();
         return aAnnos.length == 1
             && (aAnnos[0].getAnnotationClass()).equals(pool().clzUnassigned());
+        }
+
+    /**
+     * Check if this property has any Ref annotations that explicitly implement the property getter
+     * and therefore doesn't have to be implicitly initialized.
+     *
+     * @return return true iff this property doesn't need to be implicitly initialized
+     */
+    public boolean isImplicitlyAssigned()
+        {
+        if (m_FImplicitlyAssigned != null)
+            {
+            return m_FImplicitlyAssigned;
+            }
+
+        ConstantPool pool = pool();
+        if (containsRefAnnotation(pool.clzFuture()) ||
+            containsRefAnnotation(pool.clzUnassigned()))
+            {
+            return m_FImplicitlyAssigned = true;
+            }
+
+        for (Annotation anno : getRefAnnotations())
+            {
+            if (anno.hasExplicitGetter())
+                {
+                return m_FImplicitlyAssigned = true;
+                }
+            }
+
+        // if the getter exists, consider the property implicitly assigned
+        return m_FImplicitlyAssigned = getHead().hasGetter();
         }
 
     /**
@@ -1577,36 +1609,9 @@ public class PropertyInfo
     private Boolean m_FInjected;
 
     /**
-     * Check if this property has any Ref annotations that explicitly implement the property getter
-     * and therefore doesn't have to be implicitly initialized.
-     *
-     * @return return true iff this property doesn't need to be implicitly initialized
+     * Cached "ImplicitlyAssigned" flag.
      */
-    public boolean isImplicitlyAssigned()
-        {
-        if (m_FImplicitlyAssigned != null)
-            {
-            return m_FImplicitlyAssigned;
-            }
-
-        ConstantPool pool = pool();
-        if (containsRefAnnotation(pool.clzFuture()) ||
-            containsRefAnnotation(pool.clzUnassigned()))
-            {
-            return m_FImplicitlyAssigned = true;
-            }
-
-        for (Annotation anno : getRefAnnotations())
-            {
-            if (anno.hasExplicitGetter())
-                {
-                return m_FImplicitlyAssigned = true;
-                }
-            }
-
-        // if the getter exists, consider the property implicitly assigned
-        return m_FImplicitlyAssigned = getHead().hasGetter();
-        }
+    private Boolean m_FImplicitlyAssigned;
 
     /**
      * Cached base ref type.

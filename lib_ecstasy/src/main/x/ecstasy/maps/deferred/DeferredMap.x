@@ -179,23 +179,11 @@
     /**
      * A self-recycling "discrete" `Entry<Key, FromValue>` that can be used as a key/value cursor.
      */
-    protected static class DiscreteFromEntry<Key, Value>
+    protected static class DiscreteFromEntry<Key, Value>((private DeferredMap) deferredMap,
+                                                         Key                   key,
+                                                         Value                 value)
             extends DiscreteEntry<Key, Value>(key, value, readOnly=True)
             implements Closeable {
-
-        /**
-         * TODO GG I had to move this to an explicit constructor (plus prop decl), otherwise the
-         *         struct would have a field "value" and it would always be unassigned
-         */
-        construct((private DeferredMap) deferredMap,
-                  Key                   key,
-                  Value                 val) {
-              this.deferredMap = deferredMap;
-              construct DiscreteEntry(key, val);
-        }
-
-        protected/private (private DeferredMap) deferredMap;
-
         /**
          * @param key    the `Key` to advance to
          * @param value  the `Value` associated with the `Key` to advance to
