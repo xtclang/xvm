@@ -89,7 +89,7 @@
                            .addAll(reified);
             }
         } else {
-            for (Element e : this) {
+            for (Element e : unreifiedIterator()) {
                 accumulator.add(e);
             }
         }

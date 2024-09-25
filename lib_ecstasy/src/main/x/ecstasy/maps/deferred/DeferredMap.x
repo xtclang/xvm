@@ -120,8 +120,8 @@
         if (alreadyReified) {
             accumulator.putAll(reified);
         } else {
-            for ((Key key, Value value) : this) {
-                accumulator.put(key, value);
+            for (Entry<Key, Value> entry : unreifiedIterator()) {
+                accumulator.put(entry.key, entry.value);
             }
         }
     }
