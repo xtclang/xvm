@@ -4,8 +4,6 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +22,7 @@ import org.xvm.compiler.Token;
 
 import org.xvm.tool.ModuleInfo.Node;
 
+import org.xvm.tool.flag.FlagSet;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -33,25 +32,26 @@ import static org.xvm.util.Handy.resolveFile;
 
 
 /**
- * This is the command-line Ecstasy compiler.
- *
- * <p/>Find the root of the module containing the code in the current directory, and compile it, placing
+ * This is the command-line Ecstasy compiler command "xcc" or "xtc build".
+ * <p/>
+ * Find the root of the module containing the code in the current directory, and compile it, placing
  * the result in the default location:
- *
- * <p/>{@code  xcc}
- *
- * <p/>Compile the specified module, placing the result in the default location:
- *
- * <p/>{@code  xcc ./path/to/module_name.x}
- *
- * <p/>Compile the module that the specified file belongs to:
- *
- * <p/>{@code  xcc MyClass.x}
- *
- * <p/>Alternatively, either of the following would work:
- *
- * <p/>{@code  xcc MyClass.xtc}
- * <p/>{@code  xcc MyClass}
+ * <p/>
+ * {@code  xcc}
+ * <p/>
+ * Compile the specified module, placing the result in the default location:
+ * <p/>
+ * {@code  xcc ./path/to/module_name.x}
+ * <p/>
+ * Compile the module that the specified file belongs to:
+ * <p/>
+ * {@code  xcc MyClass.x}
+ * <p/>
+ * Alternatively, either of the following would work:
+ * <p/>
+ * {@code  xcc MyClass.xtc}
+ * <p/>
+ * {@code  xcc MyClass}
  *
  * <p/>The location for the resulting {@code .xtc} file follows the following rules:
  * <ul>
@@ -66,24 +66,24 @@ import static org.xvm.util.Handy.resolveFile;
  *
  * <p/>The location of additional resource files and/or directories can be specified by using the
  * {@code -r} option; for example:
- *
- * <p/>{@code  xcc -r ~/dev/prj/otherApp/build/}
+ * <p/>
+ * {@code  xcc -r ~/dev/prj/otherApp/build/}
  *
  * <p/>The location of the resulting {@code .xtc} file can be specified by using the {@code -o}
  * option; for example:
- *
- * <p/>{@code  xcc -o ~/modules/}
+ * <p/>
+ * {@code  xcc -o ~/modules/}
  *
  * <p/>The version of the resulting module can be specified by using the {@code -version} option;
  * for example:
- *
- * <p/>{@code  xcc --set-version 0.4-alpha}
+ * <p/>
+ * {@code  xcc --set-version 0.4-alpha}
  *
  * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search
  * path can contain directories and/or ".xtc" files:
- *
- * <p/>{@code  xcc -L ~/modules/:../build/:Utils.xtc}
+ * <p/>
+ * {@code  xcc -L ~/modules/:../build/:Utils.xtc}
  *
  * <p/>Other command line options:
  * <ul>
@@ -98,7 +98,7 @@ import static org.xvm.util.Handy.resolveFile;
  * </ul>
  */
 public class Compiler
-        extends Launcher
+        extends AbstractCommand
     {
     /**
      * Entry point from the OS.
@@ -109,7 +109,7 @@ public class Compiler
         {
         try
             {
-            launch(asArg);
+            Launcher.launch(CMD_COMPILER, asArg);
             }
         catch (LauncherException e)
             {
@@ -117,51 +117,51 @@ public class Compiler
             }
         }
 
-    public static void launch(String[] asArg) throws LauncherException {
-        new Compiler(asArg).run();
-    }
-
     /**
      * Compiler constructor.
      *
-     * @param asArg command line arguments
      */
-    public Compiler(String[] asArg)
+    public Compiler()
         {
-        this(asArg, null);
+        this(null);
         }
 
     /**
      * Compiler constructor.
      *
-     * @param asArg    command line arguments
      * @param console  representation of the terminal within which this command is run
      */
-    public Compiler(String[] asArg, Console console)
+    public Compiler(Console console)
         {
-        super(asArg, console);
+        this(CMD_COMPILER, console);
+        }
+
+    /**
+     * Compiler constructor.
+     *
+     * @param sName    the name of this command (as specified on the command line)
+     * @param console  representation of the terminal within which this command is run
+     */
+    public Compiler(String sName, Console console)
+        {
+        super(sName, console);
         }
 
     @Override
     protected void process()
         {
-        if (options().isShowVersion())
-            {
-            showSystemVersion(ensureLibraryRepo());
-            }
-
         // source tree setup
         log(Severity.INFO, "Selecting compilation targets");
-        File[]       resourceDirs = options().getResourceLocation();
-        File         outputLoc    = options().getOutputLocation();
-        ModuleInfo[] aTarget      = selectTargets(options().getInputLocations(), resourceDirs,
+        File[]       resourceDirs = getResourceLocation();
+        File         outputLoc    = getOutputLocation();
+        ModuleInfo[] aTarget      = selectTargets(getInputLocations(), resourceDirs,
                                                   outputLoc).toArray(new ModuleInfo[0]);
         prevModules = aTarget;
 
         int cTargets = aTarget.length;
         if (cTargets == 0)
             {
-            if (!options().isShowVersion())
+            if (!isShowVersion())
                 {
                 displayHelp();
                 }
@@ -241,8 +241,8 @@ public class Compiler
             }
         checkErrors();
 
-        boolean fRebuild = options().isForcedRebuild();
-        Version verStamp = options().getVersion();
+        boolean fRebuild = isForcedRebuild();
+        Version verStamp = getVersion();
         log(Severity.INFO, "Output-path=" + outputLoc + ", force-rebuild=" + fRebuild);
 
         Map<File, Node> mapTargets     = new ListMap<>(cTargets);
@@ -420,21 +420,6 @@ public class Compiler
         }
 
     /**
-     * Lazily configure the library repository.
-     *
-     * @return the library repository
-     */
-    protected ModuleRepository ensureLibraryRepo()
-        {
-        if (repoLib == null)
-            {
-            log(Severity.INFO, "Creating and pre-populating library and build repositories");
-            repoLib = configureLibraryRepo(options().getModulePath());
-            }
-        return repoLib;
-        }
-
-    /**
      * Link the modules together based on their declared dependencies.
      *
      * @param compilers  a module compiler for each module
@@ -544,7 +529,7 @@ public class Compiler
                         return;
                         }
                     }
-                catch (Throwable e)
+                catch (RuntimeException e)
                     {
                     System.err.println("Failed to generate code for " + compiler);
                     e.printStackTrace(System.err);
@@ -589,7 +574,7 @@ public class Compiler
      */
     protected void emitModules(Node[] allNodes, ModuleRepository repoOutput)
         {
-        Version version = options().getVersion();
+        Version version = getVersion();
         for (Node nodeModule : allNodes)
             {
             ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
@@ -627,7 +612,7 @@ public class Compiler
                 if (file.isDirectory())
                     {
                     String sName = nodeModule.name();
-                    if (!options().isOutputFilenameQualified())
+                    if (!isOutputFilenameQualified())
                         {
                         int ofDot = sName.indexOf('.');
                         if (ofDot > 0)
@@ -653,6 +638,26 @@ public class Compiler
             }
         }
 
+    @Override
+    protected boolean isBadEnoughToAbort(Severity sev)
+        {
+        Severity limit = strictLevel == Strictness.Stickler ? Severity.WARNING : Severity.ERROR;
+        return sev.compareTo(limit) >= 0;
+        }
+
+    protected boolean isBadEnoughToPrint(Severity sev)
+        {
+        if (flags().isVerbose())
+            {
+            return true;
+            }
+
+        return switch (strictLevel)
+            {
+            case None, Suppressed -> sev.compareTo(Severity.ERROR) >= 0;
+            case Normal, Stickler -> sev.compareTo(Severity.WARNING) >= 0;
+            };
+        }
 
     // ----- text output and error handling --------------------------------------------------------
 
@@ -692,15 +697,22 @@ public class Compiler
     public String desc()
         {
         return """
-            Ecstasy compiler:
+            The Ecstasy compiler:
 
-            Converts ".x" files into a compiled ".xtc" Ecstasy module.
-
-            Usage:
-
-                xcc <options> <filename>.x ...""";
+            Converts ".x" files into a compiled ".xtc" Ecstasy module.""";
         }
 
+    @Override
+    protected String getShortDescription()
+        {
+        return "Converts \".x\" files into a compiled \".xtc\" Ecstasy module";
+        }
+
+    @Override
+    protected String getUsageLine(String sName)
+        {
+        return sName + " [flags] <filename>.x ...";
+        }
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -712,7 +724,7 @@ public class Compiler
     public ModuleRepository getLibraryRepo()
         {
         return prevLibs == null
-                ? configureLibraryRepo(options().getModulePath())
+                ? configureLibraryRepo(flags().getModulePath())
                 : prevLibs;
         }
 
@@ -724,173 +736,116 @@ public class Compiler
         }
 
 
-    // ----- options -------------------------------------------------------------------------------
+    // ----- command line flags --------------------------------------------------------------------
 
     @Override
-    public Options options()
+    protected FlagSet instantiateFlags(String sName)
         {
-        return (Options) super.options();
+        return new FlagSet()
+                .withModulePath()
+                .withBoolean(ARG_REBUILD, "Force rebuild")
+                .withBoolean(ARG_STRICT, "Treat warnings as errors")
+                .withBoolean(ARG_NO_WARN, "Suppress all warnings")
+                .withBoolean(ARG_QUALIFY, "Use the full module name for the output file name")
+                .withFileList(ARG_RESOURCES, 'r', "Files and/or directories to read resources from")
+                .withFile(ARG_OUTPUT, 'o', "If compilation is necessary, the file or directory to write compiler output to")
+                .withString(ARG_SET_VERSION, "If compilation is necessary, the file or directory to write compiler output to");
         }
 
     @Override
-    protected Options instantiateOptions()
+    public void validate(FlagSet flags)
         {
-        return new Options();
+        super.validate(flags);
+
+        if (flags.getBoolean(ARG_STRICT))
+            {
+            strictLevel = Strictness.Stickler;
+            if (flags.getBoolean(ARG_NO_WARN))
+                {
+                log(Severity.ERROR, "Conflicting options specified: \"--" + ARG_STRICT
+                        + "\" and \"--" + ARG_NO_WARN + "\"");
+                }
+            }
+        else if (flags.getBoolean(ARG_NO_WARN))
+            {
+            strictLevel = Strictness.Suppressed;
+            }
+
+        // validate the -L path of file(s)/dir(s)
+        validateModulePath(flags.getModulePath());
+
+        // validate the trailing file(s)/dir(s)
+        List<File> listInputs = getInputLocations();
+        for (int i = 0, c = listInputs.size(); i < c; ++i)
+            {
+            File fileOld = listInputs.get(i);
+            File fileNew = validateSourceInput(fileOld);
+            if (fileNew != fileOld)
+                {
+                listInputs.set(i, fileNew);
+                }
+            }
+
+        // validate the -o file/dir
+        validateModuleOutput(getOutputLocation(), listInputs.size() > 1);
         }
 
     /**
-     * Compiler command-line options implementation.
+     * @return the input locations to use (files and/or directories), or an empty list if none
+     *         specified
      */
-    public class Options
-        extends Launcher.Options
+    public List<File> getInputLocations()
         {
-        /**
-         * Construct the Compiler Options.
-         */
-        public Options()
-            {
-            super();
-
-            addOption(null,     "rebuild",     Form.Name,   false, "Force rebuild");
-            addOption(null,     "strict",      Form.Name,   false, "Treat warnings as errors");
-            addOption(null,     "nowarn",      Form.Name,   false, "Suppress all warnings");
-            addOption("L" ,     null,          Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption("r" ,     null,          Form.File,   true,  "Files and/or directories to read resources from");
-            addOption("o" ,     null,          Form.File,   false, "File or directory to write output to");
-            addOption(null,     "qualify",     Form.Name,   false, "Use full module name for the output file name");
-            addOption(null,     "set-version", Form.String, false, "Specify the version to stamp onto the compiled module(s)");
-            addOption(Trailing, null,          Form.File,   true,  "Source file name(s) and/or module location(s) to compile");
-            }
-
-        /**
-         * @return the list of files in the module path (empty list if none specified)
-         */
-        public List<File> getModulePath()
-            {
-            List<File> path = (List<File>) values().get("L");
-            return path == null
-                    ? Collections.emptyList()
-                    : path;
-            }
-
-        /**
-         * @return the input locations to use (files and/or directories), or an empty list if none
-         *         specified
-         */
-        public List<File> getInputLocations()
-            {
-            List<File> list = (List<File>) values().get(Trailing);
-            return list == null
-                    ? Collections.emptyList()
-                    : list;
-            }
-
-        /**
-         * @return the location to use (a file, directory, or collection thereof) to load resources
-         *         from, or null if none specified
-         */
-        public File[] getResourceLocation()
-            {
-            ArrayList list = (ArrayList) values().get("r");
-            return list == null || list.isEmpty()
-                    ? ModuleInfo.NO_FILES
-                    : (File[]) list.toArray(new File[0]);
-            }
-
-        /**
-         * @return the output location to use (a file or directory), or null if none specified
-         */
-        public File getOutputLocation()
-            {
-            return (File) values().get("o");
-            }
-
-        /**
-         * @return the specified version for the compiler to stamp on the compiled module, or null
-         */
-        public Version getVersion()
-            {
-            String sVersion = (String) values().get("set-version");
-            return sVersion == null ? null : new Version(sVersion);
-            }
-
-        /**
-         * @return true if "fully qualified module name in output file name" option is set
-         */
-        public boolean isOutputFilenameQualified()
-            {
-            return specified("qualify");
-            }
-
-        /**
-         * @return true if "force rebuild" option is set
-         */
-        public boolean isForcedRebuild()
-            {
-            return specified("rebuild");
-            }
-
-        @Override
-        public void validate()
-            {
-            super.validate();
-
-            if (specified("strict"))
-                {
-                strictLevel = Strictness.Stickler;
-                if (specified("nowarn"))
-                    {
-                    log(Severity.ERROR, "Conflicting options specified: \"-strict\" and \"-nowarn\"");
-                    }
-                }
-            else if (specified("nowarn"))
-                {
-                strictLevel = Strictness.Suppressed;
-                }
-
-            // validate the -L path of file(s)/dir(s)
-            validateModulePath(getModulePath());
-
-            // validate the trailing file(s)/dir(s)
-            List<File> listInputs = getInputLocations();
-            for (int i = 0, c = listInputs.size(); i < c; ++i)
-                {
-                File fileOld = listInputs.get(i);
-                File fileNew = validateSourceInput(fileOld);
-                if (fileNew != fileOld)
-                    {
-                    listInputs.set(i, fileNew);
-                    }
-                }
-
-            // validate the -o file/dir
-            validateModuleOutput(getOutputLocation(), listInputs.size() > 1);
-            }
-
-        @Override
-        boolean isBadEnoughToPrint(Severity sev)
-            {
-            if (isVerbose())
-                {
-                return true;
-                }
-
-            return switch (strictLevel)
-                {
-                case None, Suppressed -> sev.compareTo(Severity.ERROR) >= 0;
-                case Normal, Stickler -> sev.compareTo(Severity.WARNING) >= 0;
-                };
-
-            }
-
-        @Override
-        boolean isBadEnoughToAbort(Severity sev)
-            {
-            Severity limit = strictLevel == Strictness.Stickler ? Severity.WARNING : Severity.ERROR;
-            return sev.compareTo(limit) >= 0;
-            }
+        return flags().getArgumentsBeforeDashDash()
+                .stream()
+                .map(File::new)
+                .toList();
         }
 
+    /**
+     * @return the location to use (a file, directory, or collection thereof) to load resources
+     *         from, or null if none specified
+     */
+    public File[] getResourceLocation()
+        {
+        List<File> list = flags().getFileList(ARG_RESOURCES);
+        return list == null || list.isEmpty()
+                ? ModuleInfo.NO_FILES
+                : list.toArray(new File[0]);
+        }
+
+    /**
+     * @return the output location to use (a file or directory), or null if none specified
+     */
+    public File getOutputLocation()
+        {
+        return flags().getFile(ARG_OUTPUT);
+        }
+
+    /**
+     * @return the specified version for the compiler to stamp on the compiled module, or null
+     */
+    public Version getVersion()
+        {
+        String sVersion = flags().getString(ARG_SET_VERSION);
+        return sVersion == null ? null : new Version(sVersion);
+        }
+
+    /**
+     * @return true if "fully qualified module name in output file name" option is set
+     */
+    public boolean isOutputFilenameQualified()
+        {
+        return flags().getBoolean(ARG_QUALIFY);
+        }
+
+    /**
+     * @return true if "force rebuild" option is set
+     */
+    public boolean isForcedRebuild()
+        {
+        return flags().getBoolean(ARG_REBUILD);
+        }
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -898,12 +853,31 @@ public class Compiler
 
     protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
 
+    /**
+     * The Ecstasy compiler executable name.
+     */
+    public static final String CMD_COMPILER = "xcc";
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    public static final String ARG_REBUILD = "rebuild";
+
+    public static final String ARG_STRICT = "strict";
+
+    public static final String ARG_QUALIFY = "qualify";
+
+    public static final String ARG_RESOURCES = "resources";
+
+    public static final String ARG_NO_WARN = "nowarn";
+
+    public static final String ARG_SET_VERSION = "set-version";
+
+    public static final String ARG_OUTPUT = "output";
 
     // ----- fields --------------------------------------------------------------------------------
 
     protected Strictness strictLevel = Strictness.Normal;
 
-    protected ModuleRepository repoLib;
     protected ModuleInfo[]     prevModules;
     protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;

@@ -30,7 +30,8 @@ public final class XtcPluginConstants {
     public static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
     public static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
-    public static final String XTC_RUNNER_LAUNCHER_NAME = "xec";
+    public static final String XTC_LAUNCHER_CLASS_NAME = "org.xvm.tool.XtcLauncher";
+    public static final String XTC_RUNNER_LAUNCHER_NAME = "xtc";
     @SuppressWarnings("unused") // TODO: This will be added to facilitate publication of single XTC project artifacts.
     public static final String XTC_COMPONENT_VARIANT_RUNTIME = "runtime";
 

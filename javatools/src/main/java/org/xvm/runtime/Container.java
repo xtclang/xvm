@@ -220,7 +220,19 @@ public abstract class Container
     public MethodConstant findModuleMethod(String sMethod, ObjectHandle[] ahArg)
         {
         TypeInfo infoModule = getModule().getType().ensureTypeInfo();
+        return findModuleMethod(infoModule, sMethod, ahArg);
+        }
 
+    /**
+     * Find a module method to call.
+     *
+     * @param sMethod  the name
+     * @param ahArg    the arguments to pass to the method
+     *
+     * @return the method constant or null if not found
+     */
+    public MethodConstant findModuleMethod(TypeInfo infoModule, String sMethod, ObjectHandle[] ahArg)
+        {
         TypeConstant[] atypeArg;
         if (ahArg.length == 0)
             {
