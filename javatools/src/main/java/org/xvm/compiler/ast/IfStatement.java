@@ -164,7 +164,7 @@ public class IfStatement
                     {
                     fValid = false;
                     }
-                else  if (exprNew != exprOld)
+                else if (exprNew != exprOld)
                     {
                     cond = exprNew;
                     conds.set(i, cond);

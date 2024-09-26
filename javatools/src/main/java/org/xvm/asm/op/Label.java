@@ -22,10 +22,10 @@ public class Label
      */
     public Label()
         {
-        this(String.valueOf(++cLabels));
-        if (cLabels >= 9999)
+        this(String.valueOf(++f_cLabels));
+        if (f_cLabels >= 9999)
             {
-            cLabels = 0;
+            f_cLabels = 0;
             }
         }
 
@@ -36,7 +36,7 @@ public class Label
      */
     public Label(String sName)
         {
-        m_sName = sName;
+        f_sName = sName;
         }
 
     /**
@@ -44,7 +44,7 @@ public class Label
      */
     public String getName()
         {
-        return m_sName;
+        return f_sName;
         }
 
     /**
@@ -85,7 +85,7 @@ public class Label
         {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(m_sName)
+        sb.append(f_sName)
           .append(": ");
 
         Op op = getNextOp();
@@ -100,16 +100,16 @@ public class Label
     /**
      * A counter to give labels different names while debugging. Race conditions are not a concern.
      */
-    static int cLabels;
+    static private int f_cLabels;
 
     /**
      * A name of the label, which is typically auto-generated. This is only for debugging; it is
      * discarded on assembly, like the label itself.
      */
-    transient String m_sName;
+    transient final private String f_sName;
 
     /**
      * Saved off registers to be restored when the label is reached.
      */
-    transient Map<String, Register> m_mapRestore;
+    transient public Map<String, Register> m_mapRestore;
     }

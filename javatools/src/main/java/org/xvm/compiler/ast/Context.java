@@ -609,7 +609,6 @@ public class Context
                     if (typeOld.isA(typeNew))
                         {
                         // the new type is wider - take it instead of the old narrower one
-                        assert !regNew.isInPlace();
                         replaceArgument(sName, Branch.Always, regNew);
                         }
                     else

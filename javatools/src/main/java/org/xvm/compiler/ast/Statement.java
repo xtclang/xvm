@@ -227,7 +227,7 @@ public abstract class Statement
 
         boolean fCompletes = fReachable && emit(ctx, fReachable, code, errs);
 
-        if (m_labelEnd != null)
+        if (m_labelEnd != null && !errs.hasSeriousErrors())
             {
             code.add(m_labelEnd);
             }

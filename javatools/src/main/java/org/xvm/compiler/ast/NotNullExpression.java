@@ -199,6 +199,7 @@ public class NotNullExpression
         if (!fCond && exprNew.isConstantNull())
             {
             exprNew.log(errs, Severity.ERROR, Compiler.SHORT_CIRCUIT_ALWAYS_NULL);
+            return null;
             }
 
         m_labelShort = parent.ensureShortCircuitLabel(this, ctx);

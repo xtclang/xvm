@@ -204,7 +204,7 @@ public class ElseExpression
         Label label = m_labelElse;
         if (label == null)
             {
-            m_nLabel    = ++m_nCounter;
+            m_nLabel    = ++s_nCounter;
             m_labelElse = label = new Label("else_:_" + m_nLabel);
             }
         return label;
@@ -241,7 +241,7 @@ public class ElseExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static    int                   m_nCounter;
+    private static    int                   s_nCounter;
     private transient int                   m_nLabel;
     private transient Label                 m_labelElse;
     private transient Map<String, Argument> m_mapElse;
