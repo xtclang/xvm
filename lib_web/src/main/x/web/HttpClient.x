@@ -14,6 +14,12 @@ import Header.Entry;
 
 /**
  * An implementation of the `Client` API.
+ *
+ * Note: it's quite intentional and important that `HttpClient` is a `const` and not a `service`.
+ * Since it's a `const`, a call to [createRequest] (implemented as a default interface method)
+ * returns a mutable `SimpleRequest` object, which could be augmented by adding necessary headers,
+ * body, etc. If `HttpClient` were a service, it would automatically "freeze" the returned
+ * [RequestOut] object, making any further changes impossible.
  */
 const HttpClient
         implements Client {

@@ -142,6 +142,8 @@ interface Header
      * @throws IllegalState  if [headersModifiable] is `False`
      */
     void removeAll(String name) {
+        checkMutable();
+
         List<Entry> entries = this.entries;
         if (!entries.empty) {
             val cursor = entries.cursor();
@@ -174,6 +176,8 @@ interface Header
      * @param entry   the header entry to add
      */
     void add(Entry entry) {
+        checkMutable();
+
         entries.add(entry);
     }
 
@@ -185,6 +189,8 @@ interface Header
      * @param value  the value or values to use for the header name
      */
     void add(String name, String|String[] value) {
+        checkMutable();
+
         if (value.is(String[])) {
             value = value.appendTo(new StringBuffer(value.estimateStringLength(",", "", "")), ",", "", "").toString();
         }
@@ -193,6 +199,12 @@ interface Header
 
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    protected void checkMutable() {
+        if (entries.is(immutable) || !entries.inPlace) {
+            throw new ReadOnly();
+        }
+    }
 
     /**
      * Determine if the specified header name is specified as having values that can contain an
@@ -210,15 +222,15 @@ interface Header
      */
     static Boolean isCommaAllowedInValue(String name) {
         return switch (name) {
-            case Authorization:                 // comma delimited sub-values
-            case AuthorizationResponse:        // comma delimited sub-values
-            case Date:                          // unquoted date containing a comma
-            case Expires:                       // unquoted date containing a comma
-            case IfModifiedSince:             // unquoted date containing a comma
-            case IfRange:                      // unquoted date containing a comma
-            case IfUnmodifiedSince:           // unquoted date containing a comma
-            case LastModified:                 // unquoted date containing a comma
-            case SetCookie:                    // unquoted date containing a comma
+            case Authorization:             // comma delimited sub-values
+            case AuthorizationResponse:     // comma delimited sub-values
+            case Date:                      // unquoted date containing a comma
+            case Expires:                   // unquoted date containing a comma
+            case IfModifiedSince:           // unquoted date containing a comma
+            case IfRange:                   // unquoted date containing a comma
+            case IfUnmodifiedSince:         // unquoted date containing a comma
+            case LastModified:              // unquoted date containing a comma
+            case SetCookie:                 // unquoted date containing a comma
             // REVIEW: maybe: "Warning" - contains date (but in quotes)
                 True;
 
