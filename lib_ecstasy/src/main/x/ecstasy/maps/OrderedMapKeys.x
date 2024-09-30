@@ -4,19 +4,19 @@ import collections.OrderedSetSlice;
  * An implementation of the Set for the [Map.keys] property that delegates its operations to the
  * [Map].
  */
-class OrderedMapKeys<MapKey extends Orderable, MapValue>(OrderedMap<MapKey, MapValue> contents)
-        extends MapKeys<MapKey, MapValue>
-        implements OrderedSet<MapKey> {
+class OrderedMapKeys<Key extends Orderable, Value>(OrderedMap<Key, Value> contents)
+        extends MapKeys<Key, Value>
+        implements OrderedSet<Key> {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(OrderedMap<MapKey, MapValue> contents) {
+    construct(OrderedMap<Key, Value> contents) {
         construct MapKeys(contents);
     }
 
     // ----- internal ------------------------------------------------------------------------------
 
     @Override
-    protected @RO OrderedMap<MapKey, MapValue> contents;
+    protected @RO OrderedMap<Key, Value> contents;
 
     // ----- OrderedSet interface ------------------------------------------------------------------
 
@@ -24,25 +24,25 @@ class OrderedMapKeys<MapKey extends Orderable, MapValue>(OrderedMap<MapKey, MapV
     conditional Orderer ordered() = contents.ordered();
 
     @Override
-    conditional MapKey first() = contents.first();
+    conditional Key first() = contents.first();
 
     @Override
-    conditional MapKey last() = contents.last();
+    conditional Key last() = contents.last();
 
     @Override
-    conditional MapKey next(MapKey element) = contents.next(element);
+    conditional Key next(Key element) = contents.next(element);
 
     @Override
-    conditional MapKey prev(MapKey element) = contents.prev(element);
+    conditional Key prev(Key element) = contents.prev(element);
 
     @Override
-    conditional MapKey ceiling(MapKey element) = contents.ceiling(element);
+    conditional Key ceiling(Key element) = contents.ceiling(element);
 
     @Override
-    conditional MapKey floor(MapKey element) = contents.floor(element);
+    conditional Key floor(Key element) = contents.floor(element);
 
     // ----- Sliceable interface -------------------------------------------------------------------
 
     @Override
-    @Op("[..]") OrderedSet<MapKey> slice(Range<MapKey> indexes) = new OrderedSetSlice(this, indexes);
+    @Op("[..]") OrderedSet<Key> slice(Range<Key> indexes) = new OrderedSetSlice(this, indexes);
 }

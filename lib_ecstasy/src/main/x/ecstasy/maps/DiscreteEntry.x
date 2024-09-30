@@ -118,7 +118,7 @@ class DiscreteEntry<Key, Value>
     // ----- Freezable implementation --------------------------------------------------------------
 
     /**
-     * Mixin that makes `MapEntries` Freezable if `MapKey` and `MapValue` are Shareable.
+     * Mixin that makes `DiscreteEntry` Freezable if `Key` and `Value` are Shareable.
      */
     static mixin FreezableEntry<Key extends Shareable, Value extends Shareable>
             into DiscreteEntry<Key, Value>

@@ -5,8 +5,8 @@
  *
  *     incorporates conditional StringableEntry<Key extends Stringable, Value extends Stringable>
  */
-mixin StringableEntry<MapKey extends Stringable, MapValue extends Stringable>
-        into Map.Entry<MapKey, MapValue>
+mixin StringableEntry<Key extends Stringable, Value extends Stringable>
+        into Map.Entry<Key, Value>
         implements Stringable {
 
     @Override

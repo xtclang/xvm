@@ -2,12 +2,12 @@
  * An implementation of the Set for the [Map.keys] property that delegates its operations to the
  * [Map].
  */
-class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
-        implements Set<MapKey>
-        incorporates conditional MapKeysFreezer<MapKey extends Shareable> {
+class MapKeys<Key, Value>(Map<Key, Value> contents)
+        implements Set<Key>
+        incorporates conditional MapKeysFreezer<Key extends Shareable> {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Map<MapKey, MapValue> contents) {
+    construct(Map<Key, Value> contents) {
         this.contents = contents;
     } finally {
         if (contents.is(immutable)) {
@@ -20,21 +20,21 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     /**
      * The [Map] for which this `Key` [Set] representation exists.
      */
-    protected/private Map<MapKey, MapValue> contents;
+    protected/private Map<Key, Value> contents;
 
     /**
      * The type of the [Map.Entry] [Iterator].
      */
-    protected typedef Iterator<Map.Entry<MapKey, MapValue>> as EntryIterator;
+    protected typedef Iterator<Map.Entry<Key, Value>> as EntryIterator;
 
     /**
      * Iterator that relies on an iterator of entries to produce a corresponding sequence of keys.
      */
     protected class KeyIterator(EntryIterator entryIterator)
-            implements Iterator<MapKey> {
+            implements Iterator<Key> {
         @Override
-        conditional MapKey next() {
-            if (Map.Entry<MapKey, MapValue> entry := entryIterator.next()) {
+        conditional Key next() {
+            if (Map.Entry<Key, Value> entry := entryIterator.next()) {
                 return True, entry.key;
             }
             return False;
@@ -47,7 +47,7 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         conditional Int knownSize() = entryIterator.knownSize();
 
         @Override
-        (Iterator<MapKey>, Iterator<MapKey>) bifurcate() {
+        (Iterator<Key>, Iterator<Key>) bifurcate() {
             (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
             return new KeyIterator(iter1), new KeyIterator(iter2);
         }
@@ -86,14 +86,14 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     Boolean empty.get() = contents.empty;
 
     @Override
-    Iterator<MapKey> iterator() = new KeyIterator(contents.iterator());
+    Iterator<Key> iterator() = new KeyIterator(contents.iterator());
 
     @Override
-    Boolean contains(MapKey value) = contents.contains(value);
+    Boolean contains(Key value) = contents.contains(value);
 
     @Override
-    Boolean containsAll(Collection<MapKey> values) {
-        for (MapKey key : values) {
+    Boolean containsAll(Collection<Key> values) {
+        for (Key key : values) {
             if (!contains(key)) {
                 return False;
             }
@@ -102,7 +102,7 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     }
 
     @Override
-    Set<MapKey> reify() {
+    Set<Key> reify() {
         if (contents.is(immutable)) {
             return this;
         }
@@ -113,14 +113,14 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     }
 
     @Override
-    MapKeys remove(MapKey key) {
+    MapKeys remove(Key key) {
         verifyInPlace();
         contents.remove(key);
         return this;
     }
 
     @Override
-    (MapKeys, Int) removeAll(function Boolean(MapKey) shouldRemove) {
+    (MapKeys, Int) removeAll(function Boolean(Key) shouldRemove) {
         verifyInPlace();
         (_, Int removed) = contents.removeAll(entry -> shouldRemove(entry.key));
         return this, removed;
@@ -138,12 +138,12 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     /**
      * Mixin that makes MapKeys Freezable if both Key is Shareable.
      */
-    static mixin MapKeysFreezer<MapKey extends Shareable>
-            into MapKeys<MapKey>
+    static mixin MapKeysFreezer<Key extends Shareable>
+            into MapKeys<Key>
             implements Freezable {
 
         @Override
-        immutable Freezable + Set<MapKey> freeze(Boolean inPlace = False) {
+        immutable Freezable + Set<Key> freeze(Boolean inPlace = False) {
             if (this.is(immutable)) {
                 return this;
             }
@@ -159,12 +159,12 @@ class MapKeys<MapKey, MapValue>(Map<MapKey, MapValue> contents)
                 val frozenMap = freezableMap.freeze(inPlace);
                 return &contents == &frozenMap
                         ? this.makeImmutable()
-                        : frozenMap.keys.as(Freezable + Set<MapKey>).freeze(True);
+                        : frozenMap.keys.as(Freezable + Set<Key>).freeze(True);
             }
 
-            // the MapKey is known to be freezable, so "reify" this set into a separate freezable
+            // the Key is known to be freezable, so "reify" this set into a separate freezable
             // set and freeze it there
-            return new ListSet<MapKey>(toArray(Constant)).freeze(inPlace=True);
+            return new ListSet<Key>(toArray(Constant)).freeze(inPlace=True);
         }
     }
 }

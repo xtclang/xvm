@@ -2,12 +2,12 @@
  * An implementation of the [Collection] for the [Map.values] property that delegates back to the
  * `Map`.
  */
-class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
-        implements Collection<MapValue>
-        incorporates conditional MapValuesFreezer<MapKey, MapValue extends Shareable> {
+class MapValues<Key, Value>(Map<Key, Value> contents)
+        implements Collection<Value>
+        incorporates conditional MapValuesFreezer<Key, Value extends Shareable> {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Map<MapKey, MapValue> contents) {
+    construct(Map<Key, Value> contents) {
         this.contents = contents;
     } finally {
         if (contents.is(immutable)) {
@@ -20,21 +20,21 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     /**
      * The [Map] for which this `Value` [Collection] representation exists.
      */
-    protected/private Map<MapKey, MapValue> contents;
+    protected/private Map<Key, Value> contents;
 
     /**
      * The type of the [Map.Entry] [Iterator].
      */
-    protected typedef Iterator<Map.Entry<MapKey, MapValue>> as EntryIterator;
+    protected typedef Iterator<Map.Entry<Key, Value>> as EntryIterator;
 
     /**
      * Iterator that relies on an iterator of entries to produce a corresponding sequence of values.
      */
     protected class ValueIterator(EntryIterator entryIterator)
-            implements Iterator<MapValue> {
+            implements Iterator<Value> {
         @Override
-        conditional MapValue next() {
-            if (Map.Entry<MapKey, MapValue> entry := entryIterator.next()) {
+        conditional Value next() {
+            if (Map.Entry<Key, Value> entry := entryIterator.next()) {
                 return True, entry.value;
             }
             return False;
@@ -44,7 +44,7 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
         conditional Int knownSize() = entryIterator.knownSize();
 
         @Override
-        (Iterator<MapValue>, Iterator<MapValue>) bifurcate() {
+        (Iterator<Value>, Iterator<Value>) bifurcate() {
             (EntryIterator iter1, EntryIterator iter2) = entryIterator.bifurcate();
             return new ValueIterator(iter1), new ValueIterator(iter2);
         }
@@ -81,10 +81,10 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     Boolean empty.get() = contents.empty;
 
     @Override
-    Iterator<MapValue> iterator() = new ValueIterator(contents.iterator());
+    Iterator<Value> iterator() = new ValueIterator(contents.iterator());
 
     @Override
-    Collection<MapValue> reify() {
+    Collection<Value> reify() {
         if (contents.is(immutable)) {
             return this;
         }
@@ -93,7 +93,7 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     }
 
     @Override
-    MapValues remove(MapValue value) {
+    MapValues remove(Value value) {
         verifyInPlace();
         for (val entry : contents.iterator()) {
             if (entry.value == value) {
@@ -105,7 +105,7 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     }
 
     @Override
-    (MapValues, Int) removeAll(function Boolean(MapValue) shouldRemove) {
+    (MapValues, Int) removeAll(function Boolean(Value) shouldRemove) {
         verifyInPlace();
         (_, Int removed) = contents.removeAll(entry -> shouldRemove(entry.value));
         return this, removed;
@@ -123,12 +123,12 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
     /**
      * Mixin that makes MapValues Freezable if Value is Shareable.
      */
-    static mixin MapValuesFreezer<MapKey, MapValue extends Shareable>
-            into MapValues<MapKey, MapValue>
+    static mixin MapValuesFreezer<Key, Value extends Shareable>
+            into MapValues<Key, Value>
             implements Freezable {
 
         @Override
-        immutable Freezable + Collection<MapValue> freeze(Boolean inPlace = False) {
+        immutable Freezable + Collection<Value> freeze(Boolean inPlace = False) {
             if (this.is(immutable)) {
                 return this;
             }
@@ -144,11 +144,11 @@ class MapValues<MapKey, MapValue>(Map<MapKey, MapValue> contents)
                 val frozenMap = freezableMap.freeze(inPlace);
                 return &contents == &frozenMap
                         ? this.makeImmutable()
-                        : frozenMap.values.as(Freezable + Collection<MapValue>).freeze(True);
+                        : frozenMap.values.as(Freezable + Collection<Value>).freeze(True);
             }
 
-            // the MapValue is known to be freezable, so "reify" this collection and freeze it
-            return toArray(Constant).as(immutable Freezable + Collection<MapValue>);
+            // the Value is known to be freezable, so "reify" this collection and freeze it
+            return toArray(Constant).as(immutable Freezable + Collection<Value>);
         }
     }
 }
