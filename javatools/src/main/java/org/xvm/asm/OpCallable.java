@@ -12,7 +12,6 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -227,14 +226,15 @@ public abstract class OpCallable extends Op
                     {
                     return null;
                     }
-                TypeInfo   infoTarget = clzChild.getFormalType().ensureTypeInfo();
-                MethodInfo info       = infoTarget.getMethodBySignature(
-                                            constructor.getIdentityConstant().getSignature(), true);
-                if (info == null)
+                TypeInfo infoTarget = clzChild.getFormalType().
+                        ensureAccess(Access.PROTECTED).ensureTypeInfo();
+                MethodInfo infoConstr = infoTarget.getMethodBySignature(
+                        constructor.getIdentityConstant().getSignature(), true);
+                if (infoConstr == null)
                     {
                     return null;
                     }
-                constructor = info.getTopmostMethodStructure(infoTarget);
+                constructor = infoConstr.getTopmostMethodStructure(infoTarget);
                 }
             }
 
@@ -298,10 +298,6 @@ public abstract class OpCallable extends Op
      */
     protected int reportMissingConstructor(Frame frame, ObjectHandle hParent)
         {
-        IdentityConstant idParent = hParent instanceof TypeHandle
-                ? ((TypeHandle) hParent).getDataType().getSingleUnderlyingClass(false)
-                : hParent.getType().getSingleUnderlyingClass(false);
-
         MethodStructure constructor = getMethodStructure(frame);
         if (constructor == null)
             {
@@ -309,9 +305,13 @@ public abstract class OpCallable extends Op
             return R_EXCEPTION;
             }
 
-        SignatureConstant sigConstructor = constructor.getIdentityConstant().getSignature();
-        return frame.raiseException("Missing constructor \"" + sigConstructor.getValueString() +
-                                     "\" at class " + idParent.getValueString());
+        IdentityConstant idParent = hParent instanceof TypeHandle
+                ? ((TypeHandle) hParent).getDataType().getSingleUnderlyingClass(false)
+                : hParent.getType().getSingleUnderlyingClass(false);
+
+        return frame.raiseException(
+                "Missing constructor \"" + constructor.getIdentityConstant().getPathString() +
+                "\" at class " + idParent.getValueString());
         }
 
     /**

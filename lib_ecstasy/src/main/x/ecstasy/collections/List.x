@@ -1214,7 +1214,7 @@ interface List<Element>
      * An SubList is a simple [List] implementation that delegates all operations back to an
      * underlying List.
      */
-    class SubList
+    protected class SubList
             implements List<Element> {
 
         construct(Range<Int> indexes) {

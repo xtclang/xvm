@@ -890,9 +890,7 @@ class HasherMap<Key, Value>
         /**
          * Construct an iterator over all of the keys in the HasherMap.
          */
-        // TODO GG how did this break? or is it correct that it shouldn't have worked?
-        // protected construct() {
-        construct() {
+        protected construct() {
             oldBucketCount = this.HasherMap.buckets.size;
         } finally {
             advanceWithinBucketArray();
