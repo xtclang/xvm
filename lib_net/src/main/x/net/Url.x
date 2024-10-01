@@ -4,8 +4,10 @@
  * @see: https://www.rfc-editor.org/rfc/rfc1738
  */
 const Url
+        extends Uri
         implements Destringable {
     // ----- constructors --------------------------------------------------------------------------
+    @Override
     construct(String text, String defaultScheme = "http") {
         assert (String?    scheme,
                 String?    authority,
@@ -19,6 +21,7 @@ const Url
                 String?    fragment) := parse(text, s -> throw new IllegalArgument(s));
 
         if (scheme == Null) {
+            assert !defaultScheme.empty;
             text = $"{defaultScheme}://{text}";
             assert (scheme, authority, user, host, ip, port, path, query, opaque, fragment) :=
                 parse(text, s -> throw new IllegalArgument(s));

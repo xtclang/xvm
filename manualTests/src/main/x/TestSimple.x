@@ -1,15 +1,32 @@
 module TestSimple {
     @Inject Console console;
 
-    package agg import aggregate.xtclang.org;
+    package net import net.xtclang.org;
 
-    import agg.*;
+    import net.Uri;
+    import net.Url;
 
     void run() {
-        Int[] ints = [1, 3, 2, 5, 8, 9];
+        testUri("host.xqiz.it");
+        console.print();
+        testUrl("host.xqiz.it");
+    }
 
-        Int? r2 = ints.filter(i -> i%2 == 0).reduce(new Max()); // this used to complain to std err
-        Int? r7 = ints.filter(i -> i%7 == 0).reduce(new Max());
-        console.print($"{r2=} {r7=}");
+    void testUri(String name) {
+        Uri uri = new Uri(name);
+        console.print($"{uri.authority=} {uri.path=}");
+
+        Uri urlHttps = uri.with(scheme="https");
+        Uri urlHttp  = uri.with(scheme="http");
+        console.print($"{urlHttps=} {urlHttp=}");
+    }
+
+    void testUrl(String name) {
+        Url url = new Url(name);
+        console.print($"{url.authority=} {url.path=}");
+
+        Uri uriHttps = url.with(scheme="https");
+        Uri uriHttp  = url.with(scheme="http");
+        console.print($"{uriHttps=} {uriHttp=}");
     }
 }
