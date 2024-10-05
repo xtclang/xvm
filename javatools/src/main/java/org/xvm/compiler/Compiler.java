@@ -135,6 +135,10 @@ public class Compiler
             StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, m_errs);
             if (!mgr.processComplete())
                 {
+                if (m_errs.hasSeriousErrors())
+                    {
+                    return null;
+                    }
                 throw new CompilerException("failed to create module");
                 }
             m_structFile = m_stmtModule.getComponent().getFileStructure();

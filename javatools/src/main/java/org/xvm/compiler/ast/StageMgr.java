@@ -81,7 +81,7 @@ public class StageMgr
         {
         if (getErrorListener().isAbortDesired())
             {
-            return true;
+            return false;
             }
 
         if (m_listRevisit != null)
@@ -91,7 +91,7 @@ public class StageMgr
                 processInternal(node);
                 if (getErrorListener().isAbortDesired())
                     {
-                    return true;
+                    return false;
                     }
                 }
             }

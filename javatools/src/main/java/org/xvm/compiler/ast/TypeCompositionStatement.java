@@ -495,8 +495,11 @@ public class TypeCompositionStatement
                     String sModule = getName();
                     if (!isValidQualifiedModule(sModule))
                         {
-                        log(errs, Severity.ERROR, Compiler.MODULE_BAD_NAME, sModule);
-                        throw new CompilerException("unable to create module with illegal name: " + sModule);
+                        errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
+                                new String[] {sModule}, source,
+                                qualified.get(0).getStartPosition(),
+                                qualified.get(qualified.size()-1).getEndPosition());
+                        return;
                         }
 
                     // create the FileStructure and "this" ModuleStructure
@@ -531,6 +534,12 @@ public class TypeCompositionStatement
                 break;
 
             case PACKAGE:
+                if (container == null)
+                    {
+                    assert errs.hasSeriousErrors();
+                    return;
+                    }
+
                 if (container.isPackageContainer())
                     {
                     component = container.createPackage(access, sName, constCond);

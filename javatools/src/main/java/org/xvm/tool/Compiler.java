@@ -391,7 +391,10 @@ public class Compiler
 
             var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
             FileStructure struct   = compiler.generateInitialFileStructure();
-            assert struct != null;
+            if (struct == null)
+                {
+                return null;
+                }
 
             String name = struct.getModuleName();
             if (mapCompilers.containsKey(name))
