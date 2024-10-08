@@ -672,14 +672,19 @@ public class XClz extends XType {
 
   @Override public boolean needs_import(boolean self) {
     // Built-ins before being 'set' have no clz, and do not needs_import
-    // Self module is also compile module.
     if( this==XCons.XXTC  ) return false;
     if( this==XCons.JTRUE ) return false;
     if( this==XCons.JFALSE) return false;
     if( this==XCons.JNULL ) return false;
     if( this==XCons.JSTRING ) return false;
     if( this==XCons.JSTRINGN ) return false;
-    return !S.eq("java.lang",_jpack) && (!self || _clz != ClzBuilder.CCLZ) && (_clz==null || _clz._par instanceof PackagePart);
+    // Everything in java.lang.* imports by default already
+    if( S.eq("java.lang",_jpack) ) return false;
+    // Self module is also compile module.
+    if( self && _clz == ClzBuilder.CCLZ ) return false; // Self does not need to import self
+    // No clz is reserved for Java builtins with no corresponding XTC class
+    // (e.g. RangeII).
+    return true;
   }
   // No java name means needs a build
   public boolean needs_build() { return _jname.isEmpty(); }
@@ -699,14 +704,6 @@ public class XClz extends XType {
   public XType _find(String tn) {
     int idx = S.find(_tns,tn);
     return idx == -1 ? null : _xts[idx];
-  }
-
-  // Does "this" have all the right types for the conditional mixin?
-  private boolean isAMix( HashMap<String,TCon> parms, XClz mixin ) {
-    for( String tn : parms.keySet() )
-      if( !_find(tn).isa( mixin._find(tn) ) )
-        return false;
-    return true;
   }
 
   // Prints/passes the type parameters.

@@ -326,8 +326,8 @@ class SwitchAST extends AST {
     _kids[0].jcode(sb);
     sb.p(" ) {").nl().ii();
 
-    for( int i=0; i<_armss.length; i++ ) {
-      if( _armss[i][0]==null ) sb.ip("default"); else sb.ip("case ").p(_armss[i][0]);
+    for( int i=0; i<_armss.length-1; i++ ) {
+      sb.ip("case ").p(_armss[i][0]);
       sb.p(case_sep);
       if( _kids[i+1] != null ) { // null is fall-through case
         _kids[i+1].jcode(sb);
@@ -335,6 +335,8 @@ class SwitchAST extends AST {
       }
       sb.nl();
     }
+    if( _armss[_armss.length-1] != null )
+      throw XEC.TODO();         // Default
     sb.di().ip("}");
     return sb;
   }

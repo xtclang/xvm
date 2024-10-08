@@ -8,7 +8,8 @@ import org.xvm.xtc.ast.AST;
 
 import java.util.Arrays;
 
-// Basically a Java class as a function
+// Basically a Java class as a function.  The first "_nargs" entries in "_xts"
+// are arguments, the remainder are returns - can be zero or many returns.
 public class XFun extends XType {
   private static XFun FREE = new XFun();
   int _nargs;
@@ -26,9 +27,10 @@ public class XFun extends XType {
     return make(meth.xargs(),meth.xrets());
   }
 
-  // Make a function from a Call.  The Call's return is the XFun's return.
-  // Arg 0 is ignored.  Args are either from kids 1&2 or kids 1&2&3.
-  // If either kid 2 or kid 3 is boxed, then both are.
+  // Make a function type from a Call signature.  The Call's return is the
+  // XFun's return.  Arg 0 is ignored (generally the Call name as a constant).
+  // Args are either from kids 1&2 or kids 1&2&3.  If either kid 2 or kid 3 is
+  // boxed, then both are.
   public static XFun makeCall( AST call ) {
     XType[] args = new XType[call._kids.length-1];
     args[0] = call._kids[1].type();
@@ -79,7 +81,7 @@ public class XFun extends XType {
     return sb.unchar();
   }
 
-  // Using shallow equals,hashCode, not deep, because the parts are already interned
+  // Using shallow equals&hashCode, not deep, because the parts are already interned
   @Override boolean eq(XType xt) { return _nargs == ((XFun)xt)._nargs; }
   @Override int hash() { return _nargs; }
   @Override boolean _isa( XType xt ) {

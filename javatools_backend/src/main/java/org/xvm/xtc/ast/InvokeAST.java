@@ -130,6 +130,14 @@ public class InvokeAST extends AST {
       };
     }
 
+    // Handle the Float64 calls
+    if( k0t == XCons.JDOUBLE || k0t == XCons.DOUBLE ) {
+      return switch( _meth ) {
+      case "add" -> ddbin( "+" );
+      default -> throw XEC.TODO(_meth);
+      };
+    }
+
     // Handle all the Char to "char" calls
     if( k0t == XCons.CHAR ) {
       return switch( _meth ) {
@@ -192,6 +200,9 @@ public class InvokeAST extends AST {
 
   private BinOpAST llbin(String op) {
     return _type==XCons.LONG ? new BinOpAST( op, "", XCons.LONG, _kids ) : null;
+  }
+  private BinOpAST ddbin(String op) {
+    return _type==XCons.DOUBLE ? new BinOpAST( op, "", XCons.DOUBLE, _kids ) : null;
   }
 
   @Override XType reBox( AST kid ) {

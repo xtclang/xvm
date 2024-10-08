@@ -9,5 +9,7 @@ public class Float64 extends BinaryFPNumber {
   public Float64(Never n ) {this(0);}
   public Float64(double d) { _i = d; }
   public final double _i;
+  public static Float64 construct( double d ) { return new Float64(d); }
+  public static Float64 make     ( double d ) { return new Float64(d); }
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
 }

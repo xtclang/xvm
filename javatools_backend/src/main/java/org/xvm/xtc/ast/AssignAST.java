@@ -63,15 +63,21 @@ class AssignAST extends AST {
     if( _kids[0] instanceof MultiAST m ) {
       BlockAST blk = enclosing_block();
       MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
+      // Insert a slot for the "tmp = retTuple"
       System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
       String tmp = blk.add_tmp(_kids[1]._type);
       AST reg = new RegAST(tmp,_kids[1]._type), con;
       mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
+      // Break out each part
       for( int i=0; i<m._kids.length; i++ ) {
         AST kid = m._kids[i];
-        reg = new RegAST(blk.add_tmp(kid._type,kid.name()),kid._type);
-        con = new ConAST(tmp+"._f"+i,kid._type);
-        mm._kids[i+1] = new AssignAST(reg,con).doType();
+        if( (kid instanceof RegAST kreg && kreg._reg==-2 /*A_IGNORE*/) ) {
+          mm._kids[i+1] = null;
+        } else {
+          reg = new RegAST(blk.add_tmp(kid._type,kid.name()),kid._type);
+          con = new ConAST(tmp+"._f"+i,kid._type);
+          mm._kids[i+1] = new AssignAST(reg,con).doType();
+        }
       }
       return mm.doType();
     }
