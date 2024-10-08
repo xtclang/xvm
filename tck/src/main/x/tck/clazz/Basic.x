@@ -42,6 +42,7 @@ class Basic {
     }
 
     // Needs to make a XFun with 2 (Key,Value) returns, so probably a Tuple return
+    // Needs to be able to compile HashMap
     //void basic2() {
     //    class MyMap<A,B,C extends Hashable> extends HashMap<C,A> { // Swapping type args
     //        construct(A a, B b, C c) { construct MyMap(0); }

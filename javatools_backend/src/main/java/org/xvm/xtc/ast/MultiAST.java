@@ -20,8 +20,10 @@ public class MultiAST extends ElvisAST {
   @Override XType _type() {
     XType kid0 = _kids[0]._type;
     if( _kids.length==1 ) return kid0;
+    if( _kids[1]==null ) return XCons.VOID; // Ignored 2nd
     XType kid1 = _kids[1]._type;
-    // Box kid1, so we can null-check it
+    // Box kid1, so we can null-check it.
+    // Basically a leading BOOL uses the "conditional" notion
     if( kid0==XCons.BOOL )
       return S.eq(kid1.ztype(),"0") ? kid1.box() : kid1;
     // Otherwise, we're in a multi-ast situation with lots of AND'd parts
@@ -72,9 +74,10 @@ public class MultiAST extends ElvisAST {
       // A;
       // B;
       // C;
-      // ...
+      // Also (a, _, c, _, e) has ignored tuple parts
       for( AST kid : _kids )
-        kid.jcode(sb).p(";").nl();
+        if( kid != null ) // Ignored in tuple breakouts
+          kid.jcode(sb).p(";").nl();
       return sb;
     }
   }

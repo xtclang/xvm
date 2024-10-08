@@ -3,89 +3,89 @@ class Medium {
     @Inject Console console;
 
     void run() {
-        //xincorp();
-        //incorp();
+        xincorp();
+        incorp();
         ic();
-        //typevars();
+        typevars();
         //annot();
     }
+
+
+    void xincorp() {
+      String baseint1 = new XBase1   < Int  >().add( 123 );
+      String basestr1 = new XBase1   <String>().add("abc");
+      assert baseint1 ==         "B[e=123 MX[e=123 S[e=123]S ]MX ]B"   ;
+      assert basestr1 ==         "B[e=abc MX[e=abc S[e=abc]S ]MX ]B"   ;
+      String dervint1 = new XDerived1< Int  >().add( 123 );
+      String dervstr1 = new XDerived1<String>().add("abc");
+      assert dervint1 == "D[e=123 B[e=123 MX[e=123 S[e=123]S ]MX ]B ]D";
+      assert dervstr1 == "D[e=abc B[e=abc MX[e=abc S[e=abc]S ]MX ]B ]D";
+      String baseint2 = new XBase2   < Int  >().add( 123 );
+      String basestr2 = new XBase2   <String>().add("abc");
+      String dervint2 = new XDerived2< Int  >().add( 123 );
+      String dervstr2 = new XDerived2<String>().add("abc");
+      assert baseint2 ==         "b[e=123 MX[e=123 s[e=123]s ]MX ]b"   ;
+      assert basestr2 ==         "b[e=abc MX[e=abc s[e=abc]s ]MX ]b"   ;
+      assert dervint2 == "d[e=123 b[e=123 MX[e=123 s[e=123]s ]MX ]b ]d";
+      assert dervstr2 == "d[e=abc b[e=abc MX[e=abc s[e=abc]s ]MX ]b ]d";
+    }
+
+    // Standard "incorporates":  The MixIn is "before" Base in the class tree:
+    //        /- Super1 <-\       /-< Base1 <- Derived1
+    // Object               MixIn
+    //        \- Super2 <-/       \-< Base2 <- Derived2
+    //
+    // Clone theory:
+    // - Clone Mixin's code "above" the Base1's:
+    //            /- Super1 <- Mix$Base1 <- Base1 <- Derived1
+    //     Object
+    //            \- Super2 <- Mix$Base2 <- Base2 <- Derived2
+    //- The clones are abstract, and mostly there to allow "super" methods to call correctly.
     //
 
-    //void xincorp() {
-    //  String baseint1 = new XBase1   < Int  >().add( 123 );
-    //  String basestr1 = new XBase1   <String>().add("abc");
-    //  assert baseint1 ==         "B[e=123 MX[e=123 S[e=123]S ]MX ]B"   ;
-    //  assert basestr1 ==         "B[e=abc MX[e=abc S[e=abc]S ]MX ]B"   ;
-    //  String dervint1 = new XDerived1< Int  >().add( 123 );
-    //  String dervstr1 = new XDerived1<String>().add("abc");
-    //  assert dervint1 == "D[e=123 B[e=123 MX[e=123 S[e=123]S ]MX ]B ]D";
-    //  assert dervstr1 == "D[e=abc B[e=abc MX[e=abc S[e=abc]S ]MX ]B ]D";
-    //  String baseint2 = new XBase2   < Int  >().add( 123 );
-    //  String basestr2 = new XBase2   <String>().add("abc");
-    //  String dervint2 = new XDerived2< Int  >().add( 123 );
-    //  String dervstr2 = new XDerived2<String>().add("abc");
-    //  assert baseint2 ==         "b[e=123 MX[e=123 s[e=123]s ]MX ]b"   ;
-    //  assert basestr2 ==         "b[e=abc MX[e=abc s[e=abc]s ]MX ]b"   ;
-    //  assert dervint2 == "d[e=123 b[e=123 MX[e=123 s[e=123]s ]MX ]b ]d";
-    //  assert dervstr2 == "d[e=abc b[e=abc MX[e=abc s[e=abc]s ]MX ]b ]d";
-    //}
-    //
-    //// Standard "incorporates":  The MixIn is "before" Base in the class tree:
-    ////        /- Super1 <-\       /-< Base1 <- Derived1
-    //// Object               MixIn
-    ////        \- Super2 <-/       \-< Base2 <- Derived2
-    ////
-    //// Clone theory:
-    //// - Clone Mixin's code "above" the Base1's:
-    ////            /- Super1 <- Mix$Base1 <- Base1 <- Derived1
-    ////     Object
-    ////            \- Super2 <- Mix$Base2 <- Base2 <- Derived2
-    ////- The clones are abstract, and mostly there to allow "super" methods to call correctly.
-    ////
-    //
-    //void incorp() {
-    //    mixin MixIn<Q> into Base1<Q> | Base2<Q> {
-    //        @Override String add(Q e) = $"MX[{e=} " + super(e) + " ]MX";
-    //    }
-    //
-    //    class Super1<S> {
-    //        String add(S e) = $"S[{e=}]S";
-    //    }
-    //    class Base1<B> extends Super1<B> incorporates MixIn<B> {
-    //        @Override String add(B e) = $"B[{e=} " + super(e) + " ]B";
-    //    }
-    //    class Derived1<D> extends Base1<D> {
-    //        @Override String add(D e) = $"D[{e=} " + super(e) + " ]D";
-    //    }
-    //
-    //    String baseint1 = new Base1   < Int  >().add( 123 );
-    //    String basestr1 = new Base1   <String>().add("abc");
-    //    assert baseint1 ==         "B[e=123 MX[e=123 S[e=123]S ]MX ]B"   ;
-    //    assert basestr1 ==         "B[e=abc MX[e=abc S[e=abc]S ]MX ]B"   ;
-    //    String dervint1 = new Derived1< Int  >().add( 123 );
-    //    String dervstr1 = new Derived1<String>().add("abc");
-    //    assert dervint1 == "D[e=123 B[e=123 MX[e=123 S[e=123]S ]MX ]B ]D";
-    //    assert dervstr1 == "D[e=abc B[e=abc MX[e=abc S[e=abc]S ]MX ]B ]D";
-    //
-    //    class Super2<Z> {
-    //        String add(Z e) = $"s[{e=}]s";
-    //    }
-    //    class Base2<ZB> extends Super2<ZB> incorporates MixIn<ZB> {
-    //        @Override String add(ZB e) = $"b[{e=} " + super(e) + " ]b";
-    //    }
-    //    class Derived2<D> extends Base2<D> {
-    //        @Override String add(D e) = $"d[{e=} " + super(e) + " ]d";
-    //    }
-    //
-    //    String baseint2 = new Base2   < Int  >().add( 123 );
-    //    String basestr2 = new Base2   <String>().add("abc");
-    //    String dervint2 = new Derived2< Int  >().add( 123 );
-    //    String dervstr2 = new Derived2<String>().add("abc");
-    //    assert baseint2 ==         "b[e=123 MX[e=123 s[e=123]s ]MX ]b"   ;
-    //    assert basestr2 ==         "b[e=abc MX[e=abc s[e=abc]s ]MX ]b"   ;
-    //    assert dervint2 == "d[e=123 b[e=123 MX[e=123 s[e=123]s ]MX ]b ]d";
-    //    assert dervstr2 == "d[e=abc b[e=abc MX[e=abc s[e=abc]s ]MX ]b ]d";
-    //}
+    void incorp() {
+        mixin MixIn<Q> into Base1<Q> | Base2<Q> {
+            @Override String add(Q e) = $"MX[{e=} " + super(e) + " ]MX";
+        }
+
+        class Super1<S> {
+            String add(S e) = $"S[{e=}]S";
+        }
+        class Base1<B> extends Super1<B> incorporates MixIn<B> {
+            @Override String add(B e) = $"B[{e=} " + super(e) + " ]B";
+        }
+        class Derived1<D> extends Base1<D> {
+            @Override String add(D e) = $"D[{e=} " + super(e) + " ]D";
+        }
+
+        String baseint1 = new Base1   < Int  >().add( 123 );
+        String basestr1 = new Base1   <String>().add("abc");
+        assert baseint1 ==         "B[e=123 MX[e=123 S[e=123]S ]MX ]B"   ;
+        assert basestr1 ==         "B[e=abc MX[e=abc S[e=abc]S ]MX ]B"   ;
+        String dervint1 = new Derived1< Int  >().add( 123 );
+        String dervstr1 = new Derived1<String>().add("abc");
+        assert dervint1 == "D[e=123 B[e=123 MX[e=123 S[e=123]S ]MX ]B ]D";
+        assert dervstr1 == "D[e=abc B[e=abc MX[e=abc S[e=abc]S ]MX ]B ]D";
+
+        class Super2<Z> {
+            String add(Z e) = $"s[{e=}]s";
+        }
+        class Base2<ZB> extends Super2<ZB> incorporates MixIn<ZB> {
+            @Override String add(ZB e) = $"b[{e=} " + super(e) + " ]b";
+        }
+        class Derived2<D> extends Base2<D> {
+            @Override String add(D e) = $"d[{e=} " + super(e) + " ]d";
+        }
+
+        String baseint2 = new Base2   < Int  >().add( 123 );
+        String basestr2 = new Base2   <String>().add("abc");
+        String dervint2 = new Derived2< Int  >().add( 123 );
+        String dervstr2 = new Derived2<String>().add("abc");
+        assert baseint2 ==         "b[e=123 MX[e=123 s[e=123]s ]MX ]b"   ;
+        assert basestr2 ==         "b[e=abc MX[e=abc s[e=abc]s ]MX ]b"   ;
+        assert dervint2 == "d[e=123 b[e=123 MX[e=123 s[e=123]s ]MX ]b ]d";
+        assert dervstr2 == "d[e=abc b[e=abc MX[e=abc s[e=abc]s ]MX ]b ]d";
+    }
 
     // Conditional incorporation: the Mixin is both *conditional* and also
     // "after" the Base in the class tree:
@@ -169,34 +169,34 @@ class Medium {
         assert dervstr2 == "d[e=abc MX[e=abc b[e=abc s[e=abc]s ]b ]MX ]d";
     }
 
-    //void typevars() {
-    //    interface IFaceRep<KeyIFace> {
-    //        String foo(KeyIFace x) { return $"IFaceRep {x=}"; }
-    //    }
-    //    interface IFaceColl<ElemIFace> {
-    //        String foo(ElemIFace x) { return $"IFaceColl {x=}"; }
-    //    }
-    //
-    //    class Outer<Key,Value> implements IFaceRep<Key> {
-    //        class InnerOut<Elem> implements IFaceColl<Elem> {
-    //            @Override String foo(Elem x) { return $"Inner {x=}"; }
-    //        }
-    //
-    //        //class Derived extends InnerOut<Key> incorporates conditional CondMixin<Key extends Int> {
-    //        //    @Override String foo(Elem x) { return $"Derived {x=}"; }
-    //        //    private static mixin CondMixin<KeyMix extends Int> {
-    //        //        String foo(KeyMix x) { return $"Mix {x=}"; }
-    //        //    }
-    //        //}
-    //    }
-    //
-    //    Outer<String,Object> so = new Outer<String,Object>();
-    //    Outer<Int   ,Object> io = new Outer<Int   ,Object>();
-    //    String sfoo = so.foo("abc");
-    //    String ifoo = io.foo(123);
-    //    assert sfoo == "IFaceRep x=abc";
-    //    assert ifoo == "IFaceRep x=123";
-    //}
+    void typevars() {
+        interface IFaceRep<KeyIFace> {
+            String foo(KeyIFace x) { return $"IFaceRep {x=}"; }
+        }
+        interface IFaceColl<ElemIFace> {
+            String foo(ElemIFace x) { return $"IFaceColl {x=}"; }
+        }
+
+        class Outer<Key,Value> implements IFaceRep<Key> {
+            class InnerOut<Elem> implements IFaceColl<Elem> {
+                @Override String foo(Elem x) { return $"Inner {x=}"; }
+            }
+
+            //class Derived extends InnerOut<Key> incorporates conditional CondMixin<Key extends Int> {
+            //    @Override String foo(Elem x) { return $"Derived {x=}"; }
+            //    private static mixin CondMixin<KeyMix extends Int> {
+            //        String foo(KeyMix x) { return $"Mix {x=}"; }
+            //    }
+            //}
+        }
+
+        Outer<String,Object> so = new Outer<String,Object>();
+        Outer<Int   ,Object> io = new Outer<Int   ,Object>();
+        String sfoo = so.foo("abc");
+        String ifoo = io.foo(123);
+        assert sfoo == "IFaceRep x=abc";
+        assert ifoo == "IFaceRep x=123";
+    }
 
     // "Annotation": the Mixin is "after" the Base in the class tree:
     // Object <- Base <- MixIn <- Derived

@@ -16,6 +16,6 @@ class Basic {
         assert x != id("abc");
         x = "def";
         assert x == "def";
-        //assert x!= id(9);
+        assert x!= id(9);
     }
 }

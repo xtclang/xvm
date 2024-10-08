@@ -14,13 +14,14 @@ module tck.xtclang.org {
         //new numbers.Decimals().run();
         //new operations.Basic().run();
         //new tuples.Basic().run();
-        new services.Basic().run();
+        new tuples.MultiReturn().run();
+        //new services.Basic().run();
         //new constructors.Basic().run();
         //new union.Basic().run();
-        //
+
         //new clazz.Medium().run();
         //new array.Medium().run();
-        //        new comparison.Medium().run();
+        //new comparison.Medium().run();
 //        new constructors.Medium().run();
 //        new constructors.Reflect().run();
 //        new inner.Basic().run();

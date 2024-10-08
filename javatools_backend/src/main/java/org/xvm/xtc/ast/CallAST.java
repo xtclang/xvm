@@ -121,7 +121,10 @@ public class CallAST extends AST {
       // Convert CLZ.hashCode (GOLD,arg1     ) to their static variant: CLZ.hashCode$CLZ (GOLD,arg1,arg2);
       con._con += "$"+clz;
       // Sharpen the function type
-      con._type = XFun.makeCall(this);
+      XFun fun = XFun.makeCall(this);
+      con._type = fun;
+      if( fun.ret() instanceof XClz xret )
+        ClzBuilder.add_import(xret);
       return null;
     }
 
@@ -151,15 +154,20 @@ public class CallAST extends AST {
   // XTC: "<T> Foo create( stuff ) { ... }"
   // So the Java has to return a generic Foo
   // Java: "Foo create( int len )"
-  //
+  private boolean needsGenericCast() {
+    if( _type instanceof XBase ) return false; // Includes VOID
+    if( _kids.length<=1 ) return false;
+    if( !(_kids[1] instanceof ConAST con) ) return false; // Type parameter in slot 1
+    if( !(con._tcon instanceof ParamTCon) ) return false; // Not a type parameter
+    if( con._con.equals("null") ) return false;           // Explicit null type parameter
+    // Will need to upcast return to match type
+    return true;
+  }
 
   @Override public SB jcode( SB sb ) {
-
     // Assume we need a (self!) cast, from some abstract type to a more
     // specified local type.
-    //sb.i();
-    if( _type != XCons.VOID && !(_type instanceof XBase) &&
-        _kids.length>1 && _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ptc )
+    if( needsGenericCast() )
       _type.clz(sb.p("(")).p(")");
     _kids[0].jcode(sb);
     AST kid = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];

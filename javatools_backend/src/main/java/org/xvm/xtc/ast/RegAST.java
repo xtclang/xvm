@@ -25,7 +25,7 @@ public class RegAST extends AST {
     XClz xt = X._tclz;
     _reg  = reg ;
     _name = switch( reg ) {
-    case -2 ->  "ignore";   // A_IGNORE
+    case -2 ->  "%ignore";  // A_IGNORE
     case -4 ->  "default";  // A_DEFAULT
     case -5 ->  "this";     // A_THIS
     case -10 -> "this";     // A_STRUCT: this as a struct
