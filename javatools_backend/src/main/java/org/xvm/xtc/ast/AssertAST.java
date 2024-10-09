@@ -14,10 +14,7 @@ class AssertAST extends ElvisAST {
   }
   private AssertAST( AST... kids ) { super(kids); }
   @Override XType _type() {
-    // If I have a conditional child, I want the conditional from the child.
-    // So: `assert string.indexOf("sub")` tests the presence of "sub" in "string"
-    if( _kids[0] != null && _kids[0]._cond )
-      _kids[0]._type = XCons.BOOL;
+    assert _kids[0]._cond || _kids[0]._type.isBool();
     return XCons.VOID;
   }
 

@@ -22,13 +22,19 @@ public class MultiAST extends ElvisAST {
     if( _kids.length==1 ) return kid0;
     if( _kids[1]==null ) return XCons.VOID; // Ignored 2nd
     XType kid1 = _kids[1]._type;
-    // Box kid1, so we can null-check it.
-    // Basically a leading BOOL uses the "conditional" notion
-    if( kid0==XCons.BOOL )
-      return S.eq(kid1.ztype(),"0") ? kid1.box() : kid1;
+
+    // Loading bool, we're using COND.  Only a 2nd element afterwards, then its
+    // conditional on that type.
+    if( _kids.length==2 && kid0.isBool() )
+      return _kids[1]._type;
+
     // Otherwise, we're in a multi-ast situation with lots of AND'd parts
     return XCons.BOOL;
   }
+  @Override boolean _cond() {
+    return _kids.length==2 && _kids[0]._type.isBool() && !_kids[1]._type.isBool();
+  }
+
 
   // All parts are simple defs of the same type.
   // Can use Javas multi-def: "int x0=e0, x1=e1"
@@ -52,12 +58,18 @@ public class MultiAST extends ElvisAST {
   @Override public SB jcode(SB sb) {
     XType xt;
     if( _expr ) {
+      // Only "true && expr"
+      if( _cond ) {
+        assert _kids[0] instanceof ConAST con && con._con.equals("true");
+        return _kids[1].jcode(sb.p("XRuntime.True(")).p(")");
+      }
       // A && B && C && ...
       for( AST kid : _kids )
         kid.jcode(sb).p(" && ");
       return sb.unchar(4); // Undo " && "
+    }
 
-    } else if( (xt=multiAssign()) != null ) {
+    if( (xt=multiAssign()) != null ) {
       // This form is required for for-loops
       //   int x0=e0, x1=e1, ..., xn=en;
       xt.str(sb).p(" ");
@@ -69,16 +81,15 @@ public class MultiAST extends ElvisAST {
         sb.p(", ");
       }
       return sb.unchar(2);
-
-    } else {
-      // A;
-      // B;
-      // C;
-      // Also (a, _, c, _, e) has ignored tuple parts
-      for( AST kid : _kids )
-        if( kid != null ) // Ignored in tuple breakouts
-          kid.jcode(sb).p(";").nl();
-      return sb;
     }
+
+    // A;
+    // B;
+    // C;
+    // Also (a, _, c, _, e) has ignored tuple parts
+    for( AST kid : _kids )
+      if( kid != null ) // Ignored in tuple breakouts
+        kid.jcode(sb).p(";").nl();
+    return sb;
   }
 }

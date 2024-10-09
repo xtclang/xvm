@@ -10,59 +10,54 @@ import org.xvm.util.S;
 import java.util.Arrays;
 
 public class CallAST extends AST {
-  final XType[] _rets;
+  final XType _ret;             // A more precise return type
   final String _mixin_tname;    // Call to a mixin-super
   static CallAST make( ClzBuilder X ) {
-    // Read optional array of return types (not currently used)
-    Const[] retTypes = X.consts();
+    // Read optional array of return types; this can be more precise than the
+    // function in _kids[0]
+    XType ret = MethodPart.ret(XType.xtypes(X.consts()),false);
     // Read the arguments, then the function expression.
     AST[] kids = X.kids_bias(1);
     // Move the function to the 0th kid slot.
     kids[0] = ast_term(X);     // Call expression first
-    XType[] rets = XType.xtypes(retTypes);
-    return new CallAST(rets,X._meth,kids);
+    return new CallAST(ret,X._meth,kids);
   }
-  CallAST( XType[] rets, MethodPart meth, AST... kids ) {
+
+  CallAST( XType ret, MethodPart meth, AST... kids ) {
     super(kids);
     // Check for a call to super: "super(args)" becomes "super.METHOD(args)".
     // If inside an interface (so _meth is a default method), the super
     // also needs the correct super interface named.
-    if( _kids[0] instanceof RegAST reg && reg._reg== -13 ) {
-      XFun fun = XFun.make(meth.xargs(),meth.xrets());
-      _kids[0] = new ConAST(null,null,"super."+meth._name,fun);
+    if( _kids[0] instanceof RegAST reg && reg._reg== -13/*A_SUPER*/ ) {
+      _kids[0] = new ConAST(null,null,"super."+meth._name,meth.xfun());
       _mixin_tname = meth.clz()._f==Part.Format.MIXIN ? meth.clz()._tnames[0] : null;
     } else _mixin_tname = null;
-    _rets = rets;
+    _ret = ret;
     _type = _type();
   }
-  CallAST( XType[] rets, AST... kids ) {
+
+  private CallAST( XType ret, AST... kids ) {
     super(kids);
-    assert !(_kids[0] instanceof RegAST);
-    _rets = rets;
-    _type = _type();
     _mixin_tname = null;
+    _ret = ret;
+    _type = _type();
   }
   static CallAST make(XType ret, String clzname, String methname, AST kid) {
-    XType[] rets = new XType[]{ret};
-    XFun fun = XFun.make(new XType[]{kid._type},rets);
+    XFun fun = XFun.make(new XType[]{ret,kid._type},false);
     ConAST con = new ConAST(clzname+"."+methname,fun);
-    CallAST call = new CallAST(rets,con,kid);
+    CallAST call = new CallAST(ret,con,kid);
     con._par = call;
     call._type = ret;
     return call;
   }
 
-  @Override XType _type() {
-    if( _rets==null ) return XCons.VOID;
-    if( _rets.length == 1 ) return _rets[0];
-    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_rets));
-  }
+  @Override XType _type() { return _ret; }
 
   @Override public AST unBox() {
     // If call's generic type returns boxed, but call is known to return
     // unboxed (because BAST is promoting a generic to a boxed primitive, but
     // expression using the Call extends unboxed), then unbox.
-    if( _kids[0]._type instanceof XFun fun && fun.nrets()==1 &&
+    if( _kids[0]._type instanceof XFun fun &&
         fun.ret() != _type && _type instanceof XBase ) {
       // Change to: Call to Uni(Cast(Call))
       AST cast = new ConvAST(_type.box(),this);
@@ -134,7 +129,7 @@ public class CallAST extends AST {
     MethodPart meth = (MethodPart) con._tcon.part();
     ClassPart clazz = meth.clz();
     ClzBuilder.add_import(clazz);
-    return new InvokeAST(base,_rets,Arrays.copyOfRange(_kids,1,_kids.length));
+    return new InvokeAST(base,_ret,Arrays.copyOfRange(_kids,1,_kids.length));
   }
 
   // Box as needed

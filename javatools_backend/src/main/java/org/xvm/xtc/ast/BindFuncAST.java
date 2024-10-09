@@ -60,7 +60,8 @@ class BindFuncAST extends AST {
         _args[i-nargs] = name;
         xargs[i-nargs] = atype;
       }
-      return XFun.make(xargs,_lam.xrets());
+      // Build a function type from the given args
+      return XFun.make(_lam.is_cond_ret(),_lam.ret(),xargs);
 
       // Currying: pre-binding some method args
     } else {
@@ -142,7 +143,7 @@ class BindFuncAST extends AST {
     // else                        called as "this.fun (args)"
     String fname = _kids[0] instanceof BindMethAST ? _kids[0].name()   : "call";
     ikids[0]     = _kids[0] instanceof BindMethAST ? new RegAST(-5,_X) : _kids[0];
-    AST curry = new InvokeAST(fname,lam.rets(),ikids);
+    AST curry = new InvokeAST(fname,lam.ret(),ikids);
     // Update this BindFunc to just call with the curried arguments
     Arrays.fill(_kids,null);
     _kids[0] = curry;

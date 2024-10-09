@@ -25,12 +25,10 @@ public class MethodPart extends MMethodPart {
 
   // Return types
   public final Parameter[] _rets;
-  private XType[] _xrets;
 
   // Argument types
   public final Parameter[] _args;
   public final int _nDefaults;  // Number of default arguments
-  private XType[] _xargs;
 
   // Constants for code
   public final Const[] _cons;
@@ -157,6 +155,7 @@ public class MethodPart extends MMethodPart {
     // TODO: Probably can dispatch as normal method, will need boxed version.
     return _annos!=null && _annos[0]._par.name().equals("Operator");
   }
+  public XType xarg(int idx) { return xfun().arg(idx); }
 
   // XTypes for all arguments.  Lazily built.
   // Default arguments responsibility of the caller; they are explicit here.
@@ -167,12 +166,15 @@ public class MethodPart extends MMethodPart {
   // - Parent xargs/types, one explicit type argument per parent type var
   // - Normal args, mapping to _args
   // - Nested inner classes get the outer class as an arg
-  public XType[] xargs() { return _xargs==null ? (_xargs = _xargs()) : _xargs; }
-  private XType[] _xargs() {
+  private XFun _xfun;
+  public XFun xfun() { return _xfun == null ? (_xfun = _xfun()) : _xfun; }
+  private XFun _xfun() {
+    XType ret = ret();
+
     // Non-constructors just walk the args (and optionally box)
     if( !is_constructor() )
-      // Don't box privates or operators
-      return (_xargs = XType.xtypes(_args, !(isPrivate() || isOperator()) ));
+      // Don't box privates or operators, DO box args to others
+      return XFun.make(is_cond_ret(), ret, XType.xtypes(_args, !(isPrivate() || isOperator())) );
 
     // Constructors get all the type args from their class
     XClz clz = clz()._tclz;
@@ -184,25 +186,52 @@ public class MethodPart extends MMethodPart {
     if( outer!=null ) len++;
 
     // Extend as needed
-    XType[] zts = Arrays.copyOf(clz._xts,len);
+    XType[] zts = new XType[len+1/*return*/];
+    zts[0] = ret;
+    System.arraycopy(clz._xts,0,zts,1,clz._xts.length);
 
     // Add outer class next
     if( outer!=null )
-      zts[j++] = outer.tclz();
+      zts[1+j++] = outer.tclz();
     // Copy/type actual args
     if( _args != null )
       for( Parameter arg : _args )
-        zts[j++] = arg.type( false );
+        zts[1+j++] = arg.type( false );
 
-    return zts;
+    return XFun.make(zts,false);
   }
-  public XType xarg(int idx) { return xargs()[idx]; }
 
-  public XType[] xrets() {
-    if( _xrets != null ) return _xrets;
-    return (_xrets = XType.xtypes(_rets,false));
+  // Method return type, including if the method is flagged conditional.
+  // Always exactly one return value:
+  // - No given rets: VOID
+  // - Exactly one: rets[0]
+  // - Two, but first is a boolean: flag as conditional of the 2nd
+  // - Three, or two and not condition: return a tuple
+  private XType _ret;
+  public XType ret() {
+    return _ret==null ? (_ret=ret(XType.xtypes(_rets,false),is_cond_ret())) : _ret;
   }
-  public XType xret(int idx) { return xrets()[idx]; }
+  public static XType ret(XType[] rets, boolean cond) {
+    if( rets==null || rets.length==0 ) {
+      assert !cond;
+      return XCons.VOID;
+    }
+    if( rets.length==1 ) {
+      assert !cond;
+      return rets[0];
+    }
+    if( rets.length==2 && rets[0]==XCons.BOOL ) {
+      // if cond is false, TOO BAD: treat as a conditional return
+      if( !cond ) throw XEC.TODO();
+      return rets[1]; // Use the non-conditional return
+    }
+    // Tuplize
+    assert !cond;
+    XClz ret = XCons.make_tuple(rets);
+    org.xvm.xec.ecstasy.collections.Tuple.make_class(ret);
+    return ret;
+  }
+
 
   public ClassPart isNestedInnerClass() {
     // self -> MMethod -> Class -> [Package or other ???]

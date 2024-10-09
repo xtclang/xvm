@@ -724,20 +724,21 @@ public class XClz extends XType {
   }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups  ) {
-    _clz_bare(sb.p("class "),false);
+    _clz_bare(sb,false);
     if( _super!=null ) sb.p(":").p(_super._name);
-    sb.p(" {").nl();
-    if( _tns != null )
+    if( _tns != null && _tns.length > 0 ) {
+      sb.p(" {");
       for( int i = 0; i< _tns.length; i++ ) {
         sb.p("  ");
         if( _tns[i]!=null ) sb.p( _tns[i]);
         sb.p(":");
         if( _xts[i] != null )  _xts[i]._str(sb,visit,dups);
-        sb.p(";").nl();
+        sb.p(";");
       }
-    sb.p("}");
+      sb.p("}");
+    }
     if( !_notNull ) sb.p("?");
-    return sb.nl();
+    return sb;
   }
 
 
@@ -850,11 +851,33 @@ public class XClz extends XType {
     return _super.subClasses(sup);
   }
 
+  private boolean subIFaces( XClz iface ) {
+    if( isIFace(iface) ) return true;
+    return _super != null && _super.subIFaces( iface );
+  }
+  // No chasing class super, yes chasing IFace super
+  private boolean isIFace( XClz iface ) {
+    if( _clz!=null && _clz._contribs!=null )
+      for( Contrib c : _clz._contribs )
+        if( c._comp == Part.Composition.Implements ) {
+          XClz iclz = (XClz)xtype(c._tContrib, false);
+          if( iclz == iface || iclz.isIFace(iface) )
+            return true;
+        }
+    return false;
+  }
+
   @Override boolean _isa( XType xt ) {
     XClz clz = (XClz)xt;        // Contract
     if( xt == XCons.XXTC ) return true; // Everything isa XTC
+    // Interface or subclass check.  Const is declared interface in XTC but
+    // declared a Class in Java.
+    if( !iface() && clz.iface() && clz != XCons.CONST )
+      return subIFaces(clz);
+    // Check basic subclassing.  Two classes or two interfaces come here.
     if( !subClasses(clz) ) return false;
     if( _xts.length < clz._xts.length ) return false;
+    // Now check pieces-parts
     for( int i=0; i<clz._xts.length; i++ )
       if( !_xts[i].isa(clz._xts[i]) )
         return false;

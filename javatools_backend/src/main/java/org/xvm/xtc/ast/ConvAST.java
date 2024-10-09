@@ -35,7 +35,7 @@ class ConvAST extends AST {
   @Override XType _type() { return _type; }
 
   @Override public AST rewrite() {
-    if( _type.isa(_kids[0]._type) )// No change
+    if( _kids[0]._type.isa(_type) )// No change
       return _kids[0];          // Drop the Conv
     // Converting from a Java primitive
     if( _kids[0]._type.is_jdk() ) {
@@ -45,7 +45,7 @@ class ConvAST extends AST {
       // Converting from a Java primitive to other things needs to be boxed
       return new NewAST(_kids,(XClz)_type);
     }
-    if( !_kids[0]._cond && _type==XCons.LONG &&
+    if( _type==XCons.LONG &&
         // TODO: this needs to handle all flavors
         (_kids[0]._type==XCons.JUINT8 ||
          _kids[0]._type==XCons.JUINT32 ) )

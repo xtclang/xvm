@@ -213,27 +213,30 @@ class SwitchAST extends AST {
   //      x.toString()
   //                  );
   private SB do_tern( SB sb, AST cond ) {
-    for( int i=0; i<_tmps.length; i++ ) {
-      sb.p(" $t(").p(_tmps[i]).p("= ");
-      cond._kids[i].jcode(sb);
-      sb.p(") &");
-    }
+    if( _tmps != null ) // null during build
+      for( int i=0; i<_tmps.length; i++ ) {
+        sb.p(" $t(").p(_tmps[i]).p("= ");
+        cond._kids[i].jcode(sb);
+        sb.p(") &");
+      }
     sb.nl().ii();
 
     // for each case label
     for( int i=0; i<_armss.length-1; i++ ) {
       sb.i();
       // for each arm
-      for( int j=0; j<_tmps.length; j++ ) {
-        String arm = _armss[i][j];
-        if( arm != null ) {   // Null arms are MatchAny and do not encode a test
-          // Arms with an allocation "new Range()" call "in"
-          if( arm.charAt(arm.length()-1)==')' )  sb.p(arm).p(".in(").p(_tmps[j]).p(")");
-          else                                   sb.p(_tmps[j]).p("==").p(arm);
-          sb.p(" && ");
+      if( _tmps != null ) {
+        for( int j = 0; j < _tmps.length; j++ ) {
+          String arm = _armss[i][j];
+          if( arm != null ) {   // Null arms are MatchAny and do not encode a test
+            // Arms with an allocation "new Range()" call "in"
+            if( arm.charAt( arm.length() - 1 ) == ')' ) sb.p( arm ).p( ".in(" ).p( _tmps[j] ).p( ")" );
+            else sb.p( _tmps[j] ).p( "==" ).p( arm );
+            sb.p( " && " );
+          }
         }
+        sb.unchar( 3 ).p( "? " );
       }
-      sb.unchar(3).p("? ");
       asExpr(_kids[i+1],sb).p(" :").nl();
     }
     sb.i();                     // The default case

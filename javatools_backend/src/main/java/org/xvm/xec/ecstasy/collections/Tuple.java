@@ -8,7 +8,7 @@ import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.Comparable;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
-public interface Tuple extends Cloneable {
+public interface Tuple extends Cloneable, Comparable {
   // Array-like interface
   abstract public XTC at(long i); // At an index
   abstract public void set(long i, XTC o); // Set an index

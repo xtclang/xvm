@@ -63,8 +63,9 @@ public class BlockAST extends ElvisAST {
       return this;
     }
 
+    // Yank a blank return
     if( _kids.length>0 && _kids[_kids.length-1] instanceof ReturnAST ret &&
-        ret._meth.xrets()==null && ret._expr==null ) {
+        ret._meth.xfun().ret()==XCons.VOID && ret._expr==null ) {
       // Void return functions execute the return for side effects only
       _kids = Arrays.copyOf(_kids,_kids.length-1);
       return this;

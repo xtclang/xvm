@@ -10,13 +10,13 @@ import org.xvm.util.SB;
  */
 public class MapCon extends TCon {
   final Format _f;
-  
+
   public TCon _t;              // Type for whole map
   public final Const[] _keys, _vals;
 
   private Part _part;
   private Part[] _parts;
-  
+  public TCon type() { return _t; } // No setter
   public MapCon( CPool X, Const.Format f ) {
     _f = f;
     X.u31();

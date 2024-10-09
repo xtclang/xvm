@@ -41,7 +41,7 @@ public abstract class XType {
 
   // --------------------------------------------------------------------------
 
-  // Fancy print, handlng cycles and dups.  Suitable for the debugger.
+  // Fancy print, handling cycles and dups.  Suitable for the debugger.
   @Override public final String toString() {
     // Collect dups and a visit bit
     VBitSet visit = new VBitSet(), dups = new VBitSet();
@@ -170,6 +170,12 @@ public abstract class XType {
   public XType e() { throw XEC.TODO(); }
 
   public XType readOnly() { throw XEC.TODO(); }
+  public boolean isBool() {
+    return
+      this==JBOOL  || this==BOOL ||
+      this==JTRUE  || this==TRUE ||
+      this==JFALSE || this==FALSE;
+  }
 
   // --------------------------------------------------------------------------
 
@@ -239,10 +245,13 @@ public abstract class XType {
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
         yield XClz.make(ptc);
 
+      if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/maps/Map.x") )
+        yield XClz.make(ptc);
+
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
-        XType[] args = xtypes(((ParamTCon)ptc._parms[0])._parms);
-        XType[] rets = xtypes(((ParamTCon)ptc._parms[1])._parms);
-        yield XFun.make(args, rets).make_class();
+        Const[] args = ((ParamTCon)ptc._parms[0])._parms;
+        Const[] rets = ((ParamTCon)ptc._parms[1])._parms;
+        yield XFun.make(false,MethodPart.ret(xtypes(rets),false),xtypes(args)).make_class();
       }
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true,self);
@@ -252,7 +261,7 @@ public abstract class XType {
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
         if( telem== JLONG )
           yield RANGE;          // Shortcut class
-        throw XEC.TODO();
+        yield XClz.make(ptc);
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") )
@@ -332,9 +341,11 @@ public abstract class XType {
 
     case AryCon ac ->
       xtype(ac.type(),false,self);
+    case MapCon mc ->
+      xtype(mc.type(),false,self);
 
     case MethodCon mcon ->
-      XFun.make((MethodPart)mcon.part());
+      ((MethodPart)mcon.part()).xfun();
 
     case FormalTChildCon ftcc ->
       ftcc.clz()._tclz.find(ftcc._name);

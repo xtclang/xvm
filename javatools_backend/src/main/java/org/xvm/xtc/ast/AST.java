@@ -11,8 +11,17 @@ public abstract class AST {
 
   public AST[] _kids;           // Kids
   AST _par;                     // Parent
+  // Computed type.  This varies during the rewrites as I attempt to unbox
+  // things, or resolve to a sharper type.  Occasionally a COND producer wants
+  // the COND as the primary answer.
   XType _type;                  // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
-  boolean _cond;                // True if passing the hidden condition flag
+  // The XRuntime.COND global is used to return a 2nd argument from many calls
+  // (often flagged as "conditional").  This 2nd argument can be used in nearly
+  // any boolean context including If's, stacked And expressions "a && b && c",
+  // as part of conditional assignments "if( Int a = condInt() ) { ...  a...}",
+  // asserts at least.  Since its a singleton global, its crushed by the very
+  // next COND-writer, and has to be consumed quickly.
+  boolean _cond;                // True if also passing the hidden condition flag
 
   // Simple all-fields constructor
   AST( AST[] kids ) { _kids = kids; }
@@ -57,6 +66,14 @@ public abstract class AST {
     }
     throw XEC.TODO();
   }
+  // Replace a constant "false" with a conditional false return
+  boolean condFalse( int idx, XType zret ) {
+    if( _kids[idx]._cond ) return false;
+    assert _kids[idx] instanceof ConAST con && con._con.equals("false");
+    _kids[idx] = new ConAST("XRuntime.False("+zret.ztype()+")");
+    _kids[idx]._cond = true;
+    return true;
+  }
 
 
   // Set parent and first cut types in the AST
@@ -69,10 +86,10 @@ public abstract class AST {
     doType();                   // Non-recursive
   }
   AST doType() {
-    XType type = _type();
-    assert _type==null || _type==type;
+    XType type = _type();              // Local type computation
+    assert _type==null || _type==type; // Allow type to be early set
     _type = type;
-    _cond = _cond();
+    _cond = _cond();            // Local cond value
     return this;
   }
   // Subclasses must override
@@ -140,10 +157,6 @@ public abstract class AST {
     // Unbox
     return new UniOpAST(new AST[]{this},null,"._i",unbox);
   }
-
-  // Is CallAST argument 'this' boxed?
-
-
 
   // Rewrite some AST bits before Java
   public AST rewrite() { return null; }

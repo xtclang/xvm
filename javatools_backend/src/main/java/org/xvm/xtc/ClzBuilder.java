@@ -512,11 +512,11 @@ public class ClzBuilder {
   public static void args(MethodPart m, SB sb, String xtra) {
     // Argument list
     if( m._args !=null ) {
-      XType[] xargs = m.xargs();
-      int delta = xargs.length - m._args.length;
+      XFun xfun = m.xfun();
+      int delta = xfun.nargs() - m._args.length;
       for( int i = 0; i < m._args.length; i++ ) {
         // Unbox boxed args
-        XType xt = xargs[i+delta];
+        XType xt = xfun.arg(i+delta);
         if( xt instanceof XClz xclz )
           add_import(xclz);
         // Parameter class, using local generic parameters
@@ -561,24 +561,13 @@ public class ClzBuilder {
     }
 
     // Return type
-    if( m.xrets()==null ) sb.p("void ");
-    else {
-      XType xret =
-        m.xrets().length == 1 ?  m.xret(0) :
-        // Conditional return!  Passes the extra return in XRuntime$COND.
-        // The m._rets[0] is the boolean
-        m.is_cond_ret() ? m.xret(1) :
-        // Tuple multi-return
-        XCons.make_tuple(m.xrets());
-      if( xret instanceof XClz xclz ) {
-        xclz.clz_bare(sb);
-        xclz.clz_generic_use(sb,m.clz()._tclz);
-      }
-      else xret.clz(sb);
-      sb.p(' ');
+    XType xret = m.xfun().ret();
+    if( xret instanceof XClz xclz ) {
+      xclz.clz_bare(sb);
+      xclz.clz_generic_use(sb,m.clz()._tclz);
     }
-
-    return sb;
+    else xret.clz(sb);
+    return sb.p(' ');
   }
 
   // Emit a Java string for this MethodPart.
@@ -609,15 +598,13 @@ public class ClzBuilder {
     args(m,_sb, _tclz._mixts == null ? null : "$");
     _sb.p(" ) ");
     // Define argument names
-    XType[] xargs = m.xargs();
-    if( xargs !=null ) {
-      // xargs on constructors includes *type variables*, which are NOT in
-      // method args.  Skip those names here.
-      int ntypes = xargs.length - (m._args==null ? 0 : m._args.length);
-      if( m._args != null )
-        for( int i = 0; i < m._args.length; i++ )
-          define(jname(m._args[i]._name),xargs[i+ntypes]);
-    }
+    XFun xfun = m.xfun();
+    // xargs on constructors includes *type variables*, which are NOT in
+    // method args.  Skip those names here.
+    int ntypes = xfun.nargs() - (m._args==null ? 0 : m._args.length);
+    if( m._args != null )
+      for( int i = 0; i < m._args.length; i++ )
+        define(jname(m._args[i]._name),xfun.arg(i+ntypes));
 
     // Abstract method, no "body"
     if( m._ast.length==0 ) {
@@ -632,10 +619,10 @@ public class ClzBuilder {
         _sb.p(");\n");
         // Upcast the args for the condition
         if( m._args !=null ) {
-          int delta = xargs.length - m._args.length;
+          int delta = xfun.nargs() - m._args.length;
           for( int i = 0; i < m._args.length; i++ ) {
             String arg = m._args[i]._name;
-            XType xt = xargs[i+delta];
+            XType xt = xfun.arg(i+delta);
             int idx = S.find(_tclz._mixts,xt);
             if( idx== -1 ) _sb.ifmt("var %0 = %0$;\n",arg);
             else           _sb.ifmt("%0 %1 = (%0)%1$;\n", _tclz._mixts[idx].clz(),arg);
@@ -705,7 +692,7 @@ public class ClzBuilder {
           call._kids[0] instanceof ConAST con &&
           ((MethodCon)con._tcon).name().equals("construct") ) {
         kid._kids[0] = new RegAST(-13,"super",XCons.XXTC/*_tclz._super*/);
-        ast._kids[i] = new InvokeAST("$construct",new XType[]{XCons.VOID},kid._kids);
+        ast._kids[i] = new InvokeAST("$construct",XCons.VOID,kid._kids);
         return;
       }
     }
@@ -713,7 +700,7 @@ public class ClzBuilder {
     throw XEC.TODO();
   }
 
-  // An inlinable method; turn into java Lambda syntax:
+  // An inlineable method; turn into java Lambda syntax:
   // From: "{ return expr }"
   // To:   "         expr   "
   public void jmethod_body_inline( MethodPart meth ) {

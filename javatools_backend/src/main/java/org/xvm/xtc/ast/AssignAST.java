@@ -36,6 +36,16 @@ class AssignAST extends AST {
 
 
   @Override XType _type() { return _kids[0]._type; }
+  @Override boolean _cond() {
+    return _kids[1]._cond ||  // Assignments do not blow "COND"
+      // Or a conditional assign
+      _op==AsnOp.AsnIfNotFalse ||
+      _op==AsnOp.AsnIfNotNull ||
+      _op==AsnOp.AsnIfWasFalse ||
+      _op==AsnOp.AsnIfWasTrue  ||
+      _op==AsnOp.AsnIfWasNull;
+  }
+
   // If is a simple define, return the type else null
   XType isDef() {
     return _op==AsnOp.Asn && _kids[0] instanceof DefRegAST def ? def._type : null;
@@ -46,7 +56,7 @@ class AssignAST extends AST {
     if( _kids[0] instanceof BinOpAST bin &&
         // Replace with "ary.set(idx,val)"
         bin._op0.equals(".at(") )
-      return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
+      return new InvokeAST("set",null,bin._kids[0],bin._kids[1],_kids[1]);
 
     // Add/push element to array; or op-assign "x+=y"
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz ) {

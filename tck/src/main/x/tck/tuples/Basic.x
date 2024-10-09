@@ -40,8 +40,8 @@ class Basic {
         Int    four = 4;
         String now  = "now";
 
-        Tuple<String, Map<Int, String>> t1 = ("goodbye", [4="now"]);
-        Tuple<String, Map<Int, String>> t2 = Tuple:(BYE(), [four=now]);
+        Tuple<String, Tuple<Int, String>> t1 = ("goodbye"  , (4   ,"now"));
+        Tuple<String, Tuple<Int, String>> t2 = Tuple:(BYE(), (four, now ));
         assert t1 == t2;
 
         Tuple<Int, String, Char> t3 = (1, "big", '?');
