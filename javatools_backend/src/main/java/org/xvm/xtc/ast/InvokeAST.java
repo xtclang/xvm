@@ -3,7 +3,6 @@ package org.xvm.xtc.ast;
 import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
-import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.util.S;
 import org.xvm.util.SB;
@@ -11,8 +10,8 @@ import org.xvm.util.SB;
 public class InvokeAST extends AST {
   String _meth, _slice_tmp;
   final boolean _async;
-  final XType[] _args;
-  final XType[] _rets;
+  final XFun _fun;
+  final XType _ret;
 
   static InvokeAST make( ClzBuilder X, boolean async ) {
     Const[] retTypes = X.consts(); // Return types
@@ -28,8 +27,9 @@ public class InvokeAST extends AST {
     MethodPart meth = (MethodPart)methcon.part();
     _meth = meth.jname();
     _async = async;
-    _args = meth.xargs();
-    _rets = XType.xtypes(retTypes);
+    _fun = meth.xfun();
+    // Return types are sharpened from the method, based on local type info
+    _ret = MethodPart.ret(XType.xtypes(retTypes),meth.is_cond_ret());
 
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -41,28 +41,22 @@ public class InvokeAST extends AST {
     }
   }
 
-  InvokeAST( String meth, XType ret, AST... kids ) {
-    this(meth, ret==null ? null : new XType[]{ret}, kids);
-  }
-  public InvokeAST( String meth, XType[] rets, AST... kids ) {
+  public InvokeAST( String meth, XType ret, AST... kids ) {
     super(kids);
     _meth = meth;
     _async = false;
-    _args = null;
-    _rets = rets;
+    _fun = null;
+    _ret = ret;
     _type = _type();
   }
 
-  @Override XType _type() {
-    if( _rets==null || _rets.length==0 ) return XCons.VOID;
-    if( _rets.length == 1 ) return _rets[0];
-    if( _rets.length == 2 && (_rets[0]==XCons.BOOL || _rets[0]==XCons.JBOOL) )
-      return _rets[1];          // Conditional
-    return XCons.make_tuple(_rets);
-  }
+  @Override XType _type() { return _ret; }
   @Override boolean _cond() {
+    // TRACE is a special for asserts; its the one function XEC understands
+    // passes-through the condition flag.
     if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
-    return _rets!=null && _rets.length == 2 && _rets[0]==XCons.BOOL;
+    // Otherwise, take the condition flag from the function being called
+    return _fun!=null && _fun._cond;
   }
 
   @Override public AST unBox() {
@@ -123,7 +117,7 @@ public class InvokeAST extends AST {
       case "exTo" -> BinOpAST.do_range( _kids, XCons.RANGEEI );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
       case "valueOf", "equals", "toInt128", "estimateStringLength", "abs" ->
-        new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
+        new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
       case "toDec64" -> new NewAST(new AST[]{_kids[0]},XCons.DEC64);
 
       default -> throw XEC.TODO(_meth);
@@ -145,11 +139,12 @@ public class InvokeAST extends AST {
       case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "toInt64" -> _kids[0]; // no-op cast
       case "asciiDigit" -> {
-        InvokeAST inv = new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+        InvokeAST inv = new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
         inv._cond = true;
         yield inv;
       }
-      case "decimalValue", "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+      case "decimalValue", "quoted" ->
+        new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -165,7 +160,8 @@ public class InvokeAST extends AST {
       }
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
-      case "quoted", "iterator" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
+      case "quoted", "iterator" ->
+        new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
       case "equals", "split", "endsWith", "startsWith", "substring" -> null;
       case "indexOf" -> {
         castInt(2);                         // Force index to be an int not a long
@@ -206,7 +202,7 @@ public class InvokeAST extends AST {
   }
 
   @Override XType reBox( AST kid ) {
-    if( _args==null ) return kid._type;
+    if( _fun==null ) return kid._type;
     if( kid instanceof NewAST ) return null; // Already boxed
     switch( _kids[0]._type ) {
     case XBase  base : return null;
@@ -217,7 +213,7 @@ public class InvokeAST extends AST {
     int idx = S.find(_kids,kid);
     if( idx==0 ) return null; // The "this" ptr never boxes
     // Expected args type vs provided kids[idx]._type
-    return _args[idx-1];
+    return _fun.arg(idx-1);
   }
 
   @Override public SB jcode( SB sb ) {

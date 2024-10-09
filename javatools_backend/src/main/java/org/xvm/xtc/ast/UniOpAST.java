@@ -127,7 +127,8 @@ class UniOpAST extends AST {
         k0.jcode(sb.p("$t("));
         return sb.p(") && !XRuntime.$COND");
       } else
-        return k0.jcode(sb.p("COND(")).p(")");
+    //    return k0.jcode(sb.p("COND(")).p(")");
+        throw XEC.TODO();
     }
 
     if( _pre !=null ) {
