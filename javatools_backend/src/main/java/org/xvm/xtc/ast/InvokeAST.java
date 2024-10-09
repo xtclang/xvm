@@ -65,9 +65,9 @@ public class InvokeAST extends AST {
       XType xt = clz._xts[0];
       switch( _meth ) {
       case "next":              // Use the primitive iterator
-        if(      clz._xts[0].isa(XCons.INTNUM ) )  _meth = "next8";
-        else if( clz._xts[0].isa(XCons.JCHAR  ) )  _meth = "next2";
-        else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
+        if(      xt.isa(XCons.INTNUM ) )  _meth = "next8";
+        else if( xt.isa(XCons.JCHAR  ) )  _meth = "next2";
+        else if( xt.isa(XCons.JSTRING) )  _meth = "nextStr";
         break;
       case
         "concat",
@@ -163,13 +163,11 @@ public class InvokeAST extends AST {
       case "quoted", "iterator" ->
         new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
       case "equals", "split", "endsWith", "startsWith", "substring" -> null;
+      // Conditional and long index return
       case "indexOf" -> {
-        castInt(2);                         // Force index to be an int not a long
-        if( _type!=XCons.BOOL ) yield null; // Return int result
-        // Request for the boolean result instead of int result
-        _type = XCons.LONG;   // Back to producing an int result
-        // But insert compare to -1 for boolean
-        yield new BinOpAST( "!=", "", XCons.BOOL, this, new ConAST( "-1", XCons.LONG ) );
+        AST call = new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2]);
+        call._cond = true;
+        yield call;
       }
       case "slice" -> {
         _slice_tmp = enclosing_block().add_tmp(XCons.RANGE);

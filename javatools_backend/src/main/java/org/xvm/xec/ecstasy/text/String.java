@@ -26,7 +26,12 @@ public class String extends Const implements Iterable<Char> {
   public static java.lang.String quoted( java.lang.String s ) {
     throw XEC.TODO();
   }
-
+  // Conditional return
+  public static long indexOf( java.lang.String src, java.lang.String find, long start ) {
+    int idx = src.indexOf(find);
+    XRuntime.$COND = idx != -1;
+    return idx;
+  }
 
   public static <E extends String> boolean equals$String( XTC gold, E ord0, E ord1 ) { return ord0._i.equals(ord1._i); }
   public static <E extends String> boolean equals$String( XTC gold, E ord0, java.lang.String s1 ) { return ord0._i.equals(s1); }

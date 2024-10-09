@@ -14,15 +14,19 @@ class AssertAST extends ElvisAST {
   }
   private AssertAST( AST... kids ) { super(kids); }
   @Override XType _type() {
-    assert _kids[0]._cond || _kids[0]._type.isBool();
+    int len = _kids.length;
+    for( int i=0; i<len-2; i++ )
+      assert _kids[i]._cond || _kids[i]._type.isBool();
     return XCons.VOID;
   }
 
   @Override public SB jcode( SB sb ) {
     sb.p("XTC.xassert(");
     int len = _kids.length;
-    for( int i=0; i<len-2; i++ )
-      _kids[i].jcode(sb).p(" && ");
+    for( int i=0; i<len-2; i++ ) {
+      if( _kids[i]._cond ) _kids[i].jcode(sb.p("$t(")).p(") && XRuntime.$COND && ");
+      else _kids[i].jcode(sb).p(" && ");
+    }
     sb.unchar(4);
     if( _kids[len-2] != null )
       throw XEC.TODO();         // intv
