@@ -89,7 +89,7 @@ public class MultiAST extends ElvisAST {
     // Also (a, _, c, _, e) has ignored tuple parts
     for( AST kid : _kids )
       if( kid != null ) // Ignored in tuple breakouts
-        kid.jcode(sb).p(";").nl();
+        kid.jcode(sb).p(";").nl().i();
     return sb;
   }
 }

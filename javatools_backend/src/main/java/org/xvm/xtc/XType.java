@@ -129,10 +129,12 @@ public abstract class XType {
   }
 
   // --------------------------------------------------------------------------
+  // Get the boxed version of self
   public XClz box() {
     if( this instanceof XClz clz ) return clz;
     return XBOX.get(this);
   }
+  // Get the unboxed version of self
   public XType unbox() {
     XBase jt = UNBOX.get(this);
     return jt==null ? this : jt;
