@@ -2372,6 +2372,12 @@ public abstract class Op
      */
     public static final int R_PAUSE            = -9;
 
+    /**
+     * Result from process() method: reset the fiber to the previous frame. Used *only* by the
+     * debugger.
+     */
+    public static final int R_RESET            = -10;
+
 
     // ----- other constants -----------------------------------------------------------------------
 

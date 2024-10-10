@@ -626,7 +626,7 @@ public class ServiceContext
                 {
                 frame.m_iPC = iPC;
 
-                if (++cOps > 1_000_000)
+                if (++cOps > 1_000_000 && !isDebuggerActive())
                     {
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
@@ -817,10 +817,58 @@ public class ServiceContext
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
 
+                case Op.R_RESET:
+                    // this is only possible as a return value by the debugger
+                    frame = frame.f_framePrev;
+                    assert frame != null && !frame.isNativeStack();
+
+                    aOp = frame.f_aOp;
+                    iPC = frame.m_iPC;
+                    insertBreakPointOp(aOp, iPC);
+                    break;
+
                 default:
                     throw new IllegalStateException("Invalid code: " + iPC);
                 }
             }
+        }
+
+    /**
+     * Replace an op at the specified index with a synthetic "checkBreakPoint" op.
+     */
+    private void insertBreakPointOp(Op[] aOp, int iPC)
+        {
+        Op opReset = aOp[iPC];
+        aOp[iPC] = new Op()
+            {
+            @Override
+            public int process(Frame frame, int iPC)
+                {
+                int nResult = getDebugger().checkBreakPoint(frame, iPC);
+                switch (nResult)
+                    {
+                    default:
+                        System.err.println("Not supported result: " + nResult);
+                        // fall through
+                    case Op.R_NEXT:
+                        aOp[iPC] = opReset;
+                        return iPC; // repeat with a real op
+
+                    case Op.R_RESET:
+                        aOp[iPC] = opReset;
+                        return Op.R_RESET; // go up a frame
+
+                    case Op.R_CALL:
+                        return Op.R_CALL;
+                    }
+                }
+
+            @Override
+            public String toString()
+                {
+                return "Debug";
+                }
+            };
         }
 
     /**

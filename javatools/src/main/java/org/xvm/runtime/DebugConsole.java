@@ -1439,6 +1439,15 @@ public final class DebugConsole
                 return Op.R_REPEAT;
                 }
 
+            case "T", "RESET":
+                if (frame.f_framePrev.isNativeStack())
+                    {
+                    writer.println("Cannot reset an active frame across the service boundaries");
+                    return Op.R_REPEAT;
+                    }
+                m_stepMode = StepMode.StepInto;
+                return Op.R_RESET;
+
             case ".":
                 {
                 int n = cArgs > 0 ? parseNonNegative(asParts[1]) : 0;
@@ -2857,6 +2866,7 @@ public final class DebugConsole
              SL <line>                Step (run) to specified line
              SL <name> <line>         Step (run) to specified line
              R                        Run to next breakpoint
+             T                        Reset (return to) a previous stack frame
                                       
              B+                       Add breakpoint for the current line
              B-                       Remove breakpoint for the current line
