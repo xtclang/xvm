@@ -23,8 +23,7 @@ service OSStorage {
                 Boolean onEvent(Event event, File file) {
                     if (file.name == filePath.name) {
                         // stay asynchronous
-                        @Future Boolean cancel = watcher.onEvent(event, file);
-                        return cancel;
+                        return watcher.onEvent^(event, file);
                     }
                     return False;
                 }
