@@ -6,7 +6,7 @@ import org.xvm.xtc.*;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 
-class DefRegAST extends AST {
+public class DefRegAST extends AST {
   final String _name;
   final String _init;
   int _reg;                     // Register number
@@ -40,7 +40,7 @@ class DefRegAST extends AST {
     // till after annotation processing
     _reg = X.define(_name,_type);
   }
-  DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
+  public DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
 
   @Override String name() { return _name; }
   @Override XType _type() { return _type; }

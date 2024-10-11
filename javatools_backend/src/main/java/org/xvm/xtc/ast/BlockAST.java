@@ -31,12 +31,20 @@ public class BlockAST extends ElvisAST {
     return blk;
   }
 
+  // Insert in slot 0.  Directly updates kids
+  public void insert0( AST kid ) {
+    AST[] kids = new AST[_kids.length+1];
+    System.arraycopy(_kids,0,kids,1,_kids.length);
+    kids[0] = kid;
+    _kids = kids;
+  }
+
   public boolean hasTemps() { return _tmps != null; }
   @Override XType _type() { return XCons.VOID; }
 
   String add_tmp(XType type) { return add_tmp(type,"$tmp"+_uid++); }
 
-  String add_tmp(XType type, String name) {
+  public String add_tmp(XType type, String name) {
     assert type != null;
     if( _tmps==null ) _tmps = new HashMap<>();
     Ary<String> tmps = _tmps.computeIfAbsent( type, k -> new Ary<>( new String[1], 0 ) );

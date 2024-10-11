@@ -28,7 +28,7 @@ public abstract class ClzBldSet {
       JavaC.JavaSrc jsrc = new JavaC.JavaSrc(xclz.qualified_name(),null);
       SRCS.add(jsrc);
       // Generate Java source.  This might trigger more things to compile.
-      new ClzBuilder(clz.mod(),clz,new SB(),new SB(),true).jclass();
+      new ClzBuilder(clz.mod(),clz,new SB(),new SB(),true,0).jclass();
       assert clz._header!=null;
       System.out.print(clz._header);
       System.out.print(clz._body);

@@ -13,7 +13,7 @@ public class CallAST extends AST {
   final XType _ret;             // A more precise return type
   final String _mixin_tname;    // Call to a mixin-super
   static CallAST make( ClzBuilder X ) {
-    // Read optional array of return types; this can be more precise than the
+    // Read return type; this can be more precise than the
     // function in _kids[0]
     XType ret = MethodPart.ret(XType.xtypes(X.consts()),false);
     // Read the arguments, then the function expression.
@@ -52,29 +52,6 @@ public class CallAST extends AST {
   }
 
   @Override XType _type() { return _ret; }
-
-  @Override public AST unBox() {
-    // If call's generic type returns boxed, but call is known to return
-    // unboxed (because BAST is promoting a generic to a boxed primitive, but
-    // expression using the Call extends unboxed), then unbox.
-    if( _kids[0]._type instanceof XFun fun &&
-        fun.ret() != _type && _type instanceof XBase ) {
-      // Change to: Call to Uni(Cast(Call))
-      AST cast = new ConvAST(_type.box(),this);
-      AST unbx = new UniOpAST(new AST[]{cast},null,"._i",_type);
-      _type = fun.ret();
-      return unbx;
-    }
-    return super.unBox();
-  }
-
-  // True if the named argument is boxed
-  boolean boxedArg(AST arg) {
-    int idx = S.find(_kids,arg);
-    XFun fun = (XFun)_kids[0]._type;
-    return fun._xts[idx-1].box()==fun._xts[idx-1];
-  }
-
 
   @Override public AST rewrite() {
     // Try to rewrite constant calls.  This is required for e.g. "funky
@@ -132,11 +109,16 @@ public class CallAST extends AST {
     return new InvokeAST(base,_ret,Arrays.copyOfRange(_kids,1,_kids.length));
   }
 
-  // Box as needed
-  @Override XType reBox( AST kid ) {
-    if( _kids[0]==kid ) return null; // Called method not boxed
+  // Box arguments as needed
+  @Override public AST reBox( ) {
     XFun fun = (XFun)_kids[0]._type;
-    return fun.arg(S.find(_kids,kid)-1);
+    AST progress=null;
+    for( int i = 1; i < _kids.length; i++ ) {
+      if( _kids[i]._type instanceof XBase &&
+          fun.arg(i-1).unbox() != fun.arg(i-1) )
+        progress = _kids[i] = _kids[i].reBoxThis();
+    }
+    return progress==null ? null : this;
   }
 
   // If the called function takes a type parameter, its return type can be as

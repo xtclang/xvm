@@ -16,7 +16,7 @@ class TemplateAST extends AST {
     sb.p("new StringBuffer()");
     for( int i=1; i<_kids.length; i++ ) {
       _kids[i].jcode(sb.p(".appendTo("));
-      if( !_kids[i]._type.is_jdk() )
+      if( _kids[i]._type!=null && !_kids[i]._type.is_jdk() )
         sb.p(".toString()");
       sb.p(")");
     }

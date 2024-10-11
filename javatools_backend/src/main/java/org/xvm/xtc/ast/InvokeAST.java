@@ -10,7 +10,7 @@ import org.xvm.util.SB;
 public class InvokeAST extends AST {
   String _meth, _slice_tmp;
   final boolean _async;
-  final XFun _fun;
+  XFun _fun;
   final XType _ret;
 
   static InvokeAST make( ClzBuilder X, boolean async ) {
@@ -57,35 +57,6 @@ public class InvokeAST extends AST {
     if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
     // Otherwise, take the condition flag from the function being called
     return _fun!=null && _fun._cond;
-  }
-
-  @Override public AST unBox() {
-    // Unbox primitive iterators
-    if( _kids[0]._type instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
-      XType xt = clz._xts[0];
-      switch( _meth ) {
-      case "next":              // Use the primitive iterator
-        if(      xt.isa(XCons.INTNUM ) )  _meth = "next8";
-        else if( xt.isa(XCons.JCHAR  ) )  _meth = "next2";
-        else if( xt.isa(XCons.JSTRING) )  _meth = "nextStr";
-        break;
-      case
-        "concat",
-        "filter",
-        "forEach",
-        "knownEmpty",
-        "knownSize",
-        "limit",
-        "map",
-        "take",
-        "untilAny",
-        "whileEach",
-        "ZZZZZZ":               // Just to end the sorted list
-        break;
-      default: throw XEC.TODO();
-      };
-    }
-    return null;
   }
 
   @Override public AST rewrite() {
@@ -162,7 +133,10 @@ public class InvokeAST extends AST {
       // Change "abc".quoted() to e.text.String.quoted("abc")
       case "quoted", "iterator" ->
         new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
-      case "equals", "split", "endsWith", "startsWith", "substring" -> null;
+      // The existing _fun has XTC.String arguments; we're using the Java
+      // function of the same name which expects bare Java.String, so we want
+      // to remove any "arguments need boxing", which is based on the _fun.
+      case "equals", "split", "endsWith", "startsWith", "substring" -> { _fun = null; yield null; }
       // Conditional and long index return
       case "indexOf" -> {
         AST call = new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2]);
@@ -177,6 +151,15 @@ public class InvokeAST extends AST {
       };
     }
 
+    // Use fast primitive iterator
+    if( k0t.isa(XCons.ITERATOR) && _meth.equals("next") ) {
+      XType elem = k0t._xts[0];
+      if(      elem.isa(XCons.INTNUM ) )  _meth = "next8";
+      else if( elem.isa(XCons.JCHAR  ) )  _meth = "next2";
+      else if( elem.isa(XCons.JSTRING) )  _meth = "nextStr";
+      return this;
+    }
+
     if( k0t instanceof XClz clz && clz.isTuple() ) {
       switch( _meth ) {
       case "slice":
@@ -189,6 +172,14 @@ public class InvokeAST extends AST {
       }
     }
 
+    // Unbox boxed arguments as needed
+    AST progress = null;
+    if( _fun != null )
+      for( int i=0; i<_fun.nargs(); i++ )
+        if( _fun.arg(i) instanceof XBase && !(_kids[i+1]._type instanceof XBase) )
+          progress = _kids[i+1] = _kids[i+1].unBoxThis();
+    if( progress != null ) return this;
+
     return null;
   }
 
@@ -199,19 +190,17 @@ public class InvokeAST extends AST {
     return _type==XCons.DOUBLE ? new BinOpAST( op, "", XCons.DOUBLE, _kids ) : null;
   }
 
-  @Override XType reBox( AST kid ) {
-    if( _fun==null ) return kid._type;
-    if( kid instanceof NewAST ) return null; // Already boxed
-    switch( _kids[0]._type ) {
-    case XBase  base : return null;
-    case XInter in   : return null;
-    case XClz clz when !clz._jname.isEmpty(): return null; // "this" ptr is a Java special, will have primitive arg version
-    default: break;
+  @Override public AST reBox( ) {
+    if( _fun==null ) return null; // Baked-in, should be good already
+    if( _kids[0]._type == XCons.CONSOLE && _meth.equals("print") )
+      return null;              // Special cutout for Console.print taking a primitive bool
+    AST progress=null;
+    for( int i = 1; i < _kids.length; i++ ) {
+      if( _kids[i]._type instanceof XBase &&
+          _fun.arg(i-1).unbox() != _fun.arg(i-1) )
+        progress = _kids[i] = _kids[i].reBoxThis();
     }
-    int idx = S.find(_kids,kid);
-    if( idx==0 ) return null; // The "this" ptr never boxes
-    // Expected args type vs provided kids[idx]._type
-    return _fun.arg(idx-1);
+    return progress==null ? null : this;
   }
 
   @Override public SB jcode( SB sb ) {

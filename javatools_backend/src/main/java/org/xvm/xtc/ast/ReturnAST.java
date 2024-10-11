@@ -66,7 +66,12 @@ public class ReturnAST extends AST {
 
 
   // Box as needed
-  @Override XType reBox( AST kid ) { return _kids[0]==kid ? _type : null; }
+  @Override public AST reBox( ) {
+    if( !(_kids[0]._type instanceof XBase && _kids[0]._type != XCons.NULL && !(_type instanceof XBase)) )
+      return null;
+    _kids[0] = _kids[0].reBoxThis();
+    return this;
+  }
 
   @Override public void jpre( SB sb ) {
     sb.p("return ");

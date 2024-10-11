@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
@@ -84,13 +85,6 @@ class NewAST extends AST {
     }
     return null;
   }
-
-  @Override XType reBox( AST kid ) {
-    if( _meth==null ) return null; // Internal made News always good
-    int idx = S.find(_kids,kid);
-    return _meth.xarg(idx);
-  }
-
 
   @Override void jpre ( SB sb ) { _type.clz_bare(sb).p(".construct("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }

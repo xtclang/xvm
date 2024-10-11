@@ -1,5 +1,8 @@
 package org.xvm.xtc;
 
+import java.util.BitSet;
+import java.util.HashMap;
+import java.util.HashSet;
 import org.xvm.XEC;
 import org.xvm.util.Ary;
 import org.xvm.util.S;
@@ -11,9 +14,6 @@ import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xtc.ast.*;
 import org.xvm.xtc.cons.*;
-
-import java.util.HashMap;
-import java.util.HashSet;
 
 
 // Some kind of base class for a Java class that implements an XTC Module
@@ -50,6 +50,9 @@ public class ClzBuilder {
 
   public final Ary<String> _locals; // Virtual register numbers to java names
   public final Ary<XType>  _ltypes; // Virtual register numbers to java types
+  public final BitSet _unboxed;     // True if unboxed at the method start
+  public final int _nouters;        // Number of outer-scope pre-boxed locals
+
   public final int nlocals() { return _locals._len; }
 
   // A collection of extra imports, generated all along
@@ -64,10 +67,10 @@ public class ClzBuilder {
 
 
   // Make a nested java class builder
-  public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false); }
+  public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false, bld.nlocals()); }
 
   // Make a (possible nested) java class builder
-  public ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean is_top ) {
+  ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean is_top, int nouters ) {
     _is_top = is_top;
     if( is_top ) {
       IMPORTS = new HashSet<>();  // Top-level imports
@@ -76,6 +79,7 @@ public class ClzBuilder {
       CMOD = mod;                 // Top-level compile unit
       CCLZ = clz==null ? mod : clz; // Compile unit class
       assert NESTED.isEmpty();
+      assert nouters == 0;
     }
     _is_module = mod==clz;
     _mod = mod;
@@ -87,6 +91,8 @@ public class ClzBuilder {
     _sb = sb;
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
+    _unboxed = new BitSet();
+    _nouters = nouters;
   }
 
   // For mixins
@@ -101,7 +107,8 @@ public class ClzBuilder {
     _sb = sb;
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
-
+    _unboxed = new BitSet();
+    _nouters = 0;
   }
 
   // Fill in the body of the matching java class
@@ -768,11 +775,18 @@ public class ClzBuilder {
     // Build the AST from bytes
     _meth = m;
     _pool = new CPool(m._ast,m._cons); // Set up the constant pool parser
+
+    // Parse
     AST ast = AST.parse(this);
+
+    // Insert argument unboxing code
+    for( int i=_nouters; i<nlocals(); i++ )
+      if( _unboxed.get(i) )
+        // Unbox flagged arguments
+        ((BlockAST)ast).insert0(new DefRegAST(_ltypes.at(i).unbox(),AST.unbox_name(_locals.at(i)),_locals.at(i)+"._i"));
+
     // Set types in every AST
     ast.doType(null);
-    // Unbox everything we can
-    ast = ast.visit(AST::unBox,null);
     // Do any trivial restructuring
     ast = ast.visit(AST::rewrite,null);
     AST._uid=0;                        // Reset temps for next go-round
@@ -808,12 +822,15 @@ public class ClzBuilder {
     return kids;
   }
 
-  // Define a new local
+  // Define a new local, return register number
   public int define( String name, XType type ) {
     // Track active locals
+    int idx = _locals._len;     // Register number
     _locals.add(name);
     _ltypes.add(type);
-    return _locals._len-1;      // Return register number
+    if( type.unbox() != type )
+      _unboxed.set(idx);
+    return idx;
   }
   // Pop locals at end of scope
   public void pop_locals(int n) {
@@ -821,6 +838,7 @@ public class ClzBuilder {
       _ltypes.pop();
       _locals.pop();
     }
+    _unboxed.clear(n,999);
   }
 
   // Name mangle for java rules

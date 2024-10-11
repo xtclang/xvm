@@ -21,12 +21,6 @@ public class ConAST extends AST {
     _X = X;
   }
 
-  @Override public AST unBox() {
-    if( _con.endsWith(".GOLD") )
-      return null;              // No unboxing gold instances
-    return super.unBox();
-  }
-
   @Override public AST rewrite() {
     // Embedded Lambda
     if( _con.equals("->") ) {
