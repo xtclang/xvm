@@ -197,7 +197,7 @@ public class InvokeAST extends AST {
     AST progress=null;
     for( int i = 1; i < _kids.length; i++ ) {
       if( _kids[i]._type instanceof XBase &&
-          _fun.arg(i-1).unbox() != _fun.arg(i-1) )
+          !(_fun.arg(i-1) instanceof XBase) )
         progress = _kids[i] = _kids[i].reBoxThis();
     }
     return progress==null ? null : this;
