@@ -106,7 +106,7 @@ class BindFuncAST extends AST {
     }
     return false;
   }
-~
+
   @Override public AST rewrite() {
     // Has embedded AST, already expanded.  Not a currying operation
     if( _lam != null ) {
