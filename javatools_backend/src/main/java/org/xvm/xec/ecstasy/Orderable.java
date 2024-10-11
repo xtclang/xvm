@@ -113,4 +113,5 @@ public interface Orderable extends org.xvm.xec.ecstasy.Comparable {
   public static <O extends Orderable> O minOf( XTC gold, O o0, O o1 ) {
     return compare(gold,(XTC)o0,(XTC)o1)==Ordered.Greater ? o1 : o0;
   }
+  public static long minOf( XTC gold, long o0, long o1 ) { return Math.min(o0,o1);  }
 }

@@ -21,23 +21,22 @@ class ForRangeAST extends ForAST {
   }
   private ForRangeAST( AST[] kids ) { super(kids,3); }
 
-  @Override public AST unBox() {
-    AST k0 = _kids[0], k1 = _kids[1];
-    if( !k0._type.primeq() )  return null;
-    if( !k1._type.isa(XCons.ARYSTRING) )  return null;
-    _kids[1] = new InvokeAST("iterStr",XCons.ITERSTR,k1);
-    return this;
-  }
-
   @Override public AST rewrite() {
     super.rewrite();
     // Primitive iterator?
+    AST k0 = _kids[0], k1 = _kids[1];
     // Get a tmp
-    if( _kids[0]._type.zero() && !(_kids[0] instanceof MultiAST) ) {
-      if( _kids[1]._type instanceof XClz xclz )
+    if( k0._type.zero() && !(k0 instanceof MultiAST) ) {
+      if( k1._type instanceof XClz xclz )
         ClzBuilder.add_import(xclz);
-      _prim_iter = enclosing_block().add_tmp(_kids[1]._type);
+      _prim_iter = enclosing_block().add_tmp(k1._type);
     }
+    // AryString primitive iterator
+    if( k0._type.primeq() && k1._type.isa(XCons.ARYSTRING) ) {
+      _kids[1] = new InvokeAST("iterStr",XCons.ITERSTR,k1);
+      return this;
+    }
+
     return null;
   }
 

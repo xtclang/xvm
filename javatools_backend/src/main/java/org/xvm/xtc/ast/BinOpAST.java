@@ -67,37 +67,15 @@ class BinOpAST extends AST {
     return _kids[1] instanceof ConAST con && con._tcon instanceof NumCon num ? (int)num._x : -1;
   }
 
-  @Override public AST unBox() {
-    int idx;
-    // Java primitive fetch instead of boxed fetch.
-    // ary_expr ".at(" idx ")"
-    // ary_expr.at8(idx) -- and the expression is primitive, not boxed
-    if( _op0.equals(".at(") && _kids[1]._type==XCons.LONG ) {
-      _type = _type.unbox();
-      if( _kids[0]._type == XCons.STRING ) {
-        _op0 = ".charAt((int)(";  _op1 = "))";
-        return this;            // progress
-      }
-      if( _kids[0]._type.isAry() ) {
-        _op0 = ".at8(";         // Use primitive 'at' instead of generic
-        return this;            // progress
-      }
-      if( _kids[0]._type.isTuple() && (idx=isFixedOffset()) != -1 )
-        // Tuple at fixed field offset
-        return new PropertyAST(_kids[0],_type,"_f"+idx);
-    }
-    return super.unBox();
-  }
-
-
   @Override public AST rewrite() {
 
+    return switch( _op0 ) {
     // Range is not a valid Java operator, so need to change everything here
-    if( _op0.equals(".." ) ) return do_range(_kids,XCons.RANGEII);
-    if( _op0.equals("..<") ) return do_range(_kids,XCons.RANGEIE);
-    if( _op0.equals("<=>") ) {
+    case ".."  -> do_range(_kids,XCons.RANGEII);
+    case "..<" -> do_range(_kids,XCons.RANGEIE);
+    case "<=>" -> {
       ClzBuilder.add_import(XCons.ORDERABLE);
-      return new InvokeAST("spaceship",XCons.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).doType();
+      yield new InvokeAST("spaceship",XCons.ORDERED,new ConAST("Orderable"),_kids[0],_kids[1]).doType();
     }
 
     // This is a ternary null-check or elvis operator.  _kids[0] is
@@ -105,19 +83,40 @@ class BinOpAST extends AST {
     //   (  "?:"                pred  alt)
     // into this tree:
     //   ( ((tmp=pred)!=null) ? tmp : alt)
-    if( _op0.equals("?:") ) {
+    case "?:" -> {
       TernaryAST tern = new TernaryAST(_kids,_kids[0]._type,false);
       tern._par = _par;
       tern._kids[0] = tern.doElvis(_kids[0],_kids[0]);
-      return tern;
+      yield tern;
     }
 
     // Cast.  Since I treat XTC "Type" as a concrete instance XTC.GOLD,
     // I do not need to cast to "Type".  Other casts can remain.
-    if( _op0.equals("as") && _kids[1] instanceof ConAST con && con._con.equals("Type.GOLD") )
-      return _kids[0];          // Types already as values
+    case "as" -> _kids[1] instanceof ConAST con && con._con.equals("Type.GOLD")
+      ? _kids[0]                // Types already as values
+      : null;
 
-    return null;
+    case ".at(" -> {
+      if( _kids[1]._type!=XCons.LONG ) yield null; // TODO: Handle other kinds of arrays
+      _type = _type.unbox();
+      if( _kids[0]._type == XCons.STRING ) {
+        _op0 = ".charAt((int)(";  _op1 = "))";
+        yield this;             // progress
+      }
+      if( _kids[0]._type.isAry() ) {
+        _op0 = ".at8(";         // Use primitive 'at' instead of generic
+        yield this;             // progress
+      }
+      int idx = isFixedOffset();
+      if( _kids[0]._type.isTuple() && idx != -1 )
+        // Tuple at fixed field offset
+        yield new PropertyAST(_kids[0],_type,"_f"+idx);
+      yield null;
+    }
+
+
+    default -> null;
+    };
   }
 
   static AST do_range( AST[] kids, XClz rng ) {

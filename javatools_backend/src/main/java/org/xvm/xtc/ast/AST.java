@@ -126,61 +126,20 @@ public abstract class AST {
         assert kid==null || kid._par==this;
     return this;
   }
-
-  // Auto-unbox e.g. Int64 to a long or xtc.String to j.l.String
-  public AST unBox() {
-    if( _par instanceof UniOpAST uni && S.eq(uni._post,"._i") )
-      return null; // Exactly the just-inserted unboxing
-    // Parent is narrowed, removes not-null and allows unboxing
-    if( _par instanceof NarrowAST nar && !(nar._par instanceof AssignAST) &&
-        nar._type instanceof XBase nbase && _type instanceof XClz ) {
-      XClz nbox = nbase.box();
-      AST box = this;
-      if( nbox != _type )
-        nar._kids[0] = box = new ConvAST(nbox,this);
-      return new UniOpAST(new AST[]{box},null,"._i",nbase);
-    }
-
-    // Otherwise unbox if type is boxed and not immediately demanded boxed
-    XType unbox = _type.unbox();
-    if( unbox == _type ||       // Already unboxed
-        unbox == XCons.NULL ||  // Unboxes to a "null"
-        !_type._notNull  ||     // Maybe-null
-        // LHS of assignment; BAD: "n._i = boxed_thing";
-        _par instanceof AssignAST asgn0 && asgn0._kids[0] == this ||
-        // Assign with no uses; BAD: "{ ...; (n = boxed)._i; ... }
-        this instanceof AssignAST asgn1 && asgn1._par instanceof BlockAST ||
-        this instanceof MultiAST ||
-        (_par instanceof CallAST call && call.boxedArg(this))
-        )
-      return null;              // Do not unbox
-    // Unbox
-    return new UniOpAST(new AST[]{this},null,"._i",unbox);
-  }
+  // Unboxed name of a boxed variable
+  public static String unbox_name(String box) { return ("$"+box+"_i").intern(); }
 
   // Rewrite some AST bits before Java
   public AST rewrite() { return null; }
 
   // Auto-box e.g. long to Int64 or j.l.String to xtc.String
-  public AST reBox() {
-    if( _par == null )  return null; // Must have a parent that cares
-    if( this instanceof NewAST nnn && nnn._meth==null ) return null; // This is exactly a recently made box
-    // Assigns RHS and Returns LHS might need to box
-    XType lhs = _par.reBox(this);
-    // Desired flavor is no-change or not-boxed or already isa
-    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) || lhs.isTuple() ) return null;
-    XClz rhs = _type.box();
-    if( rhs == null || rhs == _type ) return null; // Always going to the box, so this is a noop
-    // Never box to an interface, caller had already better be a boxed implementer
-    XClz lhsc = (XClz)lhs;
-    if( lhsc.iface() ) lhsc = XCons.XXTC;
-    assert rhs.isa(lhsc);
+  public AST reBox() { return null; }
 
-    // Box 'em up!
-    return new NewAST(new AST[]{this},rhs);
+  AST unBoxThis() { return new UniOpAST(new AST[]{this},null,"._i",_type.unbox());  }
+  AST reBoxThis() {
+    assert _type instanceof XBase;
+    return new NewAST(new AST[]{this},_type.box());
   }
-
-  XType reBox( AST par ) { return null; }
 
   /**
    * Dump indented pretty java code from AST.

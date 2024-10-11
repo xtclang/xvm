@@ -134,7 +134,9 @@ public abstract class XType {
     if( this instanceof XClz clz ) return clz;
     return XBOX.get(this);
   }
-  // Get the unboxed version of self
+  // Get the unboxed version of self.  If this==unbox() then either this is
+  // already an unboxed primitive, or no unboxed version exits (this is a ref).
+  // If this!=unbox() then the unbox() version is a primitive of this.
   public XType unbox() {
     XBase jt = UNBOX.get(this);
     return jt==null ? this : jt;

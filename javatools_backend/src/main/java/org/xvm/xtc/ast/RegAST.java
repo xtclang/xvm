@@ -33,6 +33,9 @@ public class RegAST extends AST {
     case -13 -> "super";    // A_SUPER
     default -> X._locals.at(reg);
     };
+    // Use the unboxed name variant
+    if( reg >= 0 && X._unboxed.get(reg) )
+      _name = unbox_name(_name);
     _type = switch( reg ) {
     case -2 ->  XCons.VOID;  // A_IGNORE
     case -4 ->  XCons.VOID;  // A_DEFAULT
@@ -42,9 +45,12 @@ public class RegAST extends AST {
     case -13 -> xt.iface() ? xt : (xt._super==null ? XCons.XXTC : xt._super); // A_SUPER
     default -> X._ltypes.at(reg);
     };
+    // Use the unboxed type variant
+    if( reg >= 0 && X._unboxed.get(reg) )
+      _type = _type.unbox();
     assert _type!=null;
   }
-  @Override String name() { return _name; } // Can be null for 'this'?
+  @Override String name() { return _name; }
   @Override XType _type() { return _type; }
   @Override void jpre ( SB sb ) {
     sb.p(_name);

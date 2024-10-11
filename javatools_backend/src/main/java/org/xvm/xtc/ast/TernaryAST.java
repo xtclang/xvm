@@ -39,8 +39,15 @@ class TernaryAST extends ElvisAST {
   }
 
   // Box as needed
-  @Override XType reBox( AST kid ) {
-    return _kids[_kids.length-2]==kid || _kids[_kids.length-1]==kid ? _type : null;
+  @Override public AST reBox( ) {
+    if( _type instanceof XBase ) return null;
+    AST progress = null;
+    int len = _kids.length;
+    XType k0t = _kids[len-2]._type;
+    XType k1t = _kids[len-1]._type;
+    if( k0t!=XCons.NULL && k0t.box()!=k0t ) progress = _kids[len-2] = _kids[len-2].reBoxThis();
+    if( k1t!=XCons.NULL && k1t.box()!=k1t ) progress = _kids[len-1] = _kids[len-1].reBoxThis();
+    return progress == null ? null : this;
   }
 
   @Override public SB jcode( SB sb ) {

@@ -7,6 +7,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Boolean;
 import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xrun.XRuntime;
@@ -92,8 +93,8 @@ public class Arylong extends Array<Int64> {
     return this;
   }
 
-  public Arylong shuffled(boolean inPlace) {
-    if( inPlace )
+  public Arylong shuffled(Boolean inPlace) {
+    if( inPlace._i )
       throw XEC.TODO();
     // Not inPlace so clone
     Arylong ary = new Arylong(_mut,this);

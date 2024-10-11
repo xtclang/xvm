@@ -52,6 +52,13 @@ class AssignAST extends AST {
   }
 
   @Override public AST rewrite() {
+
+    // Assign of a boxed type to an eagerly unboxed type
+    if( _type instanceof XBase && _kids[1]._type.unbox()!=_kids[1]._type ) {
+      _kids[1] = new UniOpAST(new AST[]{_kids[1]},null,"._i",_type);
+      return this;
+    }
+
     // Assign of a non-primitive array
     if( _kids[0] instanceof BinOpAST bin &&
         // Replace with "ary.set(idx,val)"
@@ -91,7 +98,6 @@ class AssignAST extends AST {
       }
       return mm.doType();
     }
-
 
     // var := (true,val)  or  var ?= not_null;
     if( _op == AsnOp.AsnIfNotFalse || _op == AsnOp.AsnIfNotNull) {
@@ -154,13 +160,13 @@ class AssignAST extends AST {
   }
 
   // Box as needed
-  @Override XType reBox( AST kid ) {
-    if( _kids[1]!=kid ) return null;
-    if( _op == AsnOp.AsnIfNotNull )
-      return _type.nullable();
-    if( _op == AsnOp.AsnIfNotFalse )
-      return XCons.BOOL;
-    return _type;
+  @Override public AST reBox( ) {
+    XType k0t = _kids[0]._type;
+    XType k1t = _kids[1]._type;
+    if( !(k1t instanceof XBase && !k1t.isa(k0t) && k1t.box().isa(k0t)) )
+      return null;
+    _kids[1] = _kids[1].reBoxThis();
+    return this;
   }
 
   @Override public SB jcode( SB sb ) {
