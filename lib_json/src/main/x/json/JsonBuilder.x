@@ -22,11 +22,10 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     @Abstract protected Id id(JsonPointer path);
 
     /**
-     * Merge the specified `Doc` into the entry in this builder
-     * with the specified `Id`.
+     * Merge the specified `Doc` into the entry in this builder with the specified `Id`.
      *
-     * The exact behaviour and merge rules will differ depending on the
-     * type of JSON value the builder builds.
+     * The exact behaviour and merge rules will differ depending on the type of JSON value the
+     * builder builds.
      */
     @Abstract protected void merge(Id id, Doc doc);
 
@@ -41,30 +40,29 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     /**
      * Return the `Doc` value the builder contains for the specified `Id`.
      *
-     * As a `Doc` type can be `Null`, if there is no entry contained in the
-     * builder for the specified `Id` then a `Null` value will be returned,
-     * which is a valid `Doc` value.
+     * As a `Doc` type can be `Null`, if there is no entry contained in the builder for the
+     * specified `Id` then a `Null` value will be returned,  which is a valid `Doc` value.
      */
     @Abstract protected Doc get(Id id);
 
     /**
-     * Perform a deep merge of the specified JSON structure with
-     * the JSON structure this builder is building.
+     * Perform a deep merge of the specified JSON structure with the JSON structure this builder is
+     * building.
      *
-     * How the merge is performed will differ depending on the type of
-     * structure passed in and the structure being built.
+     * How the merge is performed will differ depending on the type of structure passed in and the
+     * structure being built.
      *
-     * @param  the `JsonStruct` to merge
+     * @param jsonStruct the `JsonStruct` to merge
      *
      * @return this `JsonBuilder`
      */
-    JsonBuilder deepMerge(JsonStruct s) {
-        switch (s.is(_)) {
+    JsonBuilder deepMerge(JsonStruct jsonStruct) {
+        switch (jsonStruct.is(_)) {
         case JsonObject:
-            mergeObject(s);
+            mergeObject(jsonStruct);
             break;
         case JsonArray:
-            mergeArray(s);
+            mergeArray(jsonStruct);
             break;
         default:
             assert;
@@ -104,13 +102,12 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     }
 
     /**
-     * Deeply merge the entries in a `JsonObject` into the JSON value being
-     * produced by this builder.
+     * Deeply merge the entries in a `JsonObject` into the JSON value being produced by this builder.
      *
-     * @param o  the `JsonObject` to merge
+     * @param jsonObj  the `JsonObject` to merge
      */
-    protected void mergeObject(JsonObject o) {
-        for (Map.Entry<String, Doc> entry : o.entries) {
+    protected void mergeObject(JsonObject jsonObj) {
+        for (Map.Entry<String, Doc> entry : jsonObj.entries) {
             deepMerge(JsonPointer.from(entry.key), entry.value);
         }
     }
@@ -118,14 +115,14 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     /**
      * Deeply merge a `JsonObject` value into this builder.
      *
-     * @param p     the `JsonObject` to merge
+     * @param obj   the `JsonObject` to merge
      * @param path  the path to the location the object value should be merged into
      * @param doc   the value to merge the object into
      * @param id    the id of the entry being merged into
      */
-    protected void mergeObjectMember(JsonObject o, JsonPointer path, Doc doc, Id id) {
+    protected void mergeObjectMember(JsonObject obj, JsonPointer path, Doc doc, Id id) {
         JsonPointer remainder = path.remainder ?: assert;
-        JsonObject  updated   = new JsonObjectBuilder(o).deepMerge(remainder, doc).build();
+        JsonObject  updated   = new JsonObjectBuilder(obj).deepMerge(remainder, doc).build();
         update(id, updated);
     }
 
@@ -133,37 +130,37 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
      * Deeply merge the entries in a `JsonArray` into the JSON value being
      * produced by this builder.
      *
-     * @param a  the `JsonArray` to merge
+     * @param array  the `JsonArray` to merge
      */
-    protected void mergeArray(JsonArray a) {
-        for (Int i : 0 ..< a.size) {
-            deepMerge(JsonPointer.from(i.toString()), a[i]);
+    protected void mergeArray(JsonArray array) {
+        for (Int i : 0 ..< array.size) {
+            deepMerge(JsonPointer.from(i.toString()), array[i]);
         }
     }
 
     /**
      * Deeply merge a `JsonArray` value into this builder.
      *
-     * @param a     the `JsonArray` to merge
-     * @param path  the path to the location the array value should be merged into
-     * @param doc   the value to merge the array into
-     * @param id    the id of the entry being merged into
+     * @param array  the `JsonArray` to merge
+     * @param path   the path to the location the array value should be merged into
+     * @param doc    the value to merge the array into
+     * @param id     the id of the entry being merged into
      */
-    protected void mergeArrayMember(JsonArray a, JsonPointer path, Doc doc, Id id) {
+    protected void mergeArrayMember(JsonArray array, JsonPointer path, Doc doc, Id id) {
         JsonPointer remainder = path.remainder ?: assert;
-        JsonArray   updated   = new JsonArrayBuilder(a).deepMerge(remainder, doc).build();
+        JsonArray   updated   = new JsonArrayBuilder(array).deepMerge(remainder, doc).build();
         update(id, updated);
     }
 
     /**
-     * Deeply merge a `Primitive` value into this builder.
+     * Deeply merge a `Primitive` json value into this builder.
      *
-     * @param p     the `Primitive` to merge
+     * @param obj   the `Primitive` value to merge (TODO JK: value is not used!?)
      * @param path  the path to the location the primitive value should be merged into
      * @param doc   the value to merge the primitive into
      * @param id    the id of the entry being merged into
      */
-    protected void mergePrimitiveMember(Primitive p, JsonPointer path, Doc doc, Id id) {
+    protected void mergePrimitiveMember(Primitive obj, JsonPointer path, Doc doc, Id id) {
         JsonPointer remainder = path.remainder ?: assert;
         JsonObject  updated   = new JsonObjectBuilder().deepMerge(remainder, doc).build();
         update(id, updated);
@@ -205,13 +202,13 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     /**
      * Perform a deep copy of the specified JSON array.
      *
-     * @param o  the JSON array to copy
+     * @param array  the JSON array to copy
      *
      * @return a mutable copy of the JSON array
      */
-    static JsonArray deepCopyArray(JsonArray a) {
+    static JsonArray deepCopyArray(JsonArray array) {
         JsonArray copy = json.newArray();
-        for (Doc doc : a) {
+        for (Doc doc : array) {
             copy.add(deepCopy(doc));
         }
         return copy;

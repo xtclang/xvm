@@ -12,9 +12,9 @@ class JsonObjectBuilder
     /**
      * Create a JSON object builder.
      *
-     * @param template  an optional `Map<String, Doc>` to use to populate
-     *                  the builder with an initial set of values
-     * @param factory   a factory to create a new mutable `JsonArray`
+     * @param template  (optional) an optional `Map<String, Doc>` to use to populate the builder
+     *                  with an initial set of values
+     * @param factory   (optional) a factory to create a new mutable `JsonArray`
      */
     construct(JsonObject? template = Null, Factory factory = () -> json.newObject()) {
         this.factory = factory;
@@ -63,7 +63,7 @@ class JsonObjectBuilder
     JsonObjectBuilder add(String key, JsonBuilder builder) = add(key, builder.build());
 
     /**
-     * Add all the values contained in the `Map`
+     * Add all the values contained in the `Map`.
      *
      * @param map  the map of values to add
      *
@@ -75,7 +75,7 @@ class JsonObjectBuilder
     }
 
     /**
-     * Add all the values contained in the `JsonObject`
+     * Add all the values contained in the `JsonObject`.
      *
      * @param map  the map of values to add
      *

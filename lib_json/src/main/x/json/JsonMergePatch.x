@@ -1,13 +1,13 @@
 /**
- * An implementation of a JSON Merge Patch as specified
- * in [RFC7396](http://tools.ietf.org/html/rfc7396).
+ * An implementation of a JSON Merge Patch as specified in
+ * [JSON Merge Patch specification](http://tools.ietf.org/html/rfc7396).
  *
  * @param patch  the JSON value to apply as a merge patch
  */
 class JsonMergePatch(Doc patch) {
 
     /**
-     * @return True iff this patch is empty, i.e. it will not apply any
+     * `True` iff this patch is empty, i.e. it will not apply to any.
      */
     Boolean empty.get() {
         Doc patch = this.patch;
@@ -21,9 +21,8 @@ class JsonMergePatch(Doc patch) {
      * Apply this patch to the specified target.
      *
      * @param target   the JSON value to apply this patch to
-     * @param inPlace  True to modify the target in place (if applicable), or
-     *                 False to leave the target unmodified and return a patched
-     *                 copy of the target
+     * @param inPlace  (optional) `True` to modify the target in place (if applicable), or `False`
+     *                 to leave the target unmodified and return a patched copy of the target
      *
      * @return the JSON value resulting from applying this patch to the target
      */
@@ -51,7 +50,7 @@ class JsonMergePatch(Doc patch) {
                     if (Doc targetValue := target.get(key)) {
                         merge(key, merge(targetValue, value, inPlace));
                     } else {
-                        merge(key, merge(json.newObject(), value, True));
+                        merge(key, merge(json.newObject(), value, True)); // TODO JK: why not "inPlace"
                     }
                 }
             }
@@ -75,8 +74,8 @@ class JsonMergePatch(Doc patch) {
     /**
      * Generate a JSON Merge Patch from the source and target {@code JsonValue}.
      *
-     * @param source the source
-     * @param target the target
+     * @param source  the source
+     * @param target  the target
      *
      * @return a JSON Patch which when applied to the source, yields the target
      */
