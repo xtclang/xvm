@@ -1,15 +1,13 @@
 /**
  * A representation of a JSON patch, as defined
- * by https://datatracker.ietf.org/doc/html/rfc6902
+ * [JavaScript Object Notation (JSON) Patch specification](http://tools.ietf.org/html/rfc6902).
  *
- * There are various rules that apply to different types of patch operation.
- * These rules are not validated until the patch operations is actually applied.
- * This means is it is possible to construct an invalid set of patches but an
- * exception will be thrown when the patches are applied.
+ * There are various rules that apply to different types of patch operation.  These rules are not
+ * validated until the patch operations is actually applied, which means that it is possible to
+ * construct an invalid set of patches but an exception will be thrown when the patches are applied.
  */
 mixin JsonPatch
         into Array<Operation> {
-
     /**
      * Apply this patch to the specified `Doc`.
      *
@@ -17,14 +15,13 @@ mixin JsonPatch
      *
      * If the target `Doc` is immutable, the result returned will be immutable.
      *
-     * The `options` parameter allows non-standard behaviour to be applied to the patching
-     * process. The behaviour of the default options will match the RFC6902 specification.
+     * The `options` parameter allows non-standard behaviour to be applied to the patching process.
+     * The behaviour of the default options will match the RFC6902 specification.
      *
      * @param target   the `Doc` to apply the patch to
-     * @param options  the options to control patching behaviour
+     * @param options  (optional) the options to control patching behaviour
      *
-     * @return an JSON `Doc` that is the result of applying this patch
-     *         to the target JSON `Doc`
+     * @return an JSON `Doc` that is the result of applying this patch to the target JSON `Doc`
      *
      * @throws IllegalArgument if any of the operations contains an invalid parameter
      * @throws IllegalState    if applying any of the operations fails
@@ -67,7 +64,7 @@ mixin JsonPatch
     // ----- JsonPatch factory methods -------------------------------------------------------------
 
     /**
-     * Create an immutable `JsonPatch` from an array of `Operation`s.
+     * Create an immutable `JsonPatch` from an array of `Operation` objects.
      *
      * @param ops  the operations to add to the `JsonPatch`
      *
@@ -461,13 +458,13 @@ mixin JsonPatch
     /**
      * Validate an array index, converting negative indexes into their corresponding positive value.
      *
-     * If `options.supportNegativeIndices` is `True` negative indexes are allowed. In this case -1 refers
-     * to the last element in the array, -2 the second to last, and so on up to -(array.size - 1) which
-     * refers to the element at index zero.
+     * If `options.supportNegativeIndices` is `True` negative indexes are allowed. In this case -1
+     * refers to the last element in the array, -2 the second to last, and so on up to
+     * -(array.size - 1) which refers to the element at index zero.
      *
-     * - If the index is zero or positive, it must be in the range 0 ..< array.size
-     * - If the index is negative, `options.supportNegativeIndices` must be `True` and the index
-     *   must be in the range -array.size .. -1
+     * If the index is zero or positive, it must be in the range 0 ..< array.size.
+     * If the index is negative, `options.supportNegativeIndices` must be `True` and the index must
+     * be in the range -array.size .. -1.
      *
      * @param op       the `Action` being executed
      * @param index    the index to validate
@@ -484,25 +481,26 @@ mixin JsonPatch
 
         if (index > 0) {
             // invalid positive index
-            assert:arg as $"Cannot perform {op} on JSON array, index {index} out of bounds, valid range 0 ..< {array.size}";
+            assert:arg as $|Cannot perform {op} on JSON array, index {index} out of bounds, valid \
+                           |range 0 ..< {array.size}
+                           ;
         }
 
         // index is negative
         if (options.supportNegativeIndices) {
-            // We allow negative indexes, which means the index counts
-            // from the end of the array, so valid values are [-array.size >.. 0]
-            // We already know we are not zero
+            // We allow negative indexes, which means the index counts from the end of the array,
+            // so valid values are [-array.size >.. 0] (we already know the value is not zero).
             if (index < -array.size) {
-                // the index is too negative
+                // invalid negative index
                 assert:arg as $|Cannot perform {op} on JSON array, negative array index \
-                               | {index} out of bounds, expected -{array.size} .. -1
+                               |{index} out of bounds, expected -{array.size} .. -1
                                ;
             }
             return index + array.size;
         }
         // negative indexes not allowed
         assert:arg as $|Cannot perform {op} on JSON array, negative array index {index} not allowed, \
-                       | valid range 0 ..< {array.size}
+                       |valid range 0 ..< {array.size}
                        ;
     }
 
@@ -513,8 +511,10 @@ mixin JsonPatch
      *
      * @param op     the action the operation will perform
      * @param path   the path to the value to apply the action to
-     * @param value  the value the action will apply (ignored for copy, move, or remove operations)
-     * @param from   the path to the "from" value (required for copy or move operations, ignored for other operations)
+     * @param value  (optional) the value the action will apply (ignored for copy, move, or remove
+     *               operations)
+     * @param from   (optional) the path to the "from" value (used for copy or move operations,
+     *               ignored for other operations)
      */
     static const Operation(Action op, JsonPointer path, Doc value = Null, JsonPointer? from = Null) {
 
@@ -624,14 +624,17 @@ mixin JsonPatch
      * A set of options that can be used to control the patching behaviour. These options typically change the
      * behavior from the standard specified by https://datatracker.ietf.org/doc/html/rfc6902
      *
-     * @param ensurePathExistsOnAdd     a flag to indicate that an add operation should recursively create the missing
-     *                                  parts of path. For example adding "/foo/bar" if "foo" does not exist a JSON
-     *                                  object will be added at key "foo" and then "bar" will be added to that object.
-     * @param allowMissingPathOnRemove  a flag to indicate that remove operations should not fail if the target path is
-     *                                  missing. The default is `False`
-     * @param supportNegativeIndices    support the non-standard use of negative indices for JSON arrays to mean indices
-     *                                  starting at the end of an array. For example, -1 points to the last element in
-     *                                  the array. Valid negative indices are -1 ..< -array.size The default is `False`
+     * @param ensurePathExistsOnAdd     (optional) a flag to indicate that an add operation should
+     *                                  recursively create the missing parts of path. For example,
+     *                                  adding "/foo/bar" if "foo" does not exist a JSON object
+     *                                  will be added at key "foo" and then "bar" will be added to
+     *                                  that object
+     * @param allowMissingPathOnRemove  (optional) a flag to indicate that remove operations should
+     *                                  not fail if the target path is missing
+     * @param supportNegativeIndices    (optional) support the non-standard use of negative indices
+     *                                  for JSON arrays to mean indices starting at the end of an
+     *                                  array. For example, -1 points to the last element in the
+     *                                  array. Valid negative indices are -1 ..< -array.size
      */
     static const Options(Boolean ensurePathExistsOnAdd    = False,
                          Boolean allowMissingPathOnRemove = False,
