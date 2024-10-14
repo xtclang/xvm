@@ -23,14 +23,14 @@ class JsonBuilderTest {
 
     @Test
     void shouldCopySimpleObject() {
-        JsonObject object = Map<String, Doc>:["one"=11, "two"=22, "three"=33];
+        JsonObject object = hideCompileType(Map<String, Doc>:["one"=11, "two"=22, "three"=33]);
         JsonObject result = JsonBuilder.deepCopy(object);
         assertDeepCopy(object, result);
     }
 
     @Test
     void shouldCopySimpleArray() {
-        JsonArray array  = Array<Doc>:[1, 2, 3];
+        JsonArray array  = hideCompileType(Array<Doc>:[1, 2, 3]);
         JsonArray result = JsonBuilder.deepCopy(array);
         assertDeepCopy(array, result);
     }
@@ -68,6 +68,10 @@ class JsonBuilderTest {
                 assert as $"source and copy are different types source={&source.actualType} copy={&copy.actualType}";
         }
     }
+
+    // hide "immutable" compile-time type inference for the specified object
+    static JsonObject hideCompileType(JsonObject o) = o;
+    static JsonArray  hideCompileType(JsonArray  a) = a;
 
     void assertDeepCopyObject(JsonObject source, JsonObject copy) {
         assert &copy != &source as "source and copy should be different object references";

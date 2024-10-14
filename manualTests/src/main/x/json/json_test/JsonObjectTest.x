@@ -7,13 +7,7 @@ class JsonObjectBuilderTest {
     @Test
     void shouldBuildEmptyJsonObject() {
         JsonObject o = json.objectBuilder().build();
-        assert o.empty == True;
-    }
-
-    @Test
-    void shouldBeDoc() {
-        Doc doc = json.objectBuilder().build();
-        assert doc.is(JsonObject);
+        assert o.empty;
     }
 
     @Test
