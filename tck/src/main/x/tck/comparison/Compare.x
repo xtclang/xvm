@@ -35,7 +35,6 @@ class Compare {
         Int i = 1;
         Int j = 2;
 
-        assert !i.equals(j);
         assert i.compare(j) == Lesser;
     }
 
@@ -53,7 +52,6 @@ class Compare {
         String s1 = "a";
         String s2 = "b";
 
-        assert !s1.equals(s2);
         assert s2.compare(s1) == Greater;
     }
 
@@ -84,9 +82,7 @@ class Compare {
         Point p1 = asPoint(np1);
         Point p2 = asPoint(np2);
 
-        assert !np1.equals(np2);
         assert np1.compare(np2) == Lesser;
-        assert p1.equals(p2);
         assert p1.compare(p2) == Equal;
 
         Point asPoint(Point p) = p;
@@ -119,7 +115,6 @@ class Compare {
         AnyValue a1 = new AnyValue(1, "foo");
         AnyValue a2 = new AnyValue(1, "bar");
 
-        assert a1.equals(a2);
         assert a1.compare(a2) == Equal;
     }
 

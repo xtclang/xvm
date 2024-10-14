@@ -3,12 +3,12 @@
  */
 class Basic {
     @Inject Console console;
-    
+
     void run() {
         testSlowIO();
         testLongCompute();
     }
-    
+
     static service Tester(Journal journal) {
         void simulateSlowIO(Duration duration, String endMsg) {
             Utils.simulateSlowIO(duration);
