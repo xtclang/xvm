@@ -1866,6 +1866,20 @@ public abstract class AstNode
         throw new UnsupportedOperationException(arg.toString());
         }
 
+    /**
+     * A trivial helper method that ensures the type info for the specified type using a branched
+     * {@link ErrorListener} bound to this AstNode.
+     */
+    protected TypeInfo ensureTypeInfo(TypeConstant type, ErrorListener errs)
+        {
+        TypeInfo info = type.ensureTypeInfo(errs = errs.branch(this));
+        if (errs.hasSeriousErrors())
+            {
+            errs.merge();
+            }
+        return info;
+        }
+
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -1893,29 +1907,32 @@ public abstract class AstNode
             Map.Entry<String, Object> entry = iter.next();
 
             Object value = entry.getValue();
-            if (value == null)
+            switch (value)
                 {
-                iter.remove();
-                }
-            else if (value instanceof Map map)
-                {
-                if (map.isEmpty())
+                case null -> iter.remove();
+                case Map map ->
                     {
-                    iter.remove();
+                    if (map.isEmpty())
+                        {
+                        iter.remove();
+                        }
                     }
-                }
-            else if (value instanceof Collection coll)
-                {
-                if (coll.isEmpty())
+                case Collection coll ->
                     {
-                    iter.remove();
+                    if (coll.isEmpty())
+                        {
+                        iter.remove();
+                        }
                     }
-                }
-            else if (value instanceof Object[] ao)
-                {
-                if (ao.length == 0)
+                case Object[] ao ->
                     {
-                    iter.remove();
+                    if (ao.length == 0)
+                        {
+                        iter.remove();
+                        }
+                    }
+                default ->
+                    {
                     }
                 }
             }
@@ -1963,25 +1980,28 @@ public abstract class AstNode
             // find the kids
             int      cKids;
             Iterator iterK;
-            if (value instanceof Map kids)
+            switch (value)
                 {
-                cKids = kids.size();
-                iterK = kids.entrySet().iterator();
-                }
-            else if (value instanceof Collection kids)
-                {
-                cKids = kids.size();
-                iterK = kids.iterator();
-                }
-            else if (value instanceof Object[] kids)
-                {
-                cKids = kids.length;
-                iterK = Arrays.asList(kids).iterator();
-                }
-            else
-                {
-                cKids = 1;
-                iterK = Collections.singletonList(value).iterator();
+                case Map kids ->
+                    {
+                    cKids = kids.size();
+                    iterK = kids.entrySet().iterator();
+                    }
+                case Collection kids ->
+                    {
+                    cKids = kids.size();
+                    iterK = kids.iterator();
+                    }
+                case Object[] kids ->
+                    {
+                    cKids = kids.length;
+                    iterK = Arrays.asList(kids).iterator();
+                    }
+                case null, default ->
+                    {
+                    cKids = 1;
+                    iterK = Collections.singletonList(value).iterator();
+                    }
                 }
 
             for (int i = 0; i < cKids; ++i)

@@ -31,7 +31,6 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
@@ -699,14 +698,14 @@ public class MethodDeclarationStatement
 
         if (!errs.isSilent() && !method.isConstructor())
             {
-            TypeConstant   type = pool.ensureAccessTypeConstant(clzParent.getFormalType(), Access.PRIVATE);
-            TypeInfo       info = type.ensureTypeInfo(errs);
-            PropertyInfo   prop = info.findProperty(method.getName());
+            TypeConstant typeParent = pool.ensureAccessTypeConstant(clzParent.getFormalType(), Access.PRIVATE);
+            PropertyInfo prop       = ensureTypeInfo(typeParent, errs).findProperty(method.getName());
             if (prop != null &&
                 prop.getIdentity().getNestedDepth() == method.getIdentityConstant().getNestedDepth() - 1)
                 {
                 log(errs, Severity.ERROR, Compiler.METHOD_NAME_COLLISION,
                         method.getName(), prop.getIdentity().getNamespace().getPathString());
+                return;
                 }
             }
 
@@ -913,15 +912,13 @@ public class MethodDeclarationStatement
             return true;
             }
 
-        ErrorListener errsTemp   = errs.branch(this);
-        MethodInfo    infoMethod = clzParent.getFormalType().ensureAccess(Access.PRIVATE).
-                                    ensureTypeInfo(errsTemp).
+        TypeConstant typeParent = clzParent.getFormalType().ensureAccess(Access.PRIVATE);
+        MethodInfo   infoMethod = ensureTypeInfo(typeParent, errs).
                                     getMethodById(method.getIdentityConstant());
-        if (infoMethod == null || errsTemp.hasSeriousErrors())
+        if (infoMethod == null || errs.hasSeriousErrors())
             {
             // something is seriously wrong with this method; the "@Override" is the least of the
             // issues; ignore it and the problem will be reported in due time
-            errsTemp.merge();
             return true;
             }
 

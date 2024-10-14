@@ -80,7 +80,6 @@ import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -3592,18 +3591,6 @@ public class TypeCompositionStatement
     public String getDumpDesc()
         {
         return toSignatureString();
-        }
-
-    /**
-     * Temporary: Used to build a fake module that can be used to look up information while in the
-     * debugger. (REMOVE LATER!!!)
-     *
-     * @param component  the "real" component to associate with the "fake" module
-     */
-    public void buildDumpModule(Component component)
-        {
-        introduceParentage();
-        setComponent(component);
         }
 
 

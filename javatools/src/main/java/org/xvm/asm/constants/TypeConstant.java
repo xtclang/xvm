@@ -3578,8 +3578,8 @@ public abstract class TypeConstant
             // process methods
             if (!mapContribMethods.isEmpty())
                 {
-                layerOnMethods(constId, fSelf, false, idDelegate, mapMethods, mapVirtMethods,
-                        typeContrib, mapContribMethods, errs);
+                layerOnMethods(constId, fSelf ? ContribSource.Self : ContribSource.Regular,
+                        idDelegate, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
                 }
 
             // process children
@@ -3847,8 +3847,8 @@ public abstract class TypeConstant
                     }
                 mapContribMethods.put(idContrib, infoMethod);
                 }
-            layerOnMethods(constId, false, false, null, mapMethods, mapVirtMethods, typeContrib,
-                    mapContribMethods, errs);
+            layerOnMethods(constId, ContribSource.Regular, null, mapMethods, mapVirtMethods,
+                    typeContrib, mapContribMethods, errs);
             }
         }
 
@@ -4049,7 +4049,7 @@ public abstract class TypeConstant
      * @param constId            identity of the class
      * @param fSelf              true if the layer being added represents the "Equals" contribution of
      *                           the type
-     * @param fAnnoMixin         true if the contribution represents an annotation mixin
+     * @param contribSource      the contribution source
      * @param idDelegate         the property constant that provides the reference to delegate to
      * @param mapMethods         methods of the class
      * @param mapVirtMethods     the virtual methods of the type, keyed by nested id
@@ -4059,8 +4059,7 @@ public abstract class TypeConstant
      */
     protected void layerOnMethods(
             IdentityConstant                constId,
-            boolean                         fSelf,
-            boolean                         fAnnoMixin,
+            ContribSource                   contribSource,
             PropertyConstant                idDelegate,
             Map<MethodConstant, MethodInfo> mapMethods,
             Map<Object, MethodInfo>         mapVirtMethods,
@@ -4109,12 +4108,18 @@ public abstract class TypeConstant
         ConstantPool             pool            = getConstantPool();
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
         Map<Object, Set<Object>> mapNarrowedNids = null;
+        boolean                  fSelf           = contribSource == ContribSource.Self;
+        boolean                  fAnnoMixin      = contribSource == ContribSource.Annotation;
+        boolean                  fOnTop          = fAnnoMixin ||
+                                                   contribSource == ContribSource.ConditionalIncorp;
+
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
             {
-            MethodConstant    idContrib     = entry.getKey();
-            MethodInfo        methodContrib = entry.getValue();
-            MethodBody        bodyContrib   = methodContrib.getHead();
-            SignatureConstant sigContrib    = methodContrib.getSignature();
+            MethodConstant    idContrib       = entry.getKey();
+            MethodInfo        methodContrib   = entry.getValue();
+            MethodBody        bodyContrib     = methodContrib.getHead();
+            MethodBody        bodyContribTail = methodContrib.getTail();
+            SignatureConstant sigContrib      = methodContrib.getSignature();
 
             // the method is not virtual if it is a function, if it is private, or if it is
             // contained inside a method or property that is non-virtual;
@@ -4253,7 +4258,7 @@ public abstract class TypeConstant
                                 }
                             }
                         }
-                    else if (fSelf && methodContrib.getTail().isOverride())
+                    else if (fSelf && bodyContribTail.isOverride())
                         {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
@@ -4309,21 +4314,19 @@ public abstract class TypeConstant
 
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib, nidContrib, mapVirtMethods);
-
-            if (methodContrib.getTail().isOverride() ||
-                    fAnnoMixin && bodyContrib.isOverride())
+            if (bodyContribTail.isOverride())
                 {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
                 // contribution (because @Override means there MUST be a super method)
                 if (listMatches.isEmpty())
                     {
-                    if (fAnnoMixin || methodContrib.getTail().isNative())
+                    if (bodyContribTail.isNative())
                         {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodResult);
                         }
-                    else
+                    else if (bodyContribTail.getImplementation() != Implementation.Implicit)
                         {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
@@ -4449,8 +4452,9 @@ public abstract class TypeConstant
                 }
             else
                 {
-                // override is not specified
-                if (fSelf)
+                // override is not specified by the tail
+                if (fSelf ||
+                        fOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride())
                     {
                     // report "override required" if necessary
                     for (Object nid : listMatches)
@@ -4460,7 +4464,7 @@ public abstract class TypeConstant
                             {
                             // the fact that @Override is not specified, but there is a match
                             // among the underlying methods is almost always wrong except two
-                            // scenarios:
+                            // special scenarios:
                             // a) the contribution is identical to the "head", which adds nothing to
                             //    the chain and the issue either has already been reported, or
                             //    allowed for some reason - not our responsibility either way
@@ -4472,10 +4476,11 @@ public abstract class TypeConstant
                             if (!bodyHead.getIdentity().equals(idMethod) &&
                                 (bodyTail == bodyHead || !bodyTail.getIdentity().equals(idMethod)))
                                 {
+                                MethodBody bodyOverride = fOnTop ? bodyHead : bodyTail;
                                 log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                         idMethod.getNamespace().getValueString(),
-                                        bodyTail.getSignature().getValueString(),
-                                        bodyTail.getIdentity().getNamespace().getValueString()
+                                        bodyOverride.getSignature().getValueString(),
+                                        bodyOverride.getIdentity().getNamespace().getValueString()
                                         );
                                 }
                             }
@@ -5738,7 +5743,10 @@ public abstract class TypeConstant
                     mapDefaults == null ? null : mapDefaults.get(idProp.getName()), nBaseRank, errs);
             }
 
-        typeTarget.layerOnMethods(idBase, false, annoMixin != null, null, mapMethods, mapVirtMethods,
+        ContribSource contribSource = annoMixin == null
+                ? ContribSource.ConditionalIncorp
+                : ContribSource.Annotation;
+        typeTarget.layerOnMethods(idBase, contribSource, null, mapMethods, mapVirtMethods,
                 typeMixin, mapMixinMethods, errs);
 
         List<Contribution> listProcess = new ArrayList<>(infoSource.getContributionList());
@@ -7646,10 +7654,16 @@ public abstract class TypeConstant
     /**
      * TypeConstant categories.
      */
-    public enum Category
-        {
-        CLASS, IFACE, FORMAL, OTHER
-        }
+    public enum Category {CLASS, IFACE, FORMAL, OTHER}
+
+    /**
+     * Contribution source for TypeInfo computation:
+     *  - Regular: standard structural contribution (super class, implemented interface, etc.)
+     *  - Self: the class itself
+     *  - Annotation: an annotation mixin
+     *  - ConditionalIncorp: a conditional incorporate mixin
+     */
+    protected enum ContribSource {Regular, Self, Annotation, ConditionalIncorp}
 
 
     // ----- fields --------------------------------------------------------------------------------

@@ -247,7 +247,6 @@ public class AnnotationExpression
         List<Expression>  listArgs = args;
         int               cArgs    = listArgs == null ? 0 : listArgs.size();
         ValidatingContext ctx      = new ValidatingContext(getComponent().getContainingClass());
-        ErrorListener     errsTemp = errs.branch(this);
 
         TypeConstant  typeAnno = type == null
                 ? idAnno.getType()
@@ -261,16 +260,14 @@ public class AnnotationExpression
                 }
             }
 
-        TypeInfo infoAnno = typeAnno.ensureTypeInfo(errsTemp);
-
         // find a matching constructor on the annotation class
+        TypeInfo       infoAnno    = ensureTypeInfo(typeAnno, errs);
         MethodConstant idConstruct = findMethod(ctx, typeAnno, infoAnno, "construct",
-                listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errsTemp);
+                listArgs, MethodKind.Constructor, true, false, TypeConstant.NO_TYPES, errs);
 
-        errsTemp.merge();
         if (idConstruct == null)
             {
-            if (!errsTemp.hasSeriousErrors())
+            if (!errs.hasSeriousErrors())
                 {
                 log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getValueString());
                 }

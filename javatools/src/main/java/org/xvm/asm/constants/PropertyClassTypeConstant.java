@@ -405,8 +405,8 @@ public class PropertyClassTypeConstant
 
             if (!mapContribMethods.isEmpty())
                 {
-                layerOnMethods(idBase, fSelf, false, null, mapMethods, mapVirtMethods, typeContrib,
-                        mapContribMethods, errs);
+                layerOnMethods(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
+                        mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
                 }
 
             if (!mapContribChildren.isEmpty())
