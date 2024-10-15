@@ -27,7 +27,7 @@ class JsonMergePatch(Doc patch) {
      * @return the JSON value resulting from applying this patch to the target
      */
     Doc apply(Doc target, Boolean inPlace = False) {
-        return merge(target, patch);
+        return merge(target, patch, inPlace);
     }
 
     private Doc merge(Doc doc, Doc patch, Boolean inPlace = False) {
@@ -50,7 +50,8 @@ class JsonMergePatch(Doc patch) {
                     if (Doc targetValue := target.get(key)) {
                         merge(key, merge(targetValue, value, inPlace));
                     } else {
-                        merge(key, merge(json.newObject(), value, True)); // TODO JK: why not "inPlace"
+                        // merging the value into a new JsonObject (hence inPlace is `True`)
+                        merge(key, merge(json.newObject(), value, True));
                     }
                 }
             }
@@ -72,7 +73,7 @@ class JsonMergePatch(Doc patch) {
     }
 
     /**
-     * Generate a JSON Merge Patch from the source and target {@code JsonValue}.
+     * Generate a JSON Merge Patch from the source and target `JsonValue`.
      *
      * @param source  the source
      * @param target  the target
