@@ -84,6 +84,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public boolean isImmutable()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isAccessSpecified()
         {
         return false;

@@ -109,7 +109,7 @@ public class ServiceTypeConstant
     @Override
     protected boolean isDuckTypeAbleFrom(TypeConstant typeRight)
         {
-        return typeRight.isImmutable() && super.isDuckTypeAbleFrom(typeRight);
+        return typeRight.isService() && super.isDuckTypeAbleFrom(typeRight);
         }
 
 

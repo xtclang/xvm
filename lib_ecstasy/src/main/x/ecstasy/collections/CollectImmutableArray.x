@@ -11,7 +11,7 @@ const CollectImmutableArray<Element extends Shareable>
      *
      * @return an CollectImmutableArray
      */
-    static <Element> CollectImmutableArray<Element> of(Type<Element> elementType) {
+    static <Element extends Shareable> CollectImmutableArray<Element> of(Type<Element> elementType) {
         return new CollectImmutableArray<elementType.DataType>();
     }
 
