@@ -7,6 +7,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
+import java.nio.file.Path;
+
+import java.time.Instant;
+
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -80,6 +84,29 @@ public class xTerminalConsole
             {
             hConsole = m_hConsole = createServiceHandle(f_container.createServiceContext("Console"),
                     getCanonicalClass(), getCanonicalType());
+
+            LineReader reader = null;
+            try
+                {
+                if (CONSOLE != null)
+                    {
+                    Terminal terminal = TerminalBuilder.builder().build();
+                    String   sTmpDir  = System.getProperty("java.io.tmpdir");
+                    Path     pathHist = Path.of(sTmpDir, frame.f_context.f_sName + ".history");
+                    History  history  = new LimitedHistory(pathHist, 100);
+
+                    reader = LineReaderBuilder.builder()
+                            .terminal(terminal)
+                            .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+                            .option(LineReader.Option.HISTORY_TIMESTAMPED, false)
+                            .variable(LineReader.HISTORY_FILE, pathHist)
+                            .history(history)
+                            .build();
+                    }
+                }
+            catch (IOException ignore) {}
+
+            READER = reader;
             }
         return hConsole;
         }
@@ -183,6 +210,40 @@ public class xTerminalConsole
         return frame.assignValue(iReturn, hLine);
         }
 
+    /**
+     * Trivial DefaultHistory extension that limits the history file size.
+     *
+     * Note: {@link LineReader#HISTORY_SIZE} controls the history size in memory, not on disk
+     */
+    static public class LimitedHistory
+            extends DefaultHistory
+
+        {
+        public LimitedHistory(Path path, int cMaxEntries)
+            {
+            f_path        = path;
+            f_cMaxEntries = cMaxEntries;
+            }
+
+        @Override
+        public void add(Instant time, String line)
+            {
+            if (size() >= f_cMaxEntries)
+                {
+                // purge a quarter of the history
+                try
+                    {
+                    trimHistory(f_path, f_cMaxEntries - (f_cMaxEntries >> 2));
+                    }
+                catch (IOException ignore) {}
+                }
+            super.add(time, line);
+            }
+
+        private final Path f_path;
+        private final int  f_cMaxEntries;
+        }
+
 
     // ---- constants and data fields --------------------------------------------------------------
 
@@ -190,7 +251,7 @@ public class xTerminalConsole
     public static final BufferedReader CONSOLE_IN;
     public static final PrintWriter    CONSOLE_OUT;
     public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
-    public static final LineReader     READER;
+    public static       LineReader     READER;
     static
         {
         CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
@@ -199,24 +260,6 @@ public class xTerminalConsole
         CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null
                 ? new PrintWriter(System.out, true)
                 : CONSOLE.writer();
-
-        LineReader reader = null;
-        try
-            {
-            if (CONSOLE != null)
-                {
-                Terminal terminal = TerminalBuilder.builder().build();
-                History  history  = new DefaultHistory();
-
-                reader = LineReaderBuilder.builder()
-                        .terminal(terminal).option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
-                        .history(history)
-                        .build();
-                }
-            }
-        catch (IOException ignore) {}
-
-        READER = reader;
         }
 
     private static final Frame.Continuation PRINT = frameCaller ->

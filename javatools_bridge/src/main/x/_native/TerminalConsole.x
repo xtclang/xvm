@@ -4,10 +4,10 @@
 service TerminalConsole
         implements Console {
     @Override
-    void print(Object object = "", Boolean suppressNewline = False);
+    void print(Object object = "", Boolean suppressNewline = False) {TODO("native");}
 
     @Override
-    String readLine(String prompt = "", Boolean suppressEcho = False);
+    String readLine(String prompt = "", Boolean suppressEcho = False) {TODO("native");}
 
     @Override
     String toString() {
