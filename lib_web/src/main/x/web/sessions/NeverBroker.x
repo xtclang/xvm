@@ -18,12 +18,8 @@ service NeverBroker
     // ----- Broker API ----------------------------------------------------------------------------
 
     @Override
-    conditional Session findSession(RequestIn request) {
-        return False;
-    }
+    conditional (Session, ResponseOut?) findSession(RequestIn request) = False;
 
     @Override
-    conditional (Session|ResponseOut) requireSession(RequestIn request) {
-        return True, new SimpleResponse(ServiceUnavailable, "Server session management has not been enabled");
-    }
+    conditional (Session?, ResponseOut?) requireSession(RequestIn request) = False;
 }

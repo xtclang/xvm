@@ -1,22 +1,28 @@
 /**
- * An `SessionBroker` is a service that knows how to provide a session for an incoming request, if
- * the request is associated with a session or if the associated `Endpoint` requires a session and
- * one must be created.
+ * A [Session] `Broker` is a service that knows how to provide a `Session` for an
+ * [incoming request](RequestIn), if the request is associated with a `Session` or if the associated
+ * `Endpoint` requires a `Session` and one must be created.
  */
 interface Broker
             extends Duplicable, service {
     /**
-     * Find the [Session] indicated by the [request](RequestIn).
+     * Find the [Session] indicated by the [request](RequestIn). The `Broker` is permitted to create
+     * a `Session` if one is specified by the request in a trustworthy manner, but does not yet
+     * exist; for example, a "device id" may be assigned to a device, and on the device's first
+     * communication with the server, a `Session` may be realized (created) for it.
      *
-     * @param request   the incoming [request](RequestIn)
+     * @param request  the incoming [request](RequestIn)
      *
-     * @return `True` iff a [Session] is indicated by the [request](RequestIn) and it exists
+     * @return `True` iff the client is supported by this `Broker`, and a [Session] is indicated by
+     *         the [request](RequestIn) and it exists
      * @return (conditional) the [Session] indicated by the [request](RequestIn)
+     * @return (conditional) if non-`Null`, this is a [response](ResponseOut) that must immediately
+     *         be sent to the client as part of the Session establishment or maintenance dialogue
      */
-    conditional Session findSession(RequestIn request);
+    conditional (Session, ResponseOut?) findSession(RequestIn request);
 
     /**
-     * Find the [Session] indicated by the [request](RequestIn), if it exists, otherwise create one
+     * Find the [Session] indicated by the [request](RequestIn), if it exists; otherwise, create one
      * if possible, returning either the new `Session` or the response to the client necessary to
      * establish the new `Session`.
      *
@@ -25,13 +31,16 @@ interface Broker
      * the client is required to establish the session, or if an error occurs, then return a
      * [response](ResponseOut) for the client.
      *
-     * @param request   the incoming [request](RequestIn)
+     * @param request  the incoming [request](RequestIn)
      *
      * @return `True` iff this Broker is capable of handling the [Session]-related duties for the
      *         request
-     * @return (conditional) the [Session] iff one is indicated by the request and it exists, or if one can be
-     *         established without additional communication with the client; otherwise returns a
-     *         [response](ResponseOut) to the client must be sent to establish the `Session`
+     * @return (conditional) the [Session] indicated by the [request](RequestIn), or created for it;
+     *         if the returned `Session` is `Null`, that indicates that the `Session` cannot be
+     *         created yet because the dialogue (session-creation negotiation) with the client has
+     *         not progressed sufficiently, and the returned [ResponseOut] must be non-`Null`
+     * @return (conditional) if non-`Null`, this is a [response](ResponseOut) that must immediately
+     *         be sent to the client as part of the Session establishment or maintenance dialogue
      */
-    conditional (Session|ResponseOut) requireSession(RequestIn request);
+    conditional (Session?, ResponseOut?) requireSession(RequestIn request);
 }

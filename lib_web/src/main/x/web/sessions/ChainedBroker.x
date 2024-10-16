@@ -29,32 +29,34 @@
     public/private Broker[] brokers;
 
     @Override
-    conditional Session findSession(RequestIn request) {
+    conditional (Session, ResponseOut?) findSession(RequestIn request) {
         for (Broker broker : brokers) {
-            if (Session session := broker.findSession(request)) {
+            if ((Session session, ResponseOut? response) := broker.findSession(request)) {
                 // regardless of whether any other broker could answer the question positively, take
                 // the first positive answer because the order of the brokers is significant
-                return True, session;
+                return True, session, response;
             }
         }
         return False;
     }
 
     @Override
-    conditional (Session|ResponseOut) requireSession(RequestIn request) {
-        if (Session session := findSession(request)) {
-            return True, session;
+    conditional (Session?, ResponseOut?) requireSession(RequestIn request) {
+        if ((Session session, ResponseOut? response) := findSession(request)) {
+            return True, session, response;
         }
 
         ResponseOut? firstResponse = Null;
         for (Broker broker : brokers) {
-            if (val response := broker.requireSession(request)) {
-                if (response.is(Session)) {
-                    return True, response;
+            if ((Session? session, ResponseOut? response) := broker.requireSession(request)) {
+                if (session != Null) {
+                    return True, session, response;
                 }
                 firstResponse ?:= response;
             }
         }
-        return firstResponse.is(ResponseOut);
+        return firstResponse == Null
+                ? False
+                : True, Null, firstResponse;
     }
 }
