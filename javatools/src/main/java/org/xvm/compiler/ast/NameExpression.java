@@ -2646,6 +2646,7 @@ public class NameExpression
             case Module:
             case Package:
             case Class:
+                {
                 // if the name could be a singleton, then that is the default, with the other two
                 // choices being a type or a class; the presence of type parameters indicates a
                 // type or a class
@@ -2744,6 +2745,7 @@ public class NameExpression
                     TypeConstant typeThisClass = ctx.getThisClass().getFormalType();
                     return ((IdentityConstant) constant).getValueType(pool, typeThisClass);
                     }
+                }
 
             case Property:
                 {
@@ -2754,17 +2756,17 @@ public class NameExpression
 
                 // argRaw refers to the actual property identity, while the targetInfo may point to
                 // a context specific id (i.e. nested)
-                PropertyConstant  idProp = (PropertyConstant) argRaw;
-                TypeConstant      type   = idProp.getType();
-                TargetInfo        target = m_targetInfo;
-                boolean           fClass = m_fClassAttribute; // the class of Class?
+                PropertyConstant  idProp   = (PropertyConstant) argRaw;
+                TypeConstant      typeProp = idProp.getType();
+                TargetInfo        target   = m_targetInfo;
+                boolean           fClass   = m_fClassAttribute; // the class of Class?
                 PropertyInfo      infoProp;
                 TypeConstant      typeLeft;
 
                 // use the type inference to differentiate between a property de-referencing
                 // and the Property instance itself (check for both Property and Property? types)
                 if (typeDesired != null && typeDesired.removeNullable().isA(pool.typeProperty()) &&
-                        !type.removeNullable().isA(pool.typeProperty()))
+                        !typeProp.removeNullable().isA(pool.typeProperty()))
                     {
                     if (fSuppressDeref)
                         {
@@ -2810,9 +2812,10 @@ public class NameExpression
                     {
                     assert !m_fAssignable;
                     m_plan = prop.hasInitialValue() ? Plan.PropertyDeref : Plan.Singleton;
-                    return type;
+                    return typeProp;
                     }
 
+                ComputePropertyInfo:
                 if (left == null)
                     {
                     if (target == null)
@@ -2830,7 +2833,7 @@ public class NameExpression
                         {
                         // check for a narrowed property type
                         Argument argNarrowed = ctx.getVar(prop.getName());
-                        type = argNarrowed instanceof TargetInfo
+                        typeProp = argNarrowed instanceof TargetInfo
                                 ? argNarrowed.getType()
                                 : infoProp.inferImmutable(typeLeft).
                                         resolveAutoNarrowing(pool, false, typeLeft, null);
@@ -2866,12 +2869,9 @@ public class NameExpression
                         infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         if (infoProp == null)
                             {
-                            log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
-                                    prop.getName(), typeLeft.getValueString());
-                            return null;
+                            break ComputePropertyInfo;
                             }
 
-                        TypeConstant typeProp = infoProp.getType();
                         if (typeDesired != null && typeDesired.isA(pool.typeFunction()) &&
                                 !typeProp.isA(pool.typeFunction()))
                             {
@@ -2887,90 +2887,113 @@ public class NameExpression
                             }
                         }
 
-                    // TODO GG (see innerouter.x)
-                    // if ((NameExpression) left).getMeaning() == Variable &&
-                    //     typeLeft.isTypeParameter()
-                    // instead of using the constraint type
-                    //        (VirtualChildType{type=FunkyOuter<Orderable>.FunkyInner})
-                    //  we need to create a TypeInfo for a corresponding generic type
-                    //        VirtualChildType{type=FunkyOuter<FunkyOuter.Element>.FunkyInner}
-                    //  and then replace generic types with dynamic types
-                    //        VirtualChildType{type=FunkyOuter<reg -> Element>.FunkyInner}
-
                     infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
-                    if (infoProp != null)
+                    if (infoProp == null)
                         {
-                        if (infoProp.isFormalType())
+                        break ComputePropertyInfo;
+                        }
+
+                    // consider the following code topology:
+                    //
+                    //   class Parent<Element extends Orderable> {
+                    //       class Child(Element e) implements Orderable {
+                    //           static <CT extends Child> Ordered compare(CT v1, CT v2) {
+                    //               return v1.e <=> v2.e;
+                    //   }}}
+                    //
+                    // The type of the name expression "v1.e" should be computed as a formal
+                    // type "Element" against an actual type parameter type "Parent<X>.Child"
+                    if (typeProp.isFormalType() && typeLeft.isTypeParameter())
+                        {
+                        TypeConstant typeConstraint = typeLeft.resolveConstraints();
+                        if (typeConstraint.isVirtualChild())
                             {
-                            if (m_fClassAttribute)
+                            IdentityConstant idConstraint  = typeConstraint.getSingleUnderlyingClass(true);
+                            ClassStructure   clzConstraint = (ClassStructure) idConstraint.getComponent();
+
+                            FormalConstant idFormal = (FormalConstant) typeProp.getDefiningConstant();
+                            if (clzConstraint.isVirtualDescendant(idFormal.getParentConstant()))
                                 {
-                                // this can only be one of the Class' formal types,
-                                // for example: Point.StructType
-                                if (isSuppressDeref())
-                                    {
-                                    log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
-                                    return null;
-                                    }
-                                assert typeLeft.isA(pool.typeClass());
-                                type = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft, null);
+                                TypeParameterConstant idParam =
+                                        (TypeParameterConstant) typeLeft.getDefiningConstant();
+
+                                idProp   = pool.ensureFormalTypeChildConstant(idParam, idFormal.getName());
+                                typeProp = idProp.getType();
+                                break ComputePropertyInfo;
                                 }
-                            else
+                            }
+                        }
+
+                    if (infoProp.isFormalType())
+                        {
+                        if (m_fClassAttribute)
+                            {
+                            // this can only be one of the Class' formal types,
+                            // for example: Point.StructType
+                            if (isSuppressDeref())
                                 {
-                                boolean fDynamic = false;
-
-                                CheckDynamic:
-                                if (left instanceof NameExpression exprLeft)
-                                    {
-                                    if (exprLeft.isSuppressDeref())
-                                        {
-                                        // this is a Ref property access, e.g.: "&outer.Referent"
-                                        break CheckDynamic;
-                                        }
-
-                                    switch (exprLeft.getMeaning())
-                                        {
-                                        case Variable:
-                                            {
-                                            // this is a dynamic formal type (e.g. array.Element)
-                                            Register              argLeft      = (Register) exprLeft.m_arg;
-                                            DynamicFormalConstant constDynamic = pool.ensureDynamicFormal(
-                                                    ctx.getMethod().getIdentityConstant(), argLeft,
-                                                    idProp, exprLeft.getName());
-                                            type     = constDynamic.getType().getType();
-                                            fDynamic = true;
-                                            break;
-                                            }
-
-                                        case Property:
-                                            // REVIEW support dynamic types for properties?
-                                            break;
-
-                                        default:
-                                            break;
-                                        }
-                                    }
-
-                                if (!fDynamic)
-                                    {
-                                    type = idProp.getType();
-                                    }
+                                log(errs, Severity.ERROR, Compiler.INVALID_PROPERTY_REF);
+                                return null;
                                 }
+                            assert typeLeft.isA(pool.typeClass());
+                            typeProp = infoProp.getType().resolveAutoNarrowing(pool, false, typeLeft, null);
                             }
                         else
                             {
-                            TypeConstant typeResolved = infoProp.inferImmutable(typeLeft);
+                            boolean fDynamic = false;
 
-                            // strictly speaking, we could call "resolveDynamicType" regardless of
-                            // the desired type, but the implications of that are quite significant,
-                            // so we leave it to be dealt with as a part of the much wider "dynamic
-                            // type support" project
-                            if (typeDesired != null && typeDesired.containsDynamicType())
+                            CheckDynamic:
+                            if (left instanceof NameExpression exprLeft)
                                 {
-                                typeResolved = resolveDynamicType(ctx, typeLeft, type, typeResolved);
+                                if (exprLeft.isSuppressDeref())
+                                    {
+                                    // this is a Ref property access, e.g.: "&outer.Referent"
+                                    break CheckDynamic;
+                                    }
+
+                                switch (exprLeft.getMeaning())
+                                    {
+                                    case Variable:
+                                        {
+                                        // this is a dynamic formal type (e.g. array.Element)
+                                        Register              argLeft      = (Register) exprLeft.m_arg;
+                                        DynamicFormalConstant constDynamic = pool.ensureDynamicFormal(
+                                                ctx.getMethod().getIdentityConstant(), argLeft,
+                                                idProp, exprLeft.getName());
+                                        typeProp = constDynamic.getType().getType();
+                                        fDynamic = true;
+                                        break;
+                                        }
+
+                                    case Property:
+                                        // REVIEW support dynamic types for properties?
+                                        break;
+
+                                    default:
+                                        break;
+                                    }
                                 }
 
-                            type = typeResolved.resolveAutoNarrowing(pool, false, typeLeft, null);
+                            if (!fDynamic)
+                                {
+                                typeProp = idProp.getType();
+                                }
                             }
+                        }
+                    else
+                        {
+                        TypeConstant typeResolved = infoProp.inferImmutable(typeLeft);
+
+                        // strictly speaking, we could call "resolveDynamicType" regardless of
+                        // the desired type, but the implications of that are quite significant,
+                        // so we leave it to be dealt with as a part of the much wider "dynamic
+                        // type support" project
+                        if (typeDesired != null && typeDesired.containsDynamicType())
+                            {
+                            typeResolved = resolveDynamicType(ctx, typeLeft, typeProp, typeResolved);
+                            }
+
+                        typeProp = typeResolved.resolveAutoNarrowing(pool, false, typeLeft, null);
                         }
                     }
 
@@ -2991,7 +3014,7 @@ public class NameExpression
                 else
                     {
                     m_plan = Plan.PropertyDeref;
-                    return type;
+                    return typeProp;
                     }
                 }
 

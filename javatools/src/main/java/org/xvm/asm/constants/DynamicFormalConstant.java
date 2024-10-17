@@ -163,7 +163,7 @@ public class DynamicFormalConstant
                         }
                     frame = frame.f_framePrev;
                     }
-                while (frame != null);
+                while (frame != null && !frame.isNative());
                 }
             catch (ExceptionHandle.WrapperException ignore)
                 {

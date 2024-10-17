@@ -120,9 +120,7 @@ module TestInnerOuter {
                 console.print($"value1.outer.name={value1.outer.name}");
                 console.print($"value1.&outer.actualType={value1.&outer.actualType}");
 
-                // TODO GG: deferred; see explanation in NameExpression.planCodeGen()
-                //  return (value1.e <=> value2.e).reversed;
-                return CompileType.OuterType.Element.compare(value1.e, value2.e).reversed;
+                return (value1.e <=> value2.e).reversed;
             }
         }
     }

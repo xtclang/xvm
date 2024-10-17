@@ -398,7 +398,7 @@ public class ClassStructure
      * @return true iff this class is the specified parent class itself, or a virtual child of that
      *         class or any of its virtual children (recursively)
      */
-    public boolean isVirtualDescendant(ClassConstant idParent)
+    public boolean isVirtualDescendant(IdentityConstant idParent)
         {
         return getIdentityConstant().equals(idParent) ||
                 isVirtualChild() && getOuter().isVirtualDescendant(idParent);
