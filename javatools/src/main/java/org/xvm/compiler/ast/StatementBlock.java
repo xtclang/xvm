@@ -1176,7 +1176,10 @@ public class StatementBlock
 
                         if (idResult == null)
                             {
-                            if (((PropertyStructure) idProp.getComponent()).isRefAnnotated())
+                            PropertyInfo infoProp = info.findProperty(idProp, false);
+                            assert infoProp != null;
+
+                            if (infoProp.hasField() && infoProp.isRefAnnotated())
                                 {
                                 ++cSteps;
                                 }
