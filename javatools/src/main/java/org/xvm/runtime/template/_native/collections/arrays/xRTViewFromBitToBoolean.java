@@ -39,11 +39,6 @@ public class xRTViewFromBitToBoolean
         }
 
     @Override
-    public void initNative()
-        {
-        }
-
-    @Override
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();

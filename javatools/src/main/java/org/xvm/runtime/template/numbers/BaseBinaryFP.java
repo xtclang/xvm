@@ -424,7 +424,7 @@ public abstract class BaseBinaryFP
         return new FloatHandle(getCanonicalClass(), dValue);
         }
 
-    protected static class FloatHandle
+    public static class FloatHandle
             extends ObjectHandle
         {
         protected FloatHandle(ClassComposition clz, double dValue)

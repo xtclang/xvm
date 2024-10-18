@@ -93,7 +93,7 @@ public abstract class LongBasedDelegate
         {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        long[] abOld = hDelegate.m_alValue;
+        long[] alOld = hDelegate.m_alValue;
         long   cSize = hDelegate.m_cSize;
 
         if (nCapacity < cSize)
@@ -104,12 +104,12 @@ public abstract class LongBasedDelegate
 
         // for now, no trimming
         int nNew = storage((int) nCapacity);
-        int nOld = storage(abOld.length);
+        int nOld = storage(alOld.length);
         if (nNew > nOld)
             {
-            long[] abNew = new long[nNew];
-            System.arraycopy(abOld, 0, abNew, 0, abOld.length);
-            hDelegate.m_alValue = abNew;
+            long[] alNew = new long[nNew];
+            System.arraycopy(alOld, 0, alNew, 0, alOld.length);
+            hDelegate.m_alValue = alNew;
             }
         return Op.R_NEXT;
         }
@@ -343,7 +343,7 @@ public abstract class LongBasedDelegate
     /**
      * Reverse the array of longs represented by the specified array.
      *
-     * @param alValue  the bit array
+     * @param alValue  the long array
      * @param cSize    the actual number of values held by the array
      */
     public long[] reverse(long[] alValue, int cSize)
@@ -602,28 +602,22 @@ public abstract class LongBasedDelegate
 
         protected void purgeUnusedSpace()
             {
-            long[] ab = m_alValue;
+            long[] al = m_alValue;
             int    c  = ((LongBasedDelegate) getTemplate()).storage(m_cSize);
-            if (ab.length != c)
+            if (al.length != c)
                 {
-                long[] abNew = new long[c];
-                System.arraycopy(ab, 0, abNew, 0, c);
-                m_alValue = abNew;
+                long[] alNew = new long[c];
+                System.arraycopy(al, 0, alNew, 0, c);
+                m_alValue = alNew;
                 }
-            }
-
-        @Override
-        public boolean isNativeEqual()
-            {
-            return true;
             }
 
         @Override
         public int compareTo(ObjectHandle that)
             {
-            long[] abThis = m_alValue;
+            long[] alThis = m_alValue;
             long   cThis  = m_cSize;
-            long[] abThat = ((LongArrayHandle) that).m_alValue;
+            long[] alThat = ((LongArrayHandle) that).m_alValue;
             long   cThat  = ((LongArrayHandle) that).m_cSize;
 
             if (cThis != cThat)
@@ -634,7 +628,7 @@ public abstract class LongBasedDelegate
             int c = ((LongBasedDelegate) getTemplate()).storage(cThis);
             for (int i = 0; i < c; i++)
                 {
-                long iDiff = abThis[i] - abThat[i];
+                long iDiff = alThis[i] - alThat[i];
                 if (iDiff != 0)
                     {
                     return iDiff < 0 ? -1 : 1;

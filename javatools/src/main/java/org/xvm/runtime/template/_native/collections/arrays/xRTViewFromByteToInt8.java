@@ -37,11 +37,6 @@ public class xRTViewFromByteToInt8
         }
 
     @Override
-    public void initNative()
-        {
-        }
-
-    @Override
     public TypeConstant getCanonicalType()
         {
         ConstantPool pool = pool();

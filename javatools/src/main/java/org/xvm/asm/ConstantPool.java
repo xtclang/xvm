@@ -824,21 +824,6 @@ public class ConstantPool
         }
 
     /**
-     * Create a Map Entry constant.
-     *
-     * @param constType  the type of the Map Entry
-     * @param constKey   the value of the key
-     * @param constVal   the value of the entry
-     *
-     * @return the MapConstant representing the single Map Entry constant
-     */
-    public MapConstant ensureMapEntryConstant(TypeConstant constType, Constant constKey, Constant constVal)
-        {
-        // TODO validations
-        return new MapConstant(this, constType, constKey, constVal);
-        }
-
-    /**
      * Create a Map constant.
      *
      * @param constType  the type of the Map
@@ -1634,18 +1619,6 @@ public class ConstantPool
     public TypeConstant ensureArrayType(TypeConstant typeElement)
         {
         return ensureParameterizedTypeConstant(typeArray(), typeElement);
-        }
-
-    /**
-     * Obtain a TypeConstant for a parameterized List.
-     *
-     * @param typeElement  the element type of the List
-     *
-     * @return the List type
-     */
-    public TypeConstant ensureListType(TypeConstant typeElement)
-        {
-        return ensureParameterizedTypeConstant(typeList(), typeElement);
         }
 
     /**
@@ -2452,8 +2425,6 @@ public class ConstantPool
     public TypeConstant      typeString१()       {TypeConstant      c = m_typeString१;       if (c == null) {m_typeString१       = c = ensureNullableTypeConstant(typeString()                          );} return c;}
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
-    public IntConstant       val1()              {IntConstant       c = m_val1;              if (c == null) {m_val1              = c = ensureIntConstant(1)                                             ;} return c;}
-
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
     public SingletonConstant valTrue()           {SingletonConstant c = m_valTrue;           if (c == null) {m_valTrue           = c = ensureSingletonConstConstant(clzTrue()                          );} return c;}
     public SingletonConstant valLesser()         {SingletonConstant c = m_valLesser;         if (c == null) {m_valLesser         = c = ensureSingletonConstConstant(clzLesser()                        );} return c;}
@@ -4192,7 +4163,6 @@ public class ConstantPool
         m_typeFile          = null;
         m_typeFileNode      = null;
         m_val0              = null;
-        m_val1              = null;
         m_valFalse          = null;
         m_valTrue           = null;
         m_valLesser         = null;
@@ -4247,7 +4217,6 @@ public class ConstantPool
     private transient TypeConstant      m_typeFile;
     private transient TypeConstant      m_typeFileNode;
     private transient IntConstant       m_val0;
-    private transient IntConstant       m_val1;
     private transient SingletonConstant m_valFalse;
     private transient SingletonConstant m_valTrue;
     private transient SingletonConstant m_valLesser;
