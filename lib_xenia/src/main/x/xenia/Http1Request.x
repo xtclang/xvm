@@ -22,11 +22,12 @@ import HttpServer.RequestInfo;
  * An implementation of an HTTP/1 (i.e. 0.9, 1.0, 1.1) request, as received by a server, using the
  * raw request data provided by the `HttpServer.Handler` interface.
  */
-const Http1Request(RequestInfo   info,
-                   SessionBroker broker,
-                   UriTemplate   template    = UriTemplate.ROOT,
-                   UriParameters matchResult = [],
-                   Endpoint?     endpoint    = Null,
+const Http1Request(RequestInfo          info,
+                   SessionBroker        broker,
+                   function Session?()? getSession  = Null,
+                   UriTemplate          template    = UriTemplate.ROOT,
+                   UriParameters        matchResult = [],
+                   Endpoint?            endpoint    = Null,
                   )
         implements RequestIn
         implements Header
@@ -35,6 +36,7 @@ const Http1Request(RequestInfo   info,
     assert() {
         // TODO handle non-simple bodies e.g. multi-part, streaming
         assert !info.containsNestedBodies();
+
         if (Byte[] bytes := info.getBodyBytes()) {
             this.hasBody = True;
             this.bytes   = bytes;
@@ -54,9 +56,14 @@ const Http1Request(RequestInfo   info,
     protected RequestInfo info;
 
     /**
-     * The broker that can provide a session based on the raw request information.
+     * Internal: The SessionBroker to use if necessary to look up a Session for this Request.
      */
-    protected SessionBroker broker;
+    private SessionBroker broker;
+
+    /**
+     * Internal: The optional function to use to obtain the Session for this Request.
+     */
+    private function Session?()? getSession;
 
     /**
      * Internal.
@@ -208,7 +215,13 @@ const Http1Request(RequestInfo   info,
 
     @Override
     @Lazy Session? session.calc() {
-        TODO broker.extractId(this)
+        if (val getSession ?= getSession) {
+            return getSession();
+        }
+
+        Session? session = Null;
+        session := broker.findSession(this);
+        return session;
     }
 
     @Override
