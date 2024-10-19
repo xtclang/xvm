@@ -35,9 +35,10 @@ public class xRTViewFromByte
         {
         if (this == INSTANCE)
             {
-            registerNativeTemplate(new xRTViewFromByteToInt8 (f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromByteToInt16(f_container, f_struct, true));
-            registerNativeTemplate(new xRTViewFromByteToInt64(f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromByteToInt8   (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromByteToInt16  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromByteToInt64  (f_container, f_struct, true));
+            registerNativeTemplate(new xRTViewFromByteToFloat64(f_container, f_struct, true));
             }
         }
 

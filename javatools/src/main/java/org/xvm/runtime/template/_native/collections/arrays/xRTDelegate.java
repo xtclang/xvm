@@ -27,12 +27,12 @@ import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.numbers.xInt64;
-import org.xvm.runtime.template.xNullable;
 
 
 /**
@@ -77,6 +77,8 @@ public class xRTDelegate
             registerNativeTemplate(new xRTUInt64Delegate  (f_container, f_struct, true));
             registerNativeTemplate(new xRTUInt128Delegate (f_container, f_struct, true));
 
+            registerNativeTemplate(new xRTFloat64Delegate (f_container, f_struct, true));
+
             registerNativeTemplate(new xRTStringDelegate  (f_container, f_struct, true));
             }
         }
@@ -108,7 +110,9 @@ public class xRTDelegate
             mapDelegates.put(pool.typeUInt64(),  xRTUInt64Delegate .INSTANCE);
             mapDelegates.put(pool.typeUInt128(), xRTUInt128Delegate.INSTANCE);
 
-            mapDelegates.put(pool.typeString(),   xRTStringDelegate .INSTANCE);
+            mapDelegates.put(pool.typeFloat64(), xRTFloat64Delegate.INSTANCE);
+
+            mapDelegates.put(pool.typeString(),  xRTStringDelegate .INSTANCE);
 
             DELEGATES = mapDelegates;
 

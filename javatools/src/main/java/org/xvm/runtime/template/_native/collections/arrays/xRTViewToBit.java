@@ -51,6 +51,8 @@ public class xRTViewToBit
             registerNativeTemplate(new xRTViewToBitFromUInt32 (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromUInt64 (f_container, f_struct, true));
             registerNativeTemplate(new xRTViewToBitFromUInt128(f_container, f_struct, true));
+
+            registerNativeTemplate(new xRTViewToBitFromFloat64(f_container, f_struct, true));
             }
         }
     @Override
@@ -75,6 +77,8 @@ public class xRTViewToBit
             mapViews.put(pool.typeUInt32() , xRTViewToBitFromUInt32 .INSTANCE);
             mapViews.put(pool.typeUInt64() , xRTViewToBitFromUInt64 .INSTANCE);
             mapViews.put(pool.typeUInt128(), xRTViewToBitFromUInt128.INSTANCE);
+
+            mapViews.put(pool.typeFloat64(), xRTViewToBitFromFloat64.INSTANCE);
 
             VIEWS = mapViews;
             }

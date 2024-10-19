@@ -48,8 +48,7 @@ public class xRTViewFromBitToByte
         }
 
     @Override
-    public DelegateHandle createBitViewDelegate(DelegateHandle hSource,
-                                                Mutability mutability)
+    public DelegateHandle createBitViewDelegate(DelegateHandle hSource, Mutability mutability)
         {
         ClassComposition clzView = getCanonicalClass();
         if (hSource instanceof SliceHandle hSlice)
@@ -74,6 +73,11 @@ public class xRTViewFromBitToByte
         if (hSource instanceof ByteBasedDelegate.ByteArrayHandle hDelegate)
             {
             return new ViewHandle(clzView, hDelegate, hDelegate.getBitCount()/8, mutability);
+            }
+
+        if (hSource instanceof xRTViewToBitFromFloat64.ViewHandle hView)
+            {
+            return new ViewHandle(clzView, hView, hView.m_cSize/8, mutability);
             }
 
         throw new UnsupportedOperationException();

@@ -19,6 +19,7 @@ module TestArray {
         testNew();
         testNibble();
         testBits();
+        testDoubles();
 
         testComparable();
         testAggregation();
@@ -221,14 +222,20 @@ module TestArray {
         console.print();
     }
 
+    void testDoubles() {
+        Double[] doubles = [1.01, 3.14, 7.89, 1001.1];
+        Byte[]   bytes   = doubles.asByteArray();
+
+        assert bytes.toFloat64Array() == doubles;
+    }
+
     void testComparable() {
         import ecstasy.collections.Hasher;
         import ecstasy.collections.NaturalHasher;
 
         console.print("\n** testComparable()");
 
-        // Hasher<Int[]> hasher = new NaturalHasher(); // REVIEW with Cam; NaturalHasher is a Hasher<Int[]>
-        Hasher<Int[]> hasher =  new NaturalHasher<Int[]>();
+        Hasher<Int[]> hasher = new NaturalHasher();
 
         Int[] ints = [0, 1, 2, 3, 4];
         Int hash1 = hasher.hashOf(ints);

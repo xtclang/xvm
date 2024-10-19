@@ -23,6 +23,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt8;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt16;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToInt64;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewFromByteToFloat64;
 
 
 /**
@@ -52,6 +53,7 @@ public class xByteArray
         mixin.markNativeMethod("asInt8Array", VOID, null);
         mixin.markNativeMethod("asInt16Array", VOID, null);
         mixin.markNativeMethod("asInt64Array", VOID, null);
+        mixin.markNativeMethod("asFloat64Array", VOID, null);
 
         invalidateTypeInfo();
         }
@@ -93,10 +95,9 @@ public class xByteArray
                 }
             case "asInt8Array":
                 {
-                ArrayHandle hArray = (ArrayHandle) hTarget;
-
-                Mutability      mutability = hArray.m_mutability;
-                DelegateHandle  hView      = xRTViewFromByteToInt8.INSTANCE.createByteView(
+                ArrayHandle    hArray     = (ArrayHandle) hTarget;
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hView      = xRTViewFromByteToInt8.INSTANCE.createByteView(
                                                     hArray.m_hDelegate, mutability, 1);
                 return frame.assignValue(iReturn,
                         new ArrayHandle(getInt8ArrayComposition(), hView, mutability));
@@ -105,7 +106,6 @@ public class xByteArray
             case "asInt16Array":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
-
                 if (hArray.m_hDelegate.m_cSize % 2 != 0)
                     {
                     return frame.raiseException(xException.illegalArgument(frame,
@@ -122,7 +122,6 @@ public class xByteArray
             case "asInt64Array":
                 {
                 ArrayHandle hArray = (ArrayHandle) hTarget;
-
                 if (hArray.m_hDelegate.m_cSize % 8 != 0)
                     {
                     return frame.raiseException(xException.illegalArgument(frame,
@@ -134,6 +133,22 @@ public class xByteArray
                                                     hArray.m_hDelegate, mutability, 8);
                 return frame.assignValue(iReturn,
                         new ArrayHandle(getInt64ArrayComposition(), hView, mutability));
+                }
+
+            case "asFloat64Array":
+                {
+                ArrayHandle hArray = (ArrayHandle) hTarget;
+                if (hArray.m_hDelegate.m_cSize % 8 != 0)
+                    {
+                    return frame.raiseException(xException.illegalArgument(frame,
+                                "Invalid array size: " + hArray.m_hDelegate.m_cSize));
+                    }
+
+                Mutability     mutability = hArray.m_mutability;
+                DelegateHandle hView      = xRTViewFromByteToFloat64.INSTANCE.createByteView(
+                                                    hArray.m_hDelegate, mutability, 8);
+                return frame.assignValue(iReturn,
+                        new ArrayHandle(getFloat64ArrayComposition(), hView, mutability));
                 }
             }
 
@@ -220,7 +235,19 @@ public class xByteArray
         TypeComposition clz = INT64_ARRAY_CLZ;
         if (clz == null)
             {
-            INT64_ARRAY_CLZ = clz = f_container.resolveClass(pool().ensureArrayType(pool().typeInt64()));
+            INT64_ARRAY_CLZ = clz =
+                    f_container.resolveClass(pool().ensureArrayType(pool().typeInt64()));
+            }
+        return clz;
+        }
+
+    private TypeComposition getFloat64ArrayComposition()
+        {
+        TypeComposition clz = FLOAT64_ARRAY_CLZ;
+        if (clz == null)
+            {
+            FLOAT64_ARRAY_CLZ = clz =
+                    f_container.resolveClass(pool().ensureArrayType(pool().typeFloat64()));
             }
         return clz;
         }
@@ -228,4 +255,5 @@ public class xByteArray
     private static TypeComposition INT8_ARRAY_CLZ;
     private static TypeComposition INT16_ARRAY_CLZ;
     private static TypeComposition INT64_ARRAY_CLZ;
+    private static TypeComposition FLOAT64_ARRAY_CLZ;
     }

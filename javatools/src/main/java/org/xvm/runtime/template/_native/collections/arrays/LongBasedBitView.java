@@ -20,7 +20,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.Sl
 
 
 /**
- * A base class for native ArrayDelegate<Bit> views that point to delegates holding long arrays.
+ * A base class for native ArrayDelegate<ViewType> views that point to delegates holding long arrays.
  */
 public abstract class LongBasedBitView
         extends xRTViewToBit
