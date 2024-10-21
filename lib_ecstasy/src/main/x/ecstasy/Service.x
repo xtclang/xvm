@@ -56,8 +56,7 @@
  * * The runtime itself may provide events to the service, enqueuing them so that if the service is
  *   running, the event does not interrupt the execution. These events will be automatically
  *   processed by a service when it is not busy processing, such as when the current service
- *   invocation returns, calls [yield], or even potentially when another service is invoked by
- *   this service. Runtime events may be processed even if [reentrant] evaluates to `False`.
+ *   invocation returns, or even potentially when another service is invoked by this service.
  *   Runtime events include only:
  * * * Future completion events, for previous asynchronous invocations initiated by this service.
  * * * Timeout notification for the currently executing service invocation, although the runtime

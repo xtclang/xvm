@@ -3,24 +3,24 @@
  * class, property, or method **is safe** for concurrent/reentrant execution.
  *
  * Imagine a simple, provably reentrant- and concurrent-safe counter implementation, with silly
- * calls to `yield()` added, for purposes of this example:
+ * 'doSomething()' blocking call to another service added, for purposes of this example:
  *
  *     class Counter {
- *         private Int counter = 0;
+ *         private Int counter;
+ *         private SomeService svc;
  *         Int next() {
- *             this:service.yield();
  *             Int n = ++counter; // read, modify, and write the value without interruption
- *             this:service.yield();
+ *             svc.doSomething();
  *             return n;
  *         }
  *     }
  *
  * In most cases, one would expect that an instance of this class is mutable. As such, the class
- * (and thus the method) are implicitly `@Synchronized`, and thus the call to `yield()` does not
- * actually yield, and thus it does not allow other fibers to execute.
+ * (and thus the method) are implicitly `@Synchronized`, and thus the call to `doSomething()` does
+ * not actually allow other fibers to execute.
  *
  * Any one of the following actions would mark this code "safe" for executing other fibers during
- * the call to `yield()`:
+ * the call to `doSomething()`:
  *
  * * The `next()` method could be annotated with `@Concurrent`;
  *

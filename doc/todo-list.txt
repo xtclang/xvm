@@ -9,8 +9,6 @@
 - CP: add API support for multi-part body, for example (Body.x):
     conditional Body[] multipart() = False;
 
-- CP: need to implement "persistent" mutators for HasherMap
-
 - GG: add the following method to Tuple
         /**
          * Obtain a `List` view of this Tuple. Note, that the type check will be performed only
@@ -31,15 +29,8 @@
 - GG: consider changing Service.callLater() API to
     <Result> Future<Result> callLater(function Result doLater());
 
-- consider a @Proxy annotation for mutable service properties to create a delegation pattern (see
-  SessionImpl.attributes)
-
 - add a method to Map API to evaluate the "worst lookup cost" based on the current content
   (Mark's suggestion to evaluated keys' hashCode distribution)
-
-- how to move ecstasy.mgmt package to a separate module? FileTemplate depends on ModuleRepository...
-
-- GG: enum ClassCompositions without type parameters could be made into CanonicalCompositions
 
 - consider allowing comparison between T and T?; for example making Null always "Lesser"
 
@@ -65,15 +56,7 @@
 
 - CP: consider adding specialized String.append(Char c) and String.append(String s)
 
-- consider not needing the ^ for a return of a tail-call invocation (except in a try block?)
-    "return foo();" should be equivalent to "return foo^();"
-
 - CP: consider a compiler warning if a return value of Closeable type is ignored (@Adopt annotation)
-
-- consider a new Async mixin:
-        mixin Async into Object implements Service {}
-  allowing to turn a mutable class into a service:
-        ErrorList errs = new @Async ErrorList(10);
 
 - add compiler support for conditional Tuple
 
@@ -92,4 +75,3 @@
 - what if timer.schedule() lambda throws? (exception is invisible)
 - infinite loop detection
 - upon a Future's gc report if an exception has not been handled
-- allow injection of Console to specify a history file (or do it by default?)
