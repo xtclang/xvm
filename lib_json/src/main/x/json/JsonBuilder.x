@@ -86,13 +86,14 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
             Doc existing = get(id);
             switch (existing.is(_)) {
             case JsonObject:
-                mergeObjectMember(existing, path, doc, id);
+                mergeIntoObjectMember(existing, path, doc, id);
                 break;
             case JsonArray:
-                mergeArrayMember(existing, path, doc, id);
+                mergeIntoArrayMember(existing, path, doc, id);
                 break;
             case Primitive:
-                mergePrimitiveMember(existing, path, doc, id);
+                // existing is a primitive so it cannot be merged into and is instead replaced
+                replaceMember(path, doc, id);
                 break;
             default:
                 assert;
@@ -113,14 +114,14 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     }
 
     /**
-     * Deeply merge a `JsonObject` value into this builder.
+     * Deeply merge a JSON value into a `JsonObject` in this builder.
      *
-     * @param obj   the `JsonObject` to merge
-     * @param path  the path to the location the object value should be merged into
-     * @param doc   the value to merge the object into
+     * @param obj   the `JsonObject` to merge into
+     * @param path  the path to the location the `Doc` value should be merged into
+     * @param doc   the JSON value to merge into the `JsonObject`
      * @param id    the id of the entry being merged into
      */
-    protected void mergeObjectMember(JsonObject obj, JsonPointer path, Doc doc, Id id) {
+    protected void mergeIntoObjectMember(JsonObject obj, JsonPointer path, Doc doc, Id id) {
         JsonPointer remainder = path.remainder ?: assert;
         JsonObject  updated   = new JsonObjectBuilder(obj).deepMerge(remainder, doc).build();
         update(id, updated);
@@ -139,28 +140,27 @@ class JsonBuilder<JsonType extends JsonStruct, Id extends Int | String> {
     }
 
     /**
-     * Deeply merge a `JsonArray` value into this builder.
+     * Deeply merge a JSON value into a `JsonArray` value in this builder.
      *
-     * @param array  the `JsonArray` to merge
-     * @param path   the path to the location the array value should be merged into
-     * @param doc    the value to merge the array into
+     * @param array  the `JsonArray` to merge into
+     * @param path   the path to the location the JSON value should be merged into
+     * @param doc    the JSON value to merge the into the `JsonArray`
      * @param id     the id of the entry being merged into
      */
-    protected void mergeArrayMember(JsonArray array, JsonPointer path, Doc doc, Id id) {
+    protected void mergeIntoArrayMember(JsonArray array, JsonPointer path, Doc doc, Id id) {
         JsonPointer remainder = path.remainder ?: assert;
         JsonArray   updated   = new JsonArrayBuilder(array).deepMerge(remainder, doc).build();
         update(id, updated);
     }
 
     /**
-     * Deeply merge a `Primitive` json value into this builder.
+     * Replace a value in this builder with a specified value.
      *
-     * @param obj   the `Primitive` value to merge (TODO JK: value is not used!?)
-     * @param path  the path to the location the primitive value should be merged into
-     * @param doc   the value to merge the primitive into
-     * @param id    the id of the entry being merged into
+     * @param path  the path to the location of the value to replace
+     * @param doc   the JSON value to replace any existing value with
+     * @param id    the id of the entry being replaced
      */
-    protected void mergePrimitiveMember(Primitive obj, JsonPointer path, Doc doc, Id id) {
+    protected void replaceMember(JsonPointer path, Doc doc, Id id) {
         JsonPointer remainder = path.remainder ?: assert;
         JsonObject  updated   = new JsonObjectBuilder().deepMerge(remainder, doc).build();
         update(id, updated);

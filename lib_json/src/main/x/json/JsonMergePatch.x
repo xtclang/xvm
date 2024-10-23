@@ -30,33 +30,80 @@ class JsonMergePatch(Doc patch) {
         return merge(target, patch, inPlace);
     }
 
+    /**
+     * Perform a merge as described by the pseudo code in RFC 7396.
+     *
+     *     define MergePatch(Target, Patch):
+     *          if Patch is an Object:
+     *            if Target is not an Object:
+     *              Target = {} # Ignore the contents and set it to an empty Object
+     *            for each Name/Value pair in Patch:
+     *              if Value is null:
+     *                if Name exists in Target:
+     *                  remove the Name/Value pair from Target
+     *              else:
+     *                Target[Name] = MergePatch(Target[Name], Value)
+     *            return Target
+     *          else:
+     *            return Patch
+     *
+     *  * If the `patch` parameter is not a `JsonObject` the `patch` parameter is returned as the result.
+     *
+     *  * If the target `Doc` is not a `JsonObject` it is ignored and the merge will be applied to
+     *    a new empty `JsonObject`.
+     *
+     *  * If the target `Doc` is a mutable `JsonObject` and the `inPlace` parameter is `True` the merge will be
+     *    applied directly to the target.
+     *
+     *  * A `Null` value for a key in the `patch` will cause the corresponding entry in the target to be removed.
+     *    Any `Null` value in the `patch` will not appear in the merged result.
+     *
+     * @param doc      that target JSON value to apply the patch to
+     * @param patch    the JSON value representing the patch to apply
+     * @param inPlace  (optional) `True` to modify the target in place (if applicable), or `False`
+     *                 to leave the target unmodified and return a patched copy of the target
+     *
+     * @return the JSON value resulting from applying this patch to the target
+     */
     private Doc merge(Doc doc, Doc patch, Boolean inPlace = False) {
         if (patch.is(JsonObject)) {
             JsonObject target;
-
             if (doc.is(JsonObject)) {
-                target = doc;
+                if (doc.is(immutable) || !inPlace) {
+                    // we can make in place true as we are making a new target so there is
+                    // no point continually copying target elements from here on
+                    inPlace = True;
+                    target = json.newObject();
+                    target.putAll(doc);
+                } else {
+                    target = doc;
+                }
             } else {
-                target = json.newObject();
+                // we can make in place true as we are making a new target so there is
+                // no point continually copying target elements from here on
+                inPlace = True;
+                target  = json.newObject();
             }
 
-            JsonObjectBuilder builder = new JsonObjectBuilder(target);
-            for (Map.Entry<String, Doc> entry : patch.entries) {
-                String key   = entry.key;
-                Doc    value = entry.value;
+            for ((String key, Doc value) : patch) {
                 if (value == Null) {
                     target.remove(key);
                 } else {
-                    if (Doc targetValue := target.get(key)) {
-                        merge(key, merge(targetValue, value, inPlace));
-                    } else {
-                        // merging the value into a new JsonObject (hence inPlace is `True`)
-                        merge(key, merge(json.newObject(), value, True));
-                    }
+                    target[key] = merge(target[key], value, inPlace);
                 }
             }
-            return builder.build();
+            // TODO JK:
+            // If the original target is immutable the target being returned will be a copy
+            // that is currently mutable. Should it be made immutable to match the original
+            // target doc parameter?
+            // Basically, should the mutability of the result match the mutability of the
+            // original doc parameter?
+            return target;
         }
+        // TODO JK:
+        // Should a copy of the patch be returned and should it be immutable?
+        // If we do make a copy, should the mutability of the result match the mutability of the
+        // original doc parameter?
         return patch;
     }
 
