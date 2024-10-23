@@ -2,14 +2,23 @@ module TestSimple
     {
     @Inject Console console;
 
-    void run()
-        {
-        console.print(new Test().value);
+    void run() {
+        S1 s1 = new S1();
+        Int r = s1.deadlock^();
+        &r.thenDo(() -> console.print("***** Finished!"));
     }
 
-    class Test {
-        @Lazy Int value.get() = calculateValue(); // this used to throw "Unknown outer" exception
+    service S1 {
+        Int deadlock() {
+            simulateSlowIO(Duration:1S);
+            return 42;
+        }
+    }
 
-        Int calculateValue() = 42;
+    static void simulateSlowIO(Duration duration) {
+        @Inject Clock clock;
+        @Future Tuple done;
+        clock.schedule(duration, () -> {done = Tuple:();}); // this used to hang (deadlock)
+        return done;
     }
 }

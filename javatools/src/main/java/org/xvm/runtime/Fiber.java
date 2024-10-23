@@ -108,28 +108,18 @@ public class Fiber
         }
 
     /**
-     * @return true iff this fiber is waiting, terminating or currently running and points back (as
-     *         a logical thread of execution) to a waiting or running fiber on the specified service
+     * @return true iff this fiber points back (as a logical thread of execution) to a fiber on the
+     *         specified service
      */
     public boolean isContinuationOf(Fiber fiberOrig)
         {
-        switch (m_status)
+        if (f_context == fiberOrig.f_context)
             {
-            case Initial, Running, Paused:
-                if (this != f_context.getCurrentFiber())
-                    {
-                    return false;
-                    }
-                break;
-
-            case Waiting:
-            case Terminating:
-                break;
+            return true;
             }
 
         Fiber fiberCaller = getCaller();
-        return f_context == fiberOrig.f_context ||
-               fiberCaller != null && fiberCaller.isContinuationOf(fiberOrig);
+        return fiberCaller != null && fiberCaller.isContinuationOf(fiberOrig);
         }
 
     /**
@@ -530,7 +520,8 @@ public class Fiber
      */
     public String reportWaiting()
         {
-        assert m_status == FiberStatus.Waiting;
+        assert m_status == FiberStatus.Waiting
+            || m_status == FiberStatus.Terminating;
 
         Object oPending = m_oPendingRequests;
         if (oPending == null)
@@ -544,18 +535,24 @@ public class Fiber
             Fiber fiber = ((Request) oPending).m_fiber;
             return " for " + (fiber == null ? "initial" : fiber);
             }
-        else
+
+        StringBuilder sb     = new StringBuilder(" for [");
+        boolean       fFirst = true;
+        for (Request request : ((Map<CompletableFuture, Request>) oPending).values())
             {
-            StringBuilder sb = new StringBuilder(" for [");
-            for (Request request : ((Map<CompletableFuture, Request>) oPending).values())
+            if (fFirst)
                 {
-                Fiber fiber = request.m_fiber;
-                sb.append(fiber)
-                  .append(", ");
+                fFirst = false;
                 }
-            sb.append(']');
-            return sb.toString();
+            else
+                {
+                sb.append(", ");
+                }
+            Fiber fiber = request.m_fiber;
+            sb.append(fiber);
             }
+        sb.append(']');
+        return sb.toString();
         }
 
 
