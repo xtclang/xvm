@@ -1723,6 +1723,11 @@ public abstract class TypeConstant
             return info;
             }
 
+        return ensureTypeInfo(info, errs);
+        }
+
+    private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs)
+        {
         ConstantPool pool = getConstantPool();
         if (info == null)
             {
@@ -2078,7 +2083,7 @@ public abstract class TypeConstant
     /**
      * Actual buildTypeInfo implementation.
      */
-    private synchronized TypeInfo buildTypeInfoImpl(ErrorListener errs)
+    private TypeInfo buildTypeInfoImpl(ErrorListener errs)
         {
         // the raw type-info has to be built as either ":private" or ":struct", so delegate the
         // building for ":public" to ":private", and then strip out the non-accessible members
