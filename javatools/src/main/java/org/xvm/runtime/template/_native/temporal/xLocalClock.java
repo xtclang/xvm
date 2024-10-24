@@ -61,8 +61,15 @@ public class xLocalClock
         markNativeProperty("now");
         markNativeProperty("timezone");
 
-        // LocalClock has more than one "schedule" method; need to be specific
-        markNativeMethod("schedule",  new String[]{"temporal.Time", "temporal.Clock.Alarm", "Boolean"}, null);
+        // LocalClock has two "schedule" methods and while one is a trivial default implementation,
+        // it would execute on the LocalClock service that belongs to the native container.
+        // As a result, the "alarm" handle would be proxied via FunctionProxyHandle, which would
+        // keep a hard reference to the calling service and would "leak" that service unless the
+        // caller explicitly cancelled.
+        // To prevent that, we need to implement it natively, which would execute the "schedule"
+        // method on the caller's context and avoid creation of the alarm proxy.
+        markNativeMethod("schedule",  new String[]{"temporal.Duration", "temporal.Clock.Alarm", "Boolean"}, null);
+        markNativeMethod("schedule",  new String[]{"temporal.Time"    , "temporal.Clock.Alarm", "Boolean"}, null);
 
         invalidateTypeInfo();
         }
@@ -99,8 +106,27 @@ public class xLocalClock
                 GenericHandle  hWakeup = (GenericHandle)  ahArg[0];
                 FunctionHandle hAlarm  = (FunctionHandle) ahArg[1];
                 BooleanHandle  hKeep   = ahArg[2] instanceof BooleanHandle hB ? hB : xBoolean.FALSE;
+                long           ldtNow  = frame.f_context.f_container.currentTimeMillis();
+                long           ldtWakeup;
+                long           cDelay;
+                if (hWakeup.getType().equals(frame.poolContext().typeDuration()))
+                    {
+                    // hWakeUp is "Duration"
+                    LongLong llPicos = ((LongLongHandle) hWakeup.getField(null, "picoseconds")).getValue();
 
-                return invokeSchedule(frame, hWakeup, hAlarm, hKeep, iReturn);
+                    cDelay    = llPicos.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
+                    ldtWakeup = ldtNow + cDelay;
+                    }
+                else
+                    {
+                    // hWakeUp is "Time"
+                    LongLong llEpoch = ((LongLongHandle) hWakeup.getField(null, "epochPicos")).getValue();
+
+                    ldtWakeup = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
+                    cDelay    = Math.max(0, ldtWakeup - ldtNow);
+                    }
+
+                return invokeSchedule(frame, ldtWakeup, cDelay, hAlarm, hKeep, iReturn);
                 }
             }
 
@@ -109,17 +135,12 @@ public class xLocalClock
 
     /**
      * Native implementation of
-     *  "Cancellable schedule(Time when, Alarm alarm, Boolean keepAlive = False)"
+     *  "Cancellable schedule(Time     when, Alarm alarm, Boolean keepAlive = False)" and
+     *  "Cancellable schedule(Duration delay, Alarm alarm, Boolean keepAlive = False)"
      */
-    private int invokeSchedule(Frame frame, GenericHandle hWhen,
+    private int invokeSchedule(Frame frame, long ldtWakeup, long cDelay,
                                FunctionHandle hAlarm, BooleanHandle hKeepAlive, int iReturn)
         {
-        // assert (hWhen.timezone == NoTZ) == (this.timezone == NoTZ)
-        LongLong llEpoch    = ((LongLongHandle) hWhen.getField(null, "epochPicos")).getValue();
-        long     ldtNow     = frame.f_context.f_container.currentTimeMillis();
-        long     ldtWakeup  = llEpoch.divUnsigned(xNanosTimer.PICOS_PER_MILLI).getLowValue();
-        long     cDelay     = Math.max(0, ldtWakeup - ldtNow);
-
         Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
         try
             {
