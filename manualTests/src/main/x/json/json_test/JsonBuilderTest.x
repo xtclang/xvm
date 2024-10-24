@@ -76,9 +76,9 @@ class JsonBuilderTest {
     void assertDeepCopyObject(JsonObject source, JsonObject copy) {
         assert &copy != &source as "source and copy should be different object references";
         assert copy.inPlace == True as "copy should be mutable";
-        for (Map.Entry<String, Doc> entry : source.entries) {
-            assert Doc copyValue := copy.get(entry.key);
-            assertDeepCopy(entry.value, copyValue);
+        for ((String key, Doc value) : source) {
+            assert Doc copyValue := copy.get(key);
+            assertDeepCopy(value, copyValue);
         }
     }
 
@@ -142,10 +142,12 @@ class JsonBuilderTest {
         JsonObject objExpected1 = Map<String, Doc>:["three"=3, "four"=44, "five"=5];
         JsonObject source       = Map<String, Doc>:["c"=Map<String, Doc>:["1"=objUpdate1]];
         JsonObject result       = new JsonObjectBuilder(target).deepMerge(source).build();
+        Doc        a            = result["a"];
         Doc        c            = result["c"];
+        assert a.is(String);
+        assert a == "b";
         assert c.is(Array<Doc>);
         assert c == Array<Doc>:[objOrig0, objExpected1, objOrig2];
-        //assert result == Map<String, Doc>:["a"="b", "c"=Array<Doc>:[objOrig0, objExpected1, objOrig2]];
     }
 
     @Test
@@ -178,11 +180,45 @@ class JsonBuilderTest {
         assert target == Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
     }
 
+    // ---- Merge into primitive fields ------------------------------------------------------------
+
     @Test
-    void shouldMergeObjectWithPrimitiveIntoObjectWithExistingPrimitive() {
+    void shouldMergePrimitiveIntoObjectWithExistingPrimitiveField() {
         JsonObject target = Map:["a"="b", "c"="d"];
         JsonObject source = Map:["c"="updated"];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
         assert result == Map:["a"="b", "c"="updated"];
+    }
+
+    @Test
+    void shouldMergePrimitiveIntoObjectWithoutExistingPrimitiveField() {
+        JsonObject target = Map:["a"="b"];
+        JsonObject source = Map:["c"="d"];
+        JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
+        assert result == Map:["a"="b", "c"="d"];
+    }
+
+    @Test
+    void shouldMergeObjectIntoObjectWithExistingPrimitiveField() {
+        JsonObject child  = Map:["child-one"="value-one", "child-two"="value-two"];
+        JsonObject target = Map:["a"="b", "c"="d"];
+        JsonObject source = Map:["c"=child];
+        JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
+        assert result["a"] == "b";
+        Doc c = result["c"];
+        assert c.is(JsonObject);
+        assert c == child;
+    }
+
+    @Test
+    void shouldMergeArrayIntoObjectWithExistingPrimitiveField() {
+        JsonArray  child  = Array<Doc>:[1, 2, 3];
+        JsonObject target = Map:["a"="b", "c"="d"];
+        JsonObject source = Map:["c"=child];
+        JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
+        assert result["a"] == "b";
+        Doc c = result["c"];
+        assert c.is(JsonArray);
+        assert c == child;
     }
 }
