@@ -997,21 +997,11 @@ public class AssignmentStatement
                             }
 
                         // otherwise create a regular assignment operation
+                        // TODO: it should alwaye hold:  astRvalue.getType(0) == argRVal.getType(),
+                        //       however under some scenarios (mostly with array access) we're
+                        //       loosing the fidelity; this is a temporary compensation
                         TypeConstant typeTarget = astLValue.getType(0);
-                        TypeConstant typeArg    = astRValue.getType(0);
-
-                        if (typeTarget == null)
-                            {
-                            typeTarget = lvalueExpr.getType();
-                            }
-                        if (typeTarget.containsFormalType(true))
-                            {
-                            typeTarget = ctx.resolveFormalType(typeTarget);
-                            }
-                        if (typeArg == null)
-                            {
-                            typeArg = rvalue.getType();
-                            }
+                        TypeConstant typeArg    = argRVal.getType();
 
                         astAssign = new AssignAST(astLValue, operAsn, astRValue,
                             findInPlaceAssignMethod(ctx, typeTarget, typeArg, errs));
