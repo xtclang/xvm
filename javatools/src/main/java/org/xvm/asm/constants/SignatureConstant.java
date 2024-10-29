@@ -540,6 +540,38 @@ public class SignatureConstant
         }
 
     /**
+     * Determine if all the types used by this SignatureConstant are shared between its pool and the
+     * specified pool.
+     *
+     * @param poolOther  the constant pool to check
+     *
+     * @return true iff this SignatureConstant is shared between its pool and the specified pool
+     */
+    public boolean isShared(ConstantPool poolOther)
+        {
+        if (poolOther != getConstantPool())
+            {
+            for (TypeConstant type : m_aconstParams)
+                {
+                if (!type.isShared(poolOther))
+                    {
+                    return false;
+                    }
+                }
+
+            for (TypeConstant type : m_aconstReturns)
+                {
+                if (!type.isShared(poolOther))
+                    {
+                    return false;
+                    }
+                }
+            }
+
+        return true;
+        }
+
+    /**
      * @return the type of the function that corresponds to this SignatureConstant
      */
     public TypeConstant asFunctionType()

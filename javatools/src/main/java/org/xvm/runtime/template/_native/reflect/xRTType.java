@@ -467,7 +467,8 @@ public class xRTType
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xBoolean.makeHandle(
-            (((TypeHandle) hValue1).getDataType()).equals(((TypeHandle) hValue2).getDataType())));
+            (((TypeHandle) hValue1).getUnsafeDataType()).equals(
+             ((TypeHandle) hValue2).getUnsafeDataType())));
         }
 
     @Override
@@ -475,13 +476,14 @@ public class xRTType
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         return frame.assignValue(iReturn, xOrdered.makeHandle(
-            (((TypeHandle) hValue1).getDataType()).compareTo(((TypeHandle) hValue2).getDataType())));
+            (((TypeHandle) hValue1).getUnsafeDataType()).compareTo(
+             ((TypeHandle) hValue2).getUnsafeDataType())));
         }
 
     protected int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
         {
         return frame.assignValue(iReturn,
-            xInt64.makeHandle(((TypeHandle) hTarget).getDataType().hashCode()));
+            xInt64.makeHandle(((TypeHandle) hTarget).getUnsafeDataType().hashCode()));
         }
 
 
@@ -855,7 +857,7 @@ public class xRTType
     public int getPropertyForm(Frame frame, TypeHandle hType, int iReturn)
         {
         return Utils.assignInitializedEnum(frame,
-                makeFormHandle(frame, hType.isForeign() ? null : hType.getDataType()), iReturn);
+                makeFormHandle(frame, hType.getUnsafeDataType()), iReturn);
         }
 
     /**
@@ -1221,7 +1223,7 @@ public class xRTType
      */
     protected int invokeAccessSpecified(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant type = hType.getDataType();
+        TypeConstant type = hType.getUnsafeDataType();
         if (type.isAccessSpecified())
             {
             ObjectHandle hEnum = Utils.ensureInitializedEnum(frame,
@@ -1360,7 +1362,7 @@ public class xRTType
      */
     protected int invokeContained(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant typeTarget = hType.getDataType();
+        TypeConstant typeTarget = hType.getUnsafeDataType();
         // REVIEW CP: include PropertyClassTypeConstant?
         if (typeTarget.isVirtualChild() || typeTarget.isAnonymousClass())
             {
@@ -1430,7 +1432,7 @@ public class xRTType
      */
     protected int invokeModifying(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant type = hType.getDataType();
+        TypeConstant type = hType.getUnsafeDataType();
         return type.isModifyingType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
                         type.getUnderlyingType().ensureTypeHandle(frame.f_context.f_container))
@@ -1443,7 +1445,7 @@ public class xRTType
     protected int invokeNamed(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         String       sName = null;
-        TypeConstant type  = hType.getDataType();
+        TypeConstant type  = hType.getUnsafeDataType();
 
         if (type.isSingleDefiningConstant())
             {
@@ -1483,7 +1485,7 @@ public class xRTType
      */
     protected int invokeParameterized(Frame frame, TypeHandle hType, int[] aiReturn)
         {
-        TypeConstant type = hType.getDataType();
+        TypeConstant type = hType.getUnsafeDataType();
         if (!type.isParamsSpecified())
             {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -1583,7 +1585,7 @@ public class xRTType
     protected int invokeRelational(Frame frame, TypeHandle hType, int[] aiReturn)
         {
         Container    container = frame.f_context.f_container;
-        TypeConstant type      = hType.getDataType();
+        TypeConstant type      = hType.getUnsafeDataType();
         return type.isRelationalType()
                 ? frame.assignValues(aiReturn, xBoolean.TRUE,
                         type.getUnderlyingType().ensureTypeHandle(container),
@@ -1716,15 +1718,13 @@ public class xRTType
         {
         xEnum enumForm = (xEnum) INSTANCE.f_container.getTemplate("reflect.Type.Form");
 
-        if (type == null)
-            {
-            // this is an indicator of a foreign type
-            return enumForm.getEnumByName("Pure");
-            }
-
         switch (type.getFormat())
             {
             case TerminalType:
+                if (!type.isShared(frame.poolContext()))
+                    {
+                    return enumForm.getEnumByName("Pure");
+                    }
                 if (type.isSingleDefiningConstant())
                     {
                     return switch (type.getDefiningConstant().getFormat())
@@ -2116,21 +2116,21 @@ public class xRTType
         public int compareTo(ObjectHandle obj)
             {
             return obj instanceof TypeHandle that
-                    ? this.getDataType().compareTo(that.getDataType())
+                    ? this.getUnsafeDataType().compareTo(that.getUnsafeDataType())
                     : 1;
             }
 
         @Override
         public int hashCode()
             {
-            return getDataType().hashCode();
+            return getUnsafeDataType().hashCode();
             }
 
         @Override
         public boolean equals(Object obj)
             {
             return obj instanceof TypeHandle that &&
-                    this.getDataType().equals(that.getDataType());
+                    this.getUnsafeDataType().equals(that.getUnsafeDataType());
             }
 
         @Override

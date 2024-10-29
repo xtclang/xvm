@@ -319,12 +319,22 @@ public class ClassComposition
      */
     private CallChain ensureMethodChain(Object nidMethod)
         {
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool   = getConstantPool();
+        boolean      fCache = true;
         if (nidMethod instanceof SignatureConstant sig)
             {
             if (sig.getConstantPool() != pool)
                 {
-                nidMethod = pool.register(sig);
+                if (sig.isShared(pool))
+                    {
+                    nidMethod = pool.register(sig);
+                    }
+                else
+                    {
+                    // what else can we do here?
+                    fCache = false;
+                    System.err.println("WARNING: Foreign method chain for " + sig); // TODO: remove
+                    }
                 }
             }
         else
@@ -333,18 +343,30 @@ public class ClassComposition
             IdentityConstant idParent = idNested.getIdentityConstant();
             if (idParent.getConstantPool() != pool)
                 {
-                idParent  = (IdentityConstant) pool.register(idParent);
-                nidMethod = idParent.appendNestedIdentity(pool, idNested);
+                if (idParent.isShared(pool))
+                    {
+                    idParent  = (IdentityConstant) pool.register(idParent);
+                    nidMethod = idParent.appendNestedIdentity(pool, idNested);
+                    }
+                else
+                    {
+                    fCache = false;
+                    System.err.println("WARNING: Foreign nested method " + idNested +
+                                       " for " + idParent); // TODO: remove
+                    }
                 }
             }
-        return f_mapMethods.computeIfAbsent(nidMethod,
-            nid ->
-                {
-                TypeInfo info = isStruct()
-                        ? f_typeStructure.ensureTypeInfo()
-                        : f_typeInception.ensureTypeInfo();
-                return new CallChain(info.getOptimizedMethodChain(nid));
-                });
+        return fCache
+                ? f_mapMethods.computeIfAbsent(nidMethod, this::computeMethodChain)
+                : computeMethodChain(nidMethod);
+        }
+
+    private CallChain computeMethodChain(Object nidMethod)
+        {
+        TypeInfo info = isStruct()
+                ? f_typeStructure.ensureTypeInfo()
+                : f_typeInception.ensureTypeInfo();
+        return new CallChain(info.getOptimizedMethodChain(nidMethod));
         }
 
     @Override
@@ -365,20 +387,37 @@ public class ClassComposition
      */
     private CallChain ensureGetterChain(PropertyConstant idProp)
         {
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool    = getConstantPool();
+        boolean      fShared = true;
         if (idProp.getConstantPool() != pool)
             {
-            idProp = (PropertyConstant) pool.register(idProp);
-            }
-        CallChain chain = f_mapGetters.computeIfAbsent(idProp,
-            id ->
+            if (idProp.getConstantPool() != pool)
                 {
-                MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
-                return aBody == null
-                        ? NIL_CHAIN
-                        : CallChain.createPropertyCallChain(aBody);
-                });
+                if (idProp.isShared(pool))
+                    {
+                    idProp = (PropertyConstant) pool.register(idProp);
+                    }
+                else
+                    {
+                    // most likely this happens due to duck-typed properties; we may consider
+                    // caching chains by name (the PropertyInfo is most likely cached already)
+                    fShared = false;
+                    }
+                }
+            }
+
+        CallChain chain = fShared
+                ? f_mapGetters.computeIfAbsent(idProp, this::computeGetterChain)
+                : computeGetterChain(idProp);
         return chain == NIL_CHAIN ? null : chain;
+        }
+
+    private CallChain computeGetterChain(PropertyConstant id)
+        {
+        MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedGetChain(id);
+        return aBody == null
+                ? NIL_CHAIN
+                : CallChain.createPropertyCallChain(aBody);
         }
 
     @Override
@@ -399,20 +438,32 @@ public class ClassComposition
      */
     private CallChain ensurePropertySetterChain(PropertyConstant idProp)
         {
-        ConstantPool pool = getConstantPool();
+        ConstantPool pool    = getConstantPool();
+        boolean      fShared = true;
         if (idProp.getConstantPool() != pool)
             {
-            idProp = (PropertyConstant) pool.register(idProp);
-            }
-        CallChain chain = f_mapSetters.computeIfAbsent(idProp,
-            id ->
+            if (idProp.isShared(pool))
                 {
-                MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
-                return aBody == null
-                        ? NIL_CHAIN
-                        : CallChain.createPropertyCallChain(aBody);
-                });
+                idProp = (PropertyConstant) pool.register(idProp);
+                }
+            else
+                {
+                // see the comment in ensureGetterChain()
+                fShared = false;
+                }
+            }
+        CallChain chain = fShared
+                ? f_mapSetters.computeIfAbsent(idProp, this::computeSetterChain)
+                : computeSetterChain(idProp);
         return chain == NIL_CHAIN ? null : chain;
+        }
+
+    private CallChain computeSetterChain(PropertyConstant id)
+        {
+        MethodBody[] aBody = f_typeInception.ensureTypeInfo().getOptimizedSetChain(id);
+        return aBody == null
+                ? NIL_CHAIN
+                : CallChain.createPropertyCallChain(aBody);
         }
 
     @Override
