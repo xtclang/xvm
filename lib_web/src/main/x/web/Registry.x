@@ -1,11 +1,11 @@
 import json.Doc;
-import json.Schema;
 
 import convert.Codec;
 import convert.Format;
 
 import convert.codecs.FormatCodec;
 import convert.codecs.Utf8Codec;
+
 import convert.formats.JsonFormat;
 
 /**

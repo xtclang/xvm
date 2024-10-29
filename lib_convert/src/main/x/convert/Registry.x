@@ -23,7 +23,6 @@ service Registry
         DefaultFormats.forEach(registerFormat);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -56,6 +55,16 @@ service Registry
      */
     protected Map<String, Shareable> resources = new HashMap();
 
+    /**
+      * The JSON Schema to use if one is not specified externally.
+      */
+    private @Lazy Schema internalJsonSchema.calc() {
+        return new Schema(
+                enableReflection = True,
+                enableMetadata   = True,
+                enablePointers   = True,
+                randomAccess     = True);
+    }
 
     // ----- well-known resources ------------------------------------------------------------------
 
@@ -68,8 +77,7 @@ service Registry
             if (val schema := resources.get("jsonSchema")) {
                 return schema.as(Schema);
             }
-
-            return Schema.DEFAULT;
+            return internalJsonSchema;
         }
 
         @Override
@@ -153,7 +161,6 @@ service Registry
         {
         return convertersByName.get(name);
         }
-
 
     // ----- Codec support -------------------------------------------------------------------------
 

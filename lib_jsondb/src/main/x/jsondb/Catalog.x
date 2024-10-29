@@ -248,7 +248,7 @@ service Catalog<Schema extends RootSchema>
      */
     @Concurrent
     @Lazy json.Schema jsonSchema.calc() {
-        return metadata?.jsonSchema : json.Schema.DEFAULT;
+        return metadata?.jsonSchema : internalJsonSchema;
     }
 
     /**
@@ -257,9 +257,10 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     @Lazy json.Schema internalJsonSchema.calc() {
         return new json.Schema(
-            enableReflection = True,
+            randomAccess     = True, // TODO GG: test without this (fails)
             enableMetadata   = True,
-            randomAccess     = True,     // TODO test without this (fails)
+            enablePointers   = True,
+            enableReflection = True,
             );
     }
 
