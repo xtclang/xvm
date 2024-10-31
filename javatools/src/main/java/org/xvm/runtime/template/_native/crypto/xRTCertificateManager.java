@@ -226,7 +226,7 @@ public class xRTCertificateManager
             }
 
         int ofDomain = sDName.indexOf("CN=");
-        assert ofDomain > 0;
+        assert ofDomain >= 0;
         String sDomain = sDName.substring(ofDomain + 3);
 
         String sKeyPath  = sCertsDir + File.separator + sDomain + ".key";
