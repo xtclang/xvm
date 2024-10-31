@@ -4,6 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.util.VBitSet;
 import org.xvm.xtc.cons.ParamTCon;
+import org.xvm.xtc.cons.SigCon;
 import org.xvm.xtc.ast.AST;
 
 import java.util.Arrays;
@@ -53,10 +54,81 @@ public class XFun extends XType {
     return make(args,false);
   }
 
+
+  // Return type; always exactly one return value:
+  // - No given rets: VOID
+  // - Exactly one: rets[0]
+  // - Two, but first is a boolean: fconditional of the 2nd
+  // - Three, or two and not condition: return a tuple
+  public static XType ret(XType[] rets) {
+    if( rets==null || rets.length==0 )
+      return XCons.VOID;
+    if( rets.length==1 )
+      return rets[0];
+    // Treat as conditional
+    if( isCondRet(rets) )
+      return rets[1]; // Use the non-conditional return
+    // Tuplize
+    XClz ret = XCons.make_tuple(rets);
+    org.xvm.xec.ecstasy.collections.Tuple.make_class(ret);
+    return ret;
+  }
+  private static boolean isCondRet( XType[] rets ) {
+    return rets!=null && rets.length==2 && rets[0]==XCons.BOOL;
+  }
+
+  // Make an XFun from parts; this works for e.g. SigCon's which do not have a
+  // MethodPart and indeed are trying to find one.
+
+  // The args are broken into sets:
+  // - Parent xargs/types, one explicit type argument per parent type var
+  // - Normal args, mapping to _args
+  // - Nested inner classes get the outer class as an arg
+  public static XFun make( ClassPart clazz, boolean constructor, XType[] args, XType[] rets ) {
+    boolean isCondRet = isCondRet(rets);
+    XType ret = ret(rets);
+
+    // Non-constructors just walk the args
+    if( !constructor )
+      // Don't box privates or operators, DO box args to others
+      return make(isCondRet, ret, args );
+
+    // Constructors get all the type args from their class
+    XClz clz = clazz.tclz();
+    int len = clz._tns.length, j=len;
+    // Also get their stated args
+    if( args != null ) len += args.length;
+    // Nested inner classes get the outer class as an arg.
+    ClassPart outer = clazz.isNestedInnerClass();
+    if( outer!=null ) len++;
+
+    // Extend as needed
+    XType[] zts = new XType[len+1/*return*/];
+    zts[0] = ret;
+    System.arraycopy(clz._xts,0,zts,1,clz._xts.length);
+
+    // Add outer class next
+    if( outer!=null )
+      zts[1+j++] = outer.tclz();
+    // Copy/type actual args
+    if( args != null )
+      for( XType arg : args )
+        zts[1+j++] = arg;
+
+    return XFun.make(zts,isCondRet);
+  }
+
   public int nargs() { return _xts.length-1; }
   public XType arg(int i) { return _xts[i+1]; }
   public XType ret() { return _xts[0]; }
   public boolean cond() { return _cond; }
+
+  public boolean hasUnboxedArgs() {
+    for( int i=1; i<_xts.length; i++ )
+      if( _xts[i].isUnboxed() )
+        return true;
+    return false;
+  }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {
     sb.p("{ ");

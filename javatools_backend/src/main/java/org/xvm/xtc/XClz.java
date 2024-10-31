@@ -753,12 +753,12 @@ public class XClz extends XType {
 
   @Override public SB clz_bare( SB sb ) { return _clz_bare(sb,true); }
   private  SB _clz_bare( SB sb, boolean imprt ) {
-    // Tuples have a mangled class name without generics
-    if( isTuple() ) return strTuple(sb);
     // These guys need a fully qualified name to avoid name conflicts
-    if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous )
+    if( this==XCons.JSTRING || this==XCons.JSTRINGN ||this==XCons.JOBJECT || _ambiguous )
       return sb.p(qualified_name());
     if( imprt ) ClzBuilder.add_import(this);
+    // Tuples have a mangled class name without generics
+    if( isTuple() ) return strTuple(sb);
     return sb.p(name());
   }
 
@@ -766,7 +766,7 @@ public class XClz extends XType {
   // e.g. method-specific generic names, use them instead.  Using "T" here
   // instead of "XTC": "<T extends XTC> void bar( T gold, AryXTC<T> ary )"
   @Override SB _clz( SB sb, ParamTCon ptc ) {
-    clz_bare(sb);
+    _clz_bare(sb,false);
 
     // Print generic parameters?
     if( _tns.length==0 ) return sb; // None to print
@@ -795,7 +795,8 @@ public class XClz extends XType {
   public String qualified_name() {
     if( S.eq(_jpack,"java.lang") )
       return "java.lang."+_jname;
-    String name = this==XCons.TUPLE0 ? "Tuple0" : name();
+    String name = name();
+    if( isTuple() ) name = strTuple(new SB()).toString();
     String pack = pack().isEmpty() ? "" : "."+pack();
     String nest = _nest .isEmpty() ? "" : "."+_nest ;
     return (XEC.XCLZ + pack + nest + "." + name).intern();
@@ -844,6 +845,8 @@ public class XClz extends XType {
     return sb.unchar();
   }
 
+
+  // -------------------------------------------------------------------------
   // Does 'this' subclass 'sup' ?
   private boolean subClasses( XClz sup ) {
     if( _clz==sup._clz ) return true;
@@ -870,9 +873,9 @@ public class XClz extends XType {
   @Override boolean _isa( XType xt ) {
     XClz clz = (XClz)xt;        // Contract
     if( xt == XCons.XXTC ) return true; // Everything isa XTC
-    // Interface or subclass check.  Const is declared interface in XTC but
-    // declared a Class in Java.
-    if( !iface() && clz.iface() && clz != XCons.CONST )
+    // Interface or subclass check.  Const, Service are declared interface in
+    // XTC but declared a Class in Java.
+    if( !iface() && clz.iface() && clz != XCons.CONST && clz != XCons.SERVICE )
       return subIFaces(clz);
     // Check basic subclassing.  Two classes or two interfaces come here.
     if( !subClasses(clz) ) return false;

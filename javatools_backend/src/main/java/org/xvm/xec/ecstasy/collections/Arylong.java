@@ -93,8 +93,9 @@ public class Arylong extends Array<Int64> {
     return this;
   }
 
-  public Arylong shuffled(Boolean inPlace) {
-    if( inPlace._i )
+  public Arylong shuffled(Boolean inPlace) { return shuffled(inPlace._i); }
+  public Arylong shuffled(boolean inPlace) {
+    if( inPlace )
       throw XEC.TODO();
     // Not inPlace so clone
     Arylong ary = new Arylong(_mut,this);

@@ -128,11 +128,6 @@ public class ClassPart extends Part {
     return null;
   }
 
-  // True if this is a subclass of the given super
-  public boolean subclass( ClassPart sup ) {
-    return this==sup || (_super!=null && _super.subclass(sup));
-  }
-
   // Modules in XTC do not have to be named after their file path, like they do in Java.
   // Example: XTC Module ecstasy.xtclang.org is in a file ecstasy.x.
   // I am using the file name as a Java file name... which is also the Java package.
@@ -149,4 +144,15 @@ public class ClassPart extends Part {
 
   // Return XClz, expected already computed
   public XClz tclz() { assert _tclz!=null; return _tclz; }
+
+  public ClassPart isNestedInnerClass() {
+    // self -> MMethod -> Class -> [Package or other ???]
+    Part outer = _par;
+    if( isStatic() || outer instanceof PackagePart || XClz.make(this).isa(XCons.CONST) )
+      return null;
+    while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
+    return outclz;
+  }
+
+
 }

@@ -29,7 +29,7 @@ public class InvokeAST extends AST {
     _async = async;
     _fun = meth.xfun();
     // Return types are sharpened from the method, based on local type info
-    _ret = MethodPart.ret(XType.xtypes(retTypes),meth.is_cond_ret());
+    _ret = XFun.ret(XType.xtypes(retTypes));
 
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -62,7 +62,7 @@ public class InvokeAST extends AST {
   @Override public AST rewrite() {
     XType k0t = _kids[0]._type;
     // Handle all the Int/Int64/Intliteral to "long" calls
-    if( k0t == XCons.JLONG || k0t == XCons.LONG ) {
+    if( k0t == XCons.JLONG || k0t == XCons.LONG || k0t == XCons.INT ) {
       return switch( _meth ) {
       case "toString" -> _kids[0] instanceof ConAST ? null : new InvokeAST(_meth,XCons.STRING,new ConAST("Long",XCons.JLONG),_kids[0]).doType();
       case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
@@ -192,11 +192,13 @@ public class InvokeAST extends AST {
 
   @Override public AST reBox( ) {
     if( _fun==null ) return null; // Baked-in, should be good already
-    if( _kids[0]._type == XCons.CONSOLE && _meth.equals("print") )
-      return null;              // Special cutout for Console.print taking a primitive bool
+    // Internal Java-implemented mirror type; these
+    // all have primitive versions, no need to reBox.
+    if( _kids[0]._type instanceof XClz xclz && !xclz._jname.isEmpty() )
+      return null;
     AST progress=null;
     for( int i = 1; i < _kids.length; i++ ) {
-      if( _kids[i]._type instanceof XBase &&
+      if( _kids[i]._type instanceof XBase kbase && kbase != XCons.NULL &&
           !(_fun.arg(i-1) instanceof XBase) )
         progress = _kids[i] = _kids[i].reBoxThis();
     }

@@ -70,7 +70,7 @@ public abstract class AST {
   boolean condFalse( int idx, XType zret ) {
     if( _kids[idx]._cond ) return false;
     assert _kids[idx] instanceof ConAST con && con._con.equals("false");
-    _kids[idx] = new ConAST("XRuntime.False("+zret.ztype()+")");
+    _kids[idx] = new ConAST("XRuntime.False("+zret.ztype()+")", XCons.NULL);
     _kids[idx]._cond = true;
     return true;
   }
@@ -137,7 +137,7 @@ public abstract class AST {
 
   AST unBoxThis() { return new UniOpAST(new AST[]{this},null,"._i",_type.unbox());  }
   AST reBoxThis() {
-    assert _type instanceof XBase;
+    assert _type instanceof XBase base && base != XCons.NULL;
     return new NewAST(new AST[]{this},_type.box());
   }
 
@@ -235,7 +235,7 @@ public abstract class AST {
     case PreIncExpr   ->    UniOpAST.make(X,"++",null);
     case PropertyExpr -> PropertyAST.make(X);
     case RefOfExpr    ->    UniOpAST.make(X,"&",null);
-    case RegAlloc     ->   DefRegAST.make(X,true ,true );
+    case RegAlloc     ->   DefRegAST.make(X,false ,false );
     case RelOpExpr    ->    BinOpAST.make(X,true );
     case Return0Stmt  ->   ReturnAST.make(X,0);
     case Return1Stmt  ->   ReturnAST.make(X,1);

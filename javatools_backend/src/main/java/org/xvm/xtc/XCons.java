@@ -60,6 +60,7 @@ public abstract class XCons {
   public static XClz ORDERED     = make_java("ecstasy","Ordered",ENUM);
   public static XClz STRINGBUFFER= make_java("ecstasy.text","StringBuffer",null);
   public static XClz TYPE        = make_java("ecstasy.reflect","Type","ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
+  public static XClz REF         = make_java("ecstasy.reflect","Ref","ecstasy.reflect","Ref",(XClz)null,"Referent",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
   public static XClz SIGNUM  = make_java("ecstasy.numbers.Number","Signum",ENUM);

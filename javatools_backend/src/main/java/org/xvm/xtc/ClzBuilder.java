@@ -50,7 +50,6 @@ public class ClzBuilder {
 
   public final Ary<String> _locals; // Virtual register numbers to java names
   public final Ary<XType>  _ltypes; // Virtual register numbers to java types
-  public final BitSet _unboxed;     // True if unboxed at the method start
   public final int _nouters;        // Number of outer-scope pre-boxed locals
 
   public final int nlocals() { return _locals._len; }
@@ -91,7 +90,6 @@ public class ClzBuilder {
     _sb = sb;
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
-    _unboxed = new BitSet();
     _nouters = nouters;
   }
 
@@ -107,7 +105,6 @@ public class ClzBuilder {
     _sb = sb;
     _locals = new Ary<>(String.class);
     _ltypes = new Ary<>(XType .class);
-    _unboxed = new BitSet();
     _nouters = 0;
   }
 
@@ -157,7 +154,8 @@ public class ClzBuilder {
       // If this is a normal incorp "mixin<-base" class, make sure the mixin happens
       if( _tclz.       _clz._f == Part.Format.MIXIN ||
           _tclz._super._clz._f == Part.Format.MIXIN )
-        if( _tclz._clz._par instanceof MethodPart ) add_nested(_tclz._super ); else add_import(_tclz._super);
+        if( _tclz._clz._par instanceof MethodPart ) add_nested(_tclz._super );
+        else add_import(_tclz._super);
 
     // Actually start emitting class headers
     String java_class_name = _tclz._name;
@@ -295,11 +293,11 @@ public class ClzBuilder {
           for( String tn : _tclz._tns )
             _sb.fmt("$%0 %0, ",tn);
           // Nested inner classes take an outer class arg
-          ClassPart outer = meth.isNestedInnerClass();
+          ClassPart outer = _clz.isNestedInnerClass();
           if( outer!=null )
             _sb.fmt("%0 $outer, ", outer._name);
           if( meth._args==null ) _sb.unchar(2);
-          else args(meth,_sb,null);
+          else args(meth,_sb,null,false);
           _sb.p(") { return new ").p(java_class_name).p("( ");
           for( String tn : _tclz._tns )
             _sb.fmt("%0,",tn);
@@ -516,14 +514,15 @@ public class ClzBuilder {
   }
 
   // Argument with types "( int arg0, String arg1, ... )"
-  public static void args(MethodPart m, SB sb, String xtra) {
+  public static void args(MethodPart m, SB sb, String xtra, boolean box) {
     // Argument list
     if( m._args !=null ) {
       XFun xfun = m.xfun();
       int delta = xfun.nargs() - m._args.length;
       for( int i = 0; i < m._args.length; i++ ) {
-        // Unbox boxed args
         XType xt = xfun.arg(i+delta);
+        if( box && xt.isUnboxed() ) xt = xt.box();
+        // Imports as needed
         if( xt instanceof XClz xclz )
           add_import(xclz);
         // Parameter class, using local generic parameters
@@ -583,6 +582,29 @@ public class ClzBuilder {
   public void jmethod( MethodPart m, String mname ) {
     assert _locals.isEmpty();   // No locals mapped yet
 
+    // Print out a boxed version, is applicable
+    XFun xfun = m.xfun();
+    if( xfun.hasUnboxedArgs() ) {
+      // Print out the function header keywords
+      keywords(m,false);
+
+      // Return signature; stuff like "long " or "<T extends BAZ> HashSet<T> "
+      ret_sig(m, _sb);
+
+      // Unbox the args and return primitive version
+      _sb.p(mname).p("( ");
+      args(m,_sb,"",true);
+      _sb.p(" ) {").nl().ii().i();
+      if( xfun.ret()!=XCons.VOID )
+        _sb.p("return ");
+      _sb.p(mname).p("( ");
+      int delta = xfun.nargs() - m._args.length;
+      for( int i = 0; i < m._args.length; i++ )
+        _sb.p(jname(m._args[i]._name)).p("._i, ");
+      _sb.unchar(2).p(" );").nl().di();
+      _sb.i().p("}").nl();
+    }
+
     // Print out the function header keywords
     keywords(m,false);
 
@@ -602,7 +624,7 @@ public class ClzBuilder {
     // ... method_name( int arg0, String, arg1, ... ) {
     // Mixins rename all args with a "$"
     _sb.p(mname).p("( ");
-    args(m,_sb, _tclz._mixts == null ? null : "$");
+    args(m,_sb, _tclz._mixts == null ? null : "$",false);
     _sb.p(" ) ");
     // Define argument names
     XFun xfun = m.xfun();
@@ -711,8 +733,6 @@ public class ClzBuilder {
   // From: "{ return expr }"
   // To:   "         expr   "
   public void jmethod_body_inline( MethodPart meth ) {
-    if( meth._name2kid != null )
-      System.out.println("field init method has more parts");
     // Parse the method body
     AST ast = ast(meth);
     // Strip any single-block wrapper
@@ -729,8 +749,7 @@ public class ClzBuilder {
     return add_import(clz.tclz());
   }
   public static XClz add_import( XClz tclz ) {
-    // Nested internal class; imports recorded elsewhere
-    if( ClzBuilder.IMPORTS==null ) return tclz;
+    assert IMPORTS != null;
     // If the compiling class has the same path, tclz will be compiled in the
     // same source code
     if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) )
@@ -741,18 +760,22 @@ public class ClzBuilder {
     // Check for colliding on the base names; means we have to use the fully
     // qualified name everywhere.
     String tqual = tclz.qualified_name();
-    String old = ClzBuilder.BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
+    String old = BASE_IMPORTS.putIfAbsent(tclz.clz_bare(),tqual);
     boolean progress;
     if( old!=null && !S.eq(old,tqual) ) {
       tclz._ambiguous=true;   // Use fully qualified name
-      progress = ClzBuilder.AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
+      progress = AMBIGUOUS_IMPORTS.add(tclz); // Reset the ambiguous flag after compilation
     } else {
       // Import the qualified name, but use the shortcut name everywhere
-      progress = ClzBuilder.IMPORTS.add(tqual);
+      progress = IMPORTS.add(tqual);
     }
     // Needs a build also
-    if( tclz.needs_build() )
-      ClzBldSet.add(tclz._clz);
+    if( tclz.needs_build() ) {
+      // Class nested in a method in this compilation unit
+      if( tclz._clz._par instanceof MethodPart meth ) add_nested(tclz);
+      // Else top level class build
+      else ClzBldSet.add(tclz._clz);
+    }
     // Catch nested generic types
     if( progress )
       for( XType xt : tclz._xts )
@@ -763,7 +786,7 @@ public class ClzBuilder {
 
   public static void add_import( String s ) { IMPORTS.add(s); }
 
-  static XClz add_nested( XClz xclz ) {
+  public static XClz add_nested( XClz xclz ) {
     if( !xclz._did_gen && NESTED.find( xclz ) == -1 )
       NESTED.push( xclz );
     return xclz;
@@ -778,13 +801,6 @@ public class ClzBuilder {
 
     // Parse
     AST ast = AST.parse(this);
-
-    // Insert argument unboxing code
-    for( int i=_nouters; i<nlocals(); i++ )
-      if( _unboxed.get(i) )
-        // Unbox flagged arguments
-        ((BlockAST)ast).insert0(new DefRegAST(_ltypes.at(i).unbox(),AST.unbox_name(_locals.at(i)),_locals.at(i)+"._i"));
-
     // Set types in every AST
     ast.doType(null);
     // Do any trivial restructuring
@@ -828,8 +844,6 @@ public class ClzBuilder {
     int idx = _locals._len;     // Register number
     _locals.add(name);
     _ltypes.add(type);
-    if( type.unbox() != type )
-      _unboxed.set(idx);
     return idx;
   }
   // Pop locals at end of scope
@@ -838,7 +852,6 @@ public class ClzBuilder {
       _ltypes.pop();
       _locals.pop();
     }
-    _unboxed.clear(n,999);
   }
 
   // Name mangle for java rules

@@ -15,7 +15,7 @@ public class CallAST extends AST {
   static CallAST make( ClzBuilder X ) {
     // Read return type; this can be more precise than the
     // function in _kids[0]
-    XType ret = MethodPart.ret(XType.xtypes(X.consts()),false);
+    XType ret = XFun.ret(XType.xtypes(X.consts()));
     // Read the arguments, then the function expression.
     AST[] kids = X.kids_bias(1);
     // Move the function to the 0th kid slot.

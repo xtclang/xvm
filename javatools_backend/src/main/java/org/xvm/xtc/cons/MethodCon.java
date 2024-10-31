@@ -39,10 +39,22 @@ public class MethodCon extends PartCon {
       if( methx._methcon == this )
         return methx; // Early out
 
-    // Need to do a proper instanceof test
+    // Need to do a proper instanceof test.
+    // Do a fully-boxed signature, to compare against a fully-boxed method.
+    // This is so sharper signatures dont promote `Int64` to `long`
+    // and then fail to match against generic `XTC` method signatures.
+    ClassPart clz = (ClassPart)mm._par;
+    boolean con = MethodPart.is_constructor(_sig._name);
+    XFun sig = XFun.make(clz, con,
+                         XType.xtypes(_sig._args, true),
+                         XType.xtypes(_sig._rets, true));
     MethodPart rez=null;
     for( MethodPart methx=meth; methx!=null;  methx = methx._sibling ) {
-      if( methx.match_sig(_sig) ) {
+      // Do a fully-boxed method
+      XFun fun = XFun.make(clz, con,
+                           XType.xtypes(methx._args, true),
+                           XType.xtypes(methx._rets, true) );
+      if( sig.isa(fun) ) {
         assert rez==null;       // Ambiguous
         rez = methx;
       }

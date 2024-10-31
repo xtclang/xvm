@@ -163,7 +163,7 @@ class AssignAST extends AST {
   @Override public AST reBox( ) {
     XType k0t = _kids[0]._type;
     XType k1t = _kids[1]._type;
-    if( !(k1t instanceof XBase && !k1t.isa(k0t) && k1t.box().isa(k0t)) )
+    if( k0t.isUnboxed() || !k1t.isUnboxed() || k1t==XCons.NULL )
       return null;
     _kids[1] = _kids[1].reBoxThis();
     return this;

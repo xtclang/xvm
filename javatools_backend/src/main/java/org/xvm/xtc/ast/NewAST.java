@@ -19,7 +19,7 @@ class NewAST extends AST {
     AST outer = isChild ? ast_term(X) : null;
     Const type = X.con();
     MethodPart meth = (MethodPart)X.con().part();
-    assert (meth.isNestedInnerClass()!=null) == isChild;
+    assert (meth.clz().isNestedInnerClass()!=null) == isChild;
     AST[] kids = X.kids_bias(isChild ? 1 : 0);
     if( isChild )
       kids[0] = outer;

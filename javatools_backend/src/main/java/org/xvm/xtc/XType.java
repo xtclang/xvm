@@ -141,6 +141,7 @@ public abstract class XType {
     XBase jt = UNBOX.get(this);
     return jt==null ? this : jt;
   }
+  public boolean isUnboxed() { return XBOX.containsKey(this); }
   public XType box( boolean boxed ) {
     return boxed ? this : unbox();
   }
@@ -185,11 +186,12 @@ public abstract class XType {
 
 
   // Convert an array of Const to an array of XType
-  public static XType[] xtypes( Const[] cons ) {
+  public static XType[] xtypes( Const[] cons ) { return xtypes(cons,false); }
+  public static XType[] xtypes( Const[] cons, boolean box ) {
     if( cons==null ) return null;
     XType[] xts = new XType[cons.length];
     for( int i=0; i<cons.length; i++ )
-      xts[i] = xtype(cons[i],false);
+      xts[i] = xtype(cons[i],box);
     return xts;
   }
 
@@ -255,7 +257,7 @@ public abstract class XType {
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
         Const[] args = ((ParamTCon)ptc._parms[0])._parms;
         Const[] rets = ((ParamTCon)ptc._parms[1])._parms;
-        yield XFun.make(false,MethodPart.ret(xtypes(rets),false),xtypes(args)).make_class();
+        yield XFun.make(null,false,xtypes(args,boxed),xtypes(rets,boxed)).make_class();
       }
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true,self);
@@ -283,7 +285,7 @@ public abstract class XType {
 
       // Attempt to use the Java class name
       if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
-        yield telem;
+        yield telem==null ? XCons.XXTC : telem;
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
         if( telem== JCHAR )
