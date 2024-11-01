@@ -115,6 +115,11 @@ class UniOpAST extends AST {
       return null;
     }
 
+    // Treat ref operator as a no-op
+    if( S.eq("&",_pre) ) {
+      return _kids[0];
+    }
+
     return null;
   }
 

@@ -3,6 +3,9 @@ package org.xvm.xtc;
 import org.xvm.XEC;
 import org.xvm.util.S;
 import org.xvm.util.SB;
+import org.xvm.xtc.ast.AST;
+import org.xvm.xtc.ast.BlockAST;
+import org.xvm.xtc.ast.ReturnAST;
 import org.xvm.xtc.cons.Const;
 
 public abstract class PropBuilder {
@@ -93,7 +96,9 @@ public abstract class PropBuilder {
         ClzBuilder X2 =  new ClzBuilder(X,null);
         // Method has to be a no-args function, that is executed exactly once here.
         // Inline instead.
-        X2.jmethod_body_inline(meth );
+        AST ast = X2.ast(meth);
+        assert ast instanceof BlockAST blk && blk._kids.length==1 && blk._kids[0] instanceof ReturnAST && !blk.hasTemps();
+        ast._kids[0]._kids[0].jcode(sb);
       }
       // Explicit init via constant
       if( pp._init != null )
@@ -116,7 +121,7 @@ public abstract class PropBuilder {
       if( iface ) {
         sb.p(";").nl();
       } else {
-        sb.p(" { ");
+        sb.p(" ");
 
         // Explicit get via function
         Part get;
@@ -125,16 +130,13 @@ public abstract class PropBuilder {
           MethodPart meth = (MethodPart)mm._name2kid.get("get");
           ClzBuilder X2 =  new ClzBuilder(X,X._clz);
           // Method has to be a no-args function, that is executed exactly once here.
-          // Inline instead.
-          sb.nl().ii().ip("return ");
-          X2.jmethod_body_inline(meth );
-          sb.p(";").di().nl().i();
+          X2.ast(meth).jcode(sb);
         } else {
+          sb.p("{ ");
           if( lazy )
             sb.fmt("if( !%0$init ) { %0$init=true; %0 = %0$calc(); } ",pname);
-          sb.fmt("return %0; ",pname);
+          sb.fmt("return %0; }\n",pname);
         }
-        sb.p("}\n");
       }
     }
 

@@ -1,13 +1,13 @@
 package org.xvm.xtc.ast;
 
+import java.util.Arrays;
 import org.xvm.XEC;
+import org.xvm.util.S;
+import org.xvm.util.SB;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
+import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.cons.ParamTCon;
-import org.xvm.util.SB;
-import org.xvm.util.S;
-
-import java.util.Arrays;
 
 public class CallAST extends AST {
   final XType _ret;             // A more precise return type
@@ -32,6 +32,18 @@ public class CallAST extends AST {
       _kids[0] = new ConAST(null,null,"super."+meth._name,meth.xfun());
       _mixin_tname = meth.clz()._f==Part.Format.MIXIN ? meth.clz()._tnames[0] : null;
     } else _mixin_tname = null;
+
+    // Replace default args with their actual default values
+    for( int i=1; i<_kids.length; i++ ) {
+      if( _kids[i] instanceof RegAST reg &&
+          reg._reg == -4/*Op.A_DEFAULT*/ ) {    // Default reg
+        // Swap in the default from method defaults
+        MethodPart meth0 = (MethodPart)((ConAST)_kids[0])._tcon.part();
+        _kids[i] = new ConAST(null,meth0._args[i-1]._def);
+      }
+    }
+
+
     _ret = ret;
     _type = _type();
   }

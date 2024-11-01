@@ -729,22 +729,6 @@ public class ClzBuilder {
     throw XEC.TODO();
   }
 
-  // An inlineable method; turn into java Lambda syntax:
-  // From: "{ return expr }"
-  // To:   "         expr   "
-  public void jmethod_body_inline( MethodPart meth ) {
-    // Parse the method body
-    AST ast = ast(meth);
-    // Strip any single-block wrapper
-    if( ast instanceof BlockAST blk && !blk.hasTemps() && blk._kids.length==1 )
-      ast = blk._kids[0];
-    // Strip any return wrapper, just the expression
-    if( ast instanceof ReturnAST ret )
-      ast = ret._kids[0];
-    ast.jcode(_sb);
-  }
-
-
   public static XClz add_import( ClassPart clz ) {
     return add_import(clz.tclz());
   }
@@ -772,7 +756,7 @@ public class ClzBuilder {
     // Needs a build also
     if( tclz.needs_build() ) {
       // Class nested in a method in this compilation unit
-      if( tclz._clz._par instanceof MethodPart meth ) add_nested(tclz);
+      if( tclz._clz._par instanceof MethodPart ) add_nested(tclz);
       // Else top level class build
       else ClzBldSet.add(tclz._clz);
     }
