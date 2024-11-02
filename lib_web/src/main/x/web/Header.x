@@ -135,6 +135,22 @@ interface Header
     }
 
     /**
+     * Obtain the header value, as-is (not comma-expanded) for the specified case-insensitive header
+     * name. If the header name occurs multiple times within the HTTP header, then only the first
+     * instance is returned.
+     *
+     * @param name the case-insensitive header name
+     *
+     * @return the corresponding value from the HTTP header or `Null` if not found
+     */
+    @Op("[]") String? getOrNull(String name) {
+        if (String value := firstOf(name)) {
+            return value;
+        }
+        return Null;
+    }
+
+    /**
      * Erase all HTTP headers for the specified name.
      *
      * @param name  the case-insensitive header name
@@ -164,7 +180,7 @@ interface Header
      * @param name   the case-insensitive header name
      * @param value  the value or values to use for the header name
      */
-    void put(String name, String|String[] value) {
+    @Op("[]=") void put(String name, String|String[] value) {
         removeAll(name);
         add(name, value);
     }

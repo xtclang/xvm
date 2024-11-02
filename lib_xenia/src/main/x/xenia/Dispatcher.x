@@ -269,7 +269,7 @@ service Dispatcher {
                     // cookies
                     Uri newUri = new Uri(path=
                             $"{catalog.services[0].path}/session/{redirectId}/{session.version_}");
-                    header.put(Header.Location, newUri.toString());
+                    header[Header.Location] = newUri.toString();
                     break ProcessRequest;
                 }
 

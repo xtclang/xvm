@@ -48,7 +48,7 @@ service BasicAuthenticator(Realm realm)
         // to cause the client to request the user for a name and password, we need to return an
         // "Unauthorized" error code with a header that directs the client to use basic auth
         ResponseOut response = new SimpleResponse(Unauthorized);
-        response.header.put("WWW-Authenticate", $|Basic realm="{realm.name}", charset="UTF-8"
+        response.header.add("WWW-Authenticate", $|Basic realm="{realm.name}", charset="UTF-8"
                            );
         return response;
     }

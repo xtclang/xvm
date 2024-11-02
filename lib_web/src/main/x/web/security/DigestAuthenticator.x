@@ -152,7 +152,7 @@ service DigestAuthenticator(Realm realm)
         ResponseOut response = new SimpleResponse(Unauthorized);
         String nonce  = createNonce(session);
         for (Signer hasher : realm.hashers) {
-            response.header.put("WWW-Authenticate", $|Digest realm="{realm.name}",\
+            response.header.add("WWW-Authenticate", $|Digest realm="{realm.name}",\
                                                      |qop="auth",\
                                                      |algorithm={hasher.algorithm.name}-sess,\
                                                      |nonce="{nonce}",\

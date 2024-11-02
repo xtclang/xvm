@@ -1,3 +1,13 @@
+- GG: BAST generation for "map[x] = y" is completely broken; additionally if a class has
+      only a setter @Op("[]="), but no getter (@Op"[]") the compiler barfs
+
+    class Test() {
+        void test() {
+            this["a"] = "A";
+        }
+        @Op("[]=") void put(String name, String value) {}
+    }
+
 - CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
 
 - CP: make DigestAuthenticator.NonceTable into a service

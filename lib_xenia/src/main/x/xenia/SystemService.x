@@ -190,7 +190,7 @@ service SystemService {
         case Confirm:
             // handle the most common case in which the redirect was successful
             ResponseOut response = new SimpleResponse(TemporaryRedirect);
-            response.header.put(Header.Location, session.claimRedirect_(redirect)?.toString() : "/");
+            response.header[Header.Location] = session.claimRedirect_(redirect)?.toString() : "/";
             return response;
 
         case Repeat:
@@ -249,7 +249,7 @@ service SystemService {
         // come back to verify that the user agent received and subsequently sent the
         // cookies
         Uri newUri = new Uri(path=$"{catalog.services[0].path}/session/{redirect}/{session.version_}");
-        header.put(Header.Location, newUri.toString());
+        header[Header.Location] = newUri.toString();
         return response;
     }
 }
