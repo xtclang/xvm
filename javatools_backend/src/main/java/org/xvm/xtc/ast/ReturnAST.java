@@ -7,12 +7,12 @@ import org.xvm.xtc.*;
 
 public class ReturnAST extends AST {
   final MethodPart _meth;
-  final ExprAST _expr;
+  final boolean _expr;
 
   static ReturnAST make( ClzBuilder X, int n ) {
-    return new ReturnAST(X._meth, X._expr, X.kids(n) );
+    return new ReturnAST(X._meth, X._expr!=null, X.kids(n) );
   }
-  public ReturnAST( MethodPart meth, ExprAST expr, AST... kids) {
+  public ReturnAST( MethodPart meth, boolean expr, AST... kids) {
     super(kids);
     _meth = meth;
     _expr = expr;
@@ -22,18 +22,16 @@ public class ReturnAST extends AST {
 
   @Override XType _type() {
     // Nested statement expression; kids[0] is statement and have to drill to
-    // get the type.  Instead, cached here.
-    if( _expr !=null )
-      return _expr._type;
-
-    return _meth.xfun().ret();
+    // get the type.  Otherwise, the method has the official type which might
+    // be lifted over the expression.
+    return _expr ? _kids[0]._type : _meth.xfun().ret();
   }
 
   @Override public AST rewrite() {
     // Expression returns have the wrong method (the outer method not the
     // expression), and their not really a return at all except I have to model
     // them as an inner-lambda.
-    if( _expr != null ) return null;
+    if( _expr ) return null;
     // Void return functions execute the return for side effects only
     XFun fun = _meth.xfun();
     if( fun.ret() == XCons.VOID )
@@ -57,7 +55,7 @@ public class ReturnAST extends AST {
     // Flip multi-return into a tuple return
     if( _kids.length > 1 ) {
       AST nnn = new NewAST(_kids,(XClz)_type);
-      AST ret = new ReturnAST(_meth,_expr,nnn);
+      AST ret = new ReturnAST(_meth,false,nnn);
       ret._type = _type;
       return ret;
     }

@@ -85,7 +85,7 @@ public abstract class AST {
           kid.doType( this );
     doType();                   // Non-recursive
   }
-  AST doType() {
+  final AST doType() {
     XType type = _type();              // Local type computation
     assert _type==null || _type==type; // Allow type to be early set
     _type = type;

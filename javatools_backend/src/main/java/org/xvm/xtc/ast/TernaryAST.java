@@ -24,7 +24,7 @@ class TernaryAST extends ElvisAST {
       AST kid0 = _kids[len-2];
       AST kid1 = _kids[len-1];
       assert (kid0._cond && kid0._type.isa(_type)) || kid0._type.isBool();
-      assert (kid1._cond && kid1._type.isa(_type)) || kid0._type.isBool();
+      assert (kid1._cond && kid1._type.isa(_type)) || kid1._type.isBool();
     }
     return _type;
   }

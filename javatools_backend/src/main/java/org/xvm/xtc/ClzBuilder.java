@@ -171,7 +171,7 @@ public class ClzBuilder {
     _sb.ip("public ");
     if( _tclz._abstrct ) _sb.p("abstract ");
     if( !_is_top ) _sb.p("static ");
-    _sb.p(jpart).p(_tclz.clz_bare());
+    _sb.p(jpart).p(_tclz.name());
     _tclz.clz_generic_def(_sb).p(" ");
 
     // ... extends Const/XTC/etc
@@ -671,7 +671,7 @@ public class ClzBuilder {
       // method - which has the normal no-arg Java constructor already called -
       // but now the XTC constructor method needs to end in a Java return.
       if( constructor )
-        blk = blk.add(new ReturnAST(m,null,new RegAST(-5/*A_THIS*/,"this",_tclz)));
+        blk = blk.add(new ReturnAST(m,false,new RegAST(-5/*A_THIS*/,"this",_tclz)));
       blk.jcode(_sb);
       _sb.nl();
 

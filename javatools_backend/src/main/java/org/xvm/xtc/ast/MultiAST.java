@@ -21,7 +21,6 @@ public class MultiAST extends ElvisAST {
     XType kid0 = _kids[0]._type;
     if( _kids.length==1 ) return kid0;
     if( _kids[1]==null ) return XCons.VOID; // Ignored 2nd
-    XType kid1 = _kids[1]._type;
 
     // Loading bool, we're using COND.  Only a 2nd element afterwards, then its
     // conditional on that type.
@@ -31,6 +30,8 @@ public class MultiAST extends ElvisAST {
     // Otherwise, we're in a multi-ast situation with lots of AND'd parts
     return XCons.BOOL;
   }
+
+  // A conditional 2-part value
   @Override boolean _cond() {
     return _kids.length==2 && _kids[0]._type.isBool() && !_kids[1]._type.isBool();
   }
@@ -64,9 +65,11 @@ public class MultiAST extends ElvisAST {
         return _kids[1].jcode(sb.p("XRuntime.True(")).p(")");
       }
       // A && B && C && ...
-      for( AST kid : _kids )
-        kid.jcode(sb).p(" && ");
-      return sb.unchar(4); // Undo " && "
+      if( _par instanceof AssertAST || _par instanceof WhileAST ) {
+        for( AST kid : _kids )
+          kid.jcode(sb).p(" && ");
+        return sb.unchar(4); // Undo " && "
+      }
     }
 
     if( (xt=multiAssign()) != null ) {

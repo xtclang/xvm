@@ -45,7 +45,7 @@ public class BlockAST extends ElvisAST {
   String add_tmp(XType type) { return add_tmp(type,"$tmp"+_uid++); }
 
   public String add_tmp(XType type, String name) {
-    assert type != null;
+    assert type != null && name!=null;
     if( _tmps==null ) _tmps = new HashMap<>();
     Ary<String> tmps = _tmps.computeIfAbsent( type, k -> new Ary<>( new String[1], 0 ) );
     return tmps.push(name);
@@ -73,7 +73,7 @@ public class BlockAST extends ElvisAST {
 
     // Yank a blank return
     if( _kids.length>0 && _kids[_kids.length-1] instanceof ReturnAST ret &&
-        ret._meth.xfun().ret()==XCons.VOID && ret._expr==null ) {
+        ret._meth.xfun().ret()==XCons.VOID && !ret._expr ) {
       // Void return functions execute the return for side effects only
       _kids = Arrays.copyOf(_kids,_kids.length-1);
       return this;

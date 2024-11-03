@@ -2,6 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
 import org.xvm.XEC;
+import org.xvm.util.Ary;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.AsnOp;
 import org.xvm.xtc.cons.MethodCon;
@@ -35,7 +36,11 @@ class AssignAST extends AST {
   }
 
 
-  @Override XType _type() { return _kids[0]._type; }
+  @Override XType _type() {
+    // Check for a exploded tuple into a multi-assign.
+    return _kids[ _kids[0] instanceof MultiAST multi && _kids[1]._type.isTuple() ? 1 : 0 ]._type
+  }
+
   @Override boolean _cond() {
     return _kids[1]._cond ||  // Assignments do not blow "COND"
       // Or a conditional assign
@@ -74,29 +79,40 @@ class AssignAST extends AST {
       return new AssignAST( AsnOp.Asn, _meth, reg1, op ).doType();
     }
 
-    // Multi-returns from tuples.
-    //   XTC: (Int a, String b, Double c) = retTuple();
-    //  Java: { ...tmps...;  tmp = retTuple; a = tmp._f0; b = tmp._f1; c = tmp._f2; }
+    // Multi-assigns
     if( _kids[0] instanceof MultiAST m ) {
       BlockAST blk = enclosing_block();
-      MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
-      // Insert a slot for the "tmp = retTuple"
-      System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
-      String tmp = blk.add_tmp(_kids[1]._type);
-      AST reg = new RegAST(tmp,_kids[1]._type), con;
-      mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
-      // Break out each part
-      for( int i=0; i<m._kids.length; i++ ) {
-        AST kid = m._kids[i];
-        if( (kid instanceof RegAST kreg && kreg._reg==-2 /*A_IGNORE*/) ) {
-          mm._kids[i+1] = null;
-        } else {
-          reg = new RegAST(blk.add_tmp(kid._type,kid.name()),kid._type);
-          con = new ConAST(tmp+"._f"+i,kid._type);
-          mm._kids[i+1] = new AssignAST(reg,con).doType();
+      // (Int a, _ b, Double c) = (foo, bar, baz)
+      if( _kids[1] instanceof MultiAST mm ) {
+        Ary<AST> kids = new Ary<>(AST.class);
+        for( int i=0; i<m._kids.length; i++ ) {
+          if( m._kids[i] instanceof RegAST reg && reg._reg != -2/*A_IGNORE*/)
+            kids.push(new AssignAST(m._kids[i],mm._kids[i]));
         }
+        return new MultiAST(false,kids.asAry());
+
+      } else {
+        //   XTC: (Int a, String b, Double c) = retTuple();
+        //  Java: { ...tmps...;  tmp = retTuple; a = tmp._f0; b = tmp._f1; c = tmp._f2; }
+        MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
+        // Insert a slot for the "tmp = retTuple"
+        System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
+        String tmp = blk.add_tmp(_kids[1]._type);
+        AST reg = new RegAST(tmp,_kids[1]._type), con;
+        mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
+        // Break out each part
+        for( int i=0; i<m._kids.length; i++ ) {
+          AST kid = m._kids[i];
+          if( (kid instanceof RegAST kreg && kreg._reg==-2 /*A_IGNORE*/) ) {
+            mm._kids[i+1] = null;
+          } else {
+            reg = new RegAST(kid.name(),kid._type);
+            con = new ConAST(tmp+"._f"+i,kid._type);
+            mm._kids[i+1] = new AssignAST(reg,con).doType();
+          }
+        }
+        return mm.doType();
       }
-      return mm.doType();
     }
 
     // var := (true,val)  or  var ?= not_null;

@@ -12,16 +12,16 @@ import java.math.BigInteger;
 public abstract class XValue {
   // Produce a java value from a TCon
   private static final SB ASB = new SB();
-  static public String val( ClzBuilder X, Const tc ) {
+  static public String val( Const tc ) {
     assert ASB.len()==0;
     // Caller is a switch, will encode special
     if( tc instanceof MatchAnyCon ) return null;
-    _val(X,tc);
+    _val(tc);
     String rez = ASB.toString();
     ASB.clear();
     return rez;
   }
-  private static SB _val( ClzBuilder X, Const tc ) {
+  private static SB _val( Const tc ) {
     return switch( tc ) {
       // Integer constants in XTC are Java Longs
     case IntCon ic -> {
@@ -149,8 +149,8 @@ public abstract class XValue {
         : (rcon._xhi ? "IE" : "II");
       ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Range"+ext);
       ASB.p("new Range").p(ext).p("(");
-      _val(X,rcon._lo).p(",");
-      _val(X,rcon._hi).p(")");
+      _val(rcon._lo).p(",");
+      _val(rcon._hi).p(")");
       yield ASB;
     }
 
@@ -176,7 +176,7 @@ public abstract class XValue {
       }                         // Else tuple no extra args
       if( ac.cons()!=null )
         for( Const con : ac.cons() )
-          _val(X, con ).p(", ");
+          _val( con ).p(", ");
       yield ASB.unchar(2).p(")");
     }
 
@@ -186,8 +186,8 @@ public abstract class XValue {
       type.clz(ASB.p("new ")).p("() {{ ");
       for( int i=0; i<mc._keys.length; i++ ) {
         ASB.p("put(");
-        _val(X, mc._keys[i] ).p(",");
-        _val(X, mc._vals[i] ).p("); ");
+        _val( mc._keys[i] ).p(",");
+        _val( mc._vals[i] ).p("); ");
       }
       ASB.p("}} ");
       yield ASB;
@@ -222,11 +222,11 @@ public abstract class XValue {
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
         // Gets a special "CONTAINER.inject" call
-      case "InjectedRef" -> _val(X,acon.con().is_generic());
+      case "InjectedRef" -> _val(acon.con().is_generic());
       // Wraps the type as "Future<whatever>".
       case "FutureVar" -> XType.xtype(acon,true).clz(ASB.p("new ")).p("()");
       // Does nothing for Java, I believe.  It's not a Java "volatile" for sure.
-      case "VolatileVar" -> _val(X,acon.con());
+      case "VolatileVar" -> _val(acon.con());
       default -> throw XEC.TODO();
       };
 

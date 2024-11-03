@@ -102,7 +102,7 @@ public abstract class PropBuilder {
       }
       // Explicit init via constant
       if( pp._init != null )
-        sb.p(" = ").p(XValue.val(X,pp._init));
+        sb.p(" = ").p(XValue.val(pp._init));
       sb.p(";\n");
 
       // private boolean prop$init;
