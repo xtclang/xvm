@@ -609,7 +609,7 @@ public class Context
                     if (typeOld.isA(typeNew))
                         {
                         // the new type is wider - take it instead of the old narrower one
-                        replaceArgument(sName, Branch.Always, regNew);
+                        replaceArgument(sName, Branch.Always, regOld.narrowType(typeNew));
                         }
                     else
                         {
