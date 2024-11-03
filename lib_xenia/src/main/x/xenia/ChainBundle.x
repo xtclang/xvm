@@ -370,7 +370,7 @@ service ChainBundle {
                 throw new IllegalState($"Request has no body");
             }
         } else {
-            Type   paramType = param.ParamType;
+            Type paramType = param.ParamType;
             switch (paramType.is(_)) {
             case Type<Byte[]>:
                 paramValue = body.bytes;
@@ -378,7 +378,14 @@ service ChainBundle {
 
             default:
                 if (Codec<paramType.DataType> codec := registry.findCodec(body.mediaType, paramType)) {
-                    paramValue = codec.decode(body.bytes);
+                    try {
+                        paramValue = codec.decode(body.bytes);
+                    } catch (ecstasy.TypeMismatch e) {
+                        throw new IllegalState($|Incoming data type for parameter "{name}" does not \
+                                                |match its type "{paramType.DataType}"; \
+                                                |actualType is "{e.text}"
+                                              );
+                    }
                     if (String formatName ?= param.format) {
                         if (Format format := registry.findFormat(formatName, paramType),
                                    paramValue.is(String)) {
@@ -389,7 +396,8 @@ service ChainBundle {
                         break;
                     }
                 }
-                throw new IllegalState($"Unsupported BodyParam type: \"{paramType}\"");
+                throw new IllegalState($|Unsupported BodyParam type: "{paramType}"
+                                      );
             }
         }
 

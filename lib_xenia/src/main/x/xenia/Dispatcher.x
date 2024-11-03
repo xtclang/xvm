@@ -345,7 +345,9 @@ service Dispatcher {
                     } else {
                         // TODO GG: remove
                         @Inject Console console;
-                        console.print($"Dispatcher: unhandled exception for {uriString.quoted()}: {e}");
+                        console.print($|Dispatcher: unhandled exception for \
+                                       |"{requestInfo.uriString}": {e}
+                                       );
 
                         requestInfo.respond(HttpStatus.InternalServerError.code, [], [], []);
                         return;
