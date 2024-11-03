@@ -54,7 +54,7 @@ class NewAST extends AST {
     // Slide normal args over to make room for N type args
     if( kids!=null ) System.arraycopy(kids,0,kids2,N,kids.length);
     for( int i=0; i<N; i++ ) {
-      if( i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
+      if( ptc._parms!=null && i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
         // Type parameter comes from the method arguments.
         // Do a name lookup.
         int reg = X._locals.find(parm._name);

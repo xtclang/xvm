@@ -53,10 +53,13 @@ public abstract class XValue {
       ASB.quote(sc._str);
 
     // Literal constants
-    case LitCon lit ->
-      lit._f==Const.Format.IntLiteral
-      ? ASB.p("IntLiteral.construct(\"").p(lit._str).p("\")")
-      : ASB.quote(lit._str);
+    case LitCon lit -> {
+      if( lit._f==Const.Format.IntLiteral ) {
+        ClzBuilder.add_import("org.xvm.xec.ecstasy.numbers.IntLiteral");
+        yield ASB.p("IntLiteral.construct(\"").p(lit._str).p("\")");
+      }
+      yield ASB.quote(lit._str);
+    }
 
     // Method constants
     case MethodCon mcon -> {

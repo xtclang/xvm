@@ -505,8 +505,9 @@ public class XClz extends XType {
     xclz._xts = proto._xts.clone();
     xclz._tns = proto._tns.clone();
     // Override parameterized type fields
-    for( int i=0; i<ptc._parms.length; i++ )
-      xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
+    if( ptc._parms != null )
+      for( int i=0; i<ptc._parms.length; i++ )
+        xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
 
     return xclz._intern(proto);
   }

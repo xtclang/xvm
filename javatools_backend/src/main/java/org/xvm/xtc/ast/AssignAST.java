@@ -38,7 +38,7 @@ class AssignAST extends AST {
 
   @Override XType _type() {
     // Check for a exploded tuple into a multi-assign.
-    return _kids[ _kids[0] instanceof MultiAST multi && _kids[1]._type.isTuple() ? 1 : 0 ]._type
+    return _kids[ _kids[0] instanceof MultiAST multi && _kids[1]._type.isTuple() ? 1 : 0 ]._type;
   }
 
   @Override boolean _cond() {
@@ -98,7 +98,7 @@ class AssignAST extends AST {
         // Insert a slot for the "tmp = retTuple"
         System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
         String tmp = blk.add_tmp(_kids[1]._type);
-        AST reg = new RegAST(tmp,_kids[1]._type), con;
+        AST reg = new RegAST(tmp,_kids[1]._type);
         mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
         // Break out each part
         for( int i=0; i<m._kids.length; i++ ) {
@@ -106,9 +106,9 @@ class AssignAST extends AST {
           if( (kid instanceof RegAST kreg && kreg._reg==-2 /*A_IGNORE*/) ) {
             mm._kids[i+1] = null;
           } else {
-            reg = new RegAST(kid.name(),kid._type);
-            con = new ConAST(tmp+"._f"+i,kid._type);
-            mm._kids[i+1] = new AssignAST(reg,con).doType();
+            AST reg2= kid instanceof DefRegAST ? new DefRegAST(kid._type,kid.name(),null) : new RegAST(kid.name(),kid._type);
+            AST con = new ConAST(tmp+"._f"+i,kid._type);
+            mm._kids[i+1] = new AssignAST(reg2,con).doType();
           }
         }
         return mm.doType();

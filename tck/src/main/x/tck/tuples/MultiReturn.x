@@ -31,13 +31,13 @@ class MultiReturn {
         assert f==5.140000000000001;
     }
 
-    // Return a function returning a tuple
-    static const E<Key,Val>(Key key, Val val) {
-        function (Key, Val) (E<Key, Val>) entryAssociator() {
-            return e -> (e.key, e.val);
-        }
-    }
-
+    //// Return a function returning a tuple
+    //static const E<Key,Val>(Key key, Val val) {
+    //    function (Key, Val) (E<Key, Val>) entryAssociator() {
+    //        return e -> (e.key, e.val);
+    //    }
+    //}
+    //
     //void testFunFun() {
     //    E e = new E<>("ghi",16);
     //    var fun = e.entryAssociator();

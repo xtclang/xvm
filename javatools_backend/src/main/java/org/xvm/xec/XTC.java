@@ -16,9 +16,10 @@ import java.io.IOException;
 // package is really just a directory - naming this class "ecstasy" conflicts
 // with the package/directory of the same name.
 
-public abstract class XTC {
+public class XTC {
   public XTC( Never n ) {}      // No arg constructor
   public XTC() {}               // No arg constructor
+  public static XTC GOLD = new XTC();
 
   // --------------------------------------------------------------------------
   // A bunch of classes and functions that are always available (e.g. TRACE

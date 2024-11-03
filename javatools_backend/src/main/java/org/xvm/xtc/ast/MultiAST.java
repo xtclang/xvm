@@ -65,7 +65,7 @@ public class MultiAST extends ElvisAST {
         return _kids[1].jcode(sb.p("XRuntime.True(")).p(")");
       }
       // A && B && C && ...
-      if( _par instanceof AssertAST || _par instanceof WhileAST ) {
+      if( _par instanceof AssertAST || _par instanceof WhileAST || _par instanceof IfAST ) {
         for( AST kid : _kids )
           kid.jcode(sb).p(" && ");
         return sb.unchar(4); // Undo " && "
