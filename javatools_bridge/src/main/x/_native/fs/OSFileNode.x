@@ -20,6 +20,9 @@ const OSFileNode
     Boolean exists.get() { TODO("native"); }
 
     @Override
+    Int size.get() { TODO("native"); }
+
+    @Override
     conditional File linkAsFile() = store.linkAsFile(this:protected);
 
     // TODO: should it be the "local" timezone?
@@ -62,10 +65,6 @@ const OSFileNode
             return False;
         }
     }
-
-    @Override
-    Int size.get() { TODO("native"); }
-
 
     // ----- equality support ----------------------------------------------------------------------
 

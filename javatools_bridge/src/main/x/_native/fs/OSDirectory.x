@@ -8,6 +8,15 @@ const OSDirectory
         implements Directory {
 
     @Override
+    Int size.get() {
+        Int size = 0;
+        for (File file : files()) {
+            size += file.size;
+        }
+        return size;
+    }
+
+    @Override
     Iterator<String> names() = store.names(this:protected).iterator();
 
     @Override

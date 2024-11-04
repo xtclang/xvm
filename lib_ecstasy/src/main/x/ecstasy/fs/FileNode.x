@@ -41,6 +41,16 @@ interface FileNode
     @RO Boolean exists;
 
     /**
+     * The number of bytes represented by the file-node.
+     *
+     * For a directory, this value may require an extensive calculation, since the size of the
+     * directory is the sum of the sizes of its contents (not recursive).
+     *
+     * For a non-existent file-node, the size is always 0.
+     */
+    @RO Int size;
+
+    /**
      * Determine if this node is a _link_ to another node, and if it is, obtain a reference to the
      * link itself, instead of the node that is linked-to. This allows the link to be deleted, for
      * example, instead of deleting the node that is linked-to.
@@ -126,16 +136,6 @@ interface FileNode
      * @return (conditional) the new FileNode
      */
     conditional FileNode renameTo(String name);
-
-    /**
-     * The number of bytes represented by the file-node.
-     *
-     * For a directory, this value may require an extensive calculation, since the size of the
-     * directory is the sum of the sizes of its contents.
-     *
-     * For a non-existent file-node, the size is always 0.
-     */
-    @RO Int size;
 
     typedef function void () as Cancellable;
 
