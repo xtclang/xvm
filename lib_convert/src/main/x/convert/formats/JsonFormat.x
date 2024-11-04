@@ -28,8 +28,8 @@ const JsonFormat(Printer printer = Printer.DEFAULT)
 
     @Override
     Value decode(String text) {
-        if (Doc doc := new Parser(new CharArrayReader(text)).next()) {
-            return doc;
+        if (Doc doc := new Parser(text.toReader()).next()) {
+            return doc.makeImmutable();
         } else {
             return Null;
         }
