@@ -599,8 +599,12 @@ public class ClzBuilder {
         _sb.p("return ");
       _sb.p(mname).p("( ");
       int delta = xfun.nargs() - m._args.length;
-      for( int i = 0; i < m._args.length; i++ )
-        _sb.p(jname(m._args[i]._name)).p("._i, ");
+      for( int i = 0; i < m._args.length; i++ ) {
+        _sb.p(jname(m._args[i]._name));
+        if( xfun.arg(i).isUnboxed() )
+          _sb.p("._i");
+        _sb.p(", ");
+      }
       _sb.unchar(2).p(" );").nl().di();
       _sb.i().p("}").nl();
     }

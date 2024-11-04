@@ -145,6 +145,8 @@ class BinOpAST extends AST {
         (ast instanceof BinOpAST || ast instanceof TernaryAST || (ast instanceof SwitchAST sast && sast._kids[0] instanceof MultiAST ) ) ) {
       sb.p(" "); wrap=true;
     }
+    if( ast instanceof ConAST con && con._con.charAt(0)=='-' )
+      sb.p(" ");
     if( wrap ) sb.p("(");
     ast.jcode(sb);
     if( wrap ) sb.p(")");

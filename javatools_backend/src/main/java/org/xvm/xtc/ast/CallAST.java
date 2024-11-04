@@ -43,7 +43,6 @@ public class CallAST extends AST {
       }
     }
 
-
     _ret = ret;
     _type = _type();
   }
@@ -96,6 +95,9 @@ public class CallAST extends AST {
       ((ConAST)k1)._con = "null";
       ((ConAST)k1)._type= XCons.NULL;
     }
+    // References to become Java primitives
+    if( clz.equals("Ref") )
+      return ast;
 
     if( k1 instanceof ConAST ) {
       // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name

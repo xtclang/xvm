@@ -55,7 +55,7 @@ public abstract class XValue {
     // Literal constants
     case LitCon lit -> {
       if( lit._f==Const.Format.IntLiteral ) {
-        ClzBuilder.add_import("org.xvm.xec.ecstasy.numbers.IntLiteral");
+        ClzBuilder.add_import(XEC.XCLZ+".ecstasy.numbers.IntLiteral");
         yield ASB.p("IntLiteral.construct(\"").p(lit._str).p("\")");
       }
       yield ASB.quote(lit._str);
@@ -138,8 +138,11 @@ public abstract class XValue {
     case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
         yield ASB.p( S.java_class_name(mod._name));
-      if( con0.part() instanceof PropPart prop )
+      if( con0.part() instanceof PropPart prop ) {
+        if( prop.clz() != ClzBuilder.CCLZ )
+          ASB.p(prop._par._name).p(".");
         yield ASB.p(PropBuilder.jname(prop)).p("$get()");
+      }
       if( con0.part() instanceof ClassPart clz )
         yield ASB.p( S.java_class_name(clz._name)).p(".GOLD");
 
@@ -161,12 +164,11 @@ public abstract class XValue {
     case AryCon ac -> {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
       XClz ary = (XClz)XType.xtype(ac.type(),false);
+      ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.AryXTC");
       // Cannot make a zero-length instance of ARRAY, since its abstract - but
       // a zero-length version is meaningful.
-      if( ary==XCons.ARRAY || ary==XCons.ARRAY_RO ) {
-        ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.AryXTC");
+      if( ary==XCons.ARRAY || ary==XCons.ARRAY_RO )
         yield ASB.p("AryXTC.EMPTY"); // Untyped array creation; cannot hold elements
-      }
 
       // new AryString( .1, "abc", "def");
       // new Arylong  ( .1, 0, 1, 2 );

@@ -132,7 +132,7 @@ public class XTC {
   public static class Exception extends RuntimeException {
     public Exception(String msg) {super(msg); }
     public Exception() { }
-    public static Exception construct(String s) { return new Exception(s); }
+    public static Exception construct(String s, String cause) { return new Exception(s); }
     public String message$get() { return getMessage(); };
   }
 
@@ -146,7 +146,7 @@ public class XTC {
   // XTC IllegalArgument mapped to Java
   public static class IllegalArgument extends Exception {
     public IllegalArgument(String s) { super(s); }
-    public static IllegalArgument construct(String s) { return new IllegalArgument(s); }
+    public static IllegalArgument construct(String s, String cause) { return new IllegalArgument(s); }
   }
 
   // XTC ReadOnlyException mapped to Java

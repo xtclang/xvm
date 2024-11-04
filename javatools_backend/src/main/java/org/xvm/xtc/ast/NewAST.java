@@ -33,6 +33,12 @@ class NewAST extends AST {
     super(kids_plus_clz(kids,xt,X,type));
     _type = xt;
     _meth = meth;
+    if( meth!=null && kids!=null && meth._args.length != kids.length ) {
+      int len = kids.length;
+      assert len+1==meth._args.length; // more default args
+      _kids = Arrays.copyOf(_kids,meth._args.length);
+      _kids[len] = new ConAST(null,meth._args[len]._def);
+    }
     if( xt.needs_import(true) )
       ClzBuilder.add_import(xt);
   }

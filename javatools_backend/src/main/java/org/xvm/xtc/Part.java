@@ -137,6 +137,13 @@ abstract public class Part {
     return _name2kid==null ? null : _name2kid.get(s);
   }
 
+  public ClassPart clz() {
+    Part p = _par;
+    while( !(p instanceof ClassPart clz) )
+      p = p._par;
+    return clz;
+  }
+
   // ----- Enums -----------------------------------------------------------
   /**
    * The Format enumeration defines the multiple different binary formats used

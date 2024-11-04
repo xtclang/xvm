@@ -202,10 +202,4 @@ public class MethodPart extends MMethodPart {
       :_par._par._name+"$"+_name;
   }
 
-  public ClassPart clz() {
-    Part p = _par;
-    while( !(p instanceof ClassPart clz) )
-      p = p._par;
-    return clz;
-  }
 }

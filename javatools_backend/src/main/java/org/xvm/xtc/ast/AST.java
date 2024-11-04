@@ -54,17 +54,18 @@ public abstract class AST {
   String name() { throw XEC.TODO(); }
 
   // Cast nth child from a long to an int
-  void castInt(int n) {
+  boolean castInt(int n) {
     AST kid = _kids[n];
+    if( kid._type == XCons.INT ) return false; // Already an int
     // Update a long constant to an int in-place
     if( kid instanceof ConAST con ) {
-      if( con._type == XCons.INT ) return; // Already an int
       assert con._type == XCons.LONG;
       con._con = con._con.substring(0,con._con.length()-1);
       con._type = XCons.INT;
-      return;
+      return true;              // Did something
     }
-    throw XEC.TODO();
+    _kids[n] = new ConvAST(XCons.INT,_kids[n]);
+    return true;
   }
   // Replace a constant "false" with a conditional false return
   boolean condFalse( int idx, XType zret ) {

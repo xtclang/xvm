@@ -1,11 +1,12 @@
 package org.xvm.xtc.ast;
 
+import java.util.Arrays;
 import org.xvm.XEC;
-import org.xvm.xtc.*;
-import org.xvm.xtc.cons.Const;
-import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.util.S;
 import org.xvm.util.SB;
+import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xtc.*;
+import org.xvm.xtc.cons.Const;
 
 public class InvokeAST extends AST {
   String _meth, _slice_tmp;
@@ -110,12 +111,12 @@ public class InvokeAST extends AST {
       case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "toInt64" -> _kids[0]; // no-op cast
       case "asciiDigit" -> {
-        InvokeAST inv = new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+        InvokeAST inv = new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.Char",XCons.JCHAR),_kids[0]);
         inv._cond = true;
         yield inv;
       }
       case "decimalValue", "quoted" ->
-        new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+        new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.Char",XCons.JCHAR),_kids[0]);
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -136,17 +137,25 @@ public class InvokeAST extends AST {
       // The existing _fun has XTC.String arguments; we're using the Java
       // function of the same name which expects bare Java.String, so we want
       // to remove any "arguments need boxing", which is based on the _fun.
-      case "equals", "split", "endsWith", "startsWith", "substring" -> { _fun = null; yield null; }
+      case "equals", "endsWith", "startsWith" -> { _fun = null; yield null; }
+      case "substring" -> {
+        _fun = null;
+        // Force offset math to be an integer
+        yield castInt(1) ? this : null;
+      }
+
       // Conditional and long index return
       case "indexOf" -> {
-        AST call = new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2]);
+        AST call = new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2]);
         call._cond = true;
         yield call;
       }
       case "slice" -> {
-        _slice_tmp = enclosing_block().add_tmp(XCons.RANGE);
+        _slice_tmp = enclosing_block().add_tmp(ClzBuilder.add_import(XCons.RANGE));
         yield null;
       }
+      case "split" ->
+        new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2],_kids[3]);
       default -> throw XEC.TODO();
       };
     }
@@ -184,6 +193,11 @@ public class InvokeAST extends AST {
   }
 
   private BinOpAST llbin(String op) {
+    if( _type == XCons.INT ) {
+      castInt(0);
+      castInt(1);
+      return new BinOpAST( op, "", XCons.INT, _kids );
+    }
     return _type==XCons.LONG ? new BinOpAST( op, "", XCons.LONG, _kids ) : null;
   }
   private BinOpAST ddbin(String op) {
@@ -229,8 +243,8 @@ public class InvokeAST extends AST {
     // Print "str.slice( RangeExpr )" as
     // "str.substring((tmp=RangeExpr)._start,tmp._end)"
     if( _meth.equals("slice") && _type==XCons.STRING ) {
-      _kids[0].jcode(sb).p(".substring((").p(_slice_tmp).p("=");
-      _kids[1].jcode(sb).p(")._start,").p(_slice_tmp).p("._end)");
+      _kids[0].jcode(sb).p(".substring((int)(").p(_slice_tmp).p("=");
+      _kids[1].jcode(sb).p(")._start,(int)").p(_slice_tmp).p("._end)");
       return sb;
     }
 

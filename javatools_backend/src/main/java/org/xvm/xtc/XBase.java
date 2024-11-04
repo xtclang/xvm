@@ -39,7 +39,7 @@ public class XBase extends XType {
   // Because interning, if not "==" then never structurally equals and
   // because simple fully expanded types, never "isa" unless "==".
   @Override boolean _isa( XType xt ) {
-    if( this==XCons.LONG && xt==XCons.INT ) return true;
+    if( this==XCons.INT && xt==XCons.LONG ) return true;
     return S.eq( "String", _jtype ) && S.eq( "String", ((XBase) xt)._jtype ) && !xt._notNull;
   }
 }

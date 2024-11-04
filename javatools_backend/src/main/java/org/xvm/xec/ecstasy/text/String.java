@@ -6,6 +6,7 @@ import org.xvm.xec.ecstasy.Const;
 import org.xvm.xec.ecstasy.Iterable;
 import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.Ordered;
+import org.xvm.xec.ecstasy.collections.AryString;
 import org.xvm.xrun.Never;
 import org.xvm.xrun.XRuntime;
 
@@ -31,6 +32,14 @@ public class String extends Const implements Iterable<Char> {
     int idx = src.indexOf(find);
     XRuntime.$COND = idx != -1;
     return idx;
+  }
+  public static long indexOf( java.lang.String src, char find, long start ) {
+    int idx = src.indexOf(find);
+    XRuntime.$COND = idx != -1;
+    return idx;
+  }
+  public static AryString split( java.lang.String src, char find, boolean omitEmpty, boolean trim ) {
+    throw XEC.TODO();
   }
 
   public static <E extends String> boolean equals$String( XTC gold, E ord0, E ord1 ) { return ord0._i.equals(ord1._i); }
