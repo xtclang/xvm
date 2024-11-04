@@ -8,10 +8,13 @@
 module Hello
         incorporates WebApp {
     package net   import net.xtclang.org;
+    package json  import json.xtclang.org;
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
     import net.IPAddress;
+
+    import json.*;
 
     import web.*;
     import web.http.*;
@@ -153,7 +156,7 @@ module Hello
         @WebService("/e")
         service Echo {
             @Get("{path}")
-            String[] echo(String path) {
+            String[] getEcho(String path) {
                 assert:debug path != "debug";
 
                 assert RequestIn request ?= this.request;
@@ -173,6 +176,19 @@ module Hello
                         $"accepts={request.accepts}",
                         $"query={request.queryParams}",
                         $"user={session?.userId? : "<anonymous>"}",
+                       ];
+            }
+
+            @Post("anthropic")
+            JsonObject simulateClaudeAI(@BodyParam JsonObject message = []) {
+                assert Doc question := JsonPointer.from("messages/0/content").get(message);
+
+                JsonObject response = ["type"="text", "text"=$"I'm happy to help with '{question}'"];
+                return ["id"="msg_01",
+                        "type"="message",
+                        "role"="assistant",
+                        "model"="claude-3-5-sonnet-20241022",
+                        "content"=[response]
                        ];
             }
         }
