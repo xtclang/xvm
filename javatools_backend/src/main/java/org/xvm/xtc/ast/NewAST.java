@@ -23,17 +23,30 @@ class NewAST extends AST {
     AST[] kids = X.kids_bias(isChild ? 1 : 0);
     if( isChild )
       kids[0] = outer;
-    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,meth);
+    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,meth,isChild);
   }
   // For internal constructors like auto-boxing
   NewAST( AST[] kids, XClz xt ) {
-    this(kids,xt,null,null,null);
+    this(kids,xt,null,null,null,false);
   }
-  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodPart meth ) {
+  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodPart meth, boolean isChild ) {
     super(kids_plus_clz(kids,xt,X,type));
     _type = xt;
     _meth = meth;
-    if( meth!=null && kids!=null && meth._args.length != kids.length ) {
+
+    // Replace default args with their actual default values
+    if( _kids != null )
+      for( int i=1; i<_kids.length; i++ )
+        if( _kids[i] instanceof RegAST reg &&
+            reg._reg == -4/*Op.A_DEFAULT*/ ) {    // Default reg
+          // Swap in the default from method defaults
+          TCon con = meth._args[i-1]._def;
+          _kids[i] = con==null
+            ? new ConAST("0",meth.xfun().arg(i))
+            : new ConAST(null,con);
+          }
+
+    if( meth!=null && kids!=null && (meth._args==null?0:meth._args.length)+(isChild?1:0) != kids.length ) {
       int len = kids.length;
       assert len+1==meth._args.length; // more default args
       _kids = Arrays.copyOf(_kids,meth._args.length);

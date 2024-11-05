@@ -147,6 +147,7 @@ public class XTC {
   public static class IllegalArgument extends Exception {
     public IllegalArgument(String s) { super(s); }
     public static IllegalArgument construct(String s, String cause) { return new IllegalArgument(s); }
+    public static IllegalArgument construct(String s) { return new IllegalArgument(s); }
   }
 
   // XTC ReadOnlyException mapped to Java

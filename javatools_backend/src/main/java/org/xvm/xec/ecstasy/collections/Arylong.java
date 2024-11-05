@@ -36,7 +36,8 @@ public class Arylong extends Array<Int64> {
   }
   public static Arylong construct(Mutability mut, Arylong as) { return new Arylong(mut,as); }
   public static Arylong construct() { return new Arylong(); }
-  public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
+  public static Arylong construct(long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
+  public static Arylong construct(long len, long fill) { return new Arylong((int)len, i->fill ); }
   public static Arylong construct(long len) { return new Arylong((int)len); }
 
 
