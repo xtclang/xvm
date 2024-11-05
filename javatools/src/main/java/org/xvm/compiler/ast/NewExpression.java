@@ -1132,7 +1132,10 @@ public class NewExpression
                                 aArg2[0] = aArgs[0];
                                 aArg2[1] = Register.DEFAULT;
                                 idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
+
                                 code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
+
+                                aAstArgs = new ExprAST[] {aAstArgs[0], Register.DEFAULT.getRegisterAST()};
                                 }
                             else
                                 {

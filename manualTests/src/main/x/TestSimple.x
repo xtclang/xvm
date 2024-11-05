@@ -1,12 +1,10 @@
-module TestSimple
-    {
+module TestSimple {
+
     @Inject Console console;
 
     void run() {
-    }
+        Int[] array = new Int[0]; // used to generate an invalid BAST
 
-    void test(String s) {
-        Char[] chars = new Char[];
-        chars += s[0]; // this used to fail to compile
+        console.print(array);
     }
 }
