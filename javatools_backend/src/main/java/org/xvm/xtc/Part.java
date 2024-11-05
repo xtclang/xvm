@@ -79,7 +79,7 @@ abstract public class Part {
         // the body) for a single component
         n = (n << 8) | X.u8();
         // Tok.
-        kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X);
+        kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X, i);
       } else {
         throw XEC.TODO();
       }
@@ -175,15 +175,16 @@ abstract public class Part {
      * @param nFlags the flags that define the common attributes of the component
      * @param cond   the cond under which the component is present, or null
      * @param X      file parser support
+     * @param i      enum ordinal
      * @return the new component
      */
-    Part parse( Part par, Const con, int nFlags, CondCon cond, CPool X ) {
+    Part parse( Part par, Const con, int nFlags, CondCon cond, CPool X, int i ) {
       assert par!=null;
       return switch( this ) {
       case MODULE     -> new    ModPart(par, nFlags, (    ModCon) con, cond, X);
       case PACKAGE    ->new PackagePart(par, nFlags, (PackageCon) con, cond, X);
       case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE
-        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X, this);
+        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X, this, i);
       case TYPEDEF    -> new   TDefPart(par, nFlags, (   TDefCon) con, cond, X);
       case PROPERTY   -> new   PropPart(par, nFlags, (   PropCon) con, cond, X);
       case MULTIMETHOD->new MMethodPart(par, nFlags, (MMethodCon) con, cond, X);

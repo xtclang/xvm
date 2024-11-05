@@ -164,7 +164,7 @@ public class MethodPart extends MMethodPart {
   public XType ret() { return xfun().ret(); }
   private XFun _xfun() {
     boolean con = is_constructor(_name);
-    boolean box = !(con || isPrivate() || isOperator() || !XClz.make(clz())._jname.isEmpty());
+    //boolean box = !(con || isPrivate() || isOperator() || !XClz.make(clz())._jname.isEmpty());
     return XFun.make(clz(), con,
                      // Arguments are always UNBOXed.  The AST builder makes a boxed version
                      // if needed, and normal Java resolution will pick the right one.
