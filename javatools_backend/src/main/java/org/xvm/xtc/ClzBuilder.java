@@ -599,18 +599,24 @@ public class ClzBuilder {
       // Unbox the args and return primitive version
       _sb.p(mname).p("( ");
       args(m,_sb,"",true);
-      _sb.p(" ) {").nl().ii().i();
-      if( xfun.ret()!=XCons.VOID )
-        _sb.p("return ");
-      _sb.p(mname).p("( ");
-      for( int i = 0; i < m._args.length; i++ ) {
-        _sb.p(jname(m._args[i]._name));
-        if( xfun.arg(i).isUnboxed() )
-          _sb.p("._i");
-        _sb.p(", ");
+      _sb.p(" )");
+      if( m._ast.length==0 )
+        _sb.p(";");              // Abstract method
+      else {
+        _sb.p(" {").nl().ii().i();
+        if( xfun.ret()!=XCons.VOID )
+          _sb.p("return ");
+        _sb.p(mname).p("( ");
+        for( int i = 0; i < m._args.length; i++ ) {
+          _sb.p(jname(m._args[i]._name));
+          if( xfun.arg(i).isUnboxed() )
+            _sb.p("._i");
+          _sb.p(", ");
+        }
+        _sb.unchar(2).p(" );").nl().di();
+        _sb.i().p("}");
       }
-      _sb.unchar(2).p(" );").nl().di();
-      _sb.i().p("}").nl();
+      _sb.nl();
     }
 
     // Print out the function header keywords

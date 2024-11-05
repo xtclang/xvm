@@ -39,7 +39,14 @@ public class Int128 extends IntNumber {
     }
     return construct(lo,hi);
   }
-  public Int128 sub( Int128 x ) { throw XEC.TODO(); }
+  public Int128 sub( Int128 x ) {
+    long lo = _lo-x._lo;
+    long hi = _hi-x._hi;
+    if( (~(_lo | x._lo)) < 0 && lo < 0 ) {
+      throw XEC.TODO();         // Overflow
+    }
+    return construct(lo,hi);
+  }
   public Int128 mul( Int128 x ) {
     long lo = _lo*x._lo;
     long hi = _hi*x._hi + Math.multiplyHigh(_lo,x._lo) + _lo*x._hi + _hi*x._lo;
