@@ -1,6 +1,5 @@
 package org.xvm.xtc;
 
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import org.xvm.XEC;
@@ -8,6 +7,7 @@ import org.xvm.util.Ary;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xec.ecstasy.Comparable;
+import org.xvm.xec.ecstasy.Enum;
 import org.xvm.xec.ecstasy.Orderable;
 import org.xvm.xec.ecstasy.Service;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
@@ -179,8 +179,10 @@ public class ClzBuilder {
       _sb.p("extends ").p(_tclz._super._name);
       _tclz._super.clz_generic_use( _sb, _tclz );
       if( _clz._f==Part.Format.CONST ) {
-        IMPORTS.add(XEC.XCLZ+".ecstasy.Const");
-        IMPORTS.add(XEC.XCLZ+".ecstasy.Ordered");
+        IMPORTS.add( XEC.XCLZ + ".ecstasy.Const" );
+        IMPORTS.add( XEC.XCLZ + ".ecstasy.Ordered" );
+      } else if( _clz._f==Part.Format.ENUM ) {
+        IMPORTS.add(XEC.XCLZ+".ecstasy.Enum");
       } else if( _clz._f==Part.Format.SERVICE ) {
         IMPORTS.add(XEC.XCLZ+".ecstasy.Service");
       }
@@ -436,6 +438,10 @@ public class ClzBuilder {
         _clz.child("toString")==null )
       org.xvm.xec.ecstasy.Const.make_toString(_clz,_sb);
 
+    // Enum classes get a values property, not in the kids list
+    if( _clz._f == Part.Format.ENUM )
+      Enum.makeValues(_clz,_sb);
+
     // If the run method has a string array arguments -
     // - make a no-arg run, which calls the arg-run with nulls.
     // - make a main() which forwards to the arg-run
@@ -598,7 +604,6 @@ public class ClzBuilder {
       if( xfun.ret()!=XCons.VOID )
         _sb.p("return ");
       _sb.p(mname).p("( ");
-      int delta = xfun.nargs() - m._args.length;
       for( int i = 0; i < m._args.length; i++ ) {
         _sb.p(jname(m._args[i]._name));
         if( xfun.arg(i).isUnboxed() )
@@ -674,7 +679,7 @@ public class ClzBuilder {
       // This is a XTC constructor, which in Java is implemented as a factory
       // method - which has the normal no-arg Java constructor already called -
       // but now the XTC constructor method needs to end in a Java return.
-      if( constructor )
+      if( constructor && !(blk._kids[blk._kids.length-1] instanceof ThrowAST) )
         blk = blk.add(new ReturnAST(m,false,new RegAST(-5/*A_THIS*/,"this",_tclz)));
       blk.jcode(_sb);
       _sb.nl();
@@ -740,8 +745,10 @@ public class ClzBuilder {
     assert IMPORTS != null;
     // If the compiling class has the same path, tclz will be compiled in the
     // same source code
-    if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) )
+    if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) ) {
+      if( tclz._clz._par instanceof MethodPart ) add_nested(tclz);
       return tclz;
+    }
 
     // External; needs an import
     if( !tclz.needs_import(true) ) return tclz;
@@ -850,6 +857,7 @@ public class ClzBuilder {
     // Mangle names colliding with java keywords
     return switch( name ) {
     case "default", "assert", "char", "int" -> name+"0";
+    case "construct" -> "$construct";
     case "_" -> "$ignore";
     default -> name;
     };

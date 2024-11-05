@@ -32,6 +32,11 @@ class TernaryAST extends ElvisAST {
   @Override boolean _cond() { return _cond; }
 
   @Override public AST rewrite() {
+    // Ternary can be used to narrow args
+    if( !_cond && _type==XCons.INT && _kids[1]._type==XCons.LONG ) {
+      _type = XCons.LONG;
+      return new ConvAST(XCons.INT,this);
+    }
     // If conditional and either child is a bare "false" replace with a
     // conditional false constant.  Notice the "|" not "||" to side effect both
     // children.

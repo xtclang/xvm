@@ -66,7 +66,11 @@ public class InvokeAST extends AST {
     if( k0t == XCons.JLONG || k0t == XCons.LONG || k0t == XCons.INT ) {
       return switch( _meth ) {
       case "toString" -> _kids[0] instanceof ConAST ? null : new InvokeAST(_meth,XCons.STRING,new ConAST("Long",XCons.JLONG),_kids[0]).doType();
-      case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
+      case "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
+      case "toChar"  -> new ConvAST(XCons.CHAR ,_kids[0]);
+      case "toInt8"  -> new ConvAST(XCons.BYTE ,_kids[0]);
+      case "toInt16" -> new ConvAST(XCons.SHORT,_kids[0]);
+      case "toInt32" -> new ConvAST(XCons.INT  ,_kids[0]);
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
       case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL",XCons.LONG ));
@@ -122,7 +126,7 @@ public class InvokeAST extends AST {
     }
 
     // XTC String calls mapped to Java String calls
-    if( k0t == XCons.STRING ) {
+    if( k0t == XCons.STRING || k0t == XCons.STRINGN ) {
       return switch( _meth ) {
       case "toCharArray" -> _par._type== XCons.ARYCHAR ? new NewAST(_kids,XCons.ARYCHAR) : null;
       case "appendTo" -> {

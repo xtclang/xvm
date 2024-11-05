@@ -15,14 +15,14 @@ public class ModPart extends ClassPart {
 
   public final Version _version; // This version
   public final VerTree _allowedVers; //
-  public final ArrayList<Version> _prefers; 
+  public final ArrayList<Version> _prefers;
 
   ModPart( Part par, int nFlags, ModCon con, CondCon cond, CPool X ) {
-    super(par,nFlags,con,cond,X,Part.Format.MODULE);
+    super(par,nFlags,con,cond,X,Part.Format.MODULE,-1);
 
     _t = ModuleType.valueOf(X.u8());
     VerCon version = null;
-    
+
     if( isFingerprint() ) {
       _allowedVers = new VerTree();
       for( int i=0, len = X.u31(); i < len; i++ )
@@ -44,12 +44,12 @@ public class ModPart extends ClassPart {
     _dir  = (LitCon)X.xget();
     _time = (LitCon)X.xget();
   }
-  
+
   // Fingerprints link against a repo to get the actual module
   @Override Part link_as( XEC.ModRepo repo ) {
     return isFingerprint() ? repo.get(_name) : this;
   }
-  
+
   /**
    * Check if this is a fingerprint module, which is a secondary (not main) module in a file
    * structure that represents the set of external dependencies on a particular imported module
@@ -82,7 +82,7 @@ public class ModPart extends ClassPart {
     return _path._str.substring(0,_path._str.length()-2).intern();
   }
 
-  
+
   // ----- ModuleType enumeration ----------------------------------------------------------------
   /**
    * A module serves one of three primary purposes:

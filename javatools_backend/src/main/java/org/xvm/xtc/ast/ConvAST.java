@@ -45,16 +45,18 @@ class ConvAST extends AST {
       // Converting from a Java primitive to other things needs to be boxed
       return new NewAST(_kids,(XClz)_type);
     }
-    if( _type==XCons.LONG &&
+    if( _type==XCons.LONG ) {
         // TODO: this needs to handle all flavors
-        (_kids[0]._type==XCons.JUINT8 ||
-         _kids[0]._type==XCons.JUINT32 ) )
-      return new UniOpAST(new AST[]{_kids[0]},null,"._i",_type);
+      if( _kids[0]._type==XCons.JUINT8 ||
+          _kids[0]._type==XCons.JUINT32 )
+        return new UniOpAST(new AST[]{_kids[0]},null,"._i",_type);
+      return new InvokeAST("toInt",XCons.LONG,_kids);
+    }
     return null;
   }
 
   @Override public SB jcode( SB sb ) {
-    _type.clz(sb.p("((")).p(")");
-    return _kids[0].jcode(sb).p(")");
+    _type.clz(sb.p("((")).p(")(");
+    return _kids[0].jcode(sb).p("))");
   }
 }

@@ -278,7 +278,9 @@ public class XClz extends XType {
     // Module: java name is always Module.M$Module
     if( clz==mod ) return ("M$"+cname).intern();
     if( clz._par instanceof MethodPart meth ) // Class nested inside a Method
-      return S.java_class_name(meth._name+"$"+clz._name);
+      // If the method is in a property, use that for a more unique mangled name
+      return S.java_class_name(meth._name+"$"+
+                               (meth._par._par instanceof PropPart prop ? prop._name : clz._name));
     // Normal case, just the class name
     return cname;
   }
@@ -744,18 +746,13 @@ public class XClz extends XType {
 
 
   // Bare name, no generics
-  public String clz_bare( ) {
-    // Tuples have a mangled class name without generics
-    if( isTuple() ) return strTuple(new SB()).toString();
-    // These guys need a fully qualified name to avoid name conflicts
-    if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ) return qualified_name();
-    return name();
-  }
-
+  public String clz_bare( ) { return _clz_bare(new SB(),false).toString(); }
   @Override public SB clz_bare( SB sb ) { return _clz_bare(sb,true); }
   private  SB _clz_bare( SB sb, boolean imprt ) {
     // These guys need a fully qualified name to avoid name conflicts
-    if( this==XCons.JSTRING || this==XCons.JSTRINGN ||this==XCons.JOBJECT || _ambiguous )
+    if( this==XCons.JSTRING || this==XCons.JSTRINGN || this==XCons.JOBJECT || _ambiguous )
+      return sb.p(qualified_name());
+    if( _clz!=null && _clz._par.getClass() == ClassPart.class )
       return sb.p(qualified_name());
     if( imprt ) ClzBuilder.add_import(this);
     // Tuples have a mangled class name without generics

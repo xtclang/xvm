@@ -4,7 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xtc.*;
 
-class ThrowAST extends AST {
+public class ThrowAST extends AST {
 
   static ThrowAST make( ClzBuilder X ) {
     AST kid = ast_term(X);           // Throwable

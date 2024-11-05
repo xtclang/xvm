@@ -31,7 +31,14 @@ public class Int128 extends IntNumber {
   public Int128 sub( long x ) { throw XEC.TODO(); }
   public Int128 mul( long x ) { throw XEC.TODO(); }
   public Int128 div( long x ) { throw XEC.TODO(); }
-  public Int128 add( Int128 x ) { throw XEC.TODO(); }
+  public Int128 add( Int128 x ) {
+    long lo = _lo+x._lo;
+    long hi = _hi+x._hi;
+    if( (~(_lo | x._lo)) < 0 && lo < 0 ) {
+      throw XEC.TODO();         // Overflow
+    }
+    return construct(lo,hi);
+  }
   public Int128 sub( Int128 x ) { throw XEC.TODO(); }
   public Int128 mul( Int128 x ) {
     long lo = _lo*x._lo;

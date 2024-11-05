@@ -146,6 +146,7 @@ public abstract class XCons {
   public static XClz ARYBOOL  = make_java_ary("Aryboolean",JBOOL  );
   public static XClz ARYCHAR  = make_java_ary("Arychar"   ,JCHAR  );
   public static XClz ARYSTRING= make_java_ary("AryString" ,JSTRING);
+  public static XClz ARYINT   = make_java_ary("Aryint"    ,JINT32 );
   public static XClz ARYLONG  = make_java_ary("Arylong"   ,JLONG  );
   public static XClz ARYUBYTE = make_java_ary("AryUInt8"  ,JUINT8 );
 
@@ -153,6 +154,7 @@ public abstract class XCons {
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
   public static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong",   "Iterlong",  "ecstasy","Iterator",null,"Element",JLONG  );
+  public static XClz ITERATORINT  = make_java("ecstasy.collections.Aryint",    "Iterint",   "ecstasy","Iterator",null,"Element",JINT32 );
   public static XClz ITERSTR      = make_java("ecstasy.collections.AryString", "IterString","ecstasy","Iterator",null,"Element",JSTRING);
   public static XClz ITERATORCHAR = make_java("ecstasy",                       "Iterator",  "ecstasy","Iterator",null,"Element",CHAR   );
 

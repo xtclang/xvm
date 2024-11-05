@@ -7,6 +7,7 @@ import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 import org.xvm.xec.ecstasy.collections.Hashable;
 import org.xvm.xec.ecstasy.numbers.Int64;
+import org.xvm.xec.ecstasy.text.Char;
 import org.xvm.xec.ecstasy.text.Stringable;
 import org.xvm.xrun.Never;
 import org.xvm.xtc.*;
@@ -75,6 +76,10 @@ public class Const extends XTC
   public static boolean equals$Const(XTC gold, Const c0, long i ) {
     // Lost all type info, need to make sure same subclass
     return c0 instanceof Int64 i0 && i0._i == i;
+  }
+  public static boolean equals$Const(XTC gold, Const c0, char c ) {
+    // Lost all type info, need to make sure same subclass
+    return c0 instanceof Char i0 && i0._i == c;
   }
 
   public static boolean  equals$Const(XTC gold, XTC c0, XTC c1 ) { return equals$Const(gold,(Const)c0,(Const)c1); }

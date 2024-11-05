@@ -1,7 +1,6 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.util.S;
 import org.xvm.util.SB;
 import org.xvm.xtc.ast.AST;
 import org.xvm.xtc.ast.BlockAST;

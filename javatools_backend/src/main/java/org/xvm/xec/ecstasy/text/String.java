@@ -25,7 +25,7 @@ public class String extends Const implements Iterable<Char> {
   @Override public java.lang.String toString() { return _i; }
 
   public static java.lang.String quoted( java.lang.String s ) {
-    throw XEC.TODO();
+    return '"'+s+'"';
   }
   // Conditional return
   public static long indexOf( java.lang.String src, java.lang.String find, long start ) {
