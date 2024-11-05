@@ -45,7 +45,6 @@ public class ClzBuilder {
 
   // Fields for emitting a Method Code
   public MethodPart _meth;      // Method whose code is being parsed
-  public ExprAST _expr;         // True if AST is parse inside an ExprAST, similar to a nested method
   private CPool _pool;          // Parser for code buffer
 
   public final Ary<String> _locals; // Virtual register numbers to java names
@@ -679,8 +678,8 @@ public class ClzBuilder {
       // This is a XTC constructor, which in Java is implemented as a factory
       // method - which has the normal no-arg Java constructor already called -
       // but now the XTC constructor method needs to end in a Java return.
-      if( constructor && !(blk._kids[blk._kids.length-1] instanceof ThrowAST) )
-        blk = blk.add(new ReturnAST(m,false,new RegAST(-5/*A_THIS*/,"this",_tclz)));
+      if( constructor && (blk._kids.length==0 || !(blk._kids[blk._kids.length-1] instanceof ThrowAST)) )
+        blk = blk.add(new ReturnAST(m,new RegAST(-5/*A_THIS*/,"this",_tclz)));
       blk.jcode(_sb);
       _sb.nl();
 
@@ -746,7 +745,9 @@ public class ClzBuilder {
     // If the compiling class has the same path, tclz will be compiled in the
     // same source code
     if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) ) {
-      if( tclz._clz._par instanceof MethodPart ) add_nested(tclz);
+      // Method-nested classes get compiled once as the official type, but
+      // might come here again with specialized variants.
+      if( tclz._clz._par instanceof MethodPart && tclz._clz._tclz == tclz ) add_nested(tclz);
       return tclz;
     }
 

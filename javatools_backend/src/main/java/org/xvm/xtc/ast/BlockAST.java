@@ -21,7 +21,7 @@ public class BlockAST extends ElvisAST {
     return new BlockAST(kids);
   }
 
-  public BlockAST( AST... kids ) { super(kids); _type = _type(); }
+  public BlockAST( AST... kids ) { super(kids); _type = XCons.VOID; }
 
   public BlockAST add(AST kid) {
     BlockAST blk = new BlockAST(Arrays.copyOf(_kids,_kids.length+1));
@@ -73,7 +73,7 @@ public class BlockAST extends ElvisAST {
 
     // Yank a blank return
     if( _kids.length>0 && _kids[_kids.length-1] instanceof ReturnAST ret &&
-        ret._meth.xfun().ret()==XCons.VOID && !ret._expr ) {
+        ret._meth!=null && ret._meth.xfun().ret()==XCons.VOID ) {
       // Void return functions execute the return for side effects only
       _kids = Arrays.copyOf(_kids,_kids.length-1);
       return this;

@@ -39,6 +39,10 @@ public class String extends Const implements Iterable<Char> {
     return idx;
   }
   public static AryString split( java.lang.String src, char find, boolean omitEmpty, boolean trim ) {
+    if( omitEmpty ) throw XEC.TODO();
+    if( trim ) throw XEC.TODO();
+    int idx = src.indexOf(find);
+    if( idx == -1 ) return AryString.EMPTY;
     throw XEC.TODO();
   }
 

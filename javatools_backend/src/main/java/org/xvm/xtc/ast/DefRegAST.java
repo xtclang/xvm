@@ -9,7 +9,6 @@ import org.xvm.util.SB;
 public class DefRegAST extends AST {
   final String _name;
   final String _init;
-  final ExprAST _expr;          // Nested in an ExprAST
   int _reg;                     // Register number
 
   static DefRegAST make( ClzBuilder X, boolean named, boolean initd ) {
@@ -40,20 +39,11 @@ public class DefRegAST extends AST {
     // At least FutureVar redefines the type so save the AST architected type
     // till after annotation processing
     _reg = X.define(_name,_type);
-    _expr = X._expr;
   }
-  public DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; _expr=null; }
+  public DefRegAST( XType type, String name, String init ) { super(null); _type=type; _name=name; _init=init; }
 
   @Override String name() { return _name; }
   @Override XType _type() { return _type; }
-
-  @Override public AST rewrite() {
-    if( _expr==null ) return null;
-    assert _init==null;
-    // Move the Def outside the Expr and use a normal Reg update here
-    _expr.insertDef(this);
-    return new RegAST(_name,_type);
-  }
 
   @Override void jpre( SB sb ) {
     if( _type!=null ) _type.clz(sb);

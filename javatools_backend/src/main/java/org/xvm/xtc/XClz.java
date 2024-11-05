@@ -752,7 +752,9 @@ public class XClz extends XType {
     // These guys need a fully qualified name to avoid name conflicts
     if( this==XCons.JSTRING || this==XCons.JSTRINGN || this==XCons.JOBJECT || _ambiguous )
       return sb.p(qualified_name());
-    if( _clz!=null && _clz._par.getClass() == ClassPart.class )
+    // Nested class in other module?
+    if( _clz!=null && _clz._par.getClass() == ClassPart.class &&
+        _clz._par != ClzBuilder.CCLZ )
       return sb.p(qualified_name());
     if( imprt ) ClzBuilder.add_import(this);
     // Tuples have a mangled class name without generics

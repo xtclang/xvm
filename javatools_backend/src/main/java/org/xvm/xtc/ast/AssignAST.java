@@ -37,8 +37,25 @@ class AssignAST extends AST {
 
 
   @Override XType _type() {
-    // Check for a exploded tuple into a multi-assign.
-    return _kids[ _kids[0] instanceof MultiAST multi && _kids[1]._type.isTuple() ? 1 : 0 ]._type;
+    // Check for a exploded tuple into a multi-assign.  Multis aways have type
+    // boolean (bad design?), so ignore the multi type.
+    AST k0 = _kids[0], k1 = _kids[1];
+    if( k0 instanceof MultiAST ) {
+      if( k1 instanceof MultiAST ) {
+        // Both multis.  Must be matched pair.  Take the last non-ignore result.
+        for( int i=k0._kids.length-1; i >=0; i-- )
+          if( !(k0._kids[i] instanceof RegAST reg) || reg._reg != -2/*A_IGNORE*/ )
+            return k0._kids[i]._type;
+        throw XEC.TODO();       // All kids are ignore?
+      } else if( k1._type.isTuple() ) {
+        return k1._type;
+      } else {
+        return k1._type;
+      }
+    } else {
+      // LHS type
+      return k0._type;
+    }
   }
 
   @Override boolean _cond() {
@@ -86,10 +103,11 @@ class AssignAST extends AST {
       if( _kids[1] instanceof MultiAST mm ) {
         Ary<AST> kids = new Ary<>(AST.class);
         for( int i=0; i<m._kids.length; i++ ) {
-          if( m._kids[i] instanceof RegAST reg && reg._reg != -2/*A_IGNORE*/)
+          if( !(m._kids[i] instanceof RegAST reg) || reg._reg != -2/*A_IGNORE*/)
             kids.push(new AssignAST(m._kids[i],mm._kids[i]));
         }
-        return new MultiAST(false,kids.asAry());
+        if( kids._len>1 ) throw XEC.TODO();
+        return kids.at(0);
 
       } else {
         //   XTC: (Int a, String b, Double c) = retTuple();

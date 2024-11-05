@@ -7,15 +7,13 @@ import org.xvm.xtc.*;
 
 public class ReturnAST extends AST {
   final MethodPart _meth;
-  final boolean _expr;
 
   static ReturnAST make( ClzBuilder X, int n ) {
-    return new ReturnAST(X._meth, X._expr!=null, X.kids(n) );
+    return new ReturnAST(X._meth, X.kids(n) );
   }
-  public ReturnAST( MethodPart meth, boolean expr, AST... kids) {
+  public ReturnAST( MethodPart meth, AST... kids) {
     super(kids);
     _meth = meth;
-    _expr = expr;
   }
 
   @Override boolean _cond() { return _meth.is_cond_ret(); }
@@ -24,14 +22,14 @@ public class ReturnAST extends AST {
     // Nested statement expression; kids[0] is statement and have to drill to
     // get the type.  Otherwise, the method has the official type which might
     // be lifted over the expression.
-    return _expr ? _kids[0]._type : _meth.xfun().ret();
+    return enclosing_block() instanceof ExprAST ? _kids[0]._type : _meth.xfun().ret();
   }
 
   @Override public AST rewrite() {
     // Expression returns have the wrong method (the outer method not the
     // expression), and their not really a return at all except I have to model
     // them as an inner-lambda.
-    if( _expr ) return null;
+    if( enclosing_block() instanceof ExprAST ) return null;
     // Void return functions execute the return for side effects only
     XFun fun = _meth.xfun();
     if( fun.ret() == XCons.VOID )
@@ -55,21 +53,24 @@ public class ReturnAST extends AST {
     // Flip multi-return into a tuple return
     if( _kids.length > 1 ) {
       AST nnn = new NewAST(_kids,(XClz)_type);
-      AST ret = new ReturnAST(_meth,false,nnn);
+      AST ret = new ReturnAST(_meth,nnn);
       ret._type = _type;
       return ret;
     }
     return null;
   }
 
-
   // Box as needed
   @Override public AST reBox( ) {
-    if( !(_kids[0]._type instanceof XBase && _kids[0]._type != XCons.NULL && !(_type instanceof XBase)) )
+    if( !(_kids[0]._type instanceof XBase) ||
+        _kids[0]._type == XCons.NULL ||
+        _type instanceof XBase ||
+        enclosing_block() instanceof ExprAST )
       return null;
     _kids[0] = _kids[0].reBoxThis();
     return this;
   }
+
 
   @Override public void jpre( SB sb ) {
     sb.p("return ");
