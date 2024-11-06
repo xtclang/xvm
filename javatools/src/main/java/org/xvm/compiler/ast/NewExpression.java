@@ -633,7 +633,7 @@ public class NewExpression
                             return null;
                         }
                     }
-                else if (fNestMate && typeTarget.isVirtualChild() || typeTarget.isInnerChildClass())
+                else if (typeTarget.isVirtualChild() || typeTarget.isInnerChildClass())
                     {
                     ClassStructure clzTarget = (ClassStructure)
                             typeTarget.getSingleUnderlyingClass(false).getComponent();
@@ -654,8 +654,7 @@ public class NewExpression
                         }
                     else
                         {
-                        // TODO: a better error
-                        log(errs, Severity.ERROR, Compiler.INVALID_OUTER_THIS);
+                        log(errs, Severity.ERROR, Compiler.PARENT_MISSING);
                         return null;
                         }
                     }
