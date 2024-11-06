@@ -296,7 +296,7 @@ public class ClzBuilder {
           // Nested inner classes take an outer class arg
           ClassPart outer = _clz.isNestedInnerClass();
           if( outer!=null )
-            _sb.fmt("%0 $outer, ", outer._name);
+            outer._tclz.clz_bare(_sb).p(" $outer, ");
           if( meth._args==null ) _sb.unchar(2);
           else args(meth,_sb,null,false);
           _sb.p(") { return new ").p(java_class_name).p("( ");
@@ -318,8 +318,9 @@ public class ClzBuilder {
       }
     }
 
-    // Property types from interfaces
+    // Property types from interfaces and mixins
     for( XClz side : _tclz._sides.keySet() ) {
+      if( side.isMixin() ) continue;
       int[] idxs = _tclz._sides.get(side);
       for( int i=0; i<idxs.length; i++ ) {
         String name = side._tns[i]; // Side property name

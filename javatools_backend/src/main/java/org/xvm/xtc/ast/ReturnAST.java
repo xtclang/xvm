@@ -62,7 +62,8 @@ public class ReturnAST extends AST {
 
   // Box as needed
   @Override public AST reBox( ) {
-    if( !(_kids[0]._type instanceof XBase) ||
+    if( _kids==null ||
+        !(_kids[0]._type instanceof XBase) ||
         _kids[0]._type == XCons.NULL ||
         _type instanceof XBase ||
         enclosing_block() instanceof ExprAST )

@@ -165,12 +165,14 @@ public class ClassPart extends Part {
   // Return XClz, expected already computed
   public XClz tclz() { assert _tclz!=null; return _tclz; }
 
+  // Like a Java nested inner, will have an instanceof of the outer
   public ClassPart isNestedInnerClass() {
     // self -> MMethod -> Class -> [Package or other ???]
     Part outer = _par;
     if( isStatic() || outer instanceof PackagePart || XClz.make(this).isa(XCons.CONST) )
       return null;
-    while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
+    while( !(outer instanceof ClassPart outclz) )
+      outer = outer._par;
     return outclz;
   }
 

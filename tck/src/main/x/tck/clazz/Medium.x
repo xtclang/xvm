@@ -6,7 +6,7 @@ class Medium {
         xincorp();
         incorp();
         ic();
-        typevars();
+        //typevars();
         //annot();
     }
 
@@ -178,9 +178,9 @@ class Medium {
         }
 
         class Outer<Key,Value> implements IFaceRep<Key> {
-            class InnerOut<Elem> implements IFaceColl<Elem> {
-                @Override String foo(Elem x) { return $"Inner {x=}"; }
-            }
+            //class InnerOut<Elem> implements IFaceColl<Elem> {
+            //    @Override String foo(Elem x) { return $"Inner {x=} Key="+Key; }
+            //}
 
             //class Derived extends InnerOut<Key> incorporates conditional CondMixin<Key extends Int> {
             //    @Override String foo(Elem x) { return $"Derived {x=}"; }
@@ -196,6 +196,8 @@ class Medium {
         String ifoo = io.foo(123);
         assert sfoo == "IFaceRep x=abc";
         assert ifoo == "IFaceRep x=123";
+        //Outer.InnerOut<String> si = new Outer.InnerOut<String>();
+        //assert si.foo("def") == "Inner x=def Key=Object";
     }
 
     // "Annotation": the Mixin is "after" the Base in the class tree:

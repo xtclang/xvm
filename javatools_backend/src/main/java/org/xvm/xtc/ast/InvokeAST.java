@@ -170,6 +170,7 @@ public class InvokeAST extends AST {
       if(      elem.isa(XCons.INTNUM ) )  _meth = "next8";
       else if( elem.isa(XCons.JCHAR  ) )  _meth = "next2";
       else if( elem.isa(XCons.JSTRING) )  _meth = "nextStr";
+      else return null;
       return this;
     }
 

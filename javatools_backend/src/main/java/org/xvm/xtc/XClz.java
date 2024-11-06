@@ -613,8 +613,8 @@ public class XClz extends XType {
     return _xts[0];
   }
   public final boolean iface() { return _clz!=null && _clz._f==Part.Format.INTERFACE; }
-  // MIXIN "incorporates" style
-  public final boolean inCorp() {
+  // Is a mixin
+  public final boolean isMixin() {
     return _clz._f==Part.Format.MIXIN;
   }
 
@@ -812,8 +812,6 @@ public class XClz extends XType {
       sb.p("$").p( _tns[i]);
       sb.p(" extends " );
       XClz xclz = (XClz)_xts[i];
-      // Conditional incorps must weaken, no generics for the Java side
-      //if( !inCorp() ) xclz = XCons.XXTC;
       if( xclz.iface() ) {
         sb.p("XTC & ");
         sb.p(xclz.name());
