@@ -7,6 +7,7 @@ import org.xvm.XEC;
 import org.xvm.util.SB;
 import org.xvm.xec.XTC;
 import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xec.ecstasy.Boolean;
 import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.numbers.Int64;
 import org.xvm.xrun.XRuntime;
@@ -35,7 +36,8 @@ public class Arylong extends Array<Int64> {
   }
   public static Arylong construct(Mutability mut, Arylong as) { return new Arylong(mut,as); }
   public static Arylong construct() { return new Arylong(); }
-  public static Arylong construct( long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
+  public static Arylong construct(long len, LongUnaryOperator fcn ) { return new Arylong(len,fcn); }
+  public static Arylong construct(long len, long fill) { return new Arylong((int)len, i->fill ); }
   public static Arylong construct(long len) { return new Arylong((int)len); }
 
 
@@ -92,6 +94,7 @@ public class Arylong extends Array<Int64> {
     return this;
   }
 
+  public Arylong shuffled(Boolean inPlace) { return shuffled(inPlace._i); }
   public Arylong shuffled(boolean inPlace) {
     if( inPlace )
       throw XEC.TODO();

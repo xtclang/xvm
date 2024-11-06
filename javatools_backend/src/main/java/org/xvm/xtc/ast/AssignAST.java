@@ -2,6 +2,7 @@ package org.xvm.xtc.ast;
 
 import org.xvm.xtc.*;
 import org.xvm.XEC;
+import org.xvm.util.Ary;
 import org.xvm.util.SB;
 import org.xvm.xtc.cons.Const.AsnOp;
 import org.xvm.xtc.cons.MethodCon;
@@ -35,18 +36,56 @@ class AssignAST extends AST {
   }
 
 
-  @Override XType _type() { return _kids[0]._type; }
+  @Override XType _type() {
+    // Check for a exploded tuple into a multi-assign.  Multis aways have type
+    // boolean (bad design?), so ignore the multi type.
+    AST k0 = _kids[0], k1 = _kids[1];
+    if( k0 instanceof MultiAST ) {
+      if( k1 instanceof MultiAST ) {
+        // Both multis.  Must be matched pair.  Take the last non-ignore result.
+        for( int i=k0._kids.length-1; i >=0; i-- )
+          if( !(k0._kids[i] instanceof RegAST reg) || reg._reg != -2/*A_IGNORE*/ )
+            return k0._kids[i]._type;
+        throw XEC.TODO();       // All kids are ignore?
+      } else if( k1._type.isTuple() ) {
+        return k1._type;
+      } else {
+        return k1._type;
+      }
+    } else {
+      // LHS type
+      return k0._type;
+    }
+  }
+
+  @Override boolean _cond() {
+    return _kids[1]._cond ||  // Assignments do not blow "COND"
+      // Or a conditional assign
+      _op==AsnOp.AsnIfNotFalse ||
+      _op==AsnOp.AsnIfNotNull ||
+      _op==AsnOp.AsnIfWasFalse ||
+      _op==AsnOp.AsnIfWasTrue  ||
+      _op==AsnOp.AsnIfWasNull;
+  }
+
   // If is a simple define, return the type else null
   XType isDef() {
     return _op==AsnOp.Asn && _kids[0] instanceof DefRegAST def ? def._type : null;
   }
 
   @Override public AST rewrite() {
+
+    // Assign of a boxed type to an eagerly unboxed type
+    if( _type instanceof XBase && _kids[1]._type.unbox()!=_kids[1]._type ) {
+      _kids[1] = new UniOpAST(new AST[]{_kids[1]},null,"._i",_type);
+      return this;
+    }
+
     // Assign of a non-primitive array
     if( _kids[0] instanceof BinOpAST bin &&
         // Replace with "ary.set(idx,val)"
         bin._op0.equals(".at(") )
-      return new InvokeAST("set",(XType)null,bin._kids[0],bin._kids[1],_kids[1]);
+      return new InvokeAST("set",null,bin._kids[0],bin._kids[1],_kids[1]);
 
     // Add/push element to array; or op-assign "x+=y"
     if( _meth!=null && _op._meth && _kids[0]._type instanceof XClz clz ) {
@@ -57,25 +96,42 @@ class AssignAST extends AST {
       return new AssignAST( AsnOp.Asn, _meth, reg1, op ).doType();
     }
 
-    // Multi-returns from tuples.
-    //   XTC: (Int a, String b, Double c) = retTuple();
-    //  Java: { ...tmps...;  tmp = retTuple; a = tmp._f0; b = tmp._f1; c = tmp._f2; }
+    // Multi-assigns
     if( _kids[0] instanceof MultiAST m ) {
       BlockAST blk = enclosing_block();
-      MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
-      System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
-      String tmp = blk.add_tmp(_kids[1]._type);
-      AST reg = new RegAST(tmp,_kids[1]._type), con;
-      mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
-      for( int i=0; i<m._kids.length; i++ ) {
-        AST kid = m._kids[i];
-        reg = new RegAST(blk.add_tmp(kid._type,kid.name()),kid._type);
-        con = new ConAST(tmp+"._f"+i,kid._type);
-        mm._kids[i+1] = new AssignAST(reg,con).doType();
-      }
-      return mm.doType();
-    }
+      // (Int a, _ b, Double c) = (foo, bar, baz)
+      if( _kids[1] instanceof MultiAST mm ) {
+        Ary<AST> kids = new Ary<>(AST.class);
+        for( int i=0; i<m._kids.length; i++ ) {
+          if( !(m._kids[i] instanceof RegAST reg) || reg._reg != -2/*A_IGNORE*/)
+            kids.push(new AssignAST(m._kids[i],mm._kids[i]));
+        }
+        if( kids._len>1 ) throw XEC.TODO();
+        return kids.at(0);
 
+      } else {
+        //   XTC: (Int a, String b, Double c) = retTuple();
+        //  Java: { ...tmps...;  tmp = retTuple; a = tmp._f0; b = tmp._f1; c = tmp._f2; }
+        MultiAST mm = new MultiAST(false,Arrays.copyOf(m._kids,m._kids.length+1));
+        // Insert a slot for the "tmp = retTuple"
+        System.arraycopy(mm._kids,0,mm._kids,1,m._kids.length);
+        String tmp = blk.add_tmp(_kids[1]._type);
+        AST reg = new RegAST(tmp,_kids[1]._type);
+        mm._kids[0] = new AssignAST(reg,_kids[1]).doType();
+        // Break out each part
+        for( int i=0; i<m._kids.length; i++ ) {
+          AST kid = m._kids[i];
+          if( (kid instanceof RegAST kreg && kreg._reg==-2 /*A_IGNORE*/) ) {
+            mm._kids[i+1] = null;
+          } else {
+            AST reg2= kid instanceof DefRegAST ? new DefRegAST(kid._type,kid.name(),null) : new RegAST(kid.name(),kid._type);
+            AST con = new ConAST(tmp+"._f"+i,kid._type);
+            mm._kids[i+1] = new AssignAST(reg2,con).doType();
+          }
+        }
+        return mm.doType();
+      }
+    }
 
     // var := (true,val)  or  var ?= not_null;
     if( _op == AsnOp.AsnIfNotFalse || _op == AsnOp.AsnIfNotNull) {
@@ -138,24 +194,26 @@ class AssignAST extends AST {
   }
 
   // Box as needed
-  @Override XType reBox( AST kid ) {
-    if( _kids[1]!=kid ) return null;
-    if( _op == AsnOp.AsnIfNotNull )
-      return _type.nullable();
-    if( _op == AsnOp.AsnIfNotFalse )
-      return XCons.BOOL;
-    return _type;
+  @Override public AST reBox( ) {
+    XType k0t = _kids[0]._type;
+    XType k1t = _kids[1]._type;
+    if( k0t.isUnboxed() || !k1t.isUnboxed() || k1t==XCons.NULL )
+      return null;
+    _kids[1] = _kids[1].reBoxThis();
+    return this;
   }
 
   @Override public SB jcode( SB sb ) {
     return switch( _op ) {
     case AsnIfNotFalse, AsnIfNotNull -> {
       // var := (true,val)  or  var ?= not_null;
-      if( _cond_asgn!=null ) sb.ip("if( ");
+      if( _cond_asgn!=null ) sb.p("if( ");
       // Expression result is the boolean conditional value,
       // and the var was previously defined.
       // $t(var = expr()) && XRuntime.$COND
-      String name = _kids[0] instanceof RegAST reg ? reg._name : ((DefRegAST)_kids[0])._name;
+      AST kid0 = _kids[0];
+      if( kid0 instanceof NarrowAST n ) kid0 = n._kids[0];
+      String name = kid0 instanceof RegAST reg ? reg._name : ((DefRegAST)kid0)._name;
       if( _op == AsnOp.AsnIfNotFalse ) sb.p("$t");
       _kids[1].jcode(sb.p("(").p(name).p(" = ")).p(")");
       sb.p( _op == AsnOp.AsnIfNotFalse ?" && XRuntime.$COND" : "!=null " );
@@ -183,6 +241,7 @@ class AssignAST extends AST {
     case MulAsn -> asn(sb);
     case DivAsn -> asn(sb);
     case  OrAsn -> asn(sb);
+    case XorAsn -> asn(sb);
     default -> throw XEC.TODO();
     };
   }
@@ -193,7 +252,7 @@ class AssignAST extends AST {
   }
 
   private SB asnIf(SB sb, String pre, String post) {
-    sb.ip("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
+    sb.p("if( ").p(pre).p(_name).p(post).p(" ) ").p(_name).p(" = ");
     return _kids[1].jcode(sb);
   }
 }

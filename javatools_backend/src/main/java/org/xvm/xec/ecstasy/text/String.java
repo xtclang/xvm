@@ -6,6 +6,7 @@ import org.xvm.xec.ecstasy.Const;
 import org.xvm.xec.ecstasy.Iterable;
 import org.xvm.xec.ecstasy.Iterator;
 import org.xvm.xec.ecstasy.Ordered;
+import org.xvm.xec.ecstasy.collections.AryString;
 import org.xvm.xrun.Never;
 import org.xvm.xrun.XRuntime;
 
@@ -24,9 +25,26 @@ public class String extends Const implements Iterable<Char> {
   @Override public java.lang.String toString() { return _i; }
 
   public static java.lang.String quoted( java.lang.String s ) {
+    return '"'+s+'"';
+  }
+  // Conditional return
+  public static long indexOf( java.lang.String src, java.lang.String find, long start ) {
+    int idx = src.indexOf(find);
+    XRuntime.$COND = idx != -1;
+    return idx;
+  }
+  public static long indexOf( java.lang.String src, char find, long start ) {
+    int idx = src.indexOf(find);
+    XRuntime.$COND = idx != -1;
+    return idx;
+  }
+  public static AryString split( java.lang.String src, char find, boolean omitEmpty, boolean trim ) {
+    if( omitEmpty ) throw XEC.TODO();
+    if( trim ) throw XEC.TODO();
+    int idx = src.indexOf(find);
+    if( idx == -1 ) return AryString.EMPTY;
     throw XEC.TODO();
   }
-
 
   public static <E extends String> boolean equals$String( XTC gold, E ord0, E ord1 ) { return ord0._i.equals(ord1._i); }
   public static <E extends String> boolean equals$String( XTC gold, E ord0, java.lang.String s1 ) { return ord0._i.equals(s1); }

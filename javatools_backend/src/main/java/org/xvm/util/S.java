@@ -16,10 +16,29 @@ public abstract class S {
       for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
     return -1;
   }
+  public static int find( int[] es, int e ) {
+    if( es != null )
+      for( int i=0; i<es.length; i++ ) if( es[i]==e ) return i;
+    return -1;
+  }
 
   public static String java_class_name( String xname ) {
-     return xname.replace(".","_").intern();
-   }
+    int idx = findBad(xname);
+    if( idx == -1 ) return xname;
+    char[] cs = xname.toCharArray();
+    for( int i=idx; i<cs.length; i++ )
+      if( bad(cs[i]) ) cs[i] = '_';
+    return new String(cs).intern();
+  }
+  private static int findBad( String xname ) {
+    for( int i=0; i<xname.length(); i++ )
+      if( bad(xname.charAt(i)) )
+        return i;
+    return -1;
+  }
+  private static boolean bad(char c) {
+    return c=='.' || c==':' || c=='=';
+  }
 
   public static <X> X[] swap( X[] ary, int i, int j ) {
     X tmp = ary[i];

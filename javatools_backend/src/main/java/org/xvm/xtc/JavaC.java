@@ -21,7 +21,7 @@ public abstract class JavaC {
   static final XFileManager XFILE;
   // XTC loader, using XFILE to find files
   static final XClzLoader LOADER;
-  
+
   // A map from qualified Java class names e.g. "org.xvm.xec.XEC" to a
   // JCodes, which is just a wrapper around the class file contents as bytes.
   public static final XFileSys XFM;
@@ -35,14 +35,14 @@ public abstract class JavaC {
     XFM = new XFileSys("org.xvm.xec",new File(xecurl.getFile()));
   }
 
-  
+
   // Compile a whole set of classes together
   static void compile( ArrayList<JavaSrc> srcs ) {
 
     DiagnosticCollector<JavaFileObject> errs = new DiagnosticCollector<>();
 
     ArrayList<String> options = new ArrayList<>();
-    
+
     JavaCompiler.CompilationTask task = COMPILER.getTask(null, XFILE, errs, options, null, srcs);
 
     if( !task.call() ) {
@@ -68,7 +68,7 @@ public abstract class JavaC {
       _name = name;
     }
   }
-  
+
   public static class JavaSrc extends SJFOWrap {
     public String _src;
     public JavaSrc(String name, String src) {
@@ -106,7 +106,7 @@ public abstract class JavaC {
         : new ByteArrayInputStream(    _buf  ,0,_buf.length);
     }
   }
-  
+
   private static class XClzLoader extends ClassLoader {
     XClzLoader() { super(JavaC.class.getClassLoader()); }
     @Override protected Class<XTC> findClass( String clzname) throws ClassNotFoundException {
@@ -122,7 +122,7 @@ public abstract class JavaC {
   public static class XFileSys {
     public final HashMap<String,JCodes> _jcodes; // Local class files
     public final HashMap<String,XFileSys> _dirs;      // Sub-directories of the same
-    
+
     // Walk and recursively install all existing hand-made Java classes
     XFileSys( String prefix, File dir ) {
       _jcodes = new HashMap<>();
@@ -168,7 +168,7 @@ public abstract class JavaC {
       return dir;
     }
 
-    
+
     JCodes get(String clzname) {
       return pack(clzname,true)._jcodes.get(clzname);
     }
@@ -179,7 +179,7 @@ public abstract class JavaC {
     public Class<XTC> klass(ClassPart clz) {
       return clz._tclz==null ? null : klass(clz._tclz.qualified_name());
     }
-    
+
     JCodes put( String clzname, JCodes jc ) {
       pack(clzname,true)._jcodes.put(clzname,jc);
       return jc;
@@ -187,11 +187,11 @@ public abstract class JavaC {
 
   }
 
-  
+
   // Locally compiled java class files "file system".
   private static class XFileManager extends ForwardingJavaFileManager<JavaFileManager> {
     public XFileManager(StandardJavaFileManager man) { super(man); }
-    
+
     @Override public XClzLoader getClassLoader(Location location) { return LOADER; }
     // javac will get this JCodes and fill it; we map it before it gets filled
     @Override public JavaFileObject getJavaFileForOutput(Location ignore, String name, Kind kind, FileObject sibling) {
@@ -232,7 +232,7 @@ public abstract class JavaC {
         @Override public boolean hasNext() { return _iter != null && _iter.hasNext(); }
         @Override public JCodes next() { return _iter.next(); }
       }
-      
+
     }
 
   }

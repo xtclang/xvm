@@ -22,14 +22,19 @@ public class XInter extends XType {
   }
   @Override SB _clz( SB sb, ParamTCon ptc ) {
     if( ptc != null ) throw XEC.TODO();
-    sb.p("Inter[");
-    _xts[0]._clz(sb,ptc).p(",");
-    _xts[1]._clz(sb,ptc).p("]");
+    sb.p("Inter_");
+    _xts[0]._clz(sb,ptc).p("_");
+    _xts[1]._clz(sb,ptc).p("");
     return sb;
   }
   @Override boolean eq(XType xt) { return true; }
   @Override int hash() { return 0; }
   @Override boolean _isa( XType xt ) {
     throw XEC.TODO();
+  }
+  @Override public XInter readOnly() {
+    XType xt0 = _xts[0].readOnly();
+    XType xt1 = _xts[1].readOnly();
+    return xt0==_xts[0] && xt1 == _xts[1]? this : make(xt0,xt1);
   }
 }

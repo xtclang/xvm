@@ -25,6 +25,7 @@ public class RegAST extends AST {
     XClz xt = X._tclz;
     _reg  = reg ;
     _name = switch( reg ) {
+    case -2 ->  "%ignore";  // A_IGNORE
     case -4 ->  "default";  // A_DEFAULT
     case -5 ->  "this";     // A_THIS
     case -10 -> "this";     // A_STRUCT: this as a struct
@@ -33,16 +34,17 @@ public class RegAST extends AST {
     default -> X._locals.at(reg);
     };
     _type = switch( reg ) {
+    case -2 ->  XCons.VOID;  // A_IGNORE
     case -4 ->  XCons.VOID;  // A_DEFAULT
     case -5 ->  xt;          // A_THIS
-    case -10 -> xt;          // A_STRUCT: this as a struct
+    case -10 -> xt == null ? XCons.VOID : xt;          // A_STRUCT: this as a struct
     case -11 -> xt;          // A_CLASS
-    case -13 -> xt.iface() ? xt: xt._super; // A_SUPER
+    case -13 -> xt.iface() ? xt : (xt._super==null ? XCons.XXTC : xt._super); // A_SUPER
     default -> X._ltypes.at(reg);
     };
     assert _type!=null;
   }
-  @Override String name() { return _name; } // Can be null for 'this'?
+  @Override String name() { return _name; }
   @Override XType _type() { return _type; }
   @Override void jpre ( SB sb ) {
     sb.p(_name);

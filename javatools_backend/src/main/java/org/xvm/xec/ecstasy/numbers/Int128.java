@@ -25,13 +25,28 @@ public class Int128 extends IntNumber {
   public Int128(long lo) { _lo=lo; _hi=0; }
 
   public static Int128 construct(long lo) { return lo==0 ? ZERO : new Int128(lo); }
+  public static Int128 construct(long lo, long hi) { return new Int128(lo,hi); }
 
   public Int128 add( long x ) { throw XEC.TODO(); }
   public Int128 sub( long x ) { throw XEC.TODO(); }
   public Int128 mul( long x ) { throw XEC.TODO(); }
   public Int128 div( long x ) { throw XEC.TODO(); }
-  public Int128 add( Int128 x ) { throw XEC.TODO(); }
-  public Int128 sub( Int128 x ) { throw XEC.TODO(); }
+  public Int128 add( Int128 x ) {
+    long lo = _lo+x._lo;
+    long hi = _hi+x._hi;
+    if( (~(_lo | x._lo)) < 0 && lo < 0 ) {
+      throw XEC.TODO();         // Overflow
+    }
+    return construct(lo,hi);
+  }
+  public Int128 sub( Int128 x ) {
+    long lo = _lo-x._lo;
+    long hi = _hi-x._hi;
+    if( (~(_lo | x._lo)) < 0 && lo < 0 ) {
+      throw XEC.TODO();         // Overflow
+    }
+    return construct(lo,hi);
+  }
   public Int128 mul( Int128 x ) {
     long lo = _lo*x._lo;
     long hi = _hi*x._hi + Math.multiplyHigh(_lo,x._lo) + _lo*x._hi + _hi*x._lo;
@@ -48,6 +63,14 @@ public class Int128 extends IntNumber {
 
   Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
   public Dec128 toDec128() { throw XEC.TODO(); }
+  public int toInt32(boolean check) {
+    if( check ) throw XEC.TODO();
+    return (int)_lo;
+  }
+  public long toInt64(boolean check) {
+    if( check ) throw XEC.TODO();
+    return _lo;
+  }
   public long toInt(boolean check) {
     if( check ) throw XEC.TODO();
     return _lo;
@@ -55,6 +78,10 @@ public class Int128 extends IntNumber {
   public long toUInt32(boolean check) {
     if( check ) throw XEC.TODO();
     return _lo;
+  }
+  public Int128 toInt128(boolean check) {
+    if( check ) throw XEC.TODO();
+    return this;
   }
 
   @Override public long hashCode( XTC x ) { throw XEC.TODO(); }

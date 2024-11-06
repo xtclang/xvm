@@ -6,6 +6,8 @@ import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
 
+import java.util.Arrays;
+
 // Print as a switch expression.
 class SwitchAST extends AST {
 
@@ -37,6 +39,9 @@ class SwitchAST extends AST {
     AST cond = ast_term(X);
     long isa = X.pack64();
     Const[] cases = X.consts();
+    // Last case is null for default.  If no default listed, make one now.
+    if( cases[cases.length-1]!=null )
+      cases = Arrays.copyOf(cases,cases.length+1);
     int clen = cases.length;
     AST[] kids = new AST[clen+1];
     // Condition
@@ -74,13 +79,13 @@ class SwitchAST extends AST {
     Const[] rezs = expr ? X.consts() : null;
     boolean cond_defines = nlocals != X.nlocals();
     X.pop_locals(nlocals);      // Pop scope-locals at end of scope
-    return new SwitchAST(X,flavor,kids,expr,isa,cases,rezs, cond_defines);
+    return new SwitchAST(flavor,kids,expr,isa,cases,rezs, cond_defines);
   }
   private static boolean valid_range( Const c ) {
     return c == null || c instanceof IntCon || c instanceof CharCon || (c instanceof RangeCon rcon && valid_range(rcon._lo));
   }
 
-  private SwitchAST( ClzBuilder X, Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
+  private SwitchAST( Flavor flavor, AST[] kids, boolean expr, long isa, Const[] cases, Const[] rezs, boolean cond_defines ) {
     super(kids);
     _flavor = flavor;
     _expr = expr;
@@ -100,7 +105,7 @@ class SwitchAST extends AST {
         String[] arms = _armss[i] = new String[alen];
         Const[] cons = ((AryCon)cases[i]).cons();
         for( int j=0; j<alen; j++ )
-          arms[j] = cons[j] !=null ? XValue.val(X,cons[j]) : null;
+          arms[j] = cons[j] !=null ? XValue.val(cons[j]) : null;
       }
       break;
 
@@ -125,7 +130,7 @@ class SwitchAST extends AST {
       for( int i=0; i<clen; i++ )
         // This might be an exact check, or might have a default.
         if( _cases[i] != null ) {
-          String arm = XValue.val(X,_cases[i]);
+          String arm = XValue.val(_cases[i]);
           // Enum arms must be the unqualified enum name.
           int idx = arm.lastIndexOf(".");
           if( idx >=0 ) arm = arm.substring(idx + 1);
@@ -136,7 +141,7 @@ class SwitchAST extends AST {
     case SimpleTern:
       // A list of singleton constants
       for( int i=0; i<clen-1; i++ )
-        _armss[i] = new String[]{XValue.val(X,cases[i])};
+        _armss[i] = new String[]{XValue.val(cases[i])};
       break;
 
     }
@@ -208,27 +213,30 @@ class SwitchAST extends AST {
   //      x.toString()
   //                  );
   private SB do_tern( SB sb, AST cond ) {
-    for( int i=0; i<_tmps.length; i++ ) {
-      sb.p(" $t(").p(_tmps[i]).p("= ");
-      cond._kids[i].jcode(sb);
-      sb.p(") &");
-    }
+    if( _tmps != null ) // null during build
+      for( int i=0; i<_tmps.length; i++ ) {
+        sb.p(" $t(").p(_tmps[i]).p("= ");
+        cond._kids[i].jcode(sb);
+        sb.p(") &");
+      }
     sb.nl().ii();
 
     // for each case label
     for( int i=0; i<_armss.length-1; i++ ) {
       sb.i();
       // for each arm
-      for( int j=0; j<_tmps.length; j++ ) {
-        String arm = _armss[i][j];
-        if( arm != null ) {   // Null arms are MatchAny and do not encode a test
-          // Arms with an allocation "new Range()" call "in"
-          if( arm.charAt(arm.length()-1)==')' )  sb.p(arm).p(".in(").p(_tmps[j]).p(")");
-          else                                   sb.p(_tmps[j]).p("==").p(arm);
-          sb.p(" && ");
+      if( _tmps != null ) {
+        for( int j = 0; j < _tmps.length; j++ ) {
+          String arm = _armss[i][j];
+          if( arm != null ) {   // Null arms are MatchAny and do not encode a test
+            // Arms with an allocation "new Range()" call "in"
+            if( arm.charAt( arm.length() - 1 ) == ')' ) sb.p( arm ).p( ".in(" ).p( _tmps[j] ).p( ")" );
+            else sb.p( _tmps[j] ).p( "==" ).p( arm );
+            sb.p( " && " );
+          }
         }
+        sb.unchar( 3 ).p( "? " );
       }
-      sb.unchar(3).p("? ");
       asExpr(_kids[i+1],sb).p(" :").nl();
     }
     sb.i();                     // The default case
@@ -295,13 +303,14 @@ class SwitchAST extends AST {
         do sb.p( _armss[i][0] ).p( ", " );
         while( _kids[++i] == null );
       } else {
-        sb.ip("default, ");
-        i++;
+        if( _kids[++i]!=null ) sb.ip("default, ");
       }
-      sb.unchar(2).p(case_sep);
-      _kids[i].jcode(sb);
-      if( !(_kids[i] instanceof BlockAST) ) sb.p(";");
-      sb.nl();
+      if( _kids[i]!=null ) {
+        sb.unchar( 2 ).p( case_sep );
+        _kids[i].jcode( sb );
+        if( !(_kids[i] instanceof BlockAST) ) sb.p( ";" );
+        sb.nl();
+      }
     }
     sb.di().ip("}");
     return sb;
@@ -320,8 +329,8 @@ class SwitchAST extends AST {
     _kids[0].jcode(sb);
     sb.p(" ) {").nl().ii();
 
-    for( int i=0; i<_armss.length; i++ ) {
-      if( _armss[i][0]==null ) sb.ip("default"); else sb.ip("case ").p(_armss[i][0]);
+    for( int i=0; i<_armss.length-1; i++ ) {
+      sb.ip("case ").p(_armss[i][0]);
       sb.p(case_sep);
       if( _kids[i+1] != null ) { // null is fall-through case
         _kids[i+1].jcode(sb);
@@ -329,6 +338,8 @@ class SwitchAST extends AST {
       }
       sb.nl();
     }
+    if( _armss[_armss.length-1] != null )
+      throw XEC.TODO();         // Default
     sb.di().ip("}");
     return sb;
   }

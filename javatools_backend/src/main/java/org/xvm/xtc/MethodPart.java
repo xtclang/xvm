@@ -25,12 +25,10 @@ public class MethodPart extends MMethodPart {
 
   // Return types
   public final Parameter[] _rets;
-  private XType[] _xrets;
 
   // Argument types
   public final Parameter[] _args;
   public final int _nDefaults;  // Number of default arguments
-  private XType[] _xargs;
 
   // Constants for code
   public final Const[] _cons;
@@ -132,10 +130,7 @@ public class MethodPart extends MMethodPart {
   // Match against signature.
   public boolean match_sig(SigCon sig) {
     assert sig._name.equals(_name);
-    boolean rez = match_sig(_args,sig._args, true);
-    if( !rez ) return false;
-    //assert match_sig(_rets,sig._rets, false); // No selection based on return, it just needs to match
-    return true;
+    return match_sig(_args,sig._args,true);
   }
   private boolean match_sig(Parameter[] ps, TCon[] ts, boolean box) {
     if( ps==null && ts==null ) return true;
@@ -151,83 +146,32 @@ public class MethodPart extends MMethodPart {
     return true;
   }
 
-  // Link method constants
-  void _cons( XEC.ModRepo repo ) {
-    if( _cons !=null )
-      for( Const con : _cons )
-        if( con instanceof MethodCon meth )
-          // Link signature, but not the method proper
-          ; //meth._sig.link(repo);
-        else
-          //con.link(repo);
-          throw XEC.TODO();
-  }
-
   public boolean is_empty_function() {
     return _code.length==2 && _code[0]==1 && _code[1]==76;
   }
-  public boolean is_constructor() { return S.eq(_name,"construct"); }
+  public static boolean is_constructor(String name) { return S.eq(name,"construct"); }
   boolean isOperator() {
     // Operator methods always unbox (since cannot dispatch as operator).
     // TODO: Probably can dispatch as normal method, will need boxed version.
     return _annos!=null && _annos[0]._par.name().equals("Operator");
   }
+  public XType xarg(int idx) { return xfun().arg(idx); }
 
   // XTypes for all arguments.  Lazily built.
   // Default arguments responsibility of the caller; they are explicit here.
-
-  // Default constructors take class type parameters, but will lack explicit
-  // args here; so _args and _xargs will not necessarily be the same.  XARGS
-  // is broken into sets:
-  // - Parent xargs/types, one explicit type argument per parent type var
-  // - Normal args, mapping to _args
-  // - Nested inner classes get the outer class as an arg
-  public XType[] xargs() { return _xargs==null ? (_xargs = _xargs()) : _xargs; }
-  private XType[] _xargs() {
-    // Non-constructors just walk the args (and optionally box)
-    if( !is_constructor() )
-      // Don't box privates or operators
-      return (_xargs = XType.xtypes(_args, !(isPrivate() || isOperator()) ));
-
-    // Constructors get all the type args from their class
-    XClz clz = clz()._tclz;
-    int len = clz._tns.length, j=len;
-    // Also get their stated args
-    if( _args != null ) len += _args.length;
-    // Nested inner classes get the outer class as an arg.
-    ClassPart outer = isNestedInnerClass();
-    if( outer!=null ) len++;
-
-    // Extend as needed
-    XType[] zts = Arrays.copyOf(clz._xts,len);
-
-    // Add outer class next
-    if( outer!=null )
-      zts[j++] = XClz.make(outer);
-    // Copy/type actual args
-    if( _args != null )
-      for( Parameter arg : _args )
-        zts[j++] = arg.type( false );
-
-    return zts;
+  private XFun _xfun;
+  public XFun xfun() { return _xfun == null ? (_xfun = _xfun()) : _xfun; }
+  public XType ret() { return xfun().ret(); }
+  private XFun _xfun() {
+    boolean con = is_constructor(_name);
+    //boolean box = !(con || isPrivate() || isOperator() || !XClz.make(clz())._jname.isEmpty());
+    return XFun.make(clz(), con,
+                     // Arguments are always UNBOXed.  The AST builder makes a boxed version
+                     // if needed, and normal Java resolution will pick the right one.
+                     XType.xtypes(_args, false),
+                     XType.xtypes(_rets, false) );
   }
-  public XType xarg(int idx) { return xargs()[idx]; }
 
-  public XType[] xrets() {
-    if( _xrets != null ) return _xrets;
-    return (_xrets = XType.xtypes(_rets,false));
-  }
-  public XType xret(int idx) { return xrets()[idx]; }
-
-  public ClassPart isNestedInnerClass() {
-    // self -> MMethod -> Class -> [Package or other ???]
-    ClassPart clz = clz();
-    Part outer = clz._par;
-    if( clz.isStatic() || outer instanceof PackagePart || XClz.make(clz).isa(XCons.CONST) )
-      return null;
-    while( !(outer instanceof ClassPart outclz) ) outer = outer._par;
-    return outclz;
-  }
 
   // Methods returning a conditional have to consume the conditional
   // immediately, or it's lost.  The returned value will be optionally assigned.
@@ -258,10 +202,4 @@ public class MethodPart extends MMethodPart {
       :_par._par._name+"$"+_name;
   }
 
-  public ClassPart clz() {
-    Part p = _par;
-    while( !(p instanceof ClassPart clz) )
-      p = p._par;
-    return clz;
-  }
 }

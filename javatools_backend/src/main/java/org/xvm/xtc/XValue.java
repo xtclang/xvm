@@ -6,26 +6,37 @@ import org.xvm.xtc.cons.*;
 import org.xvm.util.S;
 import org.xvm.util.SB;
 
+import java.math.BigInteger;
+
 // Concrete java values from XTC values.
 public abstract class XValue {
   // Produce a java value from a TCon
   private static final SB ASB = new SB();
-  static public String val( ClzBuilder X, Const tc ) {
+  static public String val( Const tc ) {
     assert ASB.len()==0;
     // Caller is a switch, will encode special
     if( tc instanceof MatchAnyCon ) return null;
-    _val(X,tc);
+    _val(tc);
     String rez = ASB.toString();
     ASB.clear();
     return rez;
   }
-  private static SB _val( ClzBuilder X, Const tc ) {
+  private static SB _val( Const tc ) {
     return switch( tc ) {
       // Integer constants in XTC are Java Longs
     case IntCon ic -> {
+      if( ic._f==Const.Format.Int128 ) {
+        ASB.p("Int128.construct(");
+        if( ic._big != null ) {
+          long lo = ic._big.longValue();
+          BigInteger big = ic._big.shiftRight(64);
+          long hi = big.longValueExact();
+          ASB.p(lo).p("L,").p(hi).p("L");
+        }
+        else ASB.p(ic._x).p("L");
+        yield ASB.p(")");
+      }
       if( ic._big != null ) throw XEC.TODO();
-      if( ic._f==Const.Format.Int128 )
-        yield ASB.p("Int128.construct(").p(ic._x).p("L)");
       yield ASB.p(ic._x).p('L');
     }
     case Flt64Con fc -> ASB.p(fc._flt);
@@ -42,23 +53,26 @@ public abstract class XValue {
       ASB.quote(sc._str);
 
     // Literal constants
-    case LitCon lit ->
-      lit._f==Const.Format.IntLiteral
-      ? ASB.p("IntLiteral.construct(\"").p(lit._str).p("\")")
-      : ASB.quote(lit._str);
+    case LitCon lit -> {
+      if( lit._f==Const.Format.IntLiteral ) {
+        ClzBuilder.add_import(XEC.XCLZ+".ecstasy.numbers.IntLiteral");
+        yield ASB.p("IntLiteral.construct(\"").p(lit._str).p("\")");
+      }
+      yield ASB.quote(lit._str);
+    }
 
     // Method constants
     case MethodCon mcon -> {
       MethodPart meth = (MethodPart)mcon.part();
       // Lambda names "->" are inlined as Java lambdas
-      String name = meth._name;
+      String name = ClzBuilder.jname(meth._name);
       if( meth._par._par instanceof MethodPart pmeth ) {
         if( !name.equals("->") )
-          name = pmeth._name+"$"+meth._name;
+          name = ClzBuilder.jname(pmeth._name)+"$"+name;
       } else {
         // Put qualified name if not in local namespace
         ClassPart clz = (ClassPart)meth._par._par;
-        if( clz!= ClzBuilder.CMOD )
+        if( clz!= ClzBuilder.CMOD && clz!=ClzBuilder.CCLZ )
           name = ClzBuilder.add_import(XClz.make(clz)).clz_bare()+"."+name;
       }
       yield ASB.p(name);
@@ -96,7 +110,7 @@ public abstract class XValue {
         yield xt.clz(ASB).p(".GOLD");
       }
       if( xt instanceof XClz clz )
-        yield ClzBuilder.add_import(clz).clz(ASB).p(".GOLD");
+        yield ClzBuilder.add_import(clz).clz_bare(ASB).p(".GOLD");
       if( xt instanceof XBase base )
         yield base.box().clz(ASB);
       // TODO: ASSERT XClz from PTC, get the gold instance from the one type parameter?
@@ -124,8 +138,11 @@ public abstract class XValue {
     case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
         yield ASB.p( S.java_class_name(mod._name));
-      if( con0.part() instanceof PropPart prop )
+      if( con0.part() instanceof PropPart prop ) {
+        if( prop.clz() != ClzBuilder.CCLZ )
+          ASB.p(prop._par._name).p(".");
         yield ASB.p(PropBuilder.jname(prop)).p("$get()");
+      }
       if( con0.part() instanceof ClassPart clz )
         yield ASB.p( S.java_class_name(clz._name)).p(".GOLD");
 
@@ -138,8 +155,8 @@ public abstract class XValue {
         : (rcon._xhi ? "IE" : "II");
       ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.Range"+ext);
       ASB.p("new Range").p(ext).p("(");
-      _val(X,rcon._lo).p(",");
-      _val(X,rcon._hi).p(")");
+      _val(rcon._lo).p(",");
+      _val(rcon._hi).p(")");
       yield ASB;
     }
 
@@ -147,12 +164,11 @@ public abstract class XValue {
     case AryCon ac -> {
       assert ac.type() instanceof ImmutTCon; // Immutable array goes to static
       XClz ary = (XClz)XType.xtype(ac.type(),false);
+      ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.AryXTC");
       // Cannot make a zero-length instance of ARRAY, since its abstract - but
       // a zero-length version is meaningful.
-      if( ary==XCons.ARRAY || ary==XCons.ARRAY_RO ) {
-        ClzBuilder.IMPORTS.add(XEC.XCLZ+".ecstasy.collections.AryXTC");
+      if( ary==XCons.ARRAY || ary==XCons.ARRAY_RO )
         yield ASB.p("AryXTC.EMPTY"); // Untyped array creation; cannot hold elements
-      }
 
       // new AryString( .1, "abc", "def");
       // new Arylong  ( .1, 0, 1, 2 );
@@ -165,7 +181,7 @@ public abstract class XValue {
       }                         // Else tuple no extra args
       if( ac.cons()!=null )
         for( Const con : ac.cons() )
-          _val(X, con ).p(", ");
+          _val( con ).p(", ");
       yield ASB.unchar(2).p(")");
     }
 
@@ -175,8 +191,8 @@ public abstract class XValue {
       type.clz(ASB.p("new ")).p("() {{ ");
       for( int i=0; i<mc._keys.length; i++ ) {
         ASB.p("put(");
-        _val(X, mc._keys[i] ).p(",");
-        _val(X, mc._vals[i] ).p("); ");
+        _val( mc._keys[i] ).p(",");
+        _val( mc._vals[i] ).p("); ");
       }
       ASB.p("}} ");
       yield ASB;
@@ -187,8 +203,12 @@ public abstract class XValue {
       ClassPart clz = ttc.clz();
       if( clz._name.equals("Console") && clz._path._str.equals("ecstasy/io/Console.x") )
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".console()");
+      if( clz._name.equals("Random") && clz._path._str.equals("ecstasy/numbers/Random.x") )
+        yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".random()");
       if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
         yield ASB.p(NativeTimer.make_timer(XClz.make(clz)));
+      if( clz._name.equals("Clock") && clz._path._str.equals("ecstasy/temporal/Clock.x") )
+        yield ASB.p(NativeTimer.make_clock(XClz.make(clz)));
       throw XEC.TODO();
     }
 
@@ -207,11 +227,11 @@ public abstract class XValue {
     case AnnotTCon acon ->
       switch( acon.clz()._name ) {
         // Gets a special "CONTAINER.inject" call
-      case "InjectedRef" -> _val(X,acon.con().is_generic());
+      case "InjectedRef" -> _val(acon.con().is_generic());
       // Wraps the type as "Future<whatever>".
       case "FutureVar" -> XType.xtype(acon,true).clz(ASB.p("new ")).p("()");
       // Does nothing for Java, I believe.  It's not a Java "volatile" for sure.
-      case "VolatileVar" -> _val(X,acon.con());
+      case "VolatileVar" -> _val(acon.con());
       default -> throw XEC.TODO();
       };
 

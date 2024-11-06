@@ -11,8 +11,17 @@ public abstract class AST {
 
   public AST[] _kids;           // Kids
   AST _par;                     // Parent
+  // Computed type.  This varies during the rewrites as I attempt to unbox
+  // things, or resolve to a sharper type.  Occasionally a COND producer wants
+  // the COND as the primary answer.
   XType _type;                  // Null is unset, never valid. "void" or "int" or "Long" or "AryI64"
-  boolean _cond;                // True if passing the hidden condition flag
+  // The XRuntime.COND global is used to return a 2nd argument from many calls
+  // (often flagged as "conditional").  This 2nd argument can be used in nearly
+  // any boolean context including If's, stacked And expressions "a && b && c",
+  // as part of conditional assignments "if( Int a = condInt() ) { ...  a...}",
+  // asserts at least.  Since its a singleton global, its crushed by the very
+  // next COND-writer, and has to be consumed quickly.
+  boolean _cond;                // True if also passing the hidden condition flag
 
   // Simple all-fields constructor
   AST( AST[] kids ) { _kids = kids; }
@@ -45,17 +54,26 @@ public abstract class AST {
   String name() { throw XEC.TODO(); }
 
   // Cast nth child from a long to an int
-  void castInt(int n) {
+  boolean castInt(int n) {
     AST kid = _kids[n];
+    if( kid._type == XCons.INT ) return false; // Already an int
     // Update a long constant to an int in-place
     if( kid instanceof ConAST con ) {
-      if( con._type == XCons.INT ) return; // Already an int
       assert con._type == XCons.LONG;
       con._con = con._con.substring(0,con._con.length()-1);
       con._type = XCons.INT;
-      return;
+      return true;              // Did something
     }
-    throw XEC.TODO();
+    _kids[n] = new ConvAST(XCons.INT,_kids[n]);
+    return true;
+  }
+  // Replace a constant "false" with a conditional false return
+  boolean condFalse( int idx, XType zret ) {
+    if( _kids[idx]._cond ) return false;
+    assert _kids[idx] instanceof ConAST con && con._con.equals("false");
+    _kids[idx] = new ConAST("XRuntime.False("+zret.ztype()+")", XCons.NULL);
+    _kids[idx]._cond = true;
+    return true;
   }
 
 
@@ -68,11 +86,11 @@ public abstract class AST {
           kid.doType( this );
     doType();                   // Non-recursive
   }
-  AST doType() {
-    XType type = _type();
-    assert _type==null || _type==type;
+  final AST doType() {
+    XType type = _type();              // Local type computation
+    assert _type==null || _type==type; // Allow type to be early set
     _type = type;
-    _cond = _cond();
+    _cond = _cond();            // Local cond value
     return this;
   }
   // Subclasses must override
@@ -109,60 +127,20 @@ public abstract class AST {
         assert kid==null || kid._par==this;
     return this;
   }
-
-  // Auto-unbox e.g. Int64 to a long or xtc.String to j.l.String
-  public AST unBox() {
-    if( _par instanceof UniOpAST uni && S.eq(uni._post,"._i") )
-      return null; // Exactly the just-inserted unboxing
-    // Parent is narrowed, removes not-null and allows unboxing
-    if( _par instanceof NarrowAST nar && !(nar._par instanceof AssignAST) &&
-        nar._type instanceof XBase nbase && _type instanceof XClz ) {
-      XClz nbox = nbase.box();
-      AST box = this;
-      if( nbox != _type )
-        nar._kids[0] = box = new ConvAST(nbox,this);
-      return new UniOpAST(new AST[]{box},null,"._i",nbase);
-    }
-
-    // Otherwise unbox if type is boxed and not immediately demanded boxed
-    XType unbox = _type.unbox();
-    if( unbox == _type ||       // Already unboxed
-        unbox == XCons.NULL ||  // Unboxes to a "null"
-        !_type._notNull  ||     // Maybe-null
-        // LHS of assignment; BAD: "n._i = boxed_thing";
-        _par instanceof AssignAST asgn0 && asgn0._kids[0] == this ||
-        // Assign with no uses; BAD: "{ ...; (n = boxed)._i; ... }
-        this instanceof AssignAST asgn1 && asgn1._par instanceof BlockAST ||
-        this instanceof MultiAST
-        )
-      return null;              // Do not unbox
-    // Unbox
-    return new UniOpAST(new AST[]{this},null,"._i",unbox);
-  }
+  // Unboxed name of a boxed variable
+  public static String unbox_name(String box) { return ("$"+box+"_i").intern(); }
 
   // Rewrite some AST bits before Java
   public AST rewrite() { return null; }
 
   // Auto-box e.g. long to Int64 or j.l.String to xtc.String
-  public AST reBox() {
-    if( _par == null )  return null; // Must have a parent that cares
-    if( this instanceof NewAST nnn && nnn._meth==null ) return null; // This is exactly a recently made box
-    // Assigns RHS and Returns LHS might need to box
-    XType lhs = _par.reBox(this);
-    // Desired flavor is no-change or not-boxed or already isa
-    if( lhs == null || lhs instanceof XBase || _type.isa(lhs) ) return null;
-    XClz rhs = _type.box();
-    if( rhs == null || rhs == _type ) return null; // Always going to the box, so this is a noop
-    // Never box to an interface, caller had already better be a boxed implementer
-    XClz lhsc = (XClz)lhs;
-    if( lhsc.iface() ) lhsc = XCons.XXTC;
-    assert rhs.isa(lhsc);
+  public AST reBox() { return null; }
 
-    // Box 'em up!
-    return new NewAST(new AST[]{this},rhs);
+  AST unBoxThis() { return new UniOpAST(new AST[]{this},null,"._i",_type.unbox());  }
+  AST reBoxThis() {
+    assert _type instanceof XBase base && base != XCons.NULL;
+    return new NewAST(new AST[]{this},_type.box());
   }
-
-  XType reBox( AST par ) { return null; }
 
   /**
    * Dump indented pretty java code from AST.
@@ -175,7 +153,7 @@ public abstract class AST {
     if( _kids!=null )
       for( int i=0; i<_kids.length; i++ ) {
         if( _kids[i]==null ) continue;
-        _kids[i].jcode(sb );
+        _kids[i].jcode(sb);
         jmid(sb, i);
       }
     jpost(sb);
@@ -227,12 +205,14 @@ public abstract class AST {
     case DivRemExpr   ->   DivRemAST.make(X);
     case DoWhileStmt  ->  DoWhileAST.make(X);
     case ForListStmt  -> ForRangeAST.make(X);
+    case ForMapStmt   -> ForRangeAST.make(X);
     case ForRangeStmt -> ForRangeAST.make(X);
     case ForIterableStmt -> ForIterStmtAST.make(X);
     case ForStmt      ->  ForStmtAST.make(X);
     case Greater      ->    OrderAST.make(X,">");
     case IfElseStmt   ->       IfAST.make(X,3);
     case IfThenStmt   ->       IfAST.make(X,2);
+    case InitAst      ->     InitAST.make(X);
     case InvokeExpr   ->   InvokeAST.make(X,false);
     case InvokeAsyncExpr-> InvokeAST.make(X,true );
     case Less         ->    OrderAST.make(X,"<");
@@ -245,6 +225,7 @@ public abstract class AST {
     case NegExpr      ->    UniOpAST.make(X,"-",null);
     case NewExpr      ->      NewAST.make(X,false);
     case NewChildExpr ->      NewAST.make(X,true );
+    case NewVirtualExpr ->NewVirtAST.make(X);
     case NotExpr      ->    UniOpAST.make(X,"!",null);
     case None         ->     NoneAST.make(X);
     case NotNullExpr  ->    UniOpAST.make(X,"ELVIS",null);
@@ -255,7 +236,7 @@ public abstract class AST {
     case PreIncExpr   ->    UniOpAST.make(X,"++",null);
     case PropertyExpr -> PropertyAST.make(X);
     case RefOfExpr    ->    UniOpAST.make(X,"&",null);
-    case RegAlloc     ->   DefRegAST.make(X,true ,true );
+    case RegAlloc     ->   DefRegAST.make(X,false ,false );
     case RelOpExpr    ->    BinOpAST.make(X,true );
     case Return0Stmt  ->   ReturnAST.make(X,0);
     case Return1Stmt  ->   ReturnAST.make(X,1);

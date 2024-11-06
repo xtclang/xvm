@@ -60,7 +60,8 @@ class BindFuncAST extends AST {
         _args[i-nargs] = name;
         xargs[i-nargs] = atype;
       }
-      return XFun.make(xargs,_lam.xrets());
+      // Build a function type from the given args
+      return XFun.make(_lam.is_cond_ret(),_lam.ret(),xargs);
 
       // Currying: pre-binding some method args
     } else {
@@ -69,26 +70,20 @@ class BindFuncAST extends AST {
     }
   }
 
-  // Rewrite effectively-final parameter names before building the lambda AST
-  @Override public AST unBox() {
-    if( _lam != null ) {
-      // Check for other exposed names being effectively final
-      for( int i=1; i<_kids.length; i++ )
-        if( _kids[i] instanceof RegAST reg )
-          make_effectively_final(reg,_lam);
-    }
-    return super.unBox();
-  }
-
   // Make this register Java-effectively-final here
   private void make_effectively_final(RegAST reg, MethodPart lam) {
     if( isEF(_par,this,reg) ) return;
     // New final temp name
-    String s = _par.enclosing_block().add_final(reg);
+    String s = _par.enclosing_block().add_final(new RegAST(reg._reg,reg._name,reg._type));
+    String old = reg._name;
     // Change parameter name in inlined lambda
     for( Parameter p : lam._args )
       if( S.eq(p._name,reg._name) )
         { p._name = s; break; }
+    visit( ast -> {
+        if( ast instanceof RegAST rast && old.equals(rast._name) ) rast._name = s;
+        return null;
+      }, _par );
   }
 
   private boolean isEF(AST par, AST kid, RegAST reg) {
@@ -114,7 +109,13 @@ class BindFuncAST extends AST {
 
   @Override public AST rewrite() {
     // Has embedded AST, already expanded.  Not a currying operation
-    if( _lam != null ) return null;
+    if( _lam != null ) {
+      // Check for other exposed names being effectively final
+      for( int i=1; i<_kids.length; i++ )
+        if( _kids[i] instanceof RegAST reg )
+          make_effectively_final(reg,_lam);
+      return null;
+    }
 
     // Curry some function: no embedded AST, just some arg shuffles
     XFun lam = (XFun)_type;
@@ -142,7 +143,7 @@ class BindFuncAST extends AST {
     // else                        called as "this.fun (args)"
     String fname = _kids[0] instanceof BindMethAST ? _kids[0].name()   : "call";
     ikids[0]     = _kids[0] instanceof BindMethAST ? new RegAST(-5,_X) : _kids[0];
-    AST curry = new InvokeAST(fname,lam.rets(),ikids);
+    AST curry = new InvokeAST(fname,lam.ret(),ikids);
     // Update this BindFunc to just call with the curried arguments
     Arrays.fill(_kids,null);
     _kids[0] = curry;

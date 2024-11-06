@@ -49,6 +49,14 @@ abstract public class Part {
     _cond = null;
     _cslen = 0;
   }
+  Part( Part par, String name, Const id, int nFlags ) {
+    _id = id;
+    _par = par;
+    _name = name;
+    _nFlags = nFlags;
+    _cond = null;
+    _cslen = 0;
+  }
 
   @Override public String toString() { return str(new SB()).toString(); }
   public SB str(SB sb) {
@@ -71,7 +79,7 @@ abstract public class Part {
         // the body) for a single component
         n = (n << 8) | X.u8();
         // Tok.
-        kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X);
+        kid = Format.fromFlags(n).parse(this,X.xget(), n, null, X, i);
       } else {
         throw XEC.TODO();
       }
@@ -129,6 +137,13 @@ abstract public class Part {
     return _name2kid==null ? null : _name2kid.get(s);
   }
 
+  public ClassPart clz() {
+    Part p = _par;
+    while( !(p instanceof ClassPart clz) )
+      p = p._par;
+    return clz;
+  }
+
   // ----- Enums -----------------------------------------------------------
   /**
    * The Format enumeration defines the multiple different binary formats used
@@ -160,15 +175,16 @@ abstract public class Part {
      * @param nFlags the flags that define the common attributes of the component
      * @param cond   the cond under which the component is present, or null
      * @param X      file parser support
+     * @param i      enum ordinal
      * @return the new component
      */
-    Part parse( Part par, Const con, int nFlags, CondCon cond, CPool X ) {
+    Part parse( Part par, Const con, int nFlags, CondCon cond, CPool X, int i ) {
       assert par!=null;
       return switch( this ) {
       case MODULE     -> new    ModPart(par, nFlags, (    ModCon) con, cond, X);
       case PACKAGE    ->new PackagePart(par, nFlags, (PackageCon) con, cond, X);
       case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE
-        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X, this);
+        ->               new  ClassPart(par, nFlags, (  ClassCon) con, cond, X, this, i);
       case TYPEDEF    -> new   TDefPart(par, nFlags, (   TDefCon) con, cond, X);
       case PROPERTY   -> new   PropPart(par, nFlags, (   PropCon) con, cond, X);
       case MULTIMETHOD->new MMethodPart(par, nFlags, (MMethodCon) con, cond, X);

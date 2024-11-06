@@ -4,7 +4,7 @@ import org.xvm.XEC;
 import org.xvm.util.S;
 import org.xvm.xtc.cons.Const;
 
-import static org.xvm.XEC. TODO;
+import static org.xvm.XEC.TODO;
 
 import java.util.HashMap;
 
@@ -60,6 +60,7 @@ public abstract class XCons {
   public static XClz ORDERED     = make_java("ecstasy","Ordered",ENUM);
   public static XClz STRINGBUFFER= make_java("ecstasy.text","StringBuffer",null);
   public static XClz TYPE        = make_java("ecstasy.reflect","Type","ecstasy.reflect","Type",(XClz)null,"DataType",XXTC,"OuterType",XXTC);
+  public static XClz REF         = make_java("ecstasy.reflect","Ref","ecstasy.reflect","Ref",(XClz)null,"Referent",XXTC);
 
   public static XClz NUMBER  = make_java("ecstasy.numbers","Number",CONST);
   public static XClz SIGNUM  = make_java("ecstasy.numbers.Number","Signum",ENUM);
@@ -95,6 +96,7 @@ public abstract class XCons {
   public static XClz RANGE       = make_java("ecstasy","AbstractRange","ecstasy", "Range"  ,CONST,"Element",CONST);
   public static XClz RANGEEE     = make_java("ecstasy","RangeEE"      ,"ecstasy","XRangeEE",RANGE,RANGE,JLONG); // No Ecstasy matching class
   public static XClz RANGEIE     = make_java("ecstasy","RangeIE"      ,"ecstasy","XRangeIE",RANGE,RANGE,JLONG); // No Ecstasy matching class
+  public static XClz RANGEEI     = make_java("ecstasy","RangeEI"      ,"ecstasy","XRangeEI",RANGE,RANGE,JLONG); // No Ecstasy matching class
   public static XClz RANGEII     = make_java("ecstasy","RangeII"      ,"ecstasy","XRangeII",RANGE,RANGE,JLONG); // No Ecstasy matching class
 
   // This is a mixin type
@@ -144,6 +146,7 @@ public abstract class XCons {
   public static XClz ARYBOOL  = make_java_ary("Aryboolean",JBOOL  );
   public static XClz ARYCHAR  = make_java_ary("Arychar"   ,JCHAR  );
   public static XClz ARYSTRING= make_java_ary("AryString" ,JSTRING);
+  public static XClz ARYINT   = make_java_ary("Aryint"    ,JINT32 );
   public static XClz ARYLONG  = make_java_ary("Arylong"   ,JLONG  );
   public static XClz ARYUBYTE = make_java_ary("AryUInt8"  ,JUINT8 );
 
@@ -151,6 +154,7 @@ public abstract class XCons {
   // which supports a "long next8()" as well as the expected "Int64 next()".
   // No corresponding XTC class.
   public static XClz ITERATORLONG = make_java("ecstasy.collections.Arylong",   "Iterlong",  "ecstasy","Iterator",null,"Element",JLONG  );
+  public static XClz ITERATORINT  = make_java("ecstasy.collections.Aryint",    "Iterint",   "ecstasy","Iterator",null,"Element",JINT32 );
   public static XClz ITERSTR      = make_java("ecstasy.collections.AryString", "IterString","ecstasy","Iterator",null,"Element",JSTRING);
   public static XClz ITERATORCHAR = make_java("ecstasy",                       "Iterator",  "ecstasy","Iterator",null,"Element",CHAR   );
 
@@ -287,6 +291,7 @@ public abstract class XCons {
 
   public static XClz make_tuple( XType... clzs ) {
     XClz clz = XClz.mallocLen(true,"ecstasy.collections","","Tuple",clzs.length);
+    clz._tns = new String[clzs.length];
     for( int i=0; i<clzs.length; i++ )
       clz._tns[i] = (""+i).intern();
     clz._xts = clzs;

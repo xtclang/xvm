@@ -13,6 +13,8 @@ public class Char extends Const {
   public Char(char c) {_i=c;}
   public static Char make(char c) { return new Char(c); }
   public final char _i;
+  public static Char construct(char c) { return new Char(c); }
+
   public static <E extends Char> boolean equals$Char( XTC gold, E ord0, E ord1 ) { return ord0==ord1; }
   @Override public boolean equals ( XTC x0, XTC x1 ) { return ((Char)x0)._i == ((Char)x1)._i; }
   @Override public boolean equals( Object o ) {

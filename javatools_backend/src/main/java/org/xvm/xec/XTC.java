@@ -16,9 +16,10 @@ import java.io.IOException;
 // package is really just a directory - naming this class "ecstasy" conflicts
 // with the package/directory of the same name.
 
-public abstract class XTC {
+public class XTC {
   public XTC( Never n ) {}      // No arg constructor
   public XTC() {}               // No arg constructor
+  public static XTC GOLD = new XTC();
 
   // --------------------------------------------------------------------------
   // A bunch of classes and functions that are always available (e.g. TRACE
@@ -131,7 +132,7 @@ public abstract class XTC {
   public static class Exception extends RuntimeException {
     public Exception(String msg) {super(msg); }
     public Exception() { }
-    public static Exception construct(String s) { return new Exception(s); }
+    public static Exception construct(String s, String cause) { return new Exception(s); }
     public String message$get() { return getMessage(); };
   }
 
@@ -145,6 +146,7 @@ public abstract class XTC {
   // XTC IllegalArgument mapped to Java
   public static class IllegalArgument extends Exception {
     public IllegalArgument(String s) { super(s); }
+    public static IllegalArgument construct(String s, String cause) { return new IllegalArgument(s); }
     public static IllegalArgument construct(String s) { return new IllegalArgument(s); }
   }
 

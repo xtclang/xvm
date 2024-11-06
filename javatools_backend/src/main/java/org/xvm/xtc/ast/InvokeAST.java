@@ -1,18 +1,18 @@
 package org.xvm.xtc.ast;
 
+import java.util.Arrays;
 import org.xvm.XEC;
-import org.xvm.xtc.*;
-import org.xvm.xtc.cons.Const;
-import org.xvm.xtc.cons.MethodCon;
-import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.util.S;
 import org.xvm.util.SB;
+import org.xvm.xec.ecstasy.AbstractRange;
+import org.xvm.xtc.*;
+import org.xvm.xtc.cons.Const;
 
 public class InvokeAST extends AST {
   String _meth, _slice_tmp;
   final boolean _async;
-  final XType[] _args;
-  final XType[] _rets;
+  XFun _fun;
+  final XType _ret;
 
   static InvokeAST make( ClzBuilder X, boolean async ) {
     Const[] retTypes = X.consts(); // Return types
@@ -28,8 +28,9 @@ public class InvokeAST extends AST {
     MethodPart meth = (MethodPart)methcon.part();
     _meth = meth.jname();
     _async = async;
-    _args = meth.xargs();
-    _rets = XType.xtypes(retTypes);
+    _fun = meth.xfun();
+    // Return types are sharpened from the method, based on local type info
+    _ret = XFun.ret(XType.xtypes(retTypes));
 
     // Replace default args with their actual default values
     for( int i=1; i<_kids.length; i++ ) {
@@ -41,64 +42,35 @@ public class InvokeAST extends AST {
     }
   }
 
-  InvokeAST( String meth, XType ret, AST... kids ) {
-    this(meth, ret==null ? null : new XType[]{ret}, kids);
-  }
-  public InvokeAST( String meth, XType[] rets, AST... kids ) {
+  public InvokeAST( String meth, XType ret, AST... kids ) {
     super(kids);
     _meth = meth;
     _async = false;
-    _args = null;
-    _rets = rets;
+    _fun = null;
+    _ret = ret;
     _type = _type();
   }
 
-  @Override XType _type() {
-    if( _rets==null || _rets.length==0 ) return XCons.VOID;
-    if( _rets.length == 1 ) return _rets[0];
-    if( _rets.length == 2 && (_rets[0]==XCons.BOOL || _rets[0]==XCons.JBOOL) )
-      return _rets[1];          // Conditional
-    return XCons.make_tuple(_rets);
-  }
+  @Override XType _type() { return _ret; }
   @Override boolean _cond() {
+    // TRACE is a special for asserts; its the one function XEC understands
+    // passes-through the condition flag.
     if( "TRACE".equals(_meth) ) return _kids[1]._cond; // TRACE passes condition thru
-    return _rets!=null && _rets.length == 2 && _rets[0]==XCons.BOOL;
-  }
-
-  @Override public AST unBox() {
-    // Unbox primitive iterators
-    if( _kids[0]._type instanceof XClz clz && S.eq(clz._name,"Iterator") ) {
-      XType xt = clz._xts[0];
-      switch( _meth ) {
-      case "next":              // Use the primitive iterator
-        if(      clz._xts[0].isa(XCons.INTNUM ) )  _meth = "next8";
-        else if( clz._xts[0].isa(XCons.JCHAR  ) )  _meth = "next2";
-        else if( clz._xts[0].isa(XCons.JSTRING) )  _meth = "nextStr";
-        break;
-      case
-        "concat",
-        "forEach",
-        "knownEmpty",
-        "knownSize",
-        "limit",
-        "take",
-        "untilAny",
-        "whileEach",
-        "ZZZZZZ":               // Just to end the sorted list
-        break;
-      default: throw XEC.TODO();
-      };
-    }
-    return null;
+    // Otherwise, take the condition flag from the function being called
+    return _fun!=null && _fun._cond;
   }
 
   @Override public AST rewrite() {
     XType k0t = _kids[0]._type;
     // Handle all the Int/Int64/Intliteral to "long" calls
-    if( k0t == XCons.JLONG || k0t == XCons.LONG ) {
+    if( k0t == XCons.JLONG || k0t == XCons.LONG || k0t == XCons.INT ) {
       return switch( _meth ) {
       case "toString" -> _kids[0] instanceof ConAST ? null : new InvokeAST(_meth,XCons.STRING,new ConAST("Long",XCons.JLONG),_kids[0]).doType();
-      case "toChar", "toInt8", "toInt16", "toInt32", "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
+      case "toInt64", "toInt" ->  _kids[0]; // Autoboxing in Java
+      case "toChar"  -> new ConvAST(XCons.CHAR ,_kids[0]);
+      case "toInt8"  -> new ConvAST(XCons.BYTE ,_kids[0]);
+      case "toInt16" -> new ConvAST(XCons.SHORT,_kids[0]);
+      case "toInt32" -> new ConvAST(XCons.INT  ,_kids[0]);
       // Invert the call for String; FROM 123L.appendTo(sb) TO sb.appendTo(123L)
       case "appendTo" -> { S.swap(_kids,0,1); yield this; }
       case "toUInt8"  -> new BinOpAST( "&", "", XCons.LONG, _kids[0], new ConAST(       "0xFFL",XCons.LONG ));
@@ -118,11 +90,20 @@ public class InvokeAST extends AST {
       case "shiftAllRight"-> llbin( ">>>" );
       case "to"   -> BinOpAST.do_range( _kids, XCons.RANGEII );
       case "toEx" -> BinOpAST.do_range( _kids, XCons.RANGEIE );
+      case "exTo" -> BinOpAST.do_range( _kids, XCons.RANGEEI );
       case "exToEx"->BinOpAST.do_range( _kids, XCons.RANGEEE );
       case "valueOf", "equals", "toInt128", "estimateStringLength", "abs" ->
-        new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
+        new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.numbers.IntNumber",XCons.INTNUM),_kids[0]);
       case "toDec64" -> new NewAST(new AST[]{_kids[0]},XCons.DEC64);
 
+      default -> throw XEC.TODO(_meth);
+      };
+    }
+
+    // Handle the Float64 calls
+    if( k0t == XCons.JDOUBLE || k0t == XCons.DOUBLE ) {
+      return switch( _meth ) {
+      case "add" -> ddbin( "+" );
       default -> throw XEC.TODO(_meth);
       };
     }
@@ -130,21 +111,22 @@ public class InvokeAST extends AST {
     // Handle all the Char to "char" calls
     if( k0t == XCons.CHAR ) {
       return switch( _meth ) {
-      case "add" -> new BinOpAST( "+", "", XCons.CHAR, _kids );
-      case "sub" -> new BinOpAST( "-", "", XCons.CHAR, _kids );
+      case "add" -> new BinOpAST( "+", "", XCons.LONG, _kids );
+      case "sub" -> new BinOpAST( "-", "", XCons.LONG, _kids );
       case "toInt64" -> _kids[0]; // no-op cast
       case "asciiDigit" -> {
-        InvokeAST inv = new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+        InvokeAST inv = new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.Char",XCons.JCHAR),_kids[0]);
         inv._cond = true;
         yield inv;
       }
-      case "decimalValue", "quoted" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.Char",XCons.JCHAR),_kids[0]);
+      case "decimalValue", "quoted" ->
+        new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.Char",XCons.JCHAR),_kids[0]);
       default -> throw XEC.TODO(_meth);
       };
     }
 
     // XTC String calls mapped to Java String calls
-    if( k0t == XCons.STRING ) {
+    if( k0t == XCons.STRING || k0t == XCons.STRINGN ) {
       return switch( _meth ) {
       case "toCharArray" -> _par._type== XCons.ARYCHAR ? new NewAST(_kids,XCons.ARYCHAR) : null;
       case "appendTo" -> {
@@ -154,18 +136,42 @@ public class InvokeAST extends AST {
       }
       case "append", "add" -> new BinOpAST("+","", XCons.STRING, _kids);
       // Change "abc".quoted() to e.text.String.quoted("abc")
-      case "quoted", "iterator" ->  new InvokeAST(_meth,_rets,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
-      case "equals", "split", "endsWith", "startsWith" -> null;
-      case "indexOf" -> {
-        castInt(2);                         // Force index to be an int not a long
-        if( _type!=XCons.BOOL ) yield null; // Return int result
-        // Request for the boolean result instead of int result
-        _type = XCons.LONG;   // Back to producing an int result
-        // But insert compare to -1 for boolean
-        yield new BinOpAST( "!=", "", XCons.BOOL, this, new ConAST( "-1", XCons.LONG ) );
+      case "quoted", "iterator" ->
+        new InvokeAST(_meth,_ret,new ConAST("org.xvm.xec.ecstasy.text.String",XCons.JSTRING),_kids[0]);
+      // The existing _fun has XTC.String arguments; we're using the Java
+      // function of the same name which expects bare Java.String, so we want
+      // to remove any "arguments need boxing", which is based on the _fun.
+      case "equals", "endsWith", "startsWith" -> { _fun = null; yield null; }
+      case "substring" -> {
+        _fun = null;
+        // Force offset math to be an integer
+        yield castInt(1) ? this : null;
       }
+
+      // Conditional and long index return
+      case "indexOf" -> {
+        AST call = new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2]);
+        call._cond = true;
+        yield call;
+      }
+      case "slice" -> {
+        _slice_tmp = enclosing_block().add_tmp(ClzBuilder.add_import(XCons.RANGE));
+        yield null;
+      }
+      case "split" ->
+        new InvokeAST(_meth,_ret,new ConAST(XEC.XCLZ+".ecstasy.text.String",XCons.JSTRING),_kids[0],_kids[1],_kids[2],_kids[3]);
       default -> throw XEC.TODO();
       };
+    }
+
+    // Use fast primitive iterator
+    if( k0t.isa(XCons.ITERATOR) && _meth.equals("next") ) {
+      XType elem = k0t._xts[0];
+      if(      elem.isa(XCons.INTNUM ) )  _meth = "next8";
+      else if( elem.isa(XCons.JCHAR  ) )  _meth = "next2";
+      else if( elem.isa(XCons.JSTRING) )  _meth = "nextStr";
+      else return null;
+      return this;
     }
 
     if( k0t instanceof XClz clz && clz.isTuple() ) {
@@ -180,26 +186,42 @@ public class InvokeAST extends AST {
       }
     }
 
+    // Unbox boxed arguments as needed
+    AST progress = null;
+    if( _fun != null )
+      for( int i=0; i<_fun.nargs(); i++ )
+        if( _fun.arg(i) instanceof XBase && !(_kids[i+1]._type instanceof XBase) )
+          progress = _kids[i+1] = _kids[i+1].unBoxThis();
+    if( progress != null ) return this;
+
     return null;
   }
 
   private BinOpAST llbin(String op) {
+    if( _type == XCons.INT ) {
+      castInt(0);
+      castInt(1);
+      return new BinOpAST( op, "", XCons.INT, _kids );
+    }
     return _type==XCons.LONG ? new BinOpAST( op, "", XCons.LONG, _kids ) : null;
   }
+  private BinOpAST ddbin(String op) {
+    return _type==XCons.DOUBLE ? new BinOpAST( op, "", XCons.DOUBLE, _kids ) : null;
+  }
 
-  @Override XType reBox( AST kid ) {
-    if( _args==null ) return kid._type;
-    if( kid instanceof NewAST ) return null; // Already boxed
-    switch( _kids[0]._type ) {
-    case XBase  base : return null;
-    case XInter in   : return null;
-    case XClz clz when !clz._jname.isEmpty(): return null; // "this" ptr is a Java special, will have primitive arg version
-    default: break;
+  @Override public AST reBox( ) {
+    if( _fun==null ) return null; // Baked-in, should be good already
+    // Internal Java-implemented mirror type; these
+    // all have primitive versions, no need to reBox.
+    if( _kids[0]._type instanceof XClz xclz && !xclz._jname.isEmpty() )
+      return null;
+    AST progress=null;
+    for( int i = 1; i < _kids.length; i++ ) {
+      if( _kids[i]._type instanceof XBase kbase && kbase != XCons.NULL &&
+          !(_fun.arg(i-1) instanceof XBase) )
+        progress = _kids[i] = _kids[i].reBoxThis();
     }
-    int idx = S.find(_kids,kid);
-    if( idx==0 ) return null; // The "this" ptr never boxes
-    // Expected args type vs provided kids[idx]._type
-    return _args[idx-1];
+    return progress==null ? null : this;
   }
 
   @Override public SB jcode( SB sb ) {
@@ -207,7 +229,7 @@ public class InvokeAST extends AST {
 
     // Sharp tuple slices are special in all kinds of ways.
     // I have to explode the fields directly.
-    if( _type instanceof XClz clz && clz.isTuple() && _meth.equals("slice") ) {
+    if( _meth.equals("slice") && _type instanceof XClz clz && clz.isTuple() ) {
       assert _kids[1] instanceof NewAST && _kids[1]._type.isa(XCons.RANGE);
       AbstractRange rng = AbstractRange.range(_kids[1]);
       // new Tuple((tmp=kid0)._f2,tmp._f3,tmp._f4);
@@ -220,6 +242,14 @@ public class InvokeAST extends AST {
         sb.p("._f").p(i).p(",").p(_slice_tmp);
       sb.unchar(_slice_tmp.length()).unchar(1);
       sb.p(")");
+      return sb;
+    }
+
+    // Print "str.slice( RangeExpr )" as
+    // "str.substring((tmp=RangeExpr)._start,tmp._end)"
+    if( _meth.equals("slice") && _type==XCons.STRING ) {
+      _kids[0].jcode(sb).p(".substring((int)(").p(_slice_tmp).p("=");
+      _kids[1].jcode(sb).p(")._start,(int)").p(_slice_tmp).p("._end)");
       return sb;
     }
 

@@ -41,7 +41,7 @@ public abstract class XType {
 
   // --------------------------------------------------------------------------
 
-  // Fancy print, handlng cycles and dups.  Suitable for the debugger.
+  // Fancy print, handling cycles and dups.  Suitable for the debugger.
   @Override public final String toString() {
     // Collect dups and a visit bit
     VBitSet visit = new VBitSet(), dups = new VBitSet();
@@ -93,7 +93,7 @@ public abstract class XType {
     if( _xts==null ) return;
     for( XType xt : _xts ) {
       XClz box = xt.box();
-      if( box.needs_import(false) ) {
+      if( box!=null && box.needs_import(false) ) {
         String tqual = box.qualified_name();
         if( !imports.contains(tqual) ) {
           imports.add(tqual);
@@ -129,14 +129,19 @@ public abstract class XType {
   }
 
   // --------------------------------------------------------------------------
+  // Get the boxed version of self
   public XClz box() {
     if( this instanceof XClz clz ) return clz;
     return XBOX.get(this);
   }
+  // Get the unboxed version of self.  If this==unbox() then either this is
+  // already an unboxed primitive, or no unboxed version exits (this is a ref).
+  // If this!=unbox() then the unbox() version is a primitive of this.
   public XType unbox() {
     XBase jt = UNBOX.get(this);
     return jt==null ? this : jt;
   }
+  public boolean isUnboxed() { return XBOX.containsKey(this); }
   public XType box( boolean boxed ) {
     return boxed ? this : unbox();
   }
@@ -169,15 +174,24 @@ public abstract class XType {
   public boolean isTuple() { return false;  }
   public XType e() { throw XEC.TODO(); }
 
+  public XType readOnly() { throw XEC.TODO(); }
+  public boolean isBool() {
+    return
+      this==JBOOL  || this==BOOL ||
+      this==JTRUE  || this==TRUE ||
+      this==JFALSE || this==FALSE;
+  }
+
   // --------------------------------------------------------------------------
 
 
   // Convert an array of Const to an array of XType
-  public static XType[] xtypes( Const[] cons ) {
+  public static XType[] xtypes( Const[] cons ) { return xtypes(cons,false); }
+  public static XType[] xtypes( Const[] cons, boolean box ) {
     if( cons==null ) return null;
     XType[] xts = new XType[cons.length];
     for( int i=0; i<cons.length; i++ )
-      xts[i] = xtype(cons[i],false);
+      xts[i] = xtype(cons[i],box);
     return xts;
   }
 
@@ -237,10 +251,13 @@ public abstract class XType {
       if( clz._name.equals("Array") && clz._path._str.equals("ecstasy/collections/Array.x") )
         yield XClz.make(ptc);
 
+      if( clz._name.equals("Map") && clz._path._str.equals("ecstasy/maps/Map.x") )
+        yield XClz.make(ptc);
+
       if( clz._name.equals("Function") && clz._path._str.equals("ecstasy/reflect/Function.x") ) {
-        XType[] args = xtypes(((ParamTCon)ptc._parms[0])._parms);
-        XType[] rets = xtypes(((ParamTCon)ptc._parms[1])._parms);
-        yield XFun.make(args, rets).make_class();
+        Const[] args = ((ParamTCon)ptc._parms[0])._parms;
+        Const[] rets = ((ParamTCon)ptc._parms[1])._parms;
+        yield XFun.make(null,false,xtypes(args,boxed),xtypes(rets,boxed)).make_class();
       }
 
       XType telem = ptc._parms==null ? null : xtype(ptc._parms[0],true,self);
@@ -250,7 +267,7 @@ public abstract class XType {
           clz._name.equals("Interval") && clz._path._str.equals("ecstasy/Interval.x") ) {
         if( telem== JLONG )
           yield RANGE;          // Shortcut class
-        throw XEC.TODO();
+        yield XClz.make(ptc);
       }
 
       if( clz._name.equals("Iterator") && clz._path._str.equals("ecstasy/Iterator.x") )
@@ -268,7 +285,7 @@ public abstract class XType {
 
       // Attempt to use the Java class name
       if( clz._name.equals("Type") && clz._path._str.equals("ecstasy/reflect/Type.x") )
-        yield telem;
+        yield telem==null ? XCons.XXTC : telem;
 
       if( clz._name.equals("Appender") && clz._path._str.equals("ecstasy/Appender.x") ) {
         if( telem== JCHAR )
@@ -281,13 +298,15 @@ public abstract class XType {
     }
 
     case ImmutTCon itc ->
-      ((XClz)xtype(itc.icon(),boxed,self)).readOnly();
+      xtype(itc.icon(),boxed,self).readOnly();
 
     // Generalized union types gonna wait awhile.
     // Right now, allow null unions only
     case UnionTCon utc -> {
       XType u2 = xtype(utc._con2,false,self);
-      ClassPart clz1 = ((ClzCon)utc._con1).clz();
+      if( !(utc._con1 instanceof TermTCon tcon) )
+        yield XCons.XXTC;      // Not a union+null, bail out
+      ClassPart clz1 = tcon.clz();
       if( clz1 !=null && clz1._name.equals("Nullable") )
         yield (u2.zero() ? u2.box() : u2).nullable();
       XType u1 = xtype(utc._con1,true,self);
@@ -328,9 +347,11 @@ public abstract class XType {
 
     case AryCon ac ->
       xtype(ac.type(),false,self);
+    case MapCon mc ->
+      xtype(mc.type(),false,self);
 
     case MethodCon mcon ->
-      XFun.make((MethodPart)mcon.part());
+      ((MethodPart)mcon.part()).xfun();
 
     case FormalTChildCon ftcc ->
       ftcc.clz()._tclz.find(ftcc._name);
@@ -354,6 +375,7 @@ public abstract class XType {
     case Dec128Con dcon -> DEC128;
 
     case ClassCon ccon ->  XClz.make(ccon.clz());
+    case AnonClzTCon anon -> XClz.make(anon.clz());
 
     case ServiceTCon service -> XCons.SERVICE;
 
@@ -380,6 +402,9 @@ public abstract class XType {
 
     case InnerDepTCon inn -> xtype(inn._child,boxed,self);
 
+    // A conditional mixin class with perhaps several generic types,
+    // but one with no constraints lands here.  e.g. ListMapIndex
+    case null -> XCons.XXTC;
     default -> throw XEC.TODO();
     };
   }

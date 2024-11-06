@@ -19,9 +19,9 @@ public interface Comparable {
   boolean equals( XTC x0, XTC x1 );
 
   // If the XTC compiler knows 'this' and 'x1' are the same class it emits a
-  // short-form equals call in which dispatch to either side is ok.  
+  // short-form equals call in which dispatch to either side is ok.
   default boolean equals( XTC x1 ) { return equals((XTC)this,x1); }
-  
+
   /** Each implementation will define the above abstract equals as:
    *  {@code public boolean equals(XTC x0, XTC x1) { return equals$CLZ((CLZ)x0,(CLZ)x1) } }
    * Each implementation will also define (commonly with a default gen'd code):
@@ -35,7 +35,7 @@ public interface Comparable {
      public boolean equals( XTC x0, XTC x1 ) { // Called by the fully dynamic lookup
        return equals$CLZ(GOLD,(CLZ)x0,(CLZ)x1);
      }
-     public static boolean equals$CLZ( XTC gold, CLZ x0, CLZ x1 ) { 
+     public static boolean equals$CLZ( XTC gold, CLZ x0, CLZ x1 ) {
        if( x0==x1 ) return true;
        return x0.fld0.equals(x1.fld0) && x0.fld1==x1.fld1 && ... x0.fldN.equals(x1.fldN);
      }
@@ -61,6 +61,6 @@ public interface Comparable {
     sb.ip("// Default equals\n");
     sb.ip("public boolean equals( XTC x0, XTC x1 ) {\n").ii();
     sb.ifmt("return equals$%0(GOLD,(%0)x0,(%0)x1);\n",clzname).di();
-    sb.ip("}\n");    
+    sb.ip("}\n");
   }
 }

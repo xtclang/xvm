@@ -15,53 +15,108 @@ import java.util.HashMap;
 // We can map from an XTC ClassPart to a generified/erased Java class.
 // We can map from a ParamTCon to a true generic XType, with XType generic classes.
 // An XType carries the ClassPart it came from, but not the PTC (if any).
+// XClz tracks super-class
 
-// XClz tracks super-class but NOT the set of implemented interfaces.
+/*
+  current plan is broken when type names collide when coming from different sources.
+  Canonical fail:
+  - Outer class HasherMap<Key,Value>
+  - Inner class CollectionImpl<Element> // has visible 3 type names: Element,Key,Value
+  - KeySet extends CollectionImpl<Key>
+  - - Here the "Key" is "HasherMap.Key" and is punning "CI.Element"
+  - KeySetFreezer<Element extends X> mixins to KeySet<Key extends X>
+  - - Here "Element" is a local name,
+  - - punning "KeySet.Key" thus "HasherMap.Key" AND "CI.Element"
+
+  Tentative New Plan
+  - Class has self TNames, TVars only, no parents
+  - - Rename strat for self-names to parent is "aligned,null name for concrete"
+  - - Example: Base<Key,Value>            [Key   /XTC   , Value/XTC]
+  - - - then   Derived<String,Value>      [null  /String, Value/XTC]
+  - - - then   new Derived<String,Int>    [null  /String, null /Int]
+  - Sides: map Interface names to self type index
+  - - Example: IFace<Elem,QQQ>
+  - - - Base<Key,Value> implements IFace<Value,Key>
+  - - - Base.sides{ IFace -> [1,0] } // IFace.Elem maps to Base.type[1]/Value
+  - Mixin standard gets cloned into a full Class;
+  - Mixin conditional is Just Another Class with some code-gen rules on when to override
+
+  Counter to New Plan:
+  - - Example: Base<B1,B2,B3>
+  - -          Derived<D1,D2,D3,D4> extends Base<D2,D3,Int>
+
+  Tentative New Plan#B
+  - Class has a set of local tvars, which are either renames of parent or standalone
+  - - Inner class has all Outer directly (no rename, no subtype)
+  - - Need a rename strat
+  - All local tvars also have a type; this is a subtype of parent if renamed parent
+  - IFaces - perhaps can ignore tvars...???? xcc has confirmed ok
+  - Mixins are *just Classes*.  Normal for conditional, custom-per-base for standard.
+
+  3 things per-type, so now kinda want Ary-of-Struct instead of Struct-of-Ary
+  - local name
+  - local type (subtype of parent, if any)
+  - super class map (or null if new here)
+
+ */
+
 
 // XClz has a set of self-tvar-names in TNS, and a set of XTypes; a #of local
-// TVars (length of _tns), a side mapping from super/interface XClz type
+// TVars (length of _tns), a side mapping from interface XClz type
 // indices into the XTS.
 
 // Example class def:
 //   Here E is a type variable.
 //   interface List<E> { ... } // Has 1 TVar
 //   XClz: List:1{E/XTC} side[]
+//         Since List is interface, no concrete field for E
 
 // Example class usage with a concrete type, not a type-variable:
-//   class Nums extends List<Int> { ... } // Has ZERO TVars, and a mapping for List
+//   class Nums implements List<Int> { ... } // Has ZERO TVars, and a mapping for List
 //   XClz: Nums:0{/Int} side[List=[0]];
+//         Since Nums is concrete, no super, has concrete field for E
 
 //Example class usage:
 //   Name is valid in local scope and NOT in List's scope
-//   class MyList<Q> extends List<Q> { ... }
+//   class MyList<Q> implements List<Q> { ... }
 //   XClz: MyList:1{Q/XTC}, side[List=[0]]
+//         Since MyList is concrete, no super, has concrete field for Q/E
 
 //Example class usage:
 //   Name and constraint are valid in local scope.
-//   class MyList<E extends Hashable> extends List<E> { ... }
+//   class MyList<E extends Hashable> implements List<E> { ... }
 //   XClz: MyList:1{E/Hashable}, side[List=[0]]
+//         Since MyList is concrete, no super, has concrete field for Q/E
 
 //Example class usage:
 //   class CaseInsensitive implements Hasher<String> { .... }
 //   XClz: Hasher:1{Value/XTC}, side[]
 //   XClz: CaseInsensitive:1{Value/String}, side[Hasher=[0]]
+//         Since CaseInsensitive is concrete, no super, has concrete field for String/Value
 
 //Example class usage:
 //   class HashSet<E extends Hashable> implements HashMap<E,E> { .... }
 //   XClz: HashMap:2{Key/Hashable,Value/XTC}, side[]
 //   XClz: HashSet:1{E/Hashable}, side[HashMap=[0,0]]
+//         Since HashSet is concrete, no super, has concrete field for Key/Value
 
 // Example class usage:
-//   class MyMap<A,B,C extends Hashable> extends HashMap<C,String>
+//   class MyMap<A,B,C extends Hashable> implements HashMap<C,String>
 //   XClz: HashMap:2{Key/Hashable,Value/XTC}, side[]
 //   XClz:   MyMap:3[A/XTC,B/XTC,C/Hashable,/String], side[HashMap=[2,3]]
+//         Since MyMap is concrete, no super, hash concrete field for Key/Value
+
+// Example class usage:
+//   class Super<E>
+//   XClz: Super:1{E/XTC}, side[]
+//         Since Super is concrete, no super, has concrete field for E
+//   class Base<E> extends Super<E>
+//   XClz: Base:1{E/XTC}, side[Super=0]
+//         Since Base is concrete with Super and Super has field for E, no fields
 
 public class XClz extends XType {
   static final String[] STR0 = new String[0];
   static final HashMap<XClz,int[]> SIDES0 = new HashMap<>();
-
-  // Force XCons to fill the XType INTERNs
-  public static XClz _FORCE = XCons.JNULL;
 
   // The uniqueness is on these things: package, name, and all type parms.
   public String _pack, _nest, _name; // Package name, nested class name, short name
@@ -75,7 +130,8 @@ public class XClz extends XType {
   public  XClz _super;           // Super xtype or null
   public  ModPart _mod;          // Self module
   public  ClassPart _clz;        // Self class, can be a module
-  public  int _depth = -99;            // Depth for LCA
+  public  int _depth = -99;      // Depth for LCA
+  public boolean _abstrct;       // Abstract class
 
   // Java-name, if any there exists a Java mirror implementation.
   // If the name is NOT equal to _pack,_name, then the name
@@ -84,10 +140,16 @@ public class XClz extends XType {
   //          XTC Array<Int>  vs Java Arylong
   public  String _jpack, _jname;
 
-  // This is a tempory field; set and cleared per-compilation unit.
+  // This is a temporary field; set and cleared per-compilation unit.
   // If true, in this compilation-unit use the fully qualified name
   // to avoid a name conflict.
   transient public boolean _ambiguous;
+
+  // Bit for managing file-local code-gen
+  public boolean _did_gen;
+
+  // Only for mixins, the conditional types
+  XType[] _mixts;
 
   // Private no-arg constructor, always use "make" for interning
   private XClz() { _pack = "0xDEADBEEF"; }
@@ -170,7 +232,7 @@ public class XClz extends XType {
     clz._name = name;
     // Default false, check if making R/O
     clz._ro = false;
-    clz._jname = clz._jpack = ""; // So toString doesnt barf on half built XClz
+    clz._jname = clz._jpack = ""; // So toString doesn't barf on half built XClz
     return clz;
   }
 
@@ -182,10 +244,8 @@ public class XClz extends XType {
   static XClz mallocLen( boolean notNull, String pack, String nest, String name, int len ) {
     XClz clz = mallocBase(notNull,pack,nest,name);
     // See if we can reuse the xts,flds
-    if( clz._xts==null || clz._xts.length != len ) {
-      clz._xts = len==0 ? EMPTY : new XType [len];
-      clz._tns = len==0 ? STR0  : new String[len];
-    }
+    if( clz._xts==null || clz._xts.length != len )  clz._xts = len==0 ? EMPTY : new XType [len];
+    if( clz._tns==null || clz._tns.length != len )  clz._tns = len==0 ? STR0  : new String[len];
     clz._sides = SIDES0;
     return clz;
   }
@@ -197,104 +257,202 @@ public class XClz extends XType {
     clz._xts = _xts;
     clz._tns = _tns;
     clz._sides = _sides;
+    clz._mod = _mod;
+    clz._clz = _clz;
     return clz;
   }
 
-  // Gather side types from Implements and Extends
-  private static Ary<ParamTCon> sides(ClassPart clz) {
-    // Collect side type variable from interfaces and extends
-    Ary<ParamTCon> ptcs	= null;
-    if( clz._contribs != null )
-      for( Contrib c : clz._contribs )
-        if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends )
-          switch( c._tContrib ) {
-          case TermTCon ttc: break;   // no extra type params
-          case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
-          case ParamTCon ptc:
-            if( ptcs==null ) ptcs = new Ary<>(ParamTCon.class);
-            ptcs.add(ptc);
-            break;
-          case InnerDepTCon dep:
-            //XType foo = make(dep.part());
-            assert dep.clz()._tnames.length==0; // No tvars here?
-            break;
-          default: throw XEC.TODO(); // Expecting a PTC here
-        }
-    return ptcs;
+  // Nested names; usually blank
+  private static String _cnest(ClassPart clz) {
+    ModPart mod = clz.mod();
+    return clz==mod || clz._par instanceof MethodPart meth || !mod._path.equals(clz._path)
+      ? ""
+      // Class embedded in a Module file; mangle name to avoid Module name.
+      // java name is always Module.M$Module.Class
+      : ("M$"+S.java_class_name(mod.name())).intern();
   }
 
-
-  // Fill in common fields.  Not interned yet.
-  private static XClz _malloc( ClassPart clz ) { return _malloc(clz,sides(clz)); }
-
-  // Fill in common fields.  Not interned yet.
-  private static XClz _malloc( ClassPart clz, Ary<ParamTCon> ptcs ) {
-    // Extra useful info
+  private static String _cname( ClassPart clz ) {
     ModPart mod = clz.mod();
-    // Class & package names.
-    String cname, cnest;
-    if( clz==mod ) {
-      // Module: java name is always Module.M$Module
-      // Class : java name is always Module.Class
-      cnest = "";
-      cname = ("M$"+S.java_class_name(clz.name())).intern();
-    } else if( clz._par instanceof MethodPart meth ) {
-      cnest = "";
-      cname = S.java_class_name(meth._name+"$"+clz.name());
-    } else if( !mod._path.equals(clz._path) ) {
-      // Standalone Class from another module
-      cnest = "";
-      cname = S.java_class_name( clz.name() );
-    } else {
-      // Class embedded in a Module:
-      // java name is always Module.M$Module.Class
-      cnest = S.java_class_name(mod.name());
-      cnest = ("M$"+cnest).intern();
-      cname = S.java_class_name(clz.name());
-    }
+    String cname = S.java_class_name(clz._name);
+    // Module: java name is always Module.M$Module
+    if( clz==mod ) return ("M$"+cname).intern();
+    if( clz._par instanceof MethodPart meth ) // Class nested inside a Method
+      // If the method is in a property, use that for a more unique mangled name
+      return S.java_class_name(meth._name+"$"+
+                               (meth._par._par instanceof PropPart prop ? prop._name : clz._name));
+    // Normal case, just the class name
+    return cname;
+  }
 
-    // Get super class early.
-    XClz supr = get_super(clz);
+  // "Normal" classes and modules come in here.
+  private static XClz _malloc( ClassPart clz ) {
+    return _malloc(clz, _cnest(clz), _cname(clz), get_super(clz));
+  }
 
+  // Common XClz constructor for most cases: passed in a bunch of fields
+  // which vary by the path we get here.
+  // Fills in common fields.  Not interned yet.  Handles all kinds of Contribs.
+  private static XClz _malloc( ClassPart clz, String cnest, String cname, XClz supr ) {
+    boolean abstrct = false;
+    assert supr!=null || get_super(clz)==null;
 
     // Make a basic XClz with space for type vars
+    ModPart mod = clz.mod();
     XClz xclz = mallocBase( true, pack(clz,mod), cnest, cname );
     xclz._clz = clz;
     xclz._mod = mod;  // Self module
     xclz._jname = xclz._jpack = "";
-    xclz._super = supr;
-    xclz._depth = supr==null ? 0 : supr._depth+1;
 
     // Fill in self type variables
     XType [] xts = xclz._xts = new XType[clz._tnames==null ? 0 : clz._tnames.length];
     String[] tns = xclz._tns = clz._tnames==null ? STR0 : clz._tnames;
     for( int i=0; i<tns.length; i++ )
       xts[i] = xtype(clz._tcons[i],true,xclz);
-
-    // Collect side type variable from interfaces and extends
-    HashMap<XClz,int[]> sides = null;
-    if( ptcs!=null )
-      for( ParamTCon ptc : ptcs ) {
-        XClz pclz = (XClz)xtype(ptc,true);
-        assert ptc._parms.length==pclz._tns.length;
-        int[] idxs = new int[pclz._tns.length];
-        for( int i=0; i<pclz._tns.length; i++ ) {
-          String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
-          int idx = S.find(clz._tnames,pname); // Matches a clz name, uses that type
-          if( idx == -1 ) {
-            xclz._xts = xts = Arrays.copyOf(xts,(idx = xts.length)+1);
-            xts[idx] = pclz._xts[i];
+    // Inner classes pick up all outer class type variables
+    if( clz._f != Part.Format.MIXIN && clz._f != Part.Format.INTERFACE ) {
+      Part par = clz._par;
+      while( par != null && par.getClass() == ClassPart.class ) {
+        ClassPart pclz = (ClassPart) par;
+        XClz pxclz = make(pclz);
+        for( int i=0; i<pxclz._tns.length; i++ ) {
+          if( S.find(tns,pxclz._tns[i])== -1 ) {
+            int len = xts.length;
+            xclz._xts = xts = Arrays.copyOf(xts,len+1);
+            xclz._tns = tns = Arrays.copyOf(tns,len+1);
+            xts[len] = pxclz._xts[i];
+            tns[len] = pxclz._tns[i];
           }
-          idxs[i] = idx;
         }
-        if( sides==null ) sides = new HashMap<>();
-        sides.put(pclz,idxs);
+        par = par._par;
+      }
+    }
+
+    // Gather side types from Implements and Extends.
+    // May extend the _xts array.
+    xclz.sides(clz);
+
+    // Look for mixins
+    if( clz._contribs != null )
+      for( Contrib c : clz._contribs ) {
+        switch( c._comp ) {
+
+          // Many of these have explicit runtime or meta-class behaviors.
+          // Object <- Base_this <- annot_Mixin <- Derived
+        case Part.Composition.Annotation:
+          ClassPart annot = ((ClassCon)c._annot._par).clz();
+          if( annot._name.equals("Abstract") ) { abstrct = true; break; }
+          else if( annot._name.equals("Override") ) { break; } // Ignore overrides
+          else throw XEC.TODO();
+
+        case Part.Composition.Into:
+          // Don't ask for the base, because the base is asking for the mixin!
+          // Will cause infinite loop.  Instead, just move along.
+          break;             // Mixin_this is mixing into named base, any style
+        case Part.Composition.Incorporates: {
+          XClz mixin0 = make(c); // The bare mixin
+          if( c._parms==null ) {
+            // No parameters, so this is a standard "incorporates".  Make a
+            // single class with fields and functions with the Base overriding
+            // any Mixin fields.  This becomes the new supr class.
+            // Object <- Super <- MixIn <- Base <- Derived
+            String mixname = (mixin0._name+"$"+cname).intern();
+            XClz mixin = _malloc(mixin0._clz,mixin0._nest,mixname,supr);
+            mixin._abstrct = true;
+            mixin._sides = xclz._sides;
+            mixin = mixin._intern();
+            ClassPart mixclass = new ClassPart(mixin0._clz,mixname);
+            mixclass._tclz = mixin;
+            mixin._clz = mixclass;
+
+            // Sides for self use mixin as the supr
+            xclz._sides = new HashMap<>();
+            for( XClz s : mixin._sides.keySet() )
+              xclz._sides.put( s==supr ? mixin : s, mixin._sides.get(s) );
+            supr = mixin;
+
+          } else {
+            // Has parameters, so conditional incorporates; the Mixin overrides
+            // the Base.  The Mixin class always exists and requires a runtime
+            // test to actually execute.
+            // Object <- Super <- Base <- Mixin <- Derived
+            // Finish xclz
+            xclz._super = supr;
+            xclz._depth = supr==null ? 0 : supr._depth+1;
+            xclz._abstrct = abstrct;
+            xclz = xclz._intern();
+            // Recursively make mixin with custom name and super
+            String mixname = (cname+"$"+mixin0._name).intern();
+            XClz mixin = _malloc(mixin0._clz,mixin0._nest,mixname,xclz);
+            mixin._mixts = mixin._xts;
+            mixin.  _xts = xclz ._xts;
+            // Sides for mixin use xclz as the supr
+            mixin._sides = new HashMap<>();
+            for( XClz s : xclz._sides.keySet() )
+              mixin._sides.put( s==supr ? xclz : s, xclz._sides.get(s) );
+            supr = xclz;
+            xclz = mixin;
+          }
+          break;
+        }
+        case Part.Composition.Extends:
+          assert clz._super != null; break; // Already picked up
+        case Part.Composition.Implements: break; // Normal interface.  Maybe someday collect them here
+        case Part.Composition.Delegates: break; // TODO: Dunno what this is supposed to do
+        case Part.Composition.RebasesOnto:
+        case Part.Composition.Import:
+        case Part.Composition.Equal:
+          throw XEC.TODO();     // TODO
+        }
       }
 
-    // Copy sides in
-    xclz._sides = sides==null ? SIDES0 : sides;
+    xclz._super = supr;
+    xclz._depth = supr==null ? 0 : supr._depth+1;
+    xclz._abstrct = abstrct;
 
     return xclz;
+  }
+
+  // Gather side types from Implements and Extends and Incorporates.
+  private void sides( ClassPart clz ) {
+    _sides = SIDES0;
+    if( clz==null || clz._contribs == null ) return;
+
+    for( Contrib c : clz._contribs )
+      if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends || c._comp == Part.Composition.Incorporates )
+        switch( c._tContrib ) {
+        case TermTCon ttc: break;   // no extra type params
+        case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
+        case ParamTCon ptc: _sides(ptc,_tns);  break;
+          // No tvars here?
+        case InnerDepTCon dep:  assert dep .clz()._tnames.length==0;  break;
+        case VirtDepTCon virt:  assert virt.clz()._tnames.length==0;  break;
+        default: throw XEC.TODO(); // Expecting a PTC here
+        }
+  }
+
+  private void sides( ParamTCon ptc, String[] tnames ) {
+    _sides = SIDES0;
+    _sides(ptc,tnames);
+  }
+  private void _sides( ParamTCon ptc, String[] tnames ) {
+    // Now I got some sides!
+    if( _sides == SIDES0 ) _sides = new HashMap<>();
+    // Setup a side array from the base type to its parameterized version
+    XClz pclz = (XClz)xtype(ptc,true);
+    int[] idxs = new int[ptc._parms.length];
+    // Walk the parameterized types; refer back to the class's types
+    for( int i=0; i<ptc._parms.length; i++ ) {
+      String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
+      int idx = S.find(tnames,pname); // Matches a clz name, uses that type
+      if( idx == -1 ) {                    // No match, add an entry
+        _xts = Arrays.copyOf(_xts,(idx = _xts.length)+1);
+        _xts[idx] = pclz._xts[i];
+      }
+      idxs[i] = idx;
+    }
+    _sides.put(pclz,idxs);
+    //assert ptc._parms.length==pclz._tns.length;
   }
 
   // Made from XTC class.
@@ -349,10 +507,31 @@ public class XClz extends XType {
     xclz._xts = proto._xts.clone();
     xclz._tns = proto._tns.clone();
     // Override parameterized type fields
-    for( int i=0; i<ptc._parms.length; i++ )
-      xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
+    if( ptc._parms != null )
+      for( int i=0; i<ptc._parms.length; i++ )
+        xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
+
     return xclz._intern(proto);
   }
+
+  public static XClz make( Contrib c ) {
+    // Get the UNparameterized class
+    ClassPart clz = ((ClzCon)c._tContrib).clz();
+    XClz proto = make(clz);
+    if( c._parms==null ) return proto;
+
+    assert proto._xts.length>0;
+    XClz xclz = proto._mallocClone();
+    xclz._xts = proto._xts.clone();
+    xclz._tns = proto._tns.clone();
+    // Override parameterized type fields
+    for( String tn : c._parms.keySet() ) {
+      int i = S.find(xclz._tns,tn);
+      xclz._xts[i] = xtype(c._parms.get(tn),true,xclz);
+    }
+    return xclz._intern(proto);
+  }
+
 
   // Make a R/O version
   public static XClz make( ImmutTCon imm ) {
@@ -363,23 +542,18 @@ public class XClz extends XType {
     throw XEC.TODO();
   }
 
+
   // An inner class, which gets the outer class Type variables
   public static XClz make( VirtDepTCon virt ) {
-    ClassPart iclz = virt.part(); // Inner clz
-    ParamTCon ptc = (ParamTCon)virt._par;
-    Ary<ParamTCon> ptcs = sides(iclz); // Any side types it has
-    if( ptcs==null ) ptcs = new Ary<>(ParamTCon.class);
-    else throw XEC.TODO("Untested");
-    ptcs.add(ptc);
-    XClz xclz = _malloc(iclz,ptcs);    // Inner xclz
-    assert xclz._super == get_super(iclz);
-    assert xclz._depth == (iclz._tclz==null ? 0 : iclz._tclz._depth);
-    xclz._jpack = "";
-    xclz._jname = "";
-    XClz xclz2 = xclz._intern();
-    if( xclz2 != xclz ) return xclz2;
-    iclz._tclz = xclz;
-    return xclz;
+    ClassPart iclz = virt.part(); // Inner  clz
+    XClz xclz = make(iclz);       // Inner xclz
+    XClz vclz = xclz._mallocClone(); // Inner xclz, cloned
+    vclz.sides((ParamTCon)virt._par,iclz._tnames);
+
+    XClz vclz2 = vclz._intern();
+    if( vclz2 != vclz ) return vclz2;
+    iclz._tclz = vclz;
+    return vclz;
   }
 
   // Make a specialized FutureVar type
@@ -399,6 +573,7 @@ public class XClz extends XType {
       return make(clz._super);
     // The XTC Enum is a special interface, extending the XTC Const interface.
     // They are implemented as normal Java classes, with Enum extending Const.
+    if( clz._path==null ) { assert clz._f==Part.Format.CLASS; return null; }
     if( S.eq(clz._path._str,"ecstasy/Enum.x") ) return XCons.CONST;
     // Other enums are flagged via the Part.Format and do not have the
     // _super field set.
@@ -420,13 +595,12 @@ public class XClz extends XType {
     clz._notNull = false;
     return clz._intern(this);
   }
-  public XClz readOnly() {
+  @Override public XClz readOnly() {
     if( _ro ) return this;
     XClz clz = _mallocClone();
     clz._ro = true;
     return clz._intern(this);
   }
-
 
   @Override public boolean isTuple() { return S.eq(_jname,"Tuple");  }
   // TODO: Really needs to be an ISA on XTC Var
@@ -439,7 +613,10 @@ public class XClz extends XType {
     return _xts[0];
   }
   public final boolean iface() { return _clz!=null && _clz._f==Part.Format.INTERFACE; }
-
+  // Is a mixin
+  public final boolean isMixin() {
+    return _clz._f==Part.Format.MIXIN;
+  }
 
   // Class & package names.
 
@@ -469,12 +646,9 @@ public class XClz extends XType {
   // _name: Collection.equals$NonExistent
   // _name: Collection.equals$NonExistent.NotAValue
   private static String pack(ClassPart pclz, ModPart mod) {
-    //String pack1 = pack1(pclz,mod);
-    String pack2 = pack2(pclz,mod.name()).intern();
-    //assert pack1==pack2;
-    return pack2;
+    return _pack(pclz,mod.name()).intern();
   }
-  private static String pack2(Part pclz, String mod) {
+  private static String _pack(Part pclz, String mod) {
     // Observed "_par" grammar:
     // File.Mod               - Just the module directly, e.g. module tck
     // File.Mod.Clz           - stand-alone module, no package
@@ -482,12 +656,14 @@ public class XClz extends XType {
     // File.Mod.Pack.Clz.Clz  - Nested class (or enum), e.g. ecstasy.collections.Array.ArrayDelegate
     // File.Mod.Pack.Pack.Clz - Nested package        , e.g. ecstasy.collections.deferred.DeferredCollection
     // File.Mod.Pack.Clz.MMeth.Meth.Clz - Method-local class (or enum), e.g. tck.constructors.Basic.Test
+    // File.Mod.Pack.Clz.Prop.MMeth.Meth.Clz - Method-local class (or enum) as a property init
     return switch( pclz._par ) {
     case    FilePart file -> mod;  // e.g. module tck
     case     ModPart mod2 -> mod;  // eg. module ecstasy
     // case PackagePart pack; EXTENDS CLASSPART             // e.g. ecstasy.collections.deferred
-    case   ClassPart clz  -> pack2(clz ,mod)+"."+clz._name; // e.g. ecstasy.collections.Array
-    case  MethodPart meth -> pack2(meth._par,mod);          // e.g. tck.constructors.Basic
+    case   ClassPart clz  -> _pack(clz ,mod)+"."+clz._name; // e.g. ecstasy.collections.Array
+    case  MethodPart meth -> _pack(meth._par,mod);          // e.g. tck.constructors.Basic
+    case    PropPart prop -> prop._name+"$"+_pack(prop,mod);
     default -> {
       for( Part p=pclz; p!=null; p = p._par )
         System.out.print(p.getClass().getSimpleName()+" ");
@@ -496,31 +672,22 @@ public class XClz extends XType {
     }
     };
   }
-  private static String pack1(Part pclz, ModPart mod) {
-    assert mod!=null;
-    if( pclz == mod ) return mod.name(); // XTC Modules never have a Java package
-    while( !(pclz._par instanceof ClassPart clz) )
-      pclz = pclz._par;
-    String pack = null;
-    while( true ) {
-      String pxname = S.java_class_name(clz.name());
-      pack = pack==null ? pxname : pxname+"."+pack;
-      if( clz == mod ) break;
-      clz = (ClassPart)clz._par;
-    }
-    return pack.intern();
-  }
 
   @Override public boolean needs_import(boolean self) {
     // Built-ins before being 'set' have no clz, and do not needs_import
-    // Self module is also compile module.
     if( this==XCons.XXTC  ) return false;
     if( this==XCons.JTRUE ) return false;
     if( this==XCons.JFALSE) return false;
     if( this==XCons.JNULL ) return false;
     if( this==XCons.JSTRING ) return false;
     if( this==XCons.JSTRINGN ) return false;
-    return !S.eq("java.lang",_jpack) && (!self || _clz != ClzBuilder.CCLZ);
+    // Everything in java.lang.* imports by default already
+    if( S.eq("java.lang",_jpack) ) return false;
+    // Self module is also compile module.
+    if( self && _clz == ClzBuilder.CCLZ ) return false; // Self does not need to import self
+    // No clz is reserved for Java builtins with no corresponding XTC class
+    // (e.g. RangeII).
+    return true;
   }
   // No java name means needs a build
   public boolean needs_build() { return _jname.isEmpty(); }
@@ -534,6 +701,12 @@ public class XClz extends XType {
         return clz._xts[idx];
     }
     return null;
+  }
+
+  // Local only find
+  public XType _find(String tn) {
+    int idx = S.find(_tns,tn);
+    return idx == -1 ? null : _xts[idx];
   }
 
   // Prints/passes the type parameters.
@@ -554,39 +727,38 @@ public class XClz extends XType {
   }
 
   @Override public SB str( SB sb, VBitSet visit, VBitSet dups  ) {
-    clz_bare(sb.p("class "));
+    _clz_bare(sb,false);
     if( _super!=null ) sb.p(":").p(_super._name);
-    sb.p(" {").nl();
-    if( _tns != null )
+    if( _tns != null && _tns.length > 0 ) {
+      sb.p(" {");
       for( int i = 0; i< _tns.length; i++ ) {
         sb.p("  ");
         if( _tns[i]!=null ) sb.p( _tns[i]);
         sb.p(":");
         if( _xts[i] != null )  _xts[i]._str(sb,visit,dups);
-        sb.p(";").nl();
+        sb.p(";");
       }
-    sb.p("}");
+      sb.p("}");
+    }
     if( !_notNull ) sb.p("?");
-    return sb.nl();
+    return sb;
   }
 
 
   // Bare name, no generics
-  public String clz_bare( ) {
-    // Tuples have a mangled class name without generics
-    if( isTuple() ) return strTuple(new SB()).toString();
+  public String clz_bare( ) { return _clz_bare(new SB(),false).toString(); }
+  @Override public SB clz_bare( SB sb ) { return _clz_bare(sb,true); }
+  private  SB _clz_bare( SB sb, boolean imprt ) {
     // These guys need a fully qualified name to avoid name conflicts
-    if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous ) return qualified_name();
-    return name();
-  }
-
-  @Override public SB clz_bare( SB sb ) {
+    if( this==XCons.JSTRING || this==XCons.JSTRINGN || this==XCons.JOBJECT || _ambiguous )
+      return sb.p(qualified_name());
+    // Nested class in other module?
+    if( _clz!=null && _clz._par.getClass() == ClassPart.class &&
+        _clz._par != ClzBuilder.CCLZ )
+      return sb.p(qualified_name());
+    if( imprt ) ClzBuilder.add_import(this);
     // Tuples have a mangled class name without generics
     if( isTuple() ) return strTuple(sb);
-    // These guys need a fully qualified name to avoid name conflicts
-    if( this==XCons.JSTRING || this==XCons.JOBJECT || _ambiguous )
-      return sb.p(qualified_name());
-    ClzBuilder.add_import(this);
     return sb.p(name());
   }
 
@@ -594,7 +766,7 @@ public class XClz extends XType {
   // e.g. method-specific generic names, use them instead.  Using "T" here
   // instead of "XTC": "<T extends XTC> void bar( T gold, AryXTC<T> ary )"
   @Override SB _clz( SB sb, ParamTCon ptc ) {
-    clz_bare(sb);
+    _clz_bare(sb,false);
 
     // Print generic parameters?
     if( _tns.length==0 ) return sb; // None to print
@@ -623,7 +795,8 @@ public class XClz extends XType {
   public String qualified_name() {
     if( S.eq(_jpack,"java.lang") )
       return "java.lang."+_jname;
-    String name = this==XCons.TUPLE0 ? "Tuple0" : name();
+    String name = name();
+    if( isTuple() ) name = strTuple(new SB()).toString();
     String pack = pack().isEmpty() ? "" : "."+pack();
     String nest = _nest .isEmpty() ? "" : "."+_nest ;
     return (XEC.XCLZ + pack + nest + "." + name).intern();
@@ -631,7 +804,6 @@ public class XClz extends XType {
 
   // "Foo<Value extends Hashable>"
   public SB clz_generic_def( SB sb ) {
-    assert !_ambiguous;
     // No named type arguments
     if( _tns.length==0 ) return sb;
 
@@ -644,7 +816,7 @@ public class XClz extends XType {
         sb.p("XTC & ");
         sb.p(xclz.name());
       } else {
-        sb.p(xclz.name());
+        sb.p(xclz.clz());
         xclz.clz_generic_def(sb);
       }
       sb.p(", ");
@@ -671,6 +843,8 @@ public class XClz extends XType {
     return sb.unchar();
   }
 
+
+  // -------------------------------------------------------------------------
   // Does 'this' subclass 'sup' ?
   private boolean subClasses( XClz sup ) {
     if( _clz==sup._clz ) return true;
@@ -678,11 +852,33 @@ public class XClz extends XType {
     return _super.subClasses(sup);
   }
 
+  private boolean subIFaces( XClz iface ) {
+    if( isIFace(iface) ) return true;
+    return _super != null && _super.subIFaces( iface );
+  }
+  // No chasing class super, yes chasing IFace super
+  private boolean isIFace( XClz iface ) {
+    if( _clz!=null && _clz._contribs!=null )
+      for( Contrib c : _clz._contribs )
+        if( c._comp == Part.Composition.Implements ) {
+          XClz iclz = (XClz)xtype(c._tContrib, false);
+          if( iclz == iface || iclz.isIFace(iface) )
+            return true;
+        }
+    return false;
+  }
+
   @Override boolean _isa( XType xt ) {
     XClz clz = (XClz)xt;        // Contract
     if( xt == XCons.XXTC ) return true; // Everything isa XTC
+    // Interface or subclass check.  Const, Service are declared interface in
+    // XTC but declared a Class in Java.
+    if( !iface() && clz.iface() && clz != XCons.CONST && clz != XCons.SERVICE )
+      return subIFaces(clz);
+    // Check basic subclassing.  Two classes or two interfaces come here.
     if( !subClasses(clz) ) return false;
     if( _xts.length < clz._xts.length ) return false;
+    // Now check pieces-parts
     for( int i=0; i<clz._xts.length; i++ )
       if( !_xts[i].isa(clz._xts[i]) )
         return false;

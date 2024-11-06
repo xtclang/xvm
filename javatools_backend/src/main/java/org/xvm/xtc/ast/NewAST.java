@@ -1,5 +1,6 @@
 package org.xvm.xtc.ast;
 
+import org.xvm.XEC;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.*;
 import org.xvm.util.SB;
@@ -18,20 +19,39 @@ class NewAST extends AST {
     AST outer = isChild ? ast_term(X) : null;
     Const type = X.con();
     MethodPart meth = (MethodPart)X.con().part();
-    assert (meth.isNestedInnerClass()!=null) == isChild;
+    assert (meth.clz().isNestedInnerClass()!=null) == isChild;
     AST[] kids = X.kids_bias(isChild ? 1 : 0);
     if( isChild )
       kids[0] = outer;
-    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,meth);
+    return new NewAST(kids,(XClz)XType.xtype(type,true),X,type,meth,isChild);
   }
   // For internal constructors like auto-boxing
   NewAST( AST[] kids, XClz xt ) {
-    this(kids,xt,null,null,null);
+    this(kids,xt,null,null,null,false);
   }
-  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodPart meth ) {
+  NewAST( AST[] kids, XClz xt, ClzBuilder X, Const type, MethodPart meth, boolean isChild ) {
     super(kids_plus_clz(kids,xt,X,type));
     _type = xt;
     _meth = meth;
+
+    // Replace default args with their actual default values
+    if( _kids != null )
+      for( int i=1; i<_kids.length; i++ )
+        if( _kids[i] instanceof RegAST reg &&
+            reg._reg == -4/*Op.A_DEFAULT*/ ) {    // Default reg
+          // Swap in the default from method defaults
+          TCon con = meth._args[i-1]._def;
+          _kids[i] = con==null
+            ? new ConAST("0",meth.xfun().arg(i))
+            : new ConAST(null,con);
+          }
+
+    if( meth!=null && kids!=null && (meth._args==null?0:meth._args.length)+(isChild?1:0) != kids.length ) {
+      int len = kids.length;
+      assert len+1==meth._args.length; // more default args
+      _kids = Arrays.copyOf(_kids,meth._args.length);
+      _kids[len] = new ConAST(null,meth._args[len]._def);
+    }
     if( xt.needs_import(true) )
       ClzBuilder.add_import(xt);
   }
@@ -53,7 +73,7 @@ class NewAST extends AST {
     // Slide normal args over to make room for N type args
     if( kids!=null ) System.arraycopy(kids,0,kids2,N,kids.length);
     for( int i=0; i<N; i++ ) {
-      if( i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
+      if( ptc._parms!=null && i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
         // Type parameter comes from the method arguments.
         // Do a name lookup.
         int reg = X._locals.find(parm._name);
@@ -84,13 +104,6 @@ class NewAST extends AST {
     }
     return null;
   }
-
-  @Override XType reBox( AST kid ) {
-    if( _meth==null ) return null; // Internal made News always good
-    int idx = S.find(_kids,kid);
-    return _meth.xarg(idx);
-  }
-
 
   @Override void jpre ( SB sb ) { _type.clz_bare(sb).p(".construct("); }
   @Override void jmid ( SB sb, int i ) { sb.p(", "); }

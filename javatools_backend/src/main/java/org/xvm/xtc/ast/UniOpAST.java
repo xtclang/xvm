@@ -60,6 +60,7 @@ class UniOpAST extends AST {
     if( S.eq("!",_pre) )  return _type;
     if( is_elvis() )      return _type;
     if( S.eq("&",_pre) )  return _type;
+    if( S.eq("--",_pre))  return XCons.LONG;
     // Other operators carry through from the child
     return _kids[0]._type;
   }
@@ -114,6 +115,11 @@ class UniOpAST extends AST {
       return null;
     }
 
+    // Treat ref operator as a no-op
+    if( S.eq("&",_pre) ) {
+      return _kids[0];
+    }
+
     return null;
   }
 
@@ -124,7 +130,7 @@ class UniOpAST extends AST {
     if( k0._cond ) {
       if( S.eq("!",_pre) ) {
         k0.jcode(sb.p("$t("));
-        return sb.p(") && !XRuntime.$COND");
+        return sb.p(") && (XRuntime.$COND=!XRuntime.$COND)");
       } else
         return k0.jcode(sb.p("COND(")).p(")");
     }

@@ -1,74 +1,68 @@
 package org.xvm.xtc.ast;
 
+import java.util.Arrays;
 import org.xvm.XEC;
+import org.xvm.util.S;
+import org.xvm.util.SB;
 import org.xvm.xtc.*;
 import org.xvm.xtc.cons.Const;
+import org.xvm.xtc.cons.MethodCon;
 import org.xvm.xtc.cons.ParamTCon;
-import org.xvm.util.SB;
-import org.xvm.util.S;
-
-import java.util.Arrays;
 
 public class CallAST extends AST {
-  final XType[] _rets;
+  final XType _ret;             // A more precise return type
+  final String _mixin_tname;    // Call to a mixin-super
   static CallAST make( ClzBuilder X ) {
-    // Read optional array of return types (not currently used)
-    Const[] retTypes = X.consts();
+    // Read return type; this can be more precise than the
+    // function in _kids[0]
+    XType ret = XFun.ret(XType.xtypes(X.consts()));
     // Read the arguments, then the function expression.
     AST[] kids = X.kids_bias(1);
     // Move the function to the 0th kid slot.
     kids[0] = ast_term(X);     // Call expression first
-    XType[] rets = XType.xtypes(retTypes);
-    return new CallAST(rets,X._meth,kids);
+    return new CallAST(ret,X._meth,kids);
   }
-  CallAST( XType[] rets, MethodPart meth, AST... kids ) {
+
+  CallAST( XType ret, MethodPart meth, AST... kids ) {
     super(kids);
     // Check for a call to super: "super(args)" becomes "super.METHOD(args)".
     // If inside an interface (so _meth is a default method), the super
     // also needs the correct super interface named.
-    if( _kids[0] instanceof RegAST reg && reg._reg== -13 ) {
-      XFun fun = XFun.make(meth.xargs(),meth.xrets());
-      _kids[0] = new ConAST(null,null,"super."+meth._name,fun);
+    if( _kids[0] instanceof RegAST reg && reg._reg== -13/*A_SUPER*/ ) {
+      _kids[0] = new ConAST(null,null,"super."+meth._name,meth.xfun());
+      _mixin_tname = meth.clz()._f==Part.Format.MIXIN ? meth.clz()._tnames[0] : null;
+    } else _mixin_tname = null;
+
+    // Replace default args with their actual default values
+    for( int i=1; i<_kids.length; i++ ) {
+      if( _kids[i] instanceof RegAST reg &&
+          reg._reg == -4/*Op.A_DEFAULT*/ ) {    // Default reg
+        // Swap in the default from method defaults
+        MethodPart meth0 = (MethodPart)((ConAST)_kids[0])._tcon.part();
+        _kids[i] = new ConAST(null,meth0._args[i-1]._def);
+      }
     }
-    _rets = rets;
+
+    _ret = ret;
     _type = _type();
   }
-  CallAST( XType[] rets, AST... kids ) {
+
+  private CallAST( XType ret, AST... kids ) {
     super(kids);
-    assert !(_kids[0] instanceof RegAST);
-    _rets = rets;
+    _mixin_tname = null;
+    _ret = ret;
     _type = _type();
   }
   static CallAST make(XType ret, String clzname, String methname, AST kid) {
-    XType[] rets = new XType[]{ret};
-    XFun fun = XFun.make(new XType[]{kid._type},rets);
+    XFun fun = XFun.make(new XType[]{ret,kid._type},false);
     ConAST con = new ConAST(clzname+"."+methname,fun);
-    CallAST call = new CallAST(rets,con,kid);
+    CallAST call = new CallAST(ret,con,kid);
     con._par = call;
     call._type = ret;
     return call;
   }
 
-  @Override XType _type() {
-    if( _rets==null ) return XCons.VOID;
-    if( _rets.length == 1 ) return _rets[0];
-    return org.xvm.xec.ecstasy.collections.Tuple.make_class(XCons.make_tuple(_rets));
-  }
-
-  @Override public AST unBox() {
-    // If call's generic type returns boxed, but call is known to return
-    // unboxed (because BAST is promoting a generic to a boxed primitive, but
-    // expression using the Call extends unboxed), then unbox.
-    if( _kids[0]._type instanceof XFun fun && fun.nrets()==1 &&
-        fun.ret() != _type && _type instanceof XBase ) {
-      // Change to: Call to Uni(Cast(Call))
-      AST cast = new ConvAST(_type.box(),this);
-      AST unbx = new UniOpAST(new AST[]{cast},null,"._i",_type);
-      _type = fun.ret();
-      return unbx;
-    }
-    return super.unBox();
-  }
+  @Override XType _type() { return _ret; }
 
   @Override public AST rewrite() {
     // Try to rewrite constant calls.  This is required for e.g. "funky
@@ -101,6 +95,9 @@ public class CallAST extends AST {
       ((ConAST)k1)._con = "null";
       ((ConAST)k1)._type= XCons.NULL;
     }
+    // References to become Java primitives
+    if( clz.equals("Ref") )
+      return ast;
 
     if( k1 instanceof ConAST ) {
       // XTC String got force-expanded to not conflict with j.l.String, recompress to the bare name
@@ -110,7 +107,10 @@ public class CallAST extends AST {
       // Convert CLZ.hashCode (GOLD,arg1     ) to their static variant: CLZ.hashCode$CLZ (GOLD,arg1,arg2);
       con._con += "$"+clz;
       // Sharpen the function type
-      con._type = XFun.makeCall(this);
+      XFun fun = XFun.makeCall(this);
+      con._type = fun;
+      if( fun.ret() instanceof XClz xret )
+        ClzBuilder.add_import(xret);
       return null;
     }
 
@@ -120,14 +120,19 @@ public class CallAST extends AST {
     MethodPart meth = (MethodPart) con._tcon.part();
     ClassPart clazz = meth.clz();
     ClzBuilder.add_import(clazz);
-    return new InvokeAST(base,_rets,Arrays.copyOfRange(_kids,1,_kids.length));
+    return new InvokeAST(base,_ret,Arrays.copyOfRange(_kids,1,_kids.length));
   }
 
-  // Box as needed
-  @Override XType reBox( AST kid ) {
-    if( _kids[0]==kid ) return null; // Called method not boxed
+  // Box arguments as needed
+  @Override public AST reBox( ) {
     XFun fun = (XFun)_kids[0]._type;
-    return fun.arg(S.find(_kids,kid)-1);
+    AST progress=null;
+    for( int i = 1; i < _kids.length; i++ ) {
+      if( _kids[i]._type instanceof XBase &&
+          fun.arg(i-1).unbox() != fun.arg(i-1) )
+        progress = _kids[i] = _kids[i].reBoxThis();
+    }
+    return progress==null ? null : this;
   }
 
   // If the called function takes a type parameter, its return type can be as
@@ -140,23 +145,36 @@ public class CallAST extends AST {
   // XTC: "<T> Foo create( stuff ) { ... }"
   // So the Java has to return a generic Foo
   // Java: "Foo create( int len )"
-  //
-  @Override void jpre( SB sb ) {
-    // Assume we need a (self!) cast, from some abstract type to a more
-    // specified local type.
-    if( _type != XCons.VOID && !(_type instanceof XBase) &&
-        _kids.length>1 && _kids[1] instanceof ConAST con && con._tcon instanceof ParamTCon ptc )
-      _type.clz(sb.p("(")).p(")");
+  private boolean needsGenericCast() {
+    if( _type instanceof XBase ) return false; // Includes VOID
+    if( _kids.length<=1 ) return false;
+    if( !(_kids[1] instanceof ConAST con) ) return false; // Type parameter in slot 1
+    if( !(con._tcon instanceof ParamTCon) ) return false; // Not a type parameter
+    if( con._con.equals("null") ) return false;           // Explicit null type parameter
+    // Will need to upcast return to match type
+    return true;
   }
 
-  @Override void jmid ( SB sb, int i ) {
-    if( i>0 ) { sb.p(", "); return; }
+  @Override public SB jcode( SB sb ) {
+    // Assume we need a (self!) cast, from some abstract type to a more
+    // specified local type.
+    if( needsGenericCast() )
+      _type.clz(sb.p("(")).p(")");
+    _kids[0].jcode(sb);
     AST kid = _kids[0] instanceof NarrowAST n ? n._kids[0] : _kids[0];
-    sb.p( (kid instanceof RegAST ? ".call(": "(") );
-  }
-  @Override void jpost( SB sb ) {
+    sb.p( (kid instanceof RegAST ? ".call(" : "(") );
+    for( int i=1; i<_kids.length; i++ ) {
+      // If this is a super of a mixin, all mixed args need to cast to the base
+      // type not mixin type.  In general, I've no way to track this; could be
+      // any combo of fields and locals - but the mixin can only call "supers"
+      // of some sort or another.
+      if( _mixin_tname !=null )
+        sb.p("($").p(_mixin_tname).p(")");
+      _kids[i].jcode(sb).p(", ");
+    }
     if( _kids.length > 1 )
       sb.unchar(2);
-    sb.p(")");
+    return sb.p(")");
   }
+
 }

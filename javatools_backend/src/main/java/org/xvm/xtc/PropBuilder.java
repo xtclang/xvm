@@ -1,12 +1,14 @@
 package org.xvm.xtc;
 
 import org.xvm.XEC;
-import org.xvm.util.S;
 import org.xvm.util.SB;
+import org.xvm.xtc.ast.AST;
+import org.xvm.xtc.ast.BlockAST;
+import org.xvm.xtc.ast.ReturnAST;
 import org.xvm.xtc.cons.Const;
 
 public abstract class PropBuilder {
-  
+
   // Normal prop impl:
   //   private Type prop;
   //   Type prop$get() { return prop; }  // Not final, can be overridden
@@ -34,8 +36,13 @@ public abstract class PropBuilder {
     XType xtype = XType.xtype(pp._con,false);
     if( xtype instanceof XClz xclz )
       ClzBuilder.add_import(xclz);
-    String ano = pp._contribs==null ? null : pp._contribs[0]._annot.part()._name;
-    boolean lazy = "LazyVar".equals(ano); // TODO: Need a proper flag
+    boolean lazy=false,inject=false;
+    if( pp._contribs != null )
+      for( Contrib c : pp._contribs ) {
+        String ano = c._annot.part()._name;
+        if( "LazyVar".equals(ano) ) lazy = true;
+        if( "InjectedRef".equals(ano) ) inject = true;
+      }
     boolean stat = pp.isStatic() || pp._par instanceof ModPart;
     boolean tfld = X._tclz.find(pname)!=null; // Is a type field
     boolean pub = pp._access == Const.Access.PUBLIC || (pp._access==null && X._tclz.isa(XCons.CONST));
@@ -47,24 +54,25 @@ public abstract class PropBuilder {
     // Only if no parent is doing the defaults.
     if( isAlreadyDef(pp)  )
       do_def = do_get = do_set = false;
-    
+
     // No set on injections, lazy, or final(?) init
-    if( "InjectedRef".equals(ano) || pp._init != null || lazy )  do_set = false;
+    if( inject || pp._init != null || lazy )  do_set = false;
 
     // Interfaces do not get a field, but they do get getters and setters
     if( iface ) do_def=false;
 
     // No set property on type parameters
     if( tfld ) do_set = false;
-    
+
     // If overriding some methods
     if( pp._name2kid != null ) {
       for( String meth : pp._name2kid.keySet() )
         switch( meth ) {
-        case "get": do_get = true; do_def = do_set = false; break;
-        case "set": do_set = true; break;
-        case "="  : do_set = false; break; // Another flavor of init flag
-        case "->" : assert lazy; do_set = false; break;
+        case "get" : do_get = true; do_def = do_set = false; break;
+        case "set" : do_set = true; break;
+        case "="   : do_set = false; break; // Another flavor of init flag
+        case "->"  : assert lazy; do_set = false; break;
+        case "calc": assert lazy && do_get; break;
         default: throw XEC.TODO();
         }
     }
@@ -75,9 +83,9 @@ public abstract class PropBuilder {
       if( stat ) sb.p("static ");
       (tfld ? sb.p("XTC") : xtype.clz(sb)).p(" ").p(pname);
       // Special init for InjectedRef.  Other props get no init()?
-      if( "InjectedRef".equals(ano) )
+      if( inject )
         sb.fmt(" = %0.XEC.CONTAINER.get().%1()",XEC.ROOT,pname);
-  
+
       // Explicit init via function
       Part init;
       if( pp._name2kid != null && (init=pp._name2kid.get("="))!=null ) {
@@ -87,18 +95,20 @@ public abstract class PropBuilder {
         ClzBuilder X2 =  new ClzBuilder(X,null);
         // Method has to be a no-args function, that is executed exactly once here.
         // Inline instead.
-        X2.jmethod_body_inline(meth );
+        AST ast = X2.ast(meth);
+        assert ast instanceof BlockAST blk && blk._kids.length==1 && blk._kids[0] instanceof ReturnAST && !blk.hasTemps();
+        ast._kids[0]._kids[0].jcode(sb);
       }
       // Explicit init via constant
       if( pp._init != null )
-        sb.p(" = ").p(XValue.val(X,pp._init));
+        sb.p(" = ").p(XValue.val(pp._init));
       sb.p(";\n");
-      
+
       // private boolean prop$init;
       if( lazy )
         sb.ip("private boolean ").p(pname).p("$init;\n");
     }
-    
+
     // Type prop$get() { return prop; }  OR
     // Type prop$get() { if( !prop$init ) { init=true; prop=prop$calc(); } return prop; }
     if( do_get ) {
@@ -110,7 +120,7 @@ public abstract class PropBuilder {
       if( iface ) {
         sb.p(";").nl();
       } else {
-        sb.p(" { ");
+        sb.p(" ");
 
         // Explicit get via function
         Part get;
@@ -119,16 +129,13 @@ public abstract class PropBuilder {
           MethodPart meth = (MethodPart)mm._name2kid.get("get");
           ClzBuilder X2 =  new ClzBuilder(X,X._clz);
           // Method has to be a no-args function, that is executed exactly once here.
-          // Inline instead.
-          sb.nl().ii().ip("return ");
-          X2.jmethod_body_inline(meth );
-          sb.p(";").di().nl().i();
+          X2.ast(meth).jcode(sb);
         } else {
+          sb.p("{ ");
           if( lazy )
             sb.fmt("if( !%0$init ) { %0$init=true; %0 = %0$calc(); } ",pname);
-          sb.fmt("return %0; ",pname);
+          sb.fmt("return %0; }\n",pname);
         }
-        sb.p("}\n");
       }
     }
 
@@ -142,7 +149,7 @@ public abstract class PropBuilder {
         MethodPart meth = (MethodPart)mm._name2kid.get("set");
         ClzBuilder X2 =  new ClzBuilder(X,X._clz);
         X2.jmethod(meth,"set");
-        
+
       } else {
         // void prop$set(Type p) { prop=p; }
         sb.i();
@@ -152,7 +159,7 @@ public abstract class PropBuilder {
         sb.fmt("void %0$set( ",pname);
         xtype.clz(sb).p(" p )");
         if( iface ) {
-          sb.p(";").nl();      
+          sb.p(";").nl();
         } else {
           sb.p(" { ");
           boolean is_const = pp._par instanceof ClassPart pclz && pclz._f == Part.Format.CONST;
@@ -163,8 +170,11 @@ public abstract class PropBuilder {
 
     // Lazy calc
     if( lazy ) {
-      MMethodPart mm = (MMethodPart)pp._name2kid.get("->");
-      MethodPart meth = (MethodPart)mm._name2kid.get("->");
+      String ncalc = "->";
+      MMethodPart mm = (MMethodPart)pp._name2kid.get(ncalc);
+      if( mm==null )
+        mm = (MMethodPart)pp._name2kid.get(ncalc ="calc");
+      MethodPart meth = (MethodPart)mm._name2kid.get(ncalc);
       ClzBuilder X2 =  new ClzBuilder(X,X._clz);
       X2.jmethod(meth,pname+"$calc");
     }

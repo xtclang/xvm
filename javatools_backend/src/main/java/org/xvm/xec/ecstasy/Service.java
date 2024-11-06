@@ -1,20 +1,14 @@
 package org.xvm.xec.ecstasy;
 
+import java.util.concurrent.*;
 import org.xvm.XEC;
-import org.xvm.xrun.Never;
-import org.xvm.xec.XTC;
 import org.xvm.util.SB;
-import org.xvm.xtc.ClzBuilder;
-import org.xvm.xtc.MethodPart;
+import org.xvm.xec.XTC;
 import org.xvm.xrun.Container;
+import org.xvm.xrun.Never;
+import org.xvm.xtc.*;
 
 import static org.xvm.XEC.TODO;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 /** The Java Service class, implementing an XTC hidden internal class.
     The XTC Service is an *XTC interface*, not an XTC class, but it has many class-like properties.
@@ -166,16 +160,16 @@ public abstract class Service extends XTC
     sb.ip("public ");
     ClzBuilder.ret_sig(meth,sb);
     sb.p("$").p(meth._name).p("( ");
-    ClzBuilder.args(meth,sb);
+    ClzBuilder.args(meth,sb,null,false);
     sb.p(" ) { ");
-    if( meth.xrets()!=null ) sb.p("return ");
+    boolean isVoidRet = meth.ret()==XCons.VOID;
+    if( !isVoidRet ) sb.p("return ");
     sb.p("$$").p(meth._name).p("(");
-    ClzBuilder.arg_names(meth,sb);
+    ClzBuilder.arg_names(meth,sb,null);
     sb.p(").xget(); }").nl();
 
-
     SB gsb = new SB().p("XFT");
-    if( meth.xrets()!=null )
+    if( !isVoidRet )
       ClzBuilder.ret_sig(meth,gsb.p("<")).p(">");
     String gen_ft = gsb.toString();
 
@@ -184,9 +178,9 @@ public abstract class Service extends XTC
     //XFT<RET> $$MNAME(ARGS) { return $enqueue(new Call$MNAME(ARGS)) }
     sb.ip("public ").p(gen_ft);
     sb.p(" $$").p(meth._name).p("( ");
-    ClzBuilder.args(meth,sb);
+    ClzBuilder.args(meth,sb,null,false);
     sb.p(" ) { return $enqueue(new Call$").p(meth._name).p("( ");
-    ClzBuilder.arg_names(meth,sb);
+    ClzBuilder.arg_names(meth,sb,null);
     sb.p(")); }").nl();
 
     // Now the wrapper class, one per every function call.
@@ -202,28 +196,27 @@ public abstract class Service extends XTC
 
     sb.ifmt("private class Call$%0 extends XCall implements Callable {\n",meth._name).ii();
     // Final fields for args
-    if( meth.xargs() != null )
-      for( int i=0; i<meth.xargs().length; i++ )
-        sb.ifmt("private final %0 %1;\n",meth.xarg(i).clz(),meth._args[i]._name);
+    XFun fun = meth.xfun();
+    for( int i=0; i<fun.nargs(); i++ )
+      sb.ifmt("private final %0 %1;\n",fun.arg(i).clz(),meth._args[i]._name);
     // Constructor
     sb.ifmt("Call$%0( ",meth._name);
-    ClzBuilder.args(meth,sb);
+    ClzBuilder.args(meth,sb,null,false);
     sb.p(") {").nl().ii();
     sb.ifmt("super(\"%0.%1\");\n",java_class_name,meth._name);
-    if( meth.xargs() != null )
-      for( int i=0; i<meth.xargs().length; i++ )
-        sb.ifmt("this.%0 = %0;\n",meth._args[i]._name);
+    for( int i=0; i<fun.nargs(); i++ )
+      sb.ifmt("this.%0 = %0;\n",meth._args[i]._name);
     sb.di().ip("}\n");          // End of constructor
     // Call
     sb.ip("public ");
-    if( meth.xrets()!=null ) ClzBuilder.ret_sig(meth,sb);
+    if( !isVoidRet ) ClzBuilder.ret_sig(meth,sb);
     else sb.p("Object");
     sb.p(" call() { ");
-    if( meth.xrets()!=null ) sb.p("return ");
+    if( !isVoidRet ) sb.p("return ");
     sb.p(meth._name).p("(");
-    ClzBuilder.arg_names(meth,sb);
+    ClzBuilder.arg_names(meth,sb,null);
     sb.p("); ");
-    if( meth.xrets()==null ) sb.p("return null; ");
+    if( isVoidRet ) sb.p("return null; ");
     sb.p("}\n");                // End of call
     sb.di().ip("}\n");          // End of class
   }

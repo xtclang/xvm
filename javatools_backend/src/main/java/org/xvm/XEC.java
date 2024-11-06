@@ -1,16 +1,15 @@
 package org.xvm;
 
-import org.xvm.xrun.*;
-import org.xvm.xtc.FilePart;
-import org.xvm.xtc.ModPart;
-import org.xvm.xtc.Part;
-import org.xvm.util.S;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import org.xvm.util.S;
+import org.xvm.xrun.*;
+import org.xvm.xtc.FilePart;
+import org.xvm.xtc.ModPart;
+import org.xvm.xtc.Part;
 
 /**
    Exploring XTC bytecodes.  Fakes as a XEC runtime translator to JVM bytecodes.
@@ -31,9 +30,9 @@ public class XEC {
 
   // The main Ecstasy module
   public static ModPart ECSTASY;
-  
+
   // Main Launcher.
-  // Usage: (-L path)* [-M main] file.xtc args  
+  // Usage: (-L path)* [-M main] file.xtc args
   public static void main( String[] args ) throws IOException {
 
     // Parse options
@@ -48,7 +47,7 @@ public class XEC {
     // Arguments
     String[] xargs = args(ndx,args);
 
-    
+
     REPO = new ModRepo();
     // Load XTC file into repo
     ModPart mod = REPO.load(xtc);
@@ -56,7 +55,7 @@ public class XEC {
     for( String lib : libs ) REPO.load(lib);
     // Link the repo
     REPO.link();
-    
+
     // Start the thread pool up
     XRuntime.start();
 
@@ -65,7 +64,7 @@ public class XEC {
     // Start the initial container
     MainContainer M = new MainContainer(N,mod);
     CONTAINER.set(M);
-    
+
     /*Joinable J=*/M.invoke(xrun,xargs); // Returns something to join against
     //J.join();
   }
@@ -91,7 +90,7 @@ public class XEC {
       System.err.println("Usage: xec (-L path)* [-M main] file.xtc args");
       System.exit(1);
     }
-    
+
     // File to parse
     String xtc = args[ndx];
     if( !xtc.endsWith(".xtc") ) {
@@ -100,7 +99,7 @@ public class XEC {
     }
     return xtc;
   }
-  
+
   // Parse options: args to the main file
   private static String[] args(int ndx, String[] args) {
     return Arrays.copyOfRange(args,ndx,args.length);

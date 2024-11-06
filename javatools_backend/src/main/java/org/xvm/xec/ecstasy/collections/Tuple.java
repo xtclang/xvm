@@ -8,7 +8,7 @@ import org.xvm.xec.ecstasy.AbstractRange;
 import org.xvm.xec.ecstasy.Comparable;
 import org.xvm.xec.ecstasy.collections.Array.Mutability;
 
-public interface Tuple extends Cloneable {
+public interface Tuple extends Cloneable, Comparable {
   // Array-like interface
   abstract public XTC at(long i); // At an index
   abstract public void set(long i, XTC o); // Set an index
@@ -104,9 +104,12 @@ public interface Tuple extends Cloneable {
 
     // Abstract accessors
     for( int i=0; i<N; i++ ) {
+      sb.ip("public ");
       XClz clz = xtt._xts[i].box();
-      clz.clz_bare(sb.ip("public ")).fmt(" f%0() { return ",i);
-      if( clz==xtt._xts[i] )  sb.fmt("_f%0",i);   // Bare prims
+      if( clz==null ) xtt._xts[i].clz(sb);
+      else clz.clz_bare(sb);
+      sb.fmt(" f%0() { return ",i);
+      if( clz==xtt._xts[i] || clz==null )  sb.fmt("_f%0",i);   // Bare prims
       else clz.clz_bare(sb).fmt(".make(_f%0)",i); // Box  prims
       sb.p("; }\n");
     }
@@ -114,7 +117,7 @@ public interface Tuple extends Cloneable {
     for( int i=0; i<N; i++ ) {
       XType xt = xtt._xts[i];
       XType box = xt.box();
-      sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box.clz(),xt==box?"":"._i");
+      sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box==null ? xt.clz() : box.clz(),xt==box ?"":"._i");
     }
 
     // public static boolean equals$Tuple3$...(XTC gold, Tuple0, t0, Tuple0 t1)...
@@ -125,8 +128,7 @@ public interface Tuple extends Cloneable {
       XType xt = xtt._xts[i];
       xt.do_eq(sb.p("x0._f"+i), "x1._f"+i).p(" && ");
     }
-    if( N>0 ) sb.unchar(4);
-    else sb.p("true");
+    sb.unchar(4);
     sb.p(";\n").di();
     sb.ip("}\n");
 

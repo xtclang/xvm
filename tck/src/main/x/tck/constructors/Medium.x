@@ -9,7 +9,7 @@ class Medium {
         testFinalizer();
         testFinalizerChain();
     }
-    
+
     /**
      * At the end of construction the validator (assert function) must be invoked.
      */
@@ -39,8 +39,7 @@ class Medium {
                 this.s = s + "-BA";
             }
         }
-        static class Derived(String s)
-                extends Base(s) {
+        static class Derived(String s) extends Base(s) {
             assert() {
                 this.s = s + "-DA";
             }
@@ -81,16 +80,13 @@ class Medium {
     @Test
     void testFinalizerChain() {
         static class Base(String s) {
-
             construct(String s) {
                 this.s = s + "-BC";
             } finally {
                 this.s += "-BF";
             }
         }
-        static class Derived(String s)
-                extends Base {
-
+        static class Derived(String s)  extends Base {
             construct(String s) {
                 construct Base(s + "-DC");
             } finally {
