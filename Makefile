@@ -320,10 +320,16 @@ $(LIBJSN).xtc:	$(SRCJSN).x $(LIBJSN).d $(XDK_JAR) $(XDKX).xtc
 	@javatools_backend/bin/makedepends.sh $(SRCJSN) $(LIBJSN)
 	@$(XCC) $< -o $@
 
+SRCCVT = lib_convert/src/main/x/convert
+LIBCVT = $(XDK_LIB)/convert
+$(LIBCVT).xtc:	$(SRCCVT).x $(LIBCVT).d $(XDK_JAR) $(XDKX).xtc $(LIBJSN).xtc $(LIBNET).xtc
+	@echo "compiling " $@ " because " $?
+	@javatools_backend/bin/makedepends.sh $(SRCCVT) $(LIBCVT)
+	@$(XCC) $< -o $@
 
 SRCWEB = lib_web/src/main/x/web
 LIBWEB = $(XDK_LIB)/web
-$(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc
+$(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc $(LIBCVT).xtc
 	@echo "compiling " $@ " because " $?
 	@javatools_backend/bin/makedepends.sh $(SRCWEB) $(LIBWEB)
 	@$(XCC) $< -o $@
@@ -337,7 +343,7 @@ $(LIBNAT).xtc:	$(SRCNAT).x $(LIBNAT).d $(XDK_JAR) $(XDKX).xtc $(LIBCRY).xtc $(LI
 
 
 # All the core libs
-XLIB = $(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJSN).xtc $(LIBWEB).xtc $(LIBNAT).xtc
+XLIB = $(XDKX).xtc $(LIBCRY).xtc $(LIBNET).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBJSN).xtc $(LIBWEB).xtc $(LIBNAT).xtc $(LIBCVT).xtc
 xlib:	$(XLIB)
 
 include $(XLIB:.xtc=.d)
