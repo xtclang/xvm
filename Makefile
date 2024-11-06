@@ -323,6 +323,9 @@ $(LIBJSN).xtc:	$(SRCJSN).x $(LIBJSN).d $(XDK_JAR) $(XDKX).xtc
 SRCCVT = lib_convert/src/main/x/convert
 LIBCVT = $(XDK_LIB)/convert
 $(LIBCVT).xtc:	$(SRCCVT).x $(LIBCVT).d $(XDK_JAR) $(XDKX).xtc $(LIBJSN).xtc $(LIBNET).xtc
+	@echo "compiling " $@ " because " $?
+	@javatools_backend/bin/makedepends.sh $(SRCCVT) $(LIBCVT)
+	@$(XCC) $< -o $@
 
 SRCWEB = lib_web/src/main/x/web
 LIBWEB = $(XDK_LIB)/web
