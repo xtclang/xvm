@@ -149,4 +149,11 @@ module TestCompilerErrors {
             case A..E: 3;
             };
     }
+
+    void testVirtualChild() {
+        class Parent {
+            class Child {}
+        }
+        Parent.Child child = new Parent.Child(); // should not compile
+    }
 }
