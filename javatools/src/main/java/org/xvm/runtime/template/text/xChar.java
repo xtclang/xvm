@@ -27,6 +27,7 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xByteArray;
 
+import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.numbers.xUInt32;
 
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -200,6 +201,15 @@ public class xChar
         {
         return ((JavaLong) hValue1).getValue() == ((JavaLong) hValue2).getValue();
         }
+
+    @Override
+    public int buildHashCode(Frame frame, TypeComposition clazz, ObjectHandle hTarget, int iReturn)
+        {
+        JavaLong hThis = (JavaLong) hTarget;
+
+        return frame.assignValue(iReturn, xInt64.makeHandle(hThis.getValue()));
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

@@ -438,19 +438,43 @@ public class Frame
     // a convenience method; ahVar - prepared variables
     public int call1(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return ensureInitialized(createFrame1(method, hTarget, ahVar, iReturn));
+        try
+            {
+            return ensureInitialized(createFrame1(method, hTarget, ahVar, iReturn));
+            }
+        catch (IllegalStateException e)
+            {
+            return raiseException(xException.abstractMethod(this,
+                    method.getIdentityConstant().getPathString()));
+            }
         }
 
     // a convenience method; ahVar - prepared variables
     public int callT(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
         {
-        return ensureInitialized(createFrameT(method, hTarget, ahVar, iReturn));
+        try
+            {
+            return ensureInitialized(createFrameT(method, hTarget, ahVar, iReturn));
+            }
+        catch (IllegalStateException e)
+            {
+            return raiseException(xException.abstractMethod(this,
+                    method.getIdentityConstant().getPathString()));
+            }
         }
 
     // a convenience method
     public int callN(MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn)
         {
-        return ensureInitialized(createFrameN(method, hTarget, ahVar, aiReturn));
+        try
+            {
+            return ensureInitialized(createFrameN(method, hTarget, ahVar, aiReturn));
+            }
+        catch (IllegalStateException e)
+            {
+            return raiseException(xException.abstractMethod(this,
+                    method.getIdentityConstant().getPathString()));
+            }
         }
 
     // a convenience method; ahVar - prepared variables

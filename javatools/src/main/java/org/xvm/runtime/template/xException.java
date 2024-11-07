@@ -297,6 +297,11 @@ public class xException
         return makeHandle(frame, s_clzIOIllegalUTF, sMsg);
         }
 
+    public static ExceptionHandle abstractMethod(Frame frame, String sMethod)
+        {
+        return makeHandle(frame, "No implementation for \"" + sMethod + '"');
+        }
+
 
     // ---- ObjectHandle helpers -------------------------------------------------------------------
 

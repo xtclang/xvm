@@ -1708,7 +1708,7 @@ public abstract class ClassTemplate
     protected int callCompareImpl(Frame frame, TypeComposition clazz,
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
-        return frame.raiseException("No implementation for \"compare()\" function at " + f_sName);
+        return frame.raiseException(xException.abstractMethod(frame, f_sName + ".compare()"));
         }
 
     /**

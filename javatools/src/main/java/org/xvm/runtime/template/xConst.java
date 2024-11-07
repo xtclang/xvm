@@ -404,7 +404,9 @@ public class xConst
                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // Note: the actual types could be subclasses of the specified class
-        return new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
+        return this == INSTANCE
+                ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
+                : new Equals((GenericHandle) hValue1, (GenericHandle) hValue2,
                     (ClassComposition) clazz, iReturn).doNext(frame);
         }
 
@@ -413,8 +415,10 @@ public class xConst
                                   ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
         {
         // Note: the actual types could be subclasses of the specified class
-        return new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
-                    (ClassComposition) clazz, iReturn).doNext(frame);
+        return this == INSTANCE
+                ? frame.raiseException(xException.abstractMethod(frame, "Const.compare()"))
+                : new Compare((GenericHandle) hValue1, (GenericHandle) hValue2,
+                        (ClassComposition) clazz, iReturn).doNext(frame);
         }
 
     /**
@@ -430,8 +434,8 @@ public class xConst
     public int callHashCode(Frame frame, TypeConstant type, ObjectHandle hValue, int iReturn)
         {
         return this == INSTANCE
-            ? type.callHashCode(frame, hValue, iReturn)
-            : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
+                ? frame.raiseException(xException.abstractMethod(frame, "Const.hashCode()"))
+                : buildHashCode(frame, getCanonicalClass(frame.f_context.f_container), hValue, iReturn);
         }
 
     /**

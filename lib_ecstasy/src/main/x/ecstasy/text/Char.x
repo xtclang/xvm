@@ -1416,4 +1416,17 @@ const Char(UInt32 codepoint)
 
     @Override
     Appender<Char!> appendTo(Appender<Char!> buf) = buf.add(this);
+
+
+    // ----- Hashable functions --------------------------------------------------------------------
+
+    @Override
+    static <CompileType extends Char> Int64 hashCode(CompileType value) {
+        return value.codepoint.hashCode();
+    }
+
+    @Override
+    static <CompileType extends Char> Boolean equals(CompileType value1, CompileType value2) {
+        return value1.codepoint == value2.codepoint;
+    }
 }
