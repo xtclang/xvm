@@ -402,7 +402,7 @@ public abstract class Utils
 
                 boolean fDynamic = afDynamic != null && afDynamic[index];
                 int     iReturn  = aiReturn[index];
-                if (fDynamic && !((FutureHandle) hValue).isAssigned() &&
+                if (fDynamic && !((RefHandle) hValue).isAssigned() &&
                         iReturn != Op.A_IGNORE_ASYNC)
                     {
                     Frame framePrev = frameCaller.f_framePrev;
