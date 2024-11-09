@@ -19,6 +19,10 @@
 - CP: add API support for multi-part body, for example (Body.x):
     conditional Body[] multipart() = False;
 
+- CP: add formatting control to FPNumber.toString() and/or introduce
+        "FPNumberFormat implements Format<FPNumber>" similar to Java's
+        DecimalFormat. Also, could add something like Java's CompactNumberFormat
+
 - GG: add the following method to Tuple
         /**
          * Obtain a `List` view of this Tuple. Note, that the type check will be performed only
