@@ -41,6 +41,9 @@ class JsonArrayTest {
             .add(json.objectBuilder().add("one", 1).add("two", 2).add("three", 3).add("four", 4))
             .add(json.objectBuilder().add("five", 5).add("six", 6))
             .build();
+        assert array == Doc[]:[
+                ["one"=1, "two"=2, "three"=3, "four"=4],
+                ["five"=5, "six"=6]
         assert array == [
                 ["one"=1, "two"=2, "three"=3, "four"=4],
                 ["five"=5, "six"=6]

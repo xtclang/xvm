@@ -453,7 +453,7 @@ class Parser
      * @return an array of JSON values
      */
     @Override
-    Array<Doc> parseArray() {
+    List<Doc> parseArray() {
         JsonArray array = json.newArray();
         expect(ArrayEnter);
         if (!match(ArrayExit)) {
@@ -807,7 +807,7 @@ class Parser
         Token[] skipRemaining(Token[]? skipped = Null);
         Doc parseDoc();
         (Token first, Token last) skipDoc(Token[]? skipped = Null);
-        Array<Doc> parseArray();
+        List<Doc> parseArray();
         (Token first, Token last) skipArray(Token[]? skipped = Null);
         conditional ArrayParser matchArray();
         ArrayParser expectArray();
@@ -890,9 +890,9 @@ class Parser
         }
 
         @Override
-        Array<Doc> parseArray() {
+        List<Doc> parseArray() {
             checkEof();
-            Array<Doc> array = raw.parseArray();
+            List<Doc> array = raw.parseArray();
             checkDelimiter();
             return array;
         }

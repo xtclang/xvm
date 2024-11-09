@@ -47,7 +47,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/one", "/two").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonObject);
-        assert result == Map<String, Doc>:["two"=child, "three"=33];
+        assert result == json.newObject(["two"=child, "three"=33]);
     }
 
     @Test
@@ -135,7 +135,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/-").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, 3, child];
+        assert result == Doc[]:[1, 2, 3, child];
     }
 
     @Test
@@ -145,7 +145,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/-1").build();
         Doc        result = patch.apply(target, new JsonPatch.Options(supportNegativeIndices = True));
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, child, 3];
+        assert result == Doc[]:[1, 2, child, 3];
     }
 
     @Test
@@ -155,7 +155,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/-4", "/-1").build();
         Doc        result = patch.apply(target, new JsonPatch.Options(supportNegativeIndices = True));
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, child, 3];
+        assert result == Doc[]:[1, 2, child, 3];
     }
 
     @Test
@@ -165,7 +165,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/-").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, 3, child];
+        assert result == Doc[]:[1, 2, 3, child];
     }
 
     @Test
@@ -175,7 +175,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/2").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:["one", "two", child, "three"];
+        assert result == Doc[]:["one", "two", child, "three"];
     }
 
     @Test
@@ -185,7 +185,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/2").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, child, 3];
+        assert result == Doc[]:[1, 2, child, 3];
     }
 
     @Test

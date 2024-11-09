@@ -1,14 +1,31 @@
 module TestSimple {
 
+    package json import json.xtclang.org;
+
     @Inject Console console;
 
+    import json.*;
+
     void run() {
-        test(1);
+
+        Test t = new Test();
+        console.print(t.getObject());
+        console.print(t.getDoc());
+
     }
 
-    void test(Int i) {
-        Boolean f = True || foo(i % 1000) || True; // this used to blow up the compiler
-    }
+    service Test {
 
-    Boolean foo(Int i) = TODO;
+        JsonObject getObject(Int i = 1) {
+            JsonObject o = json.newObject();
+            o["a"] = i /*this will not be needed*/.toIntLiteral();
+            return o; // no need to freeze
+        }
+
+        Doc getDoc(Dec d = 1) {
+            JsonObject o = json.newObject();
+            o["a"] = d /*this will not be needed*/.toFPLiteral();
+            return o;
+        }
+    }
 }

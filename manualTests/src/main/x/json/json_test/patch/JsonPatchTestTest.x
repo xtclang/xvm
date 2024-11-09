@@ -116,7 +116,7 @@ class JsonPatchTestTest {
                          |}
                          ;
 
-        JsonObject          value    = ["a"="b"];
+        JsonObject          value    = json.newObject(["a"="b"]);
         JsonPatch.Operation expected = new JsonPatch.Operation(Test, JsonPointer.from("/one/two"), value);
         assertOperation(jsonOp, expected);
     }
