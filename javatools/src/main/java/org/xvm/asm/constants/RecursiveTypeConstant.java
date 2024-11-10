@@ -18,6 +18,9 @@ import org.xvm.asm.Register;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.util.Hash;
 
 
@@ -302,6 +305,18 @@ public class RecursiveTypeConstant
     public ClassTemplate getTemplate(Container container)
         {
         throw new UnsupportedOperationException();
+        }
+
+    @Override
+    public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return getReferredToType().callEquals(frame, hValue1, hValue2, iReturn);
+        }
+
+    @Override
+    public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn)
+        {
+        return getReferredToType().callCompare(frame, hValue1, hValue2, iReturn);
         }
 
 
