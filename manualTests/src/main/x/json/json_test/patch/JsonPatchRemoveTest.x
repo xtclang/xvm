@@ -108,7 +108,7 @@ class JsonPatchRemoveTest {
                          |}
                          ;
 
-        JsonObject          value    = Map:["a"="b"];
+        JsonObject          value    = ["a"="b"];
         JsonPatch.Operation expected = new JsonPatch.Operation(Remove, JsonPointer.from("/one/two"));
         assertOperation(jsonOp, expected);
     }

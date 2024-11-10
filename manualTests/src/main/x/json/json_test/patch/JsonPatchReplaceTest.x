@@ -151,7 +151,7 @@ class JsonPatchReplaceTest {
                          |}
                          ;
 
-        JsonObject          value    = Map:["a"="b"];
+        JsonObject          value    = ["a"="b"];
         JsonPatch.Operation expected = new JsonPatch.Operation(Replace, JsonPointer.from("/one/two"), value);
         assertOperation(jsonOp, expected);
     }

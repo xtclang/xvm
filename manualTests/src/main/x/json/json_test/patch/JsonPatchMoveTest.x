@@ -35,7 +35,9 @@ class JsonPatchMoveTest {
         JsonObject child  = json.objectBuilder().add("foo", 1234).build();
         JsonObject target = json.objectBuilder().add("one", child).add("three", 33).build();
         JsonPatch  patch  = JsonPatch.builder().move("/one", "/two").build();
-        Doc        result = Map<String, Doc>:["two"=child, "three"=33];
+        Doc        result = patch.apply(target);
+        assert result.is(JsonObject);
+        assert result == Map<String, Doc>:["two"=child, "three"=33];
     }
 
     @Test
@@ -192,7 +194,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/-").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 3, 4, 2];
+        assert result == [1, 3, 4, 2];
     }
 
     @Test
@@ -201,7 +203,7 @@ class JsonPatchMoveTest {
         JsonPatch  patch  = JsonPatch.builder().move("/1", "/3").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 3, 4, 2, 5];
+        assert result == [1, 3, 4, 2, 5];
     }
 
     @Test

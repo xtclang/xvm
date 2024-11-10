@@ -49,7 +49,7 @@ class JsonPatchTestTest {
 
     @Test
     void shouldSucceedTestingObject() {
-        Doc       target = Map<String, Doc>:["one"=1, "two"=2, "three"=3];
+        Doc       target = ["one"=1, "two"=2, "three"=3];
         JsonPatch patch = JsonPatch.builder().test("/two", 2).build();
         Doc       result = patch.apply(target);
         assert result == target;
@@ -57,15 +57,15 @@ class JsonPatchTestTest {
 
     @Test
     void shouldFailTestingObject() {
-        Doc          target = Map<String, Doc>:["one"=1, "two"=2, "three"=3];
+        Doc          target = ["one"=1, "two"=2, "three"=3];
         JsonPatch    patch = JsonPatch.builder().test("/two", 200).build();
         IllegalState error = assertThrows(() -> patch.apply(target));
     }
 
     @Test
     void shouldSucceedTestingChildObject() {
-        Doc       child  = Map<String, Doc>:["one"=1, "two"=2, "three"=3];
-        Doc       target = Map<String, Doc>:["foo"=child];
+        Doc       child  = ["one"=1, "two"=2, "three"=3];
+        Doc       target = ["foo"=child];
         JsonPatch patch = JsonPatch.builder().test("/foo/two", 2).build();
         Doc       result = patch.apply(target);
         assert result == target;
@@ -73,16 +73,16 @@ class JsonPatchTestTest {
 
     @Test
     void shouldFailTestingChildObject() {
-        Doc       child  = Map<String, Doc>:["one"=1, "two"=2, "three"=3];
-        Doc       target = Map<String, Doc>:["foo"=child];
+        Doc       child  = ["one"=1, "two"=2, "three"=3];
+        Doc       target = ["foo"=child];
         JsonPatch patch = JsonPatch.builder().test("/foo/two", 200).build();
         IllegalState error = assertThrows(() -> patch.apply(target));
     }
 
     @Test
     void shouldFailTestingMissingChildObject() {
-        Doc       child  = Map<String, Doc>:["one"=1, "two"=2, "three"=3];
-        Doc       target = Map<String, Doc>:["foo"=child];
+        Doc       child  = ["one"=1, "two"=2, "three"=3];
+        Doc       target = ["foo"=child];
         JsonPatch patch = JsonPatch.builder().test("/foo/four", 4).build();
         IllegalState error = assertThrows(() -> patch.apply(target));
     }
@@ -90,7 +90,7 @@ class JsonPatchTestTest {
     @Test
     void shouldSucceedTestingNullChildObject() {
         Doc       child  = Map<String, Doc>:["one"=1, "two"=Null, "three"=3];
-        Doc       target = Map<String, Doc>:["foo"=child];
+        Doc       target = ["foo"=child];
         JsonPatch patch = JsonPatch.builder().test("/foo/two", Null).build();
         Doc       result = patch.apply(target);
         assert result == target;
@@ -98,8 +98,8 @@ class JsonPatchTestTest {
 
     @Test
     void shouldSucceedTestingNullMissingChildObject() {
-        Doc       child  = Map<String, Doc>:["one"=1, "two"=2, "three"=3];
-        Doc       target = Map<String, Doc>:["foo"=child];
+        Doc       child  = ["one"=1, "two"=2, "three"=3];
+        Doc       target = ["foo"=child];
         JsonPatch patch = JsonPatch.builder().test("/foo/four", Null).build();
         Doc       result = patch.apply(target);
         assert result == target;
@@ -116,7 +116,7 @@ class JsonPatchTestTest {
                          |}
                          ;
 
-        JsonObject          value    = Map:["a"="b"];
+        JsonObject          value    = ["a"="b"];
         JsonPatch.Operation expected = new JsonPatch.Operation(Test, JsonPointer.from("/one/two"), value);
         assertOperation(jsonOp, expected);
     }

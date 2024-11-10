@@ -119,7 +119,7 @@ class JsonPatchAddTest {
         JsonPatch patch  = JsonPatch.builder().add("/-2", "new").build();
         Doc       result = patch.apply(array, new JsonPatch.Options(supportNegativeIndices = True));
         assert result.is(JsonArray);
-        assert result == Array<Doc>:["one", "new", "two", "three"];
+        assert result == ["one", "new", "two", "three"];
     }
 
     @Test
@@ -161,7 +161,7 @@ class JsonPatchAddTest {
         assert result.is(JsonObject);
         assert result.size == 1;
         assert result["one"].is(JsonArray);
-        assert result["one"].as(JsonArray) == Array<Doc>:["one", "added", "two", "three"];
+        assert result["one"].as(JsonArray) == ["one", "added", "two", "three"];
     }
 
     @Test
@@ -173,7 +173,7 @@ class JsonPatchAddTest {
         assert result.is(JsonObject);
         assert result.size == 1;
         assert result["one"].is(JsonArray);
-        assert result["one"].as(JsonArray) == Array<Doc>:["one", "two", "added", "three"];
+        assert result["one"].as(JsonArray) == ["one", "two", "added", "three"];
     }
 
     @Test
@@ -187,7 +187,7 @@ class JsonPatchAddTest {
                          |}
                          ;
 
-        JsonObject          value    = Map:["a"="b"];
+        JsonObject          value    = ["a"="b"];
         JsonPatch.Operation expected = new JsonPatch.Operation(Add, JsonPointer.from("/one/two"), value);
         assertOperation(jsonOp, expected);
     }
