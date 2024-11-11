@@ -29,7 +29,7 @@ class DistinctCollection<Element>
                 Orderer? order := original.ordered(),
                 order != Null) {
             // it's possible to optimize the iteration without realizing the set, because the
-            // original collection is ordered, thus idential elements will be grouped together, and
+            // original collection is ordered, thus identical elements will be grouped together, and
             // thus a once-through iteration can be accomplished simply by remember the previously
             // returned value -- after the first value has been returned, of course!
             Iterator<Element> orderedIterator = original.iterator();

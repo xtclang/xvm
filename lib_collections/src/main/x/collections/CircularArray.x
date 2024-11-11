@@ -21,7 +21,7 @@ class CircularArray<Element>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an CircularArray with an initial capacity.
+     * Construct a CircularArray with an initial capacity.
      *
      * @param initialCapacity  (optional) the number of elements to initially allocate storage for
      */

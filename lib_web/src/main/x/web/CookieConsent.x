@@ -276,7 +276,7 @@ const CookieConsent(Boolean necessary       = False,
      * @return True iff the text was successfully parsed
      * @return (conditional) True indicates that "Strictly Necessary" cookies are allowed
      * @return (conditional) True indicates that "Functionality"/"Preferences" cookies are allowed
-     * @return (conditional) True indicates that "Performance"/"Statistics" cookiesare allowed
+     * @return (conditional) True indicates that "Performance"/"Statistics" cookies are allowed
      * @return (conditional) True indicates that "Marketing"/"Targeting" cookies are allowed
      * @return (conditional) True indicates that "SocialMedia" (Third Party) cookies are allowed
      * @return (conditional) True indicates that all "First Party" cookies are allowed

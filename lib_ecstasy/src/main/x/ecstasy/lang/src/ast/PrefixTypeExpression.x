@@ -4,7 +4,7 @@ import Lexer.Token;
 
 
 /**
- * A representation of types compomsed of a prefix token in front of a type.
+ * A representation of types composed of a prefix token in front of a type.
  */
 @Abstract const PrefixTypeExpression(Token prefix, TypeExpression type)
         extends TypeExpression {

@@ -1,7 +1,7 @@
 import maps.CopyableMap;
 
 /**
- * An implementation of a [Set] that is backed by a [SkiplistMap], which implementats the "skip
+ * An implementation of a [Set] that is backed by a [SkiplistMap], which implements the "skip
  * list" data structure.
  *
  * A skip list is a data structure that has logN average time for data retrieval, insertion,

@@ -131,7 +131,7 @@ const AcceptList {
     AcceptType[] always;
 
     /**
-     * The AcceptTypes with a quality between 0.0 and 1.0 (excslusive).
+     * The AcceptTypes with a quality between 0.0 and 1.0 (exclusive).
      */
     AcceptType[] maybes;
 
