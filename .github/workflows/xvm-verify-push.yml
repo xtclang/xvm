@@ -90,7 +90,7 @@ jobs:
           gradle-version: "8.9"
 
       - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v3
+        uses: gradle/actions/wrapper-validation@v4
 
       - name: Dump environment info
         shell: bash
