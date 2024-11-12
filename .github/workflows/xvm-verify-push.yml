@@ -27,7 +27,6 @@ on:
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
   always_publish_snapshot: false
-  enable_gradle_home_cache_cleanup: true
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -86,7 +85,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
           gradle-version: "8.8"
@@ -174,7 +172,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
           gradle-version: "8.8"
