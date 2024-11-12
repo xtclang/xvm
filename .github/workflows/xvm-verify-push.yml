@@ -27,7 +27,6 @@ on:
 env:
   # TODO: Default should be disabled; we only want to be bothered by tagging and publishing for the master branch.
   always_publish_snapshot: false
-  enable_gradle_home_cache_cleanup: true
 
   # Add manual tests as an included build to the composite build configuration, and also build them.
   ORG_GRADLE_PROJECT_includeBuildManualTests: true
@@ -84,14 +83,14 @@ jobs:
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
+          gradle-version: "8.9"
 
       - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v3
+        uses: gradle/actions/wrapper-validation@v4
 
       - name: Dump environment info
         shell: bash
@@ -153,12 +152,6 @@ jobs:
     runs-on: ubuntu-latest
     #if: ${{ (github.ref == 'refs/heads/master') }}
     steps:
-      - name: Maximize Build Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          large-packages: false
-
       # Check out current repository
       - name: Fetch Sources
         uses: actions/checkout@v4
@@ -171,11 +164,11 @@ jobs:
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
+          gradle-version: "8.9"
 
       - name: Dump environment info
         shell: bash
