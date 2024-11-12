@@ -12,13 +12,13 @@ class JsonArrayBuilder
     /**
      * Create a JSON array builder.
      *
-     * @param template  an optional `JsonArray` to use to populate
-     *                  the builder with an initial set of values
-     * @param factory   a factory to create a new mutable `JsonArray`
+     * @param template  (optional) an optional `JsonArray` to use to populate the builder with an
+     *                  initial set of values
+     * @param factory   (optional) a factory to create a new mutable `JsonArray`
      */
     construct(JsonArray? template = Null, Factory factory = () -> json.newArray()) {
         this.factory = factory;
-        values = new Array();
+        this.values  = new Array();
         if (template.is(JsonArray)) {
             values.addAll(template);
         }
@@ -136,8 +136,8 @@ class JsonArrayBuilder
     /**
      * Merge a `JsonObject` into the array.
      *
-     * All of the `JsonObject` keys must be strings that are integer literals
-     * in the range between zero and the current size of the array being built.
+     * All of the `JsonObject` keys must be strings that are integer literals in the range between
+     * zero and the current size of the array being built.
      */
     @Override
     protected void mergeObject(JsonObject o) {
@@ -147,8 +147,8 @@ class JsonArrayBuilder
             Int?        index   = pointer.index;
             assert index != Null as "Cannot merge JSON Object with non-Int keys into a JSON array";
             assert 0 <= index < values.size as
-                    $|Cannot merge JSON Object into JSON array - key\
-                     | "{entry.key}" does not match an existing array entry in the range 0..<{values.size}
+                    $|Cannot merge JSON Object into JSON array - key "{entry.key}" does not match \
+                     |an existing array entry in the range 0..<{values.size}
                      ;
             map.put(pointer, entry.value);
         }
