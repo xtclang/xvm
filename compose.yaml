@@ -1,0 +1,7 @@
+services:
+  xdk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64  # Specify the target platform here
+    image: xdk:latest

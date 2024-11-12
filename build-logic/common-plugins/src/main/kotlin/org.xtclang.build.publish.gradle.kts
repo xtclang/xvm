@@ -25,7 +25,7 @@ tasks.withType<PublishToMavenRepository>().configureEach {
         allowPublication()
     }
     if (!allowPublication()) {
-        logger.warn("$prefix Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion'")
+        logger.warn("$prefix Skipping publication task, snapshotOnly=${snapshotOnly()} for version: '$semanticVersion')")
     }
 }
 
