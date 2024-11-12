@@ -87,7 +87,7 @@ jobs:
         with:
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
-          gradle-version: "8.8"
+          gradle-version: "8.9"
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v3
@@ -174,7 +174,7 @@ jobs:
         with:
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
-          gradle-version: "8.8"
+          gradle-version: "8.9"
 
       - name: Dump environment info
         shell: bash
