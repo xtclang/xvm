@@ -177,7 +177,7 @@ jobs:
           gradle-home-cache-cleanup: ${{ env.enable_gradle_home_cache_cleanup }}
           cache-disabled: ${{ github.ref == 'refs/heads/master' }}
           cache-read-only: false
-	  gradle-version: "8.8"
+          gradle-version: "8.8"
 
       - name: Dump environment info
         shell: bash
