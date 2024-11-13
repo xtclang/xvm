@@ -249,7 +249,7 @@ class JsonPatchCopyTest {
         JsonPatch  patch  = JsonPatch.builder().copy("/1", "/-").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, 3, 4, 2];
+        assert result == [1, 2, 3, 4, 2];
     }
 
     @Test
@@ -258,6 +258,6 @@ class JsonPatchCopyTest {
         JsonPatch  patch  = JsonPatch.builder().copy("/1", "/3").build();
         Doc        result = patch.apply(target);
         assert result.is(JsonArray);
-        assert result == Array<Doc>:[1, 2, 3, 2, 4, 5];
+        assert result == [1, 2, 3, 2, 4, 5];
     }
 }

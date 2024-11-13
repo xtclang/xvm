@@ -11,9 +11,9 @@ class JsonPatchOperationTest {
     @Test
     void shouldBeEqualOperationsWithJsonObjectValue() {
         JsonPatch.Operation op1 = new JsonPatch.Operation(Add, JsonPointer.from("/one/two"),
-                Map:["a"="b"], JsonPointer.from("/three/four"));
+                ["a"="b"], JsonPointer.from("/three/four"));
         JsonPatch.Operation op2 = new JsonPatch.Operation(Add, JsonPointer.from("/one/two"),
-                Map:["a"="b"], JsonPointer.from("/three/four"));
+                ["a"="b"], JsonPointer.from("/three/four"));
         assert op1 == op2;
     }
 

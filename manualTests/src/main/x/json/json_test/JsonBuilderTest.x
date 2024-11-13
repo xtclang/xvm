@@ -23,32 +23,32 @@ class JsonBuilderTest {
 
     @Test
     void shouldCopySimpleObject() {
-        JsonObject object = hideCompileType(Map<String, Doc>:["one"=11, "two"=22, "three"=33]);
+        JsonObject object = hideCompileType(["one"=11, "two"=22, "three"=33]);
         JsonObject result = JsonBuilder.deepCopy(object);
         assertDeepCopy(object, result);
     }
 
     @Test
     void shouldCopySimpleArray() {
-        JsonArray array  = hideCompileType(Array<Doc>:[1, 2, 3]);
+        JsonArray array  = hideCompileType([1, 2, 3]);
         JsonArray result = JsonBuilder.deepCopy(array);
         assertDeepCopy(array, result);
     }
 
     @Test
     void shouldCopyComplexObject() {
-        JsonObject child  = Map<String, Doc>:["one"=11, "two"=22, "three"=33];
-        JsonArray  array  = Array<Doc>:[1, 2, 3];
-        JsonObject object = Map<String, Doc>:["one"=child, "two"=array, "three"=33];
+        JsonObject child  = ["one"=11, "two"=22, "three"=33];
+        JsonArray  array  = [1, 2, 3];
+        JsonObject object = ["one"=child, "two"=array, "three"=33];
         JsonObject result = JsonBuilder.deepCopy(object);
         assertDeepCopy(object, result);
     }
 
     @Test
     void shouldCopyComplexArray() {
-        JsonArray  child  = Array<Doc>:[1, 2, 3];
-        JsonObject object = Map<String, Doc>:["one"=11, "two"=22, "three"=33];
-        JsonArray  array  = Array<Doc>:[child, object];
+        JsonArray  child  = [1, 2, 3];
+        JsonObject object = ["one"=11, "two"=22, "three"=33];
+        JsonArray  array  = [child, object];
         JsonArray  result = JsonBuilder.deepCopy(array);
         assertDeepCopy(array, result);
     }
@@ -94,23 +94,23 @@ class JsonBuilderTest {
 
     @Test
     void shouldMergeSimpleObjectIntoObject() {
-        JsonObject target = Map:["a"="b"];
-        JsonObject source = Map:["c"="d"];
+        JsonObject target = ["a"="b"];
+        JsonObject source = ["c"="d"];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
-        assert result == Map:["a"="b", "c"="d"];
+        assert result == ["a"="b", "c"="d"];
     }
 
     @Test
     void shouldMergeComplexObjectIntoObject() {
-        JsonObject target = Map:["a"="b"];
-        JsonObject source = Map:["c"=Map<String, Doc>:["one"="two"]];
+        JsonObject target = ["a"="b"];
+        JsonObject source = ["c"=["one"="two"]];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
-        assert result == Map<String, Doc>:["a"="b", "c"=Map<String, Doc>:["one"="two"]];
+        assert result == Map<String, Doc>:["a"="b", "c"=["one"="two"]];
     }
 
     @Test
     void shouldMergeArrayIntoObject() {
-        JsonObject target = Map:["a"="b"];
+        JsonObject target = ["a"="b"];
         JsonArray  source = [1, 2, 3];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
         assert result == Map<String, Doc>:["a"="b", "0"=1, "1"=2, "2"=3];
@@ -118,40 +118,40 @@ class JsonBuilderTest {
 
     @Test
     void shouldMergeObjectWithObjectIntoObjectWithExistingObject() {
-        JsonObject target = Map:["a"="b", "c"=Map<String, Doc>:["one"=1, "two"=2]];
-        JsonObject source = Map:["c"=Map<String, Doc>:["two"=22, "three"=3]];
+        JsonObject target = ["a"="b", "c"=["one"=1, "two"=2]];
+        JsonObject source = ["c"=["two"=22, "three"=3]];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
-        assert result == Map<String, Doc>:["a"="b", "c"=Map<String, Doc>:["one"=1, "two"=22, "three"=3]];
+        assert result == Map<String, Doc>:["a"="b", "c"=["one"=1, "two"=22, "three"=3]];
     }
 
     @Test
     void shouldMergeObjectWithObjectIntoObjectWithExistingArray() {
-        JsonObject target = Map:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
-        JsonObject source = Map:["c"=Map<String, Doc>:["0"="one-updated", "2"="three-updated"]];
+        JsonObject target = ["a"="b", "c"=["one", "two", "three"]];
+        JsonObject source = ["c"=["0"="one-updated", "2"="three-updated"]];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
-        assert result == Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one-updated", "two", "three-updated"]];
+        assert result == Map<String, Doc>:["a"="b", "c"=["one-updated", "two", "three-updated"]];
     }
 
     @Test
     void shouldMergeObjectWithObjectIntoObjectWithExistingComplexArray() {
-        JsonObject objOrig0     = Map<String, Doc>:["one"=1, "two"=2];
-        JsonObject objOrig1     = Map<String, Doc>:["three"=3, "four"=4, "five"=5];
-        JsonObject objOrig2     = Map<String, Doc>:["six"=6, "seven"=7];
-        JsonObject target       = Map<String, Doc>:["a"="b", "c"=Array<Doc>:[objOrig0, objOrig1, objOrig2]];
-        JsonObject objUpdate1   = Map<String, Doc>:["four"=44];
-        JsonObject objExpected1 = Map<String, Doc>:["three"=3, "four"=44, "five"=5];
-        JsonObject source       = Map<String, Doc>:["c"=Map<String, Doc>:["1"=objUpdate1]];
+        JsonObject objOrig0     = ["one"=1, "two"=2];
+        JsonObject objOrig1     = ["three"=3, "four"=4, "five"=5];
+        JsonObject objOrig2     = ["six"=6, "seven"=7];
+        JsonObject target       = ["a"="b", "c"=[objOrig0, objOrig1, objOrig2]];
+        JsonObject objUpdate1   = ["four"=44];
+        JsonObject objExpected1 = ["three"=3, "four"=44, "five"=5];
+        JsonObject source       = ["c"=["1"=objUpdate1]];
         JsonObject result       = new JsonObjectBuilder(target).deepMerge(source).build();
         Doc        c            = result["c"];
         assert c.is(Array<Doc>);
-        assert c == Array<Doc>:[objOrig0, objExpected1, objOrig2];
-        //assert result == Map<String, Doc>:["a"="b", "c"=Array<Doc>:[objOrig0, objExpected1, objOrig2]];
+        assert c == Doc[]:[objOrig0, objExpected1, objOrig2];
+        //assert result == ["a"="b", "c"=[objOrig0, objExpected1, objOrig2]];
     }
 
     @Test
     void shouldNotMergeObjectWithObjectWithNonIntKeysIntoObjectWithExistingArray() {
-        JsonObject        target  = Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
-        JsonObject        source  = Map<String, Doc>:["c"=Map<String, Doc>:["0"="one-updated", "three"="three-updated"]];
+        JsonObject        target  = ["a"="b", "c"=["one", "two", "three"]];
+        JsonObject        source  = ["c"=["0"="one-updated", "three"="three-updated"]];
         JsonObjectBuilder builder = new JsonObjectBuilder(target);
         try {
             builder.deepMerge(source);
@@ -160,13 +160,13 @@ class JsonBuilderTest {
             // expected
         }
         // target should be unchanged
-        assert target == Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
+        assert target == Map<String, Doc>:["a"="b", "c"=["one", "two", "three"]];
     }
 
     @Test
     void shouldNotMergeObjectWithObjectWithOutOfRangeKeysIntoObjectWithExistingArray() {
-        JsonObject        target  = Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
-        JsonObject        source  = Map<String, Doc>:["c"=Map<String, Doc>:["0"="one-updated", "3"="four"]];
+        JsonObject        target  = ["a"="b", "c"=["one", "two", "three"]];
+        JsonObject        source  = ["c"=["0"="one-updated", "3"="four"]];
         JsonObjectBuilder builder = new JsonObjectBuilder(target);
         try {
             builder.deepMerge(source);
@@ -175,14 +175,14 @@ class JsonBuilderTest {
             // expected
         }
         // target should be unchanged
-        assert target == Map<String, Doc>:["a"="b", "c"=Array<Doc>:["one", "two", "three"]];
+        assert target == Map<String, Doc>:["a"="b", "c"=["one", "two", "three"]];
     }
 
     @Test
     void shouldMergeObjectWithPrimitiveIntoObjectWithExistingPrimitive() {
-        JsonObject target = Map:["a"="b", "c"="d"];
-        JsonObject source = Map:["c"="updated"];
+        JsonObject target = ["a"="b", "c"="d"];
+        JsonObject source = ["c"="updated"];
         JsonObject result = new JsonObjectBuilder(target).deepMerge(source).build();
-        assert result == Map:["a"="b", "c"="updated"];
+        assert result == ["a"="b", "c"="updated"];
     }
 }
