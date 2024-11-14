@@ -38,6 +38,9 @@ service RequestInfoImpl(RTServer       server,
 
     private static function Boolean(String, String) eqInsens = CaseInsensitive.areEqual;
 
+    typedef function void(Int) as Notify;
+    private Notify[] observers = [];
+
     @Override
     @Lazy Uri uri.calc() = new Uri(uriString);
 
@@ -278,7 +281,7 @@ service RequestInfoImpl(RTServer       server,
      * Given information from both "Forwarded" and "X-Forwarded-For" headers, return the information
      * to use.
      *
-     * @paramxfwdHeaders   the header values for "Forwarded" already obtained from the request
+     * @param fwdHeaders   the header values for "Forwarded" already obtained from the request
      * @param xfwdHeaders  the header values for "X-Forwarded-For" already obtained from the request
      *
      * @return an array of IP addresses that the request was forwarded on behalf of (i.e. this does
@@ -405,8 +408,18 @@ service RequestInfoImpl(RTServer       server,
     Boolean containsNestedBodies() = server.containsNestedBodies(context);
 
     @Override
+    void observe(Notify notify) {
+        observers += notify;
+    }
+
+    @Override
     void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body) {
         server.respond(context, status, headerNames, headerValues, body);
+        for (Notify notify : observers) {
+            try {
+                notify(status);
+            } catch (Exception ignore) {}
+        }
     }
 
     @Override

@@ -248,6 +248,25 @@ interface HttpServer
         @RO Protocol protocol;
 
         /**
+         * Build a URL that converts this request to a corresponding https request.
+         *
+         * @return a string holding an https request URL equivalent of this http request
+         */
+        @RO Uri httpsUrl.get() {
+            Uri     uri      = this.uri;
+            Scheme  scheme   = HTTPS;
+            Host    host     = route.host;
+            UInt16  tlsPort  = route.httpsPort;
+            Boolean noPort   = tlsPort == 443;
+
+            return uri.withoutPort().with(
+                scheme = scheme.name,
+                host   = host.toString(),
+                port   = noPort ? Null : tlsPort,
+            );
+        }
+
+        /**
          * The user agent string, if any.
          */
         @RO String? userAgent;
@@ -290,23 +309,11 @@ interface HttpServer
         Boolean containsNestedBodies();
 
         /**
-         * Build a URL that converts this request to a corresponding https request.
+         * Register an observer that will be notified when the request is [responded to](respond).
          *
-         * @return a string holding am https request URL equivalent of this http request
+         * @param notify  a function that will be passed the `Status-Code` of the response
          */
-        @RO Uri httpsUrl.get() {
-            Uri     uri      = this.uri;
-            Scheme  scheme   = HTTPS;
-            Host    host     = route.host;
-            UInt16  tlsPort  = route.httpsPort;
-            Boolean noPort   = tlsPort == 443;
-
-            return uri.withoutPort().with(
-                scheme = scheme.name,
-                host   = host.toString(),
-                port   = noPort ? Null : tlsPort,
-            );
-        }
+        void observe(function void(Int) notify);
 
         /**
          * Instruct the server to send a response to a previously received request.

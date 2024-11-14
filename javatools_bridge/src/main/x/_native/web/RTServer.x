@@ -208,6 +208,7 @@ service RTServer
         conditional String[] getHeaderValuesForName(String name);
         conditional Byte[] getBodyBytes();
         Boolean containsNestedBodies();
+        void observe(function void(Int) notify);
         void respond(Int status, String[] headerNames, String[] headerValues, Byte[] body);
     }
 
@@ -245,7 +246,7 @@ service RTServer
          * @param tls        if the message was received (the last hop) over a TLS connection
          */
         void handle(HostInfo binding, RequestContext context, String uriString, String method, Boolean tls) {
-            RequestInfo info   = new RequestInfoImpl(this.RTServer,
+            RequestInfo info = new RequestInfoImpl(this.RTServer,
                     binding, bindings.get(binding) ?: HttpServer.NoTrustedProxies,
                     context, uriString, HttpMethod.of(method), tls);
             handler.handle^(&info.maskAs(RequestInfo));
