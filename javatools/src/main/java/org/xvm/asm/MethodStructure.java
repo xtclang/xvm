@@ -2481,7 +2481,7 @@ public class MethodStructure
             if (m_fTrailingPrefix)
                 {
                 // get the last op and append this op to it
-                ((Prefix) listOps.get(listOps.size()-1)).append(op);
+                ((Prefix) listOps.getLast()).append(op);
                 }
             else
                 {
@@ -2553,7 +2553,7 @@ public class MethodStructure
                 Op op;
                 do
                     {
-                    op = list.get(list.size() - 1);
+                    op = list.getLast();
                     while (op instanceof Op.Prefix opPrefix)
                         {
                         op = opPrefix.getNextOp();
@@ -2578,7 +2578,7 @@ public class MethodStructure
         public Op getLastOp()
             {
             List<Op> listOps = m_listOps;
-            Op       opLast  = listOps.isEmpty() ? null : listOps.get(listOps.size() - 1);
+            Op       opLast  = listOps.isEmpty() ? null : listOps.getLast();
 
             if (m_fTrailingPrefix)
                 {

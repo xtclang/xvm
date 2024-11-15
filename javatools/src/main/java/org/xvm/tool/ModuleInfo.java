@@ -1662,7 +1662,7 @@ public class ModuleInfo
                 else
                     {
                     List<Statement> list = ((StatementBlock) stmt).getStatements();
-                    m_stmtType = (TypeCompositionStatement) list.get(list.size() - 1);
+                    m_stmtType = (TypeCompositionStatement) list.getLast();
                     }
                 }
             }

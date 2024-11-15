@@ -229,7 +229,7 @@ public class AssemblerContext
             return SimulatedLinkerContext.EMPTY;
             }
 
-        SimulatedLinkerContext ctx = list.get(list.size() - 1);
+        SimulatedLinkerContext ctx = list.getLast();
         if (ctx == null)
             {
             ConditionalConstant cond = asCondition();

@@ -49,7 +49,7 @@ public class MultipleLValueStatement
     @Override
     public long getStartPosition()
         {
-        return LVals.get(0).getStartPosition();
+        return LVals.getFirst().getStartPosition();
         }
 
     @Override

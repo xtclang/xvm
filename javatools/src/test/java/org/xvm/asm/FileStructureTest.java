@@ -111,7 +111,7 @@ public class FileStructureTest
         ErrorList                errlist  = new ErrorList(10);
         Parser                   parser   = new Parser(source, errlist);
         List<Statement>          stmts    = parser.parseSource().getStatements();
-        TypeCompositionStatement module   = (TypeCompositionStatement) stmts.get(stmts.size() - 1);
+        TypeCompositionStatement module   = (TypeCompositionStatement) stmts.getLast();
         Compiler                 compiler = new Compiler(module, errlist);
         assertEquals(0, errlist.getSeriousErrorCount());
         return compiler.generateInitialFileStructure();
@@ -129,8 +129,7 @@ public class FileStructureTest
             {
             Parser parser = new Parser(source, errlist);
             List<Statement> stmts = parser.parseSource().getStatements();
-            TypeCompositionStatement module =
-                    (TypeCompositionStatement) stmts.get(stmts.size() - 1);
+            TypeCompositionStatement module = (TypeCompositionStatement) stmts.getLast();
             Compiler compiler = new Compiler(module, errlist);
 
             struct = compiler.generateInitialFileStructure();

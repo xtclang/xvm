@@ -95,13 +95,13 @@ public class CmpChainExpression
     @Override
     public long getStartPosition()
         {
-        return expressions.get(0).getStartPosition();
+        return expressions.getFirst().getStartPosition();
         }
 
     @Override
     public long getEndPosition()
         {
-        return expressions.get(expressions.size() - 1).getEndPosition();
+        return expressions.getLast().getEndPosition();
         }
 
     @Override
@@ -219,7 +219,7 @@ public class CmpChainExpression
                     {
                     // TODO need a better error
                     log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
-                                listExprs.get(0).getType().getValueString(), "...");
+                                listExprs.getFirst().getType().getValueString(), "...");
                     fValid = false;
                     }
                 else

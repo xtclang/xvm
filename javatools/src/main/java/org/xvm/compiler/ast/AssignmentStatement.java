@@ -790,7 +790,7 @@ public class AssignmentStatement
                 if (lvalueExpr.isSingle()
                         && lvalue instanceof VariableDeclarationStatement stmtVar
                         && !stmtVar.hasRefAnnotations()
-                        && rvalue.supportsCompactInit((VariableDeclarationStatement) lvalue))
+                        && rvalue.supportsCompactInit(stmtVar))
                     {
                     assert lvalueExpr.isCompletable();
                     rvalue.generateCompactInit(ctx, code, stmtVar,  errs);

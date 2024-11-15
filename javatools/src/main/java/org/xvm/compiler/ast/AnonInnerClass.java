@@ -367,16 +367,16 @@ public class AnonInnerClass
         m_sName = idSuper.getName();
 
         List<CompositionNode> list = ensureCompositions();
-        if (!list.isEmpty() && list.get(0) instanceof Extends)
+        if (!list.isEmpty() && list.getFirst() instanceof Extends nodeFirst)
             {
             getTypeExpression().log(getErrorListener(true), Severity.ERROR, Compiler.ANON_CLASS_EXTENDS_MULTI,
-                    list.get(0).getType().ensureTypeConstant().getValueString(), type.getValueString());
+                    nodeFirst.getType().ensureTypeConstant().getValueString(), type.getValueString());
             return;
             }
 
         TypeExpression exprSuper = processFormalTypes((NamedTypeExpression) exprType, idSuper);
 
-        list.add(0, new Extends(null, genKeyword(exprSuper, Id.EXTENDS), exprSuper));
+        list.addFirst(new Extends(null, genKeyword(exprSuper, Id.EXTENDS), exprSuper));
         }
 
     /**

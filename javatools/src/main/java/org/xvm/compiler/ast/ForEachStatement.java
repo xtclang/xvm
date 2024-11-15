@@ -73,7 +73,7 @@ public class ForEachStatement
 
     public AssignmentStatement getCondition()
         {
-        return (AssignmentStatement) conds.get(0);
+        return (AssignmentStatement) conds.getFirst();
         }
 
     @Override

@@ -401,14 +401,14 @@ public class MethodDeclarationStatement
                     {
                     if (modifiers != null && !modifiers.isEmpty())
                         {
-                        Token tok = modifiers.get(0);
+                        Token tok = modifiers.getFirst();
                         errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
                             getSource(), tok.getStartPosition(), tok.getEndPosition());
                         return;
                         }
                     if (params != null && !params.isEmpty())
                         {
-                        params.get(0).log(errs, Severity.ERROR, Compiler.VALIDATOR_PARAMS_UNEXPECTED);
+                        params.getFirst().log(errs, Severity.ERROR, Compiler.VALIDATOR_PARAMS_UNEXPECTED);
                         return;
                         }
 
@@ -891,7 +891,7 @@ public class MethodDeclarationStatement
                     ? aReturns[1]
                     : aReturns[0]).getType();
 
-            ErrorListener errsTemp = errs.branch(returns == null ? this : returns.get(0));
+            ErrorListener errsTemp = errs.branch(returns == null ? this : returns.getFirst());
             typeRet.validate(errsTemp);
             errsTemp.merge();
             }

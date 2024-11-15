@@ -103,8 +103,8 @@ public class Parser
             m_fDone = true;
 
             List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-            m_root = new StatementBlock(stmts, m_source, stmts.get(0).getStartPosition(),
-                    stmts.get(stmts.size()-1).getEndPosition());
+            m_root = new StatementBlock(stmts, m_source, stmts.getFirst().getStartPosition(),
+                    stmts.getLast().getEndPosition());
 
             // there shouldn't be more in the file; (note that a zero-length token doesn't count,
             // since it is probably the synthetic closing '}')
@@ -1583,7 +1583,7 @@ public class Parser
         if (!peek(Id.SEMICOLON) && !peek(Id.AS))
             {
             conds   = parseConditionList();
-            lEndPos = conds.get(conds.size()-1).getEndPosition();
+            lEndPos = conds.getLast().getEndPosition();
             }
 
         Expression exprMsg = null;

@@ -99,7 +99,7 @@ public abstract class ComponentStatement
                     }
                 }
             }
-        return listAnno.get(0);
+        return listAnno.getFirst();
         }
 
 
