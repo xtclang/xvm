@@ -1,63 +1,31 @@
 module TestSimple {
 
-    import ecstasy.collections.NaturalHasher;
+    package json import json.xtclang.org;
 
     @Inject Console console;
 
+    import json.*;
+
     void run() {
-        Char a = 'a';
-        Char b = 'b';
-        console.print(a.hashCode());
-        console.print(new NaturalHasher<Char>().hashOf(a));
 
-        console.print(a==b);
-        console.print(new NaturalHasher<Char>().areEqual(a, b));
+        Test t = new Test();
+        console.print(t.getObject());
+        console.print(t.getDoc());
 
-        console.print(a<=>b);
-
-        try {
-            Hashable h = obfuscate(a);
-            console.print(h.hashCode());
-            }
-        catch (Exception e) {
-            console.print(e);
-        }
-
-        try {
-            Const c = obfuscate(a);
-            console.print(c.hashCode());
-            }
-        catch (Exception e) {
-            console.print(e);
-        }
-
-        try {
-            Orderable c1 = obfuscate(a);
-            Orderable c2 = obfuscate(b);
-            console.print(c1 <=> c2);
-            }
-        catch (Exception e) {
-            console.print(e);
-        }
-
-        try {
-            Const c1 = obfuscate(a);
-            Const c2 = obfuscate(b);
-            console.print(c1 == c2);
-            }
-        catch (Exception e) {
-            console.print(e);
-        }
-
-        try {
-            Const c1 = obfuscate(a);
-            Const c2 = obfuscate(b);
-            console.print(c1 <=> c2);
-            }
-        catch (Exception e) {
-            console.print(e);
-        }
     }
 
-    <T> T obfuscate(Object o) = o.as(T);
+    service Test {
+
+        JsonObject getObject(Int i = 1) {
+            JsonObject o = json.newObject();
+            o["a"] = i /*this will not be needed*/.toIntLiteral();
+            return o; // no need to freeze
+        }
+
+        Doc getDoc(Dec d = 1) {
+            JsonObject o = json.newObject();
+            o["a"] = d /*this will not be needed*/.toFPLiteral();
+            return o;
+        }
+    }
 }

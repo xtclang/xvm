@@ -7,7 +7,7 @@ class JsonArrayBuilder
     /**
      * A type that is a function that can create a new instance of a mutable `JsonArray`.
      */
-    typedef function JsonArray () as Factory;
+    typedef function JsonArray() as Factory;
 
     /**
      * Create a JSON array builder.
@@ -18,7 +18,7 @@ class JsonArrayBuilder
      */
     construct(JsonArray? template = Null, Factory factory = () -> json.newArray()) {
         this.factory = factory;
-        values = new Array();
+        values = new Doc[];
         if (template.is(JsonArray)) {
             values.addAll(template);
         }
@@ -32,7 +32,7 @@ class JsonArrayBuilder
     /**
      * The array of values to be used to create a JSON array.
      */
-    private Array<Doc> values;
+    private Doc[] values;
 
     /**
      * @return the number of values that have been added to the builder.

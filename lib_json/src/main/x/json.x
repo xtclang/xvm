@@ -19,32 +19,34 @@ module json.xtclang.org
     /**
      * JSON primitive types are all JSON values except for arrays and objects.
      */
-    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) as Primitive;
+//    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) as Primitive;
+
+    // or maybe:
+
+//    typedef (Nullable | Boolean | IntLiteral | IntNumber | FPLiteral | FPNumber | String) as Primitive;
+
+    // or even:
+//    typedef (Nullable | Boolean | ecstasy.numbers.IntConvertible | ecstasy.numbers.FPConvertible | String) as Primitive;
 
     /**
      * JSON types include primitive types, array types, and map types.
      */
-    typedef (Primitive | Map<String, Doc> | Array<Doc>) as Doc;
-
-    /**
-     * A type representing a JSON Object.
-     */
-    typedef Map<String, Doc> as JsonObject;
+    typedef (Primitive | Map<String, Doc> | List<Doc>) as Doc;
 
     /**
      * A type representing a JSON Array.
      */
-    typedef Array<Doc> as JsonArray;
+    typedef Doc[] as JsonArray;
 
     /**
      * A type representing a non-primitive JSON structure.
      */
-    typedef JsonObject | JsonArray as JsonStruct;
+    typedef Map<String, Doc> | JsonArray as JsonStruct;
 
     /**
-     * @return a new instance of a mutable `JsonObject`
+     * @return a new instance of a mutable [JsonObject].
      */
-    JsonObject newObject() = new ListMap<String, Doc>();
+    JsonObject newObject(Map<String, Doc> map = []) = new JsonObject(map);
 
     /**
      * @return a builder that can produce immutable JSON object instances
@@ -54,7 +56,7 @@ module json.xtclang.org
     /**
      * @return a new instance of a mutable `JsonArray`
      */
-    JsonArray newArray() = new Array<Doc>();
+    JsonArray newArray() = new Doc[];
 
     /**
      * @return a builder that can produce immutable JSON array instances
