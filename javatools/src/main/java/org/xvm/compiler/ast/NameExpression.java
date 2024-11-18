@@ -877,7 +877,7 @@ public class NameExpression
 
         if (left instanceof NameExpression exprName && exprName.getMeaning() == Meaning.Label)
             {
-            LabelVar labelVar = (LabelVar) ctx.getVar(((NameExpression) left).getNameToken(), errs);
+            LabelVar labelVar = (LabelVar) ctx.getVar(exprName.getNameToken(), errs);
             String   sVar     = getName();
             if (labelVar.isPropReadable(sVar))
                 {
@@ -2021,9 +2021,9 @@ public class NameExpression
             {
             int                     cParams   = params.size();
             ArrayList<TypeConstant> listTypes = new ArrayList<>(cParams);
-            for (int i = 0; i < cParams; ++i)
+            for (TypeExpression param : params)
                 {
-                TypeConstant typeParam = params.get(i).getImplicitType(ctx);
+                TypeConstant typeParam = param.getImplicitType(ctx);
                 if (typeParam == null)
                     {
                     break;

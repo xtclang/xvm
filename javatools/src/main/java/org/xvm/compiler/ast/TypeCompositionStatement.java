@@ -743,9 +743,8 @@ public class TypeCompositionStatement
             boolean fExplicitlyProtected = false;
             boolean fExplicitlyPrivate   = false;
 
-            for (int i = 0, c = modifiers.size(); i < c; ++i)
+            for (Token token : modifiers)
                 {
-                Token token = modifiers.get(i);
                 int     nBits;
                 boolean fAlready;
                 switch (token.getId())
@@ -949,9 +948,8 @@ public class TypeCompositionStatement
                 {
                 compositions = new ArrayList<>();
                 }
-            for (int i = 0, c = annotations.size(); i < c; i++)
+            for (AnnotationExpression annotation : annotations)
                 {
-                AnnotationExpression annotation = annotations.get(i);
                 annotation.ensureAnnotation(pool);
                 compositions.add(new Incorporates(annotation));
                 }
@@ -1923,11 +1921,10 @@ public class TypeCompositionStatement
                             List<Parameter> listParams = constructorParams;
                             if (listParams != null)
                                 {
-                                int              cArgs    = listParams.size();
-                                List<Expression> listArgs = new ArrayList(cArgs);
-                                for (int i = 0; i < cArgs; i++)
+                                List<Expression> listArgs = new ArrayList(listParams.size());
+                                for (Parameter listParam : listParams)
                                     {
-                                    listArgs.add(new NameExpression(this, listParams.get(i).name, null));
+                                    listArgs.add(new NameExpression(this, listParam.name, null));
                                     }
                                 m_mapContribArgs.put(contrib, listArgs);
                                 }
@@ -2401,10 +2398,9 @@ public class TypeCompositionStatement
 
             Map<String, Component> mapChildren = component.getChildByNameMap();
             boolean                fInvalidate = false;
-            for (int i = 0, cParams = listParams.size(); i < cParams; ++i)
+            for (Parameter param : listParams)
                 {
-                Parameter param = listParams.get(i);
-                String    sProp = param.getName();
+                String sProp = param.getName();
 
                 PropertyStructure prop = (PropertyStructure) mapChildren.get(sProp);
                 if (!prop.isSynthetic())

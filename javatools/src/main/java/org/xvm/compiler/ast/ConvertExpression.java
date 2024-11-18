@@ -303,7 +303,7 @@ public class ConvertExpression
      *     Int y = tmpY.toInt64();
      * </code></pre>
      */
-    public ExprAST unwrapConverAST(Context ctx, ExprAST astLVal)
+    public ExprAST unwrapConvertAST(Context ctx, ExprAST astLVal)
         {
         ExprAST astFrom = expr.getExprAST(ctx);
         int     cVals   = expr.getValueCount();

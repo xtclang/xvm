@@ -179,9 +179,9 @@ public class ListExpression
                 }
 
             TypeFit fit = TypeFit.Fit;
-            for (int i = 0, cElements = exprs.size(); i < cElements; ++i)
+            for (Expression expr : exprs)
                 {
-                fit = fit.combineWith(exprs.get(i).testFit(ctx, typeElement, fExhaustive, errs));
+                fit = fit.combineWith(expr.testFit(ctx, typeElement, fExhaustive, errs));
                 if (!fit.isFit())
                     {
                     break;

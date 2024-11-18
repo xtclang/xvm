@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -1193,10 +1192,8 @@ public class MethodDeclarationStatement
 
         if (annotations != null)
             {
-            for (Iterator<AnnotationExpression> iter = annotations.iterator(); iter.hasNext();)
+            for (AnnotationExpression annotation : annotations)
                 {
-                AnnotationExpression annotation = iter.next();
-
                 String        sAnnotation = annotation.toTypeExpression().getName();
                 ClassConstant constClass  = (ClassConstant) pool.getImplicitlyImportedIdentity(sAnnotation);
                 if (constClass == null)

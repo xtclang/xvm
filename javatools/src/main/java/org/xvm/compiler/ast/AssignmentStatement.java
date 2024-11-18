@@ -819,7 +819,7 @@ public class AssignmentStatement
                 astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST(ctx));
                 astAssign = rvalue instanceof ConvertExpression exprConv &&
                             !exprConv.isSingle() && !exprConv.isConstant()
-                        ? exprConv.unwrapConverAST(ctx, astLVal)
+                        ? exprConv.unwrapConvertAST(ctx, astLVal)
                         : new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST(ctx));
                 break;
                 }
@@ -997,7 +997,7 @@ public class AssignmentStatement
                             }
 
                         // otherwise create a regular assignment operation
-                        // TODO: it should alwaye hold:  astRvalue.getType(0) == argRVal.getType(),
+                        // TODO: it should always hold:  astRvalue.getType(0) == argRVal.getType(),
                         //       however under some scenarios (mostly with array access) we're
                         //       loosing the fidelity; this is a temporary compensation
                         TypeConstant typeTarget = astLValue.getType(0);

@@ -118,10 +118,9 @@ public class MultipleLValueStatement
     @Override
     public void resetLValueTypes(Context ctx)
         {
-        List<AstNode>  listLVals = LVals;
-        for (int i = 0, c = listLVals.size(); i < c; ++i)
+        for (AstNode listLVal : LVals)
             {
-            listLVals.get(i).resetLValueTypes(ctx);
+            listLVal.resetLValueTypes(ctx);
             }
         }
 
@@ -606,9 +605,9 @@ public class MultipleLValueStatement
                 List<AstNode> LVals  = MultipleLValueStatement.this.LVals;
                 int           cExprs = LVals.size();
                 listExprs = new ArrayList<>(cExprs);
-                for (int i = 0; i < cExprs; ++i)
+                for (AstNode lVal : LVals)
                     {
-                    listExprs.add(LVals.get(i).getLValueExpression());
+                    listExprs.add(lVal.getLValueExpression());
                     }
                 this.exprs = listExprs;
                 }

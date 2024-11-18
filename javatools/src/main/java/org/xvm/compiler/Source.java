@@ -23,7 +23,7 @@ import static org.xvm.util.Handy.readFileChars;
 
 /**
  * A representation of an Ecstasy source code file, handling the first two phases of lexical analysis
- * (line termination, location and unicode escapes).
+ * (line termination, location and Unicode escapes).
  */
 public class Source
         implements Constants, Cloneable
@@ -209,7 +209,7 @@ public class Source
         }
 
     /**
-     * Obtain the next character of the source. Note that unicode escapes are
+     * Obtain the next character of the source. Note that Unicode escapes are
      * processed such that the sequence of characters "U+0024" in the source
      * would return only the single character '$'. Similarly, the combination
      * of CR+LF ("\r\n") is returned as the single character LF ('\n').
@@ -250,7 +250,7 @@ public class Source
             {
             int cchAdjust = 1;
 
-            // check for a unicode escape
+            // check for a Unicode escape
             if (ch == '\\' && of + 4 < cch
                     && isHexit(ach[of+1])
                     && isHexit(ach[of+2])
