@@ -3373,9 +3373,17 @@ public class NameExpression
                     }
 
                 IdentityConstant id = getIdentity(ctx);
-                if (id instanceof TypedefConstant)
+                if (id instanceof TypedefConstant idTypedef)
                     {
-                    return false;
+                    TypeConstant typeRef = idTypedef.getReferredToType();
+                    if (typeRef.isSingleUnderlyingClass(false))
+                        {
+                        id = typeRef.getSingleUnderlyingClass(false);
+                        }
+                    else
+                        {
+                        return false;
+                        }
                     }
 
                 if (fSoft)
