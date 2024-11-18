@@ -5,16 +5,14 @@
  */
 module AIClient {
     package json import json.xtclang.org;
-    package net  import net.xtclang.org;
     package web  import web.xtclang.org;
 
     import json.*;
 
-    import net.Uri;
-
     import web.HttpClient;
     import web.RequestOut;
     import web.ResponseIn;
+    import web.Uri;
 
     static String ANTHROPIC_API_URI =
         "https://api.anthropic.com/v1/messages";

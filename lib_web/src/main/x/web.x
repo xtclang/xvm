@@ -16,7 +16,8 @@ module web.xtclang.org {
     import net.HostPort;
     import net.IPAddress;
     import net.SocketAddress;
-    import net.Uri;
+
+    typedef net.Uri as Uri;
 
 
     // ----- request/response support --------------------------------------------------------------

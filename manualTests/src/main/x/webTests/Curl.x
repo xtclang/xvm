@@ -4,10 +4,7 @@
  *    xec build/curl.xtc GET http://www.xqiz.it 5s
  */
 module Curl {
-    package net import net.xtclang.org;
     package web import web.xtclang.org;
-
-    import net.Uri;
 
     import web.*;
 
