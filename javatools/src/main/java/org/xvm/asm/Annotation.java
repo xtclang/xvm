@@ -16,6 +16,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -123,14 +124,24 @@ public class Annotation
         {
         Constant constClass = m_constClass;
 
-        // resolve any previously unresolved constant at this point
-        Constant resolved = constClass.resolve();
-        if (resolved != constClass && resolved != null)
+        if (constClass instanceof TypedefConstant constTypedef)
             {
-            // note that this TerminalTypeConstant could not have previously been registered
-            // with the pool because it was not resolved, so changing the reference to the
-            // underlying constant is still safe at this point
-            m_constClass = constClass = resolved;
+            TypeConstant typeRef = constTypedef.getReferredToType();
+            assert typeRef.isSingleUnderlyingClass(true);
+
+            m_constClass = constClass = typeRef.getSingleUnderlyingClass(true);
+            }
+        else
+            {
+            // resolve any previously unresolved constant at this point
+            Constant resolved = constClass.resolve();
+            if (resolved != constClass && resolved != null)
+                {
+                // note that this TerminalTypeConstant could not have previously been registered
+                // with the pool because it was not resolved, so changing the reference to the
+                // underlying constant is still safe at this point
+                m_constClass = constClass = resolved;
+                }
             }
 
         return constClass;
