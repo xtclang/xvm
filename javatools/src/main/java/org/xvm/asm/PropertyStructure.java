@@ -107,7 +107,8 @@ public class PropertyStructure
         {
         return isConstant() ||
                getParent() instanceof ClassStructure clzParent &&
-               clzParent.isSingleton() && (hasInitialValue() || getInitializer() != null) &&
+               clzParent.isSingleton() && clzParent.isConst() &&
+               (hasInitialValue() || getInitializer() != null) &&
                !isTransient();
         }
 

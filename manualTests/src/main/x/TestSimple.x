@@ -2,14 +2,21 @@ module TestSimple {
 
     @Inject Console console;
 
-    typedef Test as T;
-
     void run() {
-        String r = T.report(); // that used to assert the compiler
-        console.print(r);
+        Test.report();
+        Test.init(1);
+        Test.report(); // this used to print "0" instead of "1"
     }
 
-    class Test {
-        static String report() = "test";
+    static service Test {
+        Int value = 0;
+
+        void init(Int value) {
+            this.value = value;
+        }
+
+        void report() {
+            console.print($"{value=}");
+        }
     }
 }

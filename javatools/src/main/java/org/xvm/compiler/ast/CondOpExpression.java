@@ -193,7 +193,7 @@ public class CondOpExpression
             return toConstant();
             }
 
-        switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant()))
+        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant()))
             {
             case UorF:
             case UandT:
