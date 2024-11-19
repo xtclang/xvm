@@ -1,31 +1,46 @@
 module TestSimple {
 
     package json import json.xtclang.org;
-
-    @Inject Console console;
-
     import json.*;
 
     void run() {
-
-        Test t = new Test();
-        console.print(t.getObject());
-        console.print(t.getDoc());
-
-    }
-
-    service Test {
-
-        JsonObject getObject(Int i = 1) {
-            JsonObject o = json.newObject();
-            o["a"] = i /*this will not be needed*/.toIntLiteral();
-            return o; // no need to freeze
-        }
-
-        Doc getDoc(Dec d = 1) {
-            JsonObject o = json.newObject();
-            o["a"] = d /*this will not be needed*/.toFPLiteral();
-            return o;
-        }
+        JsonObject o = json.newObject([
+        "status" = json.newObject([
+            "hostIP" = "10.0.10.4",
+            "hostIPs" = [
+                ["ip" = "10.0.10.4"]
+            ],
+            "conditions" = [
+                json.newObject([
+                    "lastProbeTime" = Null,
+                    "lastTransitionTime" = "2024-11-18T15:26:00Z",
+                    "status" = False,
+                    "type" = "PodReadyToStartContainers"
+                    ]),
+                json.newObject([
+                    "lastProbeTime" = Null,
+                    "lastTransitionTime" = "2024-11-18T15:26:00Z",
+                    "message" = "containers with incomplete status: [coherence-k8s-utils]",
+                    "reason" = "ContainersNotInitialized",
+                    "status" = "False",
+                    "type" = "Initialized"
+                    ]),
+                ],
+            "containerStatuses" = [
+                json.newObject([
+                    "image" = "ghcr.io/thegridman/test:1.0.0",
+                    "imageID" = "",
+                    "lastState" = [],
+                    "name" = "coherence",
+                    "ready" = False,
+                    "restartCount" = 0,
+                    "started" = False,
+                    "state" = [
+                        "waiting" = ["reason" = "PodInitializing"],
+                    ],
+                ]),
+            ],
+        ]),
+    ]);
     }
 }

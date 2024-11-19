@@ -19,7 +19,7 @@ module json.xtclang.org
     /**
      * JSON primitive types are all JSON values except for arrays and objects.
      */
-//    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) as Primitive;
+    typedef (Nullable | Boolean | IntLiteral | FPLiteral | String) as Primitive;
 
     // or maybe:
 
