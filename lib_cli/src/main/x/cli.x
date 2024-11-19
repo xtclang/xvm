@@ -3,10 +3,18 @@
  *
  * To use the CLI library, the application code needs to do the following:
  *     - annotate the module as a `TerminalApp`, for example:
+ *
  *          @TerminalApp("My commands")
- *          module MyCommands {...}
+ *          module MyCommands {
+ *              package cli import cli.xtclang.org;
+ *
+ *              import cli.*;
+ *
+ *              ...
+ *          }
  *
  *     - annotate any methods to be executed as a command with the `Command` annotation, for example:
+ *
  *          @Command("time", "Show current time")
  *          Time showTime() {
  *             @Inject Clock clock;
