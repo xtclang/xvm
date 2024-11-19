@@ -83,7 +83,7 @@ const HttpClient
                 assert status != Null;
                 try {
                     response = processResponse^(
-                            status, request, headerNames, headerValues, callback,
+                            status, request, uri, headerNames, headerValues, callback,
                             redirectLimit, redirectCount,
                             responseHeaderNames, responseHeaderValues, responseBytes);
                     return;
@@ -96,14 +96,13 @@ const HttpClient
         return response;
     }
 
-    private ResponseIn processResponse(Int statusCode, RequestOut request,
+    private ResponseIn processResponse(Int statusCode, RequestOut request, Uri uri,
             String[] headerNames, String[] headerValues, PasswordCallback? callback,
             Int redirectLimit, Int redirectCount,
             String[] responseHeaderNames, String[] responseHeaderValues, Byte[] responseBytes) {
 
-        String  method = request.method.name;
-        Uri     uri    = request.uri;
-        Byte[]  bytes  = request.body?.bytes : [];
+        String method = request.method.name;
+        Byte[] bytes  = request.body?.bytes : [];
 
         if (300 <= statusCode < 400 && redirectCount < redirectLimit,
                 Int index := responseHeaderNames.indexOf("Location")) {
