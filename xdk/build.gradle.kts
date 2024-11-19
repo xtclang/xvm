@@ -58,6 +58,7 @@ dependencies {
     xtcModule(libs.xdk.oodb)
     xtcModule(libs.xdk.web)
     xtcModule(libs.xdk.webauth)
+    xtcModule(libs.xdk.webcli)
     xtcModule(libs.xdk.xenia)
     xtcModule(libs.javatools.bridge)
     @Suppress("UnstableApiUsage")

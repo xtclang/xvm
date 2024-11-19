@@ -1,33 +1,31 @@
 /**
  * The command example:
  *
- *    xec build/HelloClient.xtc http://localhost:8080
+ *    xec build/HelloClient.xtc http://localhost
  */
+@TerminalApp("Hello CLI", "hi> ")
 module HelloClient {
-    package msg import Messages;
-    package web import web.xtclang.org;
+    package webcli import webcli.xtclang.org;
 
-    @Inject Console console;
+    import webcli.*;
 
-    import msg.Greeting;
-    import web.HttpClient;
+    @Command("h", "Say hello")
+    String hello() = get("/hello");
 
-    void run(String[] args=["http://localhost:8080"]) {
-        HttpClient client = new HttpClient();
+    @Command("l", "Log in")
+    String login() = get("/l");
 
-        String uri = args[0];
+    @Command("s", "Secure access")
+    String secure() = get("/s");
 
-        assert Greeting greeting := client.get(uri + "/hello").to(Greeting);
-        console.print(greeting);
+    @Command("c", "Increment count")
+    String count() = get("/c");
 
-        assert String secure := client.get(uri + "/s").to(String);
-        console.print(secure);
+    @Command("e", "Echo")
+    String echo(@Desc("Value of `debug` to start debugger") String path = "") = get($"/e/{path}");
 
-        for (Int i : 1 .. 4) {
-            assert Int count := client.get(uri + "/c").to(Int);
-            console.print(count);
-        }
-
-        console.print(client.get(uri + "/l"));
+    service Users {
+        @Command("u", "Show user info")
+        String user() = HelloClient.get("/user");
     }
 }

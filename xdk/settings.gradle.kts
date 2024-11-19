@@ -30,6 +30,7 @@ listOf(
     "lib_oodb",
     "lib_web",
     "lib_webauth",
+    "lib_webcli",
     "lib_xenia",
     "javatools_turtle",
     "javatools_launcher",
