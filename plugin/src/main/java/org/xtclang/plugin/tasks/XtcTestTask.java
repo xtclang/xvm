@@ -1,7 +1,6 @@
 package org.xtclang.plugin.tasks;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LAUNCHER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
 
 import javax.inject.Inject;
 
@@ -38,19 +37,15 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 // TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
 // TODO: Make the module path/set pattern filterable for the module DSL.
-public abstract class XtcRunTask extends XtcBaseRunTask implements XtcRuntimeExtension {
-    private static final String XEC_ARG_RUN_METHOD = "--method";
-
+public abstract class XtcTestTask extends XtcBaseRunTask implements XtcRuntimeExtension {
     /**
-     * Create an XTC run task, currently delegating instead of inheriting the plugin project
-     * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
-     * needed types have been resolved.
+     * Create an XTC test task.
      *
      * @param project  Project
      */
     @SuppressWarnings("ConstructorNotProtectedInAbstractClass") // Has to be public for code injection to work.
     @Inject
-    public XtcRunTask(final Project project) {
+    public XtcTestTask(final Project project) {
         super(project);
     }
 
@@ -66,10 +61,11 @@ public abstract class XtcRunTask extends XtcBaseRunTask implements XtcRuntimeExt
     public void executeTask() {
         super.executeTask();
 
-        final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, resolveJvmArgs());
+        final var cmd = new CommandLine(XTC_LAUNCHER_CLASS_NAME, resolveJvmArgs());
+        cmd.addRaw("test");
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getVerbose().get());
-        // When using the Gradle XTC plugin, having the "xec" or 'xtc' runtime decide to recompile stuff, is not supposed to be a thing.
+        // When using the Gradle XTC plugin, having the 'xtc' runtime decide to recompile stuff, is not supposed to be a thing.
         // The whole point about the plugin is that we guarantee source->module up-to-date relationships, as long as you follow
         // the standard build lifecycle model.
         cmd.addBoolean("--no-recompile", true);
@@ -87,25 +83,21 @@ public abstract class XtcRunTask extends XtcBaseRunTask implements XtcRuntimeExt
         // This works similarly in an xtcRunAll task, only, the "filter", is to run all modules from the source set output.
         // (TODO: one might argue that it should be all runnable modules on the module path, but, let's argue about that later)
         final var modulesToRun = resolveModulesToRunFromModulePath(modulePath);
-        final var results = modulesToRun.stream().map(module -> runSingleModule(module, createLauncher(), XEC_ARG_RUN_METHOD, cmd.copy())).toList();
+        final var results = modulesToRun.stream().map(module -> testSingleModule(module, createLauncher(), cmd.copy())).toList();
         if (modulesToRun.size() != results.size()) {
             logger.warn("{} Task was configured to run {} modules, but only {} where executed.", prefix(), modulesToRun.size(), results.size());
         }
         logFinishedRuns();
     }
 
-    private ExecResult runSingleModule(
+
+    private ExecResult testSingleModule(
         final XtcRunModule runConfig,
         final XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher,
-        final String methodName,
         final CommandLine cmd) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
         logger.info("{} Executing resolved xtcRuntime module closure: {}", prefix(), runConfig);
-        final var moduleMethod = runConfig.getMethodName().get();
-        if (!runConfig.hasDefaultMethodName()) {
-            cmd.add(methodName, moduleMethod);
-        }
 
         final var moduleName = runConfig.getModuleName().get();
         cmd.addRaw(moduleName);

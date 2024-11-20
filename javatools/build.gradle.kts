@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.tasktree)
 }
 
+dependencies {
+    testImplementation(libs.hamcrest)
+    testImplementation(libs.mockito)
+}
+
 private val semanticVersion: SemanticVersion by extra
 
 // TODO: Move these to common-plugins, the XDK composite build does use them in some different places.

@@ -1,4 +1,5 @@
 import org.xtclang.plugin.tasks.XtcRunTask
+import org.xtclang.plugin.tasks.XtcTestTask
 
 /**
  * This is the manualTests project.
@@ -305,6 +306,17 @@ val runOne by tasks.registering(XtcRunTask::class) {
     description = "Runs one test as given by the property 'testName', or a default test if not set."
     // Override debug flag from xtcRun extension here to suspend the process launched for this task, and allow attach.
     //debug = true
+    module {
+        moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
+    }
+}
+
+// This allows testing a single module, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
+val testOne by tasks.registering(XtcTestTask::class) {
+    group = "application"
+    description = "Tests one module as given by the property 'testName', or a default module if not set."
+    // Override debug flag from xtcRun extension here to suspend the process launched for this task, and allow "attach".
+//    debug = true
     module {
         moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
     }

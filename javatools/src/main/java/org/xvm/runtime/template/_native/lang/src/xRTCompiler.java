@@ -377,19 +377,9 @@ public class xRTCompiler
             m_listSources = listSources;
             }
 
-        protected Version getVersion()
-            {
-            return m_version;
-            }
-
         protected void setVersion(Version version)
             {
             m_version = version;
-            }
-
-        protected boolean isForcedRebuild()
-            {
-            return true;
             }
 
         protected Severity getSeverity()
@@ -431,10 +421,10 @@ public class xRTCompiler
                 }
             else
                 {
-                File[]           resourceDirs = options().getResourceLocation();
-                File             fileOutput   = options().getOutputLocation();
-                List<ModuleInfo> listTargets  = selectTargets(options().getInputLocations(), resourceDirs, fileOutput);
-                boolean          fRebuild     = options().isForcedRebuild();
+                File[]           resourceDirs = getResourceLocation();
+                File             fileOutput   = getOutputLocation();
+                List<ModuleInfo> listTargets  = selectTargets(getInputLocations(), resourceDirs, fileOutput);
+                boolean          fRebuild     = isForcedRebuild();
                 checkErrors();
 
                 Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
@@ -464,7 +454,7 @@ public class xRTCompiler
                 flushAndCheckErrors(allNodes);
 
                 // repository setup
-                repoLib = configureLibraryRepo(options().getModulePath());
+                repoLib = configureLibraryRepo(flags().getModulePath());
                 checkErrors();
 
                 if (cSystemModules == 0)
@@ -544,13 +534,6 @@ public class xRTCompiler
             }
 
         @Override
-        public void run()
-            {
-            // use partialRun() instead
-            throw new IllegalStateException();
-            }
-
-        @Override
         protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo)
             {
             // inlined; should not be called
@@ -586,40 +569,27 @@ public class xRTCompiler
         // ----- Options adapter -------------------------------------------------------------------
 
         @Override
-        protected Compiler.Options instantiateOptions()
+        public List<File> getInputLocations()
             {
-            return new Options();
+            return CompilerAdapter.this.getSourceLocations();
             }
 
-        /**
-         * A non-command-line Options implementation.
-         */
-        class Options
-                extends Compiler.Options
+        @Override
+        public Version getVersion()
             {
-            @Override
-            public List<File> getInputLocations()
-                {
-                return CompilerAdapter.this.getSourceLocations();
-                }
+            return m_version;
+            }
 
-            @Override
-            public Version getVersion()
-                {
-                return CompilerAdapter.this.getVersion();
-                }
+        @Override
+        public boolean isOutputFilenameQualified()
+            {
+            return true;
+            }
 
-            @Override
-            public boolean isOutputFilenameQualified()
-                {
-                return true;
-                }
-
-            @Override
-            public boolean isForcedRebuild()
-                {
-                return CompilerAdapter.this.isForcedRebuild();
-                }
+        @Override
+        public boolean isForcedRebuild()
+            {
+            return true;
             }
 
         // ----- fields ----------------------------------------------------------------------------
