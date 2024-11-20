@@ -52,7 +52,11 @@ public class Annotation
             {
             throw new IllegalArgumentException("annotation class required");
             }
-
+        if (!(constClass instanceof ClassConstant ||
+              constClass instanceof UnresolvedNameConstant))
+            {
+            throw new IllegalArgumentException("annotation is not a class " + constClass);
+            }
         if (aconstParam != null)
             {
             checkElementsNonNull(aconstParam);
@@ -124,24 +128,27 @@ public class Annotation
         {
         Constant constClass = m_constClass;
 
-        if (constClass instanceof TypedefConstant constTypedef)
+        // resolve any previously unresolved constant at this point
+        Constant resolved = constClass.resolve();
+        UseResolved: if (resolved != constClass && resolved != null)
             {
-            TypeConstant typeRef = constTypedef.getReferredToType();
-            assert typeRef.isSingleUnderlyingClass(true);
-
-            m_constClass = constClass = typeRef.getSingleUnderlyingClass(true);
-            }
-        else
-            {
-            // resolve any previously unresolved constant at this point
-            Constant resolved = constClass.resolve();
-            if (resolved != constClass && resolved != null)
+            if (resolved instanceof TypedefConstant constTypedef)
                 {
-                // note that this TerminalTypeConstant could not have previously been registered
-                // with the pool because it was not resolved, so changing the reference to the
-                // underlying constant is still safe at this point
-                m_constClass = constClass = resolved;
+                TypeConstant typeRef = constTypedef.getReferredToType();
+                if (typeRef.isSingleUnderlyingClass(true))
+                    {
+                    resolved = typeRef.getSingleUnderlyingClass(true);
+                    }
+                else
+                    {
+                    // this is not a place to report any errors; just keep the constant unresolved
+                    break UseResolved;
+                    }
                 }
+            // note that this TerminalTypeConstant could not have previously been registered
+            // with the pool because it was not resolved, so changing the reference to the
+            // underlying constant is still safe at this point
+            m_constClass = constClass = resolved;
             }
 
         return constClass;
