@@ -23,16 +23,22 @@ static service Runner {
 
     /**
      * The entry point.
+     *
+     * @param app              the app that contains classes with commands.
+     * @param args             (optional) the arguments passed by the user via the command line
+     * @param suppressWelcome  (optional) pass `True` to avoid printing the "welcome" message
+     * @param extras           (optional) extra objects that contain executable commands
      */
-    void run(TerminalApp app, String[] args = [], Boolean suppressHeader = False) {
-        Catalog catalog = Scanner.buildCatalog(app);
+    void run(TerminalApp app, String[] args = [], Boolean suppressWelcome = False,
+             Object[] extras = []) {
+        Catalog catalog = Scanner.buildCatalog(app, extras);
 
         if (args.size == 0) {
             if (description.empty) {
                 description = &app.actualClass.name;
             }
 
-            if (!suppressHeader) {
+            if (!suppressWelcome) {
                 app.print(description);
             }
 

@@ -2,10 +2,14 @@
  * Helper methods that scan the TerminalApp for runnable commands.
  */
 class Scanner {
-    static Map<String, CmdInfo> buildCatalog(TerminalApp app) {
+    static Map<String, CmdInfo> buildCatalog(TerminalApp app, Object[] extras = []) {
         Map<String, CmdInfo> cmdInfos = new ListMap();
 
         scanCommands(() -> app, &app.actualClass, cmdInfos);
+        if (!extras.empty) {
+            extras.forEach(extra ->
+                scanCommands(() -> extra, &extra.actualClass, cmdInfos));
+        }
         scanClasses(app.classes, cmdInfos);
         return cmdInfos;
     }

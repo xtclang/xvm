@@ -16,6 +16,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
@@ -351,8 +352,22 @@ public class AnnotatedTypeExpression
 
         if (fResolved)
             {
-            IdentityConstant idAnno   = (IdentityConstant) constAnno;
-            ClassStructure   clzAnno  = (ClassStructure) idAnno.getComponent();
+            IdentityConstant idAnno = (IdentityConstant) constAnno;
+            if (idAnno instanceof TypedefConstant idTypedef)
+                {
+                TypeConstant typeRef = idTypedef.getReferredToType();
+                if (typeRef.isSingleUnderlyingClass(false))
+                    {
+                    idAnno = typeRef.getSingleUnderlyingClass(false);
+                    }
+                else
+                    {
+                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, idTypedef);
+                    return null;
+                    }
+                }
+
+            ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
             if (clzAnno.getFormat() != Component.Format.MIXIN)
                 {
                 log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, clzAnno.getName());

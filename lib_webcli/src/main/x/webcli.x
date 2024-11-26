@@ -40,7 +40,7 @@ module webcli.xtclang.org {
          * The entry point.
          */
         @Override
-        void run(String[] args) = Gateway.run(this, args, Password);
+        void run(String[] args) = Gateway.run(this, args, auth=Password);
 
         /**
          * Send a GET request.
@@ -89,14 +89,14 @@ module webcli.xtclang.org {
         private @Unassigned Uri    uri;
         private PasswordCallback?  callback;
 
-        enum Credentials {None, Password, Token}
-        void initCallback(Credentials cred = None) {
-            switch (cred) {
+        enum AuthMethod {None, Password, Token}
+        void initCallback(AuthMethod auth) {
+            switch (auth) {
             case Password:
                 callback = realm -> {
                     console.print($"Realm: {realm}");
                     String name     = console.readLine("User name: ");
-                    String password = console.readLine("Password: ", suppressEcho = True);
+                    String password = console.readLine("Password: ", suppressEcho=True);
                     return name, password;
                 };
                 break;
@@ -108,18 +108,23 @@ module webcli.xtclang.org {
 
         /**
          * The entry point.
+
+         * @param app   the app that contains classes with commands.
+         * @param args  (optional) the arguments passed by the user via the command line
+         * @param auth  (optional) the authentication method
          */
-        void run(TerminalApp app, String[] args = [], Credentials cred = None) {
+        void run(TerminalApp app, String[] args = [], AuthMethod auth = None) {
             app.print(Runner.description);
-            initCallback(cred);
+            initCallback(auth);
             Gateway.resetClient(args.empty ? "" : args[0]);
-            Runner.run(app, suppressHeader = True);
+            Runner.run(app, suppressWelcome=True, extras=[this]);
         }
 
-        void resetClient(String defaultUri = "", Boolean forceTls = False) {
-            String uriString = console.readLine($"Enter the server uri [{defaultUri}]:");
-            if (uriString.empty) {
-                uriString = defaultUri;
+        @Command("reset", "Reset the server URI")
+        void resetClient(@Desc("Server URI") String uriString = "",
+                         @Desc("Specify 'true' to enforce 'https' connection") Boolean forceTls = False) {
+            while (uriString.empty) {
+                uriString = console.readLine($"Enter the server URI: ");
             }
 
             Uri uri = new Uri(uriString);
