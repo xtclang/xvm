@@ -109,7 +109,7 @@ public class Var_S
         boolean fImmutable = true;
         for (ObjectHandle hValue : ahArg)
             {
-            if (hValue.isMutable())
+            if (!hValue.isPassThrough())
                 {
                 fImmutable = false;
                 break;

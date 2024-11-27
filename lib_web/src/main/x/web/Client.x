@@ -94,7 +94,7 @@ interface Client {
      *
      * @return the resulting [Response] object
      */
-    ResponseIn put(String | Uri uri, Object content, MediaType? mediaType=Null) {
+    ResponseIn put(String | Uri uri, Object content, MediaType? mediaType = Null) {
         RequestOut request = createRequest(PUT, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
         return send^(request);
     }
@@ -109,7 +109,7 @@ interface Client {
      *
      * @return the resulting [Response] object
      */
-    ResponseIn post(String | Uri uri, Object content, MediaType? mediaType=Null) {
+    ResponseIn post(String | Uri uri, Object content, MediaType? mediaType = Null) {
         RequestOut request = createRequest(POST, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
         return send^(request);
     }
@@ -140,7 +140,8 @@ interface Client {
      *
      * @return a new Request object
      */
-    RequestOut createRequest(HttpMethod method, Uri uri, Object? content=Null, MediaType? mediaType=Null) {
+    RequestOut createRequest(HttpMethod method, Uri uri, Object? content = Null,
+                             MediaType? mediaType = Null) {
         SimpleRequest request = new SimpleRequest(this, method, uri);
         defaultHeaders.entries.forEach(entry -> request.add(entry));
 

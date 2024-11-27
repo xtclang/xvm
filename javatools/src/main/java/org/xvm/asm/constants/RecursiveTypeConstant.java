@@ -93,6 +93,12 @@ public class RecursiveTypeConstant
         }
 
     @Override
+    public boolean isService()
+        {
+        return false;
+        }
+
+    @Override
     public boolean containsGenericParam(String sName)
         {
         return false;
