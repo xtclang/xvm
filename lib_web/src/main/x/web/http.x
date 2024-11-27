@@ -36,7 +36,7 @@ package http {
          *
          * Examples:
          * * `0.0.0.0`
-         * * `locahost:80/443`
+         * * `localhost:80/443`
          *
          * @param text    the host name or address, with an optional pair of port numbers
          * @param report  (optional) the function to report a failure to, as a non-localized string
@@ -483,12 +483,25 @@ package http {
      * Parse the [Body] of the HTTP request and extract the [FormDataFile] parts.
      */
     FormDataFile[] extractFileData(Body body) {
-        FormDataFile[] files = [];
-        for (val part : parseFormData(body)) {
-            if (part.is(FormDataFile)) {
-                files += part;
+        MediaType mediaType = body.mediaType;
+        if (mediaType.type    == MediaType.FormData.type &&
+            mediaType.subtype == MediaType.FormData.subtype) {
+
+            FormDataFile[] files = new FormDataFile[];
+            for (val part : parseFormData(body)) {
+                if (part.is(FormDataFile)) {
+                    files += part;
+                }
             }
+            return files;
         }
-        return files;
+
+        if (String disposition := body.header.firstOf(Header.ContentDisposition),
+            Int    nameOffset  := disposition.indexOf("filename=") ) {
+
+            String fileName = disposition.substring(nameOffset+9).trim();
+            return [new FormDataFile(fileName, body.bytes, fileName, mediaType)];
+        }
+        return [];
     }
 }

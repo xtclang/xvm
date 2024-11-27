@@ -39,6 +39,7 @@ const MediaType {
     static MediaType FormURL     = predefine("application/x-www-form-urlencoded"                    );
     static MediaType XML         = predefine(["application/xml", "text/xml"],                 "xml" );
     static MediaType XHTML       = predefine("application/xhtml+xml",                         "xhtml");
+    static MediaType Binary      = predefine("application/octet-stream"                             );
     static MediaType Zip         = predefine("application/zip",                               "zip" );
     static MediaType ZStd        = predefine("application/zstd",                              "zst" );
     static MediaType CDAudio     = predefine("application/x-cdf",                             "cda" );
@@ -70,7 +71,7 @@ const MediaType {
      */
     static MediaType[] Predefined = [JavaScript, Json, JsonLD, JsonPatch, PDF, SQL, JsonAPI,
             Word, WordX, Excel, ExcelX, PowerPoint, PowerPointX, OpenOffice, FormURL, XML, XHTML,
-            Zip, ZStd, CDAudio, AACAudio, MpegAudio, OGG, Opus, WAV, WEBMAudio, MIDI,
+            Binary, Zip, ZStd, CDAudio, AACAudio, MpegAudio, OGG, Opus, WAV, WEBMAudio, MIDI,
             AVIF, JPEG, ICO, PNG, SVG, WebP, FormData, CSS, CSV, HTML, Text, Woff, Woff2, ];
 
 

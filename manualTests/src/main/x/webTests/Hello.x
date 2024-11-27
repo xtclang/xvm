@@ -7,8 +7,8 @@
  */
 module Hello
         incorporates WebApp {
-    package net   import net.xtclang.org;
     package json  import json.xtclang.org;
+    package net   import net.xtclang.org;
     package web   import web.xtclang.org;
     package xenia import xenia.xtclang.org;
 
@@ -139,6 +139,17 @@ module Hello
             @Get("c")
             Int count(SimpleData sessionData) {
                 return sessionData.counter++;
+            }
+
+            @Post("upload")
+            String upload(RequestIn request) {
+                if (Body body ?= request.body) {
+                    FormDataFile[] files = http.extractFileData(body);
+                    if (!files.empty) {
+                        return files.map(file -> $"{file.name}; {file.mediaType}").toString();
+                    }
+                }
+                return "<No data>";
             }
 
             @Default @Get

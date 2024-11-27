@@ -19,6 +19,7 @@ interface Header
     static String Authorization          = "Authorization";
     static String AuthorizationResponse  = "Authorization-Response";
     static String CacheControl           = "Cache-Control";
+    static String ContentDisposition     = "Content-Disposition";
     static String ContentEncoding        = "Content-Encoding";
     static String ContentLanguage        = "Content-Language";
     static String ContentLength          = "Content-Length";
