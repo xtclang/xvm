@@ -57,13 +57,18 @@ module webcli.xtclang.org {
          * Send a POST request.
          */
         String post(String path, Object content, MediaType? mediaType = Null) =
-                Gateway.sendRequest(GET, path, content, mediaType);
+                Gateway.sendRequest(POST, path, content, mediaType);
 
         /**
          * Send a DELETE request.
          */
         String delete(String path) = Gateway.sendRequest(DELETE, path);
 
+        /**
+         * Upload a file via POST request.
+         */
+        String upload(String path, File file, MediaType? mediaType = Null) =
+                Gateway.upload(path, file, mediaType);
     }
 
     static service Gateway {
@@ -76,6 +81,7 @@ module webcli.xtclang.org {
         import web.Body;
         import web.Client;
         import web.Client.PasswordCallback;
+        import web.Header;
         import web.HttpClient;
         import web.HttpStatus;
         import web.HttpMethod;
@@ -83,7 +89,6 @@ module webcli.xtclang.org {
         import web.ResponseIn;
         import web.RequestOut;
         import web.Uri;
-
 
         private @Unassigned Client client;
         private @Unassigned Uri    uri;
@@ -141,6 +146,48 @@ module webcli.xtclang.org {
             this.uri    = uri;
         }
 
+        /**
+         * Create and send a request.
+         */
+        String sendRequest(HttpMethod method, String path, Object? content = Null,
+                           MediaType? mediaType = Null) {
+            return send(createRequest(method, path, content, mediaType));
+        }
+
+        /**
+         * Create and send a POST request for the specified file data.
+         */
+        String upload(String path, File file, MediaType? mediaType = Null) {
+            String name = file.name;
+            if (mediaType == Null, Int extOffset := name.lastIndexOf('.')) {
+                if (mediaType := MediaType.of(name.substring(extOffset+1))) {} else {
+                    mediaType = Binary;
+                }
+            }
+
+            RequestOut request = createRequest(POST, path, file.contents, mediaType);
+            request.header.add(Header.ContentDisposition, $"attachment; filename={name}");
+            return send(request);
+        }
+
+        /**
+         * Create a [RequestOut] object.
+         *
+         * Note: if this method is called from "outside" of the service boundary, the returned
+         * `RequestOut` gets automatically frozen and needs to be cloned (using a "with-er") if any
+         * modification is required.
+         */
+        RequestOut createRequest(HttpMethod method, String path, Object? content = Null,
+                           MediaType? mediaType = Null) {
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+            return client.createRequest(method, uri.with(path=path), content, mediaType);
+        }
+
+        /**
+         * Send the specified request and turn the response into a human readable String.
+         */
         String send(RequestOut request) {
             ResponseIn response = client.send(request, callback);
             HttpStatus status   = response.status;
@@ -165,14 +212,6 @@ module webcli.xtclang.org {
             } else {
                 return response.toString();
             }
-        }
-
-        String sendRequest(HttpMethod method, String path, Object? content = Null,
-                           MediaType? mediaType = Null) {
-            if (!path.startsWith("/")) {
-                path = "/" + path;
-            }
-            return send(client.createRequest(method, uri.with(path=path), content, mediaType));
         }
     }
 }

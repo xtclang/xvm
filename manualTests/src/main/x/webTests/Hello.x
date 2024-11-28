@@ -144,9 +144,10 @@ module Hello
             @Post("upload")
             String upload(RequestIn request) {
                 if (Body body ?= request.body) {
-                    FormDataFile[] files = http.extractFileData(body);
-                    if (!files.empty) {
-                        return files.map(file -> $"{file.name}; {file.mediaType}").toString();
+                    FormDataFile[] fileData = http.extractFileData(body);
+                    if (!fileData.empty) {
+                        return fileData.map(fd ->
+                            $"{fd.name}; {fd.mediaType}; {fd.contents.size} bytes").toString();
                     }
                 }
                 return "<No data>";

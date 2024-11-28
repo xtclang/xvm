@@ -97,9 +97,14 @@ class SimpleRequest
 
     @Override
     Body from(Object content) {
+        if (content.is(Byte[])) {
+            this.bytes = content;
+            return this;
+        }
+
         Type type = &content.actualType;
         if (Codec codec := client.registry.findCodec(mediaType, type)) {
-            bytes = codec.encode(content);
+            this.bytes = codec.encode(content);
             return this;
         }
         throw new IllegalArgument($"Unable to find Codec for Type {type} on MediaType {mediaType}");

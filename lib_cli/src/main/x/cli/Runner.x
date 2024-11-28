@@ -267,7 +267,7 @@ static service Runner {
                     }
                 }
             } catch (Exception e) {
-                console.print($"  Error: {e.message}");
+                console.print($"  Error: {e.message.empty ? &e.actualType : e.message}");
             }
         } else {
             console.print($"  Unknown command: {head.quoted()}");

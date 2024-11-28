@@ -24,6 +24,22 @@ module HelloClient {
     @Command("e", "Echo")
     String echo(@Desc("Value of `debug` to start debugger") String path = "") = get($"/e/{path}");
 
+    @Command("upload", "Upload a file")
+    String upload(String path) {
+
+        @Inject Directory curDir;
+        @Inject Directory rootDir;
+
+        if (path.startsWith("/")) {
+            if (File file := rootDir.findFile(path)) {
+                return upload("upload", file);
+            }
+        } else if (File file := curDir.findFile(path)) {
+            return upload("upload", file);
+        }
+        return $"<Unknown file: {path.quoted()}>";
+    }
+
     service Users {
         @Command("u", "Show user info")
         String user() = HelloClient.get("/user");
