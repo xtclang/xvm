@@ -1229,8 +1229,10 @@ public abstract class AstNode
 
         // if there are multiple methods with the same name and no match is found, let's try to
         // report an error only if it's clear which method didn't fit:
+        // - an invalid argument name error should always be reported
         // - a wrong arity error should be reported only if there are no other errors
         // - a type mismatch error should be reported only if there are no other type mismatch errors
+        int cNameErrs  = 0;
         int cArityErrs = 0;
         int cTypeErrs  = 0;
 
@@ -1246,7 +1248,7 @@ public abstract class AstNode
 
             if (cExprs > cVisible || fCall && cExprs < cRequired)
                 {
-                if (cArityErrs++ == 0 && cTypeErrs == 0)
+                if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0)
                     {
                     errsKeep = errs.branch(this);
                     log(errsKeep, Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT, cRequired, cExprs);
@@ -1261,7 +1263,7 @@ public abstract class AstNode
                 boolean fTuple = cReturns == 1 && isVoid(atypeReturn);
                 if (cMethodRets != 0 || !fTuple)
                     {
-                    if (cArityErrs++ == 0 && cTypeErrs == 0)
+                    if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0)
                         {
                         errsKeep = errs.branch(this);
                         log(errsKeep, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cMethodRets);
@@ -1279,7 +1281,10 @@ public abstract class AstNode
                 if (listArgs == null)
                     {
                     // invalid name encountered
-                    errsKeep = errsTemp;
+                    if (cNameErrs++ == 0)
+                        {
+                        errsKeep = errsTemp;
+                        }
                     continue;
                     }
                 cArgs = listArgs.size();
@@ -1375,7 +1380,7 @@ public abstract class AstNode
                             typeParam.isA(pool.typeFileNode()) &&
                             lit.getLiteral().getId() == Token.Id.LIT_PATH)
                         {
-                        log(errs, Severity.ERROR, Compiler.MISSING_PARAM_RESOURCE,
+                        log(errsTemp, Severity.ERROR, Compiler.MISSING_PARAM_RESOURCE,
                                 String.valueOf(i+1), method.getParam(i).getName(),
                                 lit.getLiteral().getValueText());
                         }
@@ -1437,7 +1442,7 @@ public abstract class AstNode
                 {
                 if (errsTemp.hasSeriousErrors())
                     {
-                    if (cTypeErrs++ == 0)
+                    if (cNameErrs == 0 && cTypeErrs++ == 0)
                         {
                         errsKeep = errsTemp;
                         }
@@ -1459,7 +1464,7 @@ public abstract class AstNode
 
         // if there is any ambiguity, don't report anything; the caller will log a generic
         // "Could not find a matching method" error
-        if (cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1))
+        if (cNameErrs > 0 || cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1))
             {
             errsKeep.merge();
             }
