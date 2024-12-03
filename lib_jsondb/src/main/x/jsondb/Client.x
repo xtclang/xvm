@@ -1707,6 +1707,16 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
+        DBMapImpl putAll(Map<Key, Value> map) {
+            using (val tx = ensureTransaction(this)) {
+                for ((Key key, Value value) : map) {
+                    store_.store(tx.id, key, value);
+                }
+                return this;
+            }
+        }
+
+        @Override
         DBMapImpl remove(Key key) {
             using (val tx = ensureTransaction(this)) {
                 store_.delete(tx.id, key);

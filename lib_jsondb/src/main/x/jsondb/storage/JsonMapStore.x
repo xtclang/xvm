@@ -988,17 +988,19 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     Boolean quickScan() {
         if (super() && model != Empty) {
-            StorageModel quantity = switch (filesUsed) {
-                case 0x00: assert;
-                case 0x0001..0x03FF: Small;
-                case 0x0400..0xFFFF: Medium;
-                default: Large;
-            };
-
-            StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
-
-            // combine the two measure into the model to actually use
-            model = StorageModel.maxOf(quantity, weight);
+//            TODO: uncomment when the Medium model is implemented
+//            StorageModel quantity = switch (filesUsed) {
+//                case 0x00: assert;
+//                case 0x0001..0x03FF: Small;
+//                case 0x0400..0xFFFF: Medium;
+//                default: Large;
+//            };
+//
+//            StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
+//
+//            // combine the two measure into the model to actually use
+//            model = StorageModel.maxOf(quantity, weight);
+            model = Small;
         }
 
         return True;
