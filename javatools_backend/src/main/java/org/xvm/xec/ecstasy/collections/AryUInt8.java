@@ -24,6 +24,7 @@ public class AryUInt8 extends Array<UInt8> {
   public  AryUInt8(AryUInt8 as) { this(as._mut,as._es.clone()); }
 
   public static AryUInt8 construct() { return new AryUInt8(); }
+  public static AryUInt8 construct(long len) { return new AryUInt8(Mutable, new byte[(int)len]); }
   public static AryUInt8 construct(Mutability mut, AryUInt8 as) { return new AryUInt8(mut,as); }
 
   // Fetch element; cannot specify an "unsigned" get at the java level

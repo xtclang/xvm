@@ -70,8 +70,12 @@ public abstract class AST {
   // Replace a constant "false" with a conditional false return
   boolean condFalse( int idx, XType zret ) {
     if( _kids[idx]._cond ) return false;
-    assert _kids[idx] instanceof ConAST con && con._con.equals("false");
-    _kids[idx] = new ConAST("XRuntime.False("+zret.ztype()+")", XCons.NULL);
+    if( _kids[idx] instanceof ConAST con && con._con.equals("false") )
+      _kids[idx] = new ConAST("XRuntime.False("+zret.ztype()+")", XCons.NULL);
+    else {
+      _kids[idx]._cond = true;
+      _kids[idx] = CallAST.make(zret,"XRuntime","True",_kids[idx]);
+    }
     _kids[idx]._cond = true;
     return true;
   }

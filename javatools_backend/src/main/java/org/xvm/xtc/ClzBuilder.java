@@ -240,6 +240,7 @@ public class ClzBuilder {
 
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
+    ClassPart outer = _clz.isNestedInnerClass();
     if( mm != null &&
         // Interfaces in XTC can require a constructor with a particular signature.
         // Interfaces in Java can NOT - so just do not emit the signature.
@@ -251,18 +252,23 @@ public class ClzBuilder {
       // This is an "empty" constructor: it takes required explicit type
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
+      if( outer != null )
+        outer._tclz.clz_bare(_sb).p(" outer,");
       for( int i=0; i<_tclz._tns.length; i++ )
         _sb.fmt("$%0 %0,",_tclz._tns[i]);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
-      _sb.ip("super( ");
+      _sb.ip("super(");
       if( _tclz._super==null || _tclz._super._tns.length==0 )
-        _sb.p("(Never)null");
+        _sb.p(" (Never)null");
       else {
+        if( outer != null ) _sb.p(" outer,");
         for( int i=0; i<_tclz._tns.length; i++ )
-          _sb.fmt("%0,",_tclz._tns[i]);
+          _sb.fmt(" %0,",_tclz._tns[i]);
         _sb.unchar();
       }
       _sb.p(");").nl();
+      if( outer!=null && _tclz._super==null )
+        _sb.ip("this.$outer = outer;").nl();
       // Init any local type variables; these appear in name2kid
       for( int i=0; i<_tclz._tns.length; i++ )
         _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
@@ -291,15 +297,16 @@ public class ClzBuilder {
           keywords(meth,true);
           _tclz.clz_generic_def(_sb);
           _sb.fmt("%0 construct(  ",java_class_name); // Return type
-          for( String tn : _tclz._tns )
-            _sb.fmt("$%0 %0, ",tn);
           // Nested inner classes take an outer class arg
-          ClassPart outer = _clz.isNestedInnerClass();
           if( outer!=null )
             outer._tclz.clz_bare(_sb).p(" $outer, ");
+          for( String tn : _tclz._tns )
+            _sb.fmt("$%0 %0, ",tn);
           if( meth._args==null ) _sb.unchar(2);
           else args(meth,_sb,null,false);
           _sb.p(") { return new ").p(java_class_name).p("( ");
+          if( outer!=null )
+            _sb.p("$outer,");
           for( String tn : _tclz._tns )
             _sb.fmt("%0,",tn);
           _sb.unchar().p(").$construct(");
@@ -317,6 +324,10 @@ public class ClzBuilder {
         }
       }
     }
+
+    // Outer class field
+    if( outer != null && !is_iface && _tclz._super==null )
+      outer._tclz.clz_bare(_sb.i()).p(" $outer;// outer class\n");
 
     // Property types from interfaces and mixins
     for( XClz side : _tclz._sides.keySet() ) {

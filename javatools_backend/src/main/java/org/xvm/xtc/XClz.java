@@ -259,6 +259,7 @@ public class XClz extends XType {
     clz._sides = _sides;
     clz._mod = _mod;
     clz._clz = _clz;
+    clz._super = _super;
     return clz;
   }
 
@@ -311,17 +312,21 @@ public class XClz extends XType {
       xts[i] = xtype(clz._tcons[i],true,xclz);
     // Inner classes pick up all outer class type variables
     if( clz._f != Part.Format.MIXIN && clz._f != Part.Format.INTERFACE ) {
+      ClassPart outer = clz.isNestedInnerClass();
       Part par = clz._par;
       while( par != null && par.getClass() == ClassPart.class ) {
         ClassPart pclz = (ClassPart) par;
         XClz pxclz = make(pclz);
-        for( int i=0; i<pxclz._tns.length; i++ ) {
-          if( S.find(tns,pxclz._tns[i])== -1 ) {
-            int len = xts.length;
-            xclz._xts = xts = Arrays.copyOf(xts,len+1);
-            xclz._tns = tns = Arrays.copyOf(tns,len+1);
-            xts[len] = pxclz._xts[i];
-            tns[len] = pxclz._tns[i];
+        if( pclz != outer ) {
+          // Copy parent class type variables into subclass
+          for( int i=0; i<pxclz._tns.length; i++ ) {
+            if( S.find(tns,pxclz._tns[i])== -1 ) {
+              int len = xts.length;
+              xclz._xts = xts = Arrays.copyOf(xts,len+1);
+              xclz._tns = tns = Arrays.copyOf(tns,len+1);
+              xts[len] = pxclz._xts[i];
+              tns[len] = pxclz._tns[i];
+            }
           }
         }
         par = par._par;
@@ -661,8 +666,8 @@ public class XClz extends XType {
     case    FilePart file -> mod;  // e.g. module tck
     case     ModPart mod2 -> mod;  // eg. module ecstasy
     // case PackagePart pack; EXTENDS CLASSPART             // e.g. ecstasy.collections.deferred
-    case   ClassPart clz  -> _pack(clz ,mod)+"."+clz._name; // e.g. ecstasy.collections.Array
-    case  MethodPart meth -> _pack(meth._par,mod);          // e.g. tck.constructors.Basic
+    case   ClassPart clz  -> _pack(clz ,mod)+(clz._par instanceof MethodPart ? "$" : ".")+clz._name; // e.g. ecstasy.collections.Array
+    case  MethodPart meth -> _pack(meth._par,mod)+"."+meth._name;  // e.g. tck.constructors.Basic.meth$SomeClass
     case    PropPart prop -> prop._name+"$"+_pack(prop,mod);
     default -> {
       for( Part p=pclz; p!=null; p = p._par )

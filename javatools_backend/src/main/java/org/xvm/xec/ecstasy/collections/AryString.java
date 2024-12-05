@@ -36,6 +36,7 @@ public class AryString extends Array<org.xvm.xec.ecstasy.text.String> {
   }
 
   public static AryString construct(long len, LongFunction<String> fcn) { return new AryString(len,fcn); }
+  public static AryString construct( long len ) { return new AryString(Mutable,new String[(int)len],(int)len); }
   public static AryString construct() { return new AryString(); }
   public static AryString construct(Mutability mut, AryString as) { return new AryString(mut,as); }
 

@@ -12,13 +12,16 @@ import java.math.BigInteger;
 public abstract class XValue {
   // Produce a java value from a TCon
   private static final SB ASB = new SB();
-  static public String val( Const tc ) {
+  private static ClzBuilder _X;
+  static public String val( Const tc, ClzBuilder X ) {
     assert ASB.len()==0;
     // Caller is a switch, will encode special
     if( tc instanceof MatchAnyCon ) return null;
+    _X = X;
     _val(tc);
     String rez = ASB.toString();
     ASB.clear();
+    _X = null;
     return rez;
   }
   private static SB _val( Const tc ) {
@@ -82,10 +85,12 @@ public abstract class XValue {
     // will be either console$get() or console$set(value).
     case PropCon prop -> {
       Part par = prop.part()._par;
-      if( par != ClzBuilder.CCLZ && prop.part().isStatic() ) {
-        if( par instanceof ClassPart clz )
-          ASB.p(ClzBuilder.add_import(clz).clz_bare()).p('.');
-        else if( par instanceof MethodPart meth ) {
+      if( par != ClzBuilder.CCLZ ) {
+        if( par instanceof ClassPart clz ) {
+          if( prop.part().isStatic() )  ASB.p(ClzBuilder.add_import(clz).clz_bare()).p('.');
+          else if( !_X._clz._name2kid.containsKey(prop._name) && _X._clz.isNestedInnerClass()!=null )
+            ASB.p("$outer.");
+        } else if( par instanceof MethodPart meth && prop.part().isStatic() ) {
           ASB.p(meth._name).p('$');
         } else throw XEC.TODO();
       }

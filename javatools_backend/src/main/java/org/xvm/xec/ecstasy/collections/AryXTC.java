@@ -30,6 +30,7 @@ public class AryXTC<E extends XTC> extends Array<E> {
   public  AryXTC(AryXTC<E> as) { this(as._gold,as._mut,as._es.clone()); }
 
   public static <E extends XTC> AryXTC<E> construct(E gold) { return new AryXTC<>(gold); }
+  public static <E extends XTC> AryXTC<E> construct(E gold, long len) { return new AryXTC<>(gold,(int)len); }
 
 
   public AryXTC(E gold, long len, LongFunction<E> fcn ) {

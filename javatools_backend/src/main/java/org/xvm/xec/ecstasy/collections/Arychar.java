@@ -41,6 +41,7 @@ public class Arychar extends Array<Char> {
 
   public static Arychar construct(Arychar as) { return new Arychar(as); }
   public static Arychar construct() { return new Arychar(); }
+  public static Arychar construct( long len ) { return new Arychar(Mutable,(int)len,new char[(int)len]); }
   public static Arychar construct( String s ) { return new Arychar(s); }
   public static Arychar construct( long len, LongUnaryOperator fcn ) { return new Arychar(len,fcn); }
   public static Arychar construct( Mutability mut, Arychar as) { return new Arychar(mut,as); }

@@ -169,7 +169,7 @@ public class ClassPart extends Part {
   public ClassPart isNestedInnerClass() {
     // self -> MMethod -> Class -> [Package or other ???]
     Part outer = _par;
-    if( isStatic() || outer instanceof PackagePart || XClz.make(this).isa(XCons.CONST) )
+    if( isStatic() || outer instanceof PackagePart || _f==Part.Format.CONST )
       return null;
     while( !(outer instanceof ClassPart outclz) )
       outer = outer._par;
