@@ -172,10 +172,12 @@ class Lexer
         @Override
         Appender<Char> appendTo(Appender<Char> buf) {
             switch (id) {
-            case NoVal..FPVal:
+            case NoVal, IntVal, FPVal:
                 value.appendTo(buf);
                 break;
-
+            case BoolVal:
+                (value.as(Boolean) ? "true" : "false").appendTo(buf);
+                break;
             case StrVal:
                 buf.add('\"');
                 value.appendTo(buf);

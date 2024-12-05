@@ -163,7 +163,7 @@ module TestIO {
         Lexer lexer = new Lexer(reader);
         while (Token tok := lexer.next()) {
             console.print($"token={tok.toDebugString()}");
-            }
+        }
 
         console.print($"(eof) position={reader.position}");
     }
@@ -215,26 +215,6 @@ module TestIO {
 
         Reader reader = new CharArrayReader(s);
         ObjectInputStream o_in = new ObjectInputStream(schema, reader);
-//        console.print("BufferedPrinter:");
-//        BufferedPrinter p = new BufferedPrinter();
-//        build(p);
-//        console.print($"doc={p.doc}");
-//        console.print($"print ugly={p.toString()}");
-//        console.print($"print pretty=\n{p.toString(pretty=True)}");
-//
-//        console.print("DirectPrinter:");
-//        Appender<Char> toConsole = new Appender<Char>()
-//            {
-//            @Override
-//            Appender<Char> add(Char ch)
-//                {
-//                console.print(ch, suppressNewline=True);
-//                return this;
-//                }
-//            };
-//        DirectPrinter p2 = new DirectPrinter(toConsole);
-//        build(p2);
-//        console.print("\n(done)");
     }
 
     private void build(ElementOutput builder) {
@@ -271,16 +251,7 @@ module TestIO {
         Point read(ElementInput in) {
             using (FieldInput fields = in.openObject()) {
                 return new Point(fields.readInt("x"), fields.readInt("y"));
-//console.print($"reading point");
-//Int x = fields.readInt("x");
-//console.print($"{x=}");
-//Int y = fields.readInt("y");
-//console.print($"{y=}");
-//return new Point(x, y);
             }
-//                Doc doc = in.readDoc();
-//                Map<String, Doc> map = doc.as(Map<String, Doc>);
-//                return new Point(map["x"].as(IntLiteral).toInt64(), map["y"].as(IntLiteral).toInt64()).as(ObjectType);
         }
 
         @Override
@@ -289,10 +260,6 @@ module TestIO {
                 fields.add("x", value.x)
                       .add("y", value.y);
             }
-//                out.openObject()
-//                    .add("x", value.x)
-//                    .add("y", value.y)
-//                    .close();
         }
     }
 
@@ -307,12 +274,6 @@ module TestIO {
         Segment read(ElementInput in) {
             using (FieldInput fields = in.openObject()) {
                 return new Segment(fields.readObject<Point>("p1"), fields.readObject<Point>("p2"));
-//console.print($"reading segment");
-//Point p1 = fields.read<Point>("p1");
-//console.print($"{p1=}");
-//Point p2 = fields.read<Point>("p2");
-//console.print($"{p2=}");
-//return new Segment(p1, p2);
             }
         }
 
