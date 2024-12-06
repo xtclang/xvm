@@ -34,7 +34,6 @@ import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext.Synchronicity;
 
-import org.xvm.runtime.template.maps.xListMap;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xEnum.EnumHandle;
@@ -42,11 +41,14 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
+import org.xvm.runtime.template.annotations.xInjectedRef;
+import org.xvm.runtime.template.annotations.xInjectedRef.InjectedHandle;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+
+import org.xvm.runtime.template.maps.xListMap;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
@@ -405,6 +407,30 @@ public abstract class Utils
                 if (fDynamic && !((RefHandle) hValue).isAssigned() &&
                         iReturn != Op.A_IGNORE_ASYNC)
                     {
+                    if (hValue instanceof InjectedHandle hRef)
+                        {
+                        int iResult = ((xInjectedRef) hRef.getTemplate()).
+                                getReferent(frameCaller, hRef, Op.A_STACK);
+                        switch (iResult)
+                            {
+                            case Op.R_NEXT:
+                                afDynamic[index]   = false;
+                                ahValue  [index--] = frameCaller.popStack();
+                                continue;
+
+                            case Op.R_CALL:
+                                frameCaller.m_frameNext.addContinuation(frame ->
+                                    {
+                                    afDynamic[index]   = false;
+                                    ahValue  [index--] = frame.popStack();
+                                    return proceed(frame);
+                                    });
+                                return Op.R_CALL;
+
+                            case Op.R_EXCEPTION:
+                                return Op.R_EXCEPTION;
+                            }
+                        }
                     Frame framePrev = frameCaller.f_framePrev;
                     if (!framePrev.isDynamicVar(iReturn))
                         {
@@ -418,10 +444,6 @@ public abstract class Utils
                     {
                     case Op.R_RETURN:
                         break;
-
-                    case Op.R_CALL:
-                        frameCaller.m_frameNext.addContinuation(this);
-                        return Op.R_CALL;
 
                     case Op.R_RETURN_EXCEPTION:
                         return Op.R_RETURN_EXCEPTION;
