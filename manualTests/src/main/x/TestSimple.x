@@ -3,22 +3,31 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        (Directory d1, Directory d2, Directory d3) = showDirs();
-        console.print(d1); // this used to produce a wrong output
 
-        Tuple t = showDirs();
-        console.print(t);  // this used to assert at runtime
+        Int i = 0;
+        new Test(new Test2()).test^();
+        Int j = 1;
+        Int k = 2;
+}
+
+    service Test(Test2 t2) {
+
+        void test() {
+            Int i = 0;
+            t2.test();
+            Int j = 1;
+            Int k = 2;
+        }
     }
 
-    Directory showDir() {
-        @Inject Directory curDir;
-        return curDir;
-    }
+    service Test2 {
 
-    (Directory, Directory, Directory) showDirs() {
-        @Inject Directory curDir;
-        @Inject Directory homeDir;
-        @Inject Directory tmpDir;
-        return curDir, homeDir, tmpDir;
+        void test() {
+            Int i = 0;
+            assert:debug;
+            Int j = 1;
+            Int k = 2; // it used to lose the association at return here and wouldn't stop at
+                       // Test.test() line 18
+        }
     }
 }

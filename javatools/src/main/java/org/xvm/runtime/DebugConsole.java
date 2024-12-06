@@ -251,6 +251,22 @@ public final class DebugConsole
                 if (frame.f_fiber.isAssociated(m_frame.f_fiber))
                     {
                     m_stepMode = StepMode.StepInto;
+
+                    Frame framePrev = frame.f_framePrev;
+                    if (framePrev != null && framePrev.isNative())
+                        {
+                        // we are stepping out of the current service context and won't be able to
+                        // stop there; let's retain the association
+                        Fiber fiberCaller = framePrev.f_fiber.f_refCaller.get();
+                        if (fiberCaller != null)
+                            {
+                            Frame frameCaller = fiberCaller.getFrame();
+                            if (frameCaller != null)
+                                {
+                                m_frame = frameCaller;
+                                }
+                            }
+                        }
                     }
                 break;
             }
