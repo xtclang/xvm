@@ -402,7 +402,7 @@ public class ForEachStatement
             Expression   exprRVal  = cond.getRValue();
             ConstantPool pool      = pool();
             Plan         plan      = null;
-            TypeConstant typeLVal  = exprLVal.getType();
+            TypeConstant typeLVal  = fValid ? exprLVal.getType() : null;
             TypeConstant typeRVal  = null;
             int          cLVals    = 0;
             boolean      fConvert  = false;

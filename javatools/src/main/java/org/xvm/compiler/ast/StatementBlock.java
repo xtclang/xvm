@@ -977,7 +977,8 @@ public class StatementBlock
             }
 
         @Override
-        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name, ErrorListener errs)
+        protected Argument resolveRegularName(Context ctxFrom, String sName, Token name,
+                                              ErrorListener errs)
             {
             checkValidating();
 
@@ -1025,6 +1026,7 @@ public class StatementBlock
             // each level for the node to resolve the name
             ConstantPool     pool      = pool();
             AstNode          node      = f_stmt;
+            Source           source    = node == null ? null : node.getSource();
             boolean          fHasThis  = isMethod() || isConstructor();
             TypeConstant     typeThis  = fHasThis ? ctxFrom.getThisType() : null;
             int              cSteps    = 0;
@@ -1280,8 +1282,11 @@ public class StatementBlock
 
                 if (node instanceof StatementBlock block)
                     {
-                    // the name may specify an import
-                    ImportStatement stmtImport = block.getImport(sName, name, errs);
+                    // the name may specify an import; check if we have crossed the source boundary,
+                    // in which case we cannot use the "name" token position to determine the order
+                    // of appearance any longer (which is the only reason we pass the "name" in)
+                    ImportStatement stmtImport = block.getImport(sName,
+                            node.getSource() == source ? name : null, errs);
                     if (stmtImport != null)
                         {
                         NameResolver resolver = stmtImport.getNameResolver();
