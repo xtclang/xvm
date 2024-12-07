@@ -1,3 +1,10 @@
+- GG: a presence of .DS_Store file asserts JsonDB store initialization
+     (dataDir.files() -> file.contents.unpackUtf8())
+
+- GG: missing "Content-Type" header blows the Dispatcher
+
+- GG: group CLI commands into sections (one per class? @CommandGroup?)
+
 - GG: BAST generation for "map[x] = y" is completely broken; additionally if a class has
       only a setter @Op("[]="), but no getter (@Op"[]") the compiler barfs
 
@@ -11,6 +18,8 @@
 - CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
 
 - CP: make DigestAuthenticator.NonceTable into a service
+
+- CP: do we need a UrlEncoder (similar to Java's)?
 
 - CP: a content-type header for FormData has the following format:
     multipart/form-data; boundary=---------------------------1612195806993123533773008794
