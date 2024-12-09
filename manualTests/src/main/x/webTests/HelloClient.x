@@ -15,6 +15,9 @@ module HelloClient {
     @Command("l", "Log in")
     String login() = get("/l");
 
+    @Command("o", "Log out")
+    String logout() = get("/d");
+
     @Command("s", "Secure access")
     String secure() = get("/s");
 

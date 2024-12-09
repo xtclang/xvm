@@ -26,11 +26,12 @@ static service Runner {
      *
      * @param app              the app that contains classes with commands.
      * @param args             (optional) the arguments passed by the user via the command line
-     * @param suppressWelcome  (optional) pass `True` to avoid printing the "welcome" message
+     * @param suppressWelcome  (optional) pass `True` to avoid printing the default welcome message
      * @param extras           (optional) extra objects that contain executable commands
+     * @param init             (optional) function to call at the end of initialization
      */
     void run(TerminalApp app, String[] args = [], Boolean suppressWelcome = False,
-             Object[] extras = []) {
+             Object[] extras = [], function void()? init = Null) {
         Catalog catalog = Scanner.buildCatalog(app, extras);
 
         if (args.size == 0) {
@@ -42,8 +43,10 @@ static service Runner {
                 app.print(description);
             }
 
+            init?();
             runLoop(catalog);
         } else {
+            init?();
             runOnce(catalog, args);
         }
     }
@@ -190,10 +193,23 @@ static service Runner {
      * Find the specified command in the catalog.
      */
     conditional CmdInfo findCommand(String command, Catalog catalog) {
+        String? bestMatch = Null;
+        Boolean ambiguous = False;
         for ((String name, CmdInfo info) : catalog) {
-            if (command.startsWith(name)) {
+            if (command == name) {
                 return True, info;
             }
+            // check if it's a matching prefix and there are no ambiguities
+            if (name.startsWith(command)) {
+                if (bestMatch == Null) {
+                    bestMatch = name;
+                } else {
+                    ambiguous = True;
+                }
+            }
+        }
+        if (bestMatch != Null && !ambiguous) {
+            return catalog.get(bestMatch);
         }
         return False;
     }
