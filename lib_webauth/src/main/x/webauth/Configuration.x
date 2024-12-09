@@ -5,6 +5,9 @@ import web.security.DigestCredential;
 /**
  * An injectable Configuration for the db-based web authentication functionality.
  *
+ * Note: Configuration is used as a [DBValue] by the [AuthSchema] and therefore requires a default
+ *       value.
+ *
  * @param initUserPass   an *initial* mapping of user names to passwords; it is expected that this
  *                       will include only an administrator login, and the password will be changed
  *                       immediately after the database is configured
@@ -16,7 +19,8 @@ import web.security.DigestCredential;
 const Configuration(Map<String,String> initUserPass,
                     String             credScheme  = DigestCredential.Scheme,
                     Boolean            configured  = False,
-                   ) {
+                   )
+        default(new Configuration([], configured=False)) {
     /**
      * Create a copy of this Configuration, with the specified properties modified.
      *

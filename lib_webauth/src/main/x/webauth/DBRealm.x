@@ -73,7 +73,7 @@ const DBRealm
         this.db   = db;
     } finally {
         if (Configuration cfg ?= this.createCfg) {
-            // REVIEW need a: `using (schema.ensureTx()) {...}`
+            // TODO CP: need a: `using (schema.ensureTx()) {...}`
             if (db.dbConnection.transaction == Null) {
                 using (db.dbConnection.createTransaction()) {
                     applyConfig(cfg);
@@ -84,6 +84,7 @@ const DBRealm
         }
     }
 
+    // TODO GG: moving this inside "finally" block doesn't compile
     // we need this helper method since atm there is no Connection.ensureTransaction() API
     private void applyConfig(Configuration cfg) {
         // create the user records
@@ -142,8 +143,18 @@ const DBRealm
     @Override
     Principal createPrincipal(Principal principal) {
         Int principalId = db.principalGen.next();
-        principal = principal.with(principalId = principalId);
-        using (db.dbConnection.createTransaction()) {
+        principal = principal.with(principalId=principalId);
+
+        if (db.dbConnection.transaction == Null) {
+            using (db.dbConnection.createTransaction()) {
+                return createPrincipal(principal, principalId);
+            }
+        } else {
+            return createPrincipal(principal, principalId);
+        }
+
+        // we need this helper method since atm there is no Connection.ensureTransaction() API
+        private Principal createPrincipal(Principal principal, Int principalId) {
             // verify groups
             DBMap<Int, Group> groups = db.groups;
             for (Int groupId : principal.groupIds) {
@@ -165,8 +176,8 @@ const DBRealm
             if (!db.principals.putIfAbsent(principalId, principal)) {
                 throw new RealmException($"Principal id={principalId} already existed");
             }
+            return principal;
         }
-        return principal;
     }
 
     @Override
