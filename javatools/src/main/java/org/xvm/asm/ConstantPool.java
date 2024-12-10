@@ -2387,6 +2387,7 @@ public class ConstantPool
     public TypeConstant      typeUInt128()       {TypeConstant      c = m_typeUInt128;       if (c == null) {m_typeUInt128       = c = ensureTerminalTypeConstant(clzUInt128()                         );} return c;}
     public TypeConstant      typeUIntN()         {TypeConstant      c = m_typeUIntN;         if (c == null) {m_typeUIntN         = c = ensureTerminalTypeConstant(clzUIntN()                           );} return c;}
     public TypeConstant      typeDec64()         {TypeConstant      c = m_typeDec64;         if (c == null) {m_typeDec64         = c = ensureTerminalTypeConstant(clzDec64()                           );} return c;}
+    public TypeConstant      typeFloat32()       {TypeConstant      c = m_typeFloat32;       if (c == null) {m_typeFloat32       = c = ensureTerminalTypeConstant(clzFloat32()                         );} return c;}
     public TypeConstant      typeFloat64()       {TypeConstant      c = m_typeFloat64;       if (c == null) {m_typeFloat64       = c = ensureTerminalTypeConstant(clzFloat64()                         );} return c;}
     public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
     public TypeConstant      typeArray()         {TypeConstant      c = m_typeArray;         if (c == null) {m_typeArray         = c = ensureTerminalTypeConstant(clzArray()                           );} return c;}
@@ -2474,6 +2475,7 @@ public class ConstantPool
     protected ClassConstant  clzUInt128()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt128"                  );}
     protected ClassConstant  clzUIntN()         {return (ClassConstant) getImplicitlyImportedIdentity("UIntN"                    );}
     protected ClassConstant  clzDec64()         {return (ClassConstant) getImplicitlyImportedIdentity("Dec64"                    );}
+    protected ClassConstant  clzFloat32()       {return (ClassConstant) getImplicitlyImportedIdentity("Float32"                  );}
     protected ClassConstant  clzFloat64()       {return (ClassConstant) getImplicitlyImportedIdentity("Float64"                  );}
     protected ClassConstant  clzIndexed()       {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"           );}
     protected ClassConstant  clzInterval()      {return (ClassConstant) getImplicitlyImportedIdentity("Interval"                 );}
@@ -3987,6 +3989,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeUInt128;
     private transient TypeConstant      m_typeUIntN;
     private transient TypeConstant      m_typeDec64;
+    private transient TypeConstant      m_typeFloat32;
     private transient TypeConstant      m_typeFloat64;
     private transient TypeConstant      m_typeIndexed;
     private transient TypeConstant      m_typeArray;
@@ -4134,6 +4137,7 @@ public class ConstantPool
         m_typeUInt128       = null;
         m_typeUIntN         = null;
         m_typeDec64         = null;
+        m_typeFloat32       = null;
         m_typeFloat64       = null;
         m_typeIndexed       = null;
         m_typeArray         = null;

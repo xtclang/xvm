@@ -13,7 +13,6 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
 
-import org.xvm.type.Decimal;
 import org.xvm.type.Decimal64;
 
 import org.xvm.util.Hash;
@@ -1160,8 +1159,8 @@ public class IntConstant
      */
     public static IntConstant toIntConstant(Format format, PackedInteger pi, ConstantPool pool)
         {
-        if (       pi.compareTo(IntConstant.getMinLimit(format)) < 0
-                || pi.compareTo(IntConstant.getMaxLimit(format)) > 0)
+        if (   pi.compareTo(IntConstant.getMinLimit(format)) < 0
+            || pi.compareTo(IntConstant.getMaxLimit(format)) > 0)
             {
             throw new ArithmeticException("out of range: " + pi);
             }
@@ -1180,13 +1179,35 @@ public class IntConstant
      */
     public static DecimalConstant toDecConstant(Format format, PackedInteger pi, ConstantPool pool)
         {
-        Decimal dec = switch (format)
+        switch (format)
             {
-            case Dec64 -> new Decimal64(new BigDecimal(pi.getBigInteger(), MathContext.DECIMAL64));
-            default    -> throw new IllegalArgumentException("Unsupported format " + format);
-            };
+            case Dec64:
+                return pool.ensureDecConstant(
+                    new Decimal64(new BigDecimal(pi.getBigInteger(), MathContext.DECIMAL64)));
+            default:
+                return null; // the error will be reported by the compiler
+            }
+        }
 
-        return pool.ensureDecConstant(dec);
+    /**
+     * Convert the specified PackedInteger to a FloatConstant of the specified format.
+     *
+     * @param format  the format of the FloatConstant to use
+     * @param pi      the PackedInteger value
+     * @param pool    the ConstantPool to use
+     *
+     * @return a FloatConstant
+     */
+    public static FloatConstant toFloatConstant(Format format, PackedInteger pi, ConstantPool pool)
+        {
+        switch (format)
+            {
+            case Float32:
+                return new Float32Constant(pool,
+                    pi.isBig() ? pi.getBigInteger().floatValue() : (float) pi.getLong());
+            default:
+                return null;
+            }
         }
 
     @Override

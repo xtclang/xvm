@@ -1083,9 +1083,6 @@ public class Lexer
                                         idNum = Id.LIT_NIBBLE;
                                         break;
 
-                                    case "Int":
-                                        idNum = Id.LIT_INTA;
-                                        break;
                                     case "Int8":
                                         idNum = Id.LIT_INT8;
                                         break;
@@ -1095,6 +1092,7 @@ public class Lexer
                                     case "Int32":
                                         idNum = Id.LIT_INT32;
                                         break;
+                                    case "Int":
                                     case "Int64":
                                         idNum = Id.LIT_INT64;
                                         break;
@@ -1105,9 +1103,6 @@ public class Lexer
                                         idNum = Id.LIT_INTN;
                                         break;
 
-                                    case "UInt":
-                                        idNum = Id.LIT_UINTA;
-                                        break;
                                     case "Byte":
                                     case "UInt8":
                                         idNum = Id.LIT_UINT8;
@@ -1118,6 +1113,7 @@ public class Lexer
                                     case "UInt32":
                                         idNum = Id.LIT_UINT32;
                                         break;
+                                    case "UInt":
                                     case "UInt64":
                                         idNum = Id.LIT_UINT64;
                                         break;
@@ -1128,14 +1124,11 @@ public class Lexer
                                         idNum = Id.LIT_UINTN;
                                         break;
 
-                                    case "Dec":
-                                        idNum  = Id.LIT_DECA;
-                                        fFloat = true;
-                                        break;
                                     case "Dec32":
                                         idNum  = Id.LIT_DEC32;
                                         fFloat = true;
                                         break;
+                                    case "Dec":
                                     case "Dec64":
                                         idNum  = Id.LIT_DEC64;
                                         fFloat = true;
@@ -1165,10 +1158,12 @@ public class Lexer
                                         idNum = Id.LIT_FLOAT16;
                                         fFloat = true;
                                         break;
+                                    case "Float":
                                     case "Float32":
                                         idNum = Id.LIT_FLOAT32;
                                         fFloat = true;
                                         break;
+                                    case "Double":
                                     case "Float64":
                                         idNum = Id.LIT_FLOAT64;
                                         fFloat = true;

@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.byteArrayToHexString;

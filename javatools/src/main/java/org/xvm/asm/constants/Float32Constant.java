@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+
 import org.xvm.util.Hash;
 
 
@@ -14,7 +15,7 @@ import org.xvm.util.Hash;
  * Represent a 32-bit binary floating point constant.
  */
 public class Float32Constant
-        extends ValueConstant
+        extends FloatConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 

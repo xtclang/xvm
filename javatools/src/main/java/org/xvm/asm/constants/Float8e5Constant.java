@@ -16,7 +16,7 @@ import org.xvm.util.Hash;
  * Represent an 8-bit "FP8 E5M2" binary floating point constant.
  */
 public class Float8e5Constant
-        extends ValueConstant
+        extends FloatConstant
     {
     // ----- constructors --------------------------------------------------------------------------
 

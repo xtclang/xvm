@@ -607,8 +607,11 @@ public abstract class Expression
                     {
                     // there is no compile-time conversion available;
                     // continue with run-time conversion
-                    // TODO: for now it's most likely our omission; remove the assert below
-                    throw new IllegalStateException("No conversion found for " + constVal);
+                    // TODO: for now it's most likely our omission
+                    log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
+                        "Constant conversion from \"" + typeActual.getValueString() +
+                        "\" to \"" + typeRequired.getValueString() + '"');
+                    fit = TypeFit.NoFit;
                     }
                 else
                     {
