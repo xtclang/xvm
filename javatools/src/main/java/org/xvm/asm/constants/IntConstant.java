@@ -1096,6 +1096,14 @@ public class IntConstant
             {
             return toDecConstant(Format.Dec64);
             }
+        if (typeOut.equals(pool.typeFloat32()))
+            {
+            return toFloatConstant(Format.Float32);
+            }
+        if (typeOut.equals(pool.typeFloat64()))
+            {
+            return toFloat64Constant();
+            }
         return null;
         }
 
@@ -1144,6 +1152,30 @@ public class IntConstant
     public DecimalConstant toDecConstant(Format format)
         {
         return toDecConstant(format, getValue(), getConstantPool());
+        }
+
+    /**
+     * Convert this IntConstant to a FloatConstant of the specified format.
+     *
+     * @param format  the format of the DecimalConstant to use
+     *
+     * @return a DecimalConstant
+     */
+    public FloatConstant toFloatConstant(Format format)
+        {
+        return toFloatConstant(format, getValue(), getConstantPool());
+        }
+
+    /**
+     * Convert this IntConstant to o Float64Constant.
+     *
+     * @return Float64Constant constants
+     */
+    public Float64Constant toFloat64Constant()
+        {
+        PackedInteger pi = getValue();
+        return new Float64Constant(getConstantPool(),
+                pi.isBig() ? pi.getBigInteger().doubleValue() : (double) pi.getLong());
         }
 
     /**
