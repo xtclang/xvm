@@ -85,28 +85,7 @@ public class xTerminalConsole
             hConsole = m_hConsole = createServiceHandle(f_container.createServiceContext("Console"),
                     getCanonicalClass(), getCanonicalType());
 
-            LineReader reader = null;
-            try
-                {
-                if (CONSOLE != null)
-                    {
-                    Terminal terminal = TerminalBuilder.builder().build();
-                    String   sTmpDir  = System.getProperty("java.io.tmpdir");
-                    Path     pathHist = Path.of(sTmpDir, frame.f_context.f_sName + ".history");
-                    History  history  = new LimitedHistory(pathHist, 100);
-
-                    reader = LineReaderBuilder.builder()
-                            .terminal(terminal)
-                            .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
-                            .option(LineReader.Option.HISTORY_TIMESTAMPED, false)
-                            .variable(LineReader.HISTORY_FILE, pathHist)
-                            .history(history)
-                            .build();
-                    }
-                }
-            catch (IOException ignore) {}
-
-            READER = reader;
+            ensureLineReader(frame);
             }
         return hConsole;
         }
@@ -208,6 +187,44 @@ public class xTerminalConsole
                 }
             }
         return frame.assignValue(iReturn, hLine);
+        }
+
+    /**
+     * Ensure JLine reader.
+     *
+     * @param frame  the current frame; if not null, create a persistent history file based on the
+     *               frame context name
+     */
+    public static LineReader ensureLineReader(Frame frame)
+        {
+        if (READER == null)
+            {
+            try
+                {
+                if (CONSOLE != null)
+                    {
+                    Terminal          terminal = TerminalBuilder.builder().build();
+                    LineReaderBuilder builder  = LineReaderBuilder.builder();
+
+                    builder.terminal(terminal)
+                           .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
+                           .option(LineReader.Option.HISTORY_TIMESTAMPED, false);
+
+                    if (frame != null)
+                        {
+                        String   sTmpDir  = System.getProperty("java.io.tmpdir");
+                        Path     pathHist = Path.of(sTmpDir, frame.f_context.f_sName + ".history");
+                        History  history  = new LimitedHistory(pathHist, 100);
+
+                        builder = builder.variable(LineReader.HISTORY_FILE, pathHist)
+                                         .history(history);
+                        }
+                    READER = builder.build();
+                    }
+                }
+            catch (IOException ignore) {}
+            }
+        return READER;
         }
 
     /**

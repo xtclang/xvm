@@ -22,6 +22,9 @@ import java.util.TreeSet;
 
 import java.util.prefs.Preferences;
 
+import org.jline.reader.LineReader;
+import org.jline.reader.UserInterruptException;
+
 import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -76,6 +79,12 @@ public final class DebugConsole
     @Override
     public synchronized int activate(Frame frame, int iPC)
         {
+        if (LINE_READER == null && READER == null)
+            {
+            LINE_READER = xTerminalConsole.ensureLineReader(null);
+            READER      = xTerminalConsole.CONSOLE_IN;
+            }
+
         frame.f_context.setDebuggerActive(true);
 
         // Check if there are any natural landing ops beyond this point; otherwise "StepInto" mode
@@ -308,9 +317,7 @@ public final class DebugConsole
         m_iPC      = iPC;
         m_stepMode = StepMode.None;
 
-        PrintWriter    writer = xTerminalConsole.CONSOLE_OUT;
-        BufferedReader reader = xTerminalConsole.CONSOLE_IN;
-
+        PrintWriter writer = xTerminalConsole.CONSOLE_OUT;
         if (fRender)
             {
             writer.println(renderDisplay());
@@ -321,15 +328,33 @@ public final class DebugConsole
             {
             try
                 {
-                writer.print("\nEnter command: ");
-                writer.flush();
-
-                String sCommand = reader.readLine();
-                if (sCommand == null)
+                String sCommand;
+                if (LINE_READER == null)
                     {
-                    // we don't have a console; ignore
-                    writer.println();
-                    return iPC >= 0 ? iPC + 1 : iPC;
+                    writer.print("\nEnter command: ");
+                    writer.flush();
+
+                    sCommand = READER.readLine();
+                    if (sCommand == null)
+                        {
+                        // we don't have a console; ignore
+                        writer.println();
+                        return iPC >= 0 ? iPC + 1 : iPC;
+                        }
+                    }
+                else
+                    {
+                    try
+                        {
+                        writer.flush();
+                        sCommand = LINE_READER.readLine("\nEnter command: ");
+                        }
+                    catch (UserInterruptException e)
+                        {
+                        // Ctrl-C
+                        System.exit(-1);
+                        return iPC >= 0 ? iPC + 1 : iPC; // unreachable
+                        }
                     }
 
                 sCommand = sCommand.trim();
@@ -2116,9 +2141,9 @@ public final class DebugConsole
     private int longestOf(String[] as)
         {
         int max = 0;
-        for (int i = 0, c = as.length; i < c; ++i)
+        for (String a : as)
             {
-            int cch = as[i].length();
+            int cch = a.length();
             if (cch > max)
                 {
                 max = cch;
@@ -2781,6 +2806,16 @@ public final class DebugConsole
     public static final DebugConsole INSTANCE = new DebugConsole();
 
     /**
+     * JLine reader, if available.
+     */
+    private static LineReader LINE_READER;
+
+    /**
+     * Standard reader.
+     */
+    private static BufferedReader READER;
+
+    /**
      * Persistent preference storage.
      */
     Preferences prefs = Preferences.userNodeForPackage(DebugConsole.class);
@@ -2873,7 +2908,7 @@ public final class DebugConsole
              W- <var#>                Remove the specified watch
              D <var#>                 Display the structure view of the specified variable number
              DS <var#>                Display the "toString()" value of the specified variable number
-                                      
+             
              S  (or N)                Step over ("proceed to next line")
              S  (or N) <count>        Repeatedly step over ("proceed to next line") <count> times
              S+ (or I)                Step in
@@ -2883,7 +2918,7 @@ public final class DebugConsole
              SL <name> <line>         Step (run) to specified line
              R                        Run to next breakpoint
              T                        Reset (return to) a previous stack frame
-                                      
+             
              B+                       Add breakpoint for the current line
              B-                       Remove breakpoint for the current line
              BT                       Toggle breakpoint for the current line
@@ -2903,7 +2938,7 @@ public final class DebugConsole
              B                        List current breakpoints
              B- <breakpoint#>         Remove specified breakpoint (from the breakpoint list)
              BT <breakpoint#>         Toggle specified breakpoint (from the breakpoint list)
-                                      
+            
              VC                       View Console
              VD                       View Debugger
              VF                       View Services and Fibers
