@@ -7,8 +7,13 @@ plugins {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:latest.release") // (last checked against 1.6.3)
+    // the "latest.release" version dependency broke the build on 12/12/2024
+    // implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:latest.release")
+
+    // reverted to the previously working version
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
+
 
 repositories {
     mavenCentral()
