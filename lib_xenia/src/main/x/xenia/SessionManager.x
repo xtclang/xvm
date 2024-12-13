@@ -5,7 +5,6 @@ import convert.formats.Base64Format;
 
 import web.HttpStatus;
 
-import HttpServer.RequestInfo;
 import SessionCookie.CookieId;
 import SessionImpl.Event_;
 import SessionStore.IOResult;
@@ -50,14 +49,22 @@ service SessionManager
         implements Closeable {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(SessionStore store, SessionProducer instantiateSession,
-              UInt16 plainPort = 80, UInt16 tlsPort = 443) {
+    construct(SessionStore    store,
+              SessionProducer instantiateSession,
+              HostInfo        route,
+              Catalog         catalog) {
+
         this.store              = store;
         this.instantiateSession = instantiateSession;
+        this.route              = route;
+        this.catalog            = catalog;
 
-        plainTextCookieName = plainPort == 80  ? CookieId.PlainText.cookieName : $"{CookieId.PlainText.cookieName}_{plainPort}";
-        encryptedCookieName = tlsPort   == 443 ? CookieId.Encrypted.cookieName : $"{CookieId.Encrypted.cookieName}_{tlsPort}";
-        consentCookieName   = tlsPort   == 443 ? CookieId.Consent.cookieName   : $"{CookieId.Consent.cookieName}_{tlsPort}";
+        String httpSuffix  = route.httpPort  == 80  ? "" : $"_{route.httpPort}";
+        String httpsSuffix = route.httpsPort == 443 ? "" : $"_{route.httpsPort}";
+
+        this.plainTextCookieName = CookieId.PlainText.cookieName + httpSuffix;
+        this.encryptedCookieName = CookieId.Encrypted.cookieName + httpsSuffix;
+        this.consentCookieName   = CookieId.Consent.cookieName   + httpsSuffix;
     }
 
 
@@ -68,11 +75,22 @@ service SessionManager
      */
     protected/private @Final SessionStore store;
 
+    typedef function SessionImpl(SessionManager, Int64, RequestIn) as SessionProducer;
+
     /**
      * The means to instantiate sessions.
      */
-    typedef function SessionImpl(SessionManager, Int64, RequestInfo) as SessionProducer;
     protected/private @Final SessionProducer instantiateSession;
+
+    /**
+     * The [HostInfo] information about the route that this `SessionManager` is servicing.
+     */
+    public/private HostInfo route;
+
+    /**
+     * The [Catalog] for the [WebApp] that this `SessionManager` is servicing.
+     */
+    public/private Catalog catalog;
 
     /**
      * The name of the session cookie for non-TLS traffic.
@@ -359,14 +377,14 @@ service SessionManager
      * Instantiate a new [SessionImpl] object, including any [Session] mix-ins that the [WebApp]
      * contains.
      *
-     * @param requestInfo  the request information
+     * @param request  the request information
      *
      * @return a new [SessionImpl] object, including any mixins declared by the application, or the
      *         [HttpStatus] describing why the session could not be created
      */
-    HttpStatus|SessionImpl createSession(RequestInfo requestInfo) {
+    HttpStatus|SessionImpl createSession(RequestIn request) {
         Int64       id      = generateId();
-        SessionImpl session = instantiateSession(this, id, requestInfo);
+        SessionImpl session = instantiateSession(this, id, request);
         sessions.put(id, session);
 
         purger.track^(id);
@@ -378,13 +396,13 @@ service SessionManager
      * Instantiate a copy of the passed [SessionImpl] object.
      *
      * @param oldSession   the session to clone
-     * @param requestInfo  the request information
+     * @param request      the request information
      *
      * @return a clone of the [SessionImpl] object, or the [HttpStatus] describing why the session
      *         could not be cloned
      */
-    HttpStatus|SessionImpl cloneSession(SessionImpl oldSession, RequestInfo requestInfo) {
-        HttpStatus|SessionImpl result = createSession(requestInfo);
+    HttpStatus|SessionImpl cloneSession(SessionImpl oldSession, RequestIn request) {
+        HttpStatus|SessionImpl result = createSession(request);
         if (result.is(HttpStatus)) {
             return result;
         }

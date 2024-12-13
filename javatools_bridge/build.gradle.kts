@@ -19,6 +19,7 @@ dependencies {
     xtcModule(libs.xdk.crypto)
     xtcModule(libs.xdk.json)
     xtcModule(libs.xdk.net)
+    xtcModule(libs.xdk.sec)
     xtcModule(libs.xdk.web)
 }
 

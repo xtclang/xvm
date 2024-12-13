@@ -13,5 +13,6 @@ dependencies {
     xtcModule(libs.xdk.json)
     xtcModule(libs.xdk.net)
     xtcModule(libs.xdk.oodb)
+    xtcModule(libs.xdk.sec)
     xtcModule(libs.xdk.web)
 }

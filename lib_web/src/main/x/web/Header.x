@@ -1,3 +1,4 @@
+import ecstasy.collections.CaseInsensitive;
 import ecstasy.collections.CollectImmutableArray;
 
 /**
@@ -42,6 +43,8 @@ interface Header
     static String Cookie                 = "Cookie";
     static String SetCookie              = "Set-Cookie";
 
+    static CollectImmutableArray<String> ToStringArray = CollectImmutableArray.of(String);
+
     /**
      * `True` if this `Header` is for a [Request]; `False` if it is for a [Response].
      */
@@ -67,9 +70,7 @@ interface Header
      *
      * @return a list of names of the HTTP headers
      */
-    @RO List<String> names.get() {
-        return entries.map(e -> e[0], CollectImmutableArray.of(String));
-    }
+    @RO List<String> names.get() = entries.map(e -> e[0], ToStringArray);
 
     /**
      * Obtain the HTTP headers as list of [Entry] objects.
@@ -86,25 +87,21 @@ interface Header
      *                     header entry may be expanded to multiple values, if that delimiter occurs
      *                     within the associated value
      *
-     * @return True iff the specified name is found at least once
-     * @return (conditional) all of the corresponding values from the HTTP header
+     * @return a List of all of the corresponding values from the HTTP headers
      */
-    Iterator<String> valuesOf(String name, Char? expandDelim=Null) {
-        import ecstasy.collections.CaseInsensitive;
-        Iterator<String> iter = entries.iterator().filter(e -> CaseInsensitive.areEqual(e[0], name))
-                                                  .map(e -> e[1]);
+    List<String> valuesOf(String name, Char? expandDelim=Null) {
+        var result = entries.filter(e -> CaseInsensitive.areEqual(e[0], name))
+                            .map(e -> e[1]);
 
         if (expandDelim != Null) {
-            iter = iter.flatMap(s -> s.split(expandDelim));
+            result = result.flatMap(s -> s.split(expandDelim));
         }
 
-        return iter.map(s -> s.trim());
+        return result.map(s -> s.trim(), ToStringArray);
     }
 
     /**
-     * Obtain the header value, as-is (not comma-expanded) for the specified case-insensitive header
-     * name. If the header name occurs multiple times within the HTTP header, then only the first
-     * instance is returned.
+     * Obtain the value of the first instance of the header of the specified name.
      *
      * @param name         the case-insensitive header name
      * @param expandDelim  pass a character delimiter, such as `','`, to indicate that a single
@@ -115,13 +112,11 @@ interface Header
      * @return (conditional) the corresponding value from the HTTP header
      */
     conditional String firstOf(String name, Char? expandDelim=Null) {
-        return valuesOf(name, expandDelim).next();
+        return valuesOf(name, expandDelim).first();
     }
 
     /**
-     * Obtain the header value, as-is (not comma-expanded) for the specified case-insensitive header
-     * name. If the header name occurs multiple times within the HTTP header, then only the last
-     * instance is returned.
+     * Obtain the last value of the last instance of the header of the specified name.
      *
      * @param name         the case-insensitive header name
      * @param expandDelim  pass a character delimiter, such as `','`, to indicate that a single
@@ -132,7 +127,7 @@ interface Header
      * @return (conditional) the corresponding value from the HTTP header
      */
     conditional String lastOf(String name, Char? expandDelim=Null) {
-        return valuesOf(name, expandDelim).reversed().next();
+        return valuesOf(name, expandDelim).last();
     }
 
     /**
@@ -145,7 +140,7 @@ interface Header
      * @return the corresponding value from the HTTP header or `Null` if not found
      */
     @Op("[]") String? getOrNull(String name) {
-        if (String value := firstOf(name)) {
+        if (String value := valuesOf(name).first()) {
             return value;
         }
         return Null;
@@ -160,18 +155,7 @@ interface Header
      */
     void removeAll(String name) {
         checkMutable();
-
-        List<Entry> entries = this.entries;
-        if (!entries.empty) {
-            val cursor = entries.cursor();
-            while (cursor.exists) {
-                if (cursor.value[0] == name) {
-                    cursor.delete();
-                } else {
-                    cursor.advance();
-                }
-            }
-        }
+        entries.removeAll(e -> CaseInsensitive.areEqual(e[0], name));
     }
 
     /**
@@ -194,7 +178,6 @@ interface Header
      */
     void add(Entry entry) {
         checkMutable();
-
         entries.add(entry);
     }
 
@@ -207,7 +190,6 @@ interface Header
      */
     void add(String name, String|String[] value) {
         checkMutable();
-
         if (value.is(String[])) {
             value = value.appendTo(new StringBuffer(value.estimateStringLength(",", "", "")), ",", "", "").toString();
         }

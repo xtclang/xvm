@@ -970,7 +970,7 @@ public abstract class ClassTemplate
     private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp,
                                     int iReturn)
         {
-        TypeInfo     info      = hThis.getType().ensureTypeInfo();
+        TypeInfo     info      = hThis.getType().ensureAccess(Access.PRIVATE).ensureTypeInfo();
         PropertyInfo prop      = info.findProperty(idProp, true);
         Annotation   anno      = prop.getRefAnnotations()[0];
         Constant[]   aParams   = anno.getParams();
@@ -983,15 +983,14 @@ public abstract class ClassTemplate
         if (Op.isDeferred(hOpts))
             {
             return hOpts.proceed(frame, frameCaller ->
-                getInjectedProperty(frameCaller, hThis, idProp, iReturn));
+                    getInjectedProperty(frameCaller, hThis, idProp, iReturn));
             }
 
         ObjectHandle hValue = frame.getInjected(sResource, prop.getType(), hOpts);
         if (hValue == null)
             {
             return frame.raiseException(
-                xException.illegalState(frame, "Unknown injectable resource \"" +
-                    prop.getType().getValueString() + ' ' + sResource + '"'));
+                    xException.unknownInjectable(frame, prop.getType(), sResource));
             }
 
         // store off the value (even if deferred), so a concurrent operation wouldn't "double dip"

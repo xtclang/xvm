@@ -85,9 +85,9 @@ service RTServer
         }
 
         // we should be able to replace an exiting route, but must not add any ambiguous ones
+        UInt16 httpPort  = route.httpPort;
+        UInt16 httpsPort = route.httpsPort;
         if (!routes.contains(route)) {
-            UInt16 httpPort  = route.httpPort;
-            UInt16 httpsPort = route.httpsPort;
             if (routes.keys.any(info -> info.host.toString() == hostName &&
                                        (info.httpPort == httpPort || info.httpsPort == httpsPort))) {
                 throw new IllegalArgument($"Route is not unique: {route}");
@@ -125,7 +125,7 @@ service RTServer
             handler.configure(decryptor);
         }
 
-        addRouteImpl(hostName, new HandlerWrapper(handler), keystore, tlsKey);
+        addRouteImpl(hostName, httpPort, httpsPort, new HandlerWrapper(handler), keystore, tlsKey);
 
         routes = routes.put(route, handler);
         assert routes.is(immutable);
@@ -216,7 +216,8 @@ service RTServer
     // ----- native implementations all run on the service context ---------------------------------
 
     private void bindImpl(HostInfo binding, String bindAddr, UInt16 httpPort, UInt16 httpsPort)                {TODO("Native");}
-    private void addRouteImpl(String hostName, HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)     {TODO("Native");}
+    private void addRouteImpl(String hostName, UInt16 httpPort, UInt16 httpsPort,
+            HandlerWrapper wrapper, KeyStore? keystore, String? tlsKey)     {TODO("Native");}
     private Boolean replaceRouteImpl(String hostName, HandlerWrapper wrapper)                                  {TODO("Native");}
     private void removeRouteImpl(String hostName)                                                              {TODO("Native");}
     (Byte[], UInt16) getReceivedAtAddress(RequestContext context)                                              {TODO("Native");}

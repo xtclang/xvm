@@ -45,8 +45,8 @@ ArgumentList
     "(" Arguments-opt ")"
 
 Arguments
-    Argument
-    Arguments "," Argument
+    Argument ","-opt
+    Arguments "," Argument ","-opt
 
 Argument
     NamedArgument-opt ArgumentExpression

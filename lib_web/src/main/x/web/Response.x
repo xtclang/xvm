@@ -14,9 +14,9 @@ interface Response
     @RO HttpStatus status;
 
     @Override
-    Iterator<String> cookieNames() {
+    List<String> cookieNames() {
         return header.valuesOf(Header.SetCookie, ';')
-                     .map(kv -> kv.extract('=', 0, "???").trim());
+                     .map(kv -> kv.extract('=', 0, "???").trim(), Header.ToStringArray);
     }
 
     /**

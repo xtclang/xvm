@@ -5,12 +5,15 @@ import net.UriTemplate.UriParameters;
 
 import web.AcceptList;
 import web.Body;
+import web.Endpoint;
 import web.Header;
 import web.HttpMessage;
 import web.HttpMethod;
 import web.MediaType;
 import web.Protocol;
 import web.Scheme;
+
+import web.sessions.Broker as SessionBroker;
 
 import HttpServer.RequestInfo;
 
@@ -19,7 +22,13 @@ import HttpServer.RequestInfo;
  * An implementation of an HTTP/1 (i.e. 0.9, 1.0, 1.1) request, as received by a server, using the
  * raw request data provided by the `HttpServer.Handler` interface.
  */
-const Http1Request(RequestInfo info, UriParameters matchResult)
+const Http1Request(RequestInfo   info,
+                   SessionBroker broker,
+                   UriTemplate   template     = UriTemplate.ROOT,
+                   UriParameters matchResult  = [],
+                   Endpoint?     endpoint     = Null,
+                   Boolean       bindRequired = False,
+                  )
         implements RequestIn
         implements Header
         implements Body {
@@ -27,6 +36,7 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     assert() {
         // TODO handle non-simple bodies e.g. multi-part, streaming
         assert !info.containsNestedBodies();
+
         if (Byte[] bytes := info.getBodyBytes()) {
             this.hasBody = True;
             this.bytes   = bytes;
@@ -38,6 +48,41 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
             this.bytes     = [];
             this.mediaType = Text;  // whatever
         }
+    }
+
+    /**
+     * The raw request information.
+     */
+    protected RequestInfo info;
+
+    /**
+     * Internal: The SessionBroker to use if necessary to look up a Session for this Request.
+     */
+    private SessionBroker broker;
+
+    /**
+     * Internal: Indicates that a [bindSession] must be called to provide the session.
+     */
+    private Boolean bindRequired;
+
+    /**
+     * Internal: Used to lazy-compute the session value.
+     */
+    private @Transient Session? session_;
+
+    /**
+     * Internal: Used to validate the binding of the session value.
+     */
+    private @Transient Boolean sessionReady_;
+
+    /**
+     * Supply the session value.
+     */
+    void bindSession(Session? session) {
+        assert bindRequired && !this.&session.assigned && !sessionReady_;
+        session_      = session;
+        sessionReady_ = True;
+        val forceLazy = this.session;
     }
 
     /**
@@ -161,6 +206,9 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     @Override
     UInt16 serverPort.get() = info.receivedAtAddress[1];
 
+    @Override
+    Boolean tls.get() = info.tls;
+
     typedef (String | List<String>) as QueryParameter;
 
     @Override
@@ -189,8 +237,26 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     }
 
     @Override
+    @Lazy Session? session.calc() {
+        if (bindRequired) {
+            assert sessionReady_ as "bindSession() call was required, but never came";
+            return session_;
+        }
+
+        // look up the session using the broker
+        Session? session = Null;
+        session := broker.findSession(this);
+        return session;
+    }
+
+    @Override
+    UriTemplate template;
+
+    @Override
     UriParameters matchResult;
 
+    @Override
+    Endpoint? endpoint;
 
     // ----- Header interface ----------------------------------------------------------------------
 
@@ -220,42 +286,37 @@ const Http1Request(RequestInfo info, UriParameters matchResult)
     }
 
     @Override
-    Iterator<String> valuesOf(String name, Char? expandDelim=Null) {
-        Iterator<String> iter = entries.iterator().filter(kv -> CaseInsensitive.areEqual(kv[0], name))
-                                                  .map(kv -> kv[1]);
-
-        if (expandDelim != Null) {
-            iter = iter.flatMap(s -> s.split(expandDelim));
+    List<String> valuesOf(String name, Char? expandDelim = Null) {
+        if (String[] values := info.getHeaderValuesForName(name)) {
+            return expandDelim == Null || values.all(s -> !s.indexOf(expandDelim))
+                    ? values
+                    : values.flatMap((String s) -> s.split(expandDelim)) // TODO GG shouldn't need "String"
+                            .map(s -> s.trim(), ToStringArray);
         }
-
-        return iter.map(s -> s.trim());
+        return [];
     }
 
     @Override
-    conditional String firstOf(String name, Char? expandDelim=Null) {
+    conditional String firstOf(String name, Char? expandDelim = Null) {
         if (String[] values := info.getHeaderValuesForName(name)) {
             String value = values.empty ? "" : values[0];
-            if (expandDelim != Null) {
-                values = value.split(expandDelim);
-                value  = values[0].trim();
+            if (expandDelim != Null, Int sep := value.indexOf(expandDelim)) {
+                value = value[0..<sep].trim();
             }
             return True, value;
         }
-
         return False;
     }
 
     @Override
-    conditional String lastOf(String name, Char? expandDelim=Null) {
+    conditional String lastOf(String name, Char? expandDelim = Null) {
         if (String[] values := info.getHeaderValuesForName(name)) {
             String value = values.empty ? "" : values[values.size-1];
-            if (expandDelim != Null) {
-                values = value.split(expandDelim);
-                value  = values[values.size-1].trim();
+            if (expandDelim != Null, Int sep := value.lastIndexOf(expandDelim)) {
+                value = value.substring(sep+1).trim();
             }
             return True, value;
         }
-
         return False;
     }
 
