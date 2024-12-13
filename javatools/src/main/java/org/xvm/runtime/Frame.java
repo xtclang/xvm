@@ -2294,6 +2294,7 @@ public class Frame
                     if (fiberCaller.isWaiting())
                         {
                         frame = frame.f_framePrev;
+                        iPC   = frame.m_iPC;
                         }
                     else
                         {

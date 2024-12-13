@@ -17,6 +17,7 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.PackageConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ClassTemplate;
@@ -80,8 +81,7 @@ public class xPackage
                     ? pkg.getImportedModule().getIdentityConstant().getType()
                     : idPackage.getType();
 
-            TypeComposition clazz = frame.f_context.f_container.resolveClass(typePkg);
-            return createPackageHandle(frame, clazz);
+            return ensureConstHandle(frame, idPackage, typePkg);
             }
 
         return super.createConstHandle(frame, constant);
@@ -224,6 +224,49 @@ public class xPackage
 
 
     // ----- Helpers -------------------------------------------------------------------------------
+
+    /**
+     * Ensure there is a singleton handle for the specified package or module and push it on the
+     * frame's stack.
+     */
+    protected int ensureConstHandle(Frame frame, IdentityConstant idPkg, TypeConstant typePkg)
+        {
+        Container         container = frame.f_context.f_container;
+        SingletonConstant constPkg  = container.getConstantPool().ensureSingletonConstConstant(idPkg);
+
+        ObjectHandle hPkg = constPkg.getHandle();
+        if (hPkg != null)
+            {
+            return frame.pushStack(hPkg);
+            }
+
+        TypeComposition clazz = container.getTemplate(typePkg).ensureClass(container, typePkg, typePkg);
+
+        // make sure we store the constructed ModuleHandle at the corresponding singleton
+        switch (createPackageHandle(frame, clazz))
+            {
+            case Op.R_NEXT:
+                constPkg.setHandle(hPkg = frame.popStack());
+                container.f_heap.saveConstHandle(constPkg, hPkg);
+                return frame.pushStack(hPkg);
+
+            case Op.R_CALL:
+                frame.m_frameNext.addContinuation(frameCaller ->
+                    {
+                    ObjectHandle hP = frameCaller.popStack();
+                    constPkg.setHandle(hP);
+                    container.f_heap.saveConstHandle(constPkg, hP);
+                    return frameCaller.pushStack(hP);
+                    });
+                return Op.R_CALL;
+
+            case Op.R_EXCEPTION:
+                return Op.R_EXCEPTION;
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
 
     /**
      * @return the TypeComposition for {@code ListMap<String, Class>}

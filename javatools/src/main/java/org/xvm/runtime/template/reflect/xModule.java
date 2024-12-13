@@ -87,11 +87,7 @@ public class xModule
         {
         if (constant instanceof ModuleConstant idModule)
             {
-            Container       container  = frame.f_context.f_container;
-            TypeConstant    typeModule = idModule.getType();
-            TypeComposition clazz      = container.getTemplate(idModule).
-                                            ensureClass(container, typeModule, typeModule);
-            return createPackageHandle(frame, clazz);
+            return ensureConstHandle(frame, idModule, idModule.getType());
             }
 
         return super.createConstHandle(frame, constant);

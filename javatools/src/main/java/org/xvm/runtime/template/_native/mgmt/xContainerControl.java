@@ -8,6 +8,7 @@ import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.CallChain;
@@ -110,9 +111,10 @@ public class xContainerControl
     protected int invokeInvoke(Frame frame, ControlHandle hCtrl, StringHandle hName,
                                TupleHandle hTupleArg, ObjectHandle hRunWithin, int iReturn)
         {
-        Container container = hCtrl.f_container;
+        Container    container = hCtrl.f_container;
+        ConstantPool pool      = container.getConstantPool();
 
-        try (var ignore = ConstantPool.withPool(container.getConstantPool()))
+        try (var ignore = ConstantPool.withPool(pool))
             {
             ServiceContext ctxContainer = container.ensureServiceContext();
 
@@ -137,14 +139,15 @@ public class xContainerControl
                 return frame.raiseException("Out of context \"runWithin\" service");
                 }
 
-            TypeComposition clzModule = container.resolveClass(idModule.getType());
-            CallChain       chain     = clzModule.getMethodCallChain(idMethod.getSignature());
+            TypeComposition   clzModule   = container.resolveClass(idModule.getType());
+            CallChain         chain       = clzModule.getMethodCallChain(idMethod.getSignature());
+            SingletonConstant constModule = pool.ensureSingletonConstConstant(idModule);
             FunctionHandle  hFunction = new xRTFunction.AsyncHandle(container, chain)
                 {
                 @Override
                 protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)
                     {
-                    return frame.getConstHandle(idModule);
+                    return frame.getConstHandle(constModule);
                     }
                 };
             return hFunction.callT(frame, hService, ahArg, iReturn);
