@@ -52,6 +52,6 @@ public class Int64 extends IntNumber {
     return i0<i1 ? Ordered.Lesser : Ordered.Greater;
   }
 
-  @Override public final String toString() { return ""+_i; }
+  @Override public final String toString() { return this==GOLD ? "Int" : ""+_i; }
   @Override public long estimateStringLength() { return (64 - Long.numberOfLeadingZeros(_i)); }
 }

@@ -54,7 +54,7 @@ public class CallAST extends AST {
     _type = _type();
   }
   static CallAST make(XType ret, String clzname, String methname, AST kid) {
-    XFun fun = XFun.make(new XType[]{ret,kid._type},false);
+    XFun fun = XFun.make(false,ret,kid._type);
     ConAST con = new ConAST(clzname+"."+methname,fun);
     CallAST call = new CallAST(ret,con,kid);
     con._par = call;

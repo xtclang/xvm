@@ -3,11 +3,7 @@ package org.xvm.xtc;
 import org.xvm.XEC;
 import org.xvm.util.*;
 import org.xvm.xtc.cons.*;
-
 import static org.xvm.XEC.TODO;
-
-import java.util.Arrays;
-import java.util.HashMap;
 
 // Basically a Java class as a XType.
 //
@@ -15,122 +11,79 @@ import java.util.HashMap;
 // We can map from an XTC ClassPart to a generified/erased Java class.
 // We can map from a ParamTCon to a true generic XType, with XType generic classes.
 // An XType carries the ClassPart it came from, but not the PTC (if any).
-// XClz tracks super-class
+// XClz tracks super-class.
 
-/*
-  current plan is broken when type names collide when coming from different sources.
-  Canonical fail:
-  - Outer class HasherMap<Key,Value>
-  - Inner class CollectionImpl<Element> // has visible 3 type names: Element,Key,Value
-  - KeySet extends CollectionImpl<Key>
-  - - Here the "Key" is "HasherMap.Key" and is punning "CI.Element"
-  - KeySetFreezer<Element extends X> mixins to KeySet<Key extends X>
-  - - Here "Element" is a local name,
-  - - punning "KeySet.Key" thus "HasherMap.Key" AND "CI.Element"
+// Example: class Base<Key>; class Child extends Base;
+// Base  : {"Key" ,null , -} // Key is local to Base
+// Child : {"Key" ,Base , -} // Key is local to Base
 
-  Tentative New Plan
-  - Class has self TNames, TVars only, no parents
-  - - Rename strat for self-names to parent is "aligned,null name for concrete"
-  - - Example: Base<Key,Value>            [Key   /XTC   , Value/XTC]
-  - - - then   Derived<String,Value>      [null  /String, Value/XTC]
-  - - - then   new Derived<String,Int>    [null  /String, null /Int]
-  - Sides: map Interface names to self type index
-  - - Example: IFace<Elem,QQQ>
-  - - - Base<Key,Value> implements IFace<Value,Key>
-  - - - Base.sides{ IFace -> [1,0] } // IFace.Elem maps to Base.type[1]/Value
-  - Mixin standard gets cloned into a full Class;
-  - Mixin conditional is Just Another Class with some code-gen rules on when to override
+// Example: interface IFace<Elem>;  class Base<Key> implements IFace<Key>;
+// IFace : {"Elem",null , -   } // Elem is local to IFace
+// Base  : {"Key" ,null , -   } // Key  is local to Base
+// Base  : {"Elem",IFace,"Key"} // Elem is local to IFace, tied to local Key
 
-  Counter to New Plan:
-  - - Example: Base<B1,B2,B3>
-  - -          Derived<D1,D2,D3,D4> extends Base<D2,D3,Int>
-
-  Tentative New Plan#B
-  - Class has a set of local tvars, which are either renames of parent or standalone
-  - - Inner class has all Outer directly (no rename, no subtype)
-  - - Need a rename strat
-  - All local tvars also have a type; this is a subtype of parent if renamed parent
-  - IFaces - perhaps can ignore tvars...???? xcc has confirmed ok
-  - Mixins are *just Classes*.  Normal for conditional, custom-per-base for standard.
-
-  3 things per-type, so now kinda want Ary-of-Struct instead of Struct-of-Ary
-  - local name
-  - local type (subtype of parent, if any)
-  - super class map (or null if new here)
-
- */
+// Example: class HashSet<E extends Hashable> implements HashMap<E,E> { .... }
+// HasherMap: {"Key"  ,  null   , - }
+// HasherMap: {"Value",  null   , - }
+// HashMap:   {"Key"  ,HasherMap, - }:Hashable
+// HashMap:   {"Value",HasherMap, - }
+// HashSet:   {"E"    ,  null   , - }:Hashable
+// HashSet:   {"Key"  ,HasherMap,"E"}:Hashable
+// HashSet:   {"Value",HasherMap,"E"}
 
 
-// XClz has a set of self-tvar-names in TNS, and a set of XTypes; a #of local
-// TVars (length of _tns), a side mapping from interface XClz type
-// indices into the XTS.
+// Example, Part 1: Outer class HasherMap<Key,Value>
+// HasherMap : {"Key"  ,null,-} // Key   is local to HasherMap
+// HasherMap : {"Value",null,-} // Value is local to HasherMap
 
-// Example class def:
-//   Here E is a type variable.
-//   interface List<E> { ... } // Has 1 TVar
-//   XClz: List:1{E/XTC} side[]
-//         Since List is interface, no concrete field for E
+// Example, Part 2: Inner class CollectionImpl<Element>
+// CollectionImpl : {"Element",null     ,-} // Element is local to CollectionImpl
+// CollectionImpl : {"Key"    ,HasherMap,-} // Key   is HasherMap@0
+// CollectionImpl : {"Value"  ,HasherMap,-} // Value is HasherMap@1
 
-// Example class usage with a concrete type, not a type-variable:
-//   class Nums implements List<Int> { ... } // Has ZERO TVars, and a mapping for List
-//   XClz: Nums:0{/Int} side[List=[0]];
-//         Since Nums is concrete, no super, has concrete field for E
+// Example, Part 3: KeySet extends CollectionImpl<Key>
+// KeySet : {"Element",CollectionImpl,"Key"} // Element is CollectionImpl@0; also Key
+// KeySet : {"Key"    ,HasherMap     ,-} // Key     is HasherMap@0
+// KeySet : {"Value"  ,HasherMap     ,-} // Value   is HasherMap@1
 
-//Example class usage:
-//   Name is valid in local scope and NOT in List's scope
-//   class MyList<Q> implements List<Q> { ... }
-//   XClz: MyList:1{Q/XTC}, side[List=[0]]
-//         Since MyList is concrete, no super, has concrete field for Q/E
+// Example, Part 4: KeySetFreezer is a MIXIN
+// KeySetFreezer : {"Element", null, -} // Element is local to KeySetFreezer
 
-//Example class usage:
-//   Name and constraint are valid in local scope.
-//   class MyList<E extends Hashable> implements List<E> { ... }
-//   XClz: MyList:1{E/Hashable}, side[List=[0]]
-//         Since MyList is concrete, no super, has concrete field for Q/E
+// Example, Part 5: KeySet<Key> incorps KeySetFreezer<Key extends X>
+// So KeySetFreezer$MIX<Key extends X> extends KeySet<Key>
+// KeySetFreezer$MIX : {"Element",CollectionImpl,"Key"} // Element is CollectionImpl@0; also Key
+// KeySetFreezer$MIX : {"Key"    ,HasherMap     ,-} // Key     is HasherMap@0
+// KeySetFreezer$MIX : {"Value"  ,HasherMap     ,-} // Value   is HasherMap@1
 
-//Example class usage:
-//   class CaseInsensitive implements Hasher<String> { .... }
-//   XClz: Hasher:1{Value/XTC}, side[]
-//   XClz: CaseInsensitive:1{Value/String}, side[Hasher=[0]]
-//         Since CaseInsensitive is concrete, no super, has concrete field for String/Value
 
-//Example class usage:
-//   class HashSet<E extends Hashable> implements HashMap<E,E> { .... }
-//   XClz: HashMap:2{Key/Hashable,Value/XTC}, side[]
-//   XClz: HashSet:1{E/Hashable}, side[HashMap=[0,0]]
-//         Since HashSet is concrete, no super, has concrete field for Key/Value
+// Example, from tck/clazz/Medium.x, typevars:
+// IFaceRep: { "KeyIFace",null    ,  -   }
+// IFaceCol: {"ElemIFace",null    ,  -   }
+// Outer   : { "Key"     ,null    ,  -   }
+// Outer   : { "Val"     ,null    ,  -   }
+// Outer   : { "KeyIFace",IFaceRep,"Key" }
+// Inner   : {"Elem"     ,null    ,  -   }
+// Inner   : { "Key"     ,Outer   ,  -   }
+// Inner   : { "Val"     ,Outer   ,  -   }
+// Inner   : { "KeyIFace",IFaceRep,"Key" }
+// Inner   : {"ElemIFace",IFaceCol,"Elem"}
+// Derived : {"Elem"     ,Inner   ,  -   }
+// Derived : { "Key"     ,Outer   ,  -   }
+// Derived : { "Val"     ,Outer   ,  -   }
+// Derived : { "KeyIFace",IFaceRep,"Key" }
+// Derived : {"ElemIFace",IFaceCol,"Elem"}
 
-// Example class usage:
-//   class MyMap<A,B,C extends Hashable> implements HashMap<C,String>
-//   XClz: HashMap:2{Key/Hashable,Value/XTC}, side[]
-//   XClz:   MyMap:3[A/XTC,B/XTC,C/Hashable,/String], side[HashMap=[2,3]]
-//         Since MyMap is concrete, no super, hash concrete field for Key/Value
-
-// Example class usage:
-//   class Super<E>
-//   XClz: Super:1{E/XTC}, side[]
-//         Since Super is concrete, no super, has concrete field for E
-//   class Base<E> extends Super<E>
-//   XClz: Base:1{E/XTC}, side[Super=0]
-//         Since Base is concrete with Super and Super has field for E, no fields
-
-public class XClz extends XType {
-  static final String[] STR0 = new String[0];
-  static final HashMap<XClz,int[]> SIDES0 = new HashMap<>();
-
-  // The uniqueness is on these things: package, name, and all type parms.
+public class XClz extends XType<TVarZ> {
+  // the uniqueness is on these things: package, name, ro, and all type parms.
   public String _pack, _nest, _name; // Package name, nested class name, short name
-  public String[] _tns;         // Type names, matching up to _xts, but might be short
   public boolean _ro;           // Read/Only type; set if super is set
-  // Other mappings for super and interface types.
-  // These map from a ClassPart to an array of local xts indices, one per ClassPart tname
-  HashMap<XClz,int[]> _sides;
 
   // Not part of uniqueness, kept as a convenient cache.
-  public  XClz _super;           // Super xtype or null
-  public  ModPart _mod;          // Self module
-  public  ClassPart _clz;        // Self class, can be a module
-  public  int _depth = -99;      // Depth for LCA
+  public XClz _super;           // Super xtype or null
+  public XClz _outer;           // Outer xtype or null; might be indirect
+  public ModPart _mod;          // Self module
+  public ClassPart _clz;        // Self class, can be a module
+  public int _depth = -99;      // Depth for LCA
   public boolean _abstrct;       // Abstract class
 
   // Java-name, if any there exists a Java mirror implementation.
@@ -138,7 +91,7 @@ public class XClz extends XType {
   // also directly encodes the parameter.
   // Example: XTC Array<Char> vs Java Arychar
   //          XTC Array<Int>  vs Java Arylong
-  public  String _jpack, _jname;
+  public String _jpack, _jname;
 
   // This is a temporary field; set and cleared per-compilation unit.
   // If true, in this compilation-unit use the fully qualified name
@@ -148,12 +101,97 @@ public class XClz extends XType {
   // Bit for managing file-local code-gen
   public boolean _did_gen;
 
-  // Only for mixins, the conditional types
-  XType[] _mixts;
+  // Only for conditional mixins, the conditional types that are tested (and upcast).
+  TVarZ[] _mixs;
 
   // Private no-arg constructor, always use "make" for interning
-  private XClz() { _pack = "0xDEADBEEF"; }
+  private XClz() { _pack = "0xDEADBEEF"; _tvars = new Ary<>(TVarZ.class); }
 
+  // Get a tvar by name
+  public TVarZ tvar(String name) {
+    int idx = idx(name);
+    return idx == -1 ? null : at(idx);
+  }
+  // Get tvar index by name
+  public int idx(String name) {
+    for( int i=0; i<len(); i++ )
+      if( S.eq(at(i)._name,name) )
+        return i;
+    return -1;
+  }
+
+  public int mix(XType xt) {
+    for( int i=0; i<_mixs.length; i++ )
+      if( _mixs[i]._xt==xt )
+        return i;
+    return -1;
+  }
+
+  // Put a subtype; might refine a super-type.
+  public void putSub( String name, XType xt ) {
+    int idx = idx(name);
+    if( idx != -1 ) {
+      TVar old = at(idx);
+      if( !(old instanceof TVarZ tv2) ) throw XEC.TODO();
+      _tvars.set(idx,tv2.makeRefine(xt));
+    } else
+      _tvars.add(TVarZ.make(xt,name));
+  }
+  // Put a subtype; must refine or rename a super-type.
+  public void putSub( int idx, String name, XType xt ) {
+    // Always refining a type
+    TVarZ tv = at(idx);
+    assert xt.isa(tv._xt) || isMixin();
+    assert S.eq(tv._name,name);
+    TVarZ tvr = tv.makeRefine(xt);
+    if( tvr==tv ) return;
+    _tvars.set(idx,tvr); // Replace with refined type
+
+    // Pick up constraint on local renames also
+    for( int i=0; i<len(); i++ ) {
+      TVarZ tv2 = at(i);
+      if( S.eq(tv2._local,name) )
+        _tvars.set(i,tv2.makeRefine(xt));
+    }
+  }
+
+  // Either adding or refining; can also add a local map
+  public void put( XType xt, String name, XClz def, String local ) {
+    int idx = idx(name);
+    TVarZ tv = TVarZ.make(xt,name,def,local);
+    if( idx != -1 ) {
+      TVarZ old = at(idx);
+      assert xt.isa(old._xt);
+      if( old._local != null && local==null ) local = old._local; // Do not lose an old local name
+      assert old._local==null || S.eq(local,old._local);
+      assert old._def  ==null || def == old._def;
+      _tvars.set(idx,tv);
+    } else {
+      _tvars.add(tv);
+    }
+  }
+
+  public void putAllTypes(XClz clz) {
+    _tvars.addAll(clz._tvars);
+  }
+
+  // Is this named TVar derived from my outer class?
+  // If so, access is "$outer.name" vs just "name"
+  public boolean outer(String name) {
+    TVarZ tv = tvar(name);
+    if( tv==null ) return false;
+    if( tv._def == _outer ) return true;
+    return tv._def!=null && tv._def.outer(name);
+  }
+
+  // Number of local type vars
+  public int localLen() {
+    int len=0;
+    for( TVarZ tv : _tvars )
+      if( tv.local() )
+        len++;
+    return len;
+  }
 
   // --------------------------------------------------------------------------
   // Interning: hash and compare the XClz-specific parts, check in the INTERN
@@ -166,31 +204,46 @@ public class XClz extends XType {
   @Override boolean eq(XType xt) {
     XClz clz = (XClz)xt;
     if( !(S.eq(_name, clz._name) && S.eq(_nest, clz._nest) && S.eq(_pack, clz._pack) &&
-          _ro == clz._ro &&
-          Arrays.equals(_tns, clz._tns ) &&
-          _sides.size() == clz._sides.size() ) )
+          _ro == clz._ro ) )
       return false;
-    // Deep array equals of a hash table.
-    for( XClz iclz : _sides.keySet() ) {
-      int[] idxs0 = _sides.get(iclz);
-      int[] idxs1 = clz._sides.get(iclz);
-      if( idxs1 == null ) return false; // Missing in other
-      if( !Arrays.equals(idxs0,idxs1) ) return false;
-    }
-    return true;
+    return _tvars.equals(clz._tvars);
   }
-  @Override int hash() {
-    int hash = _name.hashCode() ^ _nest.hashCode() ^ _pack.hashCode() ^ (_ro ? 2048 : 0);
-    for( String tname : _tns )
-      hash ^= tname.hashCode();
+
+  @Override long hash() {
+    long hash = S.rot(_name.hashCode(),13) ^ S.rot(_nest.hashCode(),17) ^ S.rot(_pack.hashCode(),23) ^ (_ro ? 2048 : 0);
+    hash ^= S.rot(_tvars.hashCode(),29);
     return hash;
+  }
+
+  @Override void _dups(VBitSet visit, VBitSet dups) {
+    if( this!=XCons.XXTC )
+      super._dups(visit,dups);
+  }
+
+  @Override SB _str1( SB sb, VBitSet visit, VBitSet dups  ) {
+    _clz_bare(sb,false);
+    if( _super!=null ) sb.p(":").p(_super._name);
+    if( !_tvars.isEmpty() ) {
+      sb.p(" { ");
+      for( TVarZ tv : _tvars )
+        tv._xt._str0(sb.p(tv._name).p(":"),visit,dups).p(",");
+      sb.unchar().p("}");
+    }
+    if( !_notNull ) sb.p("?");
+    return sb;
   }
 
   // Intern, but do not fill in the extra info fields.
   XClz _intern() {
-    assert _pack != "0xDEADBEEF" && _sides!=null; // Got set
+    assert _pack != "0xDEADBEEF" ; // Got set
+    for( TVarZ tv : _tvars ) {
+      TVarZ tvx = tvar(tv._local);
+      if( tvx != null && tvx != tv && tvx._local!=null )
+        throw XEC.TODO();       // Double indirection, needs to U-F
+    }
+
     XClz clz = (XClz)intern(this);
-    if( clz!=this ) { FREE = this; _pack = "0xDEADBEEF"; }
+    if( clz!=this ) { FREE = this; _tvars.clear(); _pack = "0xDEADBEEF"; }
     return clz;
   }
 
@@ -207,6 +260,7 @@ public class XClz extends XType {
     _mod = proto._mod;
     _clz = proto._clz;
     _super = proto._super;
+    _outer = proto._outer;
     _jpack = proto._jpack;
     _jname = proto._jname;
     _depth = proto._depth;
@@ -222,6 +276,7 @@ public class XClz extends XType {
   static XClz mallocBase( boolean notNull, String pack, String nest, String name ) {
     XClz clz = FREE==null ? new XClz() : FREE;
     if( clz==FREE ) FREE=null;
+    assert clz._tvars.isEmpty();
     assert clz._pack == "0xDEADBEEF"; // Was from FREE list
 
     // These next fields are all part of uniqueness
@@ -236,30 +291,16 @@ public class XClz extends XType {
     return clz;
   }
 
-  // Makes a new uninterned XCLZ from above malloc.
-  //   Fills in package,nesting,name,null-ness.
-  //   Default R/W.
-  //   Defaults not-a-java-mirror.
-  // Has blank xts/tns arrays ready to be filled in.
-  static XClz mallocLen( boolean notNull, String pack, String nest, String name, int len ) {
-    XClz clz = mallocBase(notNull,pack,nest,name);
-    // See if we can reuse the xts,flds
-    if( clz._xts==null || clz._xts.length != len )  clz._xts = len==0 ? EMPTY : new XType [len];
-    if( clz._tns==null || clz._tns.length != len )  clz._tns = len==0 ? STR0  : new String[len];
-    clz._sides = SIDES0;
-    return clz;
-  }
-
   // Makes a new uninterned XClz cloned from the prototype.
-  // SHARES xts/tns; so these need to be defensively copied before changing.
-  private XClz _mallocClone() {
+  // SHARES _tvars; so these need to be defensively copied before changing.
+  XClz _mallocClone() {
     XClz clz = mallocBase(_notNull,_pack, _nest, _name);
-    clz._xts = _xts;
-    clz._tns = _tns;
-    clz._sides = _sides;
-    clz._mod = _mod;
-    clz._clz = _clz;
+    clz._mod   = _mod;
+    clz._clz   = _clz;
     clz._super = _super;
+    clz._outer = _outer;
+    // Copy tvars from original
+    clz.putAllTypes(this);
     return clz;
   }
 
@@ -306,36 +347,52 @@ public class XClz extends XType {
     xclz._jname = xclz._jpack = "";
 
     // Fill in self type variables
-    XType [] xts = xclz._xts = new XType[clz._tnames==null ? 0 : clz._tnames.length];
-    String[] tns = xclz._tns = clz._tnames==null ? STR0 : clz._tnames;
-    for( int i=0; i<tns.length; i++ )
-      xts[i] = xtype(clz._tcons[i],true,xclz);
-    // Inner classes pick up all outer class type variables
-    if( clz._f != Part.Format.MIXIN && clz._f != Part.Format.INTERFACE ) {
-      ClassPart outer = clz.isNestedInnerClass();
-      Part par = clz._par;
-      while( par != null && par.getClass() == ClassPart.class ) {
-        ClassPart pclz = (ClassPart) par;
-        XClz pxclz = make(pclz);
-        if( pclz != outer ) {
-          // Copy parent class type variables into subclass
-          for( int i=0; i<pxclz._tns.length; i++ ) {
-            if( S.find(tns,pxclz._tns[i])== -1 ) {
-              int len = xts.length;
-              xclz._xts = xts = Arrays.copyOf(xts,len+1);
-              xclz._tns = tns = Arrays.copyOf(tns,len+1);
-              xts[len] = pxclz._xts[i];
-              tns[len] = pxclz._tns[i];
+    for( int i=0; i<clz._tnames.length; i++ )
+      xclz._tvars.add(TVarZ.make(xtype(clz._tcons[i],true,xclz), clz._tnames[i]));
+
+    // Gather side types from Implements and Extends.
+    if( clz._contribs != null )
+      for( Contrib c : clz._contribs )
+        if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends /*|| c._comp == Part.Composition.Incorporates*/ ) {
+          XClz pclz = (XClz)xtype(c._tContrib,true);
+          // Take all the type vars from super,mixin,interface
+          for( TVarZ tv : pclz._tvars )
+            xclz.put(tv._xt,tv._name,pclz,null);
+          if( c._tContrib instanceof ParamTCon ptc ) {
+
+            // Walk the parameterized types; refer back to the class's types and refine
+            for( int i=0; i<ptc._parms.length; i++ ) {
+              if( ptc._parms[i] instanceof TermTCon ttc ) {
+                // PCLZ is usually extends, so super class.  E.g. InnerOut is the super of Derived
+
+                // Super-class type var.  E.g. Elem:XTC
+                TVarZ ptv = pclz.at(i);
+
+                // Refined super-class type
+                XType px = xtype(ptc._parms[i],true);
+                assert px.isa(ptv._xt);
+                // Name in the self/local.  E.g. Key, which is in Outer.Key:XTC
+                String tname = ttc.part() instanceof PropPart pp ? pp._name : null;
+                // Unify self, with refinement, with super-class type var
+                xclz.put(px,ptv._name,pclz,tname);
+              } else
+                throw XEC.TODO();
             }
           }
         }
-        par = par._par;
+
+
+    // An inner class has an instance of the outer class, and gets to access
+    // all the outer type variables; derived inner classes already got them
+    // from their super.
+    ClassPart outer = clz.isNestedInnerClass();
+    if( outer!=null && supr==null ) {
+      XClz out = outer.xclz();
+      for( int i=0; i<out.len(); i++ ) {
+        TVarZ tv = out.at(i);
+        xclz.put(tv._xt,tv._name,out,null);
       }
     }
-
-    // Gather side types from Implements and Extends.
-    // May extend the _xts array.
-    xclz.sides(clz);
 
     // Look for mixins
     if( clz._contribs != null )
@@ -364,17 +421,18 @@ public class XClz extends XType {
             String mixname = (mixin0._name+"$"+cname).intern();
             XClz mixin = _malloc(mixin0._clz,mixin0._nest,mixname,supr);
             mixin._abstrct = true;
-            mixin._sides = xclz._sides;
-            mixin = mixin._intern();
-            ClassPart mixclass = new ClassPart(mixin0._clz,mixname);
-            mixclass._tclz = mixin;
-            mixin._clz = mixclass;
-
-            // Sides for self use mixin as the supr
-            xclz._sides = new HashMap<>();
-            for( XClz s : mixin._sides.keySet() )
-              xclz._sides.put( s==supr ? mixin : s, mixin._sides.get(s) );
-            supr = mixin;
+            //mixin._sides = xclz._sides;
+            //mixin = mixin._intern();
+            //ClassPart mixclass = new ClassPart(mixin0._clz,mixname);
+            //mixclass._tclz = mixin;
+            //mixin._clz = mixclass;
+            //
+            //// Sides for self use mixin as the supr
+            //xclz._sides = new HashMap<>();
+            //for( XClz s : mixin._sides.keySet() )
+            //  xclz._sides.put( s==supr ? mixin : s, mixin._sides.get(s) );
+            //supr = mixin;
+            throw XEC.TODO();
 
           } else {
             // Has parameters, so conditional incorporates; the Mixin overrides
@@ -389,12 +447,25 @@ public class XClz extends XType {
             // Recursively make mixin with custom name and super
             String mixname = (cname+"$"+mixin0._name).intern();
             XClz mixin = _malloc(mixin0._clz,mixin0._nest,mixname,xclz);
-            mixin._mixts = mixin._xts;
-            mixin.  _xts = xclz ._xts;
-            // Sides for mixin use xclz as the supr
-            mixin._sides = new HashMap<>();
-            for( XClz s : xclz._sides.keySet() )
-              mixin._sides.put( s==supr ? xclz : s, xclz._sides.get(s) );
+            // If the mixin is *inside* the class its mixing, lift it to be parallel:
+            // "class Plain incorp cond Mix<E extends X> { private static mixin <E extends XX> into Plain"
+            if( mixin0._clz._par==xclz._clz ) {
+              assert mixin._pack.endsWith(xclz._name);
+              mixin._pack = mixin._pack.substring(0,mixin._pack.length()-1-xclz._name.length());
+            }
+
+            // Set aside the conditional types for code gen later.
+            // The current mixin subclass types are all made generic,
+            // so the mixin subclass can extend any other class
+            assert mixin.len()>0;
+            Ary<TVarZ> tvs = mixin._tvars;
+            mixin._mixs = tvs.asAry();
+            tvs.clear();
+            for( TVarZ tv : xclz._tvars ) {
+              //int idx; for( idx=0; idx<mixin._mixs.length; idx++ ) if( S.eq(mixin._mixs[idx]._name,tv._name) ) break;
+              //String local = idx < mixin._mixs.length ? tv._name : null;
+              tvs.add(TVarZ.make(tv._xt,tv._name,xclz, tv._name/*local*/));
+            }
             supr = xclz;
             xclz = mixin;
           }
@@ -412,65 +483,63 @@ public class XClz extends XType {
       }
 
     xclz._super = supr;
+    xclz._outer = outer==null ? null : outer.xclz();
     xclz._depth = supr==null ? 0 : supr._depth+1;
     xclz._abstrct = abstrct;
 
     return xclz;
   }
 
-  // Gather side types from Implements and Extends and Incorporates.
-  private void sides( ClassPart clz ) {
-    _sides = SIDES0;
-    if( clz==null || clz._contribs == null ) return;
-
-    for( Contrib c : clz._contribs )
-      if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends || c._comp == Part.Composition.Incorporates )
-        switch( c._tContrib ) {
-        case TermTCon ttc: break;   // no extra type params
-        case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
-        case ParamTCon ptc: _sides(ptc,_tns);  break;
-          // No tvars here?
-        case InnerDepTCon dep:  assert dep .clz()._tnames.length==0;  break;
-        case VirtDepTCon virt:  assert virt.clz()._tnames.length==0;  break;
-        default: throw XEC.TODO(); // Expecting a PTC here
-        }
-  }
-
-  private void sides( ParamTCon ptc, String[] tnames ) {
-    _sides = SIDES0;
-    _sides(ptc,tnames);
-  }
-  private void _sides( ParamTCon ptc, String[] tnames ) {
-    // Now I got some sides!
-    if( _sides == SIDES0 ) _sides = new HashMap<>();
-    // Setup a side array from the base type to its parameterized version
-    XClz pclz = (XClz)xtype(ptc,true);
-    int[] idxs = new int[ptc._parms.length];
-    // Walk the parameterized types; refer back to the class's types
-    for( int i=0; i<ptc._parms.length; i++ ) {
-      String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
-      int idx = S.find(tnames,pname); // Matches a clz name, uses that type
-      if( idx == -1 ) {                    // No match, add an entry
-        _xts = Arrays.copyOf(_xts,(idx = _xts.length)+1);
-        _xts[idx] = pclz._xts[i];
-      }
-      idxs[i] = idx;
-    }
-    _sides.put(pclz,idxs);
-    //assert ptc._parms.length==pclz._tns.length;
-  }
+  //// Gather side types from Implements and Extends and Incorporates.
+  //private void sides( ClassPart clz ) {
+  //  _sides = SIDES0;
+  //  if( clz==null || clz._contribs == null ) return;
+  //
+  //  for( Contrib c : clz._contribs )
+  //    if( c._comp == Part.Composition.Implements || c._comp == Part.Composition.Extends || c._comp == Part.Composition.Incorporates )
+  //      switch( c._tContrib ) {
+  //      case TermTCon ttc: break;   // no extra type params
+  //      case ImmutTCon imm when imm.icon() instanceof TermTCon ttc: break;
+  //      case ParamTCon ptc: _sides(ptc,_tns);  break;
+  //        // No tvars here?
+  //      case InnerDepTCon dep:  assert dep .clz()._tnames.length==0;  break;
+  //      case VirtDepTCon virt:  assert virt.clz()._tnames.length==0;  break;
+  //      default: throw XEC.TODO();
+  //      }
+  //}
+  //
+  //private void sides( ParamTCon ptc, String[] tnames ) {
+  //  _sides = SIDES0;
+  //  _sides(ptc,tnames);
+  //}
+  //private void _sides( ParamTCon ptc, String[] tnames ) {
+  //  // Now I got some sides!
+  //  if( _sides == SIDES0 ) _sides = new HashMap<>();
+  //  // Setup a side array from the base type to its parameterized version
+  //  XClz pclz = (XClz)xtype(ptc,true);
+  //  int[] idxs = new int[ptc._parms.length];
+  //  // Walk the parameterized types; refer back to the class's types
+  //  for( int i=0; i<ptc._parms.length; i++ ) {
+  //    String pname = ptc._parms[i] instanceof TermTCon ttc ? ttc.name() : pclz._tns[i];
+  //    int idx = S.find(tnames,pname); // Matches a clz name, uses that type
+  //    if( idx == -1 ) {                    // No match, add an entry
+  //      _xts = Arrays.copyOf(_xts,(idx = _xts.length)+1);
+  //      _xts[idx] = pclz._xts[i];
+  //    }
+  //    idxs[i] = idx;
+  //  }
+  //  _sides.put(pclz,idxs);
+  //  //assert ptc._parms.length==pclz._tns.length;
+  //}
 
   // Made from XTC class.
   //   Here E is the class name for a type
   //   class List<E> { ... }
   //   XClz: List{E=XTC}
-  public static XClz make( ClassPart clz ) {
-    if( clz._tclz != null )     // Check class cache
-      return clz._tclz;
+  static XClz makeClz( ClassPart clz ) {
     XClz xclz = _malloc(clz);
     XClz xclz2 = xclz._intern();
     assert xclz2 == xclz;       // Only intern XTC ClassPart once
-    clz._tclz = xclz;           // Assign the class cache
     return xclz;
   }
 
@@ -495,7 +564,7 @@ public class XClz extends XType {
   public static XClz make( ParamTCon ptc ) {
     // Get the UNparameterized class
     ClassPart clz = ptc.clz();
-    XClz proto = make(clz);
+    XClz proto = clz.xclz();
 
     // Very specifically, generic parameterized AryXTC<XTC> means the
     // un-element-typed Array<VOID>, used to make both primitive arrays and
@@ -507,33 +576,28 @@ public class XClz extends XType {
       proto = proto._ro ? XCons.ARYXTC_RO : XCons.ARYXTC;
     }
 
-    assert proto._xts.length>0;
+    assert proto.len()>0;
     XClz xclz = proto._mallocClone();
-    xclz._xts = proto._xts.clone();
-    xclz._tns = proto._tns.clone();
     // Override parameterized type fields
     if( ptc._parms != null )
-      for( int i=0; i<ptc._parms.length; i++ )
-        xclz._xts[i] = xtype(ptc._parms[i],true,xclz);
-
+      for( int i=0; i<ptc._parms.length; i++ ) {
+        XType px = xtype(ptc._parms[i],true,xclz);
+        xclz.putSub(i,clz._tnames[i],px);
+      }
     return xclz._intern(proto);
   }
 
   public static XClz make( Contrib c ) {
     // Get the UNparameterized class
     ClassPart clz = ((ClzCon)c._tContrib).clz();
-    XClz proto = make(clz);
+    XClz proto = clz.xclz();
     if( c._parms==null ) return proto;
 
-    assert proto._xts.length>0;
+    assert proto.len()>0;
     XClz xclz = proto._mallocClone();
-    xclz._xts = proto._xts.clone();
-    xclz._tns = proto._tns.clone();
     // Override parameterized type fields
-    for( String tn : c._parms.keySet() ) {
-      int i = S.find(xclz._tns,tn);
-      xclz._xts[i] = xtype(c._parms.get(tn),true,xclz);
-    }
+    for( String tn : c._parms.keySet() )
+      xclz.putSub(tn, xtype(c._parms.get(tn),true,xclz));
     return xclz._intern(proto);
   }
 
@@ -541,7 +605,7 @@ public class XClz extends XType {
   // Make a R/O version
   public static XClz make( ImmutTCon imm ) {
     if( imm.icon() instanceof TermTCon ttc ) {
-      XClz clz = make(ttc.clz());
+      XClz clz = ttc.clz().xclz();
       return clz.readOnly();
     }
     throw XEC.TODO();
@@ -551,13 +615,19 @@ public class XClz extends XType {
   // An inner class, which gets the outer class Type variables
   public static XClz make( VirtDepTCon virt ) {
     ClassPart iclz = virt.part(); // Inner  clz
-    XClz xclz = make(iclz);       // Inner xclz
+    ClassPart out = iclz.isNestedInnerClass();
+    assert out==iclz._par;
+    XClz xclz = iclz.xclz();       // Prototype inner xclz
     XClz vclz = xclz._mallocClone(); // Inner xclz, cloned
-    vclz.sides((ParamTCon)virt._par,iclz._tnames);
+    ParamTCon ptc = (ParamTCon)virt._par;
+    for( int i=0; i<ptc._parms.length; i++ ) {
+      XType px = xtype(ptc._parms[i],true,xclz);
+      vclz.putSub(out._tnames[i],px);
+    }
 
     XClz vclz2 = vclz._intern();
     if( vclz2 != vclz ) return vclz2;
-    iclz._tclz = vclz;
+    //iclz._tclz = vclz;
     return vclz;
   }
 
@@ -566,16 +636,17 @@ public class XClz extends XType {
     ClzBuilder.add_import(XCons.FUTUREVAR);
     if( xt instanceof XClz clz ) ClzBuilder.add_import(clz);
     XClz xclz = _malloc(XCons.FUTUREVAR._clz);
-    xclz._tns = XCons.FUTUREVAR._tns;
-    xclz._xts[0] = xt;
-    return xclz._intern(XCons.FUTUREVAR);
+    //xclz._tns = XCons.FUTUREVAR._tns;
+    //xclz._xts[0] = xt;
+    //return xclz._intern(XCons.FUTUREVAR);
+    throw XEC.TODO();
   }
 
   // You'd think the clz._super would be it, but not for enums
   static XClz get_super( ClassPart clz ) {
     if( clz==null ) return null;
     if( clz._super!=null )
-      return make(clz._super);
+      return clz._super.xclz();
     // The XTC Enum is a special interface, extending the XTC Const interface.
     // They are implemented as normal Java classes, with Enum extending Const.
     if( clz._path==null ) { assert clz._f==Part.Format.CLASS; return null; }
@@ -615,13 +686,11 @@ public class XClz extends XType {
   // XTC array element type
   public XType e() {
     assert isAry() || isVar();
-    return _xts[0];
+    return xt(0);
   }
   public final boolean iface() { return _clz!=null && _clz._f==Part.Format.INTERFACE; }
   // Is a mixin
-  public final boolean isMixin() {
-    return _clz._f==Part.Format.MIXIN;
-  }
+  public final boolean isMixin() { return _clz._f==Part.Format.MIXIN; }
 
   // Class & package names.
 
@@ -701,17 +770,17 @@ public class XClz extends XType {
   public XType find(String tname) {
     XClz clz = this;
     for( ; clz!=null; clz = clz._super ) {
-      int idx = S.find(clz._tns,tname);
-      if( idx!= -1 )
-        return clz._xts[idx];
+      TVar tv = clz.tvar(tname);
+      if( tv!=null ) return tv._xt;
     }
     return null;
   }
 
   // Local only find
   public XType _find(String tn) {
-    int idx = S.find(_tns,tn);
-    return idx == -1 ? null : _xts[idx];
+    //int idx = S.find(_tns,tn);
+    //return idx == -1 ? null : _xts[idx];
+    throw XEC.TODO();
   }
 
   // Prints/passes the type parameters.
@@ -730,25 +799,6 @@ public class XClz extends XType {
       (S.eq(_jname,_name) &&    // Java mirror and name does not include type
        !S.eq(_jname,"Tuple") ); // Tuples with types and not generics
   }
-
-  @Override public SB str( SB sb, VBitSet visit, VBitSet dups  ) {
-    _clz_bare(sb,false);
-    if( _super!=null ) sb.p(":").p(_super._name);
-    if( _tns != null && _tns.length > 0 ) {
-      sb.p(" {");
-      for( int i = 0; i< _tns.length; i++ ) {
-        sb.p("  ");
-        if( _tns[i]!=null ) sb.p( _tns[i]);
-        sb.p(":");
-        if( _xts[i] != null )  _xts[i]._str(sb,visit,dups);
-        sb.p(";");
-      }
-      sb.p("}");
-    }
-    if( !_notNull ) sb.p("?");
-    return sb;
-  }
-
 
   // Bare name, no generics
   public String clz_bare( ) { return _clz_bare(new SB(),false).toString(); }
@@ -774,21 +824,20 @@ public class XClz extends XType {
     _clz_bare(sb,false);
 
     // Print generic parameters?
-    if( _tns.length==0 ) return sb; // None to print
+    if( localLen()==0 ) return sb; // None to print
     if( !printsTypeParm() ) return sb; // Java mirror encodes the generic type name already
 
     // Printing generic type parameters
     sb.p("<");
-    for( int i=0; i<_tns.length; i++ ) {
-      // No ParamTCon provided, using the generic class as-is
-      if( ptc==null )  _xts[i]._clz(sb,null);
-      // ParamTCon has a different name, it's not a type, it's a generic name.
-      else if( ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm )
-        sb.p("$").p(parm._name);
-      // Structurally recurse
-      else _xts[i].clz(sb);
-      sb.p(",");
-    }
+    for( int i=0; i<len(); i++ )
+      if( at(i).local() )  {
+        if( ptc!=null && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm )
+          sb.p("$").p(parm._name);
+        else
+          // No ParamTCon provided, using the generic class as-is
+          xt(i)._clz(sb,null);
+        sb.p(",");
+      }
     return sb.unchar().p(">");
   }
 
@@ -809,14 +858,21 @@ public class XClz extends XType {
 
   // "Foo<Value extends Hashable>"
   public SB clz_generic_def( SB sb ) {
-    // No named type arguments
-    if( _tns.length==0 ) return sb;
+    sb.p("/*generic_def*/");
+    // Include all local and super type parameters.
+    // Exclude outer and interfaces.
+    boolean found=false;
+    for( TVarZ tv : _tvars )
+      if( tv.genericDef(_super) )
+        { found=true; break; }
+    if( !found ) return sb;
 
     sb.p("< ");
-    for( int i=0; i<_tns.length; i++ ) {
-      sb.p("$").p( _tns[i]);
+    for( TVarZ tv : _tvars ) {
+      if( !tv.genericDef(_super) ) continue;
+      sb.p("$").p(tv._name);
       sb.p(" extends " );
-      XClz xclz = (XClz)_xts[i];
+      XClz xclz = (XClz)tv._xt;
       if( xclz.iface() ) {
         sb.p("XTC & ");
         sb.p(xclz.name());
@@ -829,22 +885,35 @@ public class XClz extends XType {
     return sb.unchar(2).p("> ");
   }
   // "Map<Key,Value>"
-  public SB clz_generic_use( SB sb, XClz base ) {
+  public void clz_generic_use( SB sb, XClz base ) {
+    sb.p("/*generic_use*/");
     assert !_ambiguous;
-    // No named type arguments
-    int[] idxs = base._sides.get(this);
-    if( idxs==null ) return sb;
+
+    boolean found=false;
+    for( TVarZ btv : base._tvars )
+      if( btv.genericUse(base) )
+        { found=true; break; }
+    if( !found ) return;
+
     sb.p("<");
-    for( int idx : idxs )
-      if( idx < base._tns.length ) sb.p("$").p(base._tns[idx]).p(", ");
-      else base._xts[idx].clz_bare(sb).p(", ");
-    return sb.unchar(2).p("> ");
+    for( TVarZ btv : base._tvars )
+      if( btv.genericUse(base) ) {
+        sb.fmt("$%0, ",btv._local); // Local rename
+        /*
+        else if( tvar(btv._name).local() ) // Local in super class
+          // Concrete class name
+          btv._xt.clz_bare(sb).p(", ");
+
+        else ;   // Else nothing: not-local in super, not-local here
+        */
+      }
+    sb.unchar(2).p("> ");
   }
 
   private SB strTuple( SB sb ) {
-    sb.p("Tuple").p(_xts.length).p("$");
-    for( XType xt : _xts )
-      xt.clz_bare(sb).p("$");
+    sb.p("Tuple").p(len()).p("$");
+    for( int i=0; i<len(); i++ )
+      xt(i).clz_bare(sb).p("$");
     return sb.unchar();
   }
 
@@ -867,7 +936,7 @@ public class XClz extends XType {
       for( Contrib c : _clz._contribs )
         if( c._comp == Part.Composition.Implements ) {
           XClz iclz = (XClz)xtype(c._tContrib, false);
-          if( iclz == iface || iclz.isIFace(iface) )
+          if( iclz == iface || iclz.isa(iface) )
             return true;
         }
     return false;
@@ -882,10 +951,10 @@ public class XClz extends XType {
       return subIFaces(clz);
     // Check basic subclassing.  Two classes or two interfaces come here.
     if( !subClasses(clz) ) return false;
-    if( _xts.length < clz._xts.length ) return false;
+    if( len() < clz.len() ) return false;
     // Now check pieces-parts
-    for( int i=0; i<clz._xts.length; i++ )
-      if( !_xts[i].isa(clz._xts[i]) )
+    for( int i=0; i<clz.len(); i++ )
+      if( !xt(i).isa(clz.xt(i)) )
         return false;
     return true;
   }

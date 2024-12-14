@@ -44,7 +44,7 @@ public abstract class PropBuilder {
         if( "InjectedRef".equals(ano) ) inject = true;
       }
     boolean stat = pp.isStatic() || pp._par instanceof ModPart;
-    boolean tfld = X._tclz.find(pname)!=null; // Is a type field
+    TVarZ tfld = X._tclz.tvar(pname); // Is a type field
     boolean pub = pp._access == Const.Access.PUBLIC || (pp._access==null && X._tclz.isa(XCons.CONST));
     boolean iface = X._tclz.iface();
     SB sb = X._sb;
@@ -62,7 +62,7 @@ public abstract class PropBuilder {
     if( iface ) do_def=false;
 
     // No set property on type parameters
-    if( tfld ) do_set = false;
+    if( tfld!=null ) do_set = false;
 
     // If overriding some methods
     if( pp._name2kid != null ) {
@@ -81,7 +81,7 @@ public abstract class PropBuilder {
       // Definition and init
       sb.i();                     // Not private, so child can reference
       if( stat ) sb.p("static ");
-      (tfld ? sb.p("XTC") : xtype.clz(sb)).p(" ").p(pname);
+      (tfld!=null ? sb.p("$").p(tfld._name) : xtype.clz(sb)).p(" ").p(pname);
       // Special init for InjectedRef.  Other props get no init()?
       if( inject )
         sb.fmt(" = %0.XEC.CONTAINER.get().%1()",XEC.ROOT,pname);
@@ -116,7 +116,7 @@ public abstract class PropBuilder {
       if( stat ) sb.p("static ");
       if( pub ) sb.p("public ");
       if( iface ) sb.p("abstract ");
-      (tfld ? sb.p("XTC") : xtype.clz(sb)).fmt(" %0$get()",pname);
+      (tfld!=null ? sb.p("$").p(tfld._name) : xtype.clz(sb)).fmt(" %0$get()",pname);
       if( iface ) {
         sb.p(";").nl();
       } else {

@@ -32,7 +32,7 @@ public class Enum extends Const {
   // public final AryXTC<ENUM> value$get() { return VALUES; }
   public static ClassPart[] makeValues(ClassPart clz, SB sb) {
     assert clz._f == Part.Format.ENUM;
-    String name = clz._tclz._name;
+    String name = clz.xclz()._name;
 
     // The enum values are intermixed with implemented methods
     Ary<ClassPart> cs = new Ary<>(ClassPart.class);

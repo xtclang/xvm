@@ -52,7 +52,8 @@ class BinOpAST extends AST {
       if( tk.isTuple() &&
           (idx = isFixedOffset()) == -1 )
         return XCons.XXTC;   // Unknown field (not a fixed number)
-      return idx < tk._xts.length ? tk._xts[idx] : XCons.XXTC;
+      //return idx < tk._xts.length ? tk._xts[idx] : XCons.XXTC;
+      throw XEC.TODO();
     }
 
     // Cast to sharper

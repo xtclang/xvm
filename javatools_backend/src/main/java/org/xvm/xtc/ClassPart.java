@@ -38,7 +38,7 @@ public class ClassPart extends Part {
   public final Contrib[] _contribs;
 
   public SB _header, _body;     // Java source code
-  public XClz _tclz;            // XType class
+  private XClz _xclz;           // XType class
 
   ClassPart( Part par, int nFlags, Const id, CondCon cond, CPool X, Part.Format f, int ord ) {
     super(par,nFlags,id,null,cond,X);
@@ -144,6 +144,22 @@ public class ClassPart extends Part {
   // XTC classes can use their given name, and this will be prefixed with the module as needed.
   String name() { return _name; }
 
+  public XClz xclz() {
+    if( _xclz==null )
+      _xclz = XClz.makeClz(this);
+    assert _f!=Part.Format.MIXIN || _xclz._mixs==null; // Not a conditional mixin
+    return _xclz;
+  }
+  void setJavaMirror(XClz xclz) {
+    if( _xclz==xclz ) return;
+    assert _xclz==null;
+    _xclz = xclz;
+  }
+  XClz mixXClz() {
+    assert _f!=Part.Format.MIXIN;
+    throw XEC.TODO();
+  }
+
   // Module for this class
   public ModPart mod() {
     Part clz = this;
@@ -162,15 +178,15 @@ public class ClassPart extends Part {
     return clz;
   }
 
-  // Return XClz, expected already computed
-  public XClz tclz() { assert _tclz!=null; return _tclz; }
-
-  // Like a Java nested inner, will have an instanceof of the outer
+  // Like a Java nested inner, will have an instanceof of the outer.  They are
+  // not static, and have a ClassPart in their parent chain.  They can have a super,
+  // which can also be an inner class.
   public ClassPart isNestedInnerClass() {
     // self -> MMethod -> Class -> [Package or other ???]
     Part outer = _par;
     if( isStatic() || outer instanceof PackagePart || _f==Part.Format.CONST )
       return null;
+    // Skip some nested classes
     while( !(outer instanceof ClassPart outclz) )
       outer = outer._par;
     return outclz;

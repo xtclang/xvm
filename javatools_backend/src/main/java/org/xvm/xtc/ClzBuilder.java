@@ -63,10 +63,6 @@ public class ClzBuilder {
   // compilation unit
   static Ary<XClz> NESTED = new Ary<>(XClz.class);
 
-
-  // Make a nested java class builder
-  public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false, bld.nlocals()); }
-
   // Make a (possible nested) java class builder
   ClzBuilder( ModPart mod, ClassPart clz, SB sbhead, SB sb, boolean is_top, int nouters ) {
     _is_top = is_top;
@@ -81,10 +77,9 @@ public class ClzBuilder {
     }
     _is_module = mod==clz;
     _mod = mod;
-    _tmod = mod==null ? null : XClz.make(mod);
+    _tmod = mod==null ? null : mod.xclz();
     _clz = clz;
-    _tclz = clz==null ? null : XClz.make(clz);
-    assert clz==null || clz._tclz == _tclz;
+    _tclz = clz==null ? null : clz.xclz();
     _sbhead = sbhead;
     _sb = sb;
     _locals = new Ary<>(String.class);
@@ -92,14 +87,21 @@ public class ClzBuilder {
     _nouters = nouters;
   }
 
-  // For mixins
-  public ClzBuilder( XClz mod, XClz tclz, SB sbhead, SB sb ) {
+  // Make a simple nested java class builder
+  public ClzBuilder( ClzBuilder bld, ClassPart nest ) { this(bld._mod,nest,bld._sbhead,bld._sb,false, bld.nlocals()); }
+
+  // Full class nested builder
+  public ClzBuilder( XClz mod, XClz tclz, SB sbhead, SB sb ) { this(mod,tclz._clz, tclz,sbhead,sb); }
+
+  // Used to make a conditional mixin with tclz._clz != clz.
+  // Used to make nested classes      with tclz._clz == clz.
+  public ClzBuilder( XClz mod, ClassPart clz, XClz tclz, SB sbhead, SB sb ) {
     _is_top = false;
     _is_module = false;
     _tmod = mod;
     _tclz = tclz;
     _mod = (ModPart)mod._clz;
-    _clz = tclz._clz;
+    _clz = clz;
     _sbhead = sbhead;
     _sb = sb;
     _locals = new Ary<>(String.class);
@@ -198,12 +200,13 @@ public class ClzBuilder {
         if( c._comp==Part.Composition.Implements ) {
           XClz iclz = switch( c._tContrib ) {
           case ParamTCon   ptc -> XClz.make(ptc);
-          case TermTCon    ttc -> XClz.make(ttc.clz());
-          case VirtDepTCon vtc -> XClz.make(vtc.clz());
           case ImmutTCon   imm -> XClz.make(imm);
-          case InnerDepTCon inn-> XClz.make(inn.clz());
+          case TermTCon    ttc -> ttc.clz().xclz();
+          case VirtDepTCon vtc -> vtc.clz().xclz();
+          case InnerDepTCon inn-> inn.clz().xclz();
           default -> throw XEC.TODO();
           };
+          if( iclz==XCons.JOBJECT ) continue;
           _sb.p((once++ == 0) ? (is_iface ? "extends " : " implements ") : ", ").p(iclz.name());
           iclz.clz_generic_use(_sb, _tclz);
           add_import(iclz);
@@ -238,9 +241,12 @@ public class ClzBuilder {
           }
 
 
+    // Is this an inner class needing an instance of the outer class.
+    ClassPart outer = _clz.isNestedInnerClass();
+    XClz xouter = outer==null ? null : outer.xclz();
+
     // Look for a module/class init.  This will become the Java <clinit> / <init>
     MMethodPart mm = (MMethodPart)_clz.child("construct");
-    ClassPart outer = _clz.isNestedInnerClass();
     if( mm != null &&
         // Interfaces in XTC can require a constructor with a particular signature.
         // Interfaces in Java can NOT - so just do not emit the signature.
@@ -252,36 +258,53 @@ public class ClzBuilder {
       // This is an "empty" constructor: it takes required explicit type
       // parameters but does no other work.
       _sb.ifmt("public %0( ",java_class_name);
-      if( outer != null )
-        outer._tclz.clz_bare(_sb).p(" outer,");
-      for( int i=0; i<_tclz._tns.length; i++ )
-        _sb.fmt("$%0 %0,",_tclz._tns[i]);
+      if( xouter!=null ) xouter.clz_bare(_sb).p(" outer,");
+      for( TVarZ tv : _tclz._tvars )
+        if( tv.local() )
+          _sb.fmt("$%0 %0,",tv._name);
       _sb.unchar().p(" ) { // default XTC empty constructor\n").ii();
+      // First in the constructor is the java "super" call
       _sb.ip("super(");
-      if( _tclz._super==null || _tclz._super._tns.length==0 )
+      // No args, use the forced empty/no-arg "Never" super.
+      if( _tclz._super==null || _tclz._super.len()==0 )
         _sb.p(" (Never)null");
       else {
-        if( outer != null ) _sb.p(" outer,");
-        for( int i=0; i<_tclz._tns.length; i++ )
-          _sb.fmt(" %0,",_tclz._tns[i]);
+        // Nested inner class parent needs the outer class instance
+        if( xouter!=null ) _sb.p(" outer,");
+        // Super class needs all his local tvars passed in
+        if( _tclz._super!=null )
+          for( TVarZ suptv : _tclz._super._tvars )
+            if( suptv.local() ) {
+              // The super's local tvar is also local here, just pass along
+              if( _tclz.tvar(suptv._name).local() )
+                _sb.fmt(" %0,",suptv._name);
+              else // Else super's local is a concrete type here
+                //_sb.fmt("($%1)%0.GOLD,",suptv._xt.clz(),suptv._name);
+                _sb.fmt("%0.GOLD,",suptv._xt.clz());
+            }
         _sb.unchar();
       }
       _sb.p(");").nl();
+      // Top-level inner class has a pointer to the outer class
       if( outer!=null && _tclz._super==null )
         _sb.ip("this.$outer = outer;").nl();
       // Init any local type variables; these appear in name2kid
-      for( int i=0; i<_tclz._tns.length; i++ )
-        _sb.ifmt("this.%0 = %0;\n",_tclz._tns[i]);
+      for( TVarZ tv : _tclz._tvars )
+        if( tv.local() )
+          _sb.ifmt("this.%0 = %0;\n",tv._name);
       // final boolean _mix;
       // _mix = T0 instanceof String && T1 instanceof Foo;
-      if( _tclz._mixts != null ) {
+      if( _tclz.isMixin() ) {
         _sb.ip("_$mix = ");
-        for( int i=0; i<_tclz._mixts.length; i++ )
-          _sb.fmt("%0 instanceof %1 && ",_tclz._tns[i],_tclz._mixts[i].clz());
+        for( int i=0; i<_tclz._mixs.length; i++ ) {
+          String tname = _tclz._mixs[i]._name;
+          if( _tclz.outer(tname) ) _sb.p("$outer.");
+          _sb.fmt("%0 instanceof %1 && ",tname,_tclz._mixs[i]._xt.clz());
+        }
         _sb.unchar(4).p(";\n");
       }
       _sb.di().ip("}\n");
-      if( _tclz._mixts != null )
+      if( _tclz.isMixin() )
         _sb.ip("boolean _$mix;\n");
 
 
@@ -295,20 +318,27 @@ public class ClzBuilder {
         if( !_tclz._abstrct ) {
           _sb.nl();
           keywords(meth,true);
-          _tclz.clz_generic_def(_sb);
+          //_tclz.clz_generic_def(_sb);
           _sb.fmt("%0 construct(  ",java_class_name); // Return type
           // Nested inner classes take an outer class arg
-          if( outer!=null )
-            outer._tclz.clz_bare(_sb).p(" $outer, ");
-          for( String tn : _tclz._tns )
-            _sb.fmt("$%0 %0, ",tn);
+          if( xouter!=null )
+            xouter.clz_bare(_sb).p(" $outer, ");
+          // Other type arguments
+          for( TVarZ tv : _tclz._tvars )
+            if( tv.local() ) {
+              _sb.fmt("%0 %1, ",((XClz)tv._xt).iface() ? "XTC" : tv._xt.clz() ,tv._name);
+              //tv._xt.iface() ? _sb.p("XTC") : tv._xt.clz(_sb);
+              //_sb.p(" ").p(tv._name).p(", ");
+              //_sb.fmt("XTC %0, ",tv._name);
+            }
+          // Constructor method arguments
           if( meth._args==null ) _sb.unchar(2);
           else args(meth,_sb,null,false);
-          _sb.p(") { return new ").p(java_class_name).p("( ");
-          if( outer!=null )
-            _sb.p("$outer,");
-          for( String tn : _tclz._tns )
-            _sb.fmt("%0,",tn);
+          _sb.p(" ) { return new ").p(java_class_name).p("( ");
+          if( xouter!=null )  _sb.p("$outer,");
+          for( TVarZ tv : _tclz._tvars )
+            if( tv.local() )
+              _sb.fmt("%0,",tv._name);
           _sb.unchar().p(").$construct(");
           arg_names(meth,_sb, null);
           _sb.p(").$check(); }").nl();
@@ -325,36 +355,121 @@ public class ClzBuilder {
       }
     }
 
-    // Outer class field
-    if( outer != null && !is_iface && _tclz._super==null )
-      outer._tclz.clz_bare(_sb.i()).p(" $outer;// outer class\n");
 
-    // Property types from interfaces and mixins
-    for( XClz side : _tclz._sides.keySet() ) {
-      if( side.isMixin() ) continue;
-      int[] idxs = _tclz._sides.get(side);
-      for( int i=0; i<idxs.length; i++ ) {
-        String name = side._tns[i]; // Side property name
-        Part p = _clz._name2kid.get(name);
-        if( p==null ) { // Some are explicitly given in name2kids, and handled below
-          int idx = idxs[i];
-          if( is_iface ) _sb.ip("default XTC ");
-          else _tclz._xts[idx].clz_bare(_sb.ip("public "));
-          _sb.p(" ").p(name).p("$get() { return ");
-          // Either mapping an interface type to a local type OR to a constant type
-          if( idx < _tclz._tns.length ) _sb.p(_tclz._tns[idx]).p("$get()"); //  public Key$get() { return Other$get(); }
-          else _tclz._xts[idx].clz_bare(_sb).p(".GOLD");                         //  public Key$get() { return Float32.GOLD; }
-          _sb.p("; }").nl();
-        }
+    // Property types from interfaces.  Supers are inherited.  Outer types GETs
+    // are treated as properties and handled below.  Mixins are converted to
+    // classes and treated like other classes (either superclass or subclass).
+    if( xouter!=null && _tclz._super==null && !is_iface )
+      xouter.clz_bare(_sb.ip("public ")).p(" $outer;\n");
+    for( TVarZ tv : _tclz._tvars ) {
+      Part p = _clz._name2kid.get(tv._name);
+      // Some are explicitly given in name2kids, and handled below.
+      if( p!=null ) continue;
+
+      if( is_iface ) {
+        if( tv.local() )_sb.ip("default XTC ");
+        else continue;
+      } else if( tv._local!=null ) _sb.ip("public $").p(tv._local);
+      else if( tv._def!=null ) {
+        if( tv._def.iface() ) tv._xt.clz_bare(_sb.ip("public "));
+        else continue;
       }
+      else tv._xt.clz_bare(_sb.ip("public "));
+
+      _sb.p(" ").p(tv._name).p("$get() { return ");
+
+      // Either mapping an interface type to a local type OR to a constant type
+      if( tv.local() ) _sb.p(tv._name).p("$get()"); //  public Key$get() { return Other$get(); }
+      else if( tv._local!=null ) _sb.p(tv._local).p("$get()");
+      else tv._xt.clz_bare(_sb).p(".GOLD"); //  public Key$get() { return Float32.GOLD; }
+      _sb.p("; }").nl();
+
+
+      // Several options:
+      // - derived from a super or outer class; no code needed, you'll just inherit
+      // - derived from a super, but the name changes: "return $Super$get();"
+      // - local "return Type.GOLD;"
+      // - - local interface gets a default "return Type.GOLD;"
+      //
+      //tv.protoDef(tv._def) ) {
+      //  if( is_iface ) {
+      //    if( tv.local() ) {
+      //      _sb.ifmt("default XTC %0$get() { return ",tv._name);
+      //      tv._xt.clz_bare(_sb).p(".GOLD; }\n"); //  public Key$get() { return Float32.GOLD; }
+      //    }
+      //  } else {
+      //    _sb.ip("public ");
+      //
+      //    if( tv._local==null ) {
+      //      //assert tv._def==null || tv._def.iface();
+      //      tv._xt.clz_bare(_sb);
+      //      _sb.p(" ").p(tv._name).p("$get() { return ");
+      //      tv._xt.clz_bare(_sb).p(".GOLD"); //  public Key$get() { return Float32.GOLD; }
+      //      _sb.p("; }").nl();
+      //    } else {
+      //      _sb.p("$");
+      //      _sb.p(tv._local);
+      //      _sb.p(" ").p(tv._name).p("$get() { return ");
+      //      if( tv._def._outer==xouter ) _sb.p("outer.");
+      //      // Rename from super or outer class
+      //      _sb.p(tv._local).p("$get()"); //  public Key$get() { return Other$get(); }
+      //      _sb.p("; }").nl();
+      //    }
+      //  }
+      //}
     }
 
+
+    // Output Java methods for all non-method pieces-parts,
+    // including inner classes
+    if( _clz._name2kid!=null )
+      for( Part part : _clz._name2kid.values() )
+        switch( part ) {
+        case MMethodPart mmp: break; // Do nothing yet
+        case PackagePart pack:
+          // Will need to compile the package at the same time this module.
+          if( pack._contribs == null )
+            break;
+          // Imports
+          assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
+          // Ignore default ecstasy import
+          TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
+          if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
+            break;
+          // Other imports
+          add_import(ttc.clz());
+          break;
+
+        case PropPart pp:
+          PropBuilder.make_class(this,pp);
+          break;
+
+        case ClassPart clz_nest:
+          if( clz_nest.xclz()._mixs!=null ) {
+            // CLASS: DERIVED , TCLZ FROM DERIVED : DERIVED$COND_MIX
+            new ClzBuilder(_tmod,clz_nest,clz_nest.xclz()._super,_sbhead,_sb).jclass_body();
+
+            // CLASS: CONDMIX, TCLZ FROM DERIVED.SUPER: DERIVED
+            new ClzBuilder(_tmod,clz_nest.xclz(),_sbhead,_sb).jclass_body();
+          } else if( !clz_nest.isSynthetic() && clz_nest._f!=Part.Format.MIXIN ) {
+            // Nested class.  Becomes a java static inner class
+            // CLASS: INNEROUT, TCLZ FROM INNEROUT: INNEROUT
+            new ClzBuilder(this,clz_nest).jclass_body();
+          }
+          break;
+
+        case TDefPart typedef:
+          // TypeDef.  Hopefully already swallowed into XType/XClz
+          break;
+
+        default:
+          throw XEC.TODO();
+        }
 
     // Output Java methods for all class methods
     if( _clz._name2kid!=null )
       for( Part part : _clz._name2kid.values() )
-        switch( part ) {
-        case MMethodPart mmp:
+        if( part instanceof MMethodPart mmp ) {
           // Output java methods.
           String mname = jname(mmp._name);
           for( MethodPart meth = (MethodPart)mmp.child(mname); meth != null; meth = meth._sibling ) {
@@ -404,43 +519,9 @@ public class ClzBuilder {
               jmethod(meth,mname);
               // Service classes generate $mname and $$mname wrapper methods.
               if( _tclz.isa(XCons.SERVICE) && meth.isPublic() )
-                Service.make_methods(meth,java_class_name,_sb);
+                Service.make_methods(this,meth,java_class_name,_sb);
             }
           }
-          break;
-
-        case PackagePart pack:
-          // Will need to compile the package at the same time this module.
-          if( pack._contribs == null )
-            break;
-          // Imports
-          assert pack._contribs.length==1 && pack._contribs[0]._comp==Part.Composition.Import;
-          // Ignore default ecstasy import
-          TermTCon ttc = (TermTCon)pack._contribs[0]._tContrib;
-          if( S.eq(ttc.name(),"ecstasy.xtclang.org") )
-            break;
-          // Other imports
-          add_import(ttc.clz());
-          break;
-
-        case PropPart pp:
-          PropBuilder.make_class(this,pp);
-          break;
-
-        case ClassPart clz_nest:
-          if( !clz_nest.isSynthetic() ) {
-            // Nested class.  Becomes a java static inner class
-            ClzBuilder X = new ClzBuilder(this,clz_nest);
-            X.jclass_body();
-          }
-          break;
-
-        case TDefPart typedef:
-          // TypeDef.  Hopefully already swallowed into XType/XClz
-          break;
-
-        default:
-          throw XEC.TODO();
         }
 
     // Const classes get a specific {toString, appendTo}, although they are not
@@ -500,6 +581,7 @@ public class ClzBuilder {
     if( _is_top )
       while( !NESTED.isEmpty() )
         new ClzBuilder(_tmod,NESTED.pop(),_sbhead,_sb).jclass_body();
+        //new ClzBuilder(this,NESTED.pop()._clz).jclass_body();
 
     // End the class body
     _sb.di().ip("}").nl();
@@ -531,7 +613,7 @@ public class ClzBuilder {
   }
 
   // Argument with types "( int arg0, String arg1, ... )"
-  public static void args(MethodPart m, SB sb, String xtra, boolean box) {
+  public void args(MethodPart m, SB sb, String xtra, boolean box) {
     // Argument list
     if( m._args !=null ) {
       XFun xfun = m.xfun();
@@ -544,9 +626,11 @@ public class ClzBuilder {
           add_import(xclz);
         // Parameter class, using local generic parameters
         Parameter p = m._args[i];
-        if( p.tcon() instanceof TermTCon ttc && ttc.id() instanceof FormalCon )
+        if( p.tcon() instanceof TermTCon ttc && ttc.id() instanceof FormalCon &&
+            // Type variable is local
+            _tclz.tvar(ttc.name()).local() ) {
           sb.p("$").p(ttc.name());
-        else if( p._special )
+        } else if( p._special )
           sb.p("$").p(p._name);
         else
           xt.clz(sb,p.tcon() instanceof ParamTCon ptc ? ptc : null);
@@ -587,7 +671,7 @@ public class ClzBuilder {
     XType xret = m.xfun().ret();
     if( xret instanceof XClz xclz ) {
       xclz.clz_bare(sb);
-      xclz.clz_generic_use(sb,m.clz()._tclz);
+      xclz.clz_generic_use(sb,m.clz().xclz());
     }
     else xret.clz(sb);
     return sb.p(' ');
@@ -650,7 +734,7 @@ public class ClzBuilder {
     // ... method_name( int arg0, String, arg1, ... ) {
     // Mixins rename all args with a "$"
     _sb.p(mname).p("( ");
-    args(m,_sb, _tclz._mixts == null ? null : "$",false);
+    args(m,_sb, _tclz.isMixin() ? "$" : null, false);
     _sb.p(" ) ");
     // Define argument names
     XFun xfun = m.xfun();
@@ -665,7 +749,7 @@ public class ClzBuilder {
     if( m._ast.length==0 ) {
       _sb.p(";").nl();
     } else {
-      if( _tclz._mixts != null ) {
+      if( _tclz.isMixin() ) {
         // Conditional mixins check the condition and "super out" if they don't apply.
         // if( !_$mix ) return super.meth(args)
         _sb.p("{\n");
@@ -678,9 +762,9 @@ public class ClzBuilder {
           for( int i = 0; i < m._args.length; i++ ) {
             String arg = m._args[i]._name;
             XType xt = xfun.arg(i+delta);
-            int idx = S.find(_tclz._mixts,xt);
-            if( idx== -1 ) _sb.ifmt("var %0 = %0$;\n",arg);
-            else           _sb.ifmt("%0 %1 = (%0)%1$;\n", _tclz._mixts[idx].clz(),arg);
+            int idx = _tclz.mix(xt);
+            if( idx == -1 ) _sb.ifmt("var %0 = %0$;\n",arg);
+            else            _sb.ifmt("%0 %1 = (%0)%1$;\n", xt.clz(),arg);
           }
         }
         _sb.i();
@@ -701,7 +785,7 @@ public class ClzBuilder {
       blk.jcode(_sb);
       _sb.nl();
 
-      if( _tclz._mixts != null ) {
+      if( _tclz.isMixin() ) {
         _sb.di().ip("}\n");
       }
     }
@@ -729,7 +813,7 @@ public class ClzBuilder {
           // MIXINs always need their BASE
           if( clz_nest._f!=Part.Format.MIXIN )
             // Nested class.  Becomes a java static inner class
-            add_nested( XClz.make(clz_nest) );
+            add_nested( clz_nest.xclz() );
           break;
         case TDefPart tdef:
           break;                // Do nothing, handled by the XTypes already
@@ -756,7 +840,7 @@ public class ClzBuilder {
   }
 
   public static XClz add_import( ClassPart clz ) {
-    return add_import(clz.tclz());
+    return add_import(clz.xclz());
   }
   public static XClz add_import( XClz tclz ) {
     assert IMPORTS != null;
@@ -765,7 +849,7 @@ public class ClzBuilder {
     if( tclz._clz!=null && tclz._clz._path!=null && S.eq(CCLZ._path._str,tclz._clz._path._str) ) {
       // Method-nested classes get compiled once as the official type, but
       // might come here again with specialized variants.
-      if( tclz._clz._par instanceof MethodPart && tclz._clz._tclz == tclz ) add_nested(tclz);
+      if( tclz._clz._par instanceof MethodPart && tclz._clz.xclz() == tclz ) add_nested(tclz);
       return tclz;
     }
 
@@ -792,8 +876,8 @@ public class ClzBuilder {
     }
     // Catch nested generic types
     if( progress )
-      for( XType xt : tclz._xts )
-        if( xt instanceof XClz xclz_nest )
+      for( TVarZ tv : tclz._tvars )
+        if( tv._xt instanceof XClz xclz_nest )
           add_import(xclz_nest);
     return tclz;
   }

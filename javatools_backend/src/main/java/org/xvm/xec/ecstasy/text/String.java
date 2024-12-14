@@ -11,7 +11,7 @@ import org.xvm.xrun.Never;
 import org.xvm.xrun.XRuntime;
 
 public class String extends Const implements Iterable<Char> {
-  public static final String GOLD = new String((Never)null);
+  public static final String GOLD = new String("String");
   public String(Never n) { _i=null; }
   public final java.lang.String _i;
   public String(java.lang.String s) { _i = s; }

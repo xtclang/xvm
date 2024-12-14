@@ -150,7 +150,7 @@ public abstract class Service extends XTC
     @Override public String toString() { return _name; }
   }
 
-  static public void make_methods(MethodPart meth, String java_class_name, SB sb ) {
+  static public void make_methods(ClzBuilder X, MethodPart meth, String java_class_name, SB sb ) {
     ClzBuilder.add_import("java.util.concurrent.FutureTask");
     ClzBuilder.add_import("java.util.concurrent.Callable");
 
@@ -160,7 +160,7 @@ public abstract class Service extends XTC
     sb.ip("public ");
     ClzBuilder.ret_sig(meth,sb);
     sb.p("$").p(meth._name).p("( ");
-    ClzBuilder.args(meth,sb,null,false);
+    X.args(meth,sb,null,false);
     sb.p(" ) { ");
     boolean isVoidRet = meth.ret()==XCons.VOID;
     if( !isVoidRet ) sb.p("return ");
@@ -178,7 +178,7 @@ public abstract class Service extends XTC
     //XFT<RET> $$MNAME(ARGS) { return $enqueue(new Call$MNAME(ARGS)) }
     sb.ip("public ").p(gen_ft);
     sb.p(" $$").p(meth._name).p("( ");
-    ClzBuilder.args(meth,sb,null,false);
+    X.args(meth,sb,null,false);
     sb.p(" ) { return $enqueue(new Call$").p(meth._name).p("( ");
     ClzBuilder.arg_names(meth,sb,null);
     sb.p(")); }").nl();
@@ -201,7 +201,7 @@ public abstract class Service extends XTC
       sb.ifmt("private final %0 %1;\n",fun.arg(i).clz(),meth._args[i]._name);
     // Constructor
     sb.ifmt("Call$%0( ",meth._name);
-    ClzBuilder.args(meth,sb,null,false);
+    X.args(meth,sb,null,false);
     sb.p(") {").nl().ii();
     sb.ifmt("super(\"%0.%1\");\n",java_class_name,meth._name);
     for( int i=0; i<fun.nargs(); i++ )

@@ -76,7 +76,7 @@ public abstract class XValue {
         // Put qualified name if not in local namespace
         ClassPart clz = (ClassPart)meth._par._par;
         if( clz!= ClzBuilder.CMOD && clz!=ClzBuilder.CCLZ )
-          name = ClzBuilder.add_import(XClz.make(clz)).clz_bare()+"."+name;
+          name = ClzBuilder.add_import(clz.xclz()).clz_bare()+"."+name;
       }
       yield ASB.p(name);
     }
@@ -88,8 +88,11 @@ public abstract class XValue {
       if( par != ClzBuilder.CCLZ ) {
         if( par instanceof ClassPart clz ) {
           if( prop.part().isStatic() )  ASB.p(ClzBuilder.add_import(clz).clz_bare()).p('.');
-          else if( !_X._clz._name2kid.containsKey(prop._name) && _X._clz.isNestedInnerClass()!=null )
-            ASB.p("$outer.");
+          else {
+            //if( _X._clz.xclz().outer(prop._name) )
+            if( _X._tclz.outer(prop._name) )
+              ASB.p("$outer.");
+          }
         } else if( par instanceof MethodPart meth && prop.part().isStatic() ) {
           ASB.p(meth._name).p('$');
         } else throw XEC.TODO();
@@ -211,9 +214,9 @@ public abstract class XValue {
       if( clz._name.equals("Random") && clz._path._str.equals("ecstasy/numbers/Random.x") )
         yield ASB.p(XEC.ROOT).p(".XEC.CONTAINER.get()").p(".random()");
       if( clz._name.equals("Timer") && clz._path._str.equals("ecstasy/temporal/Timer.x") )
-        yield ASB.p(NativeTimer.make_timer(XClz.make(clz)));
+        yield ASB.p(NativeTimer.make_timer(clz.xclz()));
       if( clz._name.equals("Clock") && clz._path._str.equals("ecstasy/temporal/Clock.x") )
-        yield ASB.p(NativeTimer.make_clock(XClz.make(clz)));
+        yield ASB.p(NativeTimer.make_clock(clz.xclz()));
       throw XEC.TODO();
     }
 

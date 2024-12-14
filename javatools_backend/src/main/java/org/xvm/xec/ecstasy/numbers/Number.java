@@ -11,7 +11,8 @@ import org.xvm.xrun.Never;
 /**
      Support XTC Number
 */
-public abstract class Number extends Const implements Orderable {
+public class Number extends Const implements Orderable {
+  public static final Number GOLD = new Number((Never)null);
   public Number(Never n ) {}
   public Number() {}
 
@@ -23,7 +24,7 @@ public abstract class Number extends Const implements Orderable {
   }
   public static boolean equals$Number( XTC gold, double n0, double n1 ) { return n0==n1; }
 
-  abstract Array<Bit> toBitArray(Array.Mutability mut);
+  Array<Bit> toBitArray(Array.Mutability mut) { throw XEC.TODO(); }
 
   public Signum sign$get() { throw XEC.TODO(); }
 

@@ -6,7 +6,8 @@ class Medium {
         //xincorp();
         //incorp();
         //ic();
-        typevars();
+        //typevars();
+        test1();
         //annot();
     }
 
@@ -86,43 +87,43 @@ class Medium {
     //    assert dervint2 == "d[e=123 b[e=123 MX[e=123 s[e=123]s ]MX ]b ]d";
     //    assert dervstr2 == "d[e=abc b[e=abc MX[e=abc s[e=abc]s ]MX ]b ]d";
     //}
+
+    // Conditional incorporation: the Mixin is both *conditional* and also
+    // "after" the Base in the class tree:
+    //        /- Super1 <- Base1 \  <-   /-< Derived1
+    // Object                      MixIn
+    //        \- Super2 <- Base2 /  <-   \-< Derived2
+
+    // Current theory:
+    // - Mixin cannot extend two different classes, Base1 and Base2.
+    // - Java: clone Mixin's code, extending Base1,Base2 each.
+    //        /- Super1 <- Base1 <- Mixin  <- Derived1
+    // Object
+    //        \- Super2 <- Base2 <- Mixin  <- Derived2
     //
-    //// Conditional incorporation: the Mixin is both *conditional* and also
-    //// "after" the Base in the class tree:
-    ////        /- Super1 <- Base1 \  <-   /-< Derived1
-    //// Object                      MixIn
-    ////        \- Super2 <- Base2 /  <-   \-< Derived2
+    // All Mixin methods start with "if( !_mixin ) return super.add(e);"
+    // Where the _mixin is a final bool set at construction time, and
+    // implement the "conditional" part.
+
+    // ------------------------------
+    // JAVA TRANSLATION CODE
+    // Super <- Base <- Mixin  <- DerivedMix
+    // class Super<E> { E add(E e) { ... } };
     //
-    //// Current theory:
-    //// - Mixin cannot extend two different classes, Base1 and Base2.
-    //// - Java: clone Mixin's code, extending Base1,Base2 each.
-    ////        /- Super1 <- Base1 <- Mixin  <- Derived1
-    //// Object
-    ////        \- Super2 <- Base2 <- Mixin  <- Derived2
-    ////
-    //// All Mixin methods start with "if( !_mixin ) return super.add(e);"
-    //// Where the _mixin is a final bool set at construction time, and
-    //// implement the "conditional" part.
+    // class Base<E> extends Super<E> { @Override E add(E e) { ... super(e); ... } }
     //
-    //// ------------------------------
-    //// JAVA TRANSLATION CODE
-    //// Super <- Base <- Mixin  <- DerivedMix
-    //// class Super<E> { E add(E e) { ... } };
-    ////
-    //// class Base<E> extends Super<E> { @Override E add(E e) { ... super(e); ... } }
-    ////
-    //// class Mixin$Base<E> extends Base<E> {
-    ////   private final boolean _mixin;
-    ////   MixinBase( E gold ) { _mixin = gold instanceof String; }
-    ////   @Override E add(E e) {
-    ////     if( !_mixin ) return super.add(e);
-    ////     e2 = (String)e; // Must up-cast for mixin logic, which gets assume String
-    ////     ...mixin logic... super.add((E)e2); // Except for super calls, which go back to 'E' type
-    ////   }
-    //// }
-    ////
-    //// class Derived<E> extends MixinBase<E> { ... }
+    // class Mixin$Base<E> extends Base<E> {
+    //   private final boolean _mixin;
+    //   MixinBase( E gold ) { _mixin = gold instanceof String; }
+    //   @Override E add(E e) {
+    //     if( !_mixin ) return super.add(e);
+    //     e2 = (String)e; // Must up-cast for mixin logic, which gets assume String
+    //     ...mixin logic... super.add((E)e2); // Except for super calls, which go back to 'E' type
+    //   }
+    // }
     //
+    // class Derived<E> extends MixinBase<E> { ... }
+
     //void ic() {
     //    mixin MixIn<E extends String> into Base1<E> | Base2<E> {
     //        @Override String add(E e) = $"MX[{e=} " + super(e) + " ]MX";
@@ -169,40 +170,72 @@ class Medium {
     //    assert dervstr2 == "d[e=abc MX[e=abc b[e=abc s[e=abc]s ]b ]MX ]d";
     //}
 
-    void typevars() {
-        interface IFaceRep<KeyIFace> {
-            String foo(KeyIFace x) { return $"IFaceRep {x=}"; }
-        }
-        interface IFaceColl<ElemIFace> {
-            String foo(ElemIFace x) { return $"IFaceColl {x=}"; }
-        }
+    //void typevars() {
+    //    interface IFaceRep<KeyIFace> {
+    //        String foo(KeyIFace x) { return $"IFaceRep {x=}"; }
+    //    }
+    //    interface IFaceColl<ElemIFace> {
+    //        String foo(ElemIFace x) { return $"IFaceColl {x=}"; }
+    //    }
+    //
+    //    static class Outer<Key,Value> implements IFaceRep<Key> {
+    //        class InnerOut<Elem extends Number> implements IFaceColl<Elem> {
+    //            @Override String foo(Elem x) {
+    //                return $"Inner {x=} {Key=} {KeyIFace=} {ElemIFace=}";
+    //            }
+    //        }
+    //        InnerOut<Int> innerFactory() { return new InnerOut<Int>(); }
+    //        Derived derivedFactory() { return new Derived(); }
+    //
+    //        class Derived extends InnerOut incorporates conditional CondMixin<Key extends Int> {
+    //            @Override String foo(Elem x) { return $"Derived {x=} {Key=}"; }
+    //            private static mixin CondMixin<Key extends Int> into Derived {
+    //                String foo(Key x) { return $"Mix {x=}"; }
+    //            }
+    //        }
+    //    }
+    //
+    //    Outer<String,Object> so = new Outer<String,Object>();
+    //    Outer<Int   ,Object> io = new Outer<Int   ,Object>();
+    //    String sfoo = so.foo("abc");
+    //    String ifoo = io.foo(123);
+    //    assert sfoo == "IFaceRep x=abc";
+    //    assert ifoo == "IFaceRep x=123";
+    //    var si = so.innerFactory();
+    //    Int x = 123;
+    //    assert si.foo(x) == "Inner x=123 Key=String KeyIFace=String ElemIFace=Int";
+    //    var di = io.derivedFactory();
+    //    console.print(di.foo(x));
+    //    //assert di.foo(x) == "Derived x=123 Key=Int";
+    //    assert di.foo(123) == "Mix x=123";
+    //}
 
-        static class Outer<Key,Value> implements IFaceRep<Key> {
-            class InnerOut<Elem> implements IFaceColl<Elem> {
-                @Override String foo(Elem x) { return $"Inner {x=} {Key=}"; }
-            }
-            //InnerOut<String> innerFactory() { return new InnerOut<String>(); }
-            Derived derivedFactory() { return new Derived(); }
-
-            class Derived extends InnerOut<Key> /*incorporates conditional CondMixin<Key extends Int>*/ {
-                @Override String foo(Elem x) { return $"Derived {x=} {Key=}"; }
-                //private static mixin CondMixin<Key extends Int> into Derived {
-                //    @Override String foo(Key x) { return $"Mix {x=}"; }
-                //}
-            }
+    void test1() {
+        interface I {
+            String giveMessage();
         }
-
-        //Outer<String,Object> so = new Outer<String,Object>();
-        Outer<Int   ,Object> io = new Outer<Int   ,Object>();
-        //String sfoo = so.foo("abc");
-        //String ifoo = io.foo(123);
-        //assert sfoo == "IFaceRep x=abc";
-        //assert ifoo == "IFaceRep x=123";
-        //var si = so.innerFactory();
-        //assert si.foo("def") == "Inner x=def Key=String";
-        var di = io.derivedFactory();
-        //assert di.foo(123) == "Derived x=123 Key=Int";
-        //assert di.foo(123) == "Mix x=123";
+        class B {
+            String giveMessage() { return "Message"; }
+        }
+        console.print($"As I: {new B().as(I)}");
+        //interface I { String giveMessage(); }
+        //
+        //class B<T> incorporates conditional M<T extends Float32> {
+        //    String giveMessage() { return "This method should be removed!"; }
+        //}
+        //static mixin M<T extends Float32> into B<T> implements I {
+        //    @Override String giveMessage() { return "Implements I"; }
+        //}
+        //
+        //I bf32 = new B<Float32>().as(I);
+        //console.print(bf32.giveMessage());
+        //Boolean ok = True;
+        //try {
+        //    I bint = new B<Int32>().as(I);
+        //    console.print(bint.giveMessage());
+        //    ok = False;
+        //} catch (Exception e) {}
+        //assert ok, True;
     }
 
     // "Annotation": the Mixin is "after" the Base in the class tree:

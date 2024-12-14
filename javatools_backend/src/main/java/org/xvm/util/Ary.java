@@ -340,7 +340,7 @@ public class Ary<E> implements Iterable<E> {
   @Override public int hashCode( ) {
     int sum=_len;
     for( int i=0; i<_len; i++ )
-      sum += _es[i]==null ? 0 : _es[i].hashCode();
+      sum ^= _es[i]==null ? 0 : _es[i].hashCode();
     return sum;
   }
 

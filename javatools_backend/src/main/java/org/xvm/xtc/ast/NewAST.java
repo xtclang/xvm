@@ -34,7 +34,7 @@ class NewAST extends AST {
 
     // See if there are any type parameters needing adding.
     // Java mirrors have type arg baked in already
-    int nTypes = xt.printsTypeParm() ? xt._tns.length : 0;
+    int nTypes = xt.printsTypeParm() ? xt.localLen() : 0;
     int argBias = typeBias + nTypes;
 
     // Parse arg trees
@@ -66,16 +66,6 @@ class NewAST extends AST {
         }
       }
 
-    //// Missing default args?
-    //if( meth!=null && kids!=null && meth._args!=null ) {
-    //  int len = kids.length - (isChild?1:0);
-    //  if( meth._args.length > len ) {
-    //    assert len+1==meth._args.length; // more default args
-    //    _kids = Arrays.copyOf(_kids,meth._args.length);
-    //    _kids[len] = new ConAST(null,meth._args[meth._args.length-1]._def);
-    //  }
-    //}
-
     return new NewAST(kids,xt);
   }
 
@@ -96,20 +86,22 @@ class NewAST extends AST {
     // Type parameters can be constants or can be function arguments passed in.
     // Function argument names are hidden in the ParamTCon.
     ParamTCon ptc = type instanceof ParamTCon ptc0 ? ptc0 : (ParamTCon)((DepTCon)type)._par;
-    for( int i=0; i<xt._tns.length; i++ ) {
-      if( ptc._parms!=null && i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
-        // Type parameter comes from the method arguments.
-        // Do a name lookup.
-        int reg = X._locals.find(parm._name);
-        kids[i+typeBias] = new RegAST(reg,parm._name,X._ltypes.at(reg));
+    for( int i=0; i<xt.len(); i++ ) {
+      if( xt.at(i).local() ) {
+        if( ptc._parms!=null && i < ptc._parms.length && ptc._parms[i] instanceof TermTCon ttc && ttc.part() instanceof ParmPart parm ) {
+          // Type parameter comes from the method arguments.
+          // Do a name lookup.
+          int reg = X._locals.find(parm._name);
+          kids[i+typeBias] = new RegAST(reg,parm._name,X._ltypes.at(reg));
 
-      } else {
-        // Type parameter is a constant; get the golden instance ".GOLD" from
-        // the types boxed variant.
-        XType gen = xt._xts[i];
-        XClz box = gen.box();
-        if( box!=null ) { ClzBuilder.add_import(box); gen=box; }
-        kids[i+typeBias] = new ConAST(null,null,gen.clz()+".GOLD",gen);
+        } else {
+          // Type parameter is a constant; get the golden instance ".GOLD" from
+          // the types boxed variant.
+          XType gen = xt.xt(i);
+          XClz box = gen.box();
+          if( box!=null ) { ClzBuilder.add_import(box); gen=box; }
+          kids[i+typeBias] = new ConAST(null,null,gen.clz()+".GOLD",gen);
+        }
       }
     }
   }

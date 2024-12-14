@@ -1,7 +1,6 @@
 /**
  * Very basic class nesting
  */
-import ecstasy.collections.Hasher;
 import ecstasy.collections.NaturalHasher;
 class Basic {
 
@@ -56,12 +55,12 @@ class Basic {
 
     // Interfaces
     void basic3() {
-        interface IfaceBase<Hasher> { }
-        interface IfaceChild<SubHash extends Hasher> extends IfaceBase<SubHash> { }
+        interface IfaceBase<BAZ> { }
+        interface IfaceChild<SubBAZ extends BAZ> extends IfaceBase<SubBAZ> { }
         class Foo implements IfaceChild<NaturalHasher/*concrete type, not a type variable*/> { }
         Foo foo = new Foo();
-        Object o1 = foo.Hasher;
-        Object o2 = foo.SubHash;
+        Object o1 = foo.BAZ;
+        Object o2 = foo.SubBAZ;
         //Object o3 = foo.NaturalHasher; // NaturalHasher is concrete, not a type variable, so no getter
     }
 

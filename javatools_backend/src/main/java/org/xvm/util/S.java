@@ -46,4 +46,7 @@ public abstract class S {
     ary[j] = tmp;
     return ary;
   }
+
+  public static long rot(long x, int k) { return (x<<k) | (x>>>(64-k)); }
+  public static int fold(long x) { return (int)((x>>32) ^ x); }
 }

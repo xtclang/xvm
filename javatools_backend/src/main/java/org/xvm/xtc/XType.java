@@ -1,28 +1,25 @@
 package org.xvm.xtc;
 
-import org.xvm.XEC;
-import org.xvm.xtc.cons.*;
-import org.xvm.util.*;
-
-import static org.xvm.xtc.XCons.*;
-
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Arrays;
+import org.xvm.XEC;
+import org.xvm.util.*;
+import org.xvm.xtc.cons.*;
+import static org.xvm.xtc.XCons.*;
 
 // Concrete java types from XTC types.  All instances are interned so deep
 // compares are free/shallow.
 @SuppressWarnings("StaticInitializerReferencesSubClass")
-public abstract class XType {
+public abstract class XType<TV extends TVar> {
   // The intern table
   static final HashMap<XType,XType> INTERN = new HashMap<>();
-  static final XType[] EMPTY = new XType[0];
 
   private static int CNT=1;
   final int _uid = CNT++;       // Unique id, for cycle printing
 
   // Children, if any
-  public XType[] _xts;
+  public Ary<TV> _tvars;
 
   // Must a field be initialized not-null?
   // Primitives are always "nullable" even when 0.
@@ -30,50 +27,81 @@ public abstract class XType {
   // XClzs go both ways, depends on if they got unioned with Null or not.
   public boolean _notNull;
 
+  // --------------------------------------------------------------------------
+
+  boolean eq( XType xt ) { return true; } // Subclass specialized eq check
+  @Override public final boolean equals(Object o) {
+    if( this==o ) return true;
+    if( this.getClass() != o.getClass() ) return false;
+    XType xt = (XType)o;
+    if( _notNull != xt._notNull || !eq(xt) || len() != xt.len() )
+      return false;
+    for( int i=0; i<len(); i++ )
+      if( at(i) != xt.at(i) )
+        return false;
+    return true;
+  }
+
+  private int _hash;            // Hash cache, never 0
+  abstract long hash();         // Subclass hash
+  @Override final public int hashCode() {
+    if( _hash!=0 ) return _hash;
+    long hash = hash() ^ (_notNull ? 1024 : 0);
+    for( int i=0; i<len(); i++ )
+      hash = S.rot(hash,7) ^ at(i).hashCode();
+    int ihash = (int)(hash ^ (hash>>>32));
+    if( ihash==0 ) ihash = 0xdeadbeef;
+    return (_hash=ihash);
+  }
+
   // Interning support
   static XType intern( XType free ) {
     free._hash = 0;
+    assert free._tvars!=null;
     XType jt = INTERN.get(free);
-    if( jt!=null ) return jt;
+    if( jt!=null ) { free._tvars.clear(); return jt; }
     INTERN.put(jt=free,free);
     return jt;
   }
 
-  // --------------------------------------------------------------------------
-
   // Fancy print, handling cycles and dups.  Suitable for the debugger.
-  @Override public final String toString() {
+  @Override public final String toString() { return str(new SB()).toString();  }
+  // Fancy recursive print
+  public SB str( SB sb ) {
     // Collect dups and a visit bit
     VBitSet visit = new VBitSet(), dups = new VBitSet();
     _dups(visit,dups);
-    return _str(new SB(),visit.clr(),dups ).toString();
+    return _str0(sb,visit.clr(),dups );
   }
-  // Non-fancy print.  Dies on cycles and dups.  Suitable for flat or simple types.
-  public SB str( SB sb ) { return str(sb,null,null); }
 
-  private void _dups(VBitSet visit, VBitSet dups) {
+  void _dups(VBitSet visit, VBitSet dups) {
     if( visit.tset(_uid) )
       dups.set(_uid);
-    else if( _xts!=null )
-      for( XType xt : _xts )
-        if( xt != null )
-          xt._dups(visit,dups);
+    else if( _tvars!=null )
+      for( int i=0; i<len(); i++ )
+        if( at(i) != null )
+          xt(i)._dups(visit,dups);
   }
 
   // Default fancy print, stops at cycles and dups
-  public SB _str( SB sb, VBitSet visit, VBitSet dups ) {
+  final SB _str0( SB sb, VBitSet visit, VBitSet dups ) {
     if( dups!=null && dups.test(_uid) ) {
       sb.p("V").p(_uid);
       if( visit.tset(_uid) )  return sb;
       sb.p(":");
     }
-    return str(sb,visit,dups);
+    return _str1(sb,visit,dups);
   }
 
   // Internal specialized print, given dups and string/class flag
-  abstract SB str( SB sb, VBitSet visit, VBitSet dups );
+  abstract SB _str1( SB sb, VBitSet visit, VBitSet dups );
 
-    // Alternative Class flavored fancy print
+  public final int len() { return _tvars==null ? 0 : _tvars._len; }
+  public final TV at(int i) { return _tvars.at(i); }
+  public final XType xt(int i) { return at(i)._xt; }
+
+
+  // Alternative Class flavored fancy print
   public final String clz() { return _clz(new SB(),null).toString(); }
   public final SB clz( SB sb ) { return _clz(sb,null); }
   public final SB clz( SB sb, ParamTCon ptc ) { return _clz(sb,ptc); }
@@ -89,9 +117,10 @@ public abstract class XType {
     _makeImports(sb,imports);
     sb.nl();
   }
-  void _makeImports( SB sb, HashSet<String> imports ) {
-    if( _xts==null ) return;
-    for( XType xt : _xts ) {
+  final void _makeImports( SB sb, HashSet<String> imports ) {
+    if( _tvars==null ) return;
+    for( int i=0; i<len(); i++ ) {
+      XType xt = xt(i);
       XClz box = xt.box();
       if( box!=null && box.needs_import(false) ) {
         String tqual = box.qualified_name();
@@ -104,30 +133,6 @@ public abstract class XType {
     }
   }
 
-
-  abstract boolean eq( XType xt ); // Subclass specialized eq check
-  @Override public final boolean equals(Object o) {
-    if( this==o ) return true;
-    if( this.getClass() != o.getClass() ) return false;
-    XType xt = (XType)o;
-    return _notNull == xt._notNull &&
-      Arrays.equals(_xts,xt._xts) &&
-      eq(xt);
-  }
-
-  private int _hash;            // Hash cache, never 0
-  abstract int hash();          // Subclass hash
-  @Override final public int hashCode() {
-    if( _hash!=0 ) return _hash;
-    long hash = hash() ^ (_notNull ? 1024 : 0);
-    if( _xts!=null )
-      for( XType xt : _xts )
-        hash = (hash<<25) | (hash>>>(64-25)) ^ xt._uid;
-    int ihash = (int)(hash ^ (hash>>>32));
-    if( ihash==0 ) ihash = 0xdeadbeef;
-    return (_hash=ihash);
-  }
-
   // --------------------------------------------------------------------------
   // Get the boxed version of self
   public XClz box() {
@@ -138,7 +143,7 @@ public abstract class XType {
   // already an unboxed primitive, or no unboxed version exits (this is a ref).
   // If this!=unbox() then the unbox() version is a primitive of this.
   public XType unbox() {
-    XBase jt = UNBOX.get(this);
+    XBase jt = UNBOX==null ? null : UNBOX.get(this);
     return jt==null ? this : jt;
   }
   public boolean isUnboxed() { return XBOX.containsKey(this); }
@@ -216,7 +221,7 @@ public abstract class XType {
           yield XCons.XXTC;
         if( S.eq("Null",clz._name) )
           yield XCons.NULL;     // Primitive null
-        XClz xclz = XClz.make(clz);
+        XClz xclz = clz.xclz();
         if( ttc.id() instanceof FormalTChildCon ftcc )
           yield xclz.find(ftcc._name);
         yield boxed ? xclz.box() : xclz.unbox();
@@ -334,7 +339,7 @@ public abstract class XType {
       // The enum instance as a ClassPart
       ClassPart eclz = (ClassPart)econ.part();
       // The Enum class itself, not the enum
-      XClz xclz = XClz.make(eclz._super);
+      XClz xclz = eclz._super.xclz();
       // The enum
       yield xclz.unbox();
     }
@@ -354,7 +359,7 @@ public abstract class XType {
       ((MethodPart)mcon.part()).xfun();
 
     case FormalTChildCon ftcc ->
-      ftcc.clz()._tclz.find(ftcc._name);
+      ftcc.clz().xclz().find(ftcc._name);
 
     // Property constant
     case PropCon prop ->
@@ -362,11 +367,11 @@ public abstract class XType {
 
     case SingleCon con0 -> {
       if( con0.part() instanceof ModPart mod )
-        yield XClz.make(mod);
+        yield mod.xclz();
       if( con0.part() instanceof PropPart prop )
         yield XBase.make(PropBuilder.jname(prop),false);
       if( con0.part() instanceof ClassPart clz )
-        yield XClz.make(clz);
+        yield clz.xclz();
       throw XEC.TODO();
     }
 
@@ -374,8 +379,8 @@ public abstract class XType {
 
     case Dec128Con dcon -> DEC128;
 
-    case ClassCon ccon ->  XClz.make(ccon.clz());
-    case AnonClzTCon anon -> XClz.make(anon.clz());
+    case ClassCon    ccon -> ccon.clz().xclz();
+    case AnonClzTCon anon -> anon.clz().xclz();
 
     case ServiceTCon service -> XCons.SERVICE;
 

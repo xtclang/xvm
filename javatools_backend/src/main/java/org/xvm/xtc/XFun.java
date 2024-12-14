@@ -1,36 +1,36 @@
 package org.xvm.xtc;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import org.xvm.XEC;
-import org.xvm.util.SB;
-import org.xvm.util.VBitSet;
+import org.xvm.util.*;
+import org.xvm.xtc.ast.AST;
 import org.xvm.xtc.cons.ParamTCon;
 import org.xvm.xtc.cons.SigCon;
-import org.xvm.xtc.ast.AST;
-
-import java.util.Arrays;
 
 // Basically a Java class as a function.  Arg 0 is the return.
 public class XFun extends XType {
   private static XFun FREE = new XFun();
   public boolean _cond;   // Conditional return; ALSO sets global XRuntime.COND
 
+  XFun() { _tvars = new Ary<>(TVar.class); }
   // Used by e.g. CallAST
-  public static XFun make( XType[] xts, boolean cond ) {
-    FREE._cond = cond;
-    FREE._xts = xts;
+  public static XFun make( XFun free ) {
+    assert free==FREE;
     XFun jt = (XFun)intern(FREE);
     if( jt==FREE ) FREE = new XFun();
     return jt;
   }
 
   // used by MethodPart
-  public static XFun make( boolean cond, XType ret, XType[] args ) {
-    int alen = args==null ? 0 : args.length;
-    XType[] xts = FREE._xts!=null && FREE._xts.length==alen+1 ? FREE._xts : new XType[alen+1];
-    xts[0] = ret;
-    for( int i=0; i<alen; i++ )
-      xts[i+1] = args[i];
-    return make(xts,cond);
+  public static XFun make( boolean cond, XType ret, XType... args ) {
+    FREE._cond = cond;
+    assert FREE._tvars.isEmpty();
+    FREE._tvars.add(TVar.make(ret));
+    if( args!=null )
+      for( XType xt : args )
+        FREE._tvars.add(TVar.make(xt));
+    return make(FREE);
   }
 
   // Make a function type from a Call signature.  The Call's return is the
@@ -38,22 +38,41 @@ public class XFun extends XType {
   // Args are either from kids 1&2 or kids 1&2&3.  If either kid 2 or kid 3 is
   // boxed, then both are.
   public static XFun makeCall( AST call ) {
-    XType[] args = new XType[call._kids.length];
-    args[0] = call.type();      // Return
-    args[1] = call._kids[1].type();
-    args[2] = call._kids[2].type();
-    if( args.length==4 ) {
-      args[3] = call._kids[3].type();
+    assert FREE._tvars.isEmpty();
+    FREE._cond = false;
+    Ary<TVar> tvs = FREE._tvars;
+    tvs.add(TVar.make(call.type()));
+    XType k1t = call._kids[1].type();
+    XType k2t = call._kids[2].type();
+    tvs.add(TVar.make(k1t));
+    tvs.add(TVar.make(k2t));
+
+    if( call._kids.length==4 ) {
+      XType k3t = call._kids[3].type();
+      tvs.add(TVar.make(k3t));
       // If both are primitives, take it.
       // Otherwise, box them both.
-      if( !(args[2] instanceof XBase && args[3] instanceof XBase) ) {
-        if( args[2].box() != null ) args[2] = args[2].box();
-        if( args[3].box() != null ) args[3] = args[2].box();
+      if( !(k2t instanceof XBase && k3t instanceof XBase) ) {
+        if( k2t.box() != null ) tvs.set(2,TVar.make(k2t.box()));
+        if( k3t.box() != null ) tvs.set(3,TVar.make(k3t.box()));
       }
     }
-    return make(args,false);
+    return make(FREE);
   }
 
+  // Using shallow equals&hashCode, not deep, because the parts are already interned
+  // Using shallow equals&hashCode, not deep, because the parts are already interned
+  @Override boolean eq(XType xt) { return _cond==((XFun)xt)._cond; }
+  @Override long hash() { return _cond ? 512 : 0; }
+  @Override SB _str1( SB sb, VBitSet visit, VBitSet dups ) {
+    sb.p("{ ");
+    for( int i=1; i<len(); i++ )
+      xt(i)._str0(sb,visit,dups).p(", ");
+    if( len() > 1 )  sb.unchar(2);
+    sb.p(" -> ");
+    if( _cond ) sb.p("!");
+    return xt(0)._str0(sb,visit,dups).p(" }");
+  }
 
   // Return type; always exactly one return value:
   // - No given rets: VOID
@@ -94,74 +113,65 @@ public class XFun extends XType {
       return make(isCondRet, ret, args );
 
     // Constructors get all the type args from their class
-    XClz clz = clazz.tclz();
-    int len = clz._tns.length, j=len;
+    XClz clz = clazz.xclz();
+    int len = clz.len(), j=len;
     // Also get their stated args
     if( args != null ) len += args.length;
     // Nested inner classes get the outer class as an arg.
     ClassPart outer = clazz.isNestedInnerClass();
     if( outer!=null ) len++;
 
-    // Extend as needed
-    XType[] zts = new XType[len+1/*return*/];
-    zts[0] = ret;
-    System.arraycopy(clz._xts,0,zts,1,clz._xts.length);
+    // Build up the arguments
+    assert FREE._tvars.isEmpty();
+    FREE._cond = isCondRet;
+    Ary<TVar> tvs = FREE._tvars;
+    tvs.add(TVar.make(ret));
+    // Class type args for constructor
+    for( TVarZ tv : clz._tvars )
+      tvs.add(tv);
 
     // Add outer class next
     if( outer!=null )
-      zts[1+j++] = outer.tclz();
+      tvs.add(TVarZ.make(outer.xclz(),"$outer"));
     // Copy/type actual args
     if( args != null )
       for( XType arg : args )
-        zts[1+j++] = arg;
-
-    return XFun.make(zts,isCondRet);
+        tvs.add(TVar.make(arg));
+    // Intern
+    return make(FREE);
   }
 
-  public int nargs() { return _xts.length-1; }
-  public XType arg(int i) { return _xts[i+1]; }
-  public XType ret() { return _xts[0]; }
+  public int nargs() { return len()-1; }
+  public XType arg(int i) { return xt(i+1); }
+  public XType ret() { return xt(0); }
   public boolean cond() { return _cond; }
 
   public boolean hasUnboxedArgs() {
-    for( int i=1; i<_xts.length; i++ )
-      if( _xts[i].isUnboxed() )
+    for( int i=1; i<len(); i++ )
+      if( xt(i).isUnboxed() )
         return true;
     return false;
-  }
-
-  @Override public SB str( SB sb, VBitSet visit, VBitSet dups ) {
-    sb.p("{ ");
-    for( int i=1; i<_xts.length; i++ )
-      _xts[i].str(sb,visit,dups).p(", ");
-    if( _xts.length > 1 )  sb.unchar(2);
-    sb.p(" -> ");
-    if( _cond ) sb.p("!");
-    return _xts[0].str(sb,visit,dups).p(" }");
   }
 
   @Override SB _clz( SB sb, ParamTCon ptc ) {
     if( ptc != null ) {
       XClz xargs = (XClz)xtype(ptc._parms[0],true);
-      if( xargs._xts.length!=nargs() ) throw XEC.TODO();
+      if( xargs.len()!=nargs() ) throw XEC.TODO();
     }
     sb.p("Fun").p(nargs());
-    for( int i=1; i<_xts.length; i++ ) {
-      if( _xts[i]==XCons.JSTRING )   sb.p("XString$");
-      else _xts[i].clz_bare(sb).p("$");
+    for( int i=1; i<len(); i++ ) {
+      if(  xt(i)==XCons.JSTRING )   sb.p("XString$");
+      else xt(i).clz_bare(sb).p("$");
     }
     if( _cond ) throw XEC.TODO(); // Hack name to include $COND
     return sb.unchar();
   }
 
-  // Using shallow equals&hashCode, not deep, because the parts are already interned
-  @Override boolean eq(XType xt) { return _cond==((XFun)xt)._cond; }
-  @Override int hash() { return _cond ? 512 : 0; }
   @Override boolean _isa( XType xt ) {
     XFun fun = (XFun)xt;        // Invariant
-    if( _xts.length != fun._xts.length ) return false;
-    for( int i=1; i<_xts.length; i++ )
-      if( !_xts[i].isa(fun._xts[i]) )
+    if( len() != fun.len() ) return false;
+    for( int i=1; i<len(); i++ )
+      if( !xt(i).isa(fun.xt(i)) )
         return false;
     // TODO: Need to check covariant returns?
     return true;
@@ -175,7 +185,7 @@ public class XFun extends XType {
     if( ClzBldSet.find(qual) )
       return this;
     // The no-arg-no-ret version already exists, essentially a Java "Callable"
-    if( _xts.length==0 ) return this;
+    if( len()==0 ) return this;
 
 
     /* Gotta build one.  Looks like:

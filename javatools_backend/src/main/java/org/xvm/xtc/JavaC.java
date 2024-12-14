@@ -177,7 +177,7 @@ public abstract class JavaC {
       return jc == null ? null : jc._klass;
     }
     public Class<XTC> klass(ClassPart clz) {
-      return clz._tclz==null ? null : klass(clz._tclz.qualified_name());
+      return clz.xclz()==null ? null : klass(clz.xclz().qualified_name());
     }
 
     JCodes put( String clzname, JCodes jc ) {

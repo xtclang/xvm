@@ -306,6 +306,13 @@ $(LIBAGG).xtc:	$(SRCAGG).x $(LIBAGG).d $(XDK_JAR) $(XDKX).xtc
 	@javatools_backend/bin/makedepends.sh $(SRCAGG) $(LIBAGG)
 	@$(XCC) $< -o $@
 
+SRCCLI = lib_cli/src/main/x/cli
+LIBCLI = $(XDK_LIB)/cli
+$(LIBCLI).xtc:  $(SRCCLI).x $(LIBCLI).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc $(LIBCVT).xtc
+	@echo "compiling " $@ " because " $?
+	@javatools_backend/bin/makedepends.sh $(SRCCLI) $(LIBCLI)
+	@$(XCC) $< -o $@
+
 SRCCOL = lib_collections/src/main/x/collections
 LIBCOL = $(XDK_LIB)/collections
 $(LIBCOL).xtc:	$(SRCCOL).x $(LIBCOL).d $(XDK_JAR) $(XDKX).xtc
@@ -332,6 +339,13 @@ LIBWEB = $(XDK_LIB)/web
 $(LIBWEB).xtc:	$(SRCWEB).x $(LIBWEB).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc $(LIBCVT).xtc
 	@echo "compiling " $@ " because " $?
 	@javatools_backend/bin/makedepends.sh $(SRCWEB) $(LIBWEB)
+	@$(XCC) $< -o $@
+
+SRCWEBCLI = lib_webcli/src/main/x/webcli
+LIBWEBCLI = $(XDK_LIB)/webcli
+$(LIBWEBCLI).xtc:  $(SRCWEBCLI).x $(LIBWEBCLI).d $(XDK_JAR) $(XDKX).xtc $(LIBAGG).xtc $(LIBCOL).xtc $(LIBCRY).xtc $(LIBJSN).xtc $(LIBNET).xtc $(LIBCVT).xtc
+	@echo "compiling " $@ " because " $?
+	@javatools_backend/bin/makedepends.sh $(SRCWEBCLI) $(LIBWEBCLI)
 	@$(XCC) $< -o $@
 
 SRCNAT = javatools_bridge/src/main/x/_native

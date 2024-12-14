@@ -165,8 +165,8 @@ public class InvokeAST extends AST {
     }
 
     // Use fast primitive iterator
-    if( k0t.isa(XCons.ITERATOR) && _meth.equals("next") ) {
-      XType elem = k0t._xts[0];
+    if( _meth.equals("next") && k0t.isa(XCons.ITERATOR) ) {
+      XType elem = k0t.xt(0);
       if(      elem.isa(XCons.INTNUM ) )  _meth = "next8";
       else if( elem.isa(XCons.JCHAR  ) )  _meth = "next2";
       else if( elem.isa(XCons.JSTRING) )  _meth = "nextStr";
@@ -263,7 +263,7 @@ public class InvokeAST extends AST {
     // Service calls wrap
     if( _kids[0]._type instanceof XClz clz && clz.isa(XCons.SERVICE) &&
         // Except internal self-to-self
-        ClzBuilder.CCLZ._tclz != clz ) {
+        ClzBuilder.CCLZ.xclz() != clz ) {
       sb.p("$");               // Calling the     blocking service entry flavor
       if( _async ) sb.p("$");  // Calling the non-blocking service entry flavor
     } else assert !_async;     // Async is for services

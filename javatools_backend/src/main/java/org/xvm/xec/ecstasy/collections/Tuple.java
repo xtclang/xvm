@@ -36,7 +36,7 @@ public interface Tuple extends Cloneable, Comparable {
   // be used many times.
   public static XClz make_class( XClz xtt ) {
     // Lookup cached version
-    int N = xtt._xts.length;
+    int N = xtt.len();
     if( N==0 ) return xtt; // Tuple0 already exists in the base runtime
 
     String tclz = xtt.clz(new SB()).toString();
@@ -79,12 +79,12 @@ public interface Tuple extends Cloneable, Comparable {
     sb.ifmt("private %0(){}",tclz).nl();
     // N field declares
     for( int i=0; i<N; i++ )
-      sb.ifmt("public %0 _f%1;\n",xtt._xts[i].clz(),i);
+      sb.ifmt("public %0 _f%1;\n",xtt.xt(i).clz(),i);
 
     // Constructor, taking N arguments
     sb.ifmt("public %0(",tclz);
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xtt._xts[i].clz(),i);
+      sb.fmt("%0 f%1, ",xtt.xt(i).clz(),i);
     sb.unchar(2).p(") {\n").ii().i();
     // N arg to field assigns
     for( int i=0; i<N; i++ )
@@ -94,7 +94,7 @@ public interface Tuple extends Cloneable, Comparable {
     // Factory, taking N arguments and passing them along
     sb.ifmt("public static %0 construct(",tclz);
     for( int i=0; i<N; i++ )
-      sb.fmt("%0 f%1, ",xtt._xts[i].clz(),i);
+      sb.fmt("%0 f%1, ",xtt.xt(i).clz(),i);
     sb.unchar(2).p(") {\n").ii();
     sb.ifmt("return new %0(",tclz);
     // N arg to field assigns
@@ -105,17 +105,17 @@ public interface Tuple extends Cloneable, Comparable {
     // Abstract accessors
     for( int i=0; i<N; i++ ) {
       sb.ip("public ");
-      XClz clz = xtt._xts[i].box();
-      if( clz==null ) xtt._xts[i].clz(sb);
+      XClz clz = xtt.xt(i).box();
+      if( clz==null ) xtt.xt(i).clz(sb);
       else clz.clz_bare(sb);
       sb.fmt(" f%0() { return ",i);
-      if( clz==xtt._xts[i] || clz==null )  sb.fmt("_f%0",i);   // Bare prims
+      if( clz==xtt.xt(i) || clz==null )  sb.fmt("_f%0",i);   // Bare prims
       else clz.clz_bare(sb).fmt(".make(_f%0)",i); // Box  prims
       sb.p("; }\n");
     }
     // Abstract setters
     for( int i=0; i<N; i++ ) {
-      XType xt = xtt._xts[i];
+      XType xt = xtt.xt(i);
       XType box = xt.box();
       sb.ifmt("public void f%0(XTC e) { _f%0= ((%1)e)%2; }\n",i,box==null ? xt.clz() : box.clz(),xt==box ?"":"._i");
     }
@@ -125,7 +125,7 @@ public interface Tuple extends Cloneable, Comparable {
     sb.ip(  "if( x0==x1 ) return true;\n");
     sb.ip(  "return ");
     for( int i=0; i<N; i++ ) {
-      XType xt = xtt._xts[i];
+      XType xt = xtt.xt(i);
       xt.do_eq(sb.p("x0._f"+i), "x1._f"+i).p(" && ");
     }
     sb.unchar(4);
