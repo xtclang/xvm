@@ -118,4 +118,52 @@ mixin WebService(String path, Version? currentVer = Null, Version? defaultVer = 
             this.request = Null;
         }
     }
+
+    /**
+     * For components -- including the application's [Authenticator](security.Authenticator) and
+     * [session Broker](sessions.Broker) -- that may require "extra" `WebService`s to be available
+     * as part of a deployment, the components can implement this interface to expose their
+     * knowledge of those necessary `WebService`s.
+     */
+    static interface ExtrasAware {
+        /**
+         * The unique [Duplicable] [WebService] "extras" that this component is aware of.
+         */
+        @RO (Duplicable+WebService)[] extras;
+
+        /**
+         * For some collection of objects that may each be a [Duplicable] [WebService] "extra", or
+         * [ExtrasAware], collect all of those "extras".
+         *
+         * @param extras  a list of extras already known about
+         * @param objs    objects that may be a [Duplicable] [WebService] or [ExtrasAware]
+         *
+         * @return an array of unique [Duplicable] [WebService] extras
+         */
+        static (Duplicable+WebService)[] collectExtras((Duplicable+WebService)[] extras, Iterable objs) {
+            for (Object o : objs) {
+                extras = collectExtras(extras, o);
+            }
+            return extras;
+        }
+
+        /**
+         * For an object that may itself be a [Duplicable] [WebService] "extra", or is [ExtrasAware]
+         * and may know of other [Duplicable] [WebService] "extras", collect all of those "extras".
+         *
+         * @param extras  a list of extras already known about
+         * @param o       an object that may be a [Duplicable] [WebService] or [ExtrasAware]
+         *
+         * @return an array of unique [Duplicable] [WebService] extras
+         */
+        static (Duplicable+WebService)[] collectExtras((Duplicable+WebService)[] extras, Object o) {
+            if (o.is(Duplicable+WebService) && !extras.any(ws -> ws.path == o.path)) {
+                extras += o;
+            }
+            if (o.is(ExtrasAware)) {
+                extras = collectExtras(extras, o.extras);
+            }
+            return extras;
+        }
+    }
 }

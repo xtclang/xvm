@@ -1,14 +1,16 @@
+import WebService.ExtrasAware;
+
 /**
- * A `ChainedBroker` enables the use of more than one [Session Broker](Broker) when an application
+ * A `ChainBroker` enables the use of more than one [Session Broker](Broker) when an application
  * needs to support different client types, such as when an application has both a web browser
  * client (relying on cookie support) and native device application clients (with unique client ID
  * support).
  */
- service ChainedBroker
-        implements Broker {
+ service ChainBroker
+        implements Broker, ExtrasAware {
 
     /**
-     * Construct a `ChainedBroker` from a list of [Brokers](Broker).
+     * Construct a `ChainBroker` from a list of [Brokers](Broker).
      */
     construct(Broker[] brokers) {
         assert !brokers.empty;
@@ -19,9 +21,11 @@
      * [Duplicable] constructor.
      */
     @Override
-    construct(ChainedBroker that) {
+    construct(ChainBroker that) {
         this.brokers = new Broker[that.brokers.size](i -> that.brokers[i].duplicate()).freeze(inPlace=True);
     }
+
+    // ----- Broker API ----------------------------------------------------------------------------
 
     /**
      * A list of [Brokers](Broker).
@@ -59,4 +63,9 @@
                 ? False
                 : True, Null, firstResponse;
     }
+
+    // ----- ExtrasAware API ---------------------------------------------------------------------
+
+    @Override
+    @RO (Duplicable+WebService)[] extras.get() = collectExtras([], brokers);
 }

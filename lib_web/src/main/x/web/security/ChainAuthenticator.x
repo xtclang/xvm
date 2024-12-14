@@ -1,9 +1,11 @@
+import WebService.ExtrasAware;
+
 /**
  * An implementation of the [Authenticator] interface that attempts to authorized the incoming
  * request using any of the specified `Authenticators`.
  */
 const ChainAuthenticator(Realm realm, Authenticator[] chain)
-        implements Authenticator {
+        implements Authenticator, ExtrasAware {
 
     @Override
     construct(ChainAuthenticator that) {
@@ -44,4 +46,9 @@ const ChainAuthenticator(Realm realm, Authenticator[] chain)
         }
         return merged?.freeze(True) : single;
     }
+
+    // ----- ExtrasAware API ---------------------------------------------------------------------
+
+    @Override
+    @RO (Duplicable+WebService)[] extras.get() = collectExtras([], chain);
 }
