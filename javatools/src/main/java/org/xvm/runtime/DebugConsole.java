@@ -1457,6 +1457,31 @@ public final class DebugConsole
                     }
                 return Op.R_EXCEPTION;
 
+            case "DI":
+                if (cArgs >= 1)
+                    {
+                    VarDisplay[] aVars = m_aVars;
+                    int iVar = parseNonNegative(asParts[1]);
+                    if (iVar >= 0 && iVar < aVars.length)
+                        {
+                        ObjectHandle hVar = aVars[iVar].hVar;
+                        if (hVar == null)
+                            {
+                            writer.println("<unassigned>");
+                            }
+                        else if (hVar == ObjectHandle.DEFAULT)
+                            {
+                            writer.println("<default>");
+                            }
+                        else
+                            {
+                            writer.print("#" + System.identityHashCode(hVar));
+                            }
+                        return Op.R_REPEAT;
+                        }
+                    }
+                return Op.R_EXCEPTION;
+
             case "H", "HISTORY":
                 {
                 List<String> listHistory = m_listHistory;
@@ -2908,6 +2933,7 @@ public final class DebugConsole
              W- <var#>                Remove the specified watch
              D <var#>                 Display the structure view of the specified variable number
              DS <var#>                Display the "toString()" value of the specified variable number
+             DI <var#>                Display an identity code for the specified variable number
              
              S  (or N)                Step over ("proceed to next line")
              S  (or N) <count>        Repeatedly step over ("proceed to next line") <count> times
