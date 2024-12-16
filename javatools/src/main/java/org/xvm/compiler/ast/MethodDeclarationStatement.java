@@ -522,7 +522,7 @@ public class MethodDeclarationStatement
             {
             Component container = getParent().getComponent();
             String    sName     = getName();
-            if (container.isMethodContainer())
+            if (container != null && container.isMethodContainer())
                 {
                 if (returns == null && container instanceof PropertyStructure property)
                     {
