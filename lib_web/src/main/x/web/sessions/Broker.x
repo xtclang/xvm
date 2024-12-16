@@ -8,6 +8,11 @@
  * a persistent store such as a database; to maximize concurrency, the web server can
  * [duplicate](Duplicable.duplicate) a `Session` `Broker` as necessary in order to avoid contention
  * on a single instance.
+ *
+ * A `Session` `Broker` may also be annotated as a [WebService] if the `Broker` needs to handle HTTP
+ * messages from the user agent. An example is when HTTP cookies are used to identify a session, and
+ * the `Broker` needs to send those cookies to the user agent and then confirm (on the subsequent
+ * request) that the user agent received them.
  */
 interface Broker
             extends Duplicable, service {

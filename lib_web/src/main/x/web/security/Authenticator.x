@@ -33,6 +33,11 @@
  * If authorization is required, then the host would evaluate the required permission against the
  * [Entitlement] and [Principal] objects that appear in the authentication results.
  *
+ * An `Authenticator` may also be annotated as a [WebService] if the `Authenticator` needs to
+ * receive HTTP messages from the user agent as part of its workflow. An example could be an
+ * `Authenticator` that needs to verify that an HTTP cookie (e.g. containing a token) has been
+ * accepted by the user agent.
+ *
  * The `Authenticator` is expected to be a bottleneck, since implementations are likely to combine
  * high-latency I/O (e.g. database accesses) with computationally expensive logic; to maximize
  * concurrency, the HTTP server can [duplicate](Duplicable.duplicate) an `Authenticator` as
