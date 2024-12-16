@@ -34,9 +34,9 @@ const Configuration(Map<String,String> initUserPass,
                        String?             credScheme   = Null,
                        Boolean?            configured   = Null,
                       ) {
-        return new Configuration(initUserPass  = initUserPass  ?: this.initUserPass,
-                                 credScheme    = credScheme    ?: this.credScheme,
-                                 configured    = configured    ?: this.configured,
+        return new Configuration(initUserPass = initUserPass ?: this.initUserPass,
+                                 credScheme   = credScheme   ?: this.credScheme,
+                                 configured   = configured   ?: this.configured,
                                 );
     }
 }

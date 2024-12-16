@@ -21,9 +21,9 @@
      */
     construct(
             String  scheme,
-            Time?   validFrom   = Null,
-            Time?   validUntil  = Null,
-            Status? status      = Null,
+            Time?   validFrom  = Null,
+            Time?   validUntil = Null,
+            Status? status     = Null,
             ) {
         this.scheme     = scheme;
         this.validFrom  = validFrom ?: {@Inject Clock clock; return clock.now;};

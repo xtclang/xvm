@@ -158,7 +158,7 @@ const DigestCredential
             ];
 
     // ----- API -----------------------------------------------------------------------------------
-    
+
     /**
      * Test if this `DigestCredential` refers to the specified [UserId].
      *
@@ -175,9 +175,26 @@ const DigestCredential
     }
 
     /**
+     * Check that this `DigestCredential` object is active, matches the specified `userId` and hash
+     * values.
+     *
+     * @param userId  a user name or user name hash
+     * @param hash    a password hash
+     *
+     * @return True iff this `Credential` is active and matches the specified `userId` and `hash`
+     */
+    Boolean matches(UserId userId, Hash hash) {
+        return isUser(userId) && active &&
+            (  password_md5        == hash
+            || password_sha256     == hash
+            || password_sha512_256 == hash
+            );
+    }
+
+    /**
      * Given a "hasher" aka [Signer], obtain the corresponding password hash from this `Credential`.
      *
-     * @param hasher  TODO
+     * @param hasher  a `Signer` to be used
      *
      * @return True if the `Signer` is recognized by this `DigestCredential`
      * @return (conditional) the corresponding password hash

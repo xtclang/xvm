@@ -262,7 +262,7 @@ module web.xtclang.org {
      *
      *     @Endpoint(GET, "/{id}", v:3)
      *
-     * @param httpMethod  the name of the HTTP method
+     * @param httpMethod  the HTTP method
      * @param template    an optional URI Template describing a path to reach this endpoint
      * @param api         the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
      *                    that have been removed) the range of versions that the `Endpoint` _was_

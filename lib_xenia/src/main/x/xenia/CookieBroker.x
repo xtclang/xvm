@@ -1,10 +1,7 @@
 import SessionCookie.CookieId;
 import SessionImpl.Match_;
 
-import web.Get;
-import web.Header;
-import web.HttpStatus;
-import web.WebService;
+import web.*;
 
 import web.responses.SimpleResponse;
 
@@ -132,6 +129,21 @@ service CookieBroker
 
     // ----- WebService endpoints ------------------------------------------------------------------
 
+    @Get("/{redirect}/{version}")
+    ResponseOut get(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
+
+    @Post("/{redirect}/{version}")
+    ResponseOut post(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
+
+    @Patch("/{redirect}/{version}")
+    ResponseOut patch(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
+
+    @Put("/{redirect}/{version}")
+    ResponseOut put(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
+
+    @Delete("/{redirect}/{version}")
+    ResponseOut delete(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
+
     /**
      * Implements the cookie verification URL.
      *
@@ -141,7 +153,6 @@ service CookieBroker
      *
      * @return an HTTP response
      */
-    @Get("/{redirect}/{version}")
     ResponseOut handle(RequestIn request, Int redirect, Int version) {
         HttpStatus|ResponseOut result = validateSessionCookies(request, redirect, version);
         return result.is(HttpStatus)

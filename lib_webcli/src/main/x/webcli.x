@@ -111,6 +111,11 @@ module webcli.xtclang.org {
         private String?            name;
         private String?            password; // could be a token
 
+        /**
+         * Initialize authentication credentials.
+         *
+         * @param authString  a colon-delimited (:) "username:password" value; could be empty
+         */
         void initAuth(String authString) {
             if (!authString.empty) {
 
@@ -134,37 +139,6 @@ module webcli.xtclang.org {
                 return;
             }
 
-            (String, String) getPassword(String? realm, Boolean force) {
-                if (!force, String name ?= this.name, String password ?= this.password ) {
-                    return name, password;
-                }
-
-                if (realm != Null) {
-                    console.print($"Realm: {realm}");
-                }
-
-                String newName;
-                String newPassword;
-                if (name == Null) {
-                    do {
-                        newName = console.readLine("User name: ");
-                    } while (newName.empty);
-                    newPassword = console.readLine("Password: ", suppressEcho=True);
-                } else {
-                    newName = console.readLine($"User name [{name}]: ");
-                    if (newName.empty) {
-                        assert newName ?= name;
-                    }
-                    newPassword = console.readLine("Password:", suppressEcho=True);
-                    if (newPassword.empty) {
-                        assert newPassword ?= password;
-                    }
-                }
-                this.name     = newName;
-                this.password = newPassword;
-                return newName, newPassword;
-            }
-
             switch (auth) {
             case Callback:
                 this.name     = Null;
@@ -185,6 +159,44 @@ module webcli.xtclang.org {
                 this.password = newToken;
                 break;
             }
+        }
+
+        /**
+         * Read the user name and password from the console.
+         *
+         * @param realm  (optional) a realm name
+         * @param force  (optional) pass `False` to reuse previously collected credentials (if any);
+         *                          `True` to force the user input
+         */
+        (String, String) getPassword(String? realm = Null, Boolean force = False) {
+            if (!force, String name ?= this.name, String password ?= this.password ) {
+                return name, password;
+            }
+
+            if (realm != Null) {
+                console.print($"Realm: {realm}");
+            }
+
+            String newName;
+            String newPassword;
+            if (name == Null) {
+                do {
+                    newName = console.readLine("User name: ");
+                } while (newName.empty);
+                newPassword = console.readLine("Password: ", suppressEcho=True);
+            } else {
+                newName = console.readLine($"User name [{name}]: ");
+                if (newName.empty) {
+                    assert newName ?= name;
+                }
+                newPassword = console.readLine("Password:", suppressEcho=True);
+                if (newPassword.empty) {
+                    assert newPassword ?= password;
+                }
+            }
+            this.name     = newName;
+            this.password = newPassword;
+            return newName, newPassword;
         }
 
         /**
@@ -300,7 +312,15 @@ module webcli.xtclang.org {
          * Send the specified request and turn the response into a human readable String.
          */
         (String, HttpStatus) send(RequestOut request) {
-            ResponseIn response = client.send(request, callback);
+            import ecstasy.io.IOException;
+
+            ResponseIn response;
+            try {
+                response = client.send(request, callback);
+            } catch (IOException e) {
+                console.print($"Error: {e.message.empty ? &e.actualType : e.message}");
+                return ("", ServiceUnavailable);
+            }
             HttpStatus status   = response.status;
             if (status == OK) {
                 assert Body body ?= response.body;

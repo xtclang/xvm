@@ -140,11 +140,11 @@ const HttpClient
                 break Authorize;
             }
 
-                Map<String, String> props = challenge.substring(realmIndex).splitMap(valueQuote=ch->ch=='\"');
-                String              realm;
-                if (!(realm := props.get("realm"))) {
-                    break Authorize;
-                }
+            Map<String, String> props = challenge.substring(realmIndex).splitMap(valueQuote=ch->ch=='\"');
+            String              realm;
+            if (!(realm := props.get("realm"))) {
+                break Authorize;
+            }
 
             realm := realm.unquote();
 
