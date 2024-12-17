@@ -344,7 +344,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             Class<WebService> clz  = &sessionBroker.actualClass.as(Class<WebService>);
             String            path = sessionBroker.path;
             validatePath(path, declaredPaths, clz);
-            classInfos += new ClassInfo(path, clz, () -> sessionBroker);
+            classInfos += new ClassInfo(path, clz, () -> sessionBroker.duplicate());
         }
 
         // collect the ClassInfos for standard WebServices and Session mixins
