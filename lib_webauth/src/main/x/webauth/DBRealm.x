@@ -73,12 +73,7 @@ const DBRealm
         this.db   = db;
     } finally {
         if (Configuration cfg ?= this.createCfg) {
-            // TODO CP: need a: `using (schema.ensureTx()) {...}`
-            if (db.connection.transaction == Null) {
-                using (db.connection.createTransaction()) {
-                    applyConfig(cfg);
-                }
-            } else {
+            using (db.connection.createTransaction()) {
                 applyConfig(cfg);
             }
         }

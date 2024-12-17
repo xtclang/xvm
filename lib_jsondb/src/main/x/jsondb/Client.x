@@ -1434,7 +1434,10 @@ service Client<Schema extends RootSchema> {
 
         @Override
         @RO Boolean pending.get() {
-            return &this == outer.&tx;
+            // TODO GG: this blows up the runtime
+            // return &this == outer.&rootTx;
+            val rootTx = outer.rootTx;
+            return &this == &rootTx;
         }
 
         @Override
@@ -1542,7 +1545,7 @@ service Client<Schema extends RootSchema> {
                 child_ = Null;
             }
 
-            Transaction? that = outer.tx;
+            Transaction? that = outer.rootTx;
             if (&this == &that) {
                 txResetDeferred_();
                 try {
@@ -1733,7 +1736,7 @@ service Client<Schema extends RootSchema> {
                     parent_.rollbackOnly = True;
                 }
             }
-        }
+        } = False; // TODO GG not required
 
         @Override
         CommitResult commit() {
