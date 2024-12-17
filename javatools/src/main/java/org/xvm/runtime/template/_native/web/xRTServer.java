@@ -142,21 +142,9 @@ public class xRTServer
         MethodStructure ctor    = getStructure().findConstructor();
         ServiceContext  context = f_container.createServiceContext("HttpServer");
 
-        switch (context.sendConstructRequest(frame, clz, ctor, null,
-                    new ObjectHandle[ctor.getMaxVars()], Op.A_STACK))
-            {
-            case Op.R_NEXT:
-                return frame.popStack();
-
-            case Op.R_CALL:
-                return new ObjectHandle.DeferredCallHandle(frame);
-
-            case Op.R_EXCEPTION:
-                return new ObjectHandle.DeferredCallHandle(frame.m_hException);
-
-            default:
-                throw new IllegalStateException();
-            }
+        int iResult = context.sendConstructRequest(frame, clz, ctor, null,
+                            new ObjectHandle[ctor.getMaxVars()], Op.A_STACK);
+        return frame.popResult(iResult);
         }
 
     @Override

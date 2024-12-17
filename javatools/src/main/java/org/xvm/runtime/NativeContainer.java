@@ -658,7 +658,7 @@ public class NativeContainer
                 return new DeferredCallHandle(frameNext);
 
             case Op.R_EXCEPTION:
-                return new DeferredCallHandle(frame.m_hException);
+                return new DeferredCallHandle(frame.clearException());
 
             default:
                 throw new IllegalStateException();

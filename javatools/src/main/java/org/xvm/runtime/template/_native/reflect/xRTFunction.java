@@ -20,7 +20,6 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
@@ -1467,28 +1466,9 @@ public class xRTFunction
             FunctionHandle  hStruct     = new FunctionHandle(clzFunction.
                                             ensureAccess(Constants.Access.STRUCT), type, function);
 
-            switch (hStruct.getTemplate().
-                    proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    {
-                    FunctionHandle hF = (FunctionHandle) frame.popStack();
-                    hF.makeImmutable();
-                    return hF;
-                    }
-
-                case Op.R_CALL:
-                    DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
-                    hDeferred.addContinuation(frameCaller ->
-                        {
-                        frameCaller.peekStack().makeImmutable();
-                        return Op.R_NEXT;
-                        });
-                    return hDeferred;
-
-                case Op.R_EXCEPTION:
-                    return new DeferredCallHandle(frame.m_hException);
-                }
+            int iResult = hStruct.getTemplate().proceedConstruction(
+                                frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
+            return frame.popResultImmutable(iResult);
             }
 
         return new FunctionHandle(container, function);
@@ -1524,31 +1504,9 @@ public class xRTFunction
                 ConstructorHandle hStruct = new ConstructorHandle(
                         clzStruct, clzTarget, typeConstructor, constructor, aParams, fParent);
 
-                switch (hStruct.getTemplate().
-                        proceedConstruction(frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
-                    {
-                    case Op.R_NEXT:
-                        {
-                        FunctionHandle hF = (FunctionHandle) frame.popStack();
-                        hF.makeImmutable();
-                        return hF;
-                        }
-
-                    case Op.R_CALL:
-                        DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
-                        hDeferred.addContinuation(frameCaller ->
-                            {
-                            frameCaller.peekStack().makeImmutable();
-                            return Op.R_NEXT;
-                            });
-                        return hDeferred;
-
-                    case Op.R_EXCEPTION:
-                        return new DeferredCallHandle(frame.m_hException);
-
-                    default:
-                        throw new IllegalStateException();
-                    }
+                int iResult = hStruct.getTemplate().proceedConstruction(
+                                    frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
+                return frame.popResultImmutable(iResult);
                 }
             else
                 {

@@ -611,6 +611,11 @@ public abstract class Container
         ObjectHandle hTS = m_hTypeSystem;
         if (hTS == null)
             {
+            if (frame.f_context.f_container != this)
+                {
+                return frame.raiseException("Out of context container");
+                }
+
             ModuleConstant  idModule = getModule();
             ModuleStructure module   = (ModuleStructure) idModule.getComponent();
 
@@ -640,14 +645,14 @@ public abstract class Container
             ahArg[1] = xArray.makeArrayHandle(xArray.getBooleanArrayComposition(),
                         ahShared.length, ahShared, Mutability.Constant);
 
-            TypeComposition clzArray = xModule.ensureArrayComposition(frame.f_context.f_container);
+            TypeComposition clzArray = xModule.ensureArrayComposition(this);
             if (fDeferred)
                 {
                 Frame.Continuation stepNext = frameCaller ->
                     {
                     ahArg[0] = xArray.createImmutableArray(clzArray, ahModules);
-                    return saveTypeSystemHandle(frame, iReturn,
-                        templateTS.construct(frame, constructor, clzTS, null, ahArg, Op.A_STACK));
+                    return saveTypeSystemHandle(frameCaller, iReturn,
+                        templateTS.construct(frameCaller, constructor, clzTS, null, ahArg, Op.A_STACK));
                     };
 
                 return new Utils.GetArguments(ahModules, stepNext).doNext(frame);

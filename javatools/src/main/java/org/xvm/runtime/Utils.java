@@ -193,7 +193,7 @@ public abstract class Utils
             {
             iResult = hInjector.proceed(frame, frameCaller ->
                 {
-                ObjectHandle hResource = Utils.callGetResource(frameCaller,
+                ObjectHandle hResource = callGetResource(frameCaller,
                         frameCaller.popStack(), type, sName);
                 return hResource instanceof DeferredCallHandle hDeferred
                         ? hDeferred.proceed(frameCaller, null)
@@ -219,20 +219,7 @@ public abstract class Utils
             iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
             }
 
-        switch (iResult)
-            {
-            case Op.R_NEXT:
-                return frame.popStack();
-
-            case Op.R_CALL:
-                return new DeferredCallHandle(frame.m_frameNext);
-
-            case Op.R_EXCEPTION:
-                return new DeferredCallHandle(frame.clearException());
-
-            default:
-                throw new IllegalStateException();
-            }
+        return frame.popResult(iResult);
         }
 
     /**

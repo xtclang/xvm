@@ -79,7 +79,7 @@ public class IIP_Div
 
             case R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller ->
-                     template.assignArrayValue(frameCaller, hTarget, lIndex, frameCaller.popStack()));
+                    template.assignArrayValue(frameCaller, hTarget, lIndex, frameCaller.popStack()));
                 return R_CALL;
 
             case R_EXCEPTION:

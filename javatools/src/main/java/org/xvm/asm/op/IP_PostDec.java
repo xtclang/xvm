@@ -64,7 +64,6 @@ public class IP_PostDec
                     frameCaller.assignValue(m_nRetValue, hTarget));
                 return R_CALL;
 
-
             case R_EXCEPTION:
                 return R_EXCEPTION;
 

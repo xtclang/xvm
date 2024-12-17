@@ -1840,20 +1840,7 @@ public class xRTType
                     })
             : Utils.constructArgument(frame, hArg.getType(), hArg, null);
 
-        switch (iResult)
-            {
-            case Op.R_NEXT:
-                return frame.popStack();
-
-            case Op.R_CALL:
-                return new DeferredCallHandle(frame.m_frameNext);
-
-            case Op.R_EXCEPTION:
-                return new DeferredCallHandle(frame.m_hException);
-
-            default:
-                throw new IllegalStateException();
-            }
+        return frame.popResult(iResult);
         }
 
     private ObjectHandle makeRegisterHandle(Frame frame, int nRegister)
@@ -1870,8 +1857,7 @@ public class xRTType
         ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
         ahArg[0] = xInt64.makeHandle(nRegister);
 
-        int iResult = clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK);
-        switch (iResult)
+        switch (clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK))
             {
             case Op.R_NEXT:
                 return frame.popStack();

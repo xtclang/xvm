@@ -108,7 +108,7 @@ public class xRTAlgorithms
                 }
 
             case Op.R_EXCEPTION:
-                return new DeferredCallHandle(frame.m_hException);
+                return new DeferredCallHandle(frame.clearException());
 
             default:
                 throw new IllegalStateException();
@@ -121,20 +121,7 @@ public class xRTAlgorithms
         MethodStructure method = getStructure().findMethod("createAlgorithms", 0);
         CallChain       chain  = clz.getMethodCallChain(method.getIdentityConstant().getSignature());
 
-        switch (chain.invoke(frame, frame.popStack(), Op.A_STACK))
-            {
-            case Op.R_NEXT:
-                return frame.popStack();
-
-            case Op.R_CALL:
-                return new DeferredCallHandle(frame.m_frameNext);
-
-            case Op.R_EXCEPTION:
-                return new DeferredCallHandle(frame.m_hException);
-
-            default:
-                throw new IllegalStateException();
-            }
+        return frame.popResult(chain.invoke(frame, frame.popStack(), Op.A_STACK));
         }
 
     @Override

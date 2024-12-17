@@ -511,6 +511,45 @@ public class Frame
         }
 
     // a convenience method
+    public ObjectHandle popResult(int iResult)
+        {
+        return switch (iResult)
+            {
+            case Op.R_NEXT      -> popStack();
+            case Op.R_CALL      -> new DeferredCallHandle(m_frameNext);
+            case Op.R_EXCEPTION -> new DeferredCallHandle(clearException());
+            default             -> throw new IllegalStateException();
+            };
+        }
+
+    // a convenience method
+    public ObjectHandle popResultImmutable(int iResult)
+        {
+        switch (iResult)
+            {
+            case Op.R_NEXT:
+                ObjectHandle hResult = popStack();
+                hResult.makeImmutable();
+                return hResult;
+
+            case Op.R_CALL:
+                DeferredCallHandle hDeferred = new DeferredCallHandle(m_frameNext);
+                hDeferred.addContinuation(frameCaller ->
+                    {
+                    frameCaller.peekStack().makeImmutable();
+                    return Op.R_NEXT;
+                    });
+                return hDeferred;
+
+            case Op.R_EXCEPTION:
+                return new DeferredCallHandle(clearException());
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    // a convenience method
     public int wait(CompletableFuture<ObjectHandle> cf, int iReturn)
         {
         return call(createWaitFrame(cf, iReturn));

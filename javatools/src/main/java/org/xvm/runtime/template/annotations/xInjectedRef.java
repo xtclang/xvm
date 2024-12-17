@@ -147,7 +147,6 @@ public class xInjectedRef
                         }
                     else
                         {
-                        frameCaller.clearException();
                         return frameCaller.assignValue(iReturn, xBoolean.FALSE);
                         }
                     });

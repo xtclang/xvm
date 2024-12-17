@@ -202,28 +202,9 @@ public class xRTProperty
             TypeComposition clzProp = INSTANCE.ensureClass(frame.f_context.f_container, typeProp);
             PropertyHandle  hStruct = new PropertyHandle(clzProp.ensureAccess(Access.STRUCT));
 
-            switch (INSTANCE.proceedConstruction(
-                    frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK))
-                {
-                case Op.R_NEXT:
-                    {
-                    ObjectHandle hM = frame.popStack();
-                    hM.makeImmutable();
-                    return hM;
-                    }
-
-                case Op.R_CALL:
-                    DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
-                    hDeferred.addContinuation(frameCaller ->
-                        {
-                        frameCaller.peekStack().makeImmutable();
-                        return Op.R_NEXT;
-                        });
-                    return hDeferred;
-
-                case Op.R_EXCEPTION:
-                    return new DeferredCallHandle(frame.m_hException);
-                }
+            int iResult = INSTANCE.proceedConstruction(
+                                frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
+            return frame.popResultImmutable(iResult);
             }
 
         return new PropertyHandle(INSTANCE.ensureClass(frame.f_context.f_container, typeProp));
