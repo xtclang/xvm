@@ -100,7 +100,9 @@ module PeopleTest
 
     @Command("first", "Change or set or remove a first name")
     void setFirst(Int key, String name) {
-        modify(key, p -> p.with(firstName=name));
+        using (contacts.createTransaction()) {
+            modify(key, p -> p.with(firstName=name));
+        }
     }
     
     @Command("middle", "Change or set or remove a middle name")

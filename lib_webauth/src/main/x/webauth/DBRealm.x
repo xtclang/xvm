@@ -85,7 +85,6 @@ const DBRealm
     }
 
     // TODO GG: moving this inside "finally" block doesn't compile
-    // TODO GG? old comment: "we need this helper method since atm there is no Connection.ensureTransaction() API" but now there is
     private void applyConfig(Configuration cfg) {
         // create the user records
         function Credential(String, String) createCredential;
@@ -145,16 +144,7 @@ const DBRealm
         Int principalId = db.principalGen.next();
         principal = principal.with(principalId=principalId);
 
-        if (db.connection.transaction == Null) {
-            using (db.connection.createTransaction()) {
-                return createPrincipal(principal, principalId);
-            }
-        } else {
-            return createPrincipal(principal, principalId);
-        }
-
-        // we need this helper method since atm there is no Connection.ensureTransaction() API
-        private Principal createPrincipal(Principal principal, Int principalId) {
+        using (db.connection.createTransaction()) {
             // verify groups
             DBMap<Int, Group> groups = db.groups;
             for (Int groupId : principal.groupIds) {

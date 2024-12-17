@@ -46,5 +46,5 @@ interface RootSchema
      *
      * @return a new [Transaction] object
      */
-    Transaction<RootSchema> createTransaction();
+    Transaction<RootSchema> createTransaction() = connection.createTransaction();
 }

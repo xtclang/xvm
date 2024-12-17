@@ -149,10 +149,16 @@ service Client<Schema extends RootSchema> {
     public/protected (Connection + Schema)? conn = Null;
 
     /**
-     * The current Transaction on the Connection, or Null if no Transaction is active. Set to Null
-     * when either the Connection or current Transaction is closed.
+     * The current [Transaction] (either a [RootTransaction] or [NestedTransaction]) on the
+     * [Connection], or `Null` if no [Transaction] is active. Set to `Null` when either the
+     * `Connection` or current [RootTransaction] is closed.
      */
     public/protected (Transaction + Schema)? tx = Null;
+
+    /**
+     * The current [RootTransaction] on the Connection, or `Null`.
+     */
+    (RootTransaction + Schema)? rootTx.get() = tx?.root_.as(RootTransaction + Schema) : Null;
 
     /**
      * The lazily created application DBObjects within the schema.
@@ -302,12 +308,12 @@ service Client<Schema extends RootSchema> {
         static TxInfo roInfo = new TxInfo(id=0, name="internal", readOnly=True );
 
         TxInfo txInfo = readOnly ? roInfo : rwInfo;
-        if (tx == Null) {
+        if (RootTransaction rootTx ?= this.rootTx) {
+            rootTx.represent_(txInfo, txId);
+        } else {
             // create a transaction to represent the requested transaction ID
             DboInfo dboInfo = infoFor(0); // the root schema
-            tx = new Transaction(dboInfo, txInfo, txId).as(Transaction + Schema);
-        } else {
-            tx?.represent_(txInfo, txId);
+            tx = new RootTransaction(dboInfo, txInfo, txId).as(Transaction + Schema);
         }
     }
 
@@ -324,7 +330,7 @@ service Client<Schema extends RootSchema> {
         assert internal;
 
         client = txManager.allocateClient();
-        client.representTransaction(txManager.readIdFor(tx?.id_ : assert));
+        client.representTransaction(txManager.readIdFor(rootTx?.id_ : assert));
         preTxView = client;
         return client;
     }
@@ -380,7 +386,7 @@ service Client<Schema extends RootSchema> {
      */
     CommitResult commitProcessTx() {
         assert internal;
-        assert Transaction tx ?= this.tx;
+        assert RootTransaction tx ?= this.rootTx;
         return tx.commit(allowOnInternal=True);
     }
 
@@ -389,7 +395,7 @@ service Client<Schema extends RootSchema> {
      */
     void rollbackProcessTx() {
         assert internal;
-        if (Transaction tx ?= this.tx) {
+        if (RootTransaction tx ?= this.rootTx) {
             tx.rollback(allowOnInternal=True);
         }
     }
@@ -941,7 +947,7 @@ service Client<Schema extends RootSchema> {
         void defer(function Boolean(DBObjectImpl) adjust) {
             Transaction tx = requireTransaction_("defer()");
             Deferred_ deferred = new Deferred_(this, adjust);
-            tx.txAddDeferred_(deferred);
+            tx.root_.txAddDeferred_(deferred);
             dboAddDeferred_(deferred);
         }
 
@@ -1147,11 +1153,6 @@ service Client<Schema extends RootSchema> {
         SystemSchema sys.get() {
             return this.Client.implFor(BuiltIn.Sys.id).as(SystemSchema);
         }
-
-        @Override
-        (oodb.Transaction<Schema> + Schema) createTransaction() {
-            return connection.createTransaction();
-        }
     }
 
 
@@ -1239,7 +1240,7 @@ service Client<Schema extends RootSchema> {
         }
     }
 
-    // TODO cut & paste from deleted source files - /sys/ stuff to sort out later
+    // TODO CP cut & paste from deleted source files - /sys/ stuff to sort out later
     //    @Override
     //    DBInfo get()
     //        {
@@ -1266,14 +1267,10 @@ service Client<Schema extends RootSchema> {
             implements oodb.Connection<Schema> {
 
         @Override
-        @RO DBUser dbUser.get() {
-            return outer.dbUser;
-        }
+        @RO DBUser dbUser.get() = outer.dbUser;
 
         @Override
-        @RO (Transaction + Schema)? transaction.get() {
-            return outer.tx? : Null;
-        }
+        @RO (Transaction + Schema)? transaction.get() = outer.tx? : Null;
 
         /**
          * @param allowOnInternal  allow this operation to occur on an "internal" connection
@@ -1287,13 +1284,19 @@ service Client<Schema extends RootSchema> {
                                                  Int                    retryCount      = 0,
                                                  Boolean                allowOnInternal = False,
                                                 ) {
-            assert outer.tx == Null as "Attempted to create a transaction when one already exists";
-            assert !internal || allowOnInternal;
 
-            id ?:= outer.txManager.generateTxId();
-            TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
+            (Transaction + Schema)? oldTx = outer.tx;
+            (Transaction + Schema)  newTx;
+            if (oldTx == Null) {
+                assert !internal || allowOnInternal;
 
-            (Transaction + Schema) newTx = new Transaction(info_, txInfo).as(Transaction + Schema);
+                id ?:= outer.txManager.generateTxId();
+                TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
+
+                newTx = new RootTransaction(info_, txInfo).as(Transaction + Schema);
+            } else {
+                newTx = oldTx.createTransaction().as(Transaction + Schema);
+            }
 
             outer.tx = newTx;
             return newTx;
@@ -1318,18 +1321,28 @@ service Client<Schema extends RootSchema> {
      * An internal base class for the non-nested Transaction and the nested NestedTransaction
      * virtual child classes.
      */
-    protected @Abstract class Nestable(DboInfo info_)
+    protected @Abstract class Transaction(DboInfo info_)
             extends RootSchemaImpl(info_)
             implements oodb.Transaction<Schema> {
         /**
          * Outer transaction, aka "the parent".
          */
-        protected @RO Nestable!? parent_;
+        protected @RO Transaction!? parent_;
 
         /**
          * Inner transaction, aka "the child".
          */
         protected NestedTransaction!? child_;
+
+        /**
+         * The [RootTransaction].
+         */
+        @RO RootTransaction root_;
+
+        /**
+         * The [RootTransaction] id.
+         */
+        public/protected Int id_;
 
         /**
          * Notification of an inner transaction having closed.
@@ -1352,27 +1365,31 @@ service Client<Schema extends RootSchema> {
                 child_ = Null;
             }
 
-            val result = new NestedTransaction(this);
+            (oodb.Transaction<Schema> + Schema) result = new NestedTransaction(this)
+                    .as(oodb.Transaction<Schema> + Schema); // TODO GG why is a cast required?
             child_ = result;
-            return result.as(oodb.Transaction<Schema> + Schema);   // TODO GG why is a cast required?
+            return result;
         }
     }
 
     /**
      * The Transaction API, for providing to a database client.
      */
-    class Transaction(DboInfo info_, TxInfo txInfo)
-            extends Nestable {
+    class RootTransaction(DboInfo info_, TxInfo txInfo)
+            extends Transaction {
 
         construct(DboInfo info_, TxInfo txInfo, Int? id=Null) {
-            construct Nestable(info_);
+            construct Transaction(info_);
             this.txInfo = txInfo;
         } finally {
             id_ = id ?: txManager.begin(this, worker, readOnly || txInfo.readOnly);
         }
 
         @Override
-        Nestable? parent_.get() = Null;
+        RootTransaction root_.get() = this;
+
+        @Override
+        Transaction? parent_.get() = Null;
 
         /**
          * The set of DBObject ids with deferred transactional processing.
@@ -1402,6 +1419,7 @@ service Client<Schema extends RootSchema> {
          * it's just "the id". (Note that this id has no relation to the application-specified
          * transaction id that is held in the TxInfo, and has no meaning within the database.)
          */
+        @Override
         public/protected Int id_ = NO_TX;
 
         @Override
@@ -1434,7 +1452,7 @@ service Client<Schema extends RootSchema> {
          */
         @Override
         CommitResult commit(Boolean allowOnInternal = False) {
-            Transaction? that = outer.tx;
+            RootTransaction? that = outer.rootTx;
             if (that == Null) {
                 log($"Attempt to commit a previously closed transaction {this}; no current transaction.");
                 return PreviouslyClosed;
@@ -1485,7 +1503,7 @@ service Client<Schema extends RootSchema> {
          */
         @Override
         Boolean rollback(Boolean allowOnInternal = False) {
-            Transaction? that = outer.tx;
+            RootTransaction? that = outer.rootTx;
             if (that == Null) {
                 log($"Attempt to roll back a previously closed transaction {this}; no current transaction.");
                 return False;
@@ -1539,7 +1557,7 @@ service Client<Schema extends RootSchema> {
         }
 
         /**
-         * Add a deferred adjustment to this Transaction's list of deferred adjustments.
+         * Add a deferred adjustment to this RootTransaction's list of deferred adjustments.
          */
         protected void txAddDeferred_(Deferred_ deferred) {
             if (Deferred_ txLastDeferred ?= txLastDeferred_) {
@@ -1648,25 +1666,30 @@ service Client<Schema extends RootSchema> {
      * to nest/recurse arbitrarily.
      */
     class NestedTransaction
-            extends Nestable {
+            extends Transaction {
 
-        construct(Nestable parent_) {
-            construct Nestable(parent_.info_);
+        construct(Transaction parent_) {
+            construct Transaction(parent_.info_);
             this.parent_ = parent_;
         }
 
         @Override
-        protected @Final Nestable! parent_;        // TODO GG why is "!" required?
+        protected @Final Transaction! parent_;        // TODO GG why is "!" required?
 
-        protected Transaction root_.get() {
-            Nestable parent = parent_;
-            do {
-                if (parent.is(Transaction)) {
-                    return parent;
-                }
+        @Override
+        @RO RootTransaction root_.get() = parent_.root_;
+
+        @Override
+        Int id_ {
+            @Override
+            Int get() {
+                return parent_.id_;
             }
-            while (parent ?= parent.parent_);
-            assert;
+
+            @Override
+            void set(Int id) {
+                parent_.id_ = id;
+            }
         }
 
         protected Boolean active_.get() {
