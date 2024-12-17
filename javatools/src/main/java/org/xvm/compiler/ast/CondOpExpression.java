@@ -225,6 +225,13 @@ public class CondOpExpression
                 code.add(labelEnd);
                 return regAccum;
 
+            case UorT:
+                // ensure side effects are in play
+                expr1.generateArgument(ctx, code, fLocalPropOk, fUsedOnce, errs);
+                // fall through
+            case ForT:
+                return pool().valTrue();
+
             default:
                 throw new IllegalStateException();
             }
