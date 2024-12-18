@@ -270,9 +270,29 @@ public class CondOpExpression
     @Override
     public ExprAST getExprAST(Context ctx)
         {
-        return new CondOpExprAST(expr1.getExprAST(ctx),
-                                 isAnd() ? Operator.CondAnd : Operator.CondOr,
-                                 expr2.getExprAST(ctx));
+        if (isConstant())
+            {
+            return toExprAst(toConstant());
+            }
+
+        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant()))
+            {
+            case UorF:
+            case UandT:
+                // result is the same as the result of the first expression
+                return expr1.getExprAST(ctx);
+
+            case ForU:
+            case ForT:
+            case TandU:
+                // result is the same as the result of the second expression
+                return expr2.getExprAST(ctx);
+
+            default:
+                return new CondOpExprAST(expr1.getExprAST(ctx),
+                     isAnd() ? Operator.CondAnd : Operator.CondOr,
+                     expr2.getExprAST(ctx));
+            }
         }
 
 

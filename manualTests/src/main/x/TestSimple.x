@@ -7,6 +7,8 @@ module TestSimple {
     }
 
     void test(Int i) {
-        Boolean f = i % 1000 == 0 || True; // used to blow up the compiler
+        Boolean f = True || foo(i % 1000) || True; // this used to blow up the compiler
     }
+
+    Boolean foo(Int i) = TODO;
 }
