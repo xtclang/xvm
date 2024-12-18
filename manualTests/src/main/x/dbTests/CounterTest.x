@@ -1,9 +1,9 @@
 /**
  * A stand-alone test for DBProcessor functionality.
  *
- * To run:
- *      gradle compileOne -PtestName=dbTests/CounterDB
- *      gradle runOne -PtestName=dbTests/CounterTest
+ * To run, from "./manualTests/" directory:
+ *      xcc -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/CounterDB.x
+ *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/CounterTest.x
  */
 module CounterTest {
     package oodb   import oodb.xtclang.org;
@@ -15,37 +15,35 @@ module CounterTest {
 
     typedef (oodb.Connection<CounterSchema> + CounterSchema) as Connection;
 
+    @Inject Console   console;
+    @Inject Directory curDir;
+    @Inject Random    rnd;
+    @Inject Clock     clock;
+
     void run(String[] args = []) {
-        @Inject Console   console;
-        @Inject Directory homeDir;
-        @Inject Random    rnd;
+        assert curDir.fileFor("src/main/x/dbTests/CounterDB.x").exists
+                as "Not in \"manualTests\" directory";
 
-        Directory dataDir  = homeDir.dirFor("Development/xvm/manualTests/data/counterDB").ensure();
-        Directory buildDir = homeDir.dirFor("Development/xvm/manualTests/build").ensure();
+        Directory buildDir = curDir.dirFor("build/xtc/main/lib");
+        assert buildDir.fileFor("CounterDB.xtc").exists
+                as "CounterDB must be compiled to the build/xtc/main/lib directory";
 
-        Connection connection =
-                jsondb.createConnection("CounterDB", dataDir, buildDir).as(Connection);
-
+        Directory  dataDir    = curDir.dirFor("data/counterDB").ensure();
+        Connection connection = jsondb.createConnection("CounterDB", dataDir, buildDir).as(Connection);
         console.print(dump(connection));
 
         StringBuffer msg = new StringBuffer().append($"cranking up schedules: ");
         for (Int i : 1..3) {
             // pick a letter to schedule
             String name = ('A' + rnd.uint(26).toUInt32()).toString();
-
             connection.cranker.schedule(name);
-
             msg.append(name).append(", ");
         }
         console.print(msg.truncate(-2).toString());
-
         wait(connection, Duration:1s);
     }
 
     void wait(Connection connection, Duration duration) {
-        @Inject Console console;
-        @Inject Clock clock;
-
         @Future Tuple<> result;
         clock.schedule(duration, () -> {
             console.print(dump(connection));

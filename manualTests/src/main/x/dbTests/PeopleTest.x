@@ -8,9 +8,9 @@
 module PeopleTest
         incorporates TerminalApp {
 
-    package cli import cli.xtclang.org;
-    package oodb   import oodb.xtclang.org;
-    package jsondb import jsondb.xtclang.org;
+    package cli      import cli.xtclang.org;
+    package oodb     import oodb.xtclang.org;
+    package jsondb   import jsondb.xtclang.org;
     package peopleDB import PeopleDB;
 
     import cli.*;
