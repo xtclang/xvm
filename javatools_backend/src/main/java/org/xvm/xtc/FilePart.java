@@ -14,6 +14,8 @@ import java.nio.file.Files;
 public class FilePart extends Part {
   /**
    * The special sequence of bytes that identifies an XVM FileStructure.
+   *
+   * @see org.xvm.asm.Constants#FILE_MAGIC
    */
   static final int FILE_MAGIC = 0xEC57A5EE;
 
@@ -22,6 +24,8 @@ public class FilePart extends Part {
    * version that can be read and/or written by this implementation.
    * By convention, version 0 is the pre-production version: The language and
    * tool-chain are still in development.
+   *
+   * @see org.xvm.asm.Constants#VERSION_MAJOR_CUR
    */
   static final int VERSION_MAJOR_CUR = 0;
   final int _major;
@@ -35,8 +39,10 @@ public class FilePart extends Part {
    * the date string with the "-" characters having been removed). The result is that an error
    * will be displayed if there is a version mismatch, which should save some frustration -- since
    * otherwise the resulting error(s) can be very hard to diagnose.
+   *
+   * @see org.xvm.asm.Constants#VERSION_MINOR_CUR
    */
-  static final int VERSION_MINOR_CUR = 2024_10_22;
+  static final int VERSION_MINOR_CUR = 2024_12_18;
   final int _minor;
 
   // Main module
