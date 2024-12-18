@@ -74,8 +74,7 @@ public class NestedContainer
         {
         if (hSupplier instanceof FunctionHandle hFunction)
             {
-            Container      container = hService.f_context.f_container;
-            FunctionHandle hProxy    = xRTFunction.makeAsyncDelegatingHandle(hService, hFunction);
+            FunctionHandle hProxy = xRTFunction.makeAsyncDelegatingHandle(hService, hFunction);
             f_mapResources.put(key, (frame, hOpts) ->
                 {
                 ObjectHandle[] ahArg = new ObjectHandle[hProxy.getParamCount()];
@@ -84,13 +83,18 @@ public class NestedContainer
                 switch (hProxy.call1(frame, null, ahArg, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        return validateResource(frame, container, key);
+                        return validateResource(frame, frame.popStack());
 
                     case Op.R_CALL:
                         {
                         DeferredCallHandle hDeferred = new DeferredCallHandle(frame.m_frameNext);
                         hDeferred.addContinuation(frameCaller ->
-                            frameCaller.pushStack(validateResource(frameCaller, container, key)));
+                            {
+                            ObjectHandle hR = validateResource(frameCaller, frameCaller.popStack());
+                            return Op.isDeferred(hR)
+                                    ? Op.R_CALL // must be an exception
+                                    : frameCaller.pushStack(hR);
+                            });
                         return hDeferred;
                         }
 
@@ -103,36 +107,31 @@ public class NestedContainer
                     }
                 });
             }
-        else if (hSupplier.isPassThrough(this))
-            {
-            f_mapResources.put(key, (frame, hOpts) -> hSupplier);
-            }
         else
             {
-            f_mapResources.put(key, (frame, hOpts) -> new DeferredCallHandle(
-                    xException.makeHandle(frame, "Non-shareable resource: " + key)));
+            f_mapResources.put(key, (frame, hOpts) -> validateResource(frame, hSupplier));
             }
         }
 
     /**
-     * Validate, mask the injection type and ensure the ownership if necessary
+     * Validate that the injected resource is a pass-through type that belongs to this container's
+     * type system.
      */
-    private ObjectHandle validateResource(Frame frame, Container container, InjectionKey key)
+    private ObjectHandle validateResource(Frame frame, ObjectHandle hResource)
         {
-        ObjectHandle hResource = frame.popStack();
-        if (hResource.isService())
+        TypeConstant typeResource = hResource.getComposition().getType();
+
+        if (!hResource.isPassThrough(this))
             {
-            hResource = hResource.maskAs(container, key.f_type);
-            }
-        else if (hResource.isMutable())
-            {
-            // the resource must be a service or a constant
-            hResource = null;
+            return new DeferredCallHandle(xException.mutableObject(frame, typeResource));
             }
 
-        return hResource == null
-            ? new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + key))
-            : hResource;
+        if (!typeResource.isShared(getConstantPool()))
+            {
+            return new DeferredCallHandle(xException.makeHandle(frame,
+                "Injection type is not a shared: \"" + typeResource.getValueString() + '"'));
+            }
+        return hResource;
         }
 
 
@@ -144,7 +143,7 @@ public class NestedContainer
         InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
         return supplier == null
                 ? null
-                : maskInjection(frame, supplier.supply(frame, hOpts), type);
+                : supplier.supply(frame, hOpts);
         }
 
     @Override

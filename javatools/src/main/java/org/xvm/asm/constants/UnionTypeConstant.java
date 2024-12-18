@@ -96,30 +96,41 @@ public class UnionTypeConstant
         }
 
     /**
-     * Check if any of the parts of this union type extend the specified type.
+     * Collect all parts of this union type that the specified type extends (is a subclass of).
      *
-     * @param typeMatch  the type to match
+     * @param typeMatch     the type to test
+     * @param setMatching   (optional) the set to add super types to
      *
-     * @return true iff there is a part of the union that extends the specified type
+     * @return a set containing all matching types
      */
-    public boolean isMatching(TypeConstant typeMatch)
+    public Set<TypeConstant> collectExtended(TypeConstant typeMatch, Set<TypeConstant> setMatching)
         {
-        TypeConstant type1 = m_constType1;
-        TypeConstant type2 = m_constType2;
+        if (setMatching == null)
+            {
+            setMatching = new HashSet<>();
+            }
+        testExtdends(m_constType1, typeMatch, setMatching);
+        testExtdends(m_constType2, typeMatch, setMatching);
+        return setMatching;
+        }
 
-        return (type1 instanceof UnionTypeConstant typeUnion
-                    ? typeUnion.isMatching(typeMatch)
-                    : type1.isA(typeMatch))
-            || (type2 instanceof UnionTypeConstant typeUnion
-                    ? typeUnion.isMatching(typeMatch)
-                    : type2.isA(typeMatch));
+    private void testExtdends(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setSuper)
+        {
+        if (type.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
+            {
+            typeUnion.collectExtended(typeMatch, setSuper);
+            }
+        else if (typeMatch.isA(type))
+            {
+            setSuper.add(type);
+            }
         }
 
     /**
-     * Collect all parts of this union type that extend the specified type.
+     * Collect all parts of this union type that extend the specified type (is a superclass of).
      *
-     * @param typeMatch     the type to match
-     * @param setMatching   (optional) the set to add matching types to
+     * @param typeMatch     the type to test
+     * @param setMatching   (optional) the set to add sub types to
      *
      * @return a set containing all matching types
      */
@@ -134,15 +145,15 @@ public class UnionTypeConstant
         return setMatching;
         }
 
-    private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setMatching)
+    private void testMatch(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setSub)
         {
         if (type.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
             {
-            typeUnion.collectMatching(typeMatch, setMatching);
+            typeUnion.collectMatching(typeMatch, setSub);
             }
         else if (type.isA(typeMatch))
             {
-            setMatching.add(type);
+            setSub.add(type);
             }
         }
 

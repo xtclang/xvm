@@ -248,9 +248,11 @@ public abstract class Container
      * @param type   the type of the injected object
      * @param hOpts  an optional "opts" handle (see InjectedRef.x)
      *
-     * @return the injectable handle (can be a DeferredCallHandle) or null, if the name not resolvable
+     * @return the injectable handle (can be a DeferredCallHandle) or null, if the name is not
+     *         known to the container
      */
-    public abstract ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts);
+    public abstract ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type,
+                                               ObjectHandle hOpts);
 
     /**
      * A delegation method into the ConstHeap API.
@@ -693,59 +695,6 @@ public abstract class Container
         // TODO: this information will be supplied by the Linker;
         // for now assume that only the Ecstasy module is shared
         return idModule.getName().equals(ModuleStructure.ECSTASY_MODULE);
-        }
-
-    /**
-     * Mask the resource if necessary.
-     *
-     * @param frame       the current frame
-     * @param hResource   the resource handle
-     * @param typeInject  the desired injection type
-     *
-     * @return the injected resource of the specified type
-     */
-    protected ObjectHandle maskInjection(Frame frame, ObjectHandle hResource, TypeConstant typeInject)
-        {
-        if (hResource instanceof DeferredCallHandle hDeferred)
-            {
-            hDeferred.addContinuation(frameCaller ->
-                frameCaller.pushStack(completeMasking(frameCaller, frameCaller.popStack(), typeInject)));
-            return hResource;
-            }
-        return completeMasking(frame, hResource, typeInject);
-        }
-
-    private ObjectHandle completeMasking(Frame frame, ObjectHandle hResource, TypeConstant typeInject)
-        {
-        TypeConstant typeResource = hResource.getComposition().getType();
-        if (typeResource.isShared(getConstantPool()))
-            {
-            if (typeInject instanceof UnionTypeConstant typeUnion)
-                {
-                if (typeInject.isNullable())
-                    {
-                    if (hResource == xNullable.NULL)
-                        {
-                        return hResource;
-                        }
-                    typeInject = typeInject.removeNullable();
-                    }
-                else
-                    {
-                    // the injection's declared type is A|B; this should be extremely rare, if ever
-                    // used at all; the code below is just for completeness
-                    Set<TypeConstant> setMatch = typeUnion.collectMatching(typeInject, null);
-                    assert setMatch.size() == 1;
-                    typeInject = setMatch.iterator().next();
-                    }
-                }
-            return typeResource.equals(typeInject)
-                    ? hResource
-                    : hResource.maskAs(this, typeInject);
-            }
-
-        return new DeferredCallHandle(xException.makeHandle(frame,
-                "Injection type is not a shared: \"" + typeResource.getValueString() + '"'));
         }
 
 
