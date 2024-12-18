@@ -745,7 +745,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     Int begin(Client.Transaction tx, Client.Worker worker, Boolean readOnly) {
         checkEnabled();
 
-        Int clientId = tx.outer.id;
+        Int clientId = tx.outer.clientId;
         assert !byClientId.contains(clientId);
 
         Int      writeId = genWriteId();

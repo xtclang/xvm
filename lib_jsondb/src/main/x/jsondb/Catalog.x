@@ -1119,7 +1119,7 @@ service Catalog<Schema extends RootSchema>
      */
     @Concurrent
     protected void registerClient(Client client) {
-        assert clients.putIfAbsent(client.id, client);
+        assert clients.putIfAbsent(client.clientId, client);
     }
 
     /**
@@ -1131,7 +1131,7 @@ service Catalog<Schema extends RootSchema>
     @Concurrent
     protected void unregisterClient(Client client, Boolean shutdown) {
         assert client.catalog == this;
-        clients.remove(client.id, client);
+        clients.remove(client.clientId, client);
 
         if (shutdown) {
             close();

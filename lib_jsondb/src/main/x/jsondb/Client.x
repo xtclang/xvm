@@ -54,7 +54,6 @@ import Catalog.BuiltIn;
 import TxManager.NO_TX;
 import TxManager.Requirement;
 
-
 /**
  * The root of the JSON database API, as exposed to applications. This provides an implementation of
  * the OODB Connection and Transaction interfaces.
@@ -69,8 +68,6 @@ import TxManager.Requirement;
  * able to provide a custom, type-safe representation of each custom database, effectively merging
  * together the OODB API with the custom API and the custom type system defined by the database and
  * its schema.
- *
- * TODO provide a DBClosed exception after shutdown, instead of arbitrary assertions/exceptions
  */
 service Client<Schema extends RootSchema> {
     /**
@@ -78,20 +75,20 @@ service Client<Schema extends RootSchema> {
      * transaction.
      *
      * @param catalog        the JSON db catalog, representing the database on disk
-     * @param id             the id assigned to this Client service
+     * @param clientId       the id assigned to this `Client` service
      * @param dbUser         the database user to create the client on behalf of
      * @param readOnly       (optional) pass True to indicate that client is not permitted to modify
      *                       any data
      * @param notifyOnClose  the function to call when the client connection is closed
      */
     construct(Catalog<Schema>        catalog,
-              Int                    id,
+              Int                    clientId,
               DBUser                 dbUser,
               Boolean                readOnly = False,
               function void(Client)? notifyOnClose = Null) {
         assert Schema == RootSchema || catalog.metadata != Null;
 
-        this.id            = id;
+        this.clientId      = clientId;
         this.dbUser        = dbUser;
         this.catalog       = catalog;
         this.clock         = catalog.clock;
@@ -103,7 +100,6 @@ service Client<Schema extends RootSchema> {
         conn   = new Connection(infoFor(0)).as(Connection + Schema);
         worker = new Worker(jsonSchema);
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -134,31 +130,44 @@ service Client<Schema extends RootSchema> {
     public/private Boolean readOnly;
 
     /**
-     * The id assigned to this Client service.
+     * The id assigned to this `Client` service.
      */
-    public/private Int id;
+    public/private Int clientId;
 
     /**
-     * The DBUser represented by this Client service.
+     * The DBUser represented by this `Client` service.
      */
     public/private DBUser dbUser;
 
     /**
-     * The Connection represented by this Client service. Set to Null when the Connection is closed.
+     * The [Connection] represented by this `Client` service. Set to `Null` when the `Connection` is
+     * closed.
      */
     public/protected (Connection + Schema)? conn = Null;
 
     /**
-     * The current [Transaction] (either a [RootTransaction] or [NestedTransaction]) on the
-     * [Connection], or `Null` if no [Transaction] is active. Set to `Null` when either the
-     * `Connection` or current [RootTransaction] is closed.
+     * The current [RootTransaction] on the Connection, or `Null` if no [Transaction] is active.
      */
-    public/protected (Transaction + Schema)? tx = Null;
+    public/protected (RootTransaction + Schema)? rootTx = Null;
 
     /**
-     * The current [RootTransaction] on the Connection, or `Null`.
+     * The current [Transaction] (either a [RootTransaction] or [NestedTransaction]) on the
+     * [Connection], or `Null` if no [Transaction] is active.
      */
-    (RootTransaction + Schema)? rootTx.get() = tx?.root_.as(RootTransaction + Schema) : Null;
+    @RO (Transaction + Schema)? currentTx.get() {
+        (Transaction + Schema)? tx = rootTx;
+        if (tx == Null) {
+            return Null;
+        }
+
+        while (True) {
+            val child = tx.child_;
+            if (child == Null) {
+                return tx;
+            }
+            tx = child.as(Transaction + Schema);
+        }
+    }
 
     /**
      * The lazily created application DBObjects within the schema.
@@ -185,7 +194,6 @@ service Client<Schema extends RootSchema> {
      * onto this Client from the database.
      */
     @Unassigned public/private Worker worker;
-
 
     // ----- support -------------------------------------------------------------------------------
 
@@ -238,7 +246,7 @@ service Client<Schema extends RootSchema> {
      */
     @Concurrent
     Boolean checkWrite() {
-        assert !readOnly && !tx?.txInfo.readOnly;
+        assert !readOnly && !rootTx?.txInfo.readOnly;
         return checkRead();
     }
 
@@ -263,23 +271,23 @@ service Client<Schema extends RootSchema> {
             return ntx;
         }
 
-        var     tx         = this.tx;
         Boolean autocommit = False;
-
-        if (tx == Null) {
+        if (this.rootTx == Null) {
             assert !internal || allowOnInternal;
-
-            tx         = (conn?: assert).createTransaction(name="autocommit", allowOnInternal=allowOnInternal);
-            this.tx    = tx;
-            autocommit = True;
+            if (Connection conn ?= this.conn) {
+                conn.createTransaction(name="autocommit", allowOnInternal=allowOnInternal);
+                autocommit = True;
+            } else {
+                throw new DBClosed();
+            }
         }
 
         ctx.enter(autocommit);
 
-        // there is no way to report the error back from this context; the tx is marked rollback
-        // only, but the client is in an entirely different call, and not able to receive back
-        // and indication of the deferred failure, so it can only determine this failure by
-        // checking the rollbackOnly property
+        // if an error occurs processing deferred operations, there is no way to report the error
+        // back from here; the tx will be marked rollback-only, but the client is in an entirely
+        // different call, and not able to directly receive back any indication of the deferred
+        // failure, so it can only determine this failure by checking the rollbackOnly property
         dbo.dboProcessDeferred_();
 
         return ctx;
@@ -313,7 +321,7 @@ service Client<Schema extends RootSchema> {
         } else {
             // create a transaction to represent the requested transaction ID
             DboInfo dboInfo = infoFor(0); // the root schema
-            tx = new RootTransaction(dboInfo, txInfo, txId).as(Transaction + Schema);
+            rootTx = new RootTransaction(dboInfo, txInfo, txId).as(Transaction + Schema);
         }
     }
 
@@ -330,7 +338,7 @@ service Client<Schema extends RootSchema> {
         assert internal;
 
         client = txManager.allocateClient();
-        client.representTransaction(txManager.readIdFor(rootTx?.id_ : assert));
+        client.representTransaction(txManager.readIdFor(rootTx?.writeId_ : assert));
         preTxView = client;
         return client;
     }
@@ -339,9 +347,7 @@ service Client<Schema extends RootSchema> {
      * True if this is an internal ("system") client.
      */
     @Concurrent
-    @RO Boolean internal.get() {
-        return Catalog.isInternalClientId(id);
-    }
+    @RO Boolean internal.get() = Catalog.isInternalClientId(clientId);
 
     /**
      * On behalf of the scheduler, create a new internal transaction.
@@ -353,7 +359,7 @@ service Client<Schema extends RootSchema> {
         assert internal;
 
         // roll back any previously left-over transaction (unlikely that this would ever occur)
-        if (tx != Null) {
+        if (rootTx != Null) {
             rollbackProcessTx();
         }
 
@@ -408,7 +414,7 @@ service Client<Schema extends RootSchema> {
      * transaction already active.
      *
      * @param dboId           indicates which DBProcessor
-     * @param pid      indicates which Pending
+     * @param pendingId       indicates which Pending
      * @param message         the message that failed to be processed and committed
      * @param result          the result from the last failed attempt, which is either a
      *                        commit failure indicated as a [CommitResult], or an `Exception`
@@ -424,7 +430,7 @@ service Client<Schema extends RootSchema> {
      */
     <Message extends immutable Const> Boolean processingFailed(
             Int                      dboId,
-            Int                      pid,
+            Int                      pendingId,
             Message                  message,
             CommitResult | Exception result,
             Schedule?                when,
@@ -435,7 +441,7 @@ service Client<Schema extends RootSchema> {
         assert internal;
 
         // roll back any previously left-over transaction (unlikely, but just in case)
-        if (tx != Null) {
+        if (rootTx != Null) {
             rollbackProcessTx();
         }
 
@@ -445,7 +451,7 @@ service Client<Schema extends RootSchema> {
             try {
                 using (val tx = ensureTransaction(dbo, allowOnInternal=True)) {
                     if (dbo.autoRetry(message, result, when, elapsed, timesAttempted)) {
-                        dbo.retrying_(message, pid, elapsed, result);
+                        dbo.retrying_(message, pendingId, elapsed, result);
                     } else {
                         abandoning = True;
                     }
@@ -464,7 +470,7 @@ service Client<Schema extends RootSchema> {
         if (abandoning) {
             try {
                 using (val tx = ensureTransaction(dbo, allowOnInternal=True)) {
-                    dbo.abandoning_(message, pid, elapsed, result);
+                    dbo.abandoning_(message, pendingId, elapsed, result);
                     dbo.abandon(message, result, when, elapsed, timesAttempted);
                 }
             } catch (DBClosed e) {} catch (Exception e) {
@@ -501,12 +507,13 @@ service Client<Schema extends RootSchema> {
     Boolean validateDBObject(Int dboId) {
         assert internal;
 
-        ObjectStore store = storeFor(dboId);
-        store.triggerBegin(tx?.id_ : assert);
+        ObjectStore store   = storeFor(dboId);
+        Int         writeId = rootTx?.writeId_ : assert;
+        store.triggerBegin(writeId);
         try {
             return implFor(dboId).validate_();
         } finally {
-            store.triggerEnd(tx?.id_ : assert);
+            store.triggerEnd(writeId);
         }
     }
 
@@ -520,12 +527,13 @@ service Client<Schema extends RootSchema> {
     Boolean rectifyDBObject(Int dboId) {
         assert internal;
 
-        ObjectStore store = storeFor(dboId);
-        store.triggerBegin(tx?.id_ : assert);
+        ObjectStore store   = storeFor(dboId);
+        Int         writeId = rootTx?.writeId_ : assert;
+        store.triggerBegin(writeId);
         try {
             return implFor(dboId).rectify_();
         } finally {
-            store.triggerEnd(tx?.id_ : assert);
+            store.triggerEnd(writeId);
         }
     }
 
@@ -539,12 +547,13 @@ service Client<Schema extends RootSchema> {
     Boolean distributeDBObject(Int dboId) {
         assert internal;
 
-        ObjectStore store = storeFor(dboId);
-        store.triggerBegin(tx?.id_ : assert);
+        ObjectStore store   = storeFor(dboId);
+        Int         writeId = rootTx?.writeId_ : assert;
+        store.triggerBegin(writeId);
         try {
             return implFor(dboId).distribute_();
         } finally {
-            store.triggerEnd(tx?.id_ : assert);
+            store.triggerEnd(writeId);
         }
     }
 
@@ -555,9 +564,9 @@ service Client<Schema extends RootSchema> {
      */
     void stopRepresentingTransaction() {
         assert internal;
-        if (Transaction tx ?= this.tx) {
-            this.tx = Null;
-            tx.id_  = NO_TX;
+        if (Transaction tx ?= this.rootTx) {
+            rootTx    = Null;
+            tx.writeId_    = NO_TX;
         }
 
         if (val client ?= preTxView) {
@@ -570,28 +579,28 @@ service Client<Schema extends RootSchema> {
     /**
      * Obtain the DboInfo for the specified id.
      *
-     * @param id  the internal object id
+     * @param dboId  the internal object id
      *
      * @return the DboInfo for the specified id
      */
     @Concurrent
-    DboInfo infoFor(Int id) {
-        return catalog.infoFor(id);
+    DboInfo infoFor(Int dboId) {
+        return catalog.infoFor(dboId);
     }
 
     /**
      * Obtain the DBObjectImpl for the specified id.
      *
-     * @param id  the internal object id
+     * @param dboId  the internal object id
      *
      * @return the DBObjectImpl for the specified id
      */
-    DBObjectImpl implFor(Int id) {
+    DBObjectImpl implFor(Int dboId) {
         DBObjectImpl?[] impls = appObjects;
-        Int             index = id;
-        if (id < 0) {
+        Int             index = dboId;
+        if (dboId < 0) {
             impls = sysObjects;
-            index = BuiltIn.byId(id).ordinal;
+            index = BuiltIn.byId(dboId).ordinal;
         }
 
         Int size = impls.size;
@@ -599,7 +608,7 @@ service Client<Schema extends RootSchema> {
             return impls[index]?;
         }
 
-        DBObjectImpl impl = createImpl(id);
+        DBObjectImpl impl = createImpl(dboId);
 
         // save off the ObjectStore (lazy cache)
         impls[index] = impl;
@@ -610,14 +619,14 @@ service Client<Schema extends RootSchema> {
     /**
      * Create an DBObjectImpl for the specified internal database object id.
      *
-     * @param id  the internal object id
+     * @param dboId  the internal object id
      *
      * @return the new DBObjectImpl
      */
     @Concurrent
-    DBObjectImpl createImpl(Int id) {
-        if (id <= 0) {
-            DboInfo info  = infoFor(id);
+    DBObjectImpl createImpl(Int dboId) {
+        if (dboId <= 0) {
+            DboInfo info  = infoFor(dboId);
             return switch (BuiltIn.byId(info.id)) {
                 case Root:         new RootSchemaImpl(info);
                 case Sys:          new SystemSchemaImpl(info);
@@ -640,16 +649,16 @@ service Client<Schema extends RootSchema> {
             };
         }
 
-        DboInfo info = infoFor(id);
+        DboInfo info = infoFor(dboId);
         return switch (info.category) {
             case DBSchema:    new DBSchemaImpl(info);
-            case DBCounter:   new DBCounterImpl(info, storeFor(id).as(CounterStore));
-            case DBValue:     createDBValueImpl(info, storeFor(id).as(ValueStore));
-            case DBMap:       createDBMapImpl(info, storeFor(id).as(MapStore));
+            case DBCounter:   new DBCounterImpl(info, storeFor(dboId).as(CounterStore));
+            case DBValue:     createDBValueImpl(info, storeFor(dboId).as(ValueStore));
+            case DBMap:       createDBMapImpl(info, storeFor(dboId).as(MapStore));
             case DBList:      TODO
             case DBQueue:     TODO
-            case DBProcessor: createDBProcessorImpl(info, storeFor(id).as(ProcessorStore));
-            case DBLog:       createDBLogImpl  (info, storeFor(id).as(LogStore));
+            case DBProcessor: createDBProcessorImpl(info, storeFor(dboId).as(ProcessorStore));
+            case DBLog:       createDBLogImpl  (info, storeFor(dboId).as(LogStore));
         };
     }
 
@@ -690,15 +699,14 @@ service Client<Schema extends RootSchema> {
     /**
      * Obtain the DboInfo for the specified id.
      *
-     * @param id  the internal object id
+     * @param dboId  the internal object id
      *
      * @return the DboInfo for the specified id
      */
     @Concurrent
-    ObjectStore storeFor(Int id) {
-        return catalog.storeFor(id);
+    ObjectStore storeFor(Int dboId) {
+        return catalog.storeFor(dboId);
     }
-
 
     // ----- Worker --------------------------------------------------------------------------------
 
@@ -753,7 +761,6 @@ service Client<Schema extends RootSchema> {
         }
     }
 
-
     // ----- TxContext -----------------------------------------------------------------------------
 
     /**
@@ -772,22 +779,26 @@ service Client<Schema extends RootSchema> {
         }
 
         Int id.get() {
-            return outer.tx?.id_ : assert;
+            return outer.rootTx?.writeId_ : assert;
         }
 
         @Override void close(Exception? e = Null) {
             assert depth > 0;
-            assert Transaction tx ?= outer.tx;
-
             if (--depth == 0 && autocommit) {
-                if (e == Null) {
-                    val result = tx.commit();
-                    if (result != Committed) {
-                        throw new CommitFailed(tx.txInfo, result,
-                            $"Failed to auto-commit {tx}; reason={result}");
+                if  (Transaction tx ?= outer.currentTx) {
+                    if (e == Null) {
+                        val result = tx.commit();
+                        if (result != Committed) {
+                            throw new CommitFailed(tx.txInfo, result,
+                                $"Failed to auto-commit {tx}; reason={result}");
+                        }
+                    } else {
+                        tx.rollback();
                     }
+                } else if (conn == Null || catalog.status != Running) {
+                    throw new DBClosed();
                 } else {
-                    tx.rollback();
+                    assert as "no current Transaction";
                 }
             }
         }
@@ -810,7 +821,6 @@ service Client<Schema extends RootSchema> {
         @Override
         void close(Exception? e = Null) {}
     }
-
 
     // ----- DBObject ------------------------------------------------------------------------------
 
@@ -852,13 +862,11 @@ service Client<Schema extends RootSchema> {
 
         @Override
         @RO (Connection + Schema) connection.get() {
-            return outer.conn ?: assert;
+            return outer.conn ?: throw new DBClosed();
         }
 
         @Override
-        @RO (Transaction + Schema)? transaction.get() {
-            return outer.tx;
-        }
+        @RO (Transaction + Schema)? transaction.get() = outer.currentTx;
 
         @Override
         @Concurrent
@@ -940,7 +948,7 @@ service Client<Schema extends RootSchema> {
         @Override
         <Result extends immutable Const> Result require(function Result(DBObjectImpl) test) {
             Transaction tx = requireTransaction_("require()");
-            return outer.txManager.registerRequirement(tx.id_, info_.id, test);
+            return outer.txManager.registerRequirement(tx.writeId_, info_.id, test);
         }
 
         @Override
@@ -994,7 +1002,7 @@ service Client<Schema extends RootSchema> {
 
                     if (failure) {
                         // mark the transaction as rollback-only
-                        assert Transaction tx ?= outer.tx;
+                        assert Transaction tx ?= outer.currentTx;
                         tx.rollbackOnly = True;
 
                         // deferred adjustments failed
@@ -1026,10 +1034,13 @@ service Client<Schema extends RootSchema> {
                                          ;
 
             // there must already be a transaction
-            if (Transaction tx ?= outer.tx) {
+            if (Transaction tx ?= outer.currentTx) {
                 return tx;
+            } else if (outer.conn == Null || outer.catalog.status != Running) {
+                throw new DBClosed();
+            } else {
+                assert as "No transaction exists; {method} requires a transaction";
             }
-            assert as "No transaction exists; {method} requires a transaction";
         }
 
         /**
@@ -1038,7 +1049,8 @@ service Client<Schema extends RootSchema> {
          * @return True if the validation succeeded
          */
         Boolean validate_() {
-            TxChange change = new TxChange_(); // TODO CP cache?
+            // TODO can/should an instance be cached?
+            TxChange change = new TxChange_();
 
             for (val validator : info_.validators) {
                 try {
@@ -1122,7 +1134,6 @@ service Client<Schema extends RootSchema> {
         }
     }
 
-
     // ----- DBSchema ------------------------------------------------------------------------------
 
     /**
@@ -1140,7 +1151,6 @@ service Client<Schema extends RootSchema> {
         }
     }
 
-
     // ----- RootSchema ----------------------------------------------------------------------------
 
     /**
@@ -1154,7 +1164,6 @@ service Client<Schema extends RootSchema> {
             return this.Client.implFor(BuiltIn.Sys.id).as(SystemSchema);
         }
     }
-
 
     // ----- SystemSchema --------------------------------------------------------------------------
 
@@ -1238,24 +1247,21 @@ service Client<Schema extends RootSchema> {
         @RO DBLog<String> errors.get() {
             return implFor(BuiltIn.Errors.id).as(DBLog<String>);
         }
+
+        // TODO /sys/ stuff
+        // @Override
+        // DBInfo get() {
+        //     return new DBInfo(
+        //             name     = catalog.dir.toString(),
+        //             version  = catalog.version ?: assert,
+        //             created  = catalog.statusFile.created,
+        //             modified = catalog.statusFile.modified,
+        //             accessed = catalog.dir.accessed.maxOf(catalog.statusFile.modified),
+        //             readable = catalog.statusFile.readable,
+        //             writable = catalog.statusFile.writable && !catalog.readOnly,
+        //             size     = catalog.dir.size);
+        // }
     }
-
-    // TODO CP cut & paste from deleted source files - /sys/ stuff to sort out later
-    //    @Override
-    //    DBInfo get()
-    //        {
-    //        // TODO can cache a lot of this information on the Catalog
-    //        return new DBInfo(
-    //                name     = catalog.dir.toString(),
-    //                version  = catalog.version ?: assert,   // TODO review the assert
-    //                created  = catalog.statusFile.created,
-    //                modified = catalog.statusFile.modified, // TODO get timestamp from last tx
-    //                accessed = catalog.dir.accessed.maxOf(catalog.statusFile.modified),
-    //                readable = catalog.statusFile.readable,
-    //                writable = catalog.statusFile.writable && !catalog.readOnly,
-    //                size     = catalog.dir.size);
-    //        }
-
 
     // ----- Connection ----------------------------------------------------------------------------
 
@@ -1270,7 +1276,7 @@ service Client<Schema extends RootSchema> {
         @RO DBUser dbUser.get() = outer.dbUser;
 
         @Override
-        @RO (Transaction + Schema)? transaction.get() = outer.tx? : Null;
+        @RO (Transaction + Schema)? transaction.get() = outer.currentTx;
 
         /**
          * @param allowOnInternal  allow this operation to occur on an "internal" connection
@@ -1284,8 +1290,7 @@ service Client<Schema extends RootSchema> {
                                                  Int                    retryCount      = 0,
                                                  Boolean                allowOnInternal = False,
                                                 ) {
-
-            (Transaction + Schema)? oldTx = outer.tx;
+            (Transaction + Schema)? oldTx = outer.currentTx;
             (Transaction + Schema)  newTx;
             if (oldTx == Null) {
                 assert !internal || allowOnInternal;
@@ -1294,11 +1299,10 @@ service Client<Schema extends RootSchema> {
                 TxInfo txInfo = new TxInfo(id, name, priority, readOnly, timeout, retryCount);
 
                 newTx = new RootTransaction(info_, txInfo).as(Transaction + Schema);
+                outer.rootTx = newTx;
             } else {
                 newTx = oldTx.createTransaction().as(Transaction + Schema);
             }
-
-            outer.tx = newTx;
             return newTx;
         }
 
@@ -1308,17 +1312,16 @@ service Client<Schema extends RootSchema> {
         @Override
         void close(Exception? e = Null) {
             super(e);
-            outer.conn = Null;
-            outer.tx   = Null;
+            outer.conn   = Null;
+            outer.rootTx = Null;
             notifyOnClose?(this.Client);
         }
     }
 
-
     // ----- Transaction ---------------------------------------------------------------------------
 
     /**
-     * An internal base class for the non-nested Transaction and the nested NestedTransaction
+     * An internal base class for the non-nested [RootTransaction] and the [NestedTransaction]
      * virtual child classes.
      */
     protected @Abstract class Transaction(DboInfo info_)
@@ -1327,12 +1330,12 @@ service Client<Schema extends RootSchema> {
         /**
          * Outer transaction, aka "the parent".
          */
-        protected @RO Transaction!? parent_;
+        @RO Transaction!? parent_;
 
         /**
          * Inner transaction, aka "the child".
          */
-        protected NestedTransaction!? child_;
+        public/protected NestedTransaction!? child_;
 
         /**
          * The [RootTransaction].
@@ -1342,7 +1345,7 @@ service Client<Schema extends RootSchema> {
         /**
          * The [RootTransaction] id.
          */
-        public/protected Int id_;
+        @RO Int writeId_;
 
         /**
          * Notification of an inner transaction having closed.
@@ -1354,6 +1357,13 @@ service Client<Schema extends RootSchema> {
             if (&child == &child_) {
                 child_ = Null;
             }
+        }
+
+        @Override
+        @RO (Connection + Schema) connection.get() {
+            // note: this is considered to be a valid request, regardless of whether this
+            // transaction is a currently valid transaction or not
+            return outer.conn ?: throw new DBClosed();
         }
 
         @Override
@@ -1378,18 +1388,23 @@ service Client<Schema extends RootSchema> {
     class RootTransaction(DboInfo info_, TxInfo txInfo)
             extends Transaction {
 
-        construct(DboInfo info_, TxInfo txInfo, Int? id=Null) {
+        /**
+         * @param info_    the [DboInfo] for the [RootSchema]
+         * @param txInfo   the externally visible information about the transaction
+         * @param writeId  the internal "write id" for the transaction
+         */
+        construct(DboInfo info_, TxInfo txInfo, Int? writeId=Null) {
             construct Transaction(info_);
             this.txInfo = txInfo;
         } finally {
-            id_ = id ?: txManager.begin(this, worker, readOnly || txInfo.readOnly);
+            writeId_ = writeId ?: txManager.begin(this, worker, readOnly || txInfo.readOnly);
         }
 
         @Override
-        RootTransaction root_.get() = this;
+        Transaction? parent_.get() = Null;
 
         @Override
-        Transaction? parent_.get() = Null;
+        RootTransaction root_.get() = this;
 
         /**
          * The set of DBObject ids with deferred transactional processing.
@@ -1404,33 +1419,26 @@ service Client<Schema extends RootSchema> {
         /**
          * Alter the prepare-stage transaction to represent a new stage of the prepare process.
          *
-         * @param txInfo
-         * @param id
+         * @param txInfo   the externally visible information about the transaction
+         * @param writeId  the internal "write id" for the transaction
          */
-        void represent_(TxInfo txInfo, Int id) {
-            this.txInfo = txInfo;
-            this.id_    = id;
+        void represent_(TxInfo txInfo, Int writeId) {
+            this.txInfo   = txInfo;
+            this.writeId_ = writeId;
         }
 
         /**
          * The transaction ID assigned to this transaction by the TxManager.
          *
-         * Internally, this ID is known as the transaction's "write id", but here on the client,
-         * it's just "the id". (Note that this id has no relation to the application-specified
-         * transaction id that is held in the TxInfo, and has no meaning within the database.)
+         * Internally, this ID is known as the transaction's "write id". This id has no relation to
+         * the application-specified transaction id that is held in the TxInfo, and has no meaning
+         * within the database.
          */
         @Override
-        public/protected Int id_ = NO_TX;
+        public/protected Int writeId_ = NO_TX;
 
         @Override
         public/protected TxInfo txInfo;
-
-        @Override
-        @RO (Connection + Schema) connection.get() {
-            // note: this is considered to be a valid request, regardless of whether this
-            // transaction is a currently valid transaction or not
-            return outer.conn ?: assert;
-        }
 
         @Override
         @RO Boolean pending.get() {
@@ -1475,25 +1483,25 @@ service Client<Schema extends RootSchema> {
 
             // a transaction with a NO_TX id or a ReadId hasn't done anything to commit
             CommitResult result = Committed;
-            if (id_ != NO_TX && TxManager.txCat(id_) == Open) {
+            if (writeId_ != NO_TX && TxManager.txCat(writeId_) == Open) {
                 if (!txProcessDeferred_()) {
                     return DeferredFailed;
                 }
 
                 try {
-                    result = txManager.commit(id_);
+                    result = txManager.commit(writeId_);
                 } catch (DBClosed e) {
                     throw e;
                 } catch (Exception e) {
                     log($"Exception during commit of {this}: {e}");
                     result = DatabaseError;
                     try {
-                        txManager.rollback(id_);
+                        txManager.rollback(writeId_);
                     } catch (Exception ignore) {}
                 } finally {
                     // clearing out the transaction reference will "close" the transaction; it
                     // becomes no longer reachable internally
-                    outer.tx = Null;
+                    outer.rootTx = Null;
                 }
             }
 
@@ -1523,14 +1531,14 @@ service Client<Schema extends RootSchema> {
             }
 
             Boolean result = True;
-            if (id_ != NO_TX) {
+            if (writeId_ != NO_TX) {
                 try {
-                    result = txManager.rollback(id_);
+                    result = txManager.rollback(writeId_);
                 } catch (DBClosed e) {} catch (Exception e) {
                     log($"Exception during rollback of {this}: {e}");
                     result = False;
                 } finally {
-                    outer.tx = Null;
+                    outer.rootTx = Null;
                 }
             }
 
@@ -1554,7 +1562,7 @@ service Client<Schema extends RootSchema> {
                     // back the transaction, in the case that the transaction is still open
                     super(e);
                 } finally {
-                    outer.tx = Null;
+                    outer.rootTx = Null;
                 }
             }
         }
@@ -1649,7 +1657,7 @@ service Client<Schema extends RootSchema> {
 
         @Override
         String toString() {
-            return $"Transaction(id={id_}, txInfo={txInfo})";
+            return $"Transaction(id={writeId_}, txInfo={txInfo})";
         }
     }
 
@@ -1677,23 +1685,13 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
-        protected @Final Transaction! parent_;        // TODO GG why is "!" required?
+        @Final Transaction! parent_;        // TODO GG why is "!" required?
 
         @Override
         @RO RootTransaction root_.get() = parent_.root_;
 
         @Override
-        Int id_ {
-            @Override
-            Int get() {
-                return parent_.id_;
-            }
-
-            @Override
-            void set(Int id) {
-                parent_.id_ = id;
-            }
-        }
+        Int writeId_.get()= root_.writeId_;
 
         protected Boolean active_.get() {
             return parent_.&child_ == &this && parent_.pending;
@@ -1707,9 +1705,6 @@ service Client<Schema extends RootSchema> {
         }
 
         // ----- Transaction API -------------------------------------------------------------------
-
-        @Override
-        @RO (Connection + Schema) connection.get() = root_.connection.as(Connection + Schema);
 
         @Override
         TxInfo txInfo.get() = root_.txInfo;
@@ -1795,7 +1790,6 @@ service Client<Schema extends RootSchema> {
         }
     }
 
-
     // ----- DBCounter -----------------------------------------------------------------------------
 
     /**
@@ -1863,7 +1857,6 @@ service Client<Schema extends RootSchema> {
             }
         }
     }
-
 
     // ----- DBMap ---------------------------------------------------------------------------------
 
@@ -2012,7 +2005,7 @@ service Client<Schema extends RootSchema> {
                         // transaction, but if we already have a cookie left over from a
                         // previous partial iteration, we can't guarantee that we will get the
                         // same read tx-id from the new autocommit transaction
-                        assert !started || this.Client.tx != Null as
+                        assert !started || this.Client.rootTx != Null as
                                 \|Unable to complete iteration in auto-commit mode;
                                  | the Map contained too many keys at the start of the iteration
                                  | to deliver them within a single autocommit transaction.
@@ -2088,7 +2081,6 @@ service Client<Schema extends RootSchema> {
             }
         }
     }
-
 
     // ----- DBMap (for sys schema) ----------------------------------------------------------------
 
@@ -2179,11 +2171,10 @@ service Client<Schema extends RootSchema> {
                                        DBUser?                 user   = Null,
                                        (UInt|Range<UInt>)?     txIds  = Null,
                                        String?                 txName = Null) {
-            // TODO
+            // TODO implement this feature
             return False;
         }
     }
-
 
     // ----- DBProcessor ---------------------------------------------------------------------------
 
@@ -2246,7 +2237,7 @@ service Client<Schema extends RootSchema> {
              * Checks to make sure that this list isn't used outside of its transaction.
              */
             void checkTx() {
-                assert txid == this.Client.tx?.id_ : False;
+                assert txid == this.Client.rootTx?.writeId_ : False;
             }
 
             @Override
@@ -2290,13 +2281,13 @@ service Client<Schema extends RootSchema> {
         /**
          * Process one pending message.
          *
-         * @param pid      indicates which Pending
-         * @param message  the Message to process
+         * @param pendingId  indicates which Pending
+         * @param message    the Message to process
          *
          * @return the elapsed processing time
          * @return the exceptional processing failure, iff the processing failed
          */
-        (Range<Time>, Exception?) process_(Int pid, Message message) {
+        (Range<Time>, Exception?) process_(Int pendingId, Message message) {
             Transaction tx      = requireTransaction_("process()");
             Exception?  failure = Null;
             Time        start   = clock.now;
@@ -2314,7 +2305,7 @@ service Client<Schema extends RootSchema> {
                 // the information is provided to the DBProcessor's ObjectStore at this point;
                 // if the transaction fails to commit, then the fact that the PID was processed
                 // will also be lost -- as it should be!
-                store_.processCompleted(tx.id_, message, pid, elapsed);
+                store_.processCompleted(tx.writeId_, message, pendingId, elapsed);
             }
 
             return elapsed, failure;
@@ -2348,22 +2339,22 @@ service Client<Schema extends RootSchema> {
          * Notification of a decision to retry.
          */
         void retrying_(Message                  message,
-                       Int                      pid,
+                       Int                      pendingId,
                        Range<Time>              elapsed,
                        CommitResult | Exception result) {
             Transaction tx = requireTransaction_("retryPending()");
-            store_.retryPending(tx.id_, message, pid, elapsed, result);
+            store_.retryPending(tx.writeId_, message, pendingId, elapsed, result);
         }
 
         /**
          * Notification of a decision to abandon.
          */
         void abandoning_(Message                  message,
-                         Int                      pid,
+                         Int                      pendingId,
                          Range<Time>              elapsed,
                          CommitResult | Exception result) {
             Transaction tx = requireTransaction_("abandonPending()");
-            store_.abandonPending(tx.id_, message, pid, elapsed, result);
+            store_.abandonPending(tx.writeId_, message, pendingId, elapsed, result);
         }
 
         @Override
