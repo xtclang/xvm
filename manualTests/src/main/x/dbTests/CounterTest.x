@@ -6,9 +6,8 @@
  *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/CounterTest.x
  */
 module CounterTest {
-    package oodb   import oodb.xtclang.org;
-    package jsondb import jsondb.xtclang.org;
-
+    package oodb      import oodb.xtclang.org;
+    package jsondb    import jsondb.xtclang.org;
     package counterDB import CounterDB;
 
     import counterDB.CounterSchema;
