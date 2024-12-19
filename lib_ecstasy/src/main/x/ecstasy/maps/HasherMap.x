@@ -115,7 +115,7 @@ class HasherMap<Key, Value>
     /**
      * The size at which the capacity must grow.
      */
-    private Int growAt;
+    private Int growAt = 1;
 
     /**
      * The size at which the capacity must shrink.
@@ -142,9 +142,7 @@ class HasherMap<Key, Value>
             implements Duplicable {
 
         @Override
-        HashBucket duplicate(Boolean shallow=False) {
-            return super();
-        }
+        HashBucket duplicate(Boolean shallow=False) = super();
 
         /**
          * Internal bit-packed field.
@@ -185,7 +183,6 @@ class HasherMap<Key, Value>
                 this.discard();
                 return result;
             }
-
             return this;
         }
 
@@ -201,9 +198,7 @@ class HasherMap<Key, Value>
         /**
          * Discard all nodes from here down.
          */
-        void discardAll() {
-            discard();
-        }
+        void discardAll() = discard();
 
         /**
          * Determine if the node has been discarded. A discarded node can only be "held" by an
@@ -211,16 +206,12 @@ class HasherMap<Key, Value>
          * to modify the node, and [copyOnWriteIfNecessary] made a new master copy of the node
          * (which then caused this node to be discarded).
          */
-        @RO Boolean discarded.get() {
-            return stats & 0x80 != 0;
-        }
+        @RO Boolean discarded.get() = stats & 0x80 != 0;
 
         /**
          * True iff this node can represent more than one hash code.
          */
-        @RO Boolean isMultiHash.get() {
-            return False;
-        }
+        @RO Boolean isMultiHash.get() = False;
 
         /**
          * The hash code represented by this `HashBucket`. If the `HashBucket` represents more than
@@ -314,9 +305,7 @@ class HasherMap<Key, Value>
          * @return `True` iff the `HashBucket` needs to be replaced
          * @return (conditional) the new `HashBucket` to use in lieu of this
          */
-        conditional HashBucket! adopt(HashBucket! node) {
-            return True, new TreeNode(this, node);
-        }
+        conditional HashBucket! adopt(HashBucket! node) = (True, new TreeNode(this, node));
     }
 
     /**
@@ -333,19 +322,13 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        @RO Int size.get() {
-            return 1;
-        }
+        @RO Int size.get() = 1;
 
         @Override
-        Key keyAt(Int index) {
-            return key;
-        }
+        Key keyAt(Int index) = key;
 
         @Override
-        Value valueAt(Int index) {
-            return value;
-        }
+        Value valueAt(Int index) = value;
 
         @Override
         void update(Int index, Value value) {
@@ -427,19 +410,13 @@ class HasherMap<Key, Value>
         Int hash;
 
         @Override
-        @RO Int size.get() {
-            return keys.size;
-        }
+        @RO Int size.get() = keys.size;
 
         @Override
-        Key keyAt(Int index) {
-            return keys[index];
-        }
+        Key keyAt(Int index) = keys[index];
 
         @Override
-        Value valueAt(Int index) {
-            return values[index];
-        }
+        Value valueAt(Int index) = values[index];
 
         @Override
         void update(Int index, Value value) {
@@ -516,7 +493,6 @@ class HasherMap<Key, Value>
                     return True, EachKey.count;
                 }
             }
-
             return False;
         }
     }
@@ -564,20 +540,13 @@ class HasherMap<Key, Value>
         HashBucket<Key, Value>[] nodes;
 
         @Override
-        @RO Boolean isMultiHash.get() {
-            return True;
-        }
+        @RO Boolean isMultiHash.get() = True;
 
         @Override
-        @RO Int hash.get() {
-            // this must never be called
-            assert;
-        }
+        @RO Int hash.get() = assert;
 
         @Override
-        void discardAll() {
-            nodes.forEach(node -> node.discard());
-        }
+        void discardAll() = nodes.forEach(node -> node.discard());
 
         @Override
         @RO Int size.get() {
@@ -586,19 +555,13 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        Key keyAt(Int index) {
-            assert;
-        }
+        Key keyAt(Int index) = assert;
 
         @Override
-        Value valueAt(Int index) {
-            assert;
-        }
+        Value valueAt(Int index) = assert;
 
         @Override
-        void update(Int index, Value value) {
-            assert;
-        }
+        void update(Int index, Value value) = assert;
 
         @Override
         conditional Value get(Hasher<Key> hasher, Int hash, Key key) {
@@ -679,9 +642,7 @@ class HasherMap<Key, Value>
         /**
          * The number of "leaf" buckets (single or list nodes) in the tree.
          */
-        Int leafNodeCount.get() {
-            return nodes.size;
-        }
+        Int leafNodeCount.get() = nodes.size;
 
         /**
          * Obtain the specified "leaf" bucket (a single or a list node) in the tree.
@@ -690,9 +651,7 @@ class HasherMap<Key, Value>
          *
          * @return the specified "leaf" bucket
          */
-        HashBucket<Key, Value> leafNodeAt(Int index) {
-            return nodes[index];
-        }
+        HashBucket<Key, Value> leafNodeAt(Int index) = nodes[index];
 
         /**
          * Find the sub-node in the tree that has the specified hash.
@@ -778,7 +737,7 @@ class HasherMap<Key, Value>
 
     @Override
     conditional Value get(Key key) {
-        Int64 hash = hasher.hashOf(key);
+        Int hash = hasher.hashOf(key);
         if (HashBucket<Key, Value> bucket := bucketFor(hash),
                 Value value := bucket.get(hasher, hash, key)) {
             return True, value;
@@ -801,7 +760,7 @@ class HasherMap<Key, Value>
 
     @Override
     HasherMap put(Key key, Value value) {
-        Int64   hash  = hasher.hashOf(key);
+        Int     hash  = hasher.hashOf(key);
         Int     index = hash % buckets.size;
         Boolean added = False;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index]) {
@@ -834,7 +793,7 @@ class HasherMap<Key, Value>
 
     @Override
     HasherMap remove(Key key) {
-        Int64   hash    = hasher.hashOf(key);
+        Int     hash    = hasher.hashOf(key);
         Int     index   = hash % buckets.size;
         Boolean removed = False;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index]) {
@@ -1079,9 +1038,7 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        Boolean knownDistinct() {
-            return True;
-        }
+        Boolean knownDistinct() = True;
 
         @Override
         conditional Int knownSize() {
@@ -1091,9 +1048,7 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        (EntryIterator, EntryIterator) bifurcate() {
-            return this, this.clone();
-        }
+        (EntryIterator, EntryIterator) bifurcate() = (this, this.clone());
 
         // ----- internal --------------------------------------------------------------------------
 
@@ -1139,14 +1094,10 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        public Key key.get() {
-            return bucket.keyAt(index);
-        }
+        public Key key.get() = bucket.keyAt(index);
 
         @Override
-        public Boolean exists.get() {
-            return !bucket.discarded || contains(key);
-        }
+        public Boolean exists.get() = !bucket.discarded || contains(key);
 
         @Override
         Value value {
@@ -1174,21 +1125,17 @@ class HasherMap<Key, Value>
         }
 
         @Override
-        void delete() {
-            remove(key);
-        }
+        void delete() = remove(key);
 
         @Override
-        Entry<Key, Value> reify() {
-            return new KeyEntry<Key, Value>(this.Map, key);
-        }
+        Entry<Key, Value> reify() = new KeyEntry<Key, Value>(this.Map, key);
     }
 
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends HasherMap> Int64 hashCode(CompileType value) {
-        Int64                   hash   = value.size.toInt64();
+    static <CompileType extends HasherMap> Int hashCode(CompileType value) {
+        Int                     hash   = value.size.toInt();
         Hasher<CompileType.Key> hasher = value.hasher;
         for (CompileType.Key key : value) {
             hash ^= hasher.hashOf(key);
@@ -1272,7 +1219,7 @@ class HasherMap<Key, Value>
         // shoot for 20% empty buckets (i.e. 50% oversize)
         Int target = capacity + (capacity >> 1) + 15;
 
-        (_, Int index) = PRIMES.binarySearch(target.toInt64());
+        (_, Int index) = PRIMES.binarySearch(target.toInt());
         Int bucketCount = index < PRIMES.size ? PRIMES[index] : target;
 
         // shrink when falls below 20% capacity
@@ -1287,7 +1234,7 @@ class HasherMap<Key, Value>
     /**
      * Primes used for bucket array sizes (to ensure a prime modulo).
      */
-    static Int64[] PRIMES =
+    static Int[] PRIMES =
         [
         7, 13, 23, 37, 47, 61, 79, 107, 137, 181, 229, 283, 349, 419, 499, 599, 727, 863, 1013,
         1187, 1399, 1697, 2039, 2503, 3253, 4027, 5113, 6679, 8999, 11987, 16381, 21023, 28351,
