@@ -318,8 +318,7 @@ module webcli.xtclang.org {
             try {
                 response = client.send(request, callback);
             } catch (IOException e) {
-                console.print($"Error: {e.message.empty ? &e.actualType : e.message}");
-                return ("", ServiceUnavailable);
+                return ($"Error: {e.message.empty ? &e.actualType : e.message}", ServiceUnavailable);
             }
             HttpStatus status   = response.status;
             if (status == OK) {
