@@ -28,9 +28,6 @@ module Hello
     import xenia.Http1Request;
     import xenia.SessionManager;
 
-    package msg import Messages;
-    import msg.Greeting;
-
     void run(String[] args=["localhost", "localhost:8080/8090"]) {
         @Inject Console console;
 
@@ -123,8 +120,8 @@ module Hello
             }
 
             @Get("hello")
-            Greeting greeting() {
-                return ("Hi", 1);
+            String greeting() {
+                return "Hi";
             }
 
             @HttpsRequired(autoRedirect=True)
