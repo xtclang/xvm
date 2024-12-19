@@ -3,7 +3,6 @@ package org.xvm.runtime.template.reflect;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
@@ -75,17 +74,12 @@ public class xInjector
                     {
                     hOpts = xNullable.NULL;
                     }
-                ObjectHandle hValue = frame.getInjected(hName.getStringValue(), hType.getDataType(), hOpts);
-                if (hValue == null)
-                    {
-                    return frame.raiseException(xException.unknownInjectable(frame,
-                            hType.getDataType(), hName.getStringValue()));
-                    }
-
-                return Op.isDeferred(hValue)
-                        ? hValue.proceed(frame, frameCaller ->
-                            frameCaller.assignValue(iReturn, frameCaller.popStack()))
-                        : frame.assignValue(iReturn, hValue);
+                ObjectHandle hValue =
+                        frame.getInjected(hName.getStringValue(), hType.getDataType(), hOpts);
+                return hValue == null
+                        ? frame.raiseException(xException.unknownInjectable(frame,
+                                hType.getDataType(), hName.getStringValue()))
+                        : frame.assignDeferredValue(iReturn, hValue);
                 }
             }
 

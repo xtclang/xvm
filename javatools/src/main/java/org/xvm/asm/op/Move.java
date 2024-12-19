@@ -65,10 +65,7 @@ public class Move
                 frame.introduceVarCopy(nTo, nFrom);
                 }
 
-            return isDeferred(hValue)
-                    ? hValue.proceed(frame, frameCaller ->
-                        frameCaller.assignValue(nTo, frameCaller.popStack()))
-                    : frame.assignValue(nTo, hValue);
+            return frame.assignDeferredValue(nTo, hValue);
             }
         catch (ExceptionHandle.WrapperException e)
             {

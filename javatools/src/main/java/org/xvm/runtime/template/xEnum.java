@@ -173,10 +173,8 @@ public class xEnum
                 IdentityConstant idValue        = (IdentityConstant) hTarget.getType().getDefiningConstant();
                 ClassStructure   clzEnumeration = ((ClassStructure) idValue.getComponent()).getSuper();
 
-                ObjectHandle hEnumeration = frame.getConstHandle(clzEnumeration.getIdentityConstant());
-                return Op.isDeferred(hEnumeration)
-                    ? hEnumeration.proceed(frame, frameCaller -> frame.assignValue(iReturn, frameCaller.popStack()))
-                    : frame.assignValue(iReturn, hEnumeration);
+                return frame.assignDeferredValue(iReturn,
+                        frame.getConstHandle(clzEnumeration.getIdentityConstant()));
                 }
 
             case "name":

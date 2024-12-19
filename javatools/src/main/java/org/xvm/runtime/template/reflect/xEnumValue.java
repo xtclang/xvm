@@ -67,12 +67,8 @@ public class xEnumValue
         ClassStructure clzEnumValue   = (ClassStructure) idEnumValue.getComponent();
         ClassStructure clzEnumeration = clzEnumValue.getSuper();
 
-        ObjectHandle hEnumeration = frame.getConstHandle(clzEnumeration.getIdentityConstant());
-
-        return Op.isDeferred(hEnumeration)
-            ? hEnumeration.proceed(frame, frameCaller ->
-                frameCaller.assignValue(iReturn, frameCaller.popStack()))
-            : frame.assignValue(iReturn, hEnumeration);
+        return frame.assignDeferredValue(iReturn,
+                frame.getConstHandle(clzEnumeration.getIdentityConstant()));
         }
 
     /**
@@ -90,9 +86,6 @@ public class xEnumValue
         ObjectHandle hValue = Utils.ensureInitializedEnum(frame,
                 template.getEnumByName(idEnumValue.getName()));
 
-        return Op.isDeferred(hValue)
-            ? hValue.proceed(frame, frameCaller ->
-                frameCaller.assignValue(iReturn, frameCaller.popStack()))
-            : frame.assignValue(iReturn, hValue);
+        return frame.assignDeferredValue(iReturn, hValue);
         }
     }
