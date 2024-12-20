@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -822,7 +823,8 @@ public abstract class Container
     /**
      * Set of services that were started by this container (stored as a Map with no values).
      */
-    private final Map<ServiceContext, Object> f_setServices = new WeakHashMap<>();
+    private final Map<ServiceContext, Object> f_setServices =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
      * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".
