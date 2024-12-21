@@ -280,13 +280,13 @@ static int HIT = 0;
 static int ALL = 0;
     private boolean isAnyNonConcurrentWaiting(Fiber fiberCandidate)
         {
-if (++ALL % 100_000 == 0)
-    {
-    System.err.println("*** hits=" + HIT + " out of " + ALL);
-    }
+//if (++ALL % 100_000 == 0)
+//    {
+//    System.err.println("*** hits=" + HIT + " out of " + ALL);
+//    }
         if (fiberCandidate.noChange(m_lWaitEnterStamp, m_lWaitExitStamp))
             {
-++HIT;
+//++HIT;
             return fiberCandidate.getBlocker() != null;
             }
         Frame[] aFrame      = m_aFrame;
