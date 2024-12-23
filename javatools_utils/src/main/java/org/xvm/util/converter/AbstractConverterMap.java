@@ -98,13 +98,14 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V>
      * Perform a blind cast to the desired type.
      *
      * @param x   the object to cast
-     * @param <X> the type to cast to
+     * @param <X> the type to cast from
+     * @param <Y> the type to cast to
      * @return the supplied object
      */
     @SuppressWarnings("unchecked")
-    protected <X> X unchecked(Object x)
+    protected <X, Y extends X> Y unchecked(X x)
         {
-        return (X) x;
+        return (Y) x;
         }
 
     /**

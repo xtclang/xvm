@@ -17,7 +17,7 @@ public class WeakHasherReference<T> extends WeakReference<T> implements Supplier
     private final Hasher<? super T> hasher;
 
     /**
-     * A cached hash.
+     * A cached hash of the referent allowing WHR to still function as a hash key even after being cleared.
      */
     private final int hash;
 
@@ -28,7 +28,7 @@ public class WeakHasherReference<T> extends WeakReference<T> implements Supplier
      * @param hasher   the hasher to use in comparing
      * @param queue    the queue to add cleared references to
      */
-    protected WeakHasherReference(T referent, Hasher<? super T> hasher, ReferenceQueue<? super T> queue)
+    public WeakHasherReference(T referent, Hasher<? super T> hasher, ReferenceQueue<? super T> queue)
         {
         super(referent, queue);
         this.hasher = hasher;

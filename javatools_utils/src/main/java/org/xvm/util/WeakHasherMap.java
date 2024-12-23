@@ -3,7 +3,10 @@ package org.xvm.util;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
@@ -58,17 +61,34 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V>
         return new WeakHasherReference<>(key, hasher, garbage);
         }
 
+    @Override
+    protected Map<Supplier<K>, V> read()
+        {
+        Map<Supplier<K>, V> storage = super.read();
+        return ThreadLocalRandom.current().nextInt(fullGcInterval) == 0
+                ? gc(storage, true, storage instanceof ConcurrentMap)
+                : storage;
+        }
+
+    @Override
+    protected Map<Supplier<K>, V> write()
+        {
+        Map<Supplier<K>, V> storage = super.write();
+        int rand = ThreadLocalRandom.current().nextInt();
+        return gc(storage, (rand & (fullGcInterval - 1)) == 0, (rand & (MIN_GC_INTERVAL - 1)) == 0);
+        }
+
     /**
      * Remove any cleared refs from the map.
      *
      * @param storage the storage map to clean
-     * @param compact {@code true} to allow storage compaction
-     * @param full    to do a more exhaustive search of the keys
+     * @param mark    to do a more exhaustive search of the keys
+     * @param sweep   {@code true} to allow storage compaction (requires write safety)
      * @return storage
      */
-    protected Map<Supplier<K>, V> gc(Map<Supplier<K>, V> storage, boolean compact, boolean full)
+    protected Map<Supplier<K>, V> gc(Map<Supplier<K>, V> storage, boolean mark, boolean sweep)
         {
-        if (full)
+        if (mark)
             {
             int c = 0;
             for (Iterator<Supplier<K>> iter = storage.keySet().iterator(); iter.hasNext(); )
@@ -76,25 +96,24 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V>
                 Supplier<K> ref = iter.next();
                 if (ref.get() == null)
                     {
-                    if (compact)
+                    if (sweep)
                         {
                         iter.remove();
+                        continue;
                         }
                     else
                         {
-                        ((WeakReference<?>) ref).enqueue();
-                        ++c; // storage map size didn't change
+                        ((WeakHasherReference<?>) ref).enqueue();
                         }
                     }
-                else
-                    {
-                    ++c;
-                    }
+                ++c;
                 }
+
+            // schedule full GCs at rate relative to the size such that we maintain amortized O(1)
             fullGcInterval = Integer.highestOneBit(Math.max(MIN_GC_INTERVAL, c + c / 2));
             }
 
-        if (compact)
+        if (sweep)
             {
             Reference<? extends K> key;
             while ((key = garbage.poll()) != null)
@@ -107,47 +126,38 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V>
         }
 
     @Override
-    protected Map<Supplier<K>, V> read()
-        {
-        Map<Supplier<K>, V> storage = super.read();
-        // periodic full GC
-        return ThreadLocalRandom.current().nextInt(fullGcInterval) == 0
-                ? gc(storage, storage instanceof ConcurrentMap, true)
-                : storage;
-        }
-
-    @Override
-    protected Map<Supplier<K>, V> write()
-        {
-        // minor GC on every write; periodic full
-        Map<Supplier<K>, V> storage = super.write();
-        return gc(storage, ThreadLocalRandom.current().nextInt(MIN_GC_INTERVAL) == 0,
-                ThreadLocalRandom.current().nextInt(fullGcInterval) == 0);
-        }
-
-    @Override
     protected Set<K> newKeySet()
         {
-        return new KeySet()
+        return new KeySet();
+        }
+
+    /**
+     * KeySet which filters out cleared keys during iteration.
+     */
+    protected class KeySet extends HasherMap<K, V>.KeySet
+        {
+        @Override
+        public Iterator<K> iterator()
             {
-            @Override
-            public Iterator<K> iterator()
-                {
-                return new FilterIterator<>(super.iterator(), Objects::nonNull);
-                }
-            };
+            return new FilterIterator<>(super.iterator(), Objects::nonNull);
+            }
         }
 
     @Override
     protected Set<Entry<K, V>> newEntrySet()
         {
-        return new EntrySet()
+        return new EntrySet();
+        }
+
+    /**
+     * EntrySet which filters out cleared keys during iteration.
+     */
+    protected class EntrySet extends HasherMap<K, V>.EntrySet
+        {
+        @Override
+        public Iterator<Entry<K, V>> iterator()
             {
-            @Override
-            public Iterator<Entry<K, V>> iterator()
-                {
-                return new FilterIterator<>(super.iterator(), e -> e.getKey() != null);
-                }
-            };
+            return new FilterIterator<>(super.iterator(), e -> e.getKey() != null);
+            }
         }
     }
