@@ -62,13 +62,14 @@ public abstract class AbstractConverterCollection<V, SV> implements Collection<V
      * Perform a cast to the desired type.
      *
      * @param x   the object to cast
-     * @param <X> the type to cast to
+     * @param <X> the type to cast from
+     * @param <Y> the type to cast to
      * @return the supplied object
      */
     @SuppressWarnings("unchecked")
-    protected <X> X unchecked(Object x)
+    protected <X, Y extends X> Y unchecked(X x)
         {
-        return (X) x;
+        return (Y) x;
         }
 
     @Override

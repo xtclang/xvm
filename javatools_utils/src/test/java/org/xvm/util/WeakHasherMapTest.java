@@ -2,6 +2,7 @@ package org.xvm.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,6 +39,24 @@ public class WeakHasherMapTest
         assertFalse(map.keySet().contains(1));
         assertFalse(map.containsKey(1));
         assertNull(map.get(1));
+        }
+
+    @Test
+    void souldRetainAll()
+        {
+        Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
+        Map<Integer, String> map2 = new HashMap<>();
+        map.put(1, "1");
+        map.put(2, "2");
+        map.put(3, "3");
+        map2.put(2, "2");
+        map2.put(4, "4");
+        map.keySet().retainAll(map2.keySet());
+        assertEquals(1, map.size());
+        assertFalse(map.containsKey(1));
+        assertTrue(map.containsKey(2));
+        assertFalse(map.containsKey(3));
+        assertFalse(map.containsKey(4));
         }
 
     @Test
