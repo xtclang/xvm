@@ -11,7 +11,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Op;
 
@@ -235,19 +234,19 @@ public abstract class ObjectHandle
             return true;
             }
 
-        return isShared(container.getConstantPool(), null);
+        return isShared(container, null);
         }
 
     /**
      * Check if this immutable handle belongs to the same type system as the one represented by the
      * specified ConstantPool.
      *
-     * @param poolThat    the pool representing the "receiving" container
+     * @param container   the "receiving" container
      * @param mapVisited  the identity hash map of visited objects
      *
      * @return true iff this object's type is shared with that pool
      */
-    public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+    public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
         {
         return true;
         }
@@ -257,17 +256,17 @@ public abstract class ObjectHandle
      * as the one represented by the specified ConstantPool.
      *
      * @param ahValue     an array of handles to check
-     * @param poolThat    the pool representing the "receiving" container
+     * @param container   the "receiving" container
      * @param mapVisited  the identity hash map of visited objects
      *
      * @return true iff this object's type is shared with that pool
      */
-    protected static boolean areShared(ObjectHandle[] ahValue, ConstantPool poolThat,
+    protected static boolean areShared(ObjectHandle[] ahValue, Container container,
                                        Map<ObjectHandle, Boolean> mapVisited)
         {
         for (ObjectHandle field : ahValue)
             {
-            if (field != null && !field.isShared(poolThat, mapVisited))
+            if (field != null && !field.isShared(container, mapVisited))
                 {
                 return false;
                 }
@@ -682,10 +681,10 @@ public abstract class ObjectHandle
             }
 
         @Override
-        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
             TypeConstant type = getType();
-            if (!type.isShared(poolThat))
+            if (!type.isShared(container.getConstantPool()))
                 {
                 return false;
                 }
@@ -701,7 +700,7 @@ public abstract class ObjectHandle
                 }
 
             if (mapVisited.put(this, Boolean.TRUE) != null ||
-                    areShared(m_aFields, poolThat, mapVisited))
+                    areShared(m_aFields, container, mapVisited))
                 {
                 return true;
                 }
@@ -1245,9 +1244,9 @@ public abstract class ObjectHandle
             }
 
         @Override
-        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
-            return assertInitialized().isShared(poolThat, mapVisited);
+            return assertInitialized().isShared(container, mapVisited);
             }
 
         @Override

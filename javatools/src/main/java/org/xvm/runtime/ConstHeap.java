@@ -133,7 +133,7 @@ public class ConstHeap
 
                 // there is a chance that both our child and our parent do "know" that value's type,
                 // but it's not a part of our type system
-                if (hValue != null && hValue.isShared(f_container.getConstantPool(), null))
+                if (hValue != null && hValue.isShared(f_container, null))
                     {
                     saveConstHandle(constValue, hValue);
                     }
@@ -184,7 +184,7 @@ public class ConstHeap
     public ObjectHandle relocateConst(ObjectHandle hConst, Constant constant)
         {
         Container parent = f_container.f_parent;
-        if (parent != null && hConst.isShared(parent.getConstantPool(), null))
+        if (parent != null && hConst.isShared(parent, null))
             {
             ObjectHandle hNew = parent.f_heap.relocateConst(hConst, constant);
 

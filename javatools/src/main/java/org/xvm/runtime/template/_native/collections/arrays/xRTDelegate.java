@@ -7,6 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import java.util.stream.Stream;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -949,7 +950,7 @@ public class xRTDelegate
             }
 
         @Override
-        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
             // despite the shared array type, the individual elements could be narrower
             // and need to be checked
@@ -959,7 +960,7 @@ public class xRTDelegate
                 }
 
             return mapVisited.put(this, Boolean.TRUE) != null ||
-                   areShared(m_ahValue, poolThat, mapVisited);
+                   areShared(m_ahValue, container, mapVisited);
             }
 
         @Override

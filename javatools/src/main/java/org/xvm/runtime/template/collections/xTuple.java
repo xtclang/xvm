@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -835,7 +834,7 @@ public class xTuple
             }
 
         @Override
-        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
             if (mapVisited == null)
                 {
@@ -843,7 +842,7 @@ public class xTuple
                 }
 
             return mapVisited.put(this, Boolean.TRUE) != null ||
-                   areShared(m_ahValue, poolThat, mapVisited);
+                   areShared(m_ahValue, container, mapVisited);
             }
 
         @Override

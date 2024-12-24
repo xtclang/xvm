@@ -4,7 +4,6 @@ package org.xvm.runtime.template;
 import java.util.Arrays;
 import java.util.Map;
 
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
@@ -501,7 +500,7 @@ public class Proxy
             }
 
         @Override
-        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
             return true;
             }

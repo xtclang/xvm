@@ -166,9 +166,7 @@ const DBRealm
     }
 
     @Override
-    conditional Principal readPrincipal(Int id) {
-        return db.principals.get(id);
-    }
+    conditional Principal readPrincipal(Int id) = db.principals.get(id);
 
     @Override
     Principal updatePrincipal(Principal principal) {
@@ -272,9 +270,7 @@ const DBRealm
     }
 
     @Override
-    conditional Group readGroup(Int id) {
-        return db.groups.get(id);
-    }
+    conditional Group readGroup(Int id) = db.groups.get(id);
 
     @Override
     Group updateGroup(Group group) {
@@ -354,9 +350,7 @@ const DBRealm
     }
 
     @Override
-    conditional Entitlement readEntitlement(Int id) {
-        return db.entitlements.get(id);
-    }
+    conditional Entitlement readEntitlement(Int id) = db.entitlements.get(id);
 
     @Override
     Entitlement updateEntitlement(Entitlement entitlement) {

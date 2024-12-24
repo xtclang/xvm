@@ -1083,9 +1083,9 @@ public class xArray
             }
 
         @Override
-        public boolean isShared(ConstantPool poolThat, Map<ObjectHandle, Boolean> mapVisited)
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
-            return m_hDelegate.isShared(poolThat, mapVisited);
+            return m_hDelegate.isShared(container, mapVisited);
             }
 
         @Override

@@ -347,9 +347,8 @@ public class xRTConnector
                     }
 
                 List<String> listValue = entry.getValue();
-                for (int j = 0, c = listValue.size(); j < c; j++)
+                for (String sValue : listValue)
                     {
-                    String sValue = listValue.get(j);
                     assert sValue != null;
 
                     listResponseNames.add(sName);

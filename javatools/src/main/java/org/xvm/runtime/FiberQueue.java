@@ -257,12 +257,10 @@ public class FiberQueue
     private boolean isAnyNonConcurrentWaiting(Fiber fiberCandidate)
         {
         Frame[] aFrame      = m_aFrame;
-        int     cFrames     = aFrame.length;
         Fiber   fiberCaller = fiberCandidate.getCaller();
 
-        for (int i = 0; i < cFrames; i++)
+        for (Frame frame : aFrame)
             {
-            Frame frame = aFrame[i];
             if (frame == null)
                 {
                 continue;
