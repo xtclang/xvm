@@ -238,15 +238,15 @@ public abstract class ClassTemplate
      * Produce a ClassComposition for this template using the actual types for formal parameters.
      *
      * @param container   the ConstantPool to place a potentially created new type into
-     * @param typeParams  the type parameters
+     * @param atypeParams  the type parameters
      */
-    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... typeParams)
+    public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams)
         {
         ConstantPool pool          = container.getConstantPool();
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionClassConstant().getType(), typeParams).normalizeParameters();
+            getInceptionClassConstant().getType(), atypeParams).normalizeParameters();
 
-        TypeConstant typeMask = getCanonicalType().adoptParameters(pool, typeParams);
+        TypeConstant typeMask = getCanonicalType().adoptParameters(pool, atypeParams);
 
         return ensureClass(container, typeInception, typeMask);
         }

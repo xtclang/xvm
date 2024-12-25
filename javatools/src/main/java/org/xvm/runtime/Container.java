@@ -482,13 +482,14 @@ public abstract class Container
     /**
      * Create a new FileStructure for the specified module built on top of the system modules.
      *
-     * @param moduleApp  the module to build a FileStructure for
+     * @param moduleApp   the module to build a FileStructure for
+     * @param aModuleAdd  (optional) additional modules
      *
      * @return a new FileStructure
      */
-    public FileStructure createFileStructure(ModuleStructure moduleApp)
+    public FileStructure createFileStructure(ModuleStructure moduleApp, ModuleStructure... aModuleAdd)
         {
-        return getNativeContainer().createFileStructure(moduleApp);
+        return getNativeContainer().createFileStructure(moduleApp, aModuleAdd);
         }
 
     /**

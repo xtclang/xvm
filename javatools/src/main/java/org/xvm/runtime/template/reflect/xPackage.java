@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.TypeComposition;
@@ -305,9 +306,23 @@ public class xPackage
             return (IdentityConstant) getType().getDefiningConstant();
             }
 
+        public boolean isModule()
+            {
+            return getId() instanceof ModuleConstant;
+            }
+
         public ClassStructure getStructure()
             {
             return (ClassStructure) getId().getComponent();
+            }
+
+        @Override
+        public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
+            {
+            // this is a bit of a hack, but the native container should definitely be able to
+            // handle any module in the system
+            return isModule() && container instanceof NativeContainer ||
+                    super.isShared(container, mapVisited);
             }
 
         @Override

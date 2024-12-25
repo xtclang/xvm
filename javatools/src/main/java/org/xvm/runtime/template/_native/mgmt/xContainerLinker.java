@@ -22,8 +22,11 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.NestedContainer;
+import org.xvm.runtime.Utils;
 
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xService;
 
@@ -156,8 +159,14 @@ public class xContainerLinker
      */
     private int invokeCollectInjections(Frame frame, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        ComponentTemplateHandle hModule    = (ComponentTemplateHandle) ahArg[0];
-        ObjectHandle            hCondNames = ahArg[1];
+        ComponentTemplateHandle hModule     = (ComponentTemplateHandle) ahArg[0];
+        ArrayHandle             haCondNames = (ArrayHandle) ahArg[1];
+
+        if (haCondNames.m_hDelegate.m_cSize > 0)
+            {
+            return frame.raiseException(
+                xException.unsupported(frame, "Condition names are not currently supported"));
+            }
 
         ModuleStructure   module        = (ModuleStructure) hModule.getComponent();
         Set<InjectionKey> setInjections = new HashSet<>();
@@ -191,23 +200,50 @@ public class xContainerLinker
      */
     private int invokeResolveAndLink(Frame frame, ObjectHandle[] ahArg, int iReturn)
         {
-        ComponentTemplateHandle hModule     = (ComponentTemplateHandle) ahArg[0];
-        ObjectHandle            hModel      = ahArg[1]; // mgmt.Container.Model
-        ObjectHandle            hRepo       = ahArg[2]; // mgmt.ModuleRepository
-        ObjectHandle            hProvider   = ahArg[3]; // mgmt.ResourceProvider
-        ObjectHandle            hShared     = ahArg[4];
-        ObjectHandle            hAdditional = ahArg[5];
-        ObjectHandle            hCondNames  = ahArg[6];
+        ComponentTemplateHandle hModule      = (ComponentTemplateHandle) ahArg[0];
+        ObjectHandle            hModel       = ahArg[1]; // mgmt.Container.Model
+        ObjectHandle            hRepo        = ahArg[2]; // mgmt.ModuleRepository
+        ObjectHandle            hProvider    = ahArg[3]; // mgmt.ResourceProvider
+        ArrayHandle             haShared     = (ArrayHandle) ahArg[4];
+        ArrayHandle             haAdditional = (ArrayHandle) ahArg[5];
+        ArrayHandle haCondNames = (ArrayHandle) ahArg[6];
 
+        if (((EnumHandle) hModel).getOrdinal() != 0)
+            {
+            return frame.raiseException(
+                xException.unsupported(frame, "Only Lightweight model is currently supported"));
+            }
         if (!hProvider.isService())
             {
-            return frame.raiseException("ResourceProvider must be a service");
+            return frame.raiseException(
+                xException.illegalArgument(frame, "ResourceProvider must be a service"));
+            }
+        if (haCondNames.m_hDelegate.m_cSize > 0)
+            {
+            return frame.raiseException(
+                xException.unsupported(frame, "Condition names are not currently supported"));
             }
 
-        Container     container = frame.f_fiber.getCallingContainer();
-        FileStructure file      = hModule.getComponent().getFileStructure();
+        Container      container = frame.f_fiber.getCallingContainer();
+        FileStructure  file      = hModule.getComponent().getFileStructure();
+        ObjectHandle[] ahShared;
+        ObjectHandle[] ahAdditional;
+        try
+            {
+            ahShared = haShared.m_hDelegate.m_cSize == 0
+                                ? Utils.OBJECTS_NONE
+                                : haShared.getTemplate().toArray(frame, haShared);
+            ahAdditional = haAdditional.m_hDelegate.m_cSize == 0
+                                ? Utils.OBJECTS_NONE
+                                : haAdditional.getTemplate().toArray(frame, haAdditional);
+            }
+        catch (ExceptionHandle.WrapperException e)
+            {
+            return frame.raiseException(e);
+            }
 
-        switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo, Op.A_STACK))
+        switch (xRTFileTemplate.INSTANCE.invokeResolve(frame, file, hRepo,
+                    ahShared, ahAdditional, Op.A_STACK))
             {
             case Op.R_NEXT:
                 return completeResolveAndLink(frame, container, popModule(frame),

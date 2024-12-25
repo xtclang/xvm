@@ -25,6 +25,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
+import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
@@ -33,6 +34,8 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.reflect.xPackage.PackageHandle;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -125,7 +128,8 @@ public class xRTFileTemplate
         switch (method.getName())
             {
             case "resolve":
-                return invokeResolve(frame, file, hArg, iReturn);
+                return invokeResolve(frame, file, hArg,
+                        Utils.OBJECTS_NONE, Utils.OBJECTS_NONE, iReturn);
 
             case "replace":
                 return invokeReplace(frame, file, (ArrayHandle) hArg);
@@ -176,17 +180,42 @@ public class xRTFileTemplate
         }
 
     /**
-     * Native implementation of "void resolve(ModuleRepository repository)" method.
+     * Native implementation used by "void resolve(ModuleRepository repository)" method and
+     * "Container.Linker.resolveAndLink()".
      */
-    public int invokeResolve(Frame frame, FileStructure file, ObjectHandle hRepo, int iReturn)
+    public int invokeResolve(Frame frame, FileStructure file, ObjectHandle hRepo,
+                             ObjectHandle[] ahSharedModules, ObjectHandle[] ahAddModules, int iReturn)
         {
-        Container container = frame.f_context.f_container;
-        if (file.isLinked())
+        Container container   = frame.f_context.f_container;
+        int       cShared     = ahSharedModules.length;
+        int       cAdditional = ahAddModules.length;
+        if (file.isLinked() && cShared == 0 && cAdditional == 0)
             {
             return frame.assignValue(iReturn, makeHandle(container, file));
             }
 
-        FileStructure fileUnlinked = container.createFileStructure(file.getModule());
+        // TODO GG: for now, we treat shared and additional modules in the same way, just adding
+        //          them to the new type system; we will need to add some facility that would
+        //          allow the runtime to distinguish between the two and prohibit sharing of
+        //          types that belong to the "additional" modules and allow sharing the state by
+        //          "shared" modules
+        ModuleStructure[] aModuleAdd = new ModuleStructure[cShared + cAdditional];
+        for (int i = 0; i < cShared; i++)
+            {
+            PackageHandle hModule = (PackageHandle) ahSharedModules[i];
+            aModuleAdd[i] = (ModuleStructure) hModule.getStructure();
+            }
+
+        for (int i = 0; i < cAdditional; i++)
+            {
+            ComponentTemplateHandle hModule = (ComponentTemplateHandle) ahAddModules[i];
+            aModuleAdd[cShared + i] = (ModuleStructure) hModule.getComponent();
+            }
+
+        ModuleStructure module = file.isLinked()
+            ? f_container.getModuleRepository().loadModule(file.getModuleName())
+            : file.getModule();
+        FileStructure fileUnlinked = container.createFileStructure(module, aModuleAdd);
 
         if (hRepo.getTemplate() instanceof xCoreRepository)
             {
