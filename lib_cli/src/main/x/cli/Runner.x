@@ -267,6 +267,10 @@ static service Runner {
                         if (paramType.is(Type<Destringable>)) {
                             paramType.DataType argValue = new paramType.DataType(argStr);
                             args = args.add(argValue);
+                        } else if (paramType.is(Type<Boolean>)) {
+                            import ecstasy.collections.CaseInsensitive;
+                            paramType.DataType argValue = CaseInsensitive.areEqual(argStr, "True");
+                            args = args.add(argValue);
                         } else {
                             console.print($|  Unsupported type "{paramType}" for parameter \
                                            |"{param}"
