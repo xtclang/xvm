@@ -61,8 +61,8 @@ mixin WebApp
     @Lazy Authenticator authenticator.calc() {
         // use the Authenticator provided by injection, if any, which can be specified as part of
         // the application deployment process or otherwise provided by the containing HTTP server
-        @Inject Authenticator? providedAuthenticator;
-        return providedAuthenticator?;
+        @Inject Authenticator? authenticator;
+        return authenticator?;
 
         // allow a WebApp module to implement the factory method createAuthenticator()
         if (this.is(AuthenticatorFactory)) {
