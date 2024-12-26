@@ -383,8 +383,11 @@ public class FileStructure
         String sMissing = findMissing(repository, new HashSet<>(), fRuntime);
         if (sMissing == null)
             {
-            linkModules(repository, this, new HashSet<>(), fRuntime);
-            markLinked();
+            sMissing = linkModules(repository, this, new HashSet<>(), fRuntime);
+            if (sMissing == null)
+                {
+                markLinked();
+                }
             }
         return sMissing;
         }
@@ -468,13 +471,15 @@ public class FileStructure
 
     /**
      * The second phase of the linkModules implementation - actual linking.
+     *
+     * @return null iff success, otherwise the name of the first module that could not be linked to
      */
-    private void linkModules(ModuleRepository repository, FileStructure fileTop,
+    private String linkModules(ModuleRepository repository, FileStructure fileTop,
                                Set<String> setFilesDone, boolean fRuntime)
         {
         if (!setFilesDone.add(getModuleName()))
             {
-            return;
+            return null;
             }
 
         List<FileStructure>   listFilesTodo = new ArrayList<>();
@@ -497,10 +502,16 @@ public class FileStructure
                 }
 
             ModuleStructure moduleFingerprint = getModule(sModule);
-            assert moduleFingerprint != null;
+            if (moduleFingerprint == null)
+                {
+                return sModule;
+                }
 
             ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
-            assert moduleUnlinked != null;
+            if (moduleUnlinked == null)
+                {
+                return sModule;
+                }
 
             FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
             if (fRuntime)
@@ -545,8 +556,13 @@ public class FileStructure
         for (FileStructure fileDownstream : listFilesTodo)
             {
             assert !fRuntime;
-            fileDownstream.linkModules(repository, fileTop, setFilesDone, false);
+            String sMissing = fileDownstream.linkModules(repository, fileTop, setFilesDone, false);
+            if (sMissing != null)
+                {
+                return sMissing;
+                }
             }
+        return null;
         }
 
     /**
