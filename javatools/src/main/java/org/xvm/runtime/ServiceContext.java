@@ -410,7 +410,7 @@ public class ServiceContext
         {
         if (fAllowInlineExecution && drainWork())
             {
-            if (getStatus() == ServiceStatus.Terminated)
+            if (isTerminated())
                 {
                 f_container.terminate(this);
                 }
@@ -1013,7 +1013,14 @@ public class ServiceContext
         FiberStatus statusActive = null;
         for (Fiber fiber : f_setFibers)
             {
-            statusActive = fiber.getStatus().moreActive(statusActive);
+            FiberStatus status = fiber.getStatus();
+            switch (status)
+                {
+                case Initial, Running, Paused:
+                    // won't get busier than that
+                    return ServiceStatus.Busy;
+                }
+            statusActive = status.moreActive(statusActive);
             }
 
         if (statusActive == null)
@@ -1046,7 +1053,15 @@ public class ServiceContext
      */
     public boolean isIdle()
         {
-        return getStatus() == ServiceStatus.Idle;
+        return f_setFibers.isEmpty();
+        }
+
+    /**
+     * @return true iff the service is terminated
+     */
+    public boolean isTerminated()
+        {
+        return m_hService == null;
         }
 
 
@@ -1215,7 +1230,7 @@ public class ServiceContext
     public CompletableFuture<ObjectHandle> postRequest(Frame frame, FunctionHandle hFunction,
                                                        ObjectHandle[] ahArg, int cReturns)
         {
-        if (getStatus() == ServiceStatus.Terminated)
+        if (isTerminated())
             {
             return null;
             }
@@ -1350,7 +1365,7 @@ public class ServiceContext
     public int sendInvoke1Request(Frame frame, FunctionHandle hFunction,
                                   ObjectHandle hTarget, ObjectHandle[] ahArg, boolean fTuple, int iReturn)
         {
-        if (getStatus() == ServiceStatus.Terminated)
+        if (isTerminated())
             {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
@@ -1444,7 +1459,7 @@ public class ServiceContext
     public int sendInvokeNRequest(Frame frame, FunctionHandle hFunction,
                                   ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
         {
-        if (getStatus() == ServiceStatus.Terminated)
+        if (isTerminated())
             {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
@@ -1475,9 +1490,9 @@ public class ServiceContext
         CompletableFuture<ObjectHandle[]> future   = request.f_future;
 
         boolean fAllAsync = true;
-        for (int i = 0; i < cReturns; i++)
+        for (int iReturn : aiReturn)
             {
-            if (!frame.isFutureVar(aiReturn[i]))
+            if (!frame.isFutureVar(iReturn))
                 {
                 fAllAsync = false;
                 break;
@@ -1592,7 +1607,7 @@ public class ServiceContext
     public int sendProperty01Request(Frame frame, ObjectHandle hTarget,
                                      PropertyConstant idProp, int iReturn, PropertyOperation01 op)
         {
-        if (getStatus() == ServiceStatus.Terminated)
+        if (isTerminated())
             {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
@@ -1631,7 +1646,7 @@ public class ServiceContext
     public int sendProperty10Request(Frame frame, ObjectHandle hTarget,
                                      PropertyConstant idProp, ObjectHandle hValue, PropertyOperation10 op)
         {
-        if (getStatus() == ServiceStatus.Terminated)
+        if (isTerminated())
             {
             return frame.raiseException(xException.serviceTerminated(frame, f_sName));
             }
