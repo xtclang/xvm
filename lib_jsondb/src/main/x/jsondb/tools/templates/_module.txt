@@ -33,10 +33,8 @@ module %appName%_jsondb%qualifier%
     Map<String, Type> dbTypes.get() {
         return Map:
             [
-%PropertyTypes%
 // TODO:
-//            "String"=String,
-//            "AddressBookDB_:Contact"=AddressBookDB_.Contact,
+%PropertyTypes%
             ];
     }
 

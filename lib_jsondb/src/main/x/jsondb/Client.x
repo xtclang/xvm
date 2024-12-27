@@ -807,7 +807,7 @@ service Client<Schema extends RootSchema> {
         void enter(Boolean autocommit) {}
 
         @Override
-        Int writeId.get()= NO_TX;
+        Int writeId.get() = NO_TX;
 
         @Override
         void close(Exception? e = Null) {}

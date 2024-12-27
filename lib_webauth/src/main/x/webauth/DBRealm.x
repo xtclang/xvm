@@ -37,22 +37,9 @@ const DBRealm
             @Inject(resourceName=connectionName) Connection dbc;
             rootSchema = dbc;
         }
-        // find the AuthSchema inside the database
-        String?     path = Null;
-        AuthSchema? db   = Null;
-        for ((String pathStr, DBObjectInfo info) : rootSchema.sys.schemas) {
-            // find the AuthSchema; it must occur exactly-once
-            assert DBObject schema ?= info.lookupUsing(rootSchema);
-            if (schema.is(AuthSchema)) {
-                assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
-                                        | locations within the database:\
-                                        | {pathStr.quoted()} and {path.quoted()}
-                                       ;
-                path = pathStr;
-                db   = schema;
-            }
-        }
-        assert path != Null && db != Null as "The database does not contain an \"AuthSchema\"";
+
+        assert AuthSchema db := findAuthSchema(rootSchema)
+                as "The database does not contain an \"AuthSchema\"";
 
         Configuration cfg = db.config.get();
         if (!cfg.configured) {
@@ -412,7 +399,28 @@ const DBRealm
         return True;
     }
 
-    // ----- internal ------------------------------------------------------------------------------
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Find an [AuthSchema] inside the database.
+     */
+    static conditional AuthSchema findAuthSchema(RootSchema rootSchema) {
+        String?     path = Null;
+        AuthSchema? db   = Null;
+        for ((String pathStr, DBObjectInfo info) : rootSchema.sys.schemas) {
+            // find the AuthSchema; it must occur exactly-once
+            assert DBObject schema ?= info.lookupUsing(rootSchema);
+            if (schema.is(AuthSchema)) {
+                assert path == Null as $|Ambiguous "AuthSchema" instances found at multiple\
+                                        | locations within the database:\
+                                        | {pathStr.quoted()} and {path.quoted()}
+                                       ;
+                path = pathStr;
+                db   = schema;
+            }
+        }
+        return db == Null ? False : (True, db);
+    }
 
     /**
      * Munge a credential "scheme" and "locator" together into a string.
