@@ -142,10 +142,9 @@ public class xRTCompiler
         CompilerAdapter compiler = hCompiler.fAdapter;
 
         List<File> listSources = new ArrayList<>();
-        for (int i = 0, c = ahSources.length; i < c; i++)
+        for (ObjectHandle hSource : ahSources)
             {
-            NodeHandle hSource = (NodeHandle) ahSources[i];
-            listSources.add(hSource.getPath().toFile());
+            listSources.add(((NodeHandle) hSource).getPath().toFile());
             }
         compiler.setSourceLocations(listSources);
 

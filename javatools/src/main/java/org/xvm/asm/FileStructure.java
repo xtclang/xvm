@@ -414,10 +414,9 @@ public class FileStructure
         setModulesDone.add(getModuleName());
 
         // recursive check of all downstream modules
-        for (int iNextTodo = 0; iNextTodo < listModulesTodo.size(); ++iNextTodo)
+        for (String sModule : listModulesTodo)
             {
             // only need to link it once (each node in the graph gets visited once)
-            String sModule = listModulesTodo.get(iNextTodo);
             if (!setModulesDone.add(sModule))
                 {
                 continue;

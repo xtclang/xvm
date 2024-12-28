@@ -61,12 +61,8 @@ class RTFileTemplate
             }
 
             // load the module against which the compilation will occur
-            if (!repository.moduleNames.contains(nextName)) {
-                throw new Exception($"Missing dependent module: {nextName}");
-            }
-
             assert ModuleTemplate unresolved := repository.getModule(nextName)
-                as $"Missing module {nextName.quoted()}";
+                as $"Missing dependent module {nextName.quoted()}";
 
             unresolvedModules += unresolved;
             moduleNamesTodo.addAll(unresolved.parent.as(FileTemplate).moduleNames);

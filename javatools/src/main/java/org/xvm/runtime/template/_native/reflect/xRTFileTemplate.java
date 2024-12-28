@@ -267,7 +267,9 @@ public class xRTFileTemplate
             ModuleStructure         moduleFingerprint = file.getModule(moduleUnlinked.getName());
             if (moduleFingerprint == null || !moduleFingerprint.isFingerprint())
                 {
-                return frame.raiseException("Not a fingerprint module");
+                return frame.raiseException(
+                        (moduleFingerprint == null ? "Missing" : "Not a fingerprint") +
+                        " module \"" + moduleUnlinked.getName() + "\" at " + file.getModuleName());
                 }
             listUnlinked.add(moduleUnlinked);
             }
