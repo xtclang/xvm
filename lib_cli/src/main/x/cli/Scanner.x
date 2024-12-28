@@ -52,6 +52,11 @@ class Scanner {
             Instance instance = new Instance(clz);
 
             scanCommands(() -> instance.get, clz, catalog);
+
+            // look inside packages, except for imported modules
+            if (Object pkg := clz.isSingleton(), pkg.is(Package), !pkg.isModuleImport()) {
+                scanClasses(pkg.classes, catalog);
+            }
         }
     }
 
