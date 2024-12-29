@@ -213,7 +213,8 @@ public class xTerminalConsole
                     if (frame != null)
                         {
                         String   sTmpDir  = System.getProperty("java.io.tmpdir");
-                        Path     pathHist = Path.of(sTmpDir, frame.f_context.f_sName + ".history");
+                        String   sAppName = frame.f_context.f_container.getModule().getName();
+                        Path     pathHist = Path.of(sTmpDir,  sAppName + ".history");
                         History  history  = new LimitedHistory(pathHist, 100);
 
                         builder = builder.variable(LineReader.HISTORY_FILE, pathHist)
