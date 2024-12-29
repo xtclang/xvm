@@ -1,3 +1,7 @@
+import sec.Entitlement;
+import sec.Group;
+import sec.Principal;
+
 import oodb.DBCounter;
 import oodb.DBMap;
 import oodb.DBSchema;

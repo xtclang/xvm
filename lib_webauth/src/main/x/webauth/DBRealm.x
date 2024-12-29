@@ -1,5 +1,3 @@
-import crypto.Signer;
-
 import oodb.Connection;
 import oodb.DBMap;
 import oodb.DBObject;
@@ -8,7 +6,11 @@ import oodb.DBSchema;
 import oodb.RootSchema;
 
 import sec.Credential;
+import sec.Entitlement;
+import sec.Group;
 import sec.PlainTextCredential;
+import sec.Principal;
+import sec.Realm;
 import sec.Subject;
 
 import web.security.DigestCredential;
@@ -104,7 +106,7 @@ const DBRealm
     /**
      * The part of the database where the authentication information is stored.
      */
-    protected AuthSchema db;
+    AuthSchema db;
 
     // ----- operations: Principals ----------------------------------------------------------------
 

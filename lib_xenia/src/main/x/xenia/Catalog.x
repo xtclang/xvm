@@ -7,6 +7,7 @@ import net.UriTemplate.UriParameters;
 import sec.Permission;
 
 import web.*;
+import web.security.Authenticator;
 import web.sessions.Broker;
 
 import WebService.Constructor as WSConstructor;
@@ -345,6 +346,15 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             String            path = sessionBroker.path;
             validatePath(path, declaredPaths, clz);
             classInfos += new ClassInfo(path, clz, () -> sessionBroker.duplicate());
+        }
+
+        // collect the Authenticator info
+        Authenticator authenticator = app.authenticator;
+        if (authenticator.is(WebService)) {
+            Class<WebService> clz  = &authenticator.actualClass.as(Class<WebService>);
+            String            path = authenticator.path;
+            validatePath(path, declaredPaths, clz);
+            classInfos += new ClassInfo(path, clz, () -> authenticator.duplicate());
         }
 
         // collect the ClassInfos for standard WebServices and Session mixins

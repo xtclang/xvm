@@ -12,25 +12,18 @@
  *   oauth
  *   device based authenticators
  *
- * TODO initialize database automatically if necessary
+ * Additionally, this module contains a command line tool, allowing to communicate with REST API of
+ * the [AuthEndpoint] web service. To run it, use the follosing command:
+ *
+ *      xec webauth.xtclang.org [server URI]
  */
+@webcli.TerminalApp("User Management Tool for WebAuth", "auth> ", auth=Password)
 module webauth.xtclang.org {
-    package crypto import crypto.xtclang.org;
-    package net    import net.xtclang.org;
-    package oodb   import oodb.xtclang.org;
-    package sec    import sec.xtclang.org;
-    package web    import web.xtclang.org;
-
-    import crypto.Signer;
-    import crypto.Signature;
-
-    import net.IPAddress;
-
-    import sec.Credential;
-    import sec.Entitlement;
-    import sec.Group;
-    import sec.Principal;
-    import sec.Realm;
+    package convert import convert.xtclang.org;
+    package oodb    import oodb.xtclang.org;
+    package sec     import sec.xtclang.org;
+    package web     import web.xtclang.org;
+    package webcli  import webcli.xtclang.org;
 
 //    /**
 //     * Information about the use of a particular IP address.

@@ -1,5 +1,3 @@
-import sec.Credential;
-
 import web.security.DigestCredential;
 
 /**
