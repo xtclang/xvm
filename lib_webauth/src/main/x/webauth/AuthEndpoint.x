@@ -51,14 +51,14 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
         String passwordNew = Base64Format.Instance.decode(b64New).unpackUtf8();
 
         Hash hashOld = DigestCredential.passwordHash(principal.name, realm.name, passwordOld, sha512_256);
-        Hash hashNew = DigestCredential.passwordHash(principal.name, realm.name, passwordNew, sha512_256);
 
         Credential[] credentials = principal.credentials;
         FindOld: for (Credential credential : credentials) {
             if (credential.is(DigestCredential) &&
                     credential.matches(principal.name, hashOld)) {
                 credentials = credentials.reify(Mutable);
-                credentials[FindOld.count] = credential.with(password_sha512_256=hashNew);
+                credentials[FindOld.count] =
+                    credential.with(realmName=realm.name, password=passwordNew);
                 credentials = credentials.toArray(Constant, inPlace=True);
 
                 principal = realm.updatePrincipal(principal.with(credentials=credentials));
