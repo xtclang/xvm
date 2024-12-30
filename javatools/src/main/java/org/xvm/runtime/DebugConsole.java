@@ -5,6 +5,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.lang.ref.WeakReference;
+
 import java.nio.charset.StandardCharsets;
 
 import java.util.ArrayList;
@@ -266,7 +268,8 @@ public final class DebugConsole
                         {
                         // we are stepping out of the current service context and won't be able to
                         // stop there; let's retain the association
-                        Fiber fiberCaller = framePrev.f_fiber.f_refCaller.get();
+                        WeakReference<Fiber> refCaller   = framePrev.f_fiber.f_refCaller;
+                        Fiber                fiberCaller = refCaller == null ? null : refCaller.get();
                         if (fiberCaller != null)
                             {
                             Frame frameCaller = fiberCaller.getFrame();
