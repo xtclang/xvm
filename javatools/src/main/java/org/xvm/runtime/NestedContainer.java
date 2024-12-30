@@ -92,7 +92,7 @@ public class NestedContainer
                             {
                             ObjectHandle hR = validateResource(frameCaller, frameCaller.popStack());
                             return Op.isDeferred(hR)
-                                    ? Op.R_CALL // must be an exception
+                                    ? hR.proceed(frameCaller, null) // must be an exception
                                     : frameCaller.pushStack(hR);
                             });
                         return hDeferred;

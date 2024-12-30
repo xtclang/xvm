@@ -49,13 +49,24 @@ class Scanner {
                 continue;
             }
 
-            Instance instance = new Instance(clz);
+            if (clz.PublicType.isA(TerminalApp)) {
+                // avoid recursion
+                continue;
+            }
+            Class[] innerClasses = [];
+            if (Object pkg := clz.isSingleton(), pkg.is(Package)) {
+                if (pkg.isModuleImport()) {
+                    // skip imported modules
+                    continue;
+                }
+                innerClasses = pkg.classes;
+            }
 
+            Instance instance = new Instance(clz);
             scanCommands(() -> instance.get, clz, catalog);
 
-            // look inside packages, except for imported modules
-            if (Object pkg := clz.isSingleton(), pkg.is(Package), !pkg.isModuleImport()) {
-                scanClasses(pkg.classes, catalog);
+            if (!innerClasses.empty) {
+                scanClasses(innerClasses, catalog);
             }
         }
     }

@@ -17,8 +17,11 @@ static service Runner {
      * Initialization.
      */
     void init(String description, String commandPrompt) {
-        this.description   = description;
-        this.commandPrompt = commandPrompt;
+        // avoid double initialization if the cli module gets imported
+        if (this.description == "") {
+            this.description   = description;
+            this.commandPrompt = commandPrompt;
+        }
     }
 
     /**
