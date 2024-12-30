@@ -2351,9 +2351,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     }
 
     /**
-     * Read the TxManager status file.
-     *
-     * @return the array of LogFileInfo records from the status file, from oldest to newest
+     * Write the TxManager status file.
      */
     protected void writeStatus() {
         // render all of the LogFileInfo records as JSON, but put each on its own line

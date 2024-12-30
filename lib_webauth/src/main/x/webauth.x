@@ -12,8 +12,8 @@
  *   oauth
  *   device based authenticators
  *
- * Additionally, this module contains a command line tool, allowing to communicate with REST API of
- * the [AuthEndpoint] web service. To run it, use the follosing command:
+ * Additionally, this module contains a command line tool that communicates the [AuthEndpoint] web
+ * service. To run it, use the following command:
  *
  *      xec webauth.xtclang.org [server URI]
  */
