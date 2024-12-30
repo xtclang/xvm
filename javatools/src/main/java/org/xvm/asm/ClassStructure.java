@@ -2497,8 +2497,8 @@ public class ClassStructure
 
                     typeContrib = typeContrib.resolveGenerics(pool, typeRight.normalizeParameters());
 
-                    ClassConstant  idContrib = (ClassConstant) typeContrib.getSingleUnderlyingClass(true);
-                    ClassStructure clzBase   = (ClassStructure) idContrib.getComponent();
+                    IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
+                    ClassStructure   clzBase   = (ClassStructure) idContrib.getComponent();
                     if (typeContrib.isVirtualChild())
                         {
                         if (!typeRight.isVirtualChild())
@@ -2526,7 +2526,21 @@ public class ClassStructure
                     }
 
                 case Import:
-                    // import contribution doesn't play any role in the type relationship
+                    // this represents a module import, e.g.: "package web import web.xtclang.org;"
+                    // the identity constant for those contributions is always a module
+                    assert typeContrib.isSingleUnderlyingClass(false);
+
+                    IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(false);
+                    ModuleStructure  clzModule = (ModuleStructure) idContrib.getComponent();
+                    if (!clzModule.getContributionsAsList().isEmpty())
+                        {
+                        relation = relation.bestOf(
+                            clzModule.calculateRelationImpl(pool, typeLeft, typeContrib, false));
+                        if (relation == Relation.IS_A)
+                            {
+                            return Relation.IS_A;
+                            }
+                        }
                     break;
 
                 default:
