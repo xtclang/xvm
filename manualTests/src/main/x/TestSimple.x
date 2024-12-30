@@ -6,6 +6,7 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        test(1);
+        Class c = webauth;
+        assert c.PublicType.isA(cli.TerminalApp); // this used to throw
     }
 }
