@@ -1,16 +1,16 @@
 /**
- * This const represents an immutable implementation of a JSON Pointer
- * as defined by http://tools.ietf.org/html/rfc6901
+ * This const represents an immutable implementation of a JSON Pointer as defined by
+ * [JavaScript Object Notation (JSON) Pointer specification](http://tools.ietf.org/html/rfc6901).
  *
- * A JSON Pointer, when applied to a target JSON `Doc`, defines a reference location in the target `Doc`.
- * An empty JSON Pointer defines a reference to the target itself.
+ * A JSON Pointer, when applied to a target JSON `Doc`, defines a reference location in the target
+ * `Doc`. An empty JSON Pointer defines a reference to the target itself.
  */
 const JsonPointer {
     /**
      * Private `JsonPointer` constructor.
-     * Pointer instances are created via the static `from` method, which
-     * will properly validate the pointer string and create the correct
-     * pointer chain.
+     *
+     * Pointer instances are created via the static `from` method, which will properly validate the
+     * pointer string and create the correct pointer chain.
      */
     private construct(String pointer, String key = "", JsonPointer? remainder = Null) {
         if (key == "-") {
@@ -72,11 +72,10 @@ const JsonPointer {
     Boolean isLeaf;
 
     /**
-     * If this pointer represents an array index, then return
-     * the index value, otherwise return `Null`.
+     * If this pointer represents an array index, return the index value, otherwise `Null`.
      *
-     * To be a valid array index, the key must be a numeric string
-     * representing a non-negative `Int` value.
+     * To be a valid array index, the key must be a numeric string representing a non-negative
+     * `Int` value.
      */
     @Lazy Int? index.calc() {
         if (key == AppendKey) {
@@ -91,8 +90,8 @@ const JsonPointer {
     }
 
     /**
-     * A leaf `JsonPointer` that represents the path value to indicate appending to
-     * the end of a JSON array.
+     * A leaf `JsonPointer` that represents the path value to indicate appending to the end of a
+     * JSON array.
      */
     static JsonPointer Append = from("/-");
 
@@ -102,8 +101,7 @@ const JsonPointer {
     static String AppendKey = "-";
 
     /**
-     * Create a `JsonPointer` from a `String` representation of a JSON Pointer as defined
-     * by by http://tools.ietf.org/html/rfc6901
+     * Create a `JsonPointer` from a `String` representation of a JSON Pointer.
      *
      * If the JSON Pointer string is non-empty, it must be a sequence of '/' prefixed tokens,
      * and the target must either be a JSON Array, or a JSON Object.
@@ -114,8 +112,7 @@ const JsonPointer {
      */
     static JsonPointer from(String pointer) {
         // The JSON pointer spec requires all paths to start with a "/".
-        // Rather than throw an exception, we just ensure that there is always
-        // a leading "/"
+        // Rather than throw an exception, we just ensure that there is always a leading "/"
         if (pointer.size == 0 || pointer[0] != '/') {
             pointer = "/" + pointer;
         }
@@ -134,23 +131,23 @@ const JsonPointer {
     }
 
     /**
-     * Determine whether this `JsonPointer` is equivalent to, or is a parent
-     * of the specified `JsonPointer`.
+     * Determine whether this `JsonPointer` is equivalent to, or is a parent of the specified
+     * `JsonPointer`.
      *
-     * @param p  the `JsonPointer` that may be a child of this `JsonPointer`
+     * @param pointer  the `JsonPointer` that may be a child of this `JsonPointer`
      *
-     * @returns `True` iff this `JsonPointer` is equivalent to, or is a  parent
-     *          of the specified `JsonPointer`
+     * @returns `True` iff this `JsonPointer` is equivalent to, or is a  parent of the specified
+     *          `JsonPointer`
      */
-    Boolean isParent(JsonPointer p) {
+    Boolean isParent(JsonPointer pointer) {
         if (isEmpty) {
             return True;
         }
-        if (this.key != p.key) {
+        if (this.key != pointer.key) {
             return False;
         }
         JsonPointer? remainderThis  = this.remainder;
-        JsonPointer? remainderOther = p.remainder;
+        JsonPointer? remainderOther = pointer.remainder;
         return switch (remainderThis.is(_), remainderOther.is(_)) {
             case (Null, Null):               True;
             case (Null, JsonPointer):        True;
@@ -161,16 +158,17 @@ const JsonPointer {
     }
 
     /**
-     * Obtain the value from the specified JSON `Doc` at the location
-     * pointed to by this `JsonPointer`.
+     * Obtain the value from the specified JSON `Doc` at the location pointed to by this
+     * `JsonPointer`.
      *
-     * @param doc                   the JSON `Doc` to obtain the value from
-     * @param allowNegativeIndices  support the non-standard use of negative indices for JSON arrays to mean indices
-     *                              starting at the end of an array. For example, -1 points to the last element in
-     *                              the array. Valid negative indices are -1 ..< -array.size The default is `False`
+     * @param doc                     the JSON `Doc` to obtain the value from
+     * @param supportNegativeIndices  (optional) pass `True` to allow non-standard use of negative
+     *                                indices for JSON arrays, meaning that indices start at the end
+     *                                of an array (e.g.: -1 points to the last element in the array);
+     *                                valid negative indices are `-array.size >.. -1`
      *
      * @return `True` iff the doc contains a value at the location of this pointer
-     * @return the JSON value in the doc at the location of this pointer
+     * @return (conditional) the JSON value in the doc at the location of this pointer
      */
     conditional Doc get(Doc doc, Boolean supportNegativeIndices = False) {
         JsonPointer? remainder = this.remainder;
@@ -204,11 +202,13 @@ const JsonPointer {
     /**
      * Ensure the specified index is a positive index into the array
      *
-     * @param array  the array to check this pointer's index value against
+     * @param array                   the array to check this pointer's index value against
+     * @param supportNegativeIndices  pass `True` to allow non-standard use of negative indices
      *
-     * @return False if the array is empty, or True if this pointer's index is zero or positive in the
-     *         range 0 ..< array.size, or True if the index is negative in the range -array.size >.. -1
-     * @return a valid index into the array
+     * @return `False` if the array is empty, or `True` if this pointer's index is zero or positive
+     *         in the range `0 ..< array.size`, or if the index is negative in the range
+     *         `-array.size >.. -1`
+     * @return (optional) a valid index into the array
      */
     conditional Int getValidIndex(JsonArray array, Boolean supportNegativeIndices) {
         Int? index = this.index;

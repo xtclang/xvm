@@ -1,13 +1,13 @@
 /**
- * An implementation of a JSON Merge Patch as specified
- * in [RFC7396](http://tools.ietf.org/html/rfc7396).
+ * An implementation of a JSON Merge Patch as specified in
+ * [JSON Merge Patch specification](http://tools.ietf.org/html/rfc7396).
  *
  * @param patch  the JSON value to apply as a merge patch
  */
 class JsonMergePatch(Doc patch) {
 
     /**
-     * @return True iff this patch is empty, i.e. it will not apply any
+     * `True` iff this patch is empty, i.e. it will not apply to any.
      */
     Boolean empty.get() {
         Doc patch = this.patch;
@@ -21,41 +21,82 @@ class JsonMergePatch(Doc patch) {
      * Apply this patch to the specified target.
      *
      * @param target   the JSON value to apply this patch to
-     * @param inPlace  True to modify the target in place (if applicable), or
-     *                 False to leave the target unmodified and return a patched
-     *                 copy of the target
+     * @param inPlace  (optional) `True` to modify the target in place (if applicable), or `False`
+     *                 to leave the target unmodified and return a patched copy of the target
      *
      * @return the JSON value resulting from applying this patch to the target
      */
     Doc apply(Doc target, Boolean inPlace = False) {
-        return merge(target, patch);
+        return merge(target, patch, inPlace);
     }
 
+    /**
+     * Perform a merge as described by the pseudo code in RFC 7396.
+     *
+     *     define MergePatch(Target, Patch):
+     *          if Patch is an Object:
+     *            if Target is not an Object:
+     *              Target = {} # Ignore the contents and set it to an empty Object
+     *            for each Name/Value pair in Patch:
+     *              if Value is null:
+     *                if Name exists in Target:
+     *                  remove the Name/Value pair from Target
+     *              else:
+     *                Target[Name] = MergePatch(Target[Name], Value)
+     *            return Target
+     *          else:
+     *            return Patch
+     *
+     *  * If the `patch` parameter is not a `JsonObject` the `patch` parameter is returned as the result.
+     *
+     *  * If the target `Doc` is not a `JsonObject` it is ignored and the merge will be applied to
+     *    a new empty `JsonObject`.
+     *
+     *  * If the target `Doc` is a mutable `JsonObject` and the `inPlace` parameter is `True` the merge will be
+     *    applied directly to the target.
+     *
+     *  * A `Null` value for a key in the `patch` will cause the corresponding entry in the target to be removed.
+     *    Any `Null` value in the `patch` will not appear in the merged result.
+     *
+     * @param doc      that target JSON value to apply the patch to
+     * @param patch    the JSON value representing the patch to apply
+     * @param inPlace  (optional) `True` to modify the target in place (if applicable), or `False`
+     *                 to leave the target unmodified and return a patched copy of the target
+     *
+     * @return the JSON value resulting from applying this patch to the target
+     */
     private Doc merge(Doc doc, Doc patch, Boolean inPlace = False) {
         if (patch.is(JsonObject)) {
             JsonObject target;
-
             if (doc.is(JsonObject)) {
-                target = doc;
+                if (doc.is(immutable) || !inPlace) {
+                    // we can make in place true as we are making a new target so there is
+                    // no point continually copying target elements from here on
+                    inPlace = True;
+                    target = json.newObject();
+                    target.putAll(doc);
+                } else {
+                    target = doc;
+                }
             } else {
-                target = json.newObject();
+                // we can make in place true as we are making a new target so there is
+                // no point continually copying target elements from here on
+                inPlace = True;
+                target  = json.newObject();
             }
 
-            JsonObjectBuilder builder = new JsonObjectBuilder(target);
-            for (Map.Entry<String, Doc> entry : patch.entries) {
-                String key   = entry.key;
-                Doc    value = entry.value;
+            for ((String key, Doc value) : patch) {
                 if (value == Null) {
                     target.remove(key);
                 } else {
-                    if (Doc targetValue := target.get(key)) {
-                        merge(key, merge(targetValue, value, inPlace));
-                    } else {
-                        merge(key, merge(json.newObject(), value, True));
-                    }
+                    target[key] = merge(target[key], value, inPlace);
                 }
             }
-            return builder.build();
+            if (doc.is(immutable)) {
+                // The mutability of the result will match the mutability of the original doc parameter
+                target.makeImmutable();
+            }
+            return target;
         }
         return patch;
     }
@@ -73,10 +114,10 @@ class JsonMergePatch(Doc patch) {
     }
 
     /**
-     * Generate a JSON Merge Patch from the source and target {@code JsonValue}.
+     * Generate a JSON Merge Patch from the source and target `JsonValue`.
      *
-     * @param source the source
-     * @param target the target
+     * @param source  the source
+     * @param target  the target
      *
      * @return a JSON Patch which when applied to the source, yields the target
      */

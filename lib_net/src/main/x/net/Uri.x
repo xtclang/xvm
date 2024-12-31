@@ -1,7 +1,7 @@
 /**
  * A representation of a Uniform Resource Identifier (URI) reference.
  *
- * @see: https://www.ietf.org/rfc/rfc2396.txt
+ * @see https://www.ietf.org/rfc/rfc2396.txt
  */
 const Uri
         implements Destringable {
