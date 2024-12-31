@@ -92,18 +92,12 @@ class JsonMergePatch(Doc patch) {
                     target[key] = merge(target[key], value, inPlace);
                 }
             }
-            // TODO JK:
-            // If the original target is immutable the target being returned will be a copy
-            // that is currently mutable. Should it be made immutable to match the original
-            // target doc parameter?
-            // Basically, should the mutability of the result match the mutability of the
-            // original doc parameter?
+            if (doc.is(immutable)) {
+                // The mutability of the result will match the mutability of the original doc parameter
+                target.makeImmutable();
+            }
             return target;
         }
-        // TODO JK:
-        // Should a copy of the patch be returned and should it be immutable?
-        // If we do make a copy, should the mutability of the result match the mutability of the
-        // original doc parameter?
         return patch;
     }
 

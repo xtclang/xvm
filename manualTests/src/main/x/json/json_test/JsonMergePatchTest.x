@@ -302,6 +302,7 @@ class JsonMergePatchTest {
         assert &result != &original as "source and copy should not be the same object reference";
         assert result.is(JsonObject);
         assert result == Map:["a"="b"];
+        assert result.is(immutable);
     }
 
     @Test
@@ -312,6 +313,7 @@ class JsonMergePatchTest {
         assert &result != &original as "source and copy should not be the same object reference";
         assert result.is(JsonObject);
         assert result == Map:["a"="b"];
+        assert result.is(immutable) == False;
     }
 
     @Test
@@ -322,5 +324,6 @@ class JsonMergePatchTest {
         assert &result != &original as "source and copy should not be the same object reference";
         assert result.is(JsonObject);
         assert result == Map:["a"="b"];
+        assert result.is(immutable) == False;
     }
 }
