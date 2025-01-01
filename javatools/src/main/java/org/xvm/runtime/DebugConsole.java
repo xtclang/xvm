@@ -214,7 +214,9 @@ public final class DebugConsole
                 }
             if (m_stepMode != StepMode.None)
                 {
-                // one of the "step" commands, keep following the exception
+                // one of the "step" commands, keep following the exception;
+                // but since we're exiting the frame; stop at the first chance
+                m_stepMode = StepMode.StepInto;
                 return Op.R_NEXT;
                 }
             }
@@ -922,17 +924,7 @@ public final class DebugConsole
                         if ("*".equals(asParts[1]))
                             {
                             BreakPoint[] aBP = allBreakpoints();
-                            if (Arrays.stream(aBP).allMatch(BreakPoint::isEnabled))
-                                {
-                                Arrays.stream(aBP).forEach(BreakPoint::disable);
-                                m_fBreakOnAllThrows = false;
-                                }
-                            else
-                                {
-                                Arrays.stream(aBP).forEach(BreakPoint::enable);
-                                m_fBreakOnAllThrows =
-                                    Arrays.stream(aBP).anyMatch(bp -> "*".equals(bp.className));
-                                }
+                            Arrays.stream(aBP).forEach(this::toggleBP);
                             saveBreakpoints();
                             return Op.R_REPEAT;
                             }
@@ -942,15 +934,7 @@ public final class DebugConsole
                             int n = parseNonNegative(asParts[1]);
                             if (n >= 0 && n < m_aBreaks.length)
                                 {
-                                BreakPoint bp = m_aBreaks[n];
-                                if (bp.isEnabled())
-                                    {
-                                    bp.disable();
-                                    }
-                                else
-                                    {
-                                    bp.enable();
-                                    }
+                                toggleBP(m_aBreaks[n]);
                                 return Op.R_REPEAT;
                                 }
                             }
