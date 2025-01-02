@@ -2226,9 +2226,9 @@ public abstract class Component
             {
             List<Contribution> listClone = new ArrayList<>(listContribs.size());
 
-            for (int i = 0, c = listContribs.size(); i< c; i++)
+            for (Contribution listContrib : listContribs)
                 {
-                listClone.add((Contribution) listContribs.get(i).clone());
+                listClone.add((Contribution) listContrib.clone());
                 }
             that.m_listContribs = listClone;
             }

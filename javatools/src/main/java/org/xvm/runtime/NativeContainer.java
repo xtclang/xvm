@@ -807,7 +807,7 @@ public class NativeContainer
         }
 
     @Override
-    public FileStructure createFileStructure(ModuleStructure moduleApp, ModuleStructure... aModuleAdd)
+    public FileStructure createFileStructure(ModuleStructure moduleApp)
         {
         // Note: we don't need to re-synthesize structures for shared modules
         FileStructure fileApp = new FileStructure(m_moduleSystem, false);
@@ -818,11 +818,6 @@ public class NativeContainer
         fileApp.merge(f_repository.loadModule("net.xtclang.org"), true, false);
         fileApp.merge(f_repository.loadModule("web.xtclang.org"), true, false);
         fileApp.merge(m_moduleNative, false, false);
-
-        for (ModuleStructure module : aModuleAdd)
-            {
-            fileApp.merge(module, true, false);
-            }
 
         fileApp.merge(moduleApp, true, true);
 

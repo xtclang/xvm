@@ -189,9 +189,16 @@ public class xRTFileTemplate
         Container container   = frame.f_context.f_container;
         int       cShared     = ahSharedModules.length;
         int       cAdditional = ahAddModules.length;
-        if (file.isLinked() && cShared == 0 && cAdditional == 0)
+        if (file.isLinked())
             {
-            return frame.assignValue(iReturn, makeHandle(container, file));
+            if (cShared + cAdditional == 0)
+                {
+                return frame.assignValue(iReturn, makeHandle(container, file));
+                }
+            }
+        else
+            {
+            file = container.createFileStructure(file.getModule());
             }
 
         // TODO GG: for now, we treat shared and additional modules in the same way, just adding
@@ -199,37 +206,34 @@ public class xRTFileTemplate
         //          allow the runtime to distinguish between the two and prohibit sharing of
         //          types that belong to the "additional" modules and allow sharing the state by
         //          "shared" modules
-        ModuleStructure[] aModuleAdd = new ModuleStructure[cShared + cAdditional];
-        for (int i = 0; i < cShared; i++)
+        for (ObjectHandle hSharedModule : ahSharedModules)
             {
-            PackageHandle hModule = (PackageHandle) ahSharedModules[i];
-            aModuleAdd[i] = (ModuleStructure) hModule.getStructure();
+            PackageHandle hModule = (PackageHandle) hSharedModule;
+            file.merge((ModuleStructure) hModule.getStructure(), true, false);
+            assert file.validateConstants();
             }
 
-        for (int i = 0; i < cAdditional; i++)
+        for (ObjectHandle hAddModule : ahAddModules)
             {
-            ComponentTemplateHandle hModule = (ComponentTemplateHandle) ahAddModules[i];
-            aModuleAdd[cShared + i] = (ModuleStructure) hModule.getComponent();
+            ComponentTemplateHandle hModule = (ComponentTemplateHandle) hAddModule;
+            file.merge((ModuleStructure) hModule.getComponent(), true, false);
+            assert file.validateConstants();
             }
-
-        ModuleStructure module = file.isLinked()
-            ? f_container.getModuleRepository().loadModule(file.getModuleName())
-            : file.getModule();
-        FileStructure fileUnlinked = container.createFileStructure(module, aModuleAdd);
 
         if (hRepo.getTemplate() instanceof xCoreRepository)
             {
-            String sMissing = fileUnlinked.linkModules(f_container.getModuleRepository(), true);
+            String sMissing = file.linkModules(f_container.getModuleRepository(), true);
             if (sMissing != null)
                 {
                 return frame.raiseException("Missing dependent module: " + sMissing);
                 }
-            return frame.assignValue(iReturn, makeHandle(container, fileUnlinked));
+            return frame.assignValue(iReturn, makeHandle(container, file));
             }
 
         ObjectHandle[] ahArg = new ObjectHandle[LINK_MODULES_METHOD.getMaxVars()];
         ahArg[0] = hRepo;
 
+        FileStructure fileUnlinked = file;
         switch (frame.call1(LINK_MODULES_METHOD, makeHandle(container, fileUnlinked), ahArg, iReturn))
             {
             case Op.R_NEXT:

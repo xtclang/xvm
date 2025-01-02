@@ -180,8 +180,6 @@ public class FileStructure
      */
     public void merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile)
         {
-        m_sModuleName = module.getName();
-
         ModuleStructure moduleClone = module.cloneBody();
         moduleClone.setContaining(this);
 
@@ -221,7 +219,8 @@ public class FileStructure
 
         if (fTakeFile)
             {
-            m_file = module.getFileStructure().m_file;
+            m_sModuleName = module.getName();
+            m_file        = module.getFileStructure().m_file;
             }
         }
 
