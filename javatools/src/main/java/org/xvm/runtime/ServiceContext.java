@@ -404,13 +404,13 @@ public class ServiceContext
         f_fiberExecutionLock.lock();
         try
             {
-            if (fAllowInlineExecution)
+            if (isTerminated())
+                {
+                f_container.terminate(this);
+                }
+            else if (fAllowInlineExecution)
                 {
                 scheduleNext();
-                if (isTerminated())
-                    {
-                    f_container.terminate(this);
-                    }
                 }
             else
                 {
@@ -980,8 +980,6 @@ public class ServiceContext
             // TODO MF: need a better lock to avoid messages getting into the queue after this point
             m_hService = null;
 
-            f_executor.shutdown();
-
             FiberQueue qFiber = f_queueSuspended;
 
             // process all outstanding messages
@@ -1002,10 +1000,7 @@ public class ServiceContext
                 if (fiber != fiberThis)
                     {
                     fiber.setStatus(FiberStatus.Terminating, 0);
-
-                    // this will respond immediately with an exception from "Fiber.prepareRun()"
-                    execute(frameNext);
-
+                    fiber.schedule();
                     setFibers.remove(fiber);
                     }
                 }
@@ -1014,6 +1009,7 @@ public class ServiceContext
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
             f_container.terminate(this);
+            f_executor.shutdown();
             }
 
         return Op.R_NEXT;
@@ -1029,7 +1025,7 @@ public class ServiceContext
         {
         // TODO: ShuttingDown is not currently supported
 
-        if (f_executor.isShutdown())
+        if (isTerminated())
             {
             return ServiceStatus.Terminated;
             }
@@ -1085,7 +1081,7 @@ public class ServiceContext
      */
     public boolean isTerminated()
         {
-        return m_hService == null;
+        return m_hService == null && m_iFrameCounter != 0;
         }
 
 
