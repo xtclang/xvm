@@ -324,7 +324,9 @@ public class ServiceContext {
         Frame frame = nextFiber();
 
         // TODO MF: seems we should schedule all ready fibers but this causes issues???
-        if (frame != null) {
+        if (frame != null && !frame.f_fiber.m_fScheduled) {
+            // reserve the service until the selected fiber acquires the execution lock
+            m_frameCurrent = frame;
             frame.f_fiber.schedule();
         }
 
@@ -358,11 +360,10 @@ public class ServiceContext {
         try (var ignored = ConstantPool.withPool(f_pool)) {
             if (m_fShutdownRequested) {
                 terminate();
+            } else if (isTerminated()) {
+                f_container.terminate(this);
             } else if (fAllowInlineExecution) {
                 scheduleNext();
-                if (isTerminated()) {
-                    f_container.terminate(this);
-                }
             } else {
                 f_container.schedule(this);
             }
@@ -389,7 +390,8 @@ public class ServiceContext {
      * Release the context lock.
      */
     protected void releaseSchedulingLock() {
-        if (f_fiberExecutionLock.getHoldCount() > 1 || isTerminated()) {
+        if (f_fiberExecutionLock.getHoldCount() > 1 || isTerminated() ||
+                m_frameCurrent != null && m_frameCurrent.f_fiber.m_fScheduled) {
             f_fiberExecutionLock.unlock();
             return;
         }
@@ -530,7 +532,10 @@ public class ServiceContext {
             }
         }
 
-        case Paused -> m_frameCurrent = frame; // we must resume this frame
+        case Paused -> {
+            m_frameCurrent = frame; // we must resume this frame
+            execute(true);
+        }
         }
     }
 
@@ -875,8 +880,6 @@ public class ServiceContext {
             // TODO: reject requests that race with the final request-queue drain
             m_hService = null;
 
-            f_executor.shutdown();
-
             FiberQueue qFiber = f_queueSuspended;
 
             // process all outstanding messages
@@ -889,15 +892,19 @@ public class ServiceContext {
             Fiber      fiberThis = frame.f_fiber;
 
             while (!qFiber.isEmpty()) {
-                Frame frameNext = qFiber.getAny();
-                Fiber fiber     = frameNext.f_fiber;
+                qFiber.getAny();
+            }
 
+            // include fibers that have been scheduled but have not acquired the execution lock yet
+            for (Fiber fiber : setFibers) {
                 if (fiber != fiberThis) {
-                    fiber.setStatus(FiberStatus.Terminating, 0);
+                    Frame frameNext = fiber.m_frame;
+                    if (frameNext != null) {
+                        fiber.setStatus(FiberStatus.Terminating, 0);
 
-                    // this will respond immediately with an exception from "Fiber.prepareRun()"
-                    execute(frameNext);
-
+                        // this will respond immediately with an exception from "Fiber.prepareRun()"
+                        execute(frameNext);
+                    }
                     setFibers.remove(fiber);
                 }
             }
@@ -909,6 +916,7 @@ public class ServiceContext {
                    setFibers.size() == 1 && setFibers.contains(fiberThis); // just this fiber left
 
             f_container.terminate(this);
+            f_executor.shutdown();
         }
 
         return Op.R_NEXT;
@@ -934,14 +942,18 @@ public class ServiceContext {
 
         Set<Fiber> setFibers = f_setFibers;
         while (!qFiber.isEmpty()) {
-            Frame frame = qFiber.getAny();
-            Fiber fiber = frame.f_fiber;
+            qFiber.getAny();
+        }
 
-            fiber.setStatus(FiberStatus.Terminating, 0);
+        // scheduled fibers may already have been removed from the suspended queue
+        for (Fiber fiber : setFibers) {
+            Frame frame = fiber.m_frame;
+            if (frame != null) {
+                fiber.setStatus(FiberStatus.Terminating, 0);
 
-            // this will respond immediately with an exception from "Fiber.prepareRun()"
-            execute(frame);
-
+                // this will respond immediately with an exception from "Fiber.prepareRun()"
+                execute(frame);
+            }
             setFibers.remove(fiber);
         }
 
