@@ -331,13 +331,13 @@ const Date(Int32 epochDay)
         Int32 qcenturyNum  = daysLeft / DAYS_PER_QCENTURY;
         daysLeft          -= qcenturyNum * DAYS_PER_QCENTURY;
 
-        Int32 centuryNum   = daysLeft / DAYS_PER_CENTURY;
+        Int32 centuryNum   = (daysLeft / DAYS_PER_CENTURY).notGreaterThan(3);
         daysLeft          -= centuryNum * DAYS_PER_CENTURY;
 
         Int32 qennialNum   = daysLeft / DAYS_PER_QYEAR;
         daysLeft          -= qennialNum * DAYS_PER_QYEAR;
 
-        Int32 ennialNum    = daysLeft / DAYS_PER_YEAR;
+        Int32 ennialNum    = (daysLeft / DAYS_PER_YEAR).notGreaterThan(3);
         daysLeft          -= ennialNum * DAYS_PER_YEAR;
 
         Int32 year         = QCENTURY_YEAR + qcenturyNum * 400
