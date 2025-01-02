@@ -11,19 +11,12 @@
  *   2-factor
  *   oauth
  *   device based authenticators
- *
- * Additionally, this module contains a command line tool that communicates the [AuthEndpoint] web
- * service. To run it, use the following command:
- *
- *      xec webauth.xtclang.org [server URI]
  */
-@webcli.TerminalApp("User Management Tool for WebAuth", "auth> ", auth=Password)
 module webauth.xtclang.org {
     package convert import convert.xtclang.org;
     package oodb    import oodb.xtclang.org;
     package sec     import sec.xtclang.org;
     package web     import web.xtclang.org;
-    package webcli  import webcli.xtclang.org;
 
 //    /**
 //     * Information about the use of a particular IP address.
