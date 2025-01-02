@@ -1005,7 +1005,7 @@ public class ServiceContext
         {
         // TODO: ShuttingDown is not currently supported
 
-        if (m_hService == null)
+        if (isTerminated())
             {
             return ServiceStatus.Terminated;
             }
@@ -1061,7 +1061,7 @@ public class ServiceContext
      */
     public boolean isTerminated()
         {
-        return m_hService == null;
+        return m_hService == null && m_iFrameCounter > 0;
         }
 
 
