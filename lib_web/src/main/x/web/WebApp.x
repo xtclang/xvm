@@ -70,7 +70,7 @@ mixin WebApp
         }
 
         // disable authentication, since no authenticator was found
-        return new NeverAuthenticator();
+        return new NeverAuthenticator(this);
     }
 
     /**
