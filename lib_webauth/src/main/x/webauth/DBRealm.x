@@ -292,6 +292,13 @@ const DBRealm
     @Override
     Boolean deleteGroup(Int|Group group) {
         Int groupId = group.is(Int) ?: group.groupId;
+
+        // check if there are any entities that belong to that group
+        if (findPrincipals(p -> p.groupIds.contains(groupId)).next() ||
+            findGroups    (g -> g.groupIds.contains(groupId)).next()) {
+
+            throw new RealmException("Group is not empty");
+        }
         return db.groups.keys.removeIfPresent(groupId);
     }
 
