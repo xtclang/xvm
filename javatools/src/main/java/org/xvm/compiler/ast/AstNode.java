@@ -1145,10 +1145,8 @@ public abstract class AstNode
      */
     protected boolean containsNamedArgs(List<Expression> listExprArgs)
         {
-        for (int i = 0, cExpr = listExprArgs.size(); i < cExpr; ++i)
+        for (Expression exprArg : listExprArgs)
             {
-            Expression exprArg = listExprArgs.get(i);
-
             if (exprArg instanceof LabeledExpression)
                 {
                 return true;
@@ -1972,12 +1970,11 @@ public abstract class AstNode
         String sIndentLastC = sIndent + "       |";         // last cat kids except last kid
         String sIndentLastK = sIndent + "        ";         // last kid on last cat
         int cCats = 0;
-        for (Iterator<Map.Entry<String, Object>> iterC = cats.entrySet().iterator(); iterC.hasNext(); )
+        for (Map.Entry<String, Object> entry : cats.entrySet())
             {
-            boolean                   fLastC = (++cCats == cats.size());
-            Map.Entry<String, Object> entry  = iterC.next();
-            String                    sCat   = entry.getKey();
-            Object                    value  = entry.getValue();
+            boolean fLastC = (++cCats == cats.size());
+            String  sCat   = entry.getKey();
+            Object  value  = entry.getValue();
 
             // category name
             out.print(sIndentCat + sCat);

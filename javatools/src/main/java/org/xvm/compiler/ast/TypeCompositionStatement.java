@@ -2764,8 +2764,9 @@ public class TypeCompositionStatement
                         return;
                         }
 
-                    if (!validateSuperParameters(ctx, constructor, idSuper, constructSuper,
-                                listSuperArgs, errs))
+                    listSuperArgs = validateSuperParameters(ctx, constructor, idSuper,
+                                        constructSuper, listSuperArgs, errs);
+                    if (listSuperArgs == null)
                         {
                         // error must have been reported
                         return;
@@ -2963,9 +2964,9 @@ public class TypeCompositionStatement
     /**
      * Validate "extend" parameters and mark the constructor with constant arguments.
      *
-     * @return false iff the validation failed and an error has been logged
+     * @return a list of super arguments; null if the validation failed and an error has been logged
      */
-    private boolean validateSuperParameters(Context ctx, MethodStructure constructor,
+    private List<Expression> validateSuperParameters(Context ctx, MethodStructure constructor,
                 MethodConstant idSuper, MethodStructure constructSuper,
                 List<Expression> listSuperArgs, ErrorListener errs)
         {
@@ -2979,7 +2980,7 @@ public class TypeCompositionStatement
                 if (listSuperArgs == null)
                     {
                     // invalid names encountered
-                    return false;
+                    return null;
                     }
                 }
 
@@ -3020,7 +3021,7 @@ public class TypeCompositionStatement
 
             if (!fValid)
                 {
-                return false;
+                return null;
                 }
             }
 
@@ -3030,7 +3031,7 @@ public class TypeCompositionStatement
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
             }
-        return true;
+        return listSuperArgs == null ? Collections.EMPTY_LIST : listSuperArgs;
         }
 
     private void disallowTypeParams(ErrorListener errs)
@@ -3160,8 +3161,8 @@ public class TypeCompositionStatement
             {
             for (int iSuper = 0, cSupers = listContribs.size(); iSuper < cSupers; iSuper++)
                 {
-                MethodConstant   idSuper        = listIds.get(iSuper);
-                MethodStructure  constructSuper = (MethodStructure) idSuper.getComponent();
+                MethodConstant  idSuper        = listIds.get(iSuper);
+                MethodStructure constructSuper = (MethodStructure) idSuper.getComponent();
 
                 // a no-op super constructor in the same module con be safely skipped
                 if (constructSuper.isNoOp() &&
@@ -3171,11 +3172,11 @@ public class TypeCompositionStatement
                     continue;
                     }
 
-                Contribution     contrib        = listContribs.get(iSuper);
-                List<Expression> listSuperArgs  = listArgLists.get(iSuper);
-                int              cSuperArgs     = constructSuper.getParamCount();
-                Argument[]       aSuperArgs     = new Argument[cSuperArgs];
-                int              cArgs          = listSuperArgs == null ? 0 : listSuperArgs.size();
+                Contribution     contrib       = listContribs.get(iSuper);
+                List<Expression> listSuperArgs = listArgLists.get(iSuper);
+                int              cSuperArgs    = constructSuper.getParamCount();
+                Argument[]       aSuperArgs    = new Argument[cSuperArgs];
+                int              cArgs         = listSuperArgs == null ? 0 : listSuperArgs.size();
 
                 Label    labelSkipSuper = null;
                 ExprAST  astCond        = null;

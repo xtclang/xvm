@@ -568,9 +568,8 @@ public class MethodStructure
     public Parameter getParam(String sName)
         {
         Parameter[] aParam = m_aParams;
-        for (int i = 0, c = aParam.length; i < c; i++)
+        for (Parameter param : aParam)
             {
-            Parameter param = aParam[i];
             if (param.getName().equals(sName))
                 {
                 return param;
@@ -2401,11 +2400,11 @@ public class MethodStructure
                 // now that the ops have been read in, introduce them to the whole of the body of
                 // code and the constants
                 addressAndSimulateOps();
-                for (int i = 0, c = aop.length; i < c; ++i)
+                for (Op op : aop)
                     {
                     // TODO ops that can jump need to implement this method and resolve their address to an op
                     //      (otherwise code read from disk will break when we eliminate dead & redundant code)
-                    aop[i].resolveCode(this, aconst);
+                    op.resolveCode(this, aconst);
                     }
                 }
 //            try
@@ -3284,11 +3283,11 @@ public class MethodStructure
                         char chBegin = sLine.charAt(ofBegin);
                         if (chBegin == ' ' || chBegin == '\t')
                             {
-                            ++ofBegin;
-                            while (sLine.charAt(ofBegin) == chBegin)
+                            do
                                 {
                                 ++ofBegin;
                                 }
+                            while (sLine.charAt(ofBegin) == chBegin);
                             }
 
                         aconstLine[iLine] = pool.ensureStringConstant(sLine.substring(ofBegin, ofEnd));
