@@ -74,9 +74,16 @@ module webcli.xtclang.org {
                 Gateway.sendRequest(POST, path, content, mediaType);
 
         /**
+         * Send a PATCH request.
+         */
+        String patch(String path, Object? content = Null, MediaType? mediaType = Null) =
+                Gateway.sendRequest(PATCH, path, content, mediaType);
+
+        /**
          * Send a DELETE request.
          */
-        String delete(String path) = Gateway.sendRequest(DELETE, path);
+        String delete(String path, Object? content = Null, MediaType? mediaType = Null) =
+                Gateway.sendRequest(DELETE, path, content, mediaType);
 
         /**
          * Upload a file via POST request.
