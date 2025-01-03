@@ -90,10 +90,25 @@ const Permission(String target, String action, Boolean revoke = False)
      * @return True iff the scope of `this` Permission fully covers `that` Permission
      */
     Boolean covers(Permission that) {
-        return (this.action == All || this.action == that.action ||
-                this.action.endsWith('*') && that.action.startsWith(this.action[0..<this.action.size-1]))
-            && (this.target == All || this.target == that.target ||
-                this.target.endsWith('*') && that.target.startsWith(this.target[0..<this.target.size-1]));
+        return covers(that.action, that.target);
+    }
+
+    /**
+     * Determine if this Permission covers the specified `action` and `target`.
+     *
+     * Note that this method explicitly does not consider the [revoke] property; that is the
+     * responsibility of the caller. This method only evaluates the [action] and [target].
+     *
+     * @param action  another action name
+     * @param target  another target name
+     *
+     * @return True iff the scope of `this` Permission fully covers the specified action and target
+     */
+    Boolean covers(String action, String target) {
+        return (this.action == All || this.action == action ||
+                this.action.endsWith('*') && action.startsWith(this.action[0..<this.action.size-1]))
+            && (this.target == All || this.target == target ||
+                this.target.endsWith('*') && target.startsWith(this.target[0..<this.target.size-1]));
     }
 
     @Override

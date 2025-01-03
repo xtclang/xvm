@@ -2,7 +2,7 @@
  * An `Entity` represents a user or group for purposes of authorization.
  */
 @Abstract const Entity
-        extends Subject{
+        extends Subject {
 
     // ----- construction --------------------------------------------------------------------------
 
