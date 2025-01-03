@@ -1777,7 +1777,7 @@ public class ServiceContext
           .append(f_lId)
           .append(')');
 
-        if (m_synchronicity != Synchronicity.Concurrent)
+        if (m_synchronicity != null && m_synchronicity != Synchronicity.Concurrent)
             {
             sb.append(" ")
               .append(m_synchronicity.name());
