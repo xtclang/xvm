@@ -769,9 +769,9 @@ service ChainBundle {
             }
             union = True;
             assert (Type t1, Type t2) := type.relational();
-            if        (t1.is(Type<ResponseOut>)) {
+            if        (t1.is(Type<ResponseOut>) || t1.is(Type<HttpStatus>)) {
                 type = t2;
-            } else if (t2.is(Type<ResponseOut>)) {
+            } else if (t2.is(Type<ResponseOut>) || t2.is(Type<HttpStatus>)) {
                 type = t1;
             } else {
                 throw new IllegalState($|Method "{endpoint.method}": \
@@ -805,10 +805,13 @@ service ChainBundle {
                        : new SimpleResponse(HttpStatus.NotFound);
             } else if (union) {
                 return (request, result) -> {
-                    if (ResponseOut response := result[0].is(ResponseOut)) {
+                    Object response = result[0];
+                    if (response.is(ResponseOut)) {
                         return response;
+                    } else if (response.is(HttpStatus)) {
+                        return new SimpleResponse(response);
                     } else {
-                        return createSimpleResponse(mediaType, codec, request, result[0]);
+                        return createSimpleResponse(mediaType, codec, request, response);
                     }};
             } else {
                 return (request, result) ->
@@ -826,10 +829,13 @@ service ChainBundle {
                        : new SimpleResponse(HttpStatus.NotFound);
             } else if (union) {
                 return (request, result) -> {
-                    if (ResponseOut response := result[0].is(ResponseOut)) {
+                    Object response = result[0];
+                    if (response.is(ResponseOut)) {
                         return response;
+                    } else if (response.is(HttpStatus)) {
+                        return new SimpleResponse(response);
                     } else {
-                        return createSimpleResponse(mediaTypes, codecs, request, result[0]);
+                        return createSimpleResponse(mediaTypes, codecs, request, response);
                     }};
             } else {
                 return (request, result) ->
