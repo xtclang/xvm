@@ -134,22 +134,17 @@ public class PropertyInfo
         // first, determine what property bodies are duplicates, if any
         PropertyBody[] aBase = this.m_aBody;
         PropertyBody[] aAdd  = that.m_aBody;
-        int            cBase = aBase.length;
         int            cAdd  = aAdd.length;
 
         ArrayList<PropertyBody> listMerge = null;
-        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
+        NextLayer: for (PropertyBody bodyAdd : aAdd)
             {
-            PropertyBody bodyAdd = aAdd[iAdd];
-
             // unlike the MethodInfo processing, we don't need to allow duplicate interface
             // properties to survive; AAMOF if we allowed it to go on top, the "asInto" would
             // produce wrong result by using the new head (from the contributing interface) that is
             // no longer correctly represents all property aspects
-            for (int iThis = 0; iThis < cBase; ++iThis)
+            for (PropertyBody bodyBase : aBase)
                 {
-                PropertyBody bodyBase = aBase[iThis];
-
                 // discard duplicate "into" and class properties
                 if (bodyAdd.equals(bodyBase) ||
                     bodyAdd.getIdentity().equals(bodyBase.getIdentity())
@@ -268,25 +263,25 @@ public class PropertyInfo
                     {
                     Annotation   annoAdd     = aAnnoAdd[iAnnoAdd];
                     TypeConstant typeAnnoAdd = annoAdd.getAnnotationType();
-                    for (int iAnnoBase = 0; iAnnoBase < cAnnoBase; ++iAnnoBase)
+                    for (Annotation annotation : aAnnoBase)
                         {
-                        TypeConstant typeAnnoBase = aAnnoBase[iAnnoBase].getAnnotationType();
+                        TypeConstant typeAnnoBase = annotation.getAnnotationType();
                         if (typeAnnoAdd.equals(typeAnnoBase))
                             {
                             idProp.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
-                                    that.getIdentity().getParentConstant().getValueString(),
-                                    getName(),
-                                    annoAdd.getAnnotationClass().getValueString());
+                                that.getIdentity().getParentConstant().getValueString(),
+                                getName(),
+                                annoAdd.getAnnotationClass().getValueString());
                             break;
                             }
 
                         if (typeAnnoAdd.isA(typeAnnoBase))
                             {
                             idProp.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
-                                    that.getIdentity().getParentConstant().getValueString(),
-                                    getName(),
-                                    typeAnnoAdd.getValueString(),
-                                    typeAnnoBase.getValueString());
+                                that.getIdentity().getParentConstant().getValueString(),
+                                getName(),
+                                typeAnnoAdd.getValueString(),
+                                typeAnnoBase.getValueString());
                             break;
                             }
                         }
@@ -351,12 +346,10 @@ public class PropertyInfo
 
         // interface properties with a default get() and an @RO declaration become calculated
         // properties; all others become field-based properties
-        PropertyBody[]    aBody  = m_aBody;
         PropertyStructure struct = null;
         boolean           fRO    = false;
-        for (int i = 0, c = aBody.length; i < c; ++i)
+        for (PropertyBody body : m_aBody)
             {
-            PropertyBody body = aBody[i];
             if (body.getExistence() != Existence.Implied)
                 {
                 assert body.getExistence() == Existence.Interface;

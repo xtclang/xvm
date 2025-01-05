@@ -268,16 +268,13 @@ public class MethodInfo
 
         MethodBody[] aBase = this.m_aBody;
         MethodBody[] aAdd  = that.m_aBody;
-        int          cBase = aBase.length;
-        int          cAdd  = aAdd.length;
 
         ArrayList<MethodBody> listMerge = null;
-        NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat)
+        NextLayer: for (MethodBody bodyThat : aAdd)
             {
-            MethodBody bodyThat = aAdd[iThat];
-            for (int iThis = 0; iThis < cBase; ++iThis)
+            for (MethodBody methodBody : aBase)
                 {
-                if (bodyThat.equals(aBase[iThis]))
+                if (bodyThat.equals(methodBody))
                     {
                     // ignore a duplicate
                     continue NextLayer;
@@ -356,20 +353,15 @@ public class MethodInfo
 
         MethodBody[] aBase = that.m_aBody;
         MethodBody[] aAdd  = this.m_aBody;
-        int          cBase = aBase.length;
-        int          cAdd  = aAdd.length;
 
         ArrayList<MethodBody> listMerge = null;
-        NextLayer: for (int iAdd = 0; iAdd < cAdd; ++iAdd)
+        NextLayer: for (MethodBody bodyAdd : aAdd)
             {
-            MethodBody bodyAdd = aAdd[iAdd];
-
-            for (int iBase = 0; iBase < cBase; ++iBase)
+            for (MethodBody bodyBase : aBase)
                 {
                 // discard duplicates or an abstract replacing a non-abstract
-                MethodBody bodyBase = aBase[iBase];
                 if (bodyAdd.equals(bodyBase) ||
-                        (bodyAdd.isAbstract() && !bodyBase.isAbstract()))
+                    (bodyAdd.isAbstract() && !bodyBase.isAbstract()))
                     {
                     continue NextLayer;
                     }
@@ -689,13 +681,11 @@ public class MethodInfo
      */
     public boolean isAbstract()
         {
-        MethodBody[] aBody           = m_aBody;
-        boolean      fIgnoreAbstract = false;
-        int          cDeclParams     = -1;
-        int          cDeclReturns    = -1;
-        for (int i = 0, c = aBody.length; i < c; ++i)
+        boolean fIgnoreAbstract = false;
+        int     cDeclParams     = -1;
+        int     cDeclReturns    = -1;
+        for (MethodBody body : m_aBody)
             {
-            MethodBody body = aBody[i];
             switch (body.getImplementation())
                 {
                 case Implicit:
@@ -708,7 +698,7 @@ public class MethodInfo
                     break;
 
                 case Declared:
-                    cDeclParams  = Math.max(cDeclParams , body.getSignature().getParamCount());
+                    cDeclParams  = Math.max(cDeclParams, body.getSignature().getParamCount());
                     cDeclReturns = Math.max(cDeclReturns, body.getSignature().getReturnCount());
                     break;
 
@@ -733,7 +723,7 @@ public class MethodInfo
                         {
                         // a non-abstract implementation must have at least as many parameters and
                         // return values as the narrowest declaration
-                        if (body.getSignature().getParamCount()  < cDeclParams ||
+                        if (body.getSignature().getParamCount() < cDeclParams ||
                             body.getSignature().getReturnCount() < cDeclReturns)
                             {
                             break;
