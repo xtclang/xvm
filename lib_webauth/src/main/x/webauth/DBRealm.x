@@ -111,8 +111,8 @@ const DBRealm
     // ----- operations: Principals ----------------------------------------------------------------
 
     @Override
-    Iterator<Principal> findPrincipals(function Boolean(Principal) match) {
-        return db.principals.filter(e -> match(e.value)).values.iterator();
+    immutable Principal[] findPrincipals(function Boolean(Principal) match) {
+        return db.principals.filter(e -> match(e.value)).values.toArray(Constant).freeze(True);
     }
 
     @Override
@@ -208,19 +208,10 @@ const DBRealm
             }
 
             // delete all locators for the principal
-            db.principalLocators.filter(e -> e.value == principalId).clear(); // TODO GG REVIEW
-
-// REVIEW GG - alternative?
-//          Set<String> locators    = locatorsFor(principal);
-//          DBMap<String, Int> index = db.principalLocators;
-//          for (String locator : locators) {
-//              if (Int locatorId := index.get(locator), locatorId == principalId) {
-//                  index.remove(locator);
-//              }
-//          }
+            db.principalLocators.removeAll(e -> e.value == principalId);
 
             // delete all entitlements for the principal
-            db.entitlements.filter(e -> e.value.principalId == principalId).clear();
+            db.entitlementLocators.removeAll(e -> e.value == principalId);
 
             // delete the principal
             db.principals.remove(principalId);
@@ -231,8 +222,8 @@ const DBRealm
     // ----- operations: Groups ----------------------------------------------------------------
 
     @Override
-    Iterator<Group> findGroups(function Boolean(Group) match) {
-        return db.groups.filter(e -> match(e.value)).values.iterator();
+    immutable Group[] findGroups(function Boolean(Group) match) {
+        return db.groups.filter(e -> match(e.value)).values.toArray(Constant).freeze(True);
     }
 
     @Override
@@ -294,8 +285,8 @@ const DBRealm
         Int groupId = group.is(Int) ?: group.groupId;
 
         // check if there are any entities that belong to that group
-        if (findPrincipals(p -> p.groupIds.contains(groupId)).next() ||
-            findGroups    (g -> g.groupIds.contains(groupId)).next()) {
+        if (findPrincipals(p -> !p.groupIds.contains(groupId)).empty ||
+            findGroups    (g -> !g.groupIds.contains(groupId)).empty) {
 
             throw new RealmException("Group is not empty");
         }
@@ -305,8 +296,8 @@ const DBRealm
     // ----- operations: Entitlements --------------------------------------------------------------
 
     @Override
-    Iterator<Entitlement> findEntitlements(function Boolean(Entitlement) match) {
-        return db.entitlements.filter(e -> match(e.value)).values.iterator();
+    immutable Entitlement[] findEntitlements(function Boolean(Entitlement) match) {
+        return db.entitlements.filter(e -> match(e.value)).values.toArray(Constant).freeze(True);
     }
 
 
@@ -384,23 +375,14 @@ const DBRealm
 
     @Override
     Boolean deleteEntitlement(Int|Entitlement entitlement) {
-        Int     entitlementId = entitlement.is(Int) ?: entitlement.entitlementId;
+        Int entitlementId = entitlement.is(Int) ?: entitlement.entitlementId;
         using (db.connection.createTransaction()) {
             if (!(entitlement := readEntitlement(entitlementId))) {
                 return False;
             }
 
             // delete all locators for the entitlement
-            db.entitlementLocators.filter(e -> e.value == entitlementId).clear(); // TODO GG REVIEW
-
-// REVIEW GG - alternative?
-//          Set<String> locators    = locatorsFor(entitlement);
-//          DBMap<String, Int> index = db.entitlementLocators;
-//          for (String locator : locators) {
-//              if (Int locatorId := index.get(locator), locatorId == entitlementId) {
-//                  index.remove(locator);
-//              }
-//          }
+            db.entitlementLocators.removeAll(e -> e.value == entitlementId);
 
             // delete the entitlement
             db.entitlements.remove(entitlementId);

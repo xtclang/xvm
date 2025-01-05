@@ -111,9 +111,9 @@ interface Realm {
      * @param match  a function that evaluates each [Principal] for inclusion, and returns `True`
      *               for each `Principal` to include
      *
-     * @return an [Iterator] of matching [Principal] objects
+     * @return an [Iterable] of matching [Principal] objects
      */
-    Iterator<Principal> findPrincipals(function Boolean(Principal) match);
+    immutable Iterable<Principal> findPrincipals(function Boolean(Principal) match);
 
     /**
      * Attempt to locate a [Principal] using a scheme-specific locator `String`.
@@ -239,9 +239,9 @@ interface Realm {
      * @param match  a function that evaluates each [Group] for inclusion, and returns `True`
      *               for each `Group` to include
      *
-     * @return an [Iterator] of matching [Group] objects
+     * @return an [Iterable] of matching [Group] objects
      */
-    Iterator<Group> findGroups(function Boolean(Group) match);
+    immutable Iterable<Group> findGroups(function Boolean(Group) match);
 
     /**
      * Create a new [Group] in the `Realm`.
@@ -318,9 +318,9 @@ interface Realm {
      * @param match  a function that evaluates each [Entitlement] for inclusion, and returns `True`
      *               for each `Entitlement` to include
      *
-     * @return an [Iterator] of matching [Entitlement] objects
+     * @return an [Iterable] of matching [Entitlement] objects
      */
-    Iterator<Entitlement> findEntitlements(function Boolean(Entitlement) match);
+    immutable Iterable<Entitlement> findEntitlements(function Boolean(Entitlement) match);
 
     /**
      * Attempt to locate a [Entitlement] using a scheme-specific locator `String`.

@@ -66,8 +66,8 @@ const FixedRealm(String name, Principal[] principals, Group[] groups = [],
     // ----- operations: Principals ----------------------------------------------------------------
 
     @Override
-    Iterator<Principal> findPrincipals(function Boolean(Principal) match) {
-        return principals.filter(match).iterator();
+    immutable Iterable<Principal> findPrincipals(function Boolean(Principal) match) {
+        return principals.filter(match).toArray(Constant).freeze(True);
     }
 
     @Override
@@ -95,8 +95,8 @@ const FixedRealm(String name, Principal[] principals, Group[] groups = [],
     // ----- operations: Groups ----------------------------------------------------------------
 
     @Override
-    Iterator<Group> findGroups(function Boolean(Group) match) {
-        return groups.filter(match).iterator();
+    immutable Group[] findGroups(function Boolean(Group) match) {
+        return groups.filter(match).toArray(Constant).freeze(True);
     }
 
     @Override
@@ -119,8 +119,8 @@ const FixedRealm(String name, Principal[] principals, Group[] groups = [],
     // ----- operations: Entitlements --------------------------------------------------------------
 
     @Override
-    Iterator<Entitlement> findEntitlements(function Boolean(Entitlement) match) {
-        return entitlements.filter(match).iterator();
+    immutable Entitlement[] findEntitlements(function Boolean(Entitlement) match) {
+        return entitlements.filter(match).toArray(Constant).freeze(True);
     }
 
 
