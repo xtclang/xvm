@@ -1181,11 +1181,11 @@ public class MethodInfo
                     break;
 
                 case Default:
+                case Delegating:
                     // only the first one is kept; so our count could be a bit off
                     cMethods++;
                     break;
 
-                case Delegating:
                 case Field:
                 case Native:
                 case Explicit:
