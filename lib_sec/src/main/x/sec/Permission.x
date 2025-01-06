@@ -76,7 +76,78 @@ const Permission(String target, String action, Boolean revoke = False)
      */
     static Boolean checkTarget(String target) = !target.empty && target == target.trim();
 
+    /**
+     * Describes the relationship between two entities comprised of one or more aspects.
+     * * `None` - indicates that for each aspect of the two entities, there is no `Relationship`
+     * * `Same` - indicates that for each aspect of the two entities, the aspects are identical
+     * * `Covers` - indicates that the aspects of the two entities are not identical, but that each
+     *   aspect of first entity covers the corresponding aspect of the second entity
+     * * `Covered` - indicates that the aspects of the two entities are not identical, but that each
+     *   aspect of first entity is covered by the corresponding aspect of the second entity
+     * * `Collides` - indicates that an aspect of the first entity covers the corresponding aspect
+     *   of the second, while a different aspect of the first entity is covered by the second
+     */
+    enum Relationship {None, Same, Covers, Covered, Collides}
+
+    /**
+     * Calculate the relation between two path strings, either of which can be (or end with) the
+     * wildcard indicator.
+     *
+     * @param the first path string, representing an aspect of some first entity
+     * @param the second path string, representing the corresponding aspect of some second entity
+     *
+     * @return one of the [Relationship] values: [Same], [Covers], [Covered], or [None]
+     */
+    static Relationship relate(String first, String second) {
+        if (first == second) {
+            return Same;
+        }
+
+        if (first == All || first.endsWith('*') && second.startsWith(first[0..<first.size-1])) {
+            return Covers;
+        }
+
+        if (second == All || second.endsWith('*') && first.startsWith(second[0..<second.size-1])) {
+            return Covered;
+        }
+
+        return None;
+    }
+
     // ----- API -----------------------------------------------------------------------------------
+
+    /**
+     * Determine the [Relationship] between `this` `Permission` and other `Permission`, by combining
+     * the `Relationship` between the two `Permission`'s actions and the `Relationship` between the
+     * two `Permission`'s targets.
+     *
+     * The computation of the `Relationship` is calculated as follows:
+     *
+     *             Target: | Same     Covers   Covered  None
+     *             --------+--------- -------- -------- --------
+     *     Action: Same    | Same     Covers   Covered  None
+     *             Covers  | Covers   Covers   Collides None
+     *             Covered | Covered  Collides Covered  None
+     *             None    | None     None     None     None
+     *
+     * @return the `Relationship` between `this` and `that` `Permission`
+     */
+    Relationship relatedTo(Permission that) {
+        return switch (relate(this.action, that.action), relate(this.target, that.target)) {
+            case (Same, Same): Same;
+
+            case (None, _):
+            case (_, None): None;
+
+            case (Covers, Covered):
+            case (Covered, Covers): Collides;
+
+            case (Covers, _):
+            case (_, Covers): Covers;
+
+            default: Covered;
+        };
+    }
 
     /**
      * Determine if this Permission covers `that` Permission. For example, the Permission for
