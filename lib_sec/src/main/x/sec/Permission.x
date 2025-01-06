@@ -30,14 +30,15 @@ const Permission(String target, String action, Boolean revoke = False)
 
     @Override
     construct(String text) {
-        Int start = 0;
+        Int     start  = 0;
+        Boolean revoke = False;
         if (text.startsWith('!')) {
             revoke = True;
             start  = 1;
         }
 
         assert:arg Int colon := text.indexOf(':');
-        construct Permission(text[start..<colon], text.substring(colon+1));
+        construct Permission(text[start..<colon], text.substring(colon+1), revoke);
     }
 
     assert() {

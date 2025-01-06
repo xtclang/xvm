@@ -665,8 +665,13 @@ service ChainBundle {
         Object paramValue;
         if (body == Null) {
             if (!(paramValue := param.defaultValue())) {
-                throw new IllegalState($"Request has no body");
-            }
+                Type paramType = param.ParamType;
+                paramValue = switch (paramType.is(_)) {
+                    case Type<Byte[]>: Byte[]:[];
+                    case Type<String>: "";
+                    default          : throw new IllegalState($"Request has no body");
+                    };
+           }
         } else {
             Type paramType = param.ParamType;
             switch (paramType.is(_)) {
