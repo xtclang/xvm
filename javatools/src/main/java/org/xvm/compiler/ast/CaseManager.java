@@ -1507,10 +1507,8 @@ public class CaseManager<CookieType>
      */
     public void generateIfLadder(Context ctx, Code code, List<? extends AstNode> aNodes, ErrorListener errs)
         {
-        int cNodes = aNodes.size();
-        for (int i = 0; i < cNodes; ++i)
+        for (AstNode node : aNodes)
             {
-            AstNode node = aNodes.get(i);
             if (node instanceof CaseStatement stmt)
                 {
                 if (!stmt.isDefault())

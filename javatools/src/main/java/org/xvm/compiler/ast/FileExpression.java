@@ -137,8 +137,8 @@ public class FileExpression
                 case "File"        -> pool.typeFile();
                 case "Path"        -> pool.typePath();
                 case "String"      -> pool.typeString();
-                case "Array<Byte>" -> pool.typeByteArray();
-                case "Byte[]"      -> pool.typeByteArray();
+                case "Array<Byte>",
+                     "Byte[]"      -> pool.typeByteArray();
                 default            -> throw new IllegalStateException("type=" + sType);
                 };
             }

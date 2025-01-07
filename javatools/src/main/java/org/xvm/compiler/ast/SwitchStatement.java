@@ -6,7 +6,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -641,11 +640,8 @@ public class SwitchStatement
             int     cBlocks    = listAdd.size();
             for (Map<String, Assignment> mapAdd : listAdd)
                 {
-                for (Iterator<Entry<String, Assignment>> iter = mapAdd.entrySet().iterator();
-                        iter.hasNext();)
+                for (Entry<String, Assignment> entry : mapAdd.entrySet())
                     {
-                    Entry<String, Assignment> entry = iter.next();
-
                     String     sName   = entry.getKey();
                     Assignment asnThat = entry.getValue();
                     Assignment asnThis = mapThis.get(sName);

@@ -110,23 +110,13 @@ public abstract class SyntheticExpression
             return expr.getExprAST(ctx);
             }
 
-        Operator op;
-        if (this instanceof PackExpression)
+        Operator op = switch (this)
             {
-            op = Operator.Pack;
-            }
-        else if (this instanceof ToIntExpression)
-            {
-            op = Operator.ToInt;
-            }
-        else if (this instanceof TraceExpression)
-            {
-            op = Operator.Trace;
-            }
-        else
-            {
-            throw new UnsupportedOperationException();
-            }
+            case PackExpression  ignored -> Operator.Pack;
+            case ToIntExpression ignored -> Operator.ToInt;
+            case TraceExpression ignored -> Operator.Trace;
+            default                      -> throw new UnsupportedOperationException();
+            };
 
         return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
         }
