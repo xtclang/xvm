@@ -156,6 +156,7 @@ interface Client {
             request.header[Header.ContentType] = mediaType.text;
             request.ensureBody(mediaType).from(content?);
         }
+        request.header[Header.Accept] = request.accepts.text;
         return request;
     }
 

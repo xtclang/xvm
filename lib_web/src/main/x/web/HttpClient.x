@@ -107,7 +107,8 @@ const HttpClient
         Byte[] bytes  = request.body?.bytes : [];
 
         if (300 <= statusCode < 400 && redirectCount < redirectLimit,
-                Int index := responseHeaderNames.indexOf("Location")) {
+                Int index := responseHeaderNames.indexOf(
+                        CaseInsensitive.areEqual(_, "Location"))) {
             Uri redirect = new Uri(responseHeaderValues[index]);
             uri = uri.apply(redirect);
             return sendAsync^(request, uri, headerNames, headerValues, callback,

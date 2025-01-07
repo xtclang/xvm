@@ -1,21 +1,22 @@
 package org.xvm.runtime.template._native.web;
 
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
+
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 
 import java.security.cert.X509Certificate;
+
+import java.time.Duration;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -25,10 +26,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
@@ -42,7 +40,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -65,9 +62,6 @@ import org.xvm.runtime.template._native.collections.arrays.xRTStringDelegate.Str
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 
-import org.xvm.util.ListMap;
-import org.xvm.util.TransientThreadLocal;
-
 
 /**
  * Native implementation of the RTConnector.x service.
@@ -87,43 +81,6 @@ public class xRTConnector
             s_sAgent = "Mozilla/5.0 (compatible; Ecstasy/"
                        + structure.getFileStructure().getModule().getVersionString()
                        + ')' ;
-            }
-        }
-
-    private static SSLSocketFactory createSocketFactory()
-            throws GeneralSecurityException
-        {
-        TrustManager[] aTrustMgr = new TrustManager[]
-            {
-            new X509TrustManager()
-                {
-                @Override
-                public X509Certificate[] getAcceptedIssuers()
-                    {
-                    return null;
-                    }
-                @Override
-                public void checkClientTrusted(X509Certificate[] chain, String authType)
-                    {
-                    }
-                @Override
-                public void checkServerTrusted(X509Certificate[] chain, String authType)
-                    {
-                    }
-                }
-            };
-
-        SSLContext context = SSLContext.getInstance("TLS");
-        context.init(null, aTrustMgr, new SecureRandom());
-        return context.getSocketFactory();
-        }
-
-    private static synchronized void ensureGlobalHandler()
-        {
-        if (s_handlerGlobal == null)
-            {
-            // set up the global handler (horrible design in Java, but nothing we can do)
-            CookieHandler.setDefault(s_handlerGlobal = new GlobalCookieHandler());
             }
         }
 
@@ -159,24 +116,20 @@ public class xRTConnector
      */
     public ObjectHandle ensureConnector(Frame frame, ObjectHandle hOpts)
         {
-        ServiceContext  context    = f_container.createServiceContext("Connector");
-        ConnectorHandle hConnector = new ConnectorHandle(getCanonicalClass(f_container), context);
-
+        ServiceContext context = f_container.createServiceContext("Connector");
         try
             {
-            CookieHandler    handler  = createCookieHandler();
-            SSLSocketFactory factory  = createSocketFactory();
-            HostnameVerifier verifier = (sHostName, session) -> true;
+            CookieHandler cookieHandler = createCookieHandler();
+            SSLContext    sslContext    = createSSLContext();
 
-            hConnector.configure(handler, factory, verifier);
-
+            ConnectorHandle hConnector = new ConnectorHandle(getCanonicalClass(f_container),
+                                            context, cookieHandler, sslContext);
             context.setService(hConnector);
             return hConnector;
             }
         catch (GeneralSecurityException e)
             {
-            f_container.terminate(context);
-            return new DeferredCallHandle(xException.makeHandle(frame, e.getMessage()));
+            return xException.makeObscure(frame, e.getMessage());
             }
         }
 
@@ -231,81 +184,47 @@ public class xRTConnector
         StringArrayHandle haValues = (StringArrayHandle) hHeaderValues.m_hDelegate;
         ByteArrayHandle   haBytes  = (ByteArrayHandle)   hBytes.m_hDelegate;
 
-        int                 cHeaders   = (int) haNames.m_cSize;
-        Map<String, String> mapHeaders = new ListMap<>(cHeaders);
-        for (int i = 0; i < cHeaders; i++)
-            {
-            mapHeaders.put(haNames.get(i), haValues.get(i));
-            }
-
         try
             {
-            URL               url  = new URI(hUrl.getStringValue()).toURL();
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            long ldtTimeout     = frame.f_fiber.getTimeoutStamp();
+            long cTimeoutMillis = ldtTimeout > 0
+                    ? Math.max(1, ldtTimeout - frame.f_context.f_container.currentTimeMillis())
+                    : 0L;
 
-            conn.setRequestMethod(hMethod.getStringValue());
-            conn.setInstanceFollowRedirects(false);
+            HttpRequest.Builder builderRequest =
+                    HttpRequest.newBuilder(new URI(hUrl.getStringValue()));
 
-            if (conn instanceof HttpsURLConnection connTls)
+            for (int i = 0, c = (int) haNames.m_cSize; i < c; i++)
                 {
-                connTls.setHostnameVerifier(hConn.m_verifier);
-                connTls.setSSLSocketFactory(hConn.m_sslFactory);
+                builderRequest.header(haNames.get(i), haValues.get(i));
                 }
 
-            for (Map.Entry<String, String> entry : mapHeaders.entrySet())
+            if (cTimeoutMillis > 0)
                 {
-                conn.addRequestProperty(entry.getKey(), entry.getValue());
+                builderRequest.timeout(Duration.ofMillis(cTimeoutMillis));
                 }
 
-            String sMethod = hMethod.getStringValue();
-            byte[] abData;
-            if ("PUT".equals(sMethod) || "POST".equals(sMethod))
-                {
-                abData = ((ByteBasedDelegate) haBytes.getTemplate()).
-                                            getBytes(haBytes, 0, haBytes.m_cSize, false);
-                }
-            else
-                {
-                abData = null;
-                }
+            byte[] abData = haBytes.m_cSize > 0
+                    ? ((ByteBasedDelegate) haBytes.getTemplate()).
+                            getBytes(haBytes, 0, haBytes.m_cSize, false)
+                    : null;
 
-            long ldtTimeout = frame.f_fiber.getTimeoutStamp();
-            if (ldtTimeout > 0)
-                {
-                long cTimeoutMillis = Math.max(1,
-                                        ldtTimeout - frame.f_context.f_container.currentTimeMillis());
-                if (cTimeoutMillis > Integer.MAX_VALUE)
-                    {
-                    cTimeoutMillis = Integer.MAX_VALUE;
-                    }
-                conn.setConnectTimeout((int) cTimeoutMillis);
-                conn.setReadTimeout((int) cTimeoutMillis);
-                }
+            builderRequest.method(hMethod.getStringValue(),
+                    abData == null ? BodyPublishers.noBody() : BodyPublishers.ofByteArray(abData));
 
-            Callable<Integer> task = () ->
-                {
-                try (var ignore = s_handlerGlobal.withHandler(hConn.m_cookieHandler))
-                    {
-                    if (abData != null)
-                        {
-                        conn.setDoOutput(true);
-                        conn.setDoInput(true);
+            HttpClient  client  = hConn.selectClient(cTimeoutMillis);
+            HttpRequest request = builderRequest.build();
 
-                        OutputStream os = conn.getOutputStream();
-                        os.write(abData);
-                        os.flush();
-                        }
-                    return conn.getResponseCode();
-                    }
-                };
+            Callable<HttpResponse<byte[]>> task = () ->
+                    client.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
-            CompletableFuture<Integer> cfSend = frame.f_context.f_container.scheduleIO(task);
+            CompletableFuture<HttpResponse<byte[]>> cfSend = frame.f_context.f_container.scheduleIO(task);
 
             Frame.Continuation continuation = frameCaller ->
                 {
                 try
                     {
-                    return processResponse(frameCaller, conn, cfSend.get(), aiReturn);
+                    return processResponse(frameCaller, cfSend.get(), aiReturn);
                     }
                 catch (Throwable e)
                     {
@@ -322,17 +241,16 @@ public class xRTConnector
             }
         }
 
-    private int processResponse(Frame frame, HttpURLConnection conn, int nResponseCode, int[] aiReturn)
+    private int processResponse(Frame frame, HttpResponse<byte[]> response, int[] aiReturn)
         {
-        int cMaxSize = 8*1024*1024; // TODO: how to configure?
         try
             {
-            Map<String, List<String>> mapResponseHeaders = conn.getHeaderFields();
+            int                       nResponseCode      = response.statusCode();
+            Map<String, List<String>> mapResponseHeaders = response.headers().map();
 
             int          cResponseHeaders   = mapResponseHeaders.size();
             List<String> listResponseNames  = new ArrayList<>(cResponseHeaders);
             List<String> listResponseValues = new ArrayList<>(cResponseHeaders);
-            int          nContentLength     = 0;
 
             Iterator<Map.Entry<String, List<String>>> it = mapResponseHeaders.entrySet().iterator();
             for (int i = 0; i < cResponseHeaders; i++)
@@ -353,46 +271,15 @@ public class xRTConnector
 
                     listResponseNames.add(sName);
                     listResponseValues.add(sValue);
-
-                    if ("Content-Length".equalsIgnoreCase(sName))
-                        {
-                        nContentLength = Integer.parseInt(sValue);
-                        }
                     }
                 }
 
             String[] asResponseNames  = listResponseNames.toArray(Utils.NO_NAMES);
             String[] asResponseValues = listResponseValues.toArray(Utils.NO_NAMES);
 
-            byte[] abResponse = null;
-            if (nContentLength > 0)
-                {
-                if (nContentLength > cMaxSize)
-                    {
-                    nResponseCode  = 206; // "Partial Content"
-                    nContentLength = cMaxSize;
-                    }
-                InputStream in = nResponseCode >= 400
-                        ? conn.getErrorStream()
-                        : conn.getInputStream();
-                byte[] ab = new byte[nContentLength];
+            byte[] abResponse = response.body();
 
-                int ofStart = 0;
-                int cRemain = nContentLength;
-                while (true)
-                    {
-                    int cbRead = in.read(ab, ofStart, cRemain);
-                    if (cbRead == -1 || cbRead == cRemain)
-                        {
-                        break;
-                        }
-                    ofStart += cbRead;
-                    cRemain -= cbRead;
-                    }
-                abResponse = ab;
-                }
-
-            ObjectHandle hResponseBytes = abResponse == null
+            ObjectHandle hResponseBytes = abResponse == null || abResponse.length == 0
                     ? xArray.ensureEmptyByteArray()
                     : xArray.makeByteArrayHandle(abResponse, Mutability.Constant);
 
@@ -409,42 +296,40 @@ public class xRTConnector
             }
         }
 
-
-    // ----- ObjectHandles -------------------------------------------------------------------------
-
-    private CookieHandler createCookieHandler()
+    private static CookieHandler createCookieHandler()
         {
-        ensureGlobalHandler();
         return new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         }
 
-    /**
-     * Global CookieHandler.
-     */
-    protected static class GlobalCookieHandler
-            extends CookieHandler
+    private static SSLContext createSSLContext()
+            throws GeneralSecurityException
         {
-        private final TransientThreadLocal<CookieHandler> f_tloHandler = new TransientThreadLocal<>();
-
-        public AutoCloseable withHandler(CookieHandler handler)
+        // allow self-signed certificates
+        TrustManager[] aTrustMgr = new TrustManager[]
             {
-            return f_tloHandler.push(handler);
-            }
+            new X509TrustManager()
+                {
+                @Override
+                public X509Certificate[] getAcceptedIssuers()
+                    {
+                    return null;
+                    }
 
-        @Override
-        public Map<String, List<String>> get(URI uri, Map<String, List<String>> requestHeaders)
-                throws IOException
-            {
-            return f_tloHandler.get().get(uri, requestHeaders);
-            }
+                @Override
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
 
-        @Override
-        public void put(URI uri, Map<String, List<String>> responseHeaders)
-                throws IOException
-            {
-            f_tloHandler.get().put(uri, responseHeaders);
-            }
+                @Override
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+                }
+            };
+
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, aTrustMgr, new SecureRandom());
+        return context;
         }
+
+
+    // ----- ObjectHandles -------------------------------------------------------------------------
 
     /**
      * A {@link ServiceHandle} for the RTConnector service.
@@ -452,30 +337,53 @@ public class xRTConnector
     protected static class ConnectorHandle
             extends ServiceHandle
         {
-        /**
-         * The {@link CookieHandler} used by this Connector.
-         */
-        protected CookieHandler m_cookieHandler;
-        /**
-         * The {@link SSLSocketFactory} used for HTTPS.
-         */
-        protected SSLSocketFactory m_sslFactory;
-        /**
-         * The {@link HostnameVerifier}.
-         */
-        protected HostnameVerifier m_verifier;
-
-        protected ConnectorHandle(TypeComposition clazz, ServiceContext context)
+        protected ConnectorHandle(TypeComposition clazz, ServiceContext context,
+                                  CookieHandler cookieHandler, SSLContext sslContext)
             {
             super(clazz, context);
+
+            f_cookieHandler = cookieHandler;
+            f_sslContext    = sslContext;
             }
 
-        protected void configure(CookieHandler cookieHandler, SSLSocketFactory sslFactory,
-                                 HostnameVerifier hostVerifier)
+        /**
+         * Choose a client with the connection timeout approximated to the request timeout value.
+         *
+         * Note: we need to use different pools for different connection to avoid cross-pollination
+         *       of cookies.
+         */
+        protected HttpClient selectClient(long cTimeoutMillis)
             {
-            m_cookieHandler = cookieHandler;
-            m_sslFactory    = sslFactory;
-            m_verifier      = hostVerifier;
+            Duration timeout;
+            int      nSlot;
+            if (cTimeoutMillis == 0)
+                {
+                timeout = null;
+                nSlot   = 0;
+                }
+            else
+                {
+                int cApprox = Integer.highestOneBit((int) cTimeoutMillis/1000);
+
+                timeout = Duration.ofSeconds(cApprox);
+                nSlot   = Math.min(f_clientPool.length - 1,
+                                   1 + Integer.numberOfTrailingZeros(cApprox));
+                }
+
+            HttpClient client = f_clientPool[nSlot];
+            if (client == null)
+                {
+                HttpClient.Builder builderClient = HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NEVER) // we process redirect manually
+                    .cookieHandler(f_cookieHandler)
+                    .sslContext(f_sslContext);
+                if (timeout != null)
+                    {
+                    builderClient.connectTimeout(timeout);
+                    }
+                f_clientPool[nSlot] = client = builderClient.build();
+                }
+            return client;
             }
 
         @Override
@@ -483,19 +391,42 @@ public class xRTConnector
             {
             return "Connector";
             }
+
+        /**
+         * The {@link CookieHandler} used by this Connector.
+         */
+        protected final CookieHandler f_cookieHandler;
+
+        /**
+         * The {@link SSLContext} used for HTTPS.
+         */
+        protected SSLContext f_sslContext;
+
+        /**
+         * A pool of HttpClient's. The only difference between the clients in the pool is the
+         * "connectionTimeout" value. Since the timeout value should be applied for the entire
+         * request, we don't have to be precise for the "connection" phase timeout and only use very
+         * rough approximation of the request timeout value to control that phase. The slots are:
+         *
+         * [0] - no timeout
+         * [1] - 1 second timeout
+         * [2] - 2 seconds timeout
+         * [3] - 4 seconds timeout
+         * [4] - 8 seconds timeout
+         *
+         * TODO: how to close the HttpClients when ConnectionHandle is GC'd?
+         */
+        private final HttpClient[] f_clientPool = new HttpClient[5];
         }
 
 
     // ----- data fields ---------------------------------------------------------------------------
 
     /**
-     * Global handler.
-     */
-    private static GlobalCookieHandler s_handlerGlobal;
-    /**
      * Cached agent string.
      */
     private static String s_sAgent;
+
     /**
      * Cached canonical type.
      */
