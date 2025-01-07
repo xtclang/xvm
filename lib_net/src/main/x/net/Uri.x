@@ -361,12 +361,44 @@ const Uri
     /**
      * The Uri is divided into sections.
      */
-    enum Section {
-        Scheme, Authority, Path, Query, Fragment;
+    enum Section(String? prefix=Null, String? suffix=Null) {
+        Scheme(suffix=":") {
+            @Override
+            Appender<Char> escape(Appender<Char> buf, String text) = Uri.escape(text, schemeValid).appendTo(buf);
+        },
+        Authority("//"),
+        Path,                   // TODO escape
+        Query("?") {
+            @Override
+            Appender<Char> escape(Appender<Char> buf, String text) = Uri.escape(text, uricValid).appendTo(buf);
+        },
+        Fragment("#");
 
-        @Lazy Position start.calc() {
-            return new Position(this, 0);
-        }
+        /**
+         * The [Position] representing the start of this `Section`.
+         */
+        @Lazy Position start.calc() = new Position(this, 0);
+
+        /**
+         * Calculate the ending [Position] for this `Section`, based on the text content of the
+         * `Section`.
+         *
+         * @param text  the text content of this `Section`
+         *
+         * @return the [Position] representing the end of this `Section`
+         */
+        Position end(String text) = new Position(this, (prefix?.size : 0) + text.size + (suffix?.size : 0));
+
+        /**
+         * Append this `Section`'s canonical form to the passed buffer, escaping the content as
+         * necessary.
+         *
+         * @param buf   the buffer to append to
+         * @param text  the text content of this `Section`
+         *
+         * @return the buffer
+         */
+        Appender<Char> escape(Appender<Char> buf, String text) = text.appendTo(buf);
     }
 
     /**
@@ -460,12 +492,12 @@ const Uri
      * The "after the end" (exclusive) position for this Uri.
      */
     @RO Position endPosition.get() {
-        return fragment  != Null ? new Position(Fragment , fragment       .size)
+        return fragment  != Null ? Section.Fragment .end(fragment)
              : opaque    != Null ? assert
-             : query     != Null ? new Position(Query    , query          .size)
-             : path      != Null ? new Position(Path     , path.toString().size)
-             : authority != Null ? new Position(Authority, authority      .size)
-             : scheme    != Null ? new Position(Scheme   , scheme         .size)
+             : query     != Null ? Section.Query    .end(query)
+             : path      != Null ? Section.Path     .end(path)
+             : authority != Null ? Section.Authority.end(authority)
+             : scheme    != Null ? Section.Scheme   .end(scheme)
              : assert;
     }
 
@@ -737,125 +769,113 @@ const Uri
 
     /**
      * Obtain a portion of the URI's canonical form starting from the specified [Position] and
-     * ending immediately before the `next` [Position].
+     * ending immediately before the `end` [Position].
      *
      * @param start  the position to start the slice from (inclusive)
-     * @param next   (optional) the position to end the slice at (exclusive)
+     * @param end    (optional) the position to end the slice at (exclusive)
      *
      * @return the specified slice of the URI in the URI's canonical format
      */
-    String canonicalSlice(Position start, Position? next=Null) {
+    String canonicalSlice(Position start, Position? end=Null) {
         static Position WayBeyondTheEnd = new Position(Fragment, 1TB);
-        next ?:= WayBeyondTheEnd;
+        end ?:= WayBeyondTheEnd;
 
-        Section startSection = start.section;
-        Int     startOffset  = start.offset;
-        Section nextSection  = next.section;
-        Int     nextOffset   = next.offset;
-        if (startSection > nextSection || startSection == nextSection && startOffset >= nextOffset) {
+        Section section    = start.section;
+        Int     offset     = start.offset;
+        Section endSection = end.section;
+        if (section > endSection || section == endSection && offset >= end.offset) {
             return "";
         }
 
-        StringBuffer buf = new StringBuffer();
-
-        switch (startSection) {
-        case Scheme:
-            Boolean last = nextSection == Scheme;
-            if (String scheme ?= scheme) {
-                Boolean truncate = last && nextOffset < scheme.size;
-                scheme = truncate ? scheme[startOffset ..< nextOffset]
-                                  : scheme.substring(startOffset);
-
-                escape(scheme, schemeValid).appendTo(buf);
-                if (!truncate) {
-                    buf.add(':');
+        /**
+         * Append the specified section's text to the buffer, and indicate if the buffer is now
+         * complete.
+         *
+         * @param buf      the buffer being appended to
+         * @param section  the current [Section] being appended
+         * @param text     the text of the [Section]
+         * @param offset   the offset within the [Section] to start appending from
+         * @param end      the end [Position] to keep appending up to
+         *
+         * @return `True` iff that was the last [Section] to append
+         */
+        static Boolean lastAppendSection(Appender<Char> buf,
+                                         Section      section,
+                                         String       text,
+                                         Int          offset,
+                                         Position     end,
+                                        ) {
+            Section endSection  = end.section;
+            Boolean isLast      = section == endSection;
+            Int     totalLength = (section.prefix?.size : 0) + text.size + (section.suffix?.size : 0);
+            if (offset > 0 || isLast && end.offset < totalLength) {
+                // calculate exactly how much of the section should be copied
+                Int endOffset = totalLength;
+                if (isLast && end.offset < endOffset) {
+                    endOffset = end.offset;
                 }
-            }
-
-            if (last || nextSection == Authority && nextOffset == 0) {
-                break;
-            }
-
-            startOffset = 0;
-            continue;
-
-        case Authority:
-            assert opaque == Null;
-            Boolean last = nextSection == Authority;
-            if (String authority ?= authority) {
-                Boolean truncate = last && nextOffset < authority.size;
-                authority = truncate ? authority[startOffset ..< nextOffset]
-                                     : authority.substring(startOffset);
-
-                if (startOffset == 0) {
-                    "//".appendTo(buf);
+                if (String prefix ?= section.prefix) {
+                    Int partLen = prefix.size;
+                    if (offset < partLen) {
+                        prefix[offset..<endOffset.notGreaterThan(partLen)].appendTo(buf);
+                    }
+                    offset     = (offset-partLen).notLessThan(0);
+                    endOffset -= partLen;
                 }
-                authority.appendTo(buf);
-            }
-
-            if (last || nextSection == Path && nextOffset == 0) {
-                break;
-            }
-
-            startOffset = 0;
-            continue;
-
-        case Path:
-            assert opaque == Null;
-            Boolean last = nextSection == Path;
-            if (String path ?= path) {
-                String  pathString = path.toString();
-                Boolean truncate   = last && nextOffset < pathString.size;
-                pathString = truncate ? pathString[startOffset ..< nextOffset]
-                                      : pathString.substring(startOffset);
-
-                // TODO escape
-                pathString.appendTo(buf);
-            }
-
-            if (last || nextSection == Query && nextOffset == 0) {
-                break;
-            }
-
-            startOffset = 0;
-            continue;
-
-        case Query:
-            assert opaque == Null;
-            Boolean last = nextSection == Query;
-            if (String query ?= query) {
-                Boolean truncate = last && nextOffset < query.size;
-                query = truncate ? query[startOffset ..< nextOffset]
-                                 : query.substring(startOffset);
-
-                if (startOffset == 0) {
-                    buf.add('?');
+                if (!text.empty) {
+                    Int partLen = text.size;
+                    if (offset < partLen) {
+                        section.escape(buf, text[offset..<endOffset.notGreaterThan(partLen)]);
+                    }
+                    offset     = (offset-partLen).notLessThan(0);
+                    endOffset -= partLen;
                 }
-                escape(query, uricValid).appendTo(buf);
-            }
-
-            if (last || nextSection == Fragment && nextOffset == 0) {
-                break;
-            }
-
-            startOffset = 0;
-            continue;
-
-        case Fragment:
-            if (String fragment ?= fragment) {
-                Boolean truncate = nextOffset < fragment.size;
-                fragment = truncate ? fragment[startOffset ..< nextOffset]
-                                    : fragment.substring(startOffset);
-
-                if (startOffset == 0) {
-                    buf.add('#');
+                if (String suffix ?= section.suffix) {
+                    Int partLen = suffix.size;
+                    if (offset < partLen) {
+                        suffix[offset..<endOffset.notGreaterThan(partLen)].appendTo(buf);
+                    }
                 }
-                escape(fragment, uricValid).appendTo(buf);
+            } else {
+                // copy the entire section
+                section.prefix?.appendTo(buf);
+                section.escape(buf, text);
+                section.suffix?.appendTo(buf);
             }
-
-            break;
+            return isLast || (section.next()?.ordinal == endSection.ordinal && end.offset == 0) : True;
         }
 
+        StringBuffer buf = new StringBuffer();
+        switch (section) {
+        case Scheme:
+            if (lastAppendSection(buf, Scheme, scheme?, offset, end)) {
+                break;
+            }
+            offset = 0;
+            continue;
+        case Authority:
+            assert opaque == Null;
+            if (lastAppendSection(buf, Authority, authority?, offset, end)) {
+                break;
+            }
+            offset = 0;
+            continue;
+        case Path:
+            if (lastAppendSection(buf, Path, path?, offset, end)) {
+                break;
+            }
+            offset = 0;
+            continue;
+        case Query:
+            if (lastAppendSection(buf, Query, query?, offset, end)) {
+                break;
+            }
+            offset = 0;
+            continue;
+        case Fragment:
+            assert lastAppendSection(buf, Fragment, fragment?, offset, end);
+            break;
+        }
         return buf.toString();
     }
 
