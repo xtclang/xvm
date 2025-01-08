@@ -25,46 +25,44 @@ class DistinctCollection<Element>
 
     @Override
     protected Iterator<Element> unreifiedIterator() {
-        if (Collection<Element> original ?= original,
-                Orderer? order := original.ordered(),
-                order != Null) {
-            // it's possible to optimize the iteration without realizing the set, because the
-            // original collection is ordered, thus identical elements will be grouped together, and
-            // thus a once-through iteration can be accomplished simply by remember the previously
-            // returned value -- after the first value has been returned, of course!
-            Iterator<Element> orderedIterator = original.iterator();
-            return new Iterator<Element>() {
-                private Boolean  first = True;
-                private Element? prev  = Null;
+        // we must have already checked for this in "evaluateInto()" below
+        assert Collection<Element> original ?= original,
+               Orderer? order := original.ordered(), order != Null;
 
-                @Override Boolean knownDistinct() = True;
-                @Override conditional Orderer knownOrder() = (True, order);
-                @Override conditional Int knownSize() = this.DistinctCollection.knownSize();
+        // it's possible to optimize the iteration without realizing the set, because the original
+        // collection is ordered, thus identical elements will be grouped together, and thus a
+        // once-through iteration can be accomplished simply by remember the previously returned
+        // value -- after the first value has been returned, of course!
+        Iterator<Element> orderedIterator = original.iterator();
+        return new Iterator<Element>() {
+            private Boolean  first = True;
+            private Element? prev  = Null;
 
-                @Override
-                conditional Element next() {
-                    if (first) {
-                        if (Element next := orderedIterator.next()) {
-                            first = False;
-                            prev  = next;
-                            return True, next;
-                        } else {
-                            return False;
-                        }
+            @Override Boolean knownDistinct() = True;
+            @Override conditional Orderer knownOrder() = (True, order);
+            @Override conditional Int knownSize() = this.DistinctCollection.knownSize();
+
+            @Override
+            conditional Element next() {
+                if (first) {
+                    if (Element next := orderedIterator.next()) {
+                        first = False;
+                        prev  = next;
+                        return True, next;
                     } else {
-                        while (Element next := orderedIterator.next()) {
-                            if (next != prev) {
-                                prev = next;
-                                return True, next;
-                            }
-                        }
                         return False;
                     }
+                } else {
+                    while (Element next := orderedIterator.next()) {
+                        if (next != prev) {
+                            prev = next;
+                            return True, next;
+                        }
+                    }
+                    return False;
                 }
-            };
-        }
-
-        assert;
+            }
+        };
     }
 
     @Override
