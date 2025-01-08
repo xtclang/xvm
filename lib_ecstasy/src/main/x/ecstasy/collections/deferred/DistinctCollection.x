@@ -64,9 +64,34 @@ class DistinctCollection<Element>
             };
         }
 
-        return reified.iterator();
+        assert;
     }
 
+    @Override
+    protected void evaluateInto(Appender<Element> accumulator) {
+        if (Collection<Element> original ?= original) {
+            Orderer? order = original.ordered() ?: Null;
+            if (order == Null) {
+                if (original.is(Set) || accumulator.is(Set)) {
+                    accumulator.addAll(original);
+                } else {
+                    // only accumulate distinct values; this is expensive but unavoidable
+                    Collection<Element> distinctElements = Element.is(Type<Hashable>)
+                            ? new HashSet<Element>()
+                            : Element.is(Type<Orderable>)
+                                    ? new SkiplistSet<Element>()
+                                    : new Element[];
+                    for (Element element : original) {
+                        if (distinctElements.addIfAbsent(element)) {
+                            accumulator.add(element);
+                        }
+                    }
+                }
+                return;
+            }
+        }
+        return super(accumulator);
+    }
 
     // ----- Collection interface ------------------------------------------------------------------
 
