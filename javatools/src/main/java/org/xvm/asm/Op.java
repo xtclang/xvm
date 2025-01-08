@@ -375,17 +375,29 @@ public abstract class Op
         }
 
     /**
-     * Get an op at a relative address from this Op.
+     * Adjust the relative offset of a "jump to" op-code in such a way that it (i) takes into
+     * account any potential ops elimination, and (ii) if possible, land the jump on a LINE_N
+     * op, which makes the console debugger to behave much more natural.
      *
      * @param aop  an array of ops
      * @param of   the relative offset
      *
-     * @return the Op or the very last op if the destination op has been eliminated
+     * @return a potentially adjusted new offset
      */
-    protected Op calcRelativeOp(Op[] aop, int of)
+    protected int adjustRelativeAddress(Op[] aop, int of)
         {
         int nAddr = getAddress() + of;
-        return nAddr < aop.length ? aop[nAddr] : aop[aop.length - 1];
+        if (nAddr >= aop.length)
+            {
+            int nAdjust = nAddr - aop.length + 1;
+            of    -= nAdjust;
+            nAddr -= nAdjust;
+            }
+        if (aop[nAddr-1] instanceof Nop)
+            {
+            --of;
+            }
+        return of;
         }
 
     /**

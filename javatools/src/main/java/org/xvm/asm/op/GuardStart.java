@@ -118,11 +118,14 @@ public class GuardStart
         {
         if (m_aOpCatch == null)
             {
-            int c = m_aofCatch.length;
+            int ofThis = getAddress();
+            int c      = m_aofCatch.length;
             m_aOpCatch = new CatchStart[c];
             for (int i = 0; i < c; i++)
                 {
-                m_aOpCatch[i] = (CatchStart) calcRelativeOp(aop, m_aofCatch[i]);
+                int ofOp = adjustRelativeAddress(aop, m_aofCatch[i]);
+                m_aofCatch[i] = ofOp;
+                m_aOpCatch[i] = (CatchStart) aop[ofThis + ofOp];
                 }
             }
         else

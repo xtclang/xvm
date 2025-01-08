@@ -84,13 +84,19 @@ public class JumpInt
         {
         if (m_aOpCase == null)
             {
-            int c = m_aofCase.length;
+            int ofThis = getAddress();
+            int c      = m_aofCase.length;
             m_aOpCase = new Op[c];
             for (int i = 0; i < c; i++)
                 {
-                m_aOpCase[i] = calcRelativeOp(aop, m_aofCase[i]);
+                int ofOp = adjustRelativeAddress(aop, m_aofCase[i]);
+                m_aofCase[i] = ofOp;
+                m_aOpCase[i] = aop[ofThis + ofOp];
                 }
-            m_opDefault = calcRelativeOp(aop, m_ofDefault);
+
+            int ofOp = adjustRelativeAddress(aop, m_ofDefault);
+            m_ofDefault = ofOp;
+            m_opDefault = aop[ofThis + ofOp];
             }
         else
             {

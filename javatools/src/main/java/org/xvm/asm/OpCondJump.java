@@ -105,7 +105,8 @@ public abstract class OpCondJump
         {
         if (m_opDest == null)
             {
-            m_opDest = calcRelativeOp(aop, m_ofJmp);
+            m_ofJmp  = adjustRelativeAddress(aop, m_ofJmp);
+            m_opDest = aop[getAddress() + m_ofJmp];
             }
         else
             {
