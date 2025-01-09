@@ -85,6 +85,12 @@ public class ConstHeap
             {
             assert !idProp.isConstant();
 
+            ConstantPool pooThis = frame.poolContext();
+            if (idProp.getConstantPool() != pooThis)
+                {
+                idProp = (PropertyConstant) pooThis.register(idProp);
+                }
+
             return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));
             }
 

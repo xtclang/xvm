@@ -1005,6 +1005,7 @@ public final class DebugConsole
                                 {
                                 addBP(makeBreakPointLine(frame, nLine, true));
                                 m_stepMode = StepMode.None;
+                                m_frame    = null;
                                 return Op.R_NEXT;
                                 }
                             }
@@ -1016,6 +1017,7 @@ public final class DebugConsole
                             {
                             addBP(makeBreakPointLine(frame, nLine, true));
                             m_stepMode = StepMode.None;
+                            m_frame    = null;
                             return Op.R_NEXT;
                             }
                         break; // invalid break point
@@ -1026,6 +1028,7 @@ public final class DebugConsole
                             {
                             addBP(bp);
                             m_stepMode = StepMode.None;
+                            m_frame    = null;
                             return Op.R_NEXT;
                             }
                         break; // invalid break point
@@ -1034,6 +1037,7 @@ public final class DebugConsole
 
             case "R":
                 m_stepMode = StepMode.None;
+                m_frame    = null;
                 return Op.R_NEXT;
 
             case "VC":
