@@ -574,9 +574,7 @@ public class ClassStructure
     public ClassStructure getVirtualChild(String sName)
         {
         Component child = findChildDeep(sName, true);
-        return child instanceof ClassStructure clz && clz.isVirtualChild()
-                ? (ClassStructure) child
-                : null;
+        return child instanceof ClassStructure clz && clz.isVirtualChild() ? clz : null;
         }
 
     /**
@@ -3420,10 +3418,11 @@ public class ClassStructure
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
             TypeConstant typeDelegate = infoDelegate.getType();
 
+            Annotation[] aAnnos       = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
             Parameter[]  aParams      = method.getParamArray().clone();
             Parameter[]  aReturns     = method.getReturnArray().clone();
 
-            methodDelegate = createMethod(false, method.getAccess(), null,
+            methodDelegate = createMethod(false, method.getAccess(), aAnnos,
                     aReturns, method.getName(), aParams, true, false);
             methodDelegate.setSynthetic(true);
 
@@ -4027,25 +4026,19 @@ public class ClassStructure
      */
     public Component getNestedChild(Object id)
         {
-        // a null identity indicates the class itself
-        if (id == null)
+        return switch (id)
             {
-            return this;
-            }
+            // a null identity indicates the class itself
+            case null -> this;
 
-        // immediately-nested properties are identified by using only a string name
-        if (id instanceof String sName)
-            {
-            return getChild(sName);
-            }
+            // immediately-nested properties are identified by using only a string name
+            case String sName -> getChild(sName);
 
-        // immediately-nested multi-method/method combinations are identified by using only a sig
-        if (id instanceof SignatureConstant sig)
-            {
-            return findMethod(sig);
-            }
+            // immediately-nested multi-method/method combinations are identified by using only a sig
+            case SignatureConstant sig -> findMethod(sig);
 
-        return ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
+            default -> ((NestedIdentity) id).getIdentityConstant().relocateNestedIdentity(this);
+            };
         }
 
     /**
@@ -4341,7 +4334,7 @@ public class ClassStructure
 
     /**
      * The file name that indicates the location from which this class was compiled. This file name
-     * is in network format ('/'-delimited) and relative to the directory which contains the module.
+     * is in network format (/-delimited) and relative to the directory which contains the module.
      * @see ModuleStructure#getSourceDir()
      */
     private LiteralConstant m_constPath;
