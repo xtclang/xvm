@@ -1399,7 +1399,7 @@ public class Frame
                 }
 
             default:
-                throw new IllegalArgumentException("iReturn=" + f_iReturn);
+                return returnValue(f_iReturn, ahValue[0], afDynamic != null && afDynamic[0]);
             }
         }
 
