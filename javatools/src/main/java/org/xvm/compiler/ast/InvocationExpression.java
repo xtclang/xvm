@@ -71,7 +71,7 @@ import org.xvm.util.Severity;
  * model is as follows:
  * <ul>
  * <li><i>"Binding a method"</i>: Reference + Method = Function</li>
- * <li><i>"Binding parameters" (aka currying)</i>: Function + Argument(s) = Function'</li>
+ * <li><i>"Binding parameters" (aka currying)</i>: Function + Argument(s) = Function</li>
  * <li><i>"Calling a function"</i>: Function + () = Return Value(s)</li>
  * </ul>
  * <p/>
@@ -197,7 +197,7 @@ import org.xvm.util.Severity;
  * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
  *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
  *     used. If that algorithm results in a single selection, then that single selection is used.
- *     Otherwise, the redundant return types are used as a tie breaker; if that results in a single
+ *     Otherwise, the redundant return types are used as a tiebreaker; if that results in a single
  *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
  *     (Done.)</li>
  * </ol>
@@ -438,7 +438,7 @@ public class InvocationExpression
                 if (cTypeParams > 0)
                     {
                     // resolve the type parameters against all the arg types we know by now
-                    TypeConstant[] atype = m_fCall || cReturns == 0
+                    TypeConstant[] atype = m_fCall || cReturns == 0 || atypeReturn == null
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]);
                     resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype,

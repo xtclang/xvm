@@ -1380,12 +1380,7 @@ service Client<Schema extends RootSchema> {
         public/protected TxInfo txInfo;
 
         @Override
-        @RO Boolean pending.get() {
-            // TODO GG: this blows up the runtime
-            // return &this == outer.&rootTx;
-            val rootTx = outer.rootTx;
-            return &this == &rootTx;
-        }
+        @RO Boolean pending.get() = &this == outer.&rootTx;
 
         @Override
         @RO Boolean nested.get() = False;
