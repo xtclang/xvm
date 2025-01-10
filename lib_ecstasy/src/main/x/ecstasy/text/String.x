@@ -350,7 +350,7 @@ const String
         @Lazy Int size.calc() = keyIterator().count();
 
         @Override
-        @Lazy Boolean empty.get() = keyIterator().next();
+        @Lazy Boolean empty.get() = !keyIterator().next();
 
         @Override
         Boolean contains(String key) = find(key);
