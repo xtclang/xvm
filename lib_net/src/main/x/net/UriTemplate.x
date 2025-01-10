@@ -2,16 +2,15 @@ import Uri.Position;
 import Uri.Section;
 
 /**
- * An implementation of the URI Template specification.
+ * An implementation of [the URI Template specification](https://tools.ietf.org/html/rfc6570).
  *
- * @see https://tools.ietf.org/html/rfc6570
+ * TODO: support * and + expansion for ?/& expressions
  */
 const UriTemplate {
     /**
      * A map containing the result of matching a UriTemplate against a request's Uri.
      */
     typedef immutable Map<String, Value> as UriParameters;
-
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -23,19 +22,17 @@ const UriTemplate {
      * @throws IllegalArgument  iff the URI template string cannot be successfully parsed
      */
     construct(String template) {
-        assert:arg (parts, implicitSection, vars) := parse(template)
+        assert:arg (parts, vars) := parse(template)
                 as $"Failed to parse URI template: {template.quoted()}";
     }
 
     /**
      * Internal constructor.
      */
-    private construct((String|Expression)[] parts, Section?[] implicitSection, String[] vars) {
+    private construct((String|Expression)[] parts, String[] vars) {
         this.parts           = parts;
-        this.implicitSection = implicitSection;
         this.vars            = vars;
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -43,11 +40,6 @@ const UriTemplate {
      * The structure of the URI template: A sequence of parts.
      */
     (String|Expression)[] parts;
-
-    /**
-     * Each part may imply a transition to a new section of the URI.
-     */
-    Section?[] implicitSection;
 
     /**
      * The variable names parsed from the URI template.
@@ -63,7 +55,6 @@ const UriTemplate {
         }
         return "";
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -106,6 +97,7 @@ const UriTemplate {
         Int       nextLiteral  = -1;    // forces a search for the next literal
         Position? foundLiteral = Null;  // the start of the literal
         Position? afterLiteral = Null;  // after the literal
+        Boolean   parsedQuery  = False;
         while (next < count) {
             switch (next <=> nextLiteral) {
             case Lesser:
@@ -117,6 +109,14 @@ const UriTemplate {
                     nextPrefix = nextExpression.prefix;
                 }
 
+                if (!parsedQuery, String query ?= uri.query, expression.onlyWithin ?: position.section >= Query) {
+                    Map params = query.splitMap(entrySeparator='&');
+                    if (!params.empty) {
+                        bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).putAll(params);
+                    }
+                    position    = Section.Query.end(uri.query ?: "");
+                    parsedQuery = True;
+                }
                 if ((position, bindings) := expression.matches(
                         uri, position, foundLiteral, nextPrefix, bindings)) {
                     ++next;
@@ -144,8 +144,7 @@ const UriTemplate {
                         } else {
                             return False;
                         }
-                    } else if (Section section ?= implicitSection[index], section > searchFrom.section) {
-                        // REVIEW CP in case "{/path}/" (use Expression.prefix)
+                    } else if (Section section ?= part.onlyWithin, section > searchFrom.section) {
                         searchFrom = section.start;
                     }
 
@@ -201,7 +200,6 @@ const UriTemplate {
         return buf.toString();
     }
 
-
     // ----- structures ----------------------------------------------------------------------------
 
     /**
@@ -219,17 +217,27 @@ const UriTemplate {
      */
     typedef function conditional Value(String) as Lookup;
 
-    static const Variable(String name, Int? maxLength = Null, Boolean explode = False) {
+    static const Variable(String  name,
+                          Int?    maxLength = Null,
+                          Boolean require   = False,
+                          Boolean explode   = False,
+                         ) {
+        assert() {
+            assert maxLength == Null || (require == False && explode == False);
+        }
+
         @Override
         Int estimateStringLength() {
-            return name.size + (explode ? 1 : maxLength?.estimateStringLength() + 1 : 0);
+            return name.size + ((require | explode) ? 1 : maxLength?.estimateStringLength() + 1 : 0);
         }
 
         @Override
         Appender<Char> appendTo(Appender<Char> buf) {
             name.appendTo(buf);
 
-            if (explode) {
+            if (require) {
+                return buf.add(explode ? '+' : '!');
+            } else if (explode) {
                 return buf.add('*');
             }
 
@@ -327,14 +335,7 @@ const UriTemplate {
         @Override
         Appender<Char> expand(Appender<Char> buf, Lookup values) {
             @Volatile Boolean first = True;
-            function void() checkComma = () -> {
-                // multiple defined variables are comma delimited (i.e. ignore undefined)
-                if (first) {
-                    first = False;
-                } else {
-                    buf.add(',');
-                }
-            };
+            function void() checkComma = () -> {if (first) {first = False;} else {buf.add(',');}};
 
             for (Variable var : vars) {
                 if (Value value := values(var.name)) {
@@ -375,24 +376,24 @@ const UriTemplate {
             }
             to ?:= uri.endPosition;
 
-            String text = uri.canonicalSlice(from, to);
-            if (vars.size == 1 && !vars[0].explode) {
-                String name = vars[0].name;
-                Value? prev = bindings[name];
-                if (text.size == 0) {
-                    if (prev != Null) {
-                        return False;
-                    }
-                } else if (prev == Null) {
-                    bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(name, text);
-                } else if (!(prev.is(String) && prev == text)) {
-                    return False;
-                }
-
-                return True, to, bindings;
-            } else {
-                TODO("delineation of non-delineated data");
+            Variable var  = vars[0];        // note: always exactly one Variable
+            String   text = uri.canonicalSlice(from, to);
+            if (text.empty && var.require) {
+                return False;
             }
+
+            String name  = var.name;
+            Value  value = text;
+            if (var.explode) {
+                if (Value prev := bindings.get(name)) {
+                    assert !prev.is(Map) as "Cannot combine a Map and a List";
+                    value = (prev.is(String[]) ? prev : prev.as(String).split(',')) + text.split(','); // TODO GG cast is redundant
+                } else {
+                    value = text.split(',');
+                }
+            }
+            bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(name, value);
+            return True, to, bindings;
         }
     }
 
@@ -499,7 +500,7 @@ const UriTemplate {
             Int offset = 0;
             Int length = text.size;
             Loop: for (Variable var : vars) {
-                if (offset >= length || text[offset] != prefix) { // TODO secondary prefix
+                if (offset >= length || text[offset] != prefix) {
                     break;
                 }
 
@@ -565,7 +566,6 @@ const UriTemplate {
      */
     static const FormStyleQuery(Variable[] vars)
             extends SectionSpecificExpression(vars) {
-
         @Override
         Section onlyWithin.get() {
             return Query;
@@ -575,6 +575,27 @@ const UriTemplate {
         Char prefix.get() {
             return '?';
         }
+
+        @Override
+        conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
+                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings) {
+            // the bindings are all pre-parsed from the query segment to permit non-exact ordering;
+            // the only things that need to be handled here are checks for required bindings and
+            // expansion of "exploding" values
+            Loop: for (Variable var : vars) {
+                if (var.require || var.explode) {
+                    String name  = var.name;
+                    Value  value = bindings.getOrDefault(name, "");
+                    if (var.require && value.empty) {
+                        return False;
+                    }
+                    if (var.explode && value.is(String)) {
+                        bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(name, value.split(','));
+                    }
+                }
+            }
+            return True, from, bindings;
+        }
     }
 
     /**
@@ -583,13 +604,7 @@ const UriTemplate {
      * See section 3.2.9 of RFC 6570.
      */
     static const FormStyleQueryContinuation(Variable[] vars)
-            extends SectionSpecificExpression(vars) {
-
-        @Override
-        Section onlyWithin.get() {
-            return Query;
-        }
-
+            extends FormStyleQuery(vars) {
         @Override
         Char prefix.get() {
             return '&';
@@ -603,7 +618,6 @@ const UriTemplate {
      */
     static const FragmentSegment(Variable[] vars)
             extends SectionSpecificExpression(vars) {
-
         @Override
         Section onlyWithin.get() {
             return Fragment;
@@ -614,7 +628,6 @@ const UriTemplate {
             return '#';
         }
     }
-
 
     // ----- parsing -------------------------------------------------------------------------------
 
@@ -644,10 +657,9 @@ const UriTemplate {
     /**
      * Parse the specified template string into the literal and expression parts that compose it.
      */
-    static conditional ((String|Expression)[] parts, Section?[] implicitSection, String[] vars)
+    static conditional ((String|Expression)[] parts, String[] vars)
             parse(String template) {
         (String|Expression)[] parts           = new (String|Expression)[];
-        Section?[]            implicitSection = new Section?[];
         String[]              vars            = new String[];
 
         Int offset = 0;
@@ -656,7 +668,6 @@ const UriTemplate {
             if (template[offset] == '{') {
                 if ((Expression expr, offset) := parseExpression(template, offset, length)) {
                     parts += expr;
-                    implicitSection += Null; // TODO
                     expr.vars.forEach(var -> vars.addIfAbsent(var.name));
                 } else {
                     return False;
@@ -664,14 +675,13 @@ const UriTemplate {
             } else {
                 if ((String lit, offset) := parseLiteral(template, offset, length)) {
                     parts += lit;
-                    implicitSection += Null; // TODO
                 } else {
                     return False;
                 }
             }
         }
 
-        return parts.size > 0, parts, implicitSection, vars;
+        return parts.size > 0, parts, vars;
 
         /**
          * Parse an expression in the form "`{` ... `}`".
@@ -718,16 +728,35 @@ const UriTemplate {
                         continue NextVar;
 
                     case '}':       // end of variable list
-                        Expression expr = switch (operator) {
-                            case '+': TODO ReservedString
-                            case '#': new FragmentSegment(vars);
-                            case '.': TODO LabelSegment
-                            case '/': new PathSegment(vars);
-                            case ';': new PathParamSegment(vars);
-                            case '?': new FormStyleQuery(vars);
-                            case '&': new FormStyleQueryContinuation(vars);
-                            default:  new SimpleString(vars);
-                        };
+                        Expression expr;
+                        switch (operator) {
+                        case '+':
+                            TODO ReservedString
+                        case '#':
+                            expr = new FragmentSegment(vars);
+                            break;
+                        case '.':
+                            TODO LabelSegment
+                        case '/':
+                            expr = new PathSegment(vars);
+                            break;
+                        case ';':
+                            expr = new PathParamSegment(vars);
+                            break;
+                        case '?':
+                            expr = new FormStyleQuery(vars);
+                            break;
+                        case '&':
+                            expr = new FormStyleQueryContinuation(vars);
+                            break;
+                        default:
+                            // simple string has no delimiter, so only one var is allowed
+                            if (vars.size != 1) {
+                                return False;
+                            }
+                            expr = new SimpleString(vars);
+                            break;
+                        }
                         return True, expr, offset+1;
 
                     default:
@@ -760,9 +789,17 @@ const UriTemplate {
                     }
                     return True, new Variable(name, maxLength=max), offset;
 
+                case '!':       // require
+                    ++offset;
+                    return True, new Variable(name, require=True), offset;
+
                 case '*':       // explode
                     ++offset;
                     return True, new Variable(name, explode=True), offset;
+
+                case '+':       // require (i.e. one or more) and explode
+                    ++offset;
+                    return True, new Variable(name, require=True, explode=True), offset;
 
                 default:
                     return True, new Variable(name), offset;
@@ -849,7 +886,6 @@ const UriTemplate {
             return True, template[start ..< offset], offset;
         }
     }
-
 
     // ----- formatting ----------------------------------------------------------------------------
 
@@ -979,5 +1015,5 @@ const UriTemplate {
         return buf;
     }
 
-    static UriTemplate ROOT = new UriTemplate([], [], []);
+    static UriTemplate ROOT = new UriTemplate([], []);
 }
