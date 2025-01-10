@@ -52,7 +52,7 @@ module cli.xtclang.org {
                  ) {
 
             this.messagePrefix = messagePrefix;
-            Runner.init(description, commandPrompt);
+            Runner.initialize(description, commandPrompt);
         }
 
         protected String messagePrefix;

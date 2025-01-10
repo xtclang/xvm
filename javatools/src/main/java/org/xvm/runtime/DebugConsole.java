@@ -185,6 +185,11 @@ public final class DebugConsole
     @Override
     public synchronized int checkBreakPoint(Frame frame, ExceptionHandle hEx)
         {
+        if (frame.isNative())
+            {
+            return Op.R_NEXT;
+            }
+
         if (m_stepMode == StepMode.NaturalCall)
             {
             // exception by the natural code called from the debugger ("EVAL", "DS" or "BC")
@@ -197,7 +202,7 @@ public final class DebugConsole
             return Op.R_NEXT;
             }
 
-        if (frame != m_frame && hEx == m_frame.m_hException)
+        if (frame != m_frame && m_frame != null && hEx == m_frame.m_hException)
             {
             // this is a re-throw (most probable by FINALLY_END); ignore
             return Op.R_NEXT;

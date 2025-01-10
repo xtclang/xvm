@@ -3,7 +3,7 @@
  *
  *    xec build/HelloClient.xtc http://localhost
  */
-@TerminalApp("Hello CLI", "hi> ")
+@TerminalApp("Hello CLI", "hi> ", timeout=Duration:3s)
 module HelloClient {
     package webcli import webcli.xtclang.org;
 

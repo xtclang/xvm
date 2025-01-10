@@ -41,10 +41,17 @@ module webcli.xtclang.org {
      */
     enum AuthMethod {None, Callback, Password, Token}
 
+    /**
+     * The extension of cli.TerminalApp mixin.
+     *
+     * @param auth     the authentication method; [Callback] by default
+     * @param timeout  the default http request timeout; one minute by default
+     */
     mixin TerminalApp(String     description   = "",
                       String     commandPrompt = "> ",
                       String     messagePrefix = "# ",
                       AuthMethod auth          = Callback,
+                      Duration   timeout       = Duration:1m,
                 )
             extends cli.TerminalApp(description, commandPrompt, messagePrefix) {
 
@@ -54,7 +61,7 @@ module webcli.xtclang.org {
          * The entry point.
          */
         @Override
-        void run(String[] args) = Gateway.run(this, args, auth=auth);
+        void run(String[] args) = Gateway.run(this, args, auth=auth, timeout=timeout);
 
         /**
          * Send a GET request.
@@ -117,6 +124,8 @@ module webcli.xtclang.org {
         private PasswordCallback?  callback;
         private String?            name;
         private String?            password; // could be a token
+        private function void()?   init;
+        private Duration           requestTimeout = Duration:1m;
 
         /**
          * Initialize authentication credentials.
@@ -219,17 +228,23 @@ module webcli.xtclang.org {
          * @param auth      (optional) the authentication method
          * @param forceTls  (optional) pass `True` to enforce https connection
          * @param init      (optional) function to call at the end of initialization
+         * @param timeout   (optional) requests timeout duration
          */
         void run(TerminalApp app, String[] args = [], AuthMethod auth = None,
-                 Boolean forceTls = False, function void()? init = Null) {
+                 Boolean forceTls = False, function void()? init = Null,
+                 Duration? timeout = Null) {
             app.print(Runner.description);
 
-            this.auth = auth;
+            this.auth            = auth;
+            this.init            = init;
+            this.requestTimeout ?= timeout;
+
             resetClient(uriString =args.size > 0 ? args[0] : "",
                         authString=args.size > 1 ? args[1] : "",
                         forceTls  = forceTls,
                        );
-            Runner.run(app, suppressWelcome=True, extras=[this], init=init);
+            // don't pass the "init" to the runner; it has already been called by "resetClient"
+            Runner.run(app, suppressWelcome=True, extras=[this]);
         }
 
         @Command("reset", "Reset the server URI and credentials")
@@ -257,10 +272,11 @@ module webcli.xtclang.org {
 
             console.print($"Connecting to \"{uri}\"");
 
-            initAuth(authString);
-
             this.client = new HttpClient();
             this.server = uri;
+
+            initAuth(authString);
+            init?();
         }
 
         @Command("server", "Print the server URI")
@@ -322,8 +338,10 @@ module webcli.xtclang.org {
             import ecstasy.io.IOException;
 
             ResponseIn response;
-            try {
+            try (val _ = new Timeout(requestTimeout)) {
                 response = client.send(request, callback);
+            } catch (TimedOut e) {
+                return $"Request timed out after {requestTimeout.seconds} sec", ConnectionTimedOut;
             } catch (IOException e) {
                 return ($"Error: {e.message.empty ? &e.actualType : e.message}", ServiceUnavailable);
             }
