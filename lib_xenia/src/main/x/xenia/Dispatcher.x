@@ -62,7 +62,7 @@ service Dispatcher {
             WebServiceInfo? serviceInfo = Null;
             for (WebServiceInfo info : catalog.services) {
                 // the info.path, which represents a "directory", never ends with '/' (see the
-                // extractPath function in Catalog) -- except for the root path "/". a legitimately
+                // validatePath function in Catalog) -- except for the root path "/". a legitimately
                 // matching uriString may or may not have '/' at the end; for example: if the path
                 // is "test", then uri values such as "test/s", "test/" and "test" should all match
                 // (the last two would be treated as equivalent), but "tests" should not
@@ -76,11 +76,14 @@ service Dispatcher {
                     }
                 } else if (pathSize == 1) { // root path ("/") matches everything
                     serviceInfo = info;
-                    uriString   = uriString.substring(1);
-                } else if (uriSize > pathSize && uriString[pathSize] == '/' && uriString.startsWith(path)) {
-                    serviceInfo = info;
-                    uriString   = uriString.substring(pathSize + 1);
                     break;
+                } else if (uriSize > pathSize && uriString.startsWith(path)) {
+                    Char ch = uriString[pathSize];
+                    if (ch == '/' || ch == '?' || ch == '#') {
+                        serviceInfo = info;
+                        uriString   = uriString.substring(pathSize);
+                        break;
+                    }
                 }
             }
 
@@ -93,18 +96,15 @@ service Dispatcher {
                 // split what's left of the URI into a path, a query, and a fragment
                 String? query    = Null;
                 String? fragment = Null;
-                if (Int fragmentOffset := uriString.indexOf('#')) {
-                    fragment  = uriString.substring(fragmentOffset+1);
-                    uriString = uriString[0 ..< fragmentOffset];
-                }
-
-                if (Int queryOffset := uriString.indexOf('?')) {
-                    query     = uriString.substring(queryOffset+1);
-                    uriString = uriString[0 ..< queryOffset];
-                }
-
-                if (uriString.empty) {
-                    uriString = "/";
+                if (!uriString.empty) {
+                    if (Int fragmentOffset := uriString.indexOf('#')) {
+                        fragment  = uriString.substring(fragmentOffset+1);
+                        uriString = uriString[0 ..< fragmentOffset];
+                    }
+                    if (Int queryOffset := uriString.indexOf('?')) {
+                        query     = uriString.substring(queryOffset+1);
+                        uriString = uriString[0 ..< queryOffset];
+                    }
                 }
 
                 EndpointInfo  endpoint;

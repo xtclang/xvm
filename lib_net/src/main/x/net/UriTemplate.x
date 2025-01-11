@@ -3,8 +3,6 @@ import Uri.Section;
 
 /**
  * An implementation of [the URI Template specification](https://tools.ietf.org/html/rfc6570).
- *
- * TODO: support * and + expansion for ?/& expressions
  */
 const UriTemplate {
     /**
@@ -22,16 +20,29 @@ const UriTemplate {
      * @throws IllegalArgument  iff the URI template string cannot be successfully parsed
      */
     construct(String template) {
-        assert:arg (parts, vars) := parse(template)
+        assert:arg ((String|Expression)[] parts, String[] vars) := parse(template)
                 as $"Failed to parse URI template: {template.quoted()}";
+        construct UriTemplate(parts, vars);
     }
 
     /**
      * Internal constructor.
      */
     private construct((String|Expression)[] parts, String[] vars) {
-        this.parts           = parts;
-        this.vars            = vars;
+        this.parts = parts;
+        this.vars  = vars;
+
+        if (parts.any(p -> p.is(FormStyleQuery) && p.vars.any(v -> v.explode))) {
+            sweepParams    = True;
+            expectedParams = new ListSet<String>();
+            for (val part : parts) {
+                if (part.is(FormStyleQuery)) {
+                    for (val var : part.vars) {
+                        expectedParams += var.name;
+                    }
+                }
+            }
+        }
     }
 
     // ----- properties ----------------------------------------------------------------------------
@@ -56,6 +67,9 @@ const UriTemplate {
         return "";
     }
 
+    private Boolean     sweepParams    = False;
+    private Set<String> expectedParams = [];
+
     // ----- operations ----------------------------------------------------------------------------
 
     /**
@@ -78,7 +92,7 @@ const UriTemplate {
 
         if (count == 0) {
             // UriTemplate.ROOT only matches the root path
-            return uri.path == "/" ? (True, []) : False;
+            return uri.path == "" || uri.path == "/" ? (True, []) : False;
         }
 
         Position position = Start;
@@ -105,14 +119,33 @@ const UriTemplate {
                 assert Expression expression := parts[next].is(Expression);
 
                 Char? nextPrefix = Null;
-                if (next+1 < count, Expression nextExpression := parts[next].is(Expression)) {
+                if (next+1 < count, Expression nextExpression := parts[next+1].is(Expression)) {
                     nextPrefix = nextExpression.prefix;
                 }
 
                 if (!parsedQuery, String query ?= uri.query, expression.onlyWithin ?: position.section >= Query) {
-                    Map params = query.splitMap(entrySeparator='&');
+                    val params = uri.extractQueryParams();
                     if (!params.empty) {
-                        bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).putAll(params);
+                        bindings = mutate(bindings).putAll(params);
+                    }
+                    if (sweepParams) {
+                        for (val part : parts) {
+                            if (part.is(FormStyleQuery)) {
+                                for (val var : part.vars) {
+                                    if (var.explode) {
+                                        Map<String,String> value;
+                                        if (part.is(FormStyleQueryContinuation)) {
+                                            value = params.removeAll(expectedParams);
+                                        } else {
+                                            value = params;
+                                        }
+                                        if (!value.empty || !var.require) {
+                                            bindings = mutate(bindings).put(var.name, value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     position    = Section.Query.end(uri.query ?: "");
                     parsedQuery = True;
@@ -392,7 +425,7 @@ const UriTemplate {
                     value = text.split(',');
                 }
             }
-            bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(name, value);
+            bindings = mutate(bindings).put(name, value);
             return True, to, bindings;
         }
     }
@@ -430,7 +463,7 @@ const UriTemplate {
                         break;
 
                     case Map<String, String>:
-                        (Char kvDelim, Char entryDelim) = var.explode ? ('=',prefix) : (',',',');
+                        (Char kvDelim, Char entryDelim) = var.explode ? ('=',(onlyWithin==Query ? '&' : prefix)) : (',',',');
                         Loop: for ((String key, String val) : value) {
                             if (!Loop.first) {
                                 buf.add(entryDelim);
@@ -515,7 +548,7 @@ const UriTemplate {
                 String segment = text[offset ..< nextDelim];
                 Value  value   = explode ? segment.split(prefix) : segment;
 
-                bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(var.name, value);
+                bindings = mutate(bindings).put(var.name, value);
                 offset   = nextDelim;
             }
 
@@ -583,15 +616,8 @@ const UriTemplate {
             // the only things that need to be handled here are checks for required bindings and
             // expansion of "exploding" values
             Loop: for (Variable var : vars) {
-                if (var.require || var.explode) {
-                    String name  = var.name;
-                    Value  value = bindings.getOrDefault(name, "");
-                    if (var.require && value.empty) {
-                        return False;
-                    }
-                    if (var.explode && value.is(String)) {
-                        bindings = (bindings.empty ? new ListMap<String, Value>() : bindings).put(name, value.split(','));
-                    }
+                if (var.require && bindings.getOrDefault(var.name, "").empty) {
+                    return False;
                 }
             }
             return True, from, bindings;
@@ -632,26 +658,26 @@ const UriTemplate {
     // ----- parsing -------------------------------------------------------------------------------
 
     /**
-     ALPHA          =  %x41-5A / %x61-7A   ; A-Z / a-z
-     DIGIT          =  %x30-39             ; 0-9
-     HEXDIG         =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
-                       ; case-insensitive
+     ALPHA       =  %x41-5A / %x61-7A   ; A-Z / a-z
+     DIGIT       =  %x30-39             ; 0-9
+     HEXDIG      =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+                    ; case-insensitive
 
-     pct-encoded    =  "%" HEXDIG HEXDIG
-     unreserved     =  ALPHA / DIGIT / "-" / "." / "_" / "~"
-     reserved       =  gen-delims / sub-delims
-     gen-delims     =  ":" / "/" / "?" / "#" / "[" / "]" / "@"
-     sub-delims     =  "!" / "$" / "&" / "'" / "(" / ")"
-                    /  "*" / "+" / "," / ";" / "="
+     pct-encoded =  "%" HEXDIG HEXDIG
+     unreserved  =  ALPHA / DIGIT / "-" / "." / "_" / "~"
+     reserved    =  gen-delims / sub-delims
+     gen-delims  =  ":" / "/" / "?" / "#" / "[" / "]" / "@"
+     sub-delims  =  "!" / "$" / "&" / "'" / "(" / ")"
+                 /  "*" / "+" / "," / ";" / "="
 
-     ucschar        =  %xA0-D7FF / %xF900-FDCF / %xFDF0-FFEF
-                    /  %x10000-1FFFD / %x20000-2FFFD / %x30000-3FFFD
-                    /  %x40000-4FFFD / %x50000-5FFFD / %x60000-6FFFD
-                    /  %x70000-7FFFD / %x80000-8FFFD / %x90000-9FFFD
-                    /  %xA0000-AFFFD / %xB0000-BFFFD / %xC0000-CFFFD
-                    /  %xD0000-DFFFD / %xE1000-EFFFD
+     ucschar     =  %xA0-D7FF / %xF900-FDCF / %xFDF0-FFEF
+                 /  %x10000-1FFFD / %x20000-2FFFD / %x30000-3FFFD
+                 /  %x40000-4FFFD / %x50000-5FFFD / %x60000-6FFFD
+                 /  %x70000-7FFFD / %x80000-8FFFD / %x90000-9FFFD
+                 /  %xA0000-AFFFD / %xB0000-BFFFD / %xC0000-CFFFD
+                 /  %xD0000-DFFFD / %xE1000-EFFFD
 
-     iprivate       =  %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
+     iprivate    =  %xE000-F8FF / %xF0000-FFFFD / %x100000-10FFFD
     */
 
     /**
@@ -659,8 +685,8 @@ const UriTemplate {
      */
     static conditional ((String|Expression)[] parts, String[] vars)
             parse(String template) {
-        (String|Expression)[] parts           = new (String|Expression)[];
-        String[]              vars            = new String[];
+        (String|Expression)[] parts = new (String|Expression)[];
+        String[]              vars  = new String[];
 
         Int offset = 0;
         Int length = template.size;
@@ -1016,4 +1042,12 @@ const UriTemplate {
     }
 
     static UriTemplate ROOT = new UriTemplate([], []);
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Assume that an empty map is constant, and so return a mutable ListMap if an empty one is
+     * passed in.
+     */
+    private static Map<String, Value> mutate(Map<String, Value> map) = map.empty ? new ListMap<String, Value>() : map;
 }

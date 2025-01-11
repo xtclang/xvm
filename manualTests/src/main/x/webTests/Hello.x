@@ -136,7 +136,7 @@ module Hello
                 return session.principal?.name : "";
             }
 
-            @LoginRequired
+            @LoginRequired(autoRedirect=True)
             @Get("l")
             String logMeIn(Session session) {
                 return $"user={session.principal?.name : "<anonymous>"}";
@@ -179,9 +179,9 @@ module Hello
 
         @WebService("/e")
         service Echo {
-            @Get("{path}")
-            String[] getEcho(String path) {
-                assert:debug path != "debug";
+            @Get("{path}{?params*}")
+            String[] getEcho(String path="", Map<String, String> params=[]) {
+                assert:debug !path.indexOf("debug");
 
                 assert RequestIn request ?= this.request,
                                  request := &request.revealAs((protected Http1Request));
@@ -196,10 +196,10 @@ module Hello
                         $"server={request.server}",
                         $"route={request.info.routeTrace}",
                         $"authority={request.authority}",
-                        $"path={request.path}",
+                        $"path={request.path} ({path})",
                         $"protocol={request.protocol}",
                         $"accepts={request.accepts}",
-                        $"query={request.queryParams}",
+                        $"query={request.queryParams} ({params})",
                         $"user={session?.principal?.name : "<anonymous>"}",
                        ];
             }
@@ -207,7 +207,7 @@ module Hello
 
         @WebService("/settings")
         service Settings {
-            @LoginRequired
+            @LoginRequired(autoRedirect=True)
             @Get("allow-cookies")
             ResponseOut turnOnPersistentCookies(Session session) {
                 Boolean       oldExclusiveAgent = session.exclusiveAgent;
@@ -227,7 +227,7 @@ module Hello
                                        );
             }
 
-            @HttpsRequired
+            @HttpsRequired(autoRedirect=True)
             @Get("disallow-cookies")
             ResponseOut turnOffPersistentCookies(Session session) {
                 Boolean       oldExclusiveAgent = session.exclusiveAgent;

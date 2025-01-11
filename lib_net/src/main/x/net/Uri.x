@@ -201,7 +201,6 @@ const Uri
         this.fragment     = fragment;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -251,6 +250,28 @@ const Uri
      */
     String? originalForm;
 
+    // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return a [Map] whose keys are unescaped URI query parameter names and whose values are the
+     *         corresponding unescaped URI query parameter values
+     */
+    immutable Map<String, String> extractQueryParams() {
+        static MapCollector<String, String, ListMap<String,String>> toMap = new MapCollector();
+        static (String, String) decode(Map.Entry<String, String> entry) {
+            return decodeParam(entry.key), decodeParam(entry.value);
+        }
+        // TODO GG: this doesn't compile
+        // return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True) : [];
+        // TODO GG: this calls the wrong map() function
+        // return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True);
+        // return [];
+        ListMap<String, String> result = new ListMap();
+        for ((String key, String value) : query?.splitMap(entrySeparator='&')) {
+            result.put(decodeParam(key), decodeParam(value));
+        }
+        return result.freeze(inPlace=True);
+    }
 
     // ----- modifiers -----------------------------------------------------------------------------
 
@@ -354,7 +375,6 @@ const Uri
                        fragment     = fragment,
                      );
     }
-
 
     // ----- searching -----------------------------------------------------------------------------
 
@@ -726,7 +746,6 @@ const Uri
         }
     }
 
-
     // ----- formatting ----------------------------------------------------------------------------
 
     /**
@@ -927,7 +946,6 @@ const Uri
         return originalForm ?: canonicalForm;
     }
 
-
     // ----- parsing -------------------------------------------------------------------------------
 
     /**
@@ -1042,6 +1060,8 @@ const Uri
             (fragment, offset, error) := parseFragment(text, offset, error);
         } else if ((path, offset, error) := parseRelPath(text, offset, error)) {
             (query, offset, error) := parseQuery(text, offset, error);
+            (fragment, offset, error) := parseFragment(text, offset, error);
+        } else if ((query, offset, error) := parseQuery(text, offset, error)) {
             (fragment, offset, error) := parseFragment(text, offset, error);
         } else if (!((fragment, offset, error) := parseFragment(text, offset, error))) {
             error = $"Not an absolute (scheme-based) nor a relative (path-based) URI: {text.quoted()}";
@@ -1823,20 +1843,44 @@ const Uri
      * @return True iff the character can be used in the "segment" and "param" portions of several
      *         different URI path constructs
      */
-    static Boolean pcharValid(Char ch) {
-        return switch (ch) {
-            // unreserved:
-            case 'A'..'Z', 'a'..'z':
-            case '0'..'9':
-            case '-', '_', '.', '!', '~', '*', '\'', '(', ')':
-            // escaped (requires 2 digits to follow):
-            case '%':
-            // other
-            case ':', '@', '&', '=', '+', '$', ',': True;
+    static Boolean pcharValid(Char ch) = switch (ch) {
+        // unreserved:
+        case 'A'..'Z', 'a'..'z':
+        case '0'..'9':
+        case '-', '_', '.', '!', '~', '*', '\'', '(', ')':
+        // escaped (requires 2 digits to follow):
+        case '%':
+        // other
+        case ':', '@', '&', '=', '+', '$', ',': True;
 
-            default: False;
-        };
-    }
+        default: False;
+    };
+
+    /**
+     * A function that tests whether characters are valid URI "pchar" characters or the `'/'` or
+     * `'?'` characters:
+     *
+     *     query = *( pchar / "/" / "?" )
+     *
+     * The caller must validate escape sequences, since this function only examines one character.
+     *
+     * @param ch  a character
+     *
+     * @return True iff the character can be used in the "param" portion
+     */
+    static Boolean queryParamValid(Char ch) = switch (ch) {
+        // unreserved:
+        case 'A'..'Z', 'a'..'z':
+        case '0'..'9':
+        case '-', '_', '.', '!', '~', '*', '\'', '(', ')':
+        // escaped (requires 2 digits to follow):
+        case '%':
+        // query specific:
+        case '/', '?':
+        // other
+        case ':', '@', '&', '=', '+', '$', ',': True;
+        default: False;
+    };
 
     /**
      * A function that tests whether characters are valid URI "uric" characters. The "uric"
@@ -1850,21 +1894,19 @@ const Uri
      * @return True iff the character can be used in the "query", "opaque", and "fragment" portions
      *         of a URI
      */
-    static Boolean uricValid(Char ch) {
-        return switch (ch) {
-            // unreserved:
-            case 'A'..'Z', 'a'..'z':
-            case '0'..'9':
-            // mark:
-            case '-', '_', '.', '!', '~', '*', '\'', '(', ')':
-            // reserved:
-            case ';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '[', ']':
-            // escape (requires 2 digits to follow):
-            case '%': True;
+    static Boolean uricValid(Char ch) = switch (ch) {
+        // unreserved:
+        case 'A'..'Z', 'a'..'z':
+        case '0'..'9':
+        // mark:
+        case '-', '_', '.', '!', '~', '*', '\'', '(', ')':
+        // reserved:
+        case ';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '[', ']':
+        // escape (requires 2 digits to follow):
+        case '%': True;
 
-            default: False;
-        };
-    }
+        default: False;
+    };
 
     /**
      * Validate an escape sequence within a URI string.
@@ -1893,15 +1935,16 @@ const Uri
      * To avoid exceptions, this method should only be called when the escaped contents of the
      * passed string have already been validated.
      *
-     * @param text    a String that may contain `%xx` escape sequences
-     * @param except  (optional) a function that identifies specific characters to NOT unescape
+     * @param text         a String that may contain `%xx` escape sequences
+     * @param except       (optional) a function that identifies specific characters to NOT unescape
+     * @param plusIsSpace  indicates that all `'+'` characters should be replaced with `' '`
      *
      * @return the passed String, but with escape sequences replaced with their ASCII equivalents
      */
-    static String unescape(String text, function Boolean(Char)? except=Null) {
+    static String unescape(String text, function Boolean(Char)? except=Null, Boolean plusIsSpace=False) {
         Int offset = -1;
         Scan: for (Char ch : text) {
-            if (ch == '%') {
+            if (ch == '%' || plusIsSpace && ch == '+') {
                 // this is the first character to escape
                 offset = Scan.count;
                 break;
@@ -1922,6 +1965,10 @@ const Uri
             Char ch = text[offset];
             if (ch == '%') {
                 assert (ch, offset) := decodeEscape(text, offset);
+            } else if (plusIsSpace && ch == '+') {
+                buf.add(' ');
+                ++offset;
+                continue;
             } else {
                 ++offset;
             }
@@ -1942,12 +1989,13 @@ const Uri
      * String that escapes all other characters in the form `%xx`, with `x` representing a
      * hexadecimal digit ("hexit").
      *
-     * @param text   the String to escape
-     * @param valid  the function that identifies characters that do **not** require escaping
+     * @param text         the String to escape
+     * @param valid        the function that identifies characters that do **not** require escaping
+     * @param spaceIsPlus  indicates that all `' '` characters should be replaced with `'+'`
      *
      * @return the contents of the passed String, but escaped as necessary
      */
-    static String escape(String text, function Boolean(Char) valid) {
+    static String escape(String text, function Boolean(Char) valid, Boolean spaceIsPlus=False) {
         Int offset = -1;
         Scan: for (Char ch : text) {
             if (!valid(ch)) {
@@ -1970,18 +2018,51 @@ const Uri
             Char ch = text[offset];
             if (valid(ch)) {
                 buf.add(ch);
+            } else if (spaceIsPlus && ch == ' ') {
+                buf.add('+');
             } else {
-                assert ch.ascii;
-                UInt32 n = ch.codepoint;
-                buf.add('%');
-                buf.add((n >> 4).toHexit());
-                buf.add(n.toHexit());
+                if (ch.ascii) {
+                    UInt32 n = ch.codepoint;
+                    buf.add('%');
+                    buf.add((n >> 4).toHexit());
+                    buf.add(n.toHexit());
+                } else {
+                    Byte[] bytes = ch.utf8();
+                    for (Byte byte : bytes) {
+                        buf.add('%');
+                        buf.add((byte >> 4).toHexit());
+                        buf.add(byte.toHexit());
+                    }
+                }
             }
         }
 
         return buf.toString();
     }
 
+    /**
+     * Encode a parameter name or value into a string that can be placed directly into the query
+     * portion of a URI string.
+     *
+     * @param an unescaped query parameter name or value
+     *
+     * @return a string that can be placed into the query portion of a URI string
+     */
+    static String encodeParam(String text) {
+        return escape(text, queryParamValid, True);
+    }
+
+    /**
+     * Decode a parameter name or value from a string that uses the encoding specified for the query
+     * portion of a URI string.
+     *
+     * @param an escaped query parameter name or value
+     *
+     * @return the unescaped query parameter name or value
+     */
+    static String decodeParam(String text) {
+        return unescape(text, Null, True);
+    }
 
     // ----- Comparable, Orderable & Hashable funky interface implementations ----------------------
 

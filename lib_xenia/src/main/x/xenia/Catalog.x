@@ -124,14 +124,21 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             construct MethodInfo(method, wsid);
 
             String templateString = method.template;
-            while (templateString.startsWith('/')) {
-                // the endpoint path is always relative
-                templateString = templateString.substring(1);
+            if (templateString == "" || templateString == "/") {
+                this.template = UriTemplate.ROOT;
+            } else {
+                switch (templateString[0]) {
+                case '{':       // matching section/variable binding
+                case '/':       // path expected
+                case '?':       // query expected
+                case '#':       // fragment expected
+                    break;
+                default:
+                    templateString = '/' + templateString;
+                    break;
+                }
+                this.template = new UriTemplate(templateString);
             }
-
-            this.template = templateString == "" || templateString == "/"
-                ? UriTemplate.ROOT
-                : new UriTemplate(templateString);
 
             // check if the template matches UriParam's in the method
             Int     requiredParamCount   = 0;
@@ -330,7 +337,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             for ((Class<WebService> clz, WSConstructor constructor) : extras) {
                 if (AnnotationTemplate webServiceAnno := clz.annotatedBy(WebService)) {
                     String path = extractPath(webServiceAnno);
-                    validatePath(path, declaredPaths, webServiceAnno);
+                    path = validatePath(path, declaredPaths, webServiceAnno);
                     classInfos += new ClassInfo(path, clz, constructor);
                 } else {
                     throw new IllegalState($|"WebService" annotation is missing for "{clz}"
@@ -344,7 +351,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
         if (sessionBroker.is(WebService)) {
             Class<WebService> clz  = &sessionBroker.actualClass.as(Class<WebService>);
             String            path = sessionBroker.path;
-            validatePath(path, declaredPaths, clz);
+            path = validatePath(path, declaredPaths, clz);
             classInfos += new ClassInfo(path, clz, () -> sessionBroker.duplicate());
         }
 
@@ -353,7 +360,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
         if (authenticator.is(WebService)) {
             Class<WebService> clz  = &authenticator.actualClass.as(Class<WebService>);
             String            path = authenticator.path;
-            validatePath(path, declaredPaths, clz);
+            path = validatePath(path, declaredPaths, clz);
             classInfos += new ClassInfo(path, clz, () -> authenticator.duplicate());
         }
 
@@ -390,7 +397,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 Type<WebService> serviceType = child.PublicType;
                 if (WSConstructor constructor := serviceType.defaultConstructor()) {
                     String path = extractPath(webServiceAnno);
-                    validatePath(path, declaredPaths, webServiceAnno);
+                    path = validatePath(path, declaredPaths, webServiceAnno);
                     classInfos += new ClassInfo(path, child, constructor);
                 } else {
                     // the WebService without a default constructor might have been one of the
@@ -442,9 +449,13 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
     /**
      * Validate the uniqueness of the [WebService] path and add it to `declaredPaths`.
      */
-    private static void validatePath(String path, Set<String> declaredPaths,
-                                     AnnotationTemplate|Class webService) {
-        if (path != "/") {
+    private static String validatePath(String                   path,
+                                       Set<String>              declaredPaths,
+                                       AnnotationTemplate|Class webService,
+                                      ) {
+        if (path == "" || path == "/") {
+            path = "/";
+        } else {
             while (path.endsWith('/')) {
                 // while the service path represents a "directory", we normalize it, so it
                 // does not end with the '/' (except for the root)
@@ -465,6 +476,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                                     );
         }
         declaredPaths += path;
+        return path;
     }
 
     /**
