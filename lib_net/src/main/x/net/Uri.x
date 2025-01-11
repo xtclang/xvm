@@ -1965,6 +1965,7 @@ const Uri
             Char ch = text[offset];
             if (ch == '%') {
                 assert (ch, offset) := decodeEscape(text, offset);
+                // TODO unicode decode support
             } else if (plusIsSpace && ch == '+') {
                 buf.add(' ');
                 ++offset;

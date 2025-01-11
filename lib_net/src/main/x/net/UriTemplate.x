@@ -485,8 +485,12 @@ const UriTemplate {
             String sectionText   = uri.sectionText(onlyWithin);
             Int    sectionLength = sectionText.size;
             if (sectionLength == 0) {
-                // no text, no match (because even the prefix is absent)
-                return False;
+                for (Variable var : vars) {
+                    if (var.require) {
+                        // no text, no match (because even the prefix is absent)
+                        return False;
+                    }
+                }
             }
 
             // we can only match if we are inside the correct section
