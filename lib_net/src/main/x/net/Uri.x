@@ -832,6 +832,9 @@ const Uri
                 Int endOffset = totalLength;
                 if (isLast && end.offset < endOffset) {
                     endOffset = end.offset;
+                    if (offset == endOffset) {
+                        return True;
+                    }
                 }
                 if (String prefix ?= section.prefix) {
                     Int partLen = prefix.size;
@@ -839,17 +842,17 @@ const Uri
                         prefix[offset..<endOffset.notGreaterThan(partLen)].appendTo(buf);
                     }
                     offset     = (offset-partLen).notLessThan(0);
-                    endOffset -= partLen;
+                    endOffset  = (endOffset-partLen).notLessThan(0);
                 }
-                if (!text.empty) {
+                if (offset < endOffset && !text.empty) {
                     Int partLen = text.size;
                     if (offset < partLen) {
                         section.escape(buf, text[offset..<endOffset.notGreaterThan(partLen)]);
                     }
                     offset     = (offset-partLen).notLessThan(0);
-                    endOffset -= partLen;
+                    endOffset  = (endOffset-partLen).notLessThan(0);
                 }
-                if (String suffix ?= section.suffix) {
+                if (offset < endOffset, String suffix ?= section.suffix) {
                     Int partLen = suffix.size;
                     if (offset < partLen) {
                         suffix[offset..<endOffset.notGreaterThan(partLen)].appendTo(buf);

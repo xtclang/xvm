@@ -442,6 +442,13 @@ const UriTemplate {
         @Override
         @RO Char prefix;
 
+        @RO Value defaultValue.get() = "";
+
+        @RO Value defaultExplodedValue.get() {
+            static String[] EmptyArray = [];
+            return EmptyArray;
+        }
+
         @Override
         Appender<Char> expand(Appender<Char> buf, Lookup values) {
             for (Variable var : vars) {
@@ -482,24 +489,34 @@ const UriTemplate {
         @Override
         conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
                 Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings) {
-            String sectionText   = uri.sectionText(onlyWithin);
-            Int    sectionLength = sectionText.size;
-            if (sectionLength == 0) {
-                for (Variable var : vars) {
-                    if (var.require) {
-                        // no text, no match (because even the prefix is absent)
-                        return False;
-                    }
-                }
-            }
-
             // we can only match if we are inside the correct section
             if (!(from := uri.positionAt(from, onlyWithin))) {
                 return False;
             }
-            Int fromOffset = from.offset;
 
-            Int toOffset = sectionLength;
+            String sectionText   = uri.sectionText(onlyWithin);
+            Int    sectionLength = sectionText.size;
+            if (sectionLength == 0) {
+                if (prefix == nextPrefix) {
+                    // this is a conservative decision, but will not always be correct; the
+                    // assumption here is that a multi-part section can't have multiple parts
+                    // if it doesn't have any parts; it may need to be re-worked if a use case
+                    // arises where multiple empty parts are desired
+                    return False;
+                }
+                for (Variable var : vars) {
+                    if (var.require) {
+                        // no text, no match (because even the prefix is absent)
+                        return False;
+                    } else {
+                        bindings = mutate(bindings).put(var.name, var.explode ? defaultExplodedValue : defaultValue);
+                    }
+                }
+                return True, from, bindings;
+            }
+
+            Int fromOffset = from.offset;
+            Int toOffset   = sectionLength;
             to := uri.positionAt(to?, onlyWithin);
             switch (to?.section <=> onlyWithin) {
             case Lesser:
@@ -611,6 +628,12 @@ const UriTemplate {
         @Override
         Char prefix.get() {
             return '?';
+        }
+
+        @Override
+        Value defaultExplodedValue.get() {
+            static Map<String,String> EmptyMap = [];
+            return EmptyMap;
         }
 
         @Override
