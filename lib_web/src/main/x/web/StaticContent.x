@@ -16,7 +16,7 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType = Null,
         assert:arg fileNode.exists && fileNode.readable;
     }
 
-    @Get("{path}")
+    @Get("{/path}")
     conditional ResponseOut getResource(String path) {
         ResponseOut createResponse(File file) {
             MediaType? mediaType = this.mediaType;
@@ -28,7 +28,7 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType = Null,
                 : new SimpleResponse(OK, mediaType, file.contents);
         }
 
-        if (path == "" || path == "/") {
+        if (path == "") {
             if (File file := fileNode.is(File)) {
                 return True, createResponse(file);
             }
