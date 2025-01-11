@@ -1654,7 +1654,7 @@ public abstract class AstNode
                     }
                 else
                     {
-                    // there are two methods that match, but one has fewer parameters that the
+                    // there are two methods that match, but one has fewer parameters than the
                     // other, which means that the one with more parameters has default values;
                     // therefore, we could safely choose the method with fewer parameters
                     fNewBetter = cParamsNew < cParamsOld;
