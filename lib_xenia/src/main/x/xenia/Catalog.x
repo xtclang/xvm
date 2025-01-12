@@ -636,14 +636,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             }
 
             // sort the endpoints based on their UriTemplates in such a way, that:
-            //    1) the one with more parts goes first
-            //    2) otherwise, the one with a longer prefix goes first
+            //    1) otherwise, the one with a longer prefix goes first
+            //    2) the one with more parts goes first
             function Ordered(EndpointInfo, EndpointInfo) order = (ep1, ep2) -> {
                         UriTemplate t1  = ep1.template;
                         UriTemplate t2  = ep2.template;
-                        Ordered     cmp = t2.parts.size <=> t1.parts.size;
+                        Ordered     cmp = t2.literalPrefix <=> t1.literalPrefix;
                         return cmp == Equal
-                            ? t2.literalPrefix <=> t1.literalPrefix
+                            ? t2.parts.size <=> t1.parts.size
                             : cmp;
                     };
 
