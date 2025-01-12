@@ -2034,10 +2034,7 @@ const Uri
         while (offset < length) {
             Char ch = text[offset];
             if (ch == '%') {
-                // TODO GG change if to assert
-                if (!((ch, offset) := decodeEscape(text, offset, allowUnicode=allowUnicode))) {
-                    assert;
-                }
+                assert (ch, offset) := decodeEscape(text, offset, allowUnicode=allowUnicode);
             } else if (plusIsSpace && ch == '+') {
                 buf.add(' ');
                 ++offset;

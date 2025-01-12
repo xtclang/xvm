@@ -1038,7 +1038,7 @@ public abstract class AstNode
 
         // collect available types for unnamed arguments and a map of named expressions
         Map<String, Expression> mapNamedExpr = cExpr > 0
-                ? extractNamedArgs(listExprArgs, errs)
+                ? collectNamedArgs(listExprArgs, errs)
                 : Collections.emptyMap();
 
         if (mapNamedExpr == null)
@@ -1156,12 +1156,11 @@ public abstract class AstNode
         }
 
     /**
-     * Extract all named expression from the specified list into a map. Fill the implicit types
-     * for all not-named arguments into the head of the type array.
+     * Collect all named (labeled) expression from the specified list into a map.
      *
-     * @return a map of named expressions; null if an error was reported
+     * @return a map of labeled expressions; null if an error was reported
      */
-    protected Map<String, Expression> extractNamedArgs(List<Expression> listExprArgs,
+    protected Map<String, Expression> collectNamedArgs(List<Expression> listExprArgs,
                                                        ErrorListener errs)
         {
         Map<String, Expression> mapNamed = null;
@@ -1187,8 +1186,7 @@ public abstract class AstNode
                         }
                     }
 
-                // extract the underlying expression
-                mapNamed.put(sName, exprLabel.getUnderlyingExpression());
+                mapNamed.put(sName, exprLabel);
                 }
             else
                 {
@@ -1523,7 +1521,7 @@ public abstract class AstNode
     protected List<Expression> rearrangeNamedArgs(
             MethodStructure method, List<Expression> listExprArgs, ErrorListener errs)
         {
-        Map<String, Expression> mapNamedExpr = extractNamedArgs(listExprArgs, errs);
+        Map<String, Expression> mapNamedExpr = collectNamedArgs(listExprArgs, errs);
         return mapNamedExpr == null
                 ? null
                 : rearrangeNamedArgs(method, listExprArgs, mapNamedExpr, errs);
