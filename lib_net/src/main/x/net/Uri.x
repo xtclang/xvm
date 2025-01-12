@@ -1281,7 +1281,7 @@ const Uri
                     break;
 
                 case '%':
-                    if ((_, offset) := decodeEscape(text, offset)) {
+                    if ((_, offset) := decodeEscape(text, offset, allowUnicode=True)) {
                         escaped = True;
                         continue EachChar;
                     } else {
@@ -1407,7 +1407,7 @@ const Uri
 
                     // escaped (requires 2 digits to follow):
                 case '%':
-                    if ((_, offset) := decodeEscape(text, offset)) {
+                    if ((_, offset) := decodeEscape(text, offset, allowUnicode=True)) {
                         continue EachChar;
                     } else {
                         error ?:= $"Illegal escape sequence in the relative path of {text.quoted()}";
@@ -1451,7 +1451,7 @@ const Uri
                     if (!uricValid(ch)) {
                         error = $"Illegal character {ch.quoted()} in the '?' query of {text.quoted()}";
                     } else if (ch == '%') {
-                        if ((_, offset) := decodeEscape(text, offset)) {
+                        if ((_, offset) := decodeEscape(text, offset, allowUnicode=True)) {
                             continue EachChar;
                         } else {
                             error = $"Illegal escape sequence in the '?' query of {text.quoted()}";
@@ -1497,7 +1497,7 @@ const Uri
                     if (!uricValid(ch)) {
                         error = $"Illegal character {ch.quoted()} in the opaque part of {text.quoted()}";
                     } else if (ch == '%') {
-                        if ((_, offset) := decodeEscape(text, offset)) {
+                        if ((_, offset) := decodeEscape(text, offset, allowUnicode=True)) {
                             continue EachChar;
                         } else {
                             error = $"Illegal escape sequence in the relative path of {text.quoted()}";
@@ -1540,7 +1540,7 @@ const Uri
                     if (!uricValid(ch)) {
                         error = $"Illegal character {ch.quoted()} in the '#' fragment of {text.quoted()}";
                     } else if (ch == '%') {
-                        if ((_, offset) := decodeEscape(text, offset)) {
+                        if ((_, offset) := decodeEscape(text, offset, allowUnicode=True)) {
                             escaped = True;
                             continue EachChar;
                         } else {
@@ -1554,7 +1554,7 @@ const Uri
 
             String fragment = text[start ..< offset];
             if (escaped && error == Null) {
-                fragment = unescape(fragment);
+                fragment = unescape(fragment, allowUnicode=True);
             }
             return True, fragment, offset, error;
         }
@@ -1931,19 +1931,61 @@ const Uri
     /**
      * Validate an escape sequence within a URI string.
      *
-     * @param text    the text containing the escape sequence
-     * @param offset  the offset of the '%' character that begins the escape sequence
+     * @param text          the text containing the escape sequence
+     * @param offset        the offset of the '%' character that begins the escape sequence
+     * @param allowUnicode  pass `True` if the sequence can be a UTF-8 encoded Unicode character
      *
      * @return True iff the string contains a valid escape at the specified offset
      * @return (conditional) the unescaped character
      * @return (conditional) the offset after the escape sequence
      */
-    static conditional (Char ch, Int offset) decodeEscape(String text, Int offset) {
+    static conditional (Char ch, Int offset) decodeEscape(String text, Int offset, Boolean allowUnicode = False) {
         assert:arg offset >= 0;
         if (offset+3 <= text.size && text[offset] == '%',
                 Int n1 := text[offset+1].asciiHexit(),
                 Int n2 := text[offset+2].asciiHexit()) {
-            return True, ((n1 << 4) + n2).toChar(), offset+3;
+            Int byte = (n1 << 4) + n2;
+            if (byte < 0x80) {
+                // ascii character
+                return True, byte.toChar(), offset+3;
+            } else if (!allowUnicode) {
+                // it's a unicode character, which is not allowed here
+                return False;
+            }
+
+            // decode a unicode character in UTF-8 format
+            Int codepoint;
+            Int trailing;
+            switch (n1) {
+            case 0b1100, 0b1101:
+                codepoint = byte & 0b11111;
+                trailing  = 1;
+                break;
+            case 0b1110:
+                codepoint = byte & 0b1111;
+                trailing  = 2;
+                break;
+            case 0b1111:
+                assert n2 & 0b1000 == 0;
+                codepoint = byte & 0b111;
+                trailing  = 3;
+                break;
+            default:
+                return False;
+            }
+
+            for (Int i : 1..trailing) {
+                offset += 3;
+                if (offset+3 <= text.size && text[offset] == '%',
+                        n1 := text[offset+1].asciiHexit(),
+                        n1 & 0b1100 == 0b1000,
+                        n2 := text[offset+2].asciiHexit()) {
+                    codepoint = codepoint << 2 | (n1 & 0b11) << 4 | n2;
+                } else {
+                    return False;
+                }
+            }
+            return True, codepoint.toChar(), offset+3;
         }
         return False;
     }
@@ -1955,13 +1997,21 @@ const Uri
      * To avoid exceptions, this method should only be called when the escaped contents of the
      * passed string have already been validated.
      *
-     * @param text         a String that may contain `%xx` escape sequences
-     * @param except       (optional) a function that identifies specific characters to NOT unescape
-     * @param plusIsSpace  indicates that all `'+'` characters should be replaced with `' '`
+     * @param text          a String that may contain `%xx` escape sequences
+     * @param except        (optional) a function that identifies specific characters to NOT
+     *                      unescape
+     * @param plusIsSpace   (optional) indicates that all `'+'` characters should be replaced with
+     *                      `' '`
+     * @param allowUnicode  (optional) pass `True` if the sequence can be a UTF-8 encoded Unicode
+     *                      character
      *
      * @return the passed String, but with escape sequences replaced with their ASCII equivalents
      */
-    static String unescape(String text, function Boolean(Char)? except=Null, Boolean plusIsSpace=False) {
+    static String unescape(String                  text,
+                           function Boolean(Char)? except       = Null,
+                           Boolean                 plusIsSpace  = False,
+                           Boolean                 allowUnicode = False,
+                          ) {
         Int offset = -1;
         Scan: for (Char ch : text) {
             if (ch == '%' || plusIsSpace && ch == '+') {
@@ -1984,8 +2034,10 @@ const Uri
         while (offset < length) {
             Char ch = text[offset];
             if (ch == '%') {
-                assert (ch, offset) := decodeEscape(text, offset);
-                // TODO unicode decode support
+                // TODO GG change if to assert
+                if (!((ch, offset) := decodeEscape(text, offset, allowUnicode=allowUnicode))) {
+                    assert;
+                }
             } else if (plusIsSpace && ch == '+') {
                 buf.add(' ');
                 ++offset;
@@ -2082,7 +2134,7 @@ const Uri
      * @return the unescaped query parameter name or value
      */
     static String decodeParam(String text) {
-        return unescape(text, Null, True);
+        return unescape(text, Null, plusIsSpace=True, allowUnicode=True);
     }
 
     // ----- Comparable, Orderable & Hashable funky interface implementations ----------------------
