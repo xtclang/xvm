@@ -551,7 +551,7 @@ const UriTemplate {
                 return False;
             }
 
-            if (vars.size == 1) {
+            if (vars.size == 1 && prefix != nextPrefix) {
                 bindings = mutate(bindings).put(vars[0].name, text.substring(1));
                 return True, new Position(onlyWithin, toOffset), bindings;
             }
