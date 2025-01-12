@@ -508,7 +508,7 @@ const UriTemplate {
                     if (var.require) {
                         // no text, no match (because even the prefix is absent)
                         return False;
-                    } else {
+                    } else if (uri.sectionExists(onlyWithin)) {
                         bindings = mutate(bindings).put(var.name, var.explode ? defaultExplodedValue : defaultValue);
                     }
                 }

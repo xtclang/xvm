@@ -458,6 +458,23 @@ const Uri
     }
 
     /**
+     * Determine if the specified section exists within the URI.
+     *
+     * @param section  the section to check the existence of
+     *
+     * @return `True` iff the section exists, which means that its content is non-`Null`
+     */
+    Boolean sectionExists(Section section) {
+        return switch (section) {
+            case Scheme:    scheme;
+            case Authority: authority;
+            case Path:      path;
+            case Query:     query;
+            case Fragment:  fragment;
+        } != Null;
+    }
+
+    /**
      * Calculate the text of the specified section.
      *
      * @param section  the section to determine the textual content of
