@@ -1899,6 +1899,7 @@ const Uri
         case '/', '?':
         // other
         case ':', '@', '&', '=', '+', '$', ',': True;
+
         default: False;
     };
 
@@ -2118,9 +2119,7 @@ const Uri
      *
      * @return a string that can be placed into the query portion of a URI string
      */
-    static String encodeParam(String text) {
-        return escape(text, queryParamValid, True);
-    }
+    static String encodeParam(String text) = escape(text, queryParamValid, True);
 
     /**
      * Decode a parameter name or value from a string that uses the encoding specified for the query
@@ -2130,16 +2129,12 @@ const Uri
      *
      * @return the unescaped query parameter name or value
      */
-    static String decodeParam(String text) {
-        return unescape(text, Null, plusIsSpace=True, allowUnicode=True);
-    }
+    static String decodeParam(String text) = unescape(text, Null, plusIsSpace=True, allowUnicode=True);
 
     // ----- Comparable, Orderable & Hashable funky interface implementations ----------------------
 
     @Override
-    static <CompileType extends Uri> Int64 hashCode(CompileType value) {
-        return value.hashCache;
-    }
+    static <CompileType extends Uri> Int64 hashCode(CompileType value) = value.hashCache;
 
     private @Lazy Int64 hashCache.calc() {
         return (scheme?  .hashCode() : 481667)
