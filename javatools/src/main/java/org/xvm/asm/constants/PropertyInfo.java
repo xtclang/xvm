@@ -1198,8 +1198,9 @@ public class PropertyInfo
                 }
             }
 
-        // if the getter exists, consider the property implicitly assigned
-        return m_FImplicitlyAssigned = getHead().hasGetter();
+        // if the getter exists and doesn't call "super()" consider the property implicitly assigned
+        PropertyBody head = getHead();
+        return m_FImplicitlyAssigned = head.hasGetter() && head.isGetterBlockingSuper();
         }
 
     /**

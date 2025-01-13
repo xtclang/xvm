@@ -1659,7 +1659,7 @@ service Client<Schema extends RootSchema> {
                     parent_.rollbackOnly = True;
                 }
             }
-        } = False; // TODO GG not required
+        }
 
         @Override
         CommitResult commit() {
