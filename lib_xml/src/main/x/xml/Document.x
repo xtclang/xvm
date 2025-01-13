@@ -62,7 +62,9 @@ interface Document
 
     /**
      * The root XML [Element] of the `Document`. An XML `Document` always has a single root
-     * `Element`.
+     * `Element`. Setting the root `Element` may throw a ReadOnly exception if the document is not
+     * mutable, or it may copy the entire `Element` that is provided since the provided `Element`
+     * may already be part of a different `Document`.
      */
     @Override
     Element root;

@@ -2,7 +2,6 @@
  * TODO
  */
 interface Attribute
-//        extends Content {
-{
+        extends Part {
     // TODO
 }
