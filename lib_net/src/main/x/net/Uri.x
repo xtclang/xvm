@@ -263,14 +263,8 @@ const Uri
         }
         // TODO GG: this doesn't compile
         // return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True) : [];
-        // TODO GG: this calls the wrong map() function
-        // return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True);
-        // return [];
-        ListMap<String, String> result = new ListMap();
-        for ((String key, String value) : query?.splitMap(entrySeparator='&')) {
-            result.put(decodeParam(key), decodeParam(value));
-        }
-        return result.freeze(inPlace=True);
+        return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True);
+        return [];
     }
 
     // ----- modifiers -----------------------------------------------------------------------------

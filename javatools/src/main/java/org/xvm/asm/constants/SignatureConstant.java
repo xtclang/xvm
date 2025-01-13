@@ -610,14 +610,19 @@ public class SignatureConstant
      * Truncate some of the signature's parameters.
      *
      * @param ofStart  the first index to retain a parameter at
-     * @param cParams  the number of parameters to retain
+     * @param cParams  the number of parameters to retain; -1 means "take all remaining"
      *
      * @return a new SignatureConstant that has the specified (lesser than original) number of
      *         parameters
      */
     public SignatureConstant truncateParams(int ofStart, int cParams)
         {
-        assert cParams < m_aconstParams.length;
+        if (cParams < 0)
+            {
+            cParams = m_aconstParams.length - ofStart;
+            }
+
+        assert ofStart >= 0;
         assert ofStart + cParams <= m_aconstParams.length;
 
         return getConstantPool().ensureSignatureConstant(getName(),
@@ -938,12 +943,11 @@ public class SignatureConstant
     protected static void writeTypes(DataOutput out, TypeConstant[] aconst)
             throws IOException
         {
-        int c = aconst.length;
-        writePackedLong(out, c);
+        writePackedLong(out, aconst.length);
 
-        for (int i = 0; i < c; ++i)
+        for (TypeConstant typeConstant : aconst)
             {
-            writePackedLong(out, aconst[i].getPosition());
+            writePackedLong(out, typeConstant.getPosition());
             }
         }
 

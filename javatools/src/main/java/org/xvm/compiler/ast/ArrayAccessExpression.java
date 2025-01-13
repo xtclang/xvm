@@ -4,14 +4,17 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.ast.ArrayAccessExprAST;
@@ -823,9 +826,12 @@ public class ArrayAccessExpression
                     : exprArg.getImplicitType(ctx);
             }
 
-        TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
-        boolean             fTuple     = typeTarget.isTuple();
-        Set<MethodConstant> setMatch   = new HashSet<>();
+        TypeInfo infoTarget = typeTarget.ensureTypeInfo();
+        boolean  fTuple     = typeTarget.isTuple();
+
+        // collect the matching method ids and the methods structures for them
+        Set<MethodConstant>                  setMatch   = new HashSet<>();
+        Map<MethodConstant, MethodStructure> mapMethods = new HashMap<>();
 
         Set<MethodConstant> setAll = findPotentialOps(infoTarget, cArgs);
         NextOp: for (MethodConstant idMethod : setAll)
@@ -851,9 +857,9 @@ public class ArrayAccessExpression
                 }
 
             // verify that any additional parameters have a default value
-            MethodInfo info = infoTarget.getMethodById(idMethod);
-            if (cParams > cArgs && (cParams - cArgs) <
-                    info.getTopmostMethodStructure(infoTarget).getDefaultParamCount())
+            MethodInfo      info   = infoTarget.getMethodById(idMethod);
+            MethodStructure method = info.getTopmostMethodStructure(infoTarget);
+            if (cParams > cArgs && (cParams - cArgs) < method.getDefaultParamCount())
                 {
                 continue;
                 }
@@ -884,13 +890,14 @@ public class ArrayAccessExpression
                 }
 
             setMatch.add(idMethod);
+            mapMethods.put(idMethod, method);
             }
 
         return switch (setMatch.size())
             {
             case 0  -> null;
             case 1  -> setMatch.iterator().next();
-            default -> chooseBest(setMatch, typeTarget, ErrorListener.BLACKHOLE);
+            default -> chooseBest(setMatch, typeTarget, mapMethods, ErrorListener.BLACKHOLE);
             };
         }
 

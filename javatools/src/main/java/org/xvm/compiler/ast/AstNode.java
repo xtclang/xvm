@@ -1100,22 +1100,25 @@ public abstract class AstNode
             Set<MethodConstant> setIs      = new HashSet<>();
             Set<MethodConstant> setConvert = new HashSet<>();
 
+            // collect the MethodStructures for matching methods for either group
+            Map<MethodConstant, MethodStructure> mapMethods = new HashMap<>();
+
             collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
-                    mapNamedExpr, atypeReturn, setIs, setConvert, errsTemp);
+                    mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errsTemp);
 
             // now choose the best match
             boolean fArgsComplete = cArgs == 0 || listExprArgs.stream().allMatch(Expression::isCompletable);
             if (!setIs.isEmpty())
                 {
                 return fArgsComplete
-                        ? chooseBest(setIs, typeTarget, errs)
+                        ? chooseBest(setIs, typeTarget, mapMethods, errs)
                         : setIs.iterator().next();
                 }
 
             if (!setConvert.isEmpty())
                 {
                 return fArgsComplete
-                        ? chooseBest(setConvert, typeTarget, errs)
+                        ? chooseBest(setConvert, typeTarget, mapMethods, errs)
                         : setConvert.iterator().next();
                 }
             }
@@ -1204,17 +1207,18 @@ public abstract class AstNode
      * Helper method to collect matching methods.
      */
     private void collectMatchingMethods(
-            Context                 ctx,
-            TypeConstant            typeTarget,
-            TypeInfo                infoTarget,
-            Set<MethodConstant>     setMethods,
-            List<Expression>        listExprArgs,
-            boolean                 fCall,
-            Map<String, Expression> mapNamedExpr,
-            TypeConstant[]          atypeReturn,
-            Set<MethodConstant>     setIs,
-            Set<MethodConstant>     setConvert,
-            ErrorListener           errs)
+            Context                              ctx,
+            TypeConstant                         typeTarget,
+            TypeInfo                             infoTarget,
+            Set<MethodConstant>                  setMethods,
+            List<Expression>                     listExprArgs,
+            boolean                              fCall,
+            Map<String, Expression>              mapNamedExpr,
+            TypeConstant[]                       atypeReturn,
+            Set<MethodConstant>                  setIs,
+            Set<MethodConstant>                  setConvert,
+            Map<MethodConstant, MethodStructure> mapMethods,
+            ErrorListener                        errs)
         {
         ConstantPool  pool     = pool();
         int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
@@ -1456,6 +1460,7 @@ public abstract class AstNode
                 {
                 setIs.add(idMethod);
                 }
+            mapMethods.put(idMethod, method);
             }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic
@@ -1592,45 +1597,46 @@ public abstract class AstNode
      *
      * @param setMethods  the non-empty set of methods
      * @param typeTarget  the target type
+     * @param mapMethods  the method structures for the methods
      * @param errs        the error list to log to
      *
      * @return the best matching method or null, if the methods are ambiguous, in which case
      *         an error has been reported
      */
-    protected MethodConstant chooseBest(Set<MethodConstant> setMethods,
-                                        TypeConstant typeTarget, ErrorListener errs)
+    protected MethodConstant chooseBest(Set<MethodConstant> setMethods, TypeConstant typeTarget,
+            Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs)
         {
         assert !setMethods.isEmpty();
 
-        MethodConstant    idBest  = null;
-        SignatureConstant sigBest = null;
+        MethodConstant idBest  = null;
         for (MethodConstant idMethod : setMethods)
             {
-            SignatureConstant sigMethod = idMethod.getSignature();
             if (idBest == null)
                 {
-                idBest  = idMethod;
-                sigBest = sigMethod;
+                idBest = idMethod;
                 }
             else
                 {
+                // don't take the type parameters into the consideration
+                SignatureConstant sigOld = truncateSignature(idBest,   mapMethods.get(idBest));
+                SignatureConstant sigNew = truncateSignature(idMethod, mapMethods.get(idMethod));
+
+                int     cParamsOld = sigOld.getParamCount();
+                int     cParamsNew = sigNew.getParamCount();
                 boolean fOldBetter;
                 boolean fNewBetter;
-
-                int cParamsOld = sigBest.getParamCount();
-                int cParamsNew = sigMethod.getParamCount();
                 if (cParamsOld == cParamsNew)
                     {
-                    fOldBetter = sigMethod.isSubstitutableFor(sigBest, typeTarget);
-                    fNewBetter = sigBest.isSubstitutableFor(sigMethod, typeTarget);
+                    fOldBetter = sigNew.isSubstitutableFor(sigOld, typeTarget);
+                    fNewBetter = sigOld.isSubstitutableFor(sigNew, typeTarget);
 
                     if (!fOldBetter && !fNewBetter)
                         {
                         // choose the one that is narrower for every argument
                         for (int i = 0; i < cParamsOld; i++)
                             {
-                            TypeConstant typeOld = sigBest.getRawParams()[i];
-                            TypeConstant typeNew = sigMethod.getRawParams()[i];
+                            TypeConstant typeOld = sigOld.getRawParams()[i];
+                            TypeConstant typeNew = sigNew.getRawParams()[i];
 
                             if (typeOld.isA(typeNew) && !typeNew.isA(typeOld))
                                 {
@@ -1667,7 +1673,6 @@ public abstract class AstNode
                     if (fNewBetter)
                         {
                         idBest  = idMethod;
-                        sigBest = sigMethod;
                         }
                     }
                 else
@@ -1683,6 +1688,13 @@ public abstract class AstNode
         return idBest;
         }
 
+    private SignatureConstant truncateSignature(MethodConstant idMethod, MethodStructure method)
+        {
+        SignatureConstant sig = idMethod.getSignature();
+        int               c   = method.getTypeParamCount();
+
+        return c > 0 ? sig.truncateParams(c, -1) : sig;
+        }
 
     /**
      * Calculate the fit for the method return values.

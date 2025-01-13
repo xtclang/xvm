@@ -15,6 +15,7 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
@@ -29,6 +30,7 @@ import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -1455,17 +1457,25 @@ public class ForEachStatement
     /**
      * Trivial helper.
      */
-    private MethodConstant findWellKnownMethod(TypeInfo info, String sMethodName, ErrorListener errs)
+    private MethodConstant findWellKnownMethod(TypeInfo infoTarget, String sMethodName, ErrorListener errs)
         {
-        Set<MethodConstant> setId = info.findMethods(sMethodName, 0, MethodKind.Method);
+        Set<MethodConstant> setId = infoTarget.findMethods(sMethodName, 0, MethodKind.Method);
 
         if (setId.isEmpty())
             {
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
-                    sMethodName, info.getType().getValueString());
+                    sMethodName, infoTarget.getType().getValueString());
             return null;
             }
-        return chooseBest(setId, info.getType(), errs);
+
+        Map<MethodConstant, MethodStructure> mapMethods = new HashMap<>();
+        for (MethodConstant id : setId)
+            {
+            MethodInfo      info   = infoTarget.getMethodById(id);
+            MethodStructure method = info.getTopmostMethodStructure(infoTarget);
+            mapMethods.put(id, method);
+            }
+        return chooseBest(setId, infoTarget.getType(), mapMethods, errs);
         }
 
     /**
@@ -1478,7 +1488,7 @@ public class ForEachStatement
         if (prop == null)
             {
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
-                sPropName + ".get()", info.getType().getValueString());
+                    sPropName + ".get()", info.getType().getValueString());
             return null;
             }
         return prop.getIdentity();
