@@ -71,6 +71,7 @@ mixin WebService(String path, Version? currentVer = Null, Version? defaultVer = 
      * The [WebApp] containing this `WebService`. If no `WebApp` is explicitly configured, then the
      * module containing the `WebService` is used.
      */
+    @Unassigned
     WebApp webApp {
         @Override
         WebApp get() {

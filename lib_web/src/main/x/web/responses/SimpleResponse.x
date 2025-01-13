@@ -29,13 +29,10 @@ class SimpleResponse
         construct SimpleResponse(status, Text, message.utf8());
     }
 
-
     // ----- HttpMessage interface -----------------------------------------------------------------
 
     @Override
-    Header header.get() {
-        return this;
-    }
+    Header header.get() = this;
 
     @Override
     Body? body;
@@ -56,7 +53,6 @@ class SimpleResponse
         return body;
     }
 
-
     // ----- Response interface --------------------------------------------------------------------
 
     @Override
@@ -65,16 +61,13 @@ class SimpleResponse
     @Override
     HttpStatus status;
 
-
     // ----- Header interface ----------------------------------------------------------------------
 
     @Override
-    @RO Boolean isRequest.get() {
-        return False;
-    }
+    @RO Boolean isRequest.get() = False;
 
     @Override
-    List<Entry> entries.get() {
+    @Unassigned List<Entry> entries.get() {
         if (assigned) {
             return super();
         }
@@ -91,7 +84,6 @@ class SimpleResponse
         return super();
     }
 
-
     // ----- Body interface ------------------------------------------------------------------------
 
     @Override
@@ -101,10 +93,7 @@ class SimpleResponse
     Byte[] bytes;
 
     @Override
-    Body from(Object content) {
-        throw new Unsupported();
-    }
-
+    Body from(Object content) = throw new Unsupported();
 
     // ----- debugging support ---------------------------------------------------------------------
 

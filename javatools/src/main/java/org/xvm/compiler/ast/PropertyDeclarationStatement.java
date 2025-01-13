@@ -405,14 +405,18 @@ public class PropertyDeclarationStatement
                 return;
                 }
 
-            if (prop.isSimpleUnassigned() && prop.getGetter() != null)
+            if (prop.isSimpleUnassigned())
                 {
-                // property marked as @Unassigned must not have a getter
-                AnnotationExpression exprAnno = annotations.get(0);
-                exprAnno.log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                        pool().clzUnassigned().getName(),
-                        prop.getIdentityConstant().getValueString());
-                return;
+                MethodStructure methodGetter = prop.getGetter();
+                if (methodGetter != null && !methodGetter.usesSuper())
+                    {
+                    // property marked as @Unassigned must not have a getter that doesn't "super()"
+                    AnnotationExpression exprAnno = annotations.get(0);
+                    exprAnno.log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            pool().clzUnassigned().getName(),
+                            prop.getIdentityConstant().getValueString());
+                    return;
+                    }
                 }
 
             ClassStructure clz      = prop.getContainingClass(false);
@@ -627,12 +631,12 @@ public class PropertyDeclarationStatement
                 }
 
             ConstantPool pool = pool();
-            for (int iA = 0, c = aAnno.length; iA < c; iA++)
+            for (Annotation anno : aAnno)
                 {
-                Annotation     anno    = aAnno[iA];
                 ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
                 ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
-                if (clzAnno.getFormat() != Component.Format.MIXIN)
+
+                if (clzAnno.getFormat() != Format.MIXIN)
                     {
                     findAnnotationExpression(anno, annotations).
                         log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
@@ -643,8 +647,8 @@ public class PropertyDeclarationStatement
                     {
                     findAnnotationExpression(anno, annotations).
                         log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                        idAnno.getName(),
-                        prop.getIdentityConstant().getValueString());
+                            idAnno.getName(),
+                            prop.getIdentityConstant().getValueString());
                     return false;
                     }
                 }

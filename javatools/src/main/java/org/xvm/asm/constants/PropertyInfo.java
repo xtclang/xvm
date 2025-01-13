@@ -1161,13 +1161,15 @@ public class PropertyInfo
         }
 
     /**
-     * @return return true iff this property is marked as "Unassigned" and has no other annotations
+     * @return return true iff this property is marked as "Unassigned", has no other annotations
+     *                and no getter or setter
      */
     public boolean isSimpleUnassigned()
         {
         Annotation[] aAnnos = getRefAnnotations();
         return aAnnos.length == 1
-            && (aAnnos[0].getAnnotationClass()).equals(pool().clzUnassigned());
+            && (aAnnos[0].getAnnotationClass()).equals(pool().clzUnassigned())
+            && !getHead().hasGetter() && !getHead().hasSetter();
         }
 
     /**

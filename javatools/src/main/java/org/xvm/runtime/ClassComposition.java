@@ -710,12 +710,9 @@ public class ClassComposition
             TypeComposition clzRef = null;
             if (infoProp.isRefAnnotated()) // this doesn't include injected properties
                 {
-                if (!infoProp.isSimpleUnassigned())
-                    {
-                    clzRef = infoProp.isCustomLogic()
-                            ? ensurePropertyComposition(infoProp)
-                            : container.resolveClass(infoProp.getBaseRefType());
-                    }
+                clzRef = infoProp.isCustomLogic()
+                        ? ensurePropertyComposition(infoProp)
+                        : container.resolveClass(infoProp.getBaseRefType());
 
                 if (clzRef != null && !infoProp.isNative())
                     {
