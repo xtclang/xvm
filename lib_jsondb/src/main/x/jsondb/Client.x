@@ -5,11 +5,8 @@ import ecstasy.collections.CollectImmutableArray;
 import ecstasy.maps.CursorEntry;
 import ecstasy.maps.DiscreteEntry;
 import ecstasy.maps.KeySetBasedMap;
-import ecstasy.maps.KeyEntry;
 import ecstasy.maps.MapEntries;
 import ecstasy.maps.MapValues;
-
-import ecstasy.reflect.Annotation;
 
 import json.Doc;
 import json.Lexer.Token;
@@ -52,7 +49,6 @@ import storage.ValueStore;
 import Catalog.BuiltIn;
 
 import TxManager.NO_TX;
-import TxManager.Requirement;
 
 /**
  * The root of the JSON database API, as exposed to applications. This provides an implementation of
@@ -1314,8 +1310,9 @@ service Client<Schema extends RootSchema> {
                 child_ = Null;
             }
 
-            (oodb.Transaction<Schema> + Schema) result = new NestedTransaction(this)
-                    .as(oodb.Transaction<Schema> + Schema); // TODO GG why is a cast required?
+            oodb.Transaction<Schema> result = new NestedTransaction(this);
+            assert result.is(Schema);
+
             child_ = result;
             return result;
         }
@@ -1617,13 +1614,13 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
-        @Final Transaction! parent_;        // TODO GG why is "!" required?
+        @Final Transaction! parent_; // TODO GG why is "!" required?
 
         @Override
         @RO RootTransaction root_.get() = parent_.root_;
 
         @Override
-        Int writeId_.get()= root_.writeId_;
+        Int writeId_.get() = root_.writeId_;
 
         protected Boolean active_.get() = parent_.&child_ == &this && parent_.pending;
 
