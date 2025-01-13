@@ -33,6 +33,7 @@ listOf(
     "lib_webauth",
     "lib_webcli",
     "lib_xenia",
+    "lib_xml",
     "javatools_turtle",
     "javatools_launcher",
     "javatools_bridge"
