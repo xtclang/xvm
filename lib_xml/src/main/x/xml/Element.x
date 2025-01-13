@@ -4,7 +4,7 @@ import ecstasy.io.TextPosition;
  * Represents a piece of an XML document.
  */
 interface Element
-        extends Part {
+        extends ValueHolder {
     /**
      * `Element`s can be nested. A nested `Element` will have a non-`Null` parent `Element`, or be a
      * child of the [Document] itself.
@@ -13,15 +13,45 @@ interface Element
     @RO (Element|Document)? parent;
 
     /**
-     * For a `Element` that has a name, such as an [Element] or an [Attribute], this provides the name.
-     * Some forms of `Element` do not have a name, such as a [Comment].
+     * The textual form of the `Element`'s value, or `Null` if the `Element` is an empty `Element`,
+     * which has no value.
      */
-    String name;
-
-    /**
-     * The textual form of the `Element`'s value, or `Null` if there is no value.
-     */
+    @Override
     String? value;
+
+    @Override
+    <Value> Value? valueAs(Format<Value> format) {
+        if (String text ?= value) {
+            text = text.trim();
+            if (!text.empty) {
+                return format.decode(text);
+            }
+        }
+        return Null;
+    }
+
+    @Override
+    <Value> Value valueAs(Format<Value> format, Value defaultValue) {
+        if (String text ?= value) {
+            text = text.trim();
+            if (!text.empty) {
+                return format.decode(text);
+            }
+        }
+        return defaultValue;
+    }
+
+    @Override
+    <Value> String? format(Value? value, Format<Value> format) {
+        if (value == Null) {
+            this.value = Null;
+            return Null;
+        }
+
+        String text = format.encode(value);
+        this.value = text;
+        return text;
+    }
 
     /**
      * A representation of the [Attribute]s of this XML `Element`.
@@ -33,5 +63,5 @@ interface Element
      */
     @RO List<Element> elements;
 
-    Element ensureElement(String name);
+// TODO Element ensureElement(String name);
 }

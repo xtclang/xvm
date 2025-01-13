@@ -1,7 +1,34 @@
 /**
- * TODO
+ * An [XML Attribute](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-Attribute).
  */
 interface Attribute
-        extends Part {
-    // TODO
+        extends ValueHolder {
+    /**
+     * `Attribute`s can only be nested within an `Element`.
+     */
+    @Override
+    @RO Element parent;
+
+    @Override
+    String value;
+
+    @Override
+    <Value> Value valueAs(Format<Value> format) = format.decode(value);
+
+    @Override
+    <Value> Value valueAs(Format<Value> format, Value defaultValue) {
+        String text = value.trim();
+        if (!text.empty) {
+            return format.decode(text);
+        }
+        return defaultValue;
+    }
+
+    @Override
+    <Value> String format(Value? value, Format<Value> format) {
+        assert value != Null;
+        String text = format.encode(value);
+        this.value = text;
+        return text;
+    }
 }
