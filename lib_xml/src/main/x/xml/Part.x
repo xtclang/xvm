@@ -22,6 +22,12 @@ interface Part
     @RO Part? parent;
 
     /**
+     * This value indicates the level of nesting of this `Part`; a `Part` with no parent is at
+     * depth `0`, its child parts are at depth `1`, and so on.
+     */
+    @RO Int depth.get() = parent?.depth + 1 : 0;
+
+    /**
      * The sequence of `Part` objects nested within this `Part` object.
      */
     @RO List<Part> parts.get() = [];
