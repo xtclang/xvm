@@ -1,60 +1,172 @@
 /**
  * A Reader represents a bounded source of character data. It is, in essence, an InputStream of
- * character values, but one with awareness of basic line-oriented text formatting. While the Reader
- * is technically bounded, the end bound is only known when it is reached.
+ * character values, but one with awareness of basic line-oriented text formatting.
  */
 interface Reader
         extends Iterator<Char>
         extends TextPosition
         extends Closeable {
-    // ----- TextPosition support ------------------------------------------------------------------
+    // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * Optional base class for TextPosition implementations.
+     * The character offset within the reader, starting with zero.
+     *
+     * Setting the offset may be an expensive operation.
      */
-    @Abstract
-    protected static const AbstractPos
-            implements TextPosition {
-
-        @Override
-        Int estimateStringLength() {
-            return 3 + lineNumber.estimateStringLength() + lineOffset.estimateStringLength();
-        }
-
-        @Override
-        Appender<Char> appendTo(Appender<Char> buf) {
-            buf.add('(');
-            lineNumber.appendTo(buf);
-            buf.add(':');
-            lineOffset.appendTo(buf);
-            return buf.add(')');
-        }
-    }
-
-
-    // ----- general operations --------------------------------------------------------------------
+    @Override
+    Int offset;
 
     /**
-     * The current position within the character stream. This property allows the caller to save off
-     * the current position, and also allows a previously saved position to be restored later.
+     * The line number, starting with zero.
+     *
+     * When this property is set, the [lineOffset] will automatically be reset to `0`, and the
+     * [offset] will be adjusted as necessary. An [OutOfBounds] exception will be thrown if the
+     * specified value is not within the bounds of the `Reader`.
+     *
+     * Getting or setting the line number may be an expensive operation.
      */
-    TextPosition position;
+    @Override
+    Int lineNumber;
+
+    /**
+     * The offset within the current line, starting with zero.
+     *
+     * When this property is set, the [lineNumber] will remain unchanged but the [offset] may
+     * change. An [OutOfBounds] exception will be thrown if the specified value is not within the
+     * bounds of the current line.
+     *
+     * Getting or setting the line offset may be an expensive operation.
+     */
+    @Override
+    Int lineOffset;
+
+    /**
+     * The starting offset of the current line.
+     */
+    @Override
+    @RO Int lineStartOffset;
+
+    /**
+     * The current [TextPosition] within the character stream.
+     */
+    TextPosition position.get() = snapshot(this);
+
+    /**
+     * The known bounds (the "total size") of the `Reader`, including characters that have already
+     * been read.
+     *
+     * Calculating the total reader size may be a very expensive operation.
+     *
+     * Note: This method is often overridden on an implementation of `Reader`.
+     */
+    @RO Int size.get() = offset + remaining;
+
+    /**
+     * The number of characters remaining in the stream.
+     *
+     * Calculating the remaining amount may be a very expensive operation.
+     *
+     * Note: This property must generally be overridden on an implementation of `Reader`.
+     */
+    @RO Int remaining;
 
     /**
      * True iff the end of the stream has been reached.
+     *
+     * Note: This property is often overridden on an implementation of `Reader`.
      */
-    @RO Boolean eof;
+    @RO Boolean eof.get() = remaining <= 0;
+
+    // ----- Iterator operations -------------------------------------------------------------------
+
+    @Override
+    Boolean knownEmpty() = eof;
 
     /**
-     * @return  a value of type Char read from the stream
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
+     * Note: This method may be overridden on an implementation of `Reader` if the [remaining] value
+     * is expensive to compute.
      */
-    Char nextChar();
+    @Override
+    conditional Int knownSize() = (True, remaining);
+
+    @Override
+    conditional Char next() {
+        // the default implementation of the Reader relies on the combination of eof and take()
+        if (eof) {
+            return False;
+        }
+
+        return True, take();
+    }
+
+    /**
+     * Note: This method must generally be overridden on an implementation of `Reader`.
+     */
+    @Override
+    Char take();
+
+    // ----- Reader operations ---------------------------------------------------------------------
+
+    /**
+     * Obtain the next character from the `Reader`, **without changing the current `Reader`
+     * position**.
+     *
+     * Note: This method is often overridden on an implementation of `Reader`, because the default
+     * implementation of `peek()` is fairly expensive.
+     *
+     * @return `True` iff the `Reader` has not reached the [eof]
+     * @return (conditional) the next character
+     */
+    conditional Char peek() {
+        if (eof) {
+            return False;
+        }
+
+        // this is inefficient; rewind in particular may be very expensive
+        Char ch = take();
+        rewind();
+        return ch;
+    }
+
+    /**
+     * Advance the `Reader` one character and obtain that next character iff there exists a next
+     * character in the `Reader` **and** that next character matches the specified character.
+     *
+     * @param ch  the character to match
+     *
+     * @return `True` iff the `Reader` had not already reached the [eof] **and** the next character
+     *         matches the specified character `ch`
+     * @return (conditional) the next character
+     */
+    conditional Char match(Char ch) {
+        if (Char next := peek(), next == ch) {
+            return True, take();
+        }
+        return False;
+    }
+
+    /**
+     * Advance the `Reader` one character and obtain that next character iff there exists a next
+     * character in the `Reader` **and** that next character matches using the specified function.
+     *
+     * @param matches  a character-matching function
+     *
+     * @return `True` iff the `Reader` had not already reached the [eof] **and** the next character
+     *         matches using the specified character matching function
+     * @return (conditional) the next character
+     */
+    conditional Char match(function Boolean(Char) matches) {
+        if (Char next := peek(), matches(next)) {
+            return True, take();
+        }
+        return False;
+    }
 
     /**
      * Advance the Reader by the specified number of characters, but not past the end.
+     *
+     * Note: This method is often overridden on an implementation of `Reader`, because the default
+     * implementation is unoptimized.
      *
      * @param count  the number of characters to skip over (optional)
      *
@@ -62,25 +174,33 @@ interface Reader
      */
     @Override
     Reader skip(Int count = 1) {
-        assert:arg count >= 0;
+        if (count < 0) {
+            return rewind(-count);
+        }
 
         while (count-- > 0 && next()) {}
-
         return this;
     }
 
     /**
      * Rewind the Reader by the specified number of characters, but not past the beginning.
      *
+     * This may be an expensive operation.
+     *
+     * Note: This method is often overridden on an implementation of `Reader`, because the default
+     * implementation is unoptimized.
+     *
      * @param count  the number of characters to rewind (optional)
      *
      * @return this Reader
      */
     Reader rewind(Int count = 1) {
-        assert:arg count >= 0;
+        if (count < 0) {
+            return skip(-count);
+        }
 
-        Int target = (offset - count).notLessThan(0);
-        return reset().skip(target);
+        offset = (offset - count).notLessThan(0);
+        return this;
     }
 
     /**
@@ -88,30 +208,21 @@ interface Reader
      *
      * @return this Reader
      */
-    Reader reset();
-
-
-    // ----- Iterator ------------------------------------------------------------------------------
-
-    @Override
-    conditional Char next() {
-        if (eof) {
-            return False;
-        }
-
-        return True, nextChar();
+    Reader reset() {
+        offset = 0;
+        return this;
     }
 
-
-    // ----- bulk read operators -------------------------------------------------------------------
+    // ----- Sliceable operators -------------------------------------------------------------------
 
     /**
-     * Returns a portion of this Reader, as a String.
+     * Returns a portion of this `Reader`, as a `String`. This operator leaves the position within
+     * the `Reader` unchanged.
      *
-     * @param indexes  specifies a starting and stopping position for the slice
+     * @param indexes  specifies a starting and stopping [TextPosition] for the slice
      *
-     * @return a slice of this Reader as a String, corresponding to the specified range of
-     *         positions
+     * @return a slice of this `Reader` as a `String`, corresponding to the specified range
+     *         [TextPosition]s
      *
      * @throws IOException  represents the general category of input/output exceptions
      * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
@@ -129,7 +240,7 @@ interface Reader
         try (TextPosition current = position) {
             position = indexes.lowerBound;
             if (indexes.lowerExclusive) {
-                nextChar();
+                take();
             }
 
             result = nextString(count);
@@ -143,27 +254,53 @@ interface Reader
         return result;
     }
 
+    /**
+     * Returns a portion of this `Reader`, as a `String`. This operator leaves the position within
+     * the `Reader` unchanged.
+     *
+     * @param indexes  specifies a starting and stopping character offset for the slice
+     *
+     * @return a slice of this `Reader` as a `String`, corresponding to the specified range offsets
+     *
+     * @throws IOException  represents the general category of input/output exceptions
+     * @throws OutOfBounds  if the range indicates a slice that would contains illegal indexes
+     */
+    @Op("[..]") String slice(Range<Int> indexes) {
+        Int count = indexes.size;
+        if (count <= 0) {
+            return "";
+        }
+
+        Int previous = offset;
+        String result;
+        try {
+            offset = indexes.effectiveLowerBound;
+            result = nextString(count);
+            if (indexes.descending) {
+                result = result.reversed();
+            }
+        } finally {
+            offset = previous;
+        }
+
+        return result;
+    }
 
     // ----- bulk read operations ------------------------------------------------------------------
 
     /**
      * Test to see if the Reader contains at least the specified number of remaining characters.
      *
+     * Note: This property should be overridden on any implementation of `Reader` that does not have
+     * fast access to both the [remaining] and [count] values.
+     *
+     * This may be an expensive operation.
+     *
      * @param count  the number of remaining characters to test for
      *
      * @return True iff the Reader contains at least the specified number of remaining characters
      */
-    Boolean hasAtLeast(Int count);
-
-    /**
-     * Read characters into the provided array.
-     *
-     * @param  chars  the character array to read into
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
-     */
-    void nextChars(Char[] chars) = nextChars(chars, 0, chars.size);
+    Boolean hasAtLeast(Int count) = remaining >= count;
 
     /**
      * Read the specified number of characters into the provided array.
@@ -172,16 +309,18 @@ interface Reader
      * @param  offset  the offset into the array to store the first character read
      * @param  count   the number of characters to read
      *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
+     * @return the number of characters read, which is always the same as `count` unless the [eof]
+     *         is reached, in which case the number will be less than `count`
      */
-    void nextChars(Char[] chars, Int offset, Int count) {
-        assert offset >= 0 && count >= 0;
-
+    Int nextChars(Char[] chars, Int offset, Int count) {
+        assert:arg offset >= 0 && count >= 0;
         Int last = offset + count;
         while (offset < last) {
-            chars[offset++] = nextChar();
+            if (!(chars[offset++] := next())) {
+                return last - offset;               // TODO CP test and verify
+            }
         }
+        return count;
     }
 
     /**
@@ -189,27 +328,51 @@ interface Reader
      *
      * @param count  the number of characters to read
      *
-     * @return an array of the specified size, containing the characters read from the stream
-     *
-     * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
+     * @return an array of the specified count of characters (or fewer, if [eof] is encountered),
+     *         containing the characters read from the stream
      */
     immutable Char[] nextChars(Int count) {
-        Array<Char> chars = new Char[count];
-        nextChars(chars);
-        return chars.freeze(True);
+        Char[] chars = new Char[](count);
+        nextChars(chars, 0, count);
+        return chars.freeze(inPlace=True);
     }
 
     /**
      * Read the specified number of characters.
      *
+     * @param count  the number of characters to take into the resulting `String`
+     *
      * @return a String of the specified size
      */
     String nextString(Int count) = new String(nextChars(count));
 
+    /**
+     * Read from the current position to the end of the line, returning the characters up to but
+     * not including the end of the line, and leaving the current position on the beginning of (the
+     * first character of) the next line.
+     *
+     * @return the String representing the contents of the current line, starting from the current
+     *         position, up to but not including the line terminator
+     */
+    String nextLine() {
+        StringBuffer buf = new StringBuffer();
+        while (Char ch := next()) {
+            if (ch.isLineTerminator()) {
+                if (ch == '\r') {
+                    // '\r' (CR) is followed by an optional '\n' (LF)
+                    match('\n');
+                }
+                break;
+            } else {
+                buf.add(ch);
+            }
+        }
+        return buf.toString();
+    }
 
     // ----- line oriented operations --------------------------------------------------------------
 
+// TODO review vis-a-vis lineNumber property
     /**
      * Move the current position to the beginning of the specified line.
      *
@@ -245,31 +408,6 @@ interface Reader
         }
     }
 
-    /**
-     * Read from the current position to the end of the line, returning the characters up to but
-     * not including the end of the line, and leaving the current position on the beginning of (the
-     * first character of) the next line.
-     *
-     * @return the String representing the contents of the current line, starting from the current
-     *         position, up to but not including the line terminator
-     */
-    String nextLine() {
-        StringBuffer buf = new StringBuffer();
-        while (Char ch := next()) {
-            if (ch.isLineTerminator()) {
-                if (ch == '\r' && !eof && nextChar() != '\n') {
-                    rewind(1);
-                }
-
-                break;
-            } else {
-                buf.add(ch);
-            }
-        }
-
-        return buf.toString();
-    }
-
 
     // ----- redirection ---------------------------------------------------------------------------
 
@@ -279,38 +417,43 @@ interface Reader
      *
      * @param buf  the Writer or other `Appender<Char>` to pipe to
      *
+     * @return the [Writer] that was passed in
+     *
      * @throws IOException  represents the general category of input/output exceptions
      */
-    void pipeTo(Appender<Char> buf) {
+    Writer pipeTo(Writer buf) {
         while (Char ch := next()) {
             buf.add(ch);
         }
+        return buf;
     }
 
     /**
      * Pipe contents from this stream to the specified stream.
      *
-     * @param buf  the Writer or other `Appender<Char>` to pipe to
-     * @param max  the number of characters to pipe
+     * @param buf    the [Writer] (an `Appender<Char>`) to pipe to
+     * @param count  the number of characters to pipe to the provided [Appender]
+     *
+     * @return the [Writer] that was passed in
      *
      * @throws IOException  represents the general category of input/output exceptions
-     * @throws EndOfFile    if the end of the stream has been reached
+     * @throws EndOfFile    if the end of the stream is reached before `count` characters have been
+     *                      successfully piped to the provided [Writer]
      */
-    void pipeTo(Appender<Char> buf, Int count) {
-        assert:arg count >= 0;
-
-        buf.ensureCapacity(count);
-
-        while (count > 0) {
-            buf.add(nextChar());
-            --count;
+    Writer pipeTo(Writer buf, Int count) {
+        if (count > 0) {
+            buf.ensureCapacity(count);
+            do {
+                buf.add(take());
+            } while (--count > 0);
+        } else {
+            assert:arg count == 0;
         }
+        return buf;
     }
-
 
     // ----- Closeable -----------------------------------------------------------------------------
 
     @Override
-    void close(Exception? cause = Null) {
-    }
+    void close(Exception? cause = Null) {}
 }

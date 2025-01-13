@@ -23,7 +23,6 @@ const String
         construct String(text.chars.reify(Constant));
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -57,7 +56,6 @@ const String
     Boolean defined.get() {
         return this:service.typeSystem.definedNames.contains(this);
     }
-
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -94,7 +92,6 @@ const String
         StringBuffer buf = new StringBuffer(size + add);
         return (buf + this + o).toString();
     }
-
 
     // ----- operations ----------------------------------------------------------------------------
 
@@ -875,13 +872,78 @@ const String
     }
 
     /**
-    * Replace every appearance of the `match` substring in this String with the `replace` String.
-    *
-    * @param match    the substring to be replaced
-    * @param replace  the replacement String
-    *
-    * @return the resulting String
-    */
+     * Using the provided matching function, retain only the characters in the `String` that match.
+     *
+     * @param match  a function that evaluates each `Char` of the `String` for inclusion
+     *
+     * @return the resulting `String`
+     */
+    String! filter(function Boolean(Char) match) {
+        StringBuffer? buffer = Null;
+        EachChar: for (Char ch : chars) {
+            if (match(ch)) {
+                buffer?.add(ch);
+            } else if (buffer == Null) {
+                buffer = new StringBuffer(size);
+                if (!EachChar.first) {
+                    buffer.addAll(chars[0..<EachChar.count]);
+                }
+            }
+        }
+        return buffer?.toString() : this;
+    }
+
+    /**
+     * Replace runs of the specified character with a single instance of that character.
+     *
+     * @param ch  the character to remove runs of
+     *
+     * @return the resulting `String`
+     */
+    String! dedup(Char runChar) {
+        StringBuffer? buffer   = Null;
+        Int?          startRun = Null;
+        EachChar: for (Char ch : chars) {
+            if (ch == runChar) {
+                if (startRun == Null) {
+                    startRun = EachChar.count;
+                    buffer?.add(ch);
+                } else if (buffer == Null) {
+                    // this is the first detected run
+                    buffer = new StringBuffer(size).addAll(chars[0..startRun]);
+                }
+            } else {
+                buffer?.add(ch);
+                startRun = Null;
+            }
+        }
+        return buffer?.toString() : this;
+    }
+
+    /**
+     * Using the provided mapping function, convert each character of the `String` as indicated by
+     * the function.
+     *
+     * @param transform  a function that creates a "mapped" `Char` from each `Char` in this `String`
+     *
+     * @return the resulting String
+     */
+    String! map(function Char(Char) transform) {
+        StringBuffer buffer = new StringBuffer(size);
+        for (Char ch : chars) {
+            buffer.add(transform(ch));
+        }
+        return buffer.toString();
+    }
+
+    /**
+     * Replace every appearance of the `match` substring in this String with the `replace` String.
+     *
+     * @param match    the substring to be replaced
+     * @param replace  the replacement String
+     *
+     * @return the resulting String
+     */
     String! replace(String! match, String! replace) {
         Int replaceSize = replace.size;
 
@@ -904,7 +966,6 @@ const String
         return this;
     }
 
-
     // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
@@ -917,7 +978,6 @@ const String
         return chars.iterator();
     }
 
-
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
@@ -925,14 +985,12 @@ const String
         return chars[index];
     }
 
-
     // ----- Sliceable methods ---------------------------------------------------------------------
 
     @Override
     @Op("[..]") String slice(Range<Int> indexes) {
         return new String(chars[indexes]);
     }
-
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -958,7 +1016,7 @@ const String
      * @return a Reader over the characters of this String
      */
     Reader toReader() {
-        return new io.CharArrayReader(chars);
+        return new io.CharArrayReader(this);
     }
 
     @Override
@@ -999,7 +1057,6 @@ const String
         }
         return this;
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 
@@ -1074,20 +1131,22 @@ const String
     }
 
     /**
-     * Remove quotes from this string, and return the unquoted contents.
+     * Remove quotes from this string, and return the unquoted contents. By default, only double
+     * quotes (`"`) are assumed to be quotes; this can be overridden by specifying the `valueQuote`
+     * parameter.
      *
-     * @return `True` iff this string started and ended with double quotes
+     * @param valueQuote  (optional) a function that identifies an opening balanced quote of a
+     *                    quoted value
+     *
+     * @return `True` iff this string started and ended with balanced quotes
      * @return (conditional) the contents of the quoted String
      */
-    conditional String unquote() {
+    conditional String unquote(function Boolean(Char) valueQuote = ch -> ch == '\"') {
         Int size = this.size;
-        if (size >= 2 && chars[0] == '"' && chars[size-1] == '"') {
-            return True, this[0 >..< size-1];
-        }
-
-        return False;
+        return size >= 2 && valueQuote(chars[0]) && chars[size-1] == chars[0]
+                ? (True, this[0 >..< size-1])
+                : False;
     }
-
 
     // ----- Hashable functions --------------------------------------------------------------------
 
@@ -1100,7 +1159,6 @@ const String
     static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2) {
         return value1.chars == value2.chars;
     }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

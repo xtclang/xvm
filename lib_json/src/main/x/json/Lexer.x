@@ -271,7 +271,7 @@ class Lexer
         Id           id;
         Primitive    val   = Null;
         TextPosition start = reader.position;
-        switch (Char ch = reader.nextChar()) {
+        switch (Char ch = reader.take()) {
         case '{':
             id = ObjectEnter;
             break;
@@ -349,7 +349,7 @@ class Lexer
             //     other       PreWhole
             if (ch == '-') {
                 ++count;
-                ch = reader.nextChar();
+                ch = reader.take();
             }
 
             // PreWhole
@@ -360,7 +360,7 @@ class Lexer
                 if (reader.eof) {
                     break EOF;
                 }
-                ch = reader.nextChar();
+                ch = reader.take();
             } else if (ch >= '1' && ch <= '9') {
                 // MidWhole
                 //     '0'..'9'    MidWhole
@@ -370,7 +370,7 @@ class Lexer
                     if (reader.eof) {
                         break EOF;
                     }
-                    ch = reader.nextChar();
+                    ch = reader.take();
                 } while (ch >= '0' && ch <= '9');
             } else {
                 throw new IOException($"expected digit; found '{ch}'");
@@ -382,7 +382,7 @@ class Lexer
             if (ch == '.') {
                 fp = True;
                 ++count;
-                ch = reader.nextChar();
+                ch = reader.take();
 
                 // PreFrac
                 //     '0'..'9'    MidFrac
@@ -395,7 +395,7 @@ class Lexer
                         if (reader.eof) {
                             break EOF;
                         }
-                        ch = reader.nextChar();
+                        ch = reader.take();
                     } while (ch >= '0' && ch <= '9');
                 } else {
                     throw new IOException($"expected digit; found '{ch}'");
@@ -408,14 +408,14 @@ class Lexer
             if (ch == 'e' || ch == 'E') {
                 fp = True;
                 ++count;
-                ch = reader.nextChar();
+                ch = reader.take();
 
                 // PreExpSign
                 //     '+' '-'     PreExp
                 //     other       PreExp
                 if (ch == '+' || ch == '-') {
                     ++count;
-                    ch = reader.nextChar();
+                    ch = reader.take();
                 }
 
                 // PreExp
@@ -430,7 +430,7 @@ class Lexer
                         if (reader.eof) {
                             break EOF;
                         }
-                        ch = reader.nextChar();
+                        ch = reader.take();
                     } while (ch >= '0' && ch <= '9');
                 } else {
                     throw new IOException($"expected digit; found '{ch}'");
@@ -471,12 +471,12 @@ class Lexer
                     if (count > 0) {
                         TextPosition cur = reader.position;
                         reader.position  = start;
-                        buf.addAll(reader.nextChars(count));
+                        reader.pipeTo(buf, count);
                         reader.position  = cur;
                     }
                 }
 
-                switch (ch = reader.nextChar()) {
+                switch (ch = reader.take()) {
                 case '\"':
                 case '\\':
                 case '/':
@@ -505,10 +505,10 @@ class Lexer
 
                 case 'u':
                     // 'u' hex hex hex hex
-                    UInt32 codepoint = Nibble.of(reader.nextChar()).toUInt32() << 8
-                                     | Nibble.of(reader.nextChar()).toUInt32() << 8
-                                     | Nibble.of(reader.nextChar()).toUInt32() << 8
-                                     | Nibble.of(reader.nextChar()).toUInt32();
+                    UInt32 codepoint = Nibble.of(reader.take()).toUInt32() << 8
+                                     | Nibble.of(reader.take()).toUInt32() << 8
+                                     | Nibble.of(reader.take()).toUInt32() << 8
+                                     | Nibble.of(reader.take()).toUInt32();
                     break;
                 }
                 break;
@@ -550,7 +550,7 @@ class Lexer
      * @throws IOException if the next character does not match the specified character
      */
     protected void require(Char ch) {
-        if (reader.eof || reader.nextChar() != ch) {
+        if (reader.eof || reader.take() != ch) {
             throw new IOException($"expected '{ch}'");
         }
     }

@@ -1,3 +1,6 @@
+import TextPosition.Snapshot;
+import TextPosition.Stringer;
+
 /**
  * A CharArrayReader provides a Reader interface on top of a raw `Char[]` or a `String`. Because its
  * unit of storage is already in the form of a `Char`, its navigation both forwards and backwards
@@ -12,7 +15,6 @@ class CharArrayReader(immutable Char[] chars)
         construct CharArrayReader(str.toCharArray());
         this.str = str;
     }
-
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -29,63 +31,34 @@ class CharArrayReader(immutable Char[] chars)
     /**
      * @return the total number of characters represented by the reader
      */
+    @Override
     Int size.get() = chars.size;
+
+    /**
+     * @return the remaining (yet to be read) number of characters represented by the reader
+     */
+    conditional Int knownSize() {
 
     /**
      * @return the remaining (yet to be read) number of characters represented by the reader
      */
     Int remaining.get() = size - offset;
 
+    // ----- Iterator operations -------------------------------------------------------------------
 
-    // ----- Position implementation ---------------------------------------------------------------
+    @Override
+    Boolean knownEmpty() = eof;
 
-    /**
-     * Simple constant implementation of the Position interface.
-     */
-    private static const SimplePos(Int offset, Int lineNumber, Int lineOffset)
-            extends Reader.AbstractPos;
-
-    /**
-     * A Position implementation that packs all the data into a single Int64.
-     */
-    private static const TinyPos
-            extends Reader.AbstractPos {
-
-        construct(Int offset, Int lineNumber, Int lineOffset) {
-            // up to 24 bits for offset, 20 bits for line and line offset
-            assert:arg offset     >= 0 && offset     <= 0xFFFFFF;
-            assert:arg lineNumber >= 0 && lineNumber <= 0xFFFFF;
-            assert:arg lineOffset >= 0 && lineOffset <= 0xFFFFF;
-
-            combo = (offset << 20 | lineNumber << 20 | lineOffset).toInt64();
-        }
-
-        private Int64 combo;
-
-        @Override
-        Int offset.get() {
-            return combo >>> 40;
-        }
-
-        @Override
-        Int lineNumber.get() {
-            return combo >>> 20 & 0xFFFFF;
-        }
-
-        @Override
-        Int lineOffset.get() {
-            return combo & 0xFFFFF;
-        }
-    }
-
+    @Override
+    conditional Int knownSize() = (True, remaining);
 
     // ----- Reader operations ---------------------------------------------------------------------
 
     @Override
-    public/private Int offset;
+    Int offset; // TODO
 
     @Override
-    public/private Int lineNumber;
+    Int lineNumber; // TODO
 
     @Override
     public/private Int lineStartOffset;
@@ -96,12 +69,12 @@ class CharArrayReader(immutable Char[] chars)
         TextPosition get() {
             return offset <= 0xFFFFFF && lineNumber <= 0xFFFFF && lineOffset <= 0xFFFFF
                     ? new TinyPos(offset, lineNumber, lineOffset)
-                    : new SimplePos(offset, lineNumber, lineOffset);
+                    : new Snapshot(offset, lineNumber, lineOffset);
         }
 
         @Override
         void set(TextPosition position) {
-            assert:arg position.is(SimplePos) || position.is(TinyPos);
+            assert:arg position.is(Snapshot) || position.is(TinyPos);
 
             offset          = position.offset;
             lineNumber      = position.lineNumber;
@@ -115,7 +88,7 @@ class CharArrayReader(immutable Char[] chars)
     }
 
     @Override
-    Char nextChar() {
+    Char take() {
         if (eof) {
             throw new EndOfFile();
         }
@@ -168,12 +141,10 @@ class CharArrayReader(immutable Char[] chars)
         return this;
     }
 
-
     // ----- bulk read operations ------------------------------------------------------------------
 
     @Override
     Boolean hasAtLeast(Int count) = count <= remaining;
-
 
     // ----- line oriented operations --------------------------------------------------------------
 
@@ -187,7 +158,6 @@ class CharArrayReader(immutable Char[] chars)
         TODO
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -196,11 +166,5 @@ class CharArrayReader(immutable Char[] chars)
     immutable Char[] toCharArray() = chars;
 
     @Override
-    String toString() {
-        return str ?: {
-            String result = new String(chars);
-            str = result;
-            return result;
-        };
-    }
+    String toString() = str ?: (str <- new String(chars));
 }

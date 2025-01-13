@@ -1,7 +1,7 @@
 /**
  * An iterator that issues an event on every "next" call.
  */
-class PeekingIterator<Element>(Iterator<Element> iter, function void observe(Element))
+class ObservingIterator<Element>(Iterator<Element> iter, function void observe(Element))
         extends DelegatingIterator<Element>(iter) {
 
     protected/private function void observe(Element);

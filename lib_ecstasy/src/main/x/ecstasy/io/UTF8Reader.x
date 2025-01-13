@@ -1,3 +1,5 @@
+import TextPosition.Stringer;
+
 /**
  * A UTF8Reader represents a bounded source of character data from an underlying InputStream.
  */
@@ -50,7 +52,8 @@ class UTF8Reader
      */
     @Abstract
     protected static const AbstractPos
-            extends Reader.AbstractPos {
+            implements Reader
+            incorporates Stringer {
         @Abstract
         @RO Int rawOffset;
     }
@@ -142,7 +145,7 @@ class UTF8Reader
     }
 
     @Override
-    Char nextChar() {
+    Char take() {
         Char ch = DataInput.readUTF8Char(in);
         ++offset;
 
