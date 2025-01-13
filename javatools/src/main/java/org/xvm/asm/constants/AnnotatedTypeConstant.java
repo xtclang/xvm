@@ -334,7 +334,8 @@ public class AnnotatedTypeConstant
         if (typeBase.isAnnotated())
             {
             TypeConstant typeBaseR = typeBase.andNot(pool, that);
-            if (typeBaseR != typeBase && !(typeBaseR instanceof DifferenceTypeConstant))
+            if (typeBaseR != null && typeBaseR != typeBase &&
+                    !(typeBaseR instanceof DifferenceTypeConstant))
                 {
                 return cloneSingle(pool, typeBaseR);
                 }

@@ -184,10 +184,18 @@ public class IsExpression
                 }
             else if (exprTarget instanceof NameExpression exprName)
                 {
-                typeInferred = typeTarget.combine(pool, typeTest);
+                TypeConstant typeTrue  = typeTarget.combine(pool, typeTest);
+                TypeConstant typeFalse = typeTarget.andNot(pool, typeTest);
 
-                exprName.narrowType(ctx, Branch.WhenTrue,  typeInferred);
-                exprName.narrowType(ctx, Branch.WhenFalse, typeTarget.andNot(pool, typeTest));
+                exprName.narrowType(ctx, Branch.WhenTrue, typeTrue);
+
+                // typeFalse can be null if there was a "TYPE_MATCHES_ALWAYS" warning above
+                if (typeFalse != null)
+                    {
+                    exprName.narrowType(ctx, Branch.WhenFalse, typeFalse);
+                    }
+
+                typeInferred = typeTrue;
                 }
 
             if (!fSingle)

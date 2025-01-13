@@ -291,12 +291,32 @@ public class UnionTypeConstant
             return type1;
             }
 
+        if (type1.isA(that) && !type2.isA(that))
+            {
+            // if A'.is(A), then (A' | B) - A => B
+            return type2;
+            }
+
+        if (type2.isA(that) && !type1.isA(that))
+            {
+            // if B'.is(B), then (A | B') - B => A
+            return type1;
+            }
+
         // recurse to cover cases like this:
         // ((A | B) | C) - B => A | C
         if (type1.isRelationalType() || type2.isRelationalType())
             {
             TypeConstant type1R = type1.andNot(pool, that);
             TypeConstant type2R = type2.andNot(pool, that);
+            if (type1R == null)
+                {
+                return type2R;
+                }
+            if (type2R == null)
+                {
+                return type1R;
+                }
             if (type1R != type1 || type2R != type2)
                 {
                 return type1R.union(pool, type2R);
@@ -308,6 +328,14 @@ public class UnionTypeConstant
             // (A | B) - (C | D) => ((A | B) - C) | ((A | B) - D)
             TypeConstant type1R = andNot(pool, that.getUnderlyingType());
             TypeConstant type2R = andNot(pool, that.getUnderlyingType2());
+            if (type1R == null)
+                {
+                return type2R;
+                }
+            if (type2R == null)
+                {
+                return type1R;
+                }
             if (type1R != this || type2R != that)
                 {
                 return type1R.union(pool, type2R);

@@ -1102,9 +1102,11 @@ public class TerminalTypeConstant
                     }
 
                 TypeConstant typeR = typeConstraint.andNot(pool, that);
-                return typeR.equals(typeConstraint)
-                        ? this
-                        : this.combine(pool, typeR);
+                return typeR == null
+                        ? null
+                        : typeR.equals(typeConstraint)
+                            ? this
+                            : this.combine(pool, typeR);
                 }
             }
 

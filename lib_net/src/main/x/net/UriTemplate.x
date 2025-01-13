@@ -420,7 +420,7 @@ const UriTemplate {
             if (var.explode) {
                 if (Value prev := bindings.get(name)) {
                     assert !prev.is(Map) as "Cannot combine a Map and a List";
-                    value = (prev.is(String[]) ? prev : prev.as(String).split(',')) + text.split(','); // TODO GG cast is redundant
+                    value = (prev.is(List<String>) ? prev : prev.split(',')) + text.split(',');
                 } else {
                     value = text.split(',');
                 }
@@ -470,7 +470,8 @@ const UriTemplate {
                         break;
 
                     case Map<String, String>:
-                        (Char kvDelim, Char entryDelim) = var.explode ? ('=',(onlyWithin==Query ? '&' : prefix)) : (',',',');
+                        (Char kvDelim, Char entryDelim) =
+                                var.explode ? ('=',(onlyWithin==Query ? '&' : prefix)) : (',',',');
                         Loop: for ((String key, String val) : value) {
                             if (!Loop.first) {
                                 buf.add(entryDelim);
@@ -1081,5 +1082,6 @@ const UriTemplate {
      * Assume that an empty map is constant, and so return a mutable ListMap if an empty one is
      * passed in.
      */
-    private static Map<String, Value> mutate(Map<String, Value> map) = map.empty ? new ListMap<String, Value>() : map;
+    private static Map<String, Value> mutate(Map<String, Value> map) =
+            map.empty ? new ListMap<String, Value>() : map;
 }

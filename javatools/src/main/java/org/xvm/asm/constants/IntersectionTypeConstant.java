@@ -195,12 +195,32 @@ public class IntersectionTypeConstant
             return type1;
             }
 
+        if (type1.isA(that) && !type2.isA(that))
+            {
+            // (A<T> + B) - A => B
+            return type2;
+            }
+
+        if (type2.isA(that) && !type1.isA(that))
+            {
+            // (A + B<T>) - B => B
+            return type1;
+            }
+
         // recurse to cover cases like this:
         // ((A + B) + C) - B => A + C
         if (type1.isRelationalType() || type2.isRelationalType())
             {
             TypeConstant type1R = type1.andNot(pool, that);
             TypeConstant type2R = type2.andNot(pool, that);
+            if (type1R == null)
+                {
+                return type2R;
+                }
+            if (type2R == null)
+                {
+                return type1R;
+                }
             if (type1R != type1 || type2R != type2)
                 {
                 return type1R.combine(pool, type2R);

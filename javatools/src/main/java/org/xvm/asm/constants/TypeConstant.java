@@ -1104,7 +1104,8 @@ public abstract class TypeConstant
      * Unless this type is relational, the "not assignable to the specified type" part of the
      * contract may not be achievable.
      *
-     * @return a type that is equal or narrower than this type
+     * @return a type that is equal or narrower than this type or null if such a representation is
+     *         impossible, e.g. {@code this.isA(that)}
      */
     public TypeConstant andNot(ConstantPool pool, TypeConstant that)
         {
@@ -1113,6 +1114,11 @@ public abstract class TypeConstant
         if (thisResolved != this || thatResolved != that)
             {
             return thisResolved.andNot(pool, thatResolved);
+            }
+
+        if (thisResolved.isA(thatResolved))
+            {
+            return null;
             }
 
         // type "Type" is known to have a distributive property:
