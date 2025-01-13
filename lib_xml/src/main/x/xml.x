@@ -1,4 +1,34 @@
+/**
+ *
+ */
 module xml {
+
+    /**
+     * Create an XML [Document] from the passed XML text.
+     *
+     * TODO add error logging
+     *
+     * @param text  a `String` containing an XML document
+     *
+     * @return `True` iff the `String` contained a valid XML document
+     * @return (optional) the parsed XML [Document]
+     */
+    conditional Document parse(String text) {
+        TODO
+    }
+
+    /**
+     * Create an XML [Document] from the passed XML text.
+     *
+     * TODO add optional DTD etc. params
+     *
+     * @param name  the name of the top level XML element
+     *
+     * @return a new XML [Document] with a root element of the specified name
+     */
+    Document make(String name) {
+        TODO
+    }
 
     // ----- XML validation ------------------------------------------------------------------------
 

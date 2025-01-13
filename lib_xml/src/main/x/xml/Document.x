@@ -10,6 +10,8 @@ interface Document
         extends Freezable {
     /**
      * TODO
+     * A `Document` instance that `.is(immutable)` can be assumed to be immutable, but the converse
+     * is not true; to be sure that a Document.
      */
     Document ensureMutable();
 

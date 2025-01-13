@@ -1,9 +1,10 @@
 /**
- * This represents a "part" of an XML [Document]. XML documents have lots of different forms of
- * content, including the obvious (elements and attributes), and the not-so-obvious (comments,
- * processing instructions, etc.)
+ * This represents a "part" of an XML [Document], or even the entire `Document`. XML documents have
+ * different forms of content, including the obvious (elements and attributes), but also the
+ * not-so-obvious (comments, processing instructions, etc.) Each is represented by a `Part`.
  */
-interface Part {
+interface Part
+        extends Stringable {
     /**
      * The [Document] to which this part belongs. It is possible that a `Part` is an orphan, and its
      * `Document` would be `Null`.
@@ -14,16 +15,6 @@ interface Part {
      * The root (the parent-most) `Element` of the XML.
      */
     @RO Element root.get() = doc?.root : assert;
-// {
-//        TODO
-//    };
-
-    enum Form<FormType extends Part> {DOC<Document>, ELEM<Element>, ATTR<Attribute>, DATA<Part>, REF<Part>, PI<Part>, }
-
-    /**
-     * The [Form] of the `Part`.
-     */
-    @RO Form form;
 
     /**
      * The parent `Part` of this `Part`, or `Null`.
@@ -44,4 +35,34 @@ interface Part {
      * This `Part`'s index in its [siblings] list.
      */
     @RO Int index;
+
+    /**
+     * Delete this `Part` from the XML `Document` (or portion thereof) within which it exists.
+     *
+     * @throws ReadOnly  if the `Document` (or other container) is not mutable
+     */
+    void delete();
+
+    /**
+     * @param pretty  pass `True` to format for a human reader, which will be larger than the
+     *                default space-optimized format
+     */
+    @Override
+    String toString(Boolean pretty = False) {
+        return appendTo(new StringBuffer(estimateStringLength(pretty)), pretty).toString();
+    }
+
+    /**
+     * @param pretty  pass `True` to format for a human reader, which will be larger than the
+     *                default space-optimized format
+     */
+    @Override
+    @Abstract Int estimateStringLength(Boolean pretty = False);
+
+    /**
+     * @param pretty  pass `True` to format for a human reader, which will be larger than the
+     *                default space-optimized format
+     */
+    @Override
+    @Abstract Appender<Char> appendTo(Appender<Char> buf, Boolean pretty = False);
 }
