@@ -7,11 +7,16 @@
  * [processing instructions](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PI) aka PIs.
  */
 interface Document
-        extends Freezable {
+        extends Part {
     /**
-     * TODO
+     * If this `Document` is already mutable, then return this `Document`, otherwise create a
+     * mutable form of this Document and return it.
+     *
      * A `Document` instance that `.is(immutable)` can be assumed to be immutable, but the converse
-     * is not true; to be sure that a Document.
+     * is not true; to be sure that a `Document` is mutable, always rely on this method.
+     *
+     * @return a mutable form of this `Document`, which will be this `Document` if it is already
+     *         mutable
      */
     Document ensureMutable();
 
@@ -27,18 +32,15 @@ interface Document
      * portion of the document. If none exists, one is created. If one exists, any previous
      * information is discarded, and only the information passed to this method is retained.
      *
-     * @param version     TODO
-     * @param encoding    TODO
-     * @param standalone  TODO
+     * @param version     the XML version
+     * @param encoding    the XML encoding
+     * @param standalone  the XML "standalone" specifier
      *
-     * @return TODO
+     * @return the new XMLDecl as a Processing `Instruction`
+     *
+     * @throws ReadOnly  if the `Document` is not mutable
      */
     Instruction initXmlDecl(Version version = v:1.0, String? encoding = Null, Boolean? standalone = Null);
-
-    /**
-     *
-     */
-    void deleteXmlDecl();
 
     /**
      * This is the [Version] number from the
@@ -48,11 +50,20 @@ interface Document
      */
     Version? xmlVersion;
 
+    /**
+     * The XML "standalone" specifier.
+     */
     String? encoding;
 
+    /**
+     * The XML "standalone" specifier.
+     */
     Boolean standalone;
 
-//    @RO List<Content> contents;
-
-    @RO Element root;
+    /**
+     * The root XML [Element] of the `Document`. An XML `Document` always has a single root
+     * `Element`.
+     */
+    @Override
+    Element root;
 }
