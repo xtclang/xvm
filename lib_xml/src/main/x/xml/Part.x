@@ -4,7 +4,7 @@
  * not-so-obvious (comments, processing instructions, etc.) Each is represented by a `Part`.
  */
 interface Part
-        extends Stringable {
+        extends Freezable, Stringable {
     /**
      * The [Document] to which this part belongs. It is possible that a `Part` is an orphan, and its
      * `Document` would be `Null`.
