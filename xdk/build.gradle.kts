@@ -61,6 +61,7 @@ dependencies {
     xtcModule(libs.xdk.webauth)
     xtcModule(libs.xdk.webcli)
     xtcModule(libs.xdk.xenia)
+    xtcModule(libs.xdk.xml)
     xtcModule(libs.javatools.bridge)
     @Suppress("UnstableApiUsage")
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
