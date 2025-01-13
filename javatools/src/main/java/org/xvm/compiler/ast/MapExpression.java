@@ -146,10 +146,11 @@ public class MapExpression
             {
             TypeConstant typeMap = pool().typeMap();
 
-            if (!typeRequired.isA(typeMap) ||
-                    !type.testFit(ctx, typeMap.getType(), fExhaustive, null).isFit())
+            if (!typeRequired.isA(typeMap)
+                    || !type.testFit(ctx, typeMap.getType(), fExhaustive, errs).isFit()
+                    || !checkMapType(type.getTypeConstant(), errs))
                 {
-                break CheckEntries;
+                return TypeFit.NoFit;
                 }
 
             TypeConstant typeKey = typeRequired.resolveGenericType("Key");
@@ -162,20 +163,20 @@ public class MapExpression
             TypeFit fit = TypeFit.Fit;
             for (Expression key : keys)
                 {
-                TypeFit fitKey = key.testFit(ctx, typeKey, fExhaustive, null);
+                TypeFit fitKey = key.testFit(ctx, typeKey, fExhaustive, errs);
                 if (!fitKey.isFit())
                     {
-                    break CheckEntries;
+                    return TypeFit.NoFit;
                     }
                 fit = fit.combineWith(fitKey);
                 }
 
             for (Expression val : values)
                 {
-                TypeFit fitVal = val.testFit(ctx, typeVal, fExhaustive, null);
+                TypeFit fitVal = val.testFit(ctx, typeVal, fExhaustive, errs);
                 if (!fitVal.isFit())
                     {
-                    break CheckEntries;
+                    return TypeFit.NoFit;
                     }
                 fit = fit.combineWith(fitVal);
                 }
@@ -311,15 +312,9 @@ public class MapExpression
                 }
             }
 
-        // the type must either be Map (in which case a system-selected type will be used), or a
-        // type that is a Map and takes the contents in its constructor, or has a no-parameter
-        // constructor (so the map can be created empty and the items added to it)
-        if (!typeActual.isSingleUnderlyingClass(true) ||
-                !typeActual.getSingleUnderlyingClass(true).equals(pool.clzMap()))
+        if (!checkMapType(typeActual, errs))
             {
-            // REVIEW how to handle another type besides "Map"? same problem will exist for List, Array, etc.
-            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                    pool.typeMap().getValueString(), typeActual.getValueString());
+            // an error has been reported
             return null;
             }
 
@@ -483,6 +478,28 @@ public class MapExpression
             return new ConstantExprAST(toConstant());
             }
         return new MapExprAST(getType(), m_aKeyAST, m_aValueAST);
+        }
+
+
+    // ----- internal helpers ----------------------------------------------------------------------
+
+    /**
+     * The actual type must either be Map (in which case a system-selected type will be used), or a
+     * type that is a Map and takes the contents in its constructor, or has a no-parameter
+     * constructor (so the map can be created empty and the items added to it).
+     */
+    private boolean checkMapType(TypeConstant typeActual, ErrorListener errs)
+        {
+        ConstantPool pool = pool();
+        if (!typeActual.isSingleUnderlyingClass(true) ||
+                !typeActual.getSingleUnderlyingClass(true).equals(pool.clzMap()))
+            {
+            // TODO how to handle another type besides "Map"?
+            log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
+                    pool.typeMap().getValueString(), typeActual.getValueString());
+            return false;
+            }
+        return true;
         }
 
 

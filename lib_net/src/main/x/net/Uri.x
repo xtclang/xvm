@@ -257,14 +257,11 @@ const Uri
      *         corresponding unescaped URI query parameter values
      */
     immutable Map<String, String> extractQueryParams() {
-        static MapCollector<String, String, ListMap<String,String>> toMap = new MapCollector();
+        static MapCollector<String, String, ListMap<String, String>> toMap = new MapCollector();
         static (String, String) decode(Map.Entry<String, String> entry) {
             return decodeParam(entry.key), decodeParam(entry.value);
         }
-        // TODO GG: this doesn't compile
-        // return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True) : [];
-        return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True);
-        return [];
+        return query?.splitMap(entrySeparator='&').map(decode, toMap).freeze(inPlace=True) : [];
     }
 
     // ----- modifiers -----------------------------------------------------------------------------
