@@ -2,6 +2,8 @@
  *
  */
 module xml {
+    package convert import convert.xtclang.org;
+    import convert.Format;
 
     /**
      * Create an XML [Document] from the passed XML text.
