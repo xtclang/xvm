@@ -103,18 +103,26 @@ module xml {
     }
 
     /**
-     * Determine if the provided  target and instruction constitute a valid XML
+     * Determine if the provided target is valid for an XML Processing Instruction, aka a
      * ["PI"](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PITarget).
      *
-     * @param target       the "PITarget"
+     * @param target  the "PITarget"
+     *
+     * @return `True` iff the specified instruction target is valid
+     */
+    static Boolean isValidTarget(String target) {
+        return isValidName(target) && !ecstasy.collections.CaseInsensitive.areEqual(target, "xml");
+    }
+
+    /**
+     * Determine if the provided instruction is valid for an XML Processing Instruction, aka a
+     * ["PI"](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PITarget).
+     *
      * @param instruction  the contents of the processing instruction
      *
-     * @return `True` iff the specified target and instruction are valid
+     * @return `True` iff the specified instruction text is valid
      */
-    static Boolean isValidInstruction(String target, String instruction) {
-        if (!isValidName(target) || ecstasy.collections.CaseInsensitive.areEqual(target, "xml")) {
-            return False;
-        }
+    static Boolean isValidInstruction(String instruction) {
         for (Int i = 0, Int len = instruction.size; i < len; ++i) {
             Char ch = instruction[i];
             if (!isChar(ch)) {

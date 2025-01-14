@@ -9,12 +9,12 @@ interface Part
      * The [Document] to which this part belongs. It is possible that a `Part` is an orphan, and its
      * `Document` would be `Null`.
      */
-    @RO Document? doc;
+    @RO Document? doc.get() = parent?.doc : Null;
 
     /**
      * The root (the parent-most) `Element` of the XML.
      */
-    @RO Element root.get() = doc?.root : assert;
+    @RO Element? root.get() = parent?.root : Null;
 
     /**
      * The parent `Part` of this `Part`, or `Null`.

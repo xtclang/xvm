@@ -1,17 +1,23 @@
 /**
  * An [XML Processing Instruction (PI)](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PI).
  */
-interface Instruction
-        extends Part {
+class Instruction
+        implements Part {
     /**
      * The "target" of the Processing `Instruction`.
      */
-    String target;
+    String target.set(String s) {
+        assert:arg isValidTarget(s) as $"Invalid Processing Instruction target: {s.quoted()}";
+        super(s);
+    }
 
     /**
      * The optional text content of the Processing `Instruction`.
      */
-    String? text;
+    String? text.set(String? s) {
+        assert:arg isValidInstruction(s?) as $"Invalid Processing Instruction text: {s.quoted()}";
+        super(s);
+    }
 
     @Override
     Int estimateStringLength(Boolean pretty = False) {

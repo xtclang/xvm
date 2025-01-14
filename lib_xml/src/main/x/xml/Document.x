@@ -8,6 +8,18 @@
  */
 interface Document
         extends Part {
+    @Override
+    @RO Document doc.get() = this;
+
+    /**
+     * The root XML [Element] of the `Document`. An XML `Document` always has a single root
+     * `Element`. Setting the root `Element` may throw a ReadOnly exception if the document is not
+     * mutable, or it may copy the entire `Element` that is provided since the provided `Element`
+     * may already be part of a different `Document`.
+     */
+    @Override
+    Element root;
+
     /**
      * If this `Document` is already mutable, then return this `Document`, otherwise create a
      * mutable form of this Document and return it.
@@ -59,13 +71,4 @@ interface Document
      * The XML "standalone" specifier.
      */
     Boolean standalone;
-
-    /**
-     * The root XML [Element] of the `Document`. An XML `Document` always has a single root
-     * `Element`. Setting the root `Element` may throw a ReadOnly exception if the document is not
-     * mutable, or it may copy the entire `Element` that is provided since the provided `Element`
-     * may already be part of a different `Document`.
-     */
-    @Override
-    Element root;
 }

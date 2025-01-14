@@ -5,6 +5,9 @@ import ecstasy.io.TextPosition;
  */
 interface Element
         extends ValueHolder {
+    @Override
+    @RO Element root.get() = parent.is(Element)?.root : this;
+
     /**
      * `Element`s can be nested. A nested `Element` will have a non-`Null` parent `Element`, or be a
      * child of the [Document] itself.
