@@ -35,18 +35,22 @@ const Http1Request(RequestInfo   info,
 
     assert() {
         // TODO handle non-simple bodies e.g. multi-part, streaming
-        assert !info.containsNestedBodies();
+        if (info.containsNestedBodies()) {
+            TODO multi-part body requests are not yet supported
+        }
 
         if (Byte[] bytes := info.getBodyBytes()) {
             this.hasBody = True;
             this.bytes   = bytes;
 
-            assert String[] contentTypes := info.getHeaderValuesForName(Header.ContentType);
-            assert mediaType := MediaType.of(contentTypes[0]);
+            assert String[] contentTypes := info.getHeaderValuesForName(Header.ContentType)
+                    as $"{Header.ContentType.quoted()} header is missing";
+            assert mediaType := MediaType.of(contentTypes[0])
+                    as $"Invalid media type {contentTypes[0].quoted()}";
         } else {
             this.hasBody   = False;
             this.bytes     = [];
-            this.mediaType = Text;  // whatever
+            this.mediaType = Text; // whatever
         }
     }
 
@@ -94,21 +98,15 @@ const Http1Request(RequestInfo   info,
     // ----- HttpMessage interface -----------------------------------------------------------------
 
     @Override
-    @RO Header header.get() {
-        return this;
-    }
+    @RO Header header.get() = this;
 
     @Override
     Body? body {
         @Override
-        Body? get() {
-            return hasBody ? this : Null;
-        }
+        Body? get() = hasBody ? this : Null;
 
         @Override
-        void set(Body? body) {
-            throw new ReadOnly();
-        }
+        void set(Body? body) = throw new ReadOnly();
     }
 
     @Override
@@ -119,32 +117,22 @@ const Http1Request(RequestInfo   info,
     }
 
     @Override
-    immutable HttpMessage freeze(Boolean inPlace = False) {
-        return this;
-    }
+    immutable HttpMessage freeze(Boolean inPlace = False) = this;
 
 
     // ----- Request Interface ---------------------------------------------------------------------
 
     @Override
-    HttpMethod method.get() {
-        return info.method;
-    }
+    HttpMethod method.get() = info.method;
 
     @Override
-    @Lazy Uri uri.calc() {
-        return info.uri;
-    }
+    @Lazy Uri uri.calc() = info.uri;
 
     @Override
-    Scheme scheme.get() {
-        return info.tls ? HTTPS : HTTP;
-    }
+    Scheme scheme.get() = info.tls ? HTTPS : HTTP;
 
     @Override
-    String authority.get() {
-        return url.authority ?: assert;
-    }
+    String authority.get() = url.authority ?: assert;
 
     @Override
     Protocol protocol.get() {
@@ -261,14 +249,10 @@ const Http1Request(RequestInfo   info,
     // ----- Header interface ----------------------------------------------------------------------
 
     @Override
-    @RO Boolean isRequest.get() {
-        return True;
-    }
+    @RO Boolean isRequest.get() = True;
 
     @Override
-    @RO Boolean modifiable.get() {
-        return False;
-    }
+    @RO Boolean modifiable.get() = False;
 
     @Override
     @Lazy String[] names.calc() = info.headerNames;
@@ -321,9 +305,7 @@ const Http1Request(RequestInfo   info,
     }
 
     @Override
-    void removeAll(String name) {
-        throw new ReadOnly();
-    }
+    void removeAll(String name) = throw new ReadOnly();
 
 
     // ----- Body interface ------------------------------------------------------------------------
@@ -335,7 +317,5 @@ const Http1Request(RequestInfo   info,
     Byte[] bytes;
 
     @Override
-    Body from(Object content) {
-        throw new ReadOnly();
-    }
+    Body from(Object content) = throw new ReadOnly();
 }
