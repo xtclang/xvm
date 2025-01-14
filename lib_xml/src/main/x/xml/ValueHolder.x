@@ -1,17 +1,16 @@
-import ecstasy.io.TextPosition;
-
 /**
- * Represents a piece of an XML document.
+ * Represents a [Part] of an XML document that holds a named value. Specifically, an [Element] may
+ * hold a value, and an [Attribute] must hold a value.
  */
 interface ValueHolder
         extends Part {
     /**
-     * The name of an `Element`.
+     * The name associated with the value.
      */
     String name;
 
     /**
-     * The textual form of the `ValueHolder`'s value, or `Null` if there is no value. The
+     * The textual form of the `ValueHolder`'s value, or `Null` if there is no value.
      */
     String? value;
 
@@ -46,5 +45,5 @@ interface ValueHolder
      *
      * @return the `String` value that was stored in this `ValueHolder`
      */
-    <Value> String? format(Value? value, Format<Value> format);
+    <Value> String? encode(Value? value, Format<Value> format);
 }

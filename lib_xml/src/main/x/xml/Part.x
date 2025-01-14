@@ -35,19 +35,19 @@ interface Part
     /**
      * A [List] of sibling `Part` objects including this `Part`.
      */
-    @RO List<Part> siblings;
+    @RO List<Part> siblings.get() = parent?.parts : [this];
 
     /**
      * This `Part`'s index in its [siblings] list.
      */
-    @RO Int index;
+    @RO Int index.get() = parent?.parts.indexOf(this)? : 0;
 
     /**
      * Delete this `Part` from the XML `Document` (or portion thereof) within which it exists.
      *
      * @throws ReadOnly  if the `Document` (or other container) is not mutable
      */
-    void delete();
+    void delete() = parent?.parts.delete(index);
 
     /**
      * @param pretty  pass `True` to format for a human reader, which will be larger than the
