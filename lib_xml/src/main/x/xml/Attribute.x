@@ -17,18 +17,17 @@ interface Attribute
 
     @Override
     <Value> Value valueAs(Format<Value> format, Value defaultValue) {
-        String text = value.trim();
-        if (!text.empty) {
-            return format.decode(text);
-        }
-        return defaultValue;
+        String text = value;
+        return text.empty ? defaultValue : format.decode(text);
     }
 
     @Override
-    <Value> String format(Value? value, Format<Value> format) {
-        assert value != Null;
+    <Value> String encode(Value? value, Format<Value> format) {
+        assert:arg value != Null as $"Attribute values must not be Null ({name=})";
         String text = format.encode(value);
         this.value = text;
         return text;
     }
+
+    // TODO Stringable
 }

@@ -1,8 +1,8 @@
 /**
  * An [XML Comment](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-Comment).
  */
-interface Comment
-        extends Part {
+class Comment
+        implements Part {
     /**
      * The text content of the `Comment`.
      */
@@ -16,11 +16,10 @@ interface Comment
     @Override
     Appender<Char> appendTo(Appender<Char> buf, Boolean pretty = False) {
         "<!--".appendTo(buf);
-        buf.add(' ');
         if (!text.empty) {
-            text.appendTo(buf);
             buf.add(' ');
+            text.appendTo(buf);
         }
-        return "-->".appendTo(buf);
+        return " -->".appendTo(buf);
     }
 }
