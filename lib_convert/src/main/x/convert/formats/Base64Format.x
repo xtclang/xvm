@@ -1,22 +1,17 @@
 /**
  * A `Format` that handles decoding Base64 data from a `String` into a `Byte[]`.
  */
-const Base64Format(Boolean pad=False, Int? lineLength=Null)
+const Base64Format(Boolean pad=False, Int? lineLength = Null)
         implements Format<Byte[]> {
 
     @Override
-    String name.get() {
-        return $"Base64{pad ? "-padded" : ""}{lineLength == Null ? "" : $"({lineLength})"}";
-    }
+    String name.get() =
+            $"Base64{pad ? "-padded" : ""}{lineLength == Null ? "" : $"({lineLength})"}";
 
     /**
      * Default Base64 Format instance: Unpadded, no line length limit.
      */
     static Base64Format Instance = new Base64Format();
-
-// REVIEW could this (transparently) support any further codec that translates binary into some other type?
-//    @Override
-//    <OtherValue> conditional Format!<OtherValue> forType(Type<OtherValue> type, Registry registry)
 
     @Override
     Value read(Iterator<Char> stream) {
@@ -64,7 +59,7 @@ const Base64Format(Boolean pad=False, Int? lineLength=Null)
     }
 
     @Override
-    void write(Value value, Appender<Char> stream, Boolean? pad=Null, Int? lineLength=Null) {
+    void write(Value value, Appender<Char> stream, Boolean? pad = Null, Int? lineLength = Null) {
         pad        ?:= this.pad;
         lineLength ?:= this.lineLength ?: MaxValue;
 

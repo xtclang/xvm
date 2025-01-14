@@ -327,7 +327,6 @@ interface ClassTemplate
             }
 
             // one can only "implement" an interface
-            // REVIEW implication of the possibility of an @Annotated interface
             if (!(composition.is(ClassTemplate) && composition.format == Interface)) {
                 return False;
             }
@@ -523,32 +522,24 @@ interface ClassTemplate
         }
 
         @Override
-        TypeTemplate type.get() {
-            return composition.type.annotate(annotation);
-        }
+        TypeTemplate type.get() = composition.type.annotate(annotation);
 
         @Override
-        Contribution[] contribs.get() {
-            return [];
-        }
+        Contribution[] contribs.get() = [];
 
         @Override
-        conditional (AnnotationTemplate, Composition!) deannotate() {
-            return True, annotation, composition;
-        }
+        conditional (AnnotationTemplate, Composition!) deannotate() = (True, annotation, composition);
     }
-
 
     // ----- ClassTemplate API ---------------------------------------------------------------------
 
     /**
-     * TODO CP please explain
+     * Determine if this class template represents an "inflated" property.
      *
      * @return True iff the class represents an inflated property
      * @return (conditional) the PropertyTemplate this class comes from
      */
     conditional PropertyTemplate fromProperty();
-
 
     // ----- attributes ----------------------------------------------------------------------------
 
@@ -673,7 +664,6 @@ interface ClassTemplate
      * The information that identifies the location of the source code for this class.
      */
     @RO SourceCodeInfo? sourceInfo;
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

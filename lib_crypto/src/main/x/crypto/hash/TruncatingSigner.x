@@ -19,12 +19,11 @@ const TruncatingSigner
 
         this.baseSigner = baseSigner;
         this.truncateTo = truncateTo;
-        this.name       = fullName ?: $"{baseSigner.algorithm.name}-{8*truncateTo}"; // REVIEW is '-' standard? or '/'?
+        this.name       = fullName ?: $"{baseSigner.algorithm.name}-{8*truncateTo}";
     }
 
     protected/private Signer baseSigner;
     protected/private Int truncateTo;
-
 
     // ----- Algorithm interface -------------------------------------------------------------------
 
@@ -37,7 +36,6 @@ const TruncatingSigner
         // optimize it by proving that we can return "this" instead of allocating a new Signer
         return new TruncatingSigner(baseSigner.algorithm.allocate(key).as(Signer), truncateTo, name);
     }
-
 
     // ----- Signer interface ----------------------------------------------------------------------
 

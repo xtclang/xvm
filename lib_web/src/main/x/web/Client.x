@@ -3,8 +3,6 @@ import requests.SimpleRequest;
 
 /**
  * A representation of a web client.
- * TODO how to secure? need to be able to restrict which algorithms can be used
- * TODO patch method
  */
 interface Client {
     // ----- Client configuration ------------------------------------------------------------------
@@ -70,7 +68,6 @@ interface Client {
      */
     @RO Header defaultHeaders;
 
-
     // ---- helpers for simple HTTP methods --------------------------------------------------------
 
     /**
@@ -101,7 +98,6 @@ interface Client {
 
     /**
      * Post the specified resource.
-     * REVIEW what about a version that takes a (json.Doc json) parameter?
      *
      * @param uri        the resource identifier to post a request to
      * @param content    the content of the request body
@@ -111,6 +107,19 @@ interface Client {
      */
     ResponseIn post(String | Uri uri, Object content, MediaType? mediaType = Null) {
         RequestOut request = createRequest(POST, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
+        return send^(request);
+    }
+    /**
+     * Patch the specified resource.
+     *
+     * @param uri        the resource identifier to post a request to
+     * @param content    the content of the request body
+     * @param mediaType  (optional) the media type of the body
+     *
+     * @return the resulting [Response] object
+     */
+    ResponseIn patch(String | Uri uri, Object content, MediaType? mediaType = Null) {
+        RequestOut request = createRequest(PATCH, uri.is(String) ? new Uri(uri) : uri, content, mediaType);
         return send^(request);
     }
 
@@ -125,7 +134,6 @@ interface Client {
         RequestOut request = createRequest(DELETE, uri.is(String) ? new Uri(uri) : uri);
         return send^(request);
     }
-
 
     // ---- request handling -----------------------------------------------------------------------
 
