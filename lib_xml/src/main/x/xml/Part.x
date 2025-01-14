@@ -70,5 +70,5 @@ interface Part
      *                default space-optimized format
      */
     @Override
-    @Abstract Appender<Char> appendTo(Appender<Char> buf, Boolean pretty = False);
+    @Abstract Writer appendTo(Writer buf, Boolean pretty = False);
 }
