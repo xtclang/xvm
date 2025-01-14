@@ -14,7 +14,7 @@ class Comment
     }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf, Boolean pretty = False) {
+    Writer appendTo(Writer buf, Boolean pretty = False) {
         "<!--".appendTo(buf);
         if (!text.empty) {
             buf.add(' ');
