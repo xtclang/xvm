@@ -72,5 +72,20 @@ interface Document
      */
     Boolean standalone;
 
-    // TODO Stringable
+    @Override
+    Int estimateStringLength(Boolean pretty = False) {
+        return parts.reduce(0, (sum, part) -> sum + part.estimateStringLength(pretty))
+                + (pretty ? parts.size - 1 : 0);
+    }
+
+    @Override
+    Writer appendTo(Writer buf, Boolean pretty = False) {
+        Loop: for (Part part : parts) {
+            if (pretty && !Loop.first) {
+                buf.add('\n');
+            }
+            part.appendTo(buf, pretty);
+        }
+        return buf;
+    }
 }

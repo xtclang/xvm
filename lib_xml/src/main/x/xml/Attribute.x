@@ -29,5 +29,39 @@ interface Attribute
         return text;
     }
 
-    // TODO Stringable
+    @Override
+    Int estimateStringLength(Boolean pretty = False) {
+        Int total = name.size + value.size + 3;     // '=' and 2 quote chars
+        Int squotes = 0;
+        Int dquotes = 0;
+        for (Char ch : value) {
+            switch (ch) {
+            case '\'':
+                ++squotes;
+                break;
+            case '\"':
+                ++dquotes;
+                break;
+            case '<':
+                total += 3;         // "&lt;"
+                break;
+            case '&':
+                total += 4;         // "&amp;"
+                break;
+            }
+        }
+        // we'll never escape single quotes because we'll always use double quotes by default or if
+        // there are any single quotes; we may need to escape double quotes, though, under two
+        // conditions: (1) the value is > 64 chars long (we always use double quotes), or (2) there
+        // are both single and double quotes (in which case we also always use double quotes)
+        if (dquotes > 0 && (value.size > 64 || squotes > 0)) {
+            total += 5 * dquotes;   // "&quot;"
+        }
+        return total;
+    }
+
+    @Override
+    Writer appendTo(Writer buf, Boolean pretty = False) {
+        return writeAttribute(buf, name, value);
+    }
 }

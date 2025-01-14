@@ -54,7 +54,7 @@ class Instruction(String target, String? text = Null)
     }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf, Boolean pretty = False) {
+    Writer appendTo(Writer buf, Boolean pretty = False) {
         "<?".appendTo(buf);
         target.appendTo(buf);
         if (text != Null) {
