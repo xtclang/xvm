@@ -1,5 +1,3 @@
-import ecstasy.io.TextPosition;
-
 /**
  * Represents a piece of an XML document.
  */
@@ -8,10 +6,6 @@ interface Element
     @Override
     @RO Element root.get() = parent.is(Element)?.root : this;
 
-    /**
-     * `Element`s can be nested. A nested `Element` will have a non-`Null` parent `Element`, or be a
-     * child of the [Document] itself.
-     */
     @Override
     @RO (Element|Document)? parent;
 
@@ -45,7 +39,7 @@ interface Element
     }
 
     @Override
-    <Value> String? format(Value? value, Format<Value> format) {
+    <Value> String? encode(Value? value, Format<Value> format) {
         if (value == Null) {
             this.value = Null;
             return Null;
@@ -57,7 +51,8 @@ interface Element
     }
 
     /**
-     * A representation of the [Attribute]s of this XML `Element`.
+     * A representation of the [Attribute]s of this XML `Element`. The insertion order of the `Map`
+     * is maintained.
      */
     @RO Map<String, Attribute> attributes;
 
@@ -80,7 +75,7 @@ interface Element
      *
      * @return the added or modified [Attribute] of the specified name
      */
-    <Value> Attribute formatAttribute(String name, Value value, Format<Value> format) {
+    <Value> Attribute encodeAttribute(String name, Value value, Format<Value> format) {
         return setAttribute(name, format.encode(value));
     }
 
@@ -121,11 +116,7 @@ interface Element
      * @return the new child `Element`
      */
     <Value> Element add(String name, Value? value, Format<Value> format) {
-        String? text = Null;
-        if (value != Null) {
-            text = format.encode(value);
-        }
-        return add(name, text);
+        return add(name, format.encode(value?) : Null);
     }
 
     /**
@@ -138,4 +129,6 @@ interface Element
         elements.removeAll(e -> e.name == name);
         return this;
     }
+
+    // TODO Stringable
 }

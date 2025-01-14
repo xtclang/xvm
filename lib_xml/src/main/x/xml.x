@@ -1,7 +1,7 @@
 /**
- *
+ * TODO
  */
-module xml {
+module xml.xtclang.org {
     package convert import convert.xtclang.org;
     import convert.Format;
 
@@ -28,7 +28,7 @@ module xml {
      *
      * @return a new XML [Document] with a root element of the specified name
      */
-    Document make(String name) {
+    Document create(String name) {
         TODO
     }
 
@@ -194,18 +194,19 @@ module xml {
         }
 
         return switch (ch.codepoint) {
-            case 0x00C0..0x00D6: True;
-            case 0x00D8..0x00F6: True;
-            case 0x00F8..0x02FF: True;
-            case 0x0370..0x037D: True;
-            case 0x037F..0x1FFF: True;
-            case 0x200C..0x200D: True;
-            case 0x2070..0x218F: True;
-            case 0x2C00..0x2FEF: True;
-            case 0x3001..0xD7FF: True;
-            case 0xF900..0xFDCF: True;
-            case 0xFDF0..0xFFFD: True;
+            case 0x00C0..0x00D6:
+            case 0x00D8..0x00F6:
+            case 0x00F8..0x02FF:
+            case 0x0370..0x037D:
+            case 0x037F..0x1FFF:
+            case 0x200C..0x200D:
+            case 0x2070..0x218F:
+            case 0x2C00..0x2FEF:
+            case 0x3001..0xD7FF:
+            case 0xF900..0xFDCF:
+            case 0xFDF0..0xFFFD:
             case 0x10000..0xEFFFF: True;
+
             default: False;
         };
     }
@@ -238,19 +239,20 @@ module xml {
         }
 
         return switch (ch.codepoint) {
-            case 0x00B7: True;
-            case 0x00C0..0x00D6: True;
-            case 0x00D8..0x00F6: True;
-            case 0x00F8..0x037D: True;
-            case 0x037F..0x1FFF: True;
-            case 0x200C..0x200D: True;
-            case 0x203F..0x2040: True;
-            case 0x2070..0x218F: True;
-            case 0x2C00..0x2FEF: True;
-            case 0x3001..0xD7FF: True;
-            case 0xF900..0xFDCF: True;
-            case 0xFDF0..0xFFFD: True;
+            case 0x00B7:
+            case 0x00C0..0x00D6:
+            case 0x00D8..0x00F6:
+            case 0x00F8..0x037D:
+            case 0x037F..0x1FFF:
+            case 0x200C..0x200D:
+            case 0x203F..0x2040:
+            case 0x2070..0x218F:
+            case 0x2C00..0x2FEF:
+            case 0x3001..0xD7FF:
+            case 0xF900..0xFDCF:
+            case 0xFDF0..0xFFFD:
             case 0x10000..0xEFFFF: True;
+
             default: False;
         };
     }

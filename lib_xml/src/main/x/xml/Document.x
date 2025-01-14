@@ -71,4 +71,6 @@ interface Document
      * The XML "standalone" specifier.
      */
     Boolean standalone;
+
+    // TODO Stringable
 }
