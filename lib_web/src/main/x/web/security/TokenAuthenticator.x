@@ -3,7 +3,8 @@ import ecstasy.collections.CaseInsensitive;
 import convert.codecs.Utf8Codec;
 import convert.formats.Base64Format;
 
-import responses.SimpleResponse;
+import sec.Entitlement;
+import sec.KeyCredential;
 
 
 /**
@@ -29,7 +30,6 @@ service TokenAuthenticator
         this.realm = that.realm;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -38,13 +38,26 @@ service TokenAuthenticator
     @Override
     public/protected Realm realm;
 
-
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
     Attempt[] findAndRevokeSecrets(RequestIn request) {
-        // TODO
-        return [];
+        KeyAttempt[] attempts = scan(request);
+        if (attempts.empty) {
+            return attempts;
+        }
+
+        KeyAttempt[] secrets = [];
+        for (KeyAttempt attempt : attempts) {
+            if (attempt.status >= NotActive,
+                    Entitlement entitlement ?= attempt.entitlement,
+                    String      locator     ?= attempt.locator,
+                                entitlement := entitlement.revokeCredential(KeyCredential.Scheme, locator)) {
+                realm.updateEntitlement(entitlement);
+                secrets += attempt;
+            }
+        }
+        return secrets;
     }
 
     @Override
@@ -52,8 +65,24 @@ service TokenAuthenticator
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
-        // first, check to see if the incoming request includes the necessary authentication
-        // information, which will be in one or more "Authorization" header entries
+        KeyAttempt[] attempts = scan(request);
+        return attempts.empty ? [new Attempt(Null, NoData)] : attempts;
+    }
+
+    /**
+     * Scan the incoming request for any relevant HTTP Authentication Scheme information, which will
+     * be in one or more `Authorization` header entries.
+     *
+     * @param request  the HTTP request
+     *
+     * @return an array of zero or more [Attempt] records, corresponding to the information found in
+     *         the `Authorization` headers
+     */
+    KeyAttempt[] scan(RequestIn request) {
+        KeyAttempt[] attempts = [];
+
+        // check to see if the incoming request includes the necessary authentication information,
+        // which will be in one or more "Authorization" header entries
         for (String auth : request.header.valuesOf("Authorization")) {
             auth = auth.trim();
             // "Authorization" header format: Bearer Base64([{user}:]{token})
@@ -61,7 +90,8 @@ service TokenAuthenticator
                 try {
                     auth = Utf8Codec.decode(Base64Format.Instance.decode(auth.substring(7)));
                 } catch (Exception e) {
-                    return [new Attempt(Null, Failed, BadRequest)];
+                    attempts += new KeyAttempt(Null, Failed);
+                    continue;
                 }
 
                 String user;
@@ -71,20 +101,28 @@ service TokenAuthenticator
                     user  = auth[0 ..< tokenOffset];
                     token = auth.substring(tokenOffset + 1);
                 } else {
-                    // TODO CP: there is no user name, only a token; how to ask the Realm?
                     user  = "";
                     token = auth;
                 }
 
-// TODO
-//                if (Set<String> roles := realm.authenticate(user, token)) {
-//                    session?.authenticate(user, roles=roles);
-//                    return Allowed;
-//                } else {
-//                    return Forbidden;
-//                }
+                // REVIEW CP: how to use the user name if present?
+                String locator = KeyCredential.createLocator(realm.name, token);
+
+                if (Entitlement entitlement := realm.findEntitlement(KeyCredential.Scheme, locator)) {
+                    Authenticator.Status status = entitlement.calcStatus(realm) == Active ? Success : NotActive;
+                    attempts += new KeyAttempt(entitlement, status, locator);
+                } else {
+                    attempts += new KeyAttempt(locator, Failed);
+                }
             }
         }
-        return [new Attempt(Null, NoData)];
+        return attempts;
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    static const KeyAttempt(Claim? subject, Status status, String? locator = Null)
+            extends Attempt(subject, status, Null) {
+        @RO Entitlement? entitlement.get() = subject.is(Entitlement) ?: Null;
     }
 }

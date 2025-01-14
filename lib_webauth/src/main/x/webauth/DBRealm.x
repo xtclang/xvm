@@ -57,7 +57,6 @@ const DBRealm
             this.createCfg = cfg;
         }
 
-
         this.name = name;
         this.db   = db;
     } finally {
@@ -81,12 +80,12 @@ const DBRealm
             throw new IllegalState("Unsupported credential scheme: {cfg.credScheme.quoted}");
         }
 
-        ListMap<String, String> initUserNoPass = new ListMap();
+        Map<String, String> initUserNoPass = new ListMap();
         for ((String userName, String password) : cfg.initUserPass) {
             Credential credential = createCredential(userName, password);
             Principal  principal  = createPrincipal(
                     new Principal(0, userName, permissions=[AllowAll], credentials=[credential]));
-            initUserNoPass.put(userName, "???");
+            initUserNoPass.put(userName, "");
         }
 
         // store the configuration (but remove the passwords), and specify that the database

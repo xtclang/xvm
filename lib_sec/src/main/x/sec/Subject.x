@@ -236,16 +236,32 @@ import ecstasy.maps.HasherMap;
      * @return (conditional) the resulting `Subject`
      */
     conditional Subject revokeCredential(Credential credential) {
+        return revokeCredential(credential.scheme, credential.locators);
+    }
+
+    /**
+     * Revoke any [Credential] from this `Subject` identified by the specified scheme and locator.
+     *
+     * @param scheme   the scheme of the [Credential] to revoke
+     * @param locator  the locator of the [Credential] to revoke
+     *
+     * @return `True` iff a matching [Credential] was present on this `Subject`, and was revoked
+     * @return (conditional) the resulting `Subject`
+     */
+    conditional Subject revokeCredential(String scheme, String|String[] locator) {
         // replace any instances of that credential with a revoked credential
-        Subject  subject  = this;
-        Boolean  modified = False;
-        String[] locators = credential.locators;
+        Subject subject  = this;
+        Boolean modified = False;
+
         Each: for (Credential each : credentials) {
             if (each.status != Revoked
-                    && each.scheme == credential.scheme
-                    && each.locators == locators) {
-                subject  = subject.with(credentials=subject.credentials.replace(Each.count, credential.revoke()));
+                    && each.scheme == scheme
+                    && (locator.is(String)
+                        ? each.locators.contains(locator)
+                        : each.locators == locator)) {
                 modified = True;
+                subject  = subject.with(
+                                credentials=subject.credentials.replace(Each.count, each.revoke()));
             }
         }
         return modified, subject;

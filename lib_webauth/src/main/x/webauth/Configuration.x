@@ -14,11 +14,12 @@ import web.security.DigestCredential;
  *                       successfully applied to the database
  */
 // TODO other config for 2FA, email verification, password requirements, etc.
-const Configuration(Map<String,String> initUserPass,
-                    String             credScheme  = DigestCredential.Scheme,
-                    Boolean            configured  = False,
+const Configuration(Map<String, String> initUserPass,
+                    String              credScheme  = DigestCredential.Scheme,
+                    Boolean             configured  = False,
                    )
         default(new Configuration([], configured=False)) {
+
     /**
      * Create a copy of this Configuration, with the specified properties modified.
      *
@@ -28,9 +29,9 @@ const Configuration(Map<String,String> initUserPass,
      *
      * @return a new Configuration with the specified changes
      */
-    Configuration with(Map<String,String>? initUserPass = Null,
-                       String?             credScheme   = Null,
-                       Boolean?            configured   = Null,
+    Configuration with(Map<String, String>? initUserPass = Null,
+                       String?              credScheme   = Null,
+                       Boolean?             configured   = Null,
                       ) {
         return new Configuration(initUserPass = initUserPass ?: this.initUserPass,
                                  credScheme   = credScheme   ?: this.credScheme,

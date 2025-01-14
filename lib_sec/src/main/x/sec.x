@@ -3,4 +3,7 @@
  * authentication and permission-based authorization, including support for principals, groups, and
  * entitlements.
  */
-module sec.xtclang.org {}
+module sec.xtclang.org {
+    package convert import convert.xtclang.org;
+    package crypto  import crypto.xtclang.org;
+}

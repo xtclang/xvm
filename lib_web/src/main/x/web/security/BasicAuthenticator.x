@@ -55,10 +55,10 @@ service BasicAuthenticator(Realm realm)
 
         BasicAttempt[] secrets = [];
         for (BasicAttempt attempt : attempts) {
-            if (attempt.status >= NotActive
-                    && attempt.subject.is(Principal)
-                    && attempt.credential?.active : False) {
-                realm.updatePrincipal(attempt.principal?.revokeCredential(attempt.credential?)?);
+            if (attempt.status >= NotActive,
+                    Principal principal ?= attempt.principal,
+                              principal := principal.revokeCredential(attempt.credential?)) {
+                realm.updatePrincipal(principal);
                 secrets += attempt;
             }
         }
