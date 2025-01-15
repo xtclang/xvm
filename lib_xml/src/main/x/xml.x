@@ -317,15 +317,7 @@ module xml.xtclang.org {
 
         // for the element value, escape just `<` and `&` chars
         if (value != Null) {
-            for (Char ch : value) {
-                if (ch == '<') {
-                    "&lt;".appendTo(writer);
-                } else if (ch == '&') {
-                    "&amp;".appendTo(writer);
-                } else {
-                    writer.add(ch);
-                }
-            }
+            writeData(writer, value);
         }
 
         // write any child elements
@@ -385,6 +377,55 @@ module xml.xtclang.org {
             }
         }
         writer.add(quote);
+        return writer;
+    }
+
+    /**
+     * Write an XML element's CharData.
+     *
+     * @param writer  the [Writer] to emit output to
+     * @param text    the CharData text content
+     *
+     * @return the writer
+     */
+    static Writer writeData(Writer writer, String text) {
+        Int of  = 0;
+        Int len = text.size;
+
+        // skip leading and trailing whitespace (using the broad Unicode definition of whitespace)
+        while (of < len && text[of].isWhitespace()) {
+            ++of;
+        }
+        while (len > of && text[len-1].isWhitespace()) {
+            --len;
+        }
+
+        for ( ; of < len; ++of) {
+            switch (Char ch = text[of]) {
+            case '<':
+                "&lt;".appendTo(writer);
+                break;
+            case '&':
+                "&amp;".appendTo(writer);
+                break;
+            case '>':
+                if (of >= 2 && text[of-1] == ']' && text[of-2] == ']') {
+                    // weird XML spec detail: "The right angle bracket (>) may be represented
+                    // using the string "&gt;", and MUST, for compatibility, be escaped using
+                    // either "&gt;" or a character reference when it appears in the string
+                    // "]]>" in content", and "In the content of elements, character data is any
+                    // string of characters which does not contain the start-delimiter of any
+                    // markup and does not include the CDATA-section-close delimiter, "]]>""
+                    "&gt;".appendTo(writer);
+                } else {
+                    writer.add(ch);
+                }
+                break;
+            default:
+                writer.add(ch);
+                break;
+            }
+        }
         return writer;
     }
 
