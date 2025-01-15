@@ -59,6 +59,24 @@ module xml.xtclang.org {
     }
 
     /**
+     * Determine if the provided content is valid XML
+     * [CharData](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-CharData).
+     *
+     * @param content  the textual content to encode in a CDATA section
+     *
+     * @return `True` iff the specified content can be encoded in a CDATA section
+     */
+    static Boolean isValidCharData(String content) {
+        for (Int i = 0, Int len = content.size; i < len; ++i) {
+            Char ch = content[i];
+            if (!isChar(ch)) {
+                return False;
+            }
+        }
+        return True;
+    }
+
+    /**
      * Determine if the provided content can be placed into a valid XML
      * ["CDATA section"](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-CDSect).
      *

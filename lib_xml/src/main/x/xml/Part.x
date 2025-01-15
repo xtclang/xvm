@@ -2,6 +2,8 @@
  * This represents a "part" of an XML [Document], or even the entire `Document`. XML documents have
  * different forms of content, including the obvious (elements and attributes), but also the
  * not-so-obvious (comments, processing instructions, etc.) Each is represented by a `Part`.
+ *
+ * TODO DTD and EntityRef support
  */
 interface Part
         extends Freezable, Stringable {
@@ -63,12 +65,12 @@ interface Part
      *                default space-optimized format
      */
     @Override
-    @Abstract Int estimateStringLength(Boolean pretty = False);
+    @Abstract Int estimateStringLength(Boolean pretty = False, Int indent=0);
 
     /**
      * @param pretty  pass `True` to format for a human reader, which will be larger than the
      *                default space-optimized format
      */
     @Override
-    @Abstract Writer appendTo(Writer buf, Boolean pretty = False);
+    @Abstract Writer appendTo(Writer buf, Boolean pretty = False, String indent="");
 }
