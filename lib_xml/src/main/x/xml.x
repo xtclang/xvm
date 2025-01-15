@@ -99,6 +99,20 @@ module xml.xtclang.org {
     }
 
     /**
+     * Determine if the provided content is a valid entity reference, aka
+     * ["EntityRef"](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-EntityRef).
+     *
+     * @param ref  the EntityRef text
+     *
+     * @return `True` iff the provided EntityRef text is a legal entity reference in XML
+     */
+    static Boolean isValidEntityRef(String ref) {
+        // EntityRef ::= '&' Name ';'
+        Int len = ref.size;
+        return len >= 3 && ref[0] == '&' && ref[len-1] == ';' && isValidName(ref[0..<len-1]);
+    }
+
+    /**
      * Determine if the provided  target and instruction constitute a valid XML
      * ["PI"](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PITarget).
      *
