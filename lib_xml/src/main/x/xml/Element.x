@@ -130,5 +130,48 @@ interface Element
         return this;
     }
 
-    // TODO Stringable
+    @Override
+    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
+        return 3; // TODO
+    }
+
+    @Override
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent = "") {
+        List<Part> parts = this.parts;
+
+        indent.appendTo(buf);
+        buf.add('<');
+        name.appendTo(buf);
+        if (parts.empty) {
+            return "/>".appendTo(buf);
+        }
+
+        Boolean stag      = True;       // spec refers to opening element tag as "stag"
+        String  newIndent = indent;     // will be grown to a new indent before it gets used
+        Loop: for (Part part : parts) {
+            if (part.is(Attribute)) {
+                part.appendTo(buf, pretty, indent);
+            } else {
+                if (stag) {
+                    if (Loop.last) {
+                        return "/>".appendTo(buf);
+                    }
+                    buf.add('>');
+                    newIndent = indent + "  ";
+                    stag      = False;
+                }
+
+                if (pretty) {
+                    buf.add('\n');
+                    newIndent.appendTo(buf);
+                }
+                part.appendTo(buf, pretty, newIndent);
+            }
+        }
+
+        indent.appendTo(buf);
+        "</".appendTo(buf);
+        name.appendTo(buf);
+        return buf.add('>');
+    }
 }

@@ -26,11 +26,7 @@ class Instruction(String target, String? text = Null)
     }
 
     @Override
-    public/protected (Document|Element)? parent.set((Document|Element)? p) {
-        // can't orphan the Instruction once it has been adopted
-        assert parent == Null;
-        super(p);
-    }
+    public/protected (Document|Element)? parent;
 
     /**
      * The "target" of the Processing `Instruction`.
@@ -49,12 +45,12 @@ class Instruction(String target, String? text = Null)
     }
 
     @Override
-    Int estimateStringLength(Boolean pretty = False) {
+    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
         return 4 + target.size + (text?.size + 1 : 0);
     }
 
     @Override
-    Writer appendTo(Writer buf, Boolean pretty = False) {
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent="") {
         "<?".appendTo(buf);
         target.appendTo(buf);
         if (text != Null) {
