@@ -11,6 +11,9 @@ import web.RequestAborted;
 
 import web.responses.SimpleResponse;
 
+import web.security.Authenticator;
+import web.security.Authenticator.Attempt;
+
 import web.sessions.Broker as SessionBroker;
 
 import net.UriTemplate.UriParameters;
@@ -55,7 +58,7 @@ service Dispatcher {
     void dispatch(RequestInfo requestInfo) {
         Boolean tls       = requestInfo.tls;
         String  uriString = requestInfo.uriString;
-        FromTheBeginning: while (True) {
+        while (True) {
             // select the service to delegate request processing to; the service infos are sorted
             // with the most specific path first (so the first path match wins)
             Int             uriSize     = uriString.size;
@@ -91,6 +94,7 @@ service Dispatcher {
             @Future ResponseOut response;
             ProcessRequest: if (serviceInfo == Null) {
                 RequestIn request = new Http1Request(requestInfo, sessionBroker);
+                handlePlainTextSecrets(tls, requestInfo, request);
                 response = catalog.webApp.handleUnhandledError^(request, HttpStatus.NotFound);
             } else {
                 // split what's left of the URI into a path, a query, and a fragment
@@ -115,6 +119,7 @@ service Dispatcher {
                     try {
                         uri = new Uri(path=uriString, query=query, fragment=fragment);
                     } catch (Exception e) {
+                        handlePlainTextSecrets(tls, requestInfo);
                         response = new SimpleResponse(BadRequest);
                         break ProcessRequest;
                     }
@@ -139,6 +144,7 @@ service Dispatcher {
                         Int errorWsid = onErrorInfo.wsid;
                         bundle = bundlePool.allocateBundle(errorWsid);
                         if (ErrorHandler onError ?= bundle.ensureErrorHandler(errorWsid)) {
+                            handlePlainTextSecrets(tls, requestInfo, request, bundle=bundle);
                             response = onError^(request, HttpStatus.NotFound);
                             break ProcessRequest;
                         } else {
@@ -146,6 +152,7 @@ service Dispatcher {
                             bundle = Null;
                         }
                     }
+                    handlePlainTextSecrets(tls, requestInfo, request);
                     response = catalog.webApp.handleUnhandledError^(request, HttpStatus.NotFound);
                     break ProcessRequest;
                 }
@@ -153,6 +160,7 @@ service Dispatcher {
                 // if the endpoint requires HTTPS (or some other form of TLS), the server responds
                 // either with an error or with a redirect to a URL that uses a TLS-enabled protocol
                 if (!tls && endpoint.requiresTls) {
+                    handlePlainTextSecrets(tls, requestInfo);
                     response = new SimpleResponse(endpoint.redirectTls ? PermanentRedirect : Forbidden);
                     response.header.add(Header.Location, requestInfo.httpsUrl.toString());
                     break ProcessRequest;
@@ -183,11 +191,17 @@ service Dispatcher {
                 request.bindSession(session);
 
                 if (sendNow == Null) {
-                    // this is the "normal" i.e. "actual" request processing
-                    bundle = bundlePool.allocateBundle(wsid);
-                    Handler handle = bundle.ensureCallChain(endpoint);
-                    response = handle^(request);
+                    if (!tls, sendNow ?= handlePlainTextSecrets(tls, requestInfo, request,
+                                            bundle=bundle, createResponse=True)) {
+                        response = sendNow;
+                    } else {
+                        // this is the "normal" i.e. "actual" request processing
+                        bundle = bundlePool.allocateBundle(wsid);
+                        Handler handle = bundle.ensureCallChain(endpoint);
+                        response = handle^(request);
+                    }
                 } else {
+                    handlePlainTextSecrets(tls, requestInfo, request);
                     response = sendNow;
                 }
             }
@@ -221,5 +235,57 @@ service Dispatcher {
             });
             return;
         }
+    }
+
+    /**
+     * Check the request to make sure that no plain text credentials are potentially leaked by the
+     * request. If any credential may have been leaked, revoke those credentials and produce a
+     * response to the client if required.
+     *
+     * @param tls             `True` iff the client sent a request protected by TLS
+     * @param requestInfo      the incoming [RequestInfo] from the client
+     * @param request          (optional) [RequestIn], iff there already exists a request;
+     *                         otherwise `Null`
+     * @param bundle           (optional) [ChainBundle], iff one has already been allocated;
+     *                         otherwise `Null`
+     * @param createResponse   (optional) specifies whether a response needs to be produced if
+     *                         plain text credentials are potentially leaked
+     *
+     * @return a [ResponseOut] to send back to the client in case the response is requested and
+     *                         there are plain text credential leaks; `Null` otherwise
+     */
+    protected ResponseOut? handlePlainTextSecrets(Boolean      tls,
+                                                  RequestInfo  requestInfo,
+                                                  RequestIn?   request        = Null,
+                                                  ChainBundle? bundle         = Null,
+                                                  Boolean      createResponse = False,
+                                                 ) {
+        // only requests that are not TLS protected are assumed to leak credentials
+        if (!tls) {
+            // obtain an Authenticator
+            Authenticator authenticator = bundle?.authenticator : catalog.webApp.authenticator;
+
+            // ensure that a request exists
+            request ?:= new Http1Request(requestInfo, sessionBroker);
+
+            // ask the Authenticator to scan for (and revoke) any plain text credentials
+            Attempt[] leaks = authenticator.findAndRevokeSecrets(request);
+
+            // if anything may have leaked, create a request to respond as best as possible to
+            // the assumed leaks
+            if (createResponse && !leaks.empty) {
+                // grab the first ResponseOut from the Attempt, if any is provided
+                HttpStatus? status = Null;
+                for (Attempt leak : leaks) {
+                    if (ResponseOut response := leak.response.is(ResponseOut)) {
+                        return response;
+                    } else {
+                        status ?:= leak.response.is(HttpStatus)?;
+                    }
+                }
+                return new SimpleResponse(status ?: Unauthorized);
+            }
+        }
+        return Null;
     }
 }

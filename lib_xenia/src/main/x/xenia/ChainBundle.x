@@ -81,7 +81,7 @@ service ChainBundle {
      * to avoid contention on a single `Authenticator` in case it is implemented without concurrency
      * and has high-latency (e.g. database) operations.
      */
-    private Authenticator authenticator;
+    public/private Authenticator authenticator;
 
     /**
      * A lazily created duplicate of the app's session broker, created only if the authentication
