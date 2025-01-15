@@ -1,25 +1,45 @@
 /**
  * An [XML Comment](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-Comment).
  */
-class Comment
+class Comment(String text)
         implements Part {
     /**
-     * The text content of the `Comment`.
+     * This constructor allows a new orphan `Comment` to be created, which can then be added to a
+     * [Document] or [Element].
      */
-    String text;
-
-    @Override
-    Int estimateStringLength(Boolean pretty = False) {
-        return 8 + (text.empty ? 0 : text.size + 1);
+    construct(String text) {
+        assert:arg isValidComment(text) as $"Invalid Comment text: {text.quoted()}";
+        this.text = text;
     }
 
     @Override
-    Writer appendTo(Writer buf, Boolean pretty = False) {
+    public/protected (Document|Element)? parent;
+
+    /**
+     * The text content of the `Comment`.
+     */
+    String text.set(String s) {
+        assert:arg isValidComment(s) as $"Invalid Comment text: {s.quoted()}";
+        super(s);
+    }
+
+    @Override
+    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
+        return 7 + (text.empty ? 0 : text.size + 1);
+    }
+
+    @Override
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent="") {
         "<!--".appendTo(buf);
         if (!text.empty) {
-            buf.add(' ');
+            if (!text[0].isWhitespace()) {
+                buf.add(' ');
+            }
             text.appendTo(buf);
+            if (!text[text.size-1].isWhitespace()) {
+                buf.add(' ');
+            }
         }
-        return " -->".appendTo(buf);
+        return "-->".appendTo(buf);
     }
 }

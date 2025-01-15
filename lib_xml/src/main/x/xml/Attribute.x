@@ -30,7 +30,7 @@ interface Attribute
     }
 
     @Override
-    Int estimateStringLength(Boolean pretty = False) {
+    Int estimateStringLength(Boolean pretty = False, Int indent=0) {
         Int total = name.size + value.size + 3;     // '=' and 2 quote chars
         Int squotes = 0;
         Int dquotes = 0;
@@ -61,7 +61,7 @@ interface Attribute
     }
 
     @Override
-    Writer appendTo(Writer buf, Boolean pretty = False) {
+    Writer appendTo(Writer buf, Boolean pretty = False, String indent="") {
         return writeAttribute(buf, name, value);
     }
 }
