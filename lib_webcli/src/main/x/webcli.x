@@ -55,6 +55,7 @@ module webcli.xtclang.org {
                 )
             extends cli.TerminalApp(description, commandPrompt, messagePrefix) {
 
+        import web.HttpStatus;
         import web.MediaType;
 
         /**
@@ -66,36 +67,36 @@ module webcli.xtclang.org {
         /**
          * Send a GET request.
          */
-        String get(String path) = Gateway.sendRequest(GET, path);
+        (String, HttpStatus) get(String path) = Gateway.sendRequest(GET, path);
 
         /**
          * Send a PUT request.
          */
-        String put(String path, Object? content = Null, MediaType? mediaType = Null) =
+        (String, HttpStatus) put(String path, Object? content = Null, MediaType? mediaType = Null) =
                 Gateway.sendRequest(PUT, path, content, mediaType);
 
         /**
          * Send a POST request.
          */
-        String post(String path, Object? content = Null, MediaType? mediaType = Null) =
+        (String, HttpStatus) post(String path, Object? content = Null, MediaType? mediaType = Null) =
                 Gateway.sendRequest(POST, path, content, mediaType);
 
         /**
          * Send a PATCH request.
          */
-        String patch(String path, Object? content = Null, MediaType? mediaType = Null) =
+        (String, HttpStatus) patch(String path, Object? content = Null, MediaType? mediaType = Null) =
                 Gateway.sendRequest(PATCH, path, content, mediaType);
 
         /**
          * Send a DELETE request.
          */
-        String delete(String path, Object? content = Null, MediaType? mediaType = Null) =
+        (String, HttpStatus) delete(String path, Object? content = Null, MediaType? mediaType = Null) =
                 Gateway.sendRequest(DELETE, path, content, mediaType);
 
         /**
          * Upload a file via POST request.
          */
-        String upload(String path, File file, MediaType? mediaType = Null) =
+        (String, HttpStatus) upload(String path, File file, MediaType? mediaType = Null) =
                 Gateway.upload(path, file, mediaType);
     }
 
@@ -293,7 +294,7 @@ module webcli.xtclang.org {
         /**
          * Create and send a POST request for the specified file data.
          */
-        String upload(String path, File file, MediaType? mediaType = Null) {
+        (String, HttpStatus) upload(String path, File file, MediaType? mediaType = Null) {
             String name = file.name;
             if (mediaType == Null, Int extOffset := name.lastIndexOf('.')) {
                 if (mediaType := MediaType.of(name.substring(extOffset+1))) {} else {
