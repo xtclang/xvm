@@ -46,4 +46,19 @@ interface ValueHolder
      * @return the `String` value that was stored in this `ValueHolder`
      */
     <Value> String? encode(Value? value, Format<Value> format);
+
+    /**
+     * The [List] of [Content] objects that constitute the value held by this `ValueHolder`; will be
+     * empty for an `Element` with no value. This property supports complex constructions, such as
+     * combinations of CharData (aka [Data]), CDSect (aka [CData]), and [EntityRef] objects that
+     * can in aggregate define the `Value`.
+     *
+     * If the containing [Document] (or substructure thereof) is mutable, then `Content` objects can
+     * be added and removed from this `List`, subject to any constraints imposed by the XML
+     * specification. `Content` objects added to this `List` may be replaced (as part of the add
+     * operation, or at any subsequent point) with different objects representing the same
+     * information, so the caller must not assume that the reference added to the `List` is the same
+     * reference that is held by the `List`.
+     */
+    @RO List<Content> contents;
 }

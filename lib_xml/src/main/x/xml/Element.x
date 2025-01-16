@@ -51,10 +51,29 @@ interface Element
     }
 
     /**
-     * A representation of the [Attribute]s of this XML `Element`. The insertion order of the `Map`
-     * is maintained.
+     * A representation of the `Attribute`s of this XML `Element`.
+     *
+     * If the containing [Document] (or substructure thereof) is mutable, then `Attribute` objects
+     * can be added and removed from this `List`, subject to any constraints imposed by the XML
+     * specification. `Attribute` objects added to this `List` may be replaced (as part of the add
+     * operation, or at any subsequent point) with different objects representing the same
+     * information, so the caller must not assume that the reference added to the `List` is the same
+     * reference that is held by the `List`.
      */
-    @RO Map<String, Attribute> attributes;
+    @RO List<Attribute> attributes;
+
+    /**
+     * A representation of the [Attribute]s of this XML `Element`, keyed by `Attribute` name. The
+     * insertion order of the `Map` is maintained.
+     *
+     * If the containing [Document] (or substructure thereof) is mutable, then `Attribute` objects
+     * can be added and removed from this `Map`, subject to any constraints imposed by the XML
+     * specification. `Attribute` objects added to this `Map` may be replaced (as part of the add
+     * operation, or at any subsequent point) with different objects representing the same
+     * information, so the caller must not assume that the reference added to the `Map` is the same
+     * reference that is held by the `Map`.
+     */
+    @RO Map<String, Attribute> attributesByName;
 
     /**
      * Add or modify an [Attribute] on this `Element` of the specified name.
@@ -81,6 +100,13 @@ interface Element
 
     /**
      * A representation of the child `Element`s of this XML `Element`.
+     *
+     * If the containing [Document] (or substructure thereof) is mutable, then `Element` objects can
+     * be added and removed from this `List`, subject to any constraints imposed by the XML
+     * specification. `Element` objects added to this `List` may be replaced (as part of the add
+     * operation, or at any subsequent point) with different objects representing the same
+     * information, so the caller must not assume that the reference added to the `List` is the same
+     * reference that is held by the `List`.
      */
     @RO List<Element> elements;
 

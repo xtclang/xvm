@@ -13,7 +13,12 @@ class Comment(String text)
     }
 
     @Override
-    public/protected (Document|Element)? parent;
+    public/protected (Document|Element)? parent.set((Document|Element)? parent) {
+        (Document|Element)? oldParent = this.parent;
+        assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
+                as "The parent of this Comment cannot be modified";
+        super(parent);
+    }
 
     /**
      * The text content of the `Comment`.
