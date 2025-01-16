@@ -21,7 +21,7 @@ interface Part
     /**
      * The parent `Part` of this `Part`, or `Null`.
      */
-    @RO Part? parent;
+    @RO Part!? parent;
 
     /**
      * This value indicates the level of nesting of this `Part`; a `Part` with no parent is at
@@ -31,13 +31,27 @@ interface Part
 
     /**
      * The sequence of `Part` objects nested within this `Part` object.
+     *
+     * If the containing [Document] (or substructure thereof) is mutable, then `Part` objects can
+     * be added and removed from this `List`, subject to any constraints imposed by the XML
+     * specification. `Part` objects added to this `List` may be replaced (as part of the add
+     * operation, or at any subsequent point) with different objects representing the same
+     * information, so the caller must not assume that the reference added to the `List` is the same
+     * reference that is held by the `List`.
      */
-    @RO List<Part> parts.get() = [];
+    @RO List<Part!> parts.get() = [];
 
     /**
      * A [List] of sibling `Part` objects including this `Part`.
+     *
+     * If the containing [Document] (or substructure thereof) is mutable, then `Part` objects can
+     * be added and removed from this `List`, subject to any constraints imposed by the XML
+     * specification. `Part` objects added to this `List` may be replaced (as part of the add
+     * operation, or at any subsequent point) with different objects representing the same
+     * information, so the caller must not assume that the reference added to the `List` is the same
+     * reference that is held by the `List`.
      */
-    @RO List<Part> siblings.get() = parent?.parts : [this];
+    @RO List<Part!> siblings.get() = parent?.parts : [this];
 
     /**
      * This `Part`'s index in its [siblings] list.

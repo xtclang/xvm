@@ -26,7 +26,12 @@ class Instruction(String target, String? text = Null)
     }
 
     @Override
-    public/protected (Document|Element)? parent;
+    public/protected (Document|Element)? parent.set((Document|Element)? parent) {
+        (Document|Element)? oldParent = this.parent;
+        assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
+                as "The parent of this Processing Instruction cannot be modified";
+        super(parent);
+    }
 
     /**
      * The "target" of the Processing `Instruction`.

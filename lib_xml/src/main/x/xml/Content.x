@@ -7,7 +7,12 @@
 @Abstract class Content
         implements Part {
     @Override
-    public/protected (Element|Attribute)? parent;
+    public/protected (Element|Attribute)? parent.set((Element|Attribute)? parent) {
+        (Element|Attribute)? oldParent = this.parent;
+        assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
+                as "The parent of this Content cannot be modified";
+        super(parent);
+    }
 
     /**
      * The text content of the `Data`.

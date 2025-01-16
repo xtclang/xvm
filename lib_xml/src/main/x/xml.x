@@ -1,5 +1,6 @@
 /**
- * TODO
+ * A module for working with -- searching, extracting data from, creating, and manipulating -- XML
+ * documents.
  */
 module xml.xtclang.org {
     package convert import convert.xtclang.org;
@@ -8,23 +9,21 @@ module xml.xtclang.org {
     /**
      * Create an XML [Document] from the passed XML text.
      *
-     * TODO add error logging
-     *
-     * @param text  a `String` containing an XML document
+     * @param text    a `String` containing an XML document
+     * @param errors  (optional) a collector for errors encountered during parsing
      *
      * @return `True` iff the `String` contained a valid XML document
      * @return (optional) the parsed XML [Document]
      */
-    conditional Document parse(String text) {
-        TODO
+    conditional Document parse(String text, Appender<Parser.Error>? errors = Null) {
+        return Parser.DEFAULT.parse(text, errors);
     }
 
     /**
      * Create an XML [Document] from the passed XML text.
      *
-     * TODO add optional DTD etc. params
-     *
      * @param name  the name of the top level XML element
+     * TODO add optional DTD etc. params
      *
      * @return a new XML [Document] with a root element of the specified name
      */
