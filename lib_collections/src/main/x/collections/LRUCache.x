@@ -122,7 +122,7 @@ service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int ma
             (Key key, Value value, Entry? nextLRU = Null, Entry? prevLRU = Null) {}
 
     /**
-     * An easier name for referring to `Entry<Key,Value>`.
+     * An easier name for referring to `Entry<Key, Value>`.
      */
     protected typedef Entry<Key, Value> as Node;
 

@@ -5,7 +5,7 @@
  */
 const CollectImmutableMap<Key extends Shareable,
                           Value extends Shareable,
-                          Result extends immutable Map<Key, Value>>(function Map<Key,Value>()? create = Null)
+                          Result extends immutable Map<Key, Value>>(function Map<Key, Value>()? create = Null)
         extends MapCollector<Key, Value, Result>(create) {
 
     @Override

@@ -164,7 +164,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
     @Override
     Iterator<Entry<Key, Value>> iterator() {
-        Partition<Key,Value>[] partitions = this.ConcurrentHasherMap.partitions;
+        Partition<Key, Value>[] partitions = this.ConcurrentHasherMap.partitions;
         if (partitions.size == 1) {
             return partitions[0].entries.iterator();
         }

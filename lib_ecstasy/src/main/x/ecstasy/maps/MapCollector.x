@@ -13,7 +13,7 @@
  * @param create  the optional [Map] factory function
  */
 const MapCollector<Key, Value, Result extends Map<Key, Value>>
-        (function Map<Key,Value>()? create = Null) {
+        (function Map<Key, Value>()? create = Null) {
     /**
      * Create the [Map] to use to collect the result.
      *

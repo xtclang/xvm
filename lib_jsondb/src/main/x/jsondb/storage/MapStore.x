@@ -93,7 +93,7 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
 //     *
 //     * @return an Iterator of the Key and Value objects in the DBMap as of the specified transaction
 //     */
-//    Iterator<Tuple<Key,Value>> keysAndValuesAt(Int txId);
+//    Iterator<Tuple<Key, Value>> keysAndValuesAt(Int txId);
 //
 //    /**
 //     * Obtain an iterator over all of the keys (in their internal URI format) for the specified
@@ -115,7 +115,7 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
 //     * @return an Iterator of the keys and values, with the keys in the internal JSON URI format
 //     *         used for key storage
 //     */
-//    Iterator<Tuple<String,Value>> urisAndValuesAt(Int txId);
+//    Iterator<Tuple<String, Value>> urisAndValuesAt(Int txId);
 //
 //    /**
 //     * Obtain the value associated with the specified key, iff that key is present in the map. If
