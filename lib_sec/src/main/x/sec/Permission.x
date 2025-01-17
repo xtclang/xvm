@@ -38,7 +38,7 @@ const Permission(String target, String action, Boolean revoke = False)
         }
 
         assert:arg Int colon := text.indexOf(':');
-        construct Permission(text[start..<colon], text.substring(colon+1), revoke);
+        construct Permission(text.substring(colon+1), text[start..<colon], revoke);
     }
 
     assert() {

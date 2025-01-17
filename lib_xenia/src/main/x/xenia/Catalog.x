@@ -111,6 +111,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
     static const EndpointInfo
             extends MethodInfo {
         construct(Endpoint method, Int id, Int wsid,
+                 String                servicePath,
                  Boolean               serviceTls,
                  Boolean               serviceRedirectTls,
                  Boolean               serviceRequiresSession,
@@ -217,7 +218,9 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                         ? method.consumes
                         : serviceConsumes;
             this.requiredPermission = method.is(Restrict)
-                        ? computeRestriction(method)
+                        ? computeRestriction(method, servicePath == "/" && !templateString.empty
+                                ? templateString
+                                : servicePath + templateString)
                         : serviceRestriction;
 
             this.allowRequestStreaming  = method.is(StreamingRequest)  || serviceStreamRequest;
@@ -507,6 +510,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
         for (ClassInfo classInfo : classInfos) {
             Class<WebService> clz         = classInfo.clz;
             Type<WebService>  serviceType = clz.PublicType;
+            String            servicePath = classInfo.path;
 
             TrustLevel serviceTrust       = appTrustLevel;
             Boolean    serviceTls         = appTls;
@@ -548,11 +552,11 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 serviceRequiresSession &= !clz.is(SessionOptional);
             }
 
-            MediaTypes  serviceProduces        = clz.is(Produces) ? clz.produces : appProduces;
-            MediaTypes  serviceConsumes        = clz.is(Consumes) ? clz.consumes : appConsumes;
-            Restriction serviceRestriction     = clz.is(Restrict) ? computeRestriction(clz) : appRestriction;
-            Boolean     serviceStreamRequest   = clz.is(StreamingRequest) || appStreamRequest;
-            Boolean     serviceStreamResponse  = clz.is(StreamingResponse) || appStreamResponse;
+            MediaTypes  serviceProduces       = clz.is(Produces) ? clz.produces : appProduces;
+            MediaTypes  serviceConsumes       = clz.is(Consumes) ? clz.consumes : appConsumes;
+            Restriction serviceRestriction    = clz.is(Restrict) ? computeRestriction(clz) : appRestriction;
+            Boolean     serviceStreamRequest  = clz.is(StreamingRequest)  || appStreamRequest;
+            Boolean     serviceStreamResponse = clz.is(StreamingResponse) || appStreamResponse;
 
             EndpointInfo[] endpoints    = new EndpointInfo[];
             EndpointInfo?  defaultGet   = Null;
@@ -584,7 +588,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                                                     );
                         }
                         validateEndpoint(method);
-                        defaultGet = new EndpointInfo(method, epid++, wsid,
+                        defaultGet = new EndpointInfo(method, epid++, wsid, servicePath,
                                         serviceTls, serviceRedirectTls,
                                         serviceRequiresSession, serviceTrust,
                                         serviceProduces, serviceConsumes, serviceRestriction,
@@ -598,7 +602,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 case Endpoint:
                     validateEndpoint(method);
 
-                    EndpointInfo info = new EndpointInfo(method, epid++, wsid,
+                    EndpointInfo info = new EndpointInfo(method, epid++, wsid, servicePath,
                                         serviceTls, serviceRedirectTls,
                                         serviceRequiresSession, serviceTrust,
                                         serviceProduces, serviceConsumes, serviceRestriction,
@@ -658,13 +662,13 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             observers   .freeze(inPlace=True);
 
             webServiceInfos += new WebServiceInfo(wsid++,
-                    classInfo.path, classInfo.constructor,
+                    servicePath, classInfo.constructor,
                     endpoints, defaultGet, interceptors, observers, onError, route);
         }
         return webServiceInfos;
     }
 
-    static Restriction computeRestriction(Restrict restrict) {
+    static Restriction computeRestriction(Restrict restrict, String? templateString = Null) {
         String?|Method<WebService, <>, <Boolean>> permission = restrict.permission;
 
         if (permission.is(String?)) {
@@ -673,15 +677,22 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 return new Permission(permission);
             }
 
+            String      restrictTarget   = templateString ?: restrict.template;
+            UriTemplate restrictTemplate = new UriTemplate(restrictTarget);
+            String[]    restrictVars     = restrictTemplate.vars;
             if (permission == Null) {
-                // the permission is not specified by the Restrict; need to compute it
-                return defaultRestriction(restrict);
+                // the permission is not specified by the Restrict; compute the default value
+                if (restrictVars.empty) {
+                    // e.g. "GET:/api/accounts"
+                    return new Permission(restrictTarget, restrict.httpMethod.name);
+                } else {
+                    // e.g. "GET:/api/accounts{/id}"
+                    return (request) -> new Permission(request.template.format(request.matchResult),
+                                                       request.method.name);
+                }
             }
 
             // permission target can be parameterized; we need to resolve it at run time
-            String      endpointTarget     = restrict.template;
-            UriTemplate endpointTemplate   = new UriTemplate(endpointTarget);
-            String[]    endpointVars       = endpointTemplate.vars;
             Permission  rawPermission      = new Permission(permission);
             String      permissionTarget   = rawPermission.target;
             UriTemplate permissionTemplate = new UriTemplate(permissionTarget);
@@ -689,26 +700,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             if (permissionVars.empty) {
                 return rawPermission;
             }
-            assert endpointVars.containsAll(permissionVars) as
+            assert restrictVars.containsAll(permissionVars) as
                     $|Restrict permission "{permission}" contains elements that are missing in \
-                     |the endpoint template "{endpointTarget}"
+                     |the endpoint template "{restrict.template}"
                      ;
             String action = rawPermission.action;
             return (request) ->
                 new Permission(permissionTemplate.format(request.matchResult), action);
         }
         return permission; // Method<WebService, <>, <Boolean>>
-    }
-
-    static Restriction defaultRestriction(Endpoint method) {
-            String      target   = method.template;
-            UriTemplate template = new UriTemplate(target);
-
-            return template.vars.empty
-                // e.g. "PUT:/accounts"
-                ? new Permission(target, method.httpMethod.name)
-                // e.g. "GET:/accounts/{id}"
-                : (request) -> new Permission(request.template.format(request.matchResult),
-                                              request.method.name);
     }
 }
