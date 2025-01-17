@@ -11,6 +11,7 @@ import web.security.Authenticator;
 import web.sessions.Broker;
 
 import WebService.Constructor as WSConstructor;
+import WebService.ExtrasAware;
 
 /**
  * The catalog of WebApp endpoints.
@@ -346,22 +347,24 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             }
         }
 
+        private void collectExtras(ExtrasAware extraAware, ClassInfo[] classInfos,
+                              Set<String> declaredPaths) {
+            for ((Duplicable+WebService) extra : extraAware.extras) {
+                Class<WebService> clz  = &extra.actualClass.as(Class<WebService>);
+                String            path = extra.path;
+                path = validatePath(path, declaredPaths, clz);
+                classInfos += new ClassInfo(path, clz, () -> extra.duplicate());
+            }
+        }
+
         // collect the Broker info
-        Broker sessionBroker = app.sessionBroker;
-        if (sessionBroker.is(WebService)) {
-            Class<WebService> clz  = &sessionBroker.actualClass.as(Class<WebService>);
-            String            path = sessionBroker.path;
-            path = validatePath(path, declaredPaths, clz);
-            classInfos += new ClassInfo(path, clz, () -> sessionBroker.duplicate());
+        if (Broker sessionBroker := app.sessionBroker.is(ExtrasAware)) {
+            collectExtras(sessionBroker, classInfos, declaredPaths);
         }
 
         // collect the Authenticator info
-        Authenticator authenticator = app.authenticator;
-        if (authenticator.is(WebService)) {
-            Class<WebService> clz  = &authenticator.actualClass.as(Class<WebService>);
-            String            path = authenticator.path;
-            path = validatePath(path, declaredPaths, clz);
-            classInfos += new ClassInfo(path, clz, () -> authenticator.duplicate());
+        if (Authenticator authenticator := app.authenticator.is(ExtrasAware)) {
+            collectExtras(authenticator, classInfos, declaredPaths);
         }
 
         // collect the ClassInfos for standard WebServices and Session mixins

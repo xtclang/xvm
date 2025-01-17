@@ -14,7 +14,7 @@ import web.sessions.Broker;
  */
 @WebService("/.well-known/verify-cookies")
 service CookieBroker
-        implements Broker {
+        implements Broker, WebService.ExtrasAware {
 
     // ----- constructors --------------------------------------------------------------------------
 
@@ -126,6 +126,11 @@ service CookieBroker
                 : Null;
         return True, session, response;
     }
+
+    // ----- ExtrasAware interface -----------------------------------------------------------------
+
+    @Override
+    (Duplicable+WebService)[] extras.get() = [this];
 
     // ----- WebService endpoints ------------------------------------------------------------------
 
