@@ -166,6 +166,33 @@ module xml.xtclang.org {
         return True;
     }
 
+    /**
+     * Determine if the provided
+     * [EncodingDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-EncodingDecl) is valid for an
+     * XML document.
+     *
+     *     EncodingDecl ::= S 'encoding' Eq ('"' EncName '"' | "'" EncName "'" )
+     *     EncName      ::= [A-Za-z] ([A-Za-z0-9._] | '-')*
+     *
+     * @param encoding  the XML EncodingDecl
+     *
+     * @return `True` iff the specified XML EncodingDecl is valid
+     */
+    static Boolean isValidEncoding(String encoding) {
+        Int len = encoding.size;
+        if (len > 0 && encoding[0].asciiLetter()) {
+            for (Int i = 1; i < len; ++i) {
+                switch (encoding[i]) {
+                case 'A'..'Z', 'a'..'z', '0'..'9', '.', '_', '-':
+                    break;
+                default: return False;
+                }
+            }
+            return True;
+        }
+        return False;
+    }
+
     // ----- XML validation helpers ----------------------------------------------------------------
 
     /**
