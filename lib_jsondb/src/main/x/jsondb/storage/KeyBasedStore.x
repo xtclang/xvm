@@ -32,7 +32,7 @@ mixin KeyBasedStore<Key extends Hashable>
             // TODO remove illegal chars
             Int size = name.size;
             return switch (size) {
-                case 0   : assert;
+                case 0   : "_";  // empty string as a key is very rare, but allowed
                 case 1, 2: name[0].toString();
                 default  : $"{name[0]}{name[size-1]}";
             };
@@ -136,7 +136,7 @@ mixin KeyBasedStore<Key extends Hashable>
 
                 if (corrupted && lastInFile < firstSeal) {
                     catalog.log($|File {fileName} is corrupted beyond transaction {lastInFile} and\
-                                 | may contain transaction data preceeding the earliest recovered\
+                                 | may contain transaction data preceding the earliest recovered\
                                  | transaction {firstSeal}
                                );
                     return False;
