@@ -36,6 +36,8 @@ interface Document
      * A `Document` has an optional
      * [XMLDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-XMLDecl), which is structured as an
      * XML PI (processing instruction) using a reserved Target Name of "XML" (case insensitive).
+     * The returned [Instruction] must not be mutated directly; instead, modify the [xmlVersion],
+     * [encoding], and [standalone] properties on this `Document`.
      */
     @RO Instruction? xmlDecl;
 
@@ -55,22 +57,23 @@ interface Document
     Instruction initXmlDecl(Version version = v:1.0, String? encoding = Null, Boolean? standalone = Null);
 
     /**
-     * This is the [Version] number from the
-     * [VersionInfo](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-VersionInfo) in the optional
-     * [XMLDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-XMLDecl) section. At present, the
-     * only XML version is `1.0`.
+     * The optional [XMLDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-XMLDecl) "version"
+     * value. At the present time (which is now in the past if you're reading this), the only XML
+     * version is `1.0`.
      */
     Version? xmlVersion;
 
     /**
-     * The XML "standalone" specifier.
+     * The optional [XMLDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-XMLDecl) "encoding"
+     * value.
      */
     String? encoding;
 
     /**
-     * The XML "standalone" specifier.
+     * The optional [XMLDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-XMLDecl) "standalone"
+     * value.
      */
-    Boolean standalone;
+    Boolean? standalone;
 
     @Override
     Int estimateStringLength(Boolean pretty = False, Int indent=0) {
