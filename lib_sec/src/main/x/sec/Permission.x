@@ -151,8 +151,8 @@ const Permission(String target, String action, Boolean revoke = False)
     }
 
     /**
-     * Determine if this Permission covers `that` Permission. For example, the Permission for
-     * `(All, All)` will always return `True` when it is asked if it covers another Permission.
+     * Determine if this Permission covers `that` Permission. For example, the [AllowAll] Permission
+     * will always return `True` when it is asked if it covers another Permission.
      *
      * Note that this method explicitly does not consider the [revoke] property; that is the
      * responsibility of the caller. This method only evaluates the [action] and [target].
@@ -181,6 +181,29 @@ const Permission(String target, String action, Boolean revoke = False)
                 this.action.endsWith('*') && action.startsWith(this.action[0..<this.action.size-1]))
             && (this.target == All || this.target == target ||
                 this.target.endsWith('*') && target.startsWith(this.target[0..<this.target.size-1]));
+    }
+
+    /**
+     * Determine if this Permission is covered by `that` Permission. For example, any Permission
+     * will always return `True` when asked if it's covered by [AllowAll] Permission.
+     *
+     * Note that this method explicitly does not consider the [revoke] property; that is the
+     * responsibility of the caller. This method only evaluates the [action] and [target].
+     *
+     * @param that  another Permission (or array of Permission objects)
+     *
+     * @return True iff the scope of `that` Permission fully covers `this` Permission
+     */
+    Boolean coveredBy(Permission|Permission[] that) {
+        if (that.is(Permission)) {
+            return that.covers(this);
+        }
+        for (Permission permission : that) {
+            if (permission.covers(this)) {
+                return True;
+            }
+        }
+        return False;
     }
 
     @Override

@@ -190,7 +190,7 @@ module web.xtclang.org {
      */
     mixin Restrict(String?|Method<WebService, <>, <Boolean>> permission = Null,
                    Boolean autoRedirect = False)
-            extends LoginRequired(autoRedirect=autoRedirect);
+            extends HttpsRequired(autoRedirect=autoRedirect);
 
     /**
      * This annotation, `@HttpsRequired`, is used to mark a web service call -- or any containing

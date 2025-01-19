@@ -274,7 +274,7 @@ service ChainBundle {
         TrustLevel  requiredTrust      = endpoint.requiredTrust;
         Restriction requiredPermission = endpoint.requiredPermission;
 
-        if (requiredTrust == None) {
+        if (requiredTrust == None && requiredPermission == Null) {
             // no permission check is required
             return Null;
         }
@@ -306,8 +306,7 @@ service ChainBundle {
             Session?    session    = request.session;
             Permission? permission = resolvePermission?(request) : Null;
             FromTheTop: while (True) {
-                if (session != Null && requiredTrust <= session.trustLevel
-                        && checkSessionApproval(session, permission, accessGranted)) {
+                if (checkSessionApproval(session?, permission, requiredTrust, accessGranted)) {
                     return False;
                 }
 
@@ -342,6 +341,7 @@ service ChainBundle {
                 Attempt[]     failures     = [];
                 Attempt[]     inactives    = [];
                 AuthStatus    bestStatus   = NoData;
+                Boolean       hasResponse  = False;
                 for (Attempt attempt : attempts) {
                     switch (attempt.status) {
                         case Success:
@@ -374,8 +374,11 @@ service ChainBundle {
                         case KnownNoSession:
                         case KnownNoData:
                         case NoSession:
-                        case NoData:
                             bestStatus = bestStatus.notLessThan(attempt.status);
+                            break;
+
+                        case NoData:
+                            hasResponse |= attempt.response != Null;
                             break;
 
                         default:
@@ -426,11 +429,14 @@ service ChainBundle {
                     if (session != Null) {
                         session.authenticate(principal, entitlements);
                     }
-                    // use the raw auth data we just collected
+                    // use the raw auth data we just collected;
+                    // no need to check the trust since we have just successfully authenticated
                     if (checkApproval(principal, entitlements, permission, accessGranted)) {
                         return False;
                     } else {
-                        return True, new SimpleResponse(Forbidden);
+                        return True, hasResponse
+                                ? buildChallenge(attempts)
+                                : new SimpleResponse(Forbidden);
                     }
                 }
 
@@ -450,8 +456,6 @@ service ChainBundle {
                             }
                         }
                         attempts = attempts.filter(a -> a.status == bestStatus, ToAttemptArray);
-                    } else {
-                        attempts = attempts;
                     }
                 } else {
                     attempts = inactives;
@@ -497,16 +501,28 @@ service ChainBundle {
          * Determine if the specified [Permission]/check is allowed using information from the
          * session.
          */
-        private Boolean checkSessionApproval(Session session,
-                Permission? permission, (function Boolean())? accessGranted) {
-            return checkApproval(session.principal, session.entitlements, permission, accessGranted);
+        private Boolean checkSessionApproval(Session session, Permission? permission,
+                        TrustLevel requiredTrust, (function Boolean())? accessGranted) {
+            Principal? principal = session.principal;
+            return checkTrust(principal, requiredTrust, session.trustLevel) &&
+                   checkApproval(principal, session.entitlements, permission, accessGranted);
+        }
+
+        /**
+         * Determine if there is sufficient trust level.
+         */
+        private Boolean checkTrust(Principal? principal,
+                                   TrustLevel requiredTrust, TrustLevel sessionTrust) {
+            return principal == Null
+                    ? requiredTrust == None // there is no trust (LoginRequired) without the principal
+                    : requiredTrust <= sessionTrust;
         }
 
         /**
          * Determine if the specified [Permission]/check is allowed.
          */
         private Boolean checkApproval(Principal? principal, Entitlement[] entitlements,
-                Permission? permission, (function Boolean())? accessGranted) {
+                                      Permission? permission, (function Boolean())? accessGranted) {
             if (permission != Null) {
                 Realm realm = authenticator.realm;
                 return principal?.permitted(realm, permission);
