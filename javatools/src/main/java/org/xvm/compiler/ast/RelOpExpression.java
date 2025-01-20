@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -336,7 +335,7 @@ public class RelOpExpression
 
         if (typeRequired != null && typeRequired.isTypeOfType())
             {
-            TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
+            TypeFit fit = testFitAsType(ctx, typeRequired, fExhaustive, errs);
             if (fit.isFit())
                 {
                 return fit;
@@ -1004,10 +1003,9 @@ public class RelOpExpression
     public static MethodConstant chooseBestMethod(Set<MethodConstant> setOps, TypeConstant typeActual)
         {
         MethodConstant idBest = null;
-        for (Iterator<MethodConstant> iter = setOps.iterator(); iter.hasNext();)
+        for (MethodConstant idMethod : setOps)
             {
-            MethodConstant idMethod  = iter.next();
-            TypeConstant   typeParam = idMethod.getRawParams()[0];
+            TypeConstant typeParam = idMethod.getRawParams()[0];
 
             if (typeActual.equals(typeParam))
                 {

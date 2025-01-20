@@ -248,6 +248,12 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isOnlyNullable()
+        {
+        return isTypeResolved() && getResolvedType().isOnlyNullable();
+        }
+
+    @Override
     public TypeConstant removeNullable()
         {
         if (isTypeResolved())

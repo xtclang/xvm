@@ -992,11 +992,14 @@ public abstract class TypeConstant
     /**
      * If T1 == T0<E> and T2.isA(T0) then return (T1 + T2) => T2<E + EC2>, where EC2 is a constraint
      * for E on T2.
+     *
+     * Note: this obviously doesn't apply to Class<T> and "into class" annotations.
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
                                                         TypeConstant t1, TypeConstant t2)
         {
         if (t1 instanceof ParameterizedTypeConstant &&
+                t1.isA(pool.typeClass()) == t2.isA(pool.typeClass()) &&
                 t2.isA(t1.getUnderlyingType()) &&
                 t2.isSingleUnderlyingClass(true) && !t2.isParamsSpecified())
             {
@@ -5660,11 +5663,10 @@ public abstract class TypeConstant
         {
         ConstantPool pool = getConstantPool();
         TypeInfo     info = infoBase;
-        for (int i = 0, c = atypeCondInc.length; i < c; i++)
+        for (TypeConstant typeMixin : atypeCondInc)
             {
-            TypeConstant typeMixin   = atypeCondInc[i];
             TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
-            TypeInfo     infoMixin   = typePrivate.ensureTypeInfoInternal(errs);
+            TypeInfo infoMixin = typePrivate.ensureTypeInfoInternal(errs);
             if (infoMixin == null)
                 {
                 // return the incomplete info of for we've got so far
@@ -5678,7 +5680,7 @@ public abstract class TypeConstant
                 }
 
             info = mergeMixinTypeInfo(this, cInvalidations, idBase, infoBase.getClassStructure(),
-                    info, infoMixin, Annotation.NO_ANNOTATIONS, null, errs);
+                info, infoMixin, Annotation.NO_ANNOTATIONS, null, errs);
             }
         return info;
         }
@@ -7585,9 +7587,9 @@ public abstract class TypeConstant
         {
         atype = (TypeConstant[]) registerConstants(pool, atype);
 
-        for (int i = 0, c = atype.length; i < c; i++)
+        for (TypeConstant typeConstant : atype)
             {
-            atype[i].registerConstants(pool);
+            typeConstant.registerConstants(pool);
             }
         return atype;
         }

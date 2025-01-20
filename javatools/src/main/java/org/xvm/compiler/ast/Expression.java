@@ -498,13 +498,24 @@ public abstract class Expression
         }
 
     /**
+     * Convert this expression into a TypeExpression and determine if it can yield the specified
+     * type.
+     *
+     * @see #testFit(Context, TypeConstant, boolean, ErrorListener)
+     */
+    protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
+                                    ErrorListener errs)
+        {
+        TypeExpression exprType = toTypeExpression();
+        return new StageMgr(exprType, Compiler.Stage.Validated, errs).fastForward(20)
+                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
+                : TypeFit.NoFit;
+        }
+
+    /**
      * Convert this expression into a TypeExpression and validate it.
      *
-     * @param ctx           the compilation context for the statement
-     * @param typeRequired  the type that the expression is expected to be able to provide
-     * @param errs          the error list to log any errors to
-     *
-     * @return the resulting expression, or null if compilation cannot proceed
+     * @see #validate(Context, TypeConstant, ErrorListener)
      */
     protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs)
         {
