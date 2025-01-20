@@ -1389,8 +1389,8 @@ public class xRTFunction
      * Create a function handle representing an asynchronous (service) call.
      *
      *
-     * @param frame
-     * @param chain the method chain
+     * @param frame  the current frame
+     * @param chain  the method chain
      *
      * @return the corresponding function handle
      */
@@ -1402,8 +1402,8 @@ public class xRTFunction
     /**
      * Create a function handle representing an asynchronous (service) call.
      *
-     * @param hService  the service in which context the function should be called
-     * @param hDelegate the function to delegate calls to
+     * @param hService   the service in which context the function should be called
+     * @param hDelegate  the function to delegate calls to
      *
      * @return the corresponding delegating function handle
      */
