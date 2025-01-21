@@ -293,7 +293,7 @@ public class PropertyConstant
             typeTarget = getClassIdentity().getType();
             }
 
-        TypeConstant typePrivate  = pool.ensureAccessTypeConstant(typeTarget, Access.PRIVATE);
+        TypeConstant typePrivate  = typeTarget.ensureAccess(Access.PRIVATE);
         PropertyInfo infoProp     = typePrivate.ensureTypeInfo().findProperty(this);
         TypeConstant typeReferent = infoProp.getType();
         TypeConstant typeImpl     = pool.ensurePropertyClassTypeConstant(typePrivate, this);

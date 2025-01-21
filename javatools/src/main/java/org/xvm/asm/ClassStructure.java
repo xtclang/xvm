@@ -3413,7 +3413,7 @@ public class ClassStructure
             {
             ConstantPool pool         = getConstantPool();
             TypeConstant typeFormal   = getFormalType();
-            TypeConstant typePrivate  = pool.ensureAccessTypeConstant(typeFormal, Access.PRIVATE);
+            TypeConstant typePrivate  = typeFormal.ensureAccess(Access.PRIVATE);
             TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
             TypeConstant typeDelegate = infoDelegate.getType();

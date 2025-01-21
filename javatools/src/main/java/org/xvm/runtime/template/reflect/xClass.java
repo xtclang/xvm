@@ -207,11 +207,9 @@ public class xClass
      */
     public int getPropertyComposition(Frame frame, ObjectHandle hTarget, int iReturn)
         {
-        // TODO CP: can typeTarget be annotated?
-        TypeConstant typeTarget  = getClassType(hTarget);
-        Constant     constTarget = typeTarget.getDefiningConstant();
-
-        if  (constTarget instanceof IdentityConstant id)
+        TypeConstant typeTarget = getClassType(hTarget);
+        if (typeTarget.isSingleDefiningConstant() &&
+                typeTarget.getDefiningConstant() instanceof IdentityConstant id)
             {
             Component component = id.getComponent();
             return frame.assignValue(iReturn,
@@ -220,7 +218,9 @@ public class xClass
                         : xRTComponentTemplate.makeComponentHandle(frame.f_context.f_container, component));
             }
 
-        throw new IllegalStateException();
+        // all we can say, it's a ComponentTemplate of Object
+        return frame.assignValue(iReturn, xRTComponentTemplate.makeComponentHandle(
+                frame.f_context.f_container, pool().clzObject().getComponent()));
         }
 
     /**

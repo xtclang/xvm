@@ -1,6 +1,7 @@
 package org.xvm.runtime.template.reflect;
 
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +31,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.PropertyComposition;
+import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.VarSupport;
@@ -42,6 +44,8 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.annotations.xFutureVar.FutureHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
+
+import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -139,16 +143,7 @@ public class xRef
                     h -> frame.assignValue(iReturn, h.getType().ensureTypeHandle(frame.f_context.f_container)));
 
             case "actualClass":
-                return actOnReferent(frame, hRef, h ->
-                    {
-                    TypeConstant type = h.getType();
-                    if (type.isImmutabilitySpecified())
-                        {
-                        type = type.removeImmutable();
-                        }
-                    return frame.assignDeferredValue(iReturn, frame.getConstHandle(
-                            frame.poolContext().ensureClassConstant(type)));
-                    });
+                return actOnReferent(frame, hRef, h -> ensureClassHandle(frame, h, iReturn));
 
             case "annotations":
                 return getPropertyAnnotations(frame, hRef, iReturn);
@@ -180,6 +175,91 @@ public class xRef
             }
 
         return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
+        }
+
+    private int ensureClassHandle(Frame frame, ObjectHandle hTarget, int iReturn)
+        {
+        ConstantPool pool = frame.poolContext();
+        TypeConstant type = hTarget.getComposition().getType();
+
+        if (!type.isSingleDefiningConstant() || !type.isShared(pool))
+            {
+            if (hTarget.getComposition() instanceof ClassComposition clzTarget)
+                {
+                // the only way for a handle to be a relational or not shared type is to be
+                // explicitly masked
+                assert !clzTarget.isInception();
+
+                // create a ClassHandle for the inception class and mask it
+                TypeConstant typeInception = clzTarget.getInceptionType();
+                if (typeInception.isShared(pool))
+                    {
+                    ObjectHandle hClass = frame.getConstHandle(
+                            pool.ensureClassConstant(typeInception));
+                    return Op.isDeferred(hClass)
+                        ? hClass.proceed(frame, frameCaller ->
+                            maskClassHandle(frameCaller, frameCaller.popStack(), clzTarget, iReturn))
+                        : maskClassHandle(frame, hClass, clzTarget, iReturn);
+                    }
+
+                // we don't own the class type; send the request to the owner container
+                Container owner = ((GenericHandle) hTarget).getOwner();
+                if (owner != null)
+                    {
+                    ServiceContext ctxOwner = owner.getServiceContext();
+                    Op opClassHandle = new Op()
+                        {
+                        public int process(Frame frame, int iPC)
+                            {
+                            ObjectHandle hClass = frame.getConstHandle(
+                                    frame.poolContext().ensureClassConstant(typeInception));
+                            return frame.assignDeferredValue(0, hClass);
+                            }
+
+                        public String toString()
+                            {
+                            return "CreateClassHandle";
+                            }
+                        };
+
+                    // this will return a proxy handle
+                    return ctxOwner.sendOp1Request(frame, opClassHandle, iReturn);
+                    }
+                }
+            return frame.raiseException("Unsupported type: " + type.getValueString());
+            }
+
+        if (type.isImmutabilitySpecified())
+            {
+            type = type.removeImmutable();
+            }
+        return frame.assignDeferredValue(iReturn,
+                frame.getConstHandle(pool.ensureClassConstant(type)));
+        }
+
+    private int maskClassHandle(Frame frame, ObjectHandle hClass, TypeComposition clz, int iReturn)
+        {
+        ConstantPool pool     = frame.poolContext();
+        TypeConstant typeOrig = hClass.getType();
+        TypeConstant typeMask = clz.getType();
+        TypeConstant typeClz  = pool.ensureParameterizedTypeConstant(pool.typeClass(),
+                                    typeMask,
+                                    typeMask.ensureAccess(Access.PROTECTED),
+                                    typeMask.ensureAccess(Access.PRIVATE),
+                                    pool.typeStruct());
+        if (typeOrig.isAnnotated())
+            {
+            List<Annotation> listAnno = Arrays.asList(typeOrig.getAnnotations());
+            listAnno.removeIf(anno -> !anno.getAnnotationType().isShared(pool));
+            if (!listAnno.isEmpty())
+                {
+                typeClz = pool.ensureAnnotatedTypeConstant(typeClz,
+                                listAnno.toArray(Annotation.NO_ANNOTATIONS));
+                }
+            }
+
+        TypeComposition clzMask = hClass.getTemplate().ensureClass(frame.f_context.f_container, typeClz);
+        return frame.assignValue(iReturn, hClass.cloneAs(clzMask));
         }
 
     @Override
@@ -697,8 +777,14 @@ public class xRef
      */
     protected int maskAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int iReturn)
         {
+        Supported:
         if (hTarget instanceof GenericHandle hGeneric)
             {
+            if (hGeneric instanceof ClassHandle || hGeneric instanceof TypeHandle)
+                {
+                break Supported;
+                }
+
             if (!hGeneric.isService())
                 {
                 TypeConstant type = hGeneric.getType();
@@ -715,10 +801,9 @@ public class xRef
                 ? frame.raiseException(xException.typeMismatch(frame, typeMasked.getValueString()))
                 : frame.assignValue(iReturn, hMasked);
             }
-        else
-            {
-            return frame.raiseException(xException.unsupported(frame, "maskAs"));
-            }
+
+        return frame.raiseException(xException.unsupported(frame, "maskAs() for " +
+                hTarget.getType().removeAccess().getValueString()));
         }
 
     /**

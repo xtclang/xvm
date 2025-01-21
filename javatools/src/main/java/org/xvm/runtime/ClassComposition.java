@@ -624,7 +624,7 @@ public class ClassComposition
     /**
      * @return true iff this TypeComposition represents an inception class
      */
-    protected boolean isInception()
+    public boolean isInception()
         {
         return this == f_clzInception;
         }
@@ -696,8 +696,7 @@ public class ClassComposition
                                 containsKey(infoProp.getIdentity().getClassIdentity()))
                             {
                             // the property is defined by the underlying type; currently those
-                            // nested properties are stored in the corresponding Refs "box"
-                            // REVIEW: consider having this helper at the TypeInfo
+                            // nested properties are stored in the corresponding Ref "box"
                             continue;
                             }
                         break;

@@ -149,6 +149,19 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public TypeConstant ensureAccess(Access access)
+        {
+        TypeConstant type1  = m_constType1;
+        TypeConstant type2  = m_constType2;
+        TypeConstant type1A = type1.ensureAccess(access);
+        TypeConstant type2A = type2.ensureAccess(access);
+
+        return type1.equals(type1A) && type2.equals(type2A)
+                ? this
+                : cloneRelational(getConstantPool(), type1A, type2A);
+        }
+
+    @Override
     public boolean isNullable()
         {
         TypeConstant type1 = m_constType1;
@@ -404,10 +417,8 @@ public class IntersectionTypeConstant
         Map<Object, ParamInfo> map2 = info2.getTypeParams();
         Map<Object, ParamInfo> map  = new HashMap<>(map1);
 
-        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map.entrySet().iterator(); iter.hasNext();)
+        for (Map.Entry<Object, ParamInfo> entry : map.entrySet())
             {
-            Map.Entry<Object, ParamInfo> entry = iter.next();
-
             Object nid = entry.getKey();
 
             ParamInfo param2 = map2.get(nid);
@@ -419,9 +430,9 @@ public class IntersectionTypeConstant
 
             // the type param exists in both maps; ensure the types are compatible
             // and choose the wider one
-            ParamInfo    param1 = entry.getValue();
-            TypeConstant type1  = param1.getActualType();
-            TypeConstant type2  = param2.getActualType();
+            ParamInfo param1 = entry.getValue();
+            TypeConstant type1 = param1.getActualType();
+            TypeConstant type2 = param2.getActualType();
 
             if (type2.isA(type1))
                 {
