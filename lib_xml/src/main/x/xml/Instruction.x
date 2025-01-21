@@ -1,3 +1,7 @@
+import impl.Node;
+import impl.DocumentNode;
+import impl.ElementNode;
+
 /**
  * An [XML Processing Instruction (PI)](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PI).
  *
@@ -12,8 +16,8 @@
  * They can even appear in the middle of an element's value.
  */
 class Instruction(String target, String? text = Null)
-        implements Part {
-
+        implements Part
+        incorporates Node {
     /**
      * This constructor allows a new orphan Processing `Instruction` (PI) to be created, which can
      * then be added to a [Document] or [Element].
@@ -26,11 +30,28 @@ class Instruction(String target, String? text = Null)
     }
 
     @Override
-    public/protected (Document|Element)? parent.set((Document|Element)? parent) {
-        (Document|Element)? oldParent = this.parent;
-        assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
-                as "The parent of this Processing Instruction cannot be modified";
-        super(parent);
+    construct(Instruction that) {
+        this.target = that.target;
+        this.text   = that.text;
+    }
+
+    @Override
+    protected (DocumentNode|ElementNode)? parent_;
+
+    @Override
+    public/protected (Document|Element)? parent {
+        @Override
+        (Document|Element)? get() {
+            return parent_;
+        }
+
+        @Override
+        void set((Document|Element)? parent) {
+            (Document|Element)? oldParent = this.parent;
+            assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
+                    as "The parent of this Processing Instruction cannot be modified";
+            parent_ = parent.as((DocumentNode|ElementNode)?);
+        }
     }
 
     /**

@@ -1,25 +1,26 @@
-class DocNode(Element root)
+class DocumentNode(Element root)
         implements Document
         incorporates Node {
 
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a new mutable `DocNode`, copying the content of the passed DocNode.
+     * Construct a new mutable `DocumentNode`, copying the content of the passed DocumentNode.
      *
-     * @param that  the `DocNode` to copy
+     * @param that  the `DocumentNode` to copy
      */
-    protected construct(DocNode that) {
+    @Override
+    construct(DocumentNode that) {
         TODO
     }
 
     // ----- Document API --------------------------------------------------------------------------
 
     @Override
-    Document ensureMutable() = this.is(immutable) ? new DocNode(this) : this;
+    Document ensureMutable() = this.is(immutable) ? new DocumentNode(this) : this;
 
     @Override
-    Instruction? xmlDecl.get() {
+    @RO Instruction? xmlDecl.get() {
         return cachedXmlDecl?;
         if (!hasXmlDecl) {
             return Null;
@@ -35,7 +36,17 @@ class DocNode(Element root)
         }
         buf.add('\"');
 
-        // TODO
+        if (String enc ?= encoding) {
+            " encoding=\"".appendTo(buf);
+            enc.appendTo(buf);
+            buf.add('\"');
+        }
+
+        if (Boolean sa ?= standalone) {
+            " standalone=\"".appendTo(buf);
+            (sa ? "yes" : "no").appendTo(buf);
+            buf.add('\"');
+        }
 
         return cachedXmlDecl <- new XmlDecl(this, "xml", buf.toString());
     }
@@ -75,13 +86,37 @@ class DocNode(Element root)
         Boolean? oldSA = standalone;
         if (newSA != oldSA) {
             super(newSA);
-            cachedXmlDecl = Null;
+            cachedXmlDecl = Null; // TODO wrong need to create it and link it in
         }
     }
 
     @Override
-    immutable DocNode freeze(Boolean inPlace = False) {
+    List<Part> parts.get() {
+        // TODO
         TODO
+    }
+
+    @Override
+    protected void prepareFreeze() {
+        val _ = xmlDecl;
+//        val _
+        // TODO force list of parts
+        super();
+    }
+
+    @Override
+    immutable DocumentNode freeze(Boolean inPlace = False) {
+        if (this.is(immutable)) {
+            return this;
+        }
+
+        if (!inPlace) {
+            // copy the XML document
+            return new DocumentNode(this).freeze(inPlace=True);
+        }
+
+        prepareFreeze();
+        return makeImmutable();
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -103,14 +138,20 @@ class DocNode(Element root)
      * A special [Instruction] used for the XMLDecl portion of the XML document.
      */
     protected static class XmlDecl
-            extends Instruction {
-        construct (Document parent, String target, String? text) {
+            extends Instruction
+            incorporates Node {
+        construct(DocumentNode parent, String target, String? text) {
             // this does not invoke the super constructor, because the target "xml" is explicitly
             // illegal in XML, except in the XMLDecl, so the Instruction constructor will assert
             assert:arg ecstasy.collections.CaseInsensitive.areEqual(target, "xml");
             this.parent = parent;
             this.target = target;
             this.text   = text;
+        }
+
+        @Override
+        construct(XmlDecl that) {
+            // TODO
         }
 
         @Override
@@ -123,9 +164,6 @@ class DocNode(Element root)
         Document? parent;
 
         @Override
-        @RO Int index.get() = 0;
-
-        @Override
         void delete() {
             if (Document parent ?= parent) {
                 parent.xmlVersion = Null;
@@ -133,11 +171,6 @@ class DocNode(Element root)
                 parent.standalone = Null;
                 this.parent = Null;
             }
-        }
-
-        @Override
-        immutable XmlDecl freeze(Boolean inPlace = False) {
-            TODO
         }
     }
 }

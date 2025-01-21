@@ -6,7 +6,7 @@
  * TODO DTD and EntityRef support
  */
 interface Part
-        extends Freezable, Stringable {
+        extends Duplicable, Hashable, Stringable {
     /**
      * The [Document] to which this part belongs. It is possible that a `Part` is an orphan, and its
      * `Document` would be `Null`.
@@ -42,28 +42,11 @@ interface Part
     @RO List<Part!> parts.get() = [];
 
     /**
-     * A [List] of sibling `Part` objects including this `Part`.
-     *
-     * If the containing [Document] (or substructure thereof) is mutable, then `Part` objects can
-     * be added and removed from this `List`, subject to any constraints imposed by the XML
-     * specification. `Part` objects added to this `List` may be replaced (as part of the add
-     * operation, or at any subsequent point) with different objects representing the same
-     * information, so the caller must not assume that the reference added to the `List` is the same
-     * reference that is held by the `List`.
-     */
-    @RO List<Part!> siblings.get() = parent?.parts : [this];
-
-    /**
-     * This `Part`'s index in its [siblings] list.
-     */
-    @RO Int index.get() = parent?.parts.indexOf(this)? : 0;
-
-    /**
      * Delete this `Part` from the XML `Document` (or portion thereof) within which it exists.
      *
      * @throws ReadOnly  if the `Document` (or other container) is not mutable
      */
-    void delete() = parent?.parts.delete(index);
+    void delete() = parent?.parts.remove(this);
 
     /**
      * @param pretty  pass `True` to format for a human reader, which will be larger than the
@@ -87,4 +70,34 @@ interface Part
      */
     @Override
     @Abstract Writer appendTo(Writer buf, Boolean pretty = False, String indent="");
+
+    @Override
+    static <CompileType extends Part> Int64 hashCode(CompileType value) {
+        return switch (value.is(_)) {
+            case Element:     Element    .hashCode(value);  // TODO GG compiler does not accept value.hashCode() here
+            case Attribute:   Attribute  .hashCode(value);
+            case Data:        Data       .hashCode(value);
+            case CData:       CData      .hashCode(value);
+            case EntityRef:   EntityRef  .hashCode(value);
+            case Instruction: Instruction.hashCode(value);
+            case Comment:     Comment    .hashCode(value);
+            case Document:    Document   .hashCode(value);
+            default:          assert as $"Unsupported type: {&value.actualType}";
+        };
+    }
+
+    @Override
+    static <CompileType extends Part> Boolean equals(CompileType value1, CompileType value2) {
+        return switch (value1.is(_)) {
+            case Element:     value2.is(Element    ) && value1 == value2;
+            case Attribute:   value2.is(Attribute  ) && value1 == value2;
+            case Data:        value2.is(Data       ) && value1 == value2;
+            case CData:       value2.is(CData      ) && value1 == value2;
+            case EntityRef:   value2.is(EntityRef  ) && value1 == value2;
+            case Instruction: value2.is(Instruction) && value1 == value2;
+            case Comment:     value2.is(Comment    ) && value1 == value2;
+            case Document:    value2.is(Document   ) && value1 == value2;
+            default:          assert as $"Unsupported type: {&value1.actualType}";
+        };
+    }
 }

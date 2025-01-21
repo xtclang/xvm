@@ -200,4 +200,14 @@ interface Element
         name.appendTo(buf);
         return buf.add('>');
     }
+
+    @Override
+    static <CompileType extends Element> Int64 hashCode(CompileType value) {
+        TODO
+    }
+
+    @Override
+    static <CompileType extends Element> Boolean equals(CompileType value1, CompileType value2) {
+        TODO
+    }
 }
