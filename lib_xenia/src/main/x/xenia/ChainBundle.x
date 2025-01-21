@@ -427,11 +427,12 @@ service ChainBundle {
 
                     Principal? principal = principals.empty ? Null : principals[0];
                     if (session != Null) {
-                        session.authenticate(principal, entitlements);
+                        session.authenticate(principal, entitlements, trustLevel=Highest);
                     }
-                    // use the raw auth data we just collected;
-                    // no need to check the trust since we have just successfully authenticated
-                    if (checkApproval(principal, entitlements, permission, accessGranted)) {
+
+                    // use the raw auth data we just collected
+                    if (checkTrust(principal, requiredTrust, session?.trustLevel:Highest) &&
+                        checkApproval(principal, entitlements, permission, accessGranted)) {
                         return False;
                     } else {
                         return True, hasResponse
