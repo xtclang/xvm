@@ -7,7 +7,7 @@
  * [processing instructions](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-PI) aka PIs.
  */
 interface Document
-        extends Part {
+        extends Part, Freezable {
     @Override
     @RO Document doc.get() = this;
 
@@ -19,6 +19,9 @@ interface Document
      */
     @Override
     Element root;
+
+    @Override
+    @RO Part? parent.get() = Null;
 
     /**
      * If this `Document` is already mutable, then return this `Document`, otherwise create a
@@ -64,6 +67,12 @@ interface Document
     Version? xmlVersion;
 
     /**
+     * The default XML version number. At the present time (which is now in the past if you're
+     * reading this), the only XML version is `1.0`.
+     */
+    static Version DefaultVersion = v:1.0;
+
+    /**
      * The optional [XMLDecl](https://www.w3.org/TR/2008/REC-xml-20081126/#NT-XMLDecl) "encoding"
      * value.
      */
@@ -90,5 +99,45 @@ interface Document
             part.appendTo(buf, pretty);
         }
         return buf;
+    }
+
+    @Override
+    static <CompileType extends Document> Int64 hashCode(CompileType value) {
+        Iterator<Part> iter = value.parts.iterator();
+        Int            hash = iter.next()?.hashCode() : assert; // doc must have at least one part
+        while (Part next := iter.next()) {
+            hash = hash.rotateLeft(17) ^ next.hashCode();
+        }
+        return hash;
+    }
+
+    @Override
+    static <CompileType extends Document> Boolean equals(CompileType value1, CompileType value2) {
+        if (value1.xmlVersion != value2.xmlVersion
+                || value1.encoding != value2.encoding
+                || value1.standalone != value2.standalone
+                || value1.root != value2.root) {
+            return False;
+        }
+
+        List<Part> parts1 = value1.parts;
+        List<Part> parts2 = value2.parts;
+        if (parts1.size != parts2.size) {
+            return False;
+        }
+        Iterator<Part> iter1 = parts1.iterator();
+        Iterator<Part> iter2 = parts2.iterator();
+        while ( Part part1 := iter1.next(),
+                Part part2 := iter2.next()) {
+            if (part1.is(Element)) {
+                // already compared the root element
+                if (!part2.is(Element)) {
+                    return False;
+                }
+            } else if (part1 != part2) {
+                return False;
+            }
+        }
+        return True;
     }
 }
