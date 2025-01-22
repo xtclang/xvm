@@ -98,12 +98,24 @@ mixin Node
 
     @Override
     Cursor cursor(Int index = 0) {
-        TODO
+        Node? prev = Null;
+        Node? cur  = child_;
+        for (Int i = 0; i < index; ++i) {
+            prev = cur;
+            cur  = cur?.next_;
+            assert:bounds prev != Null as $"Cursor index ({index}) out of bounds";
+        }
+        return new CursorImpl(index, prev, cur);    // TODO need a mod count to detect changes?
     }
 
     @Override
     @Op("[]") Part getElement(Index index) {
-        TODO
+        assert:bounds index >= 0;
+        Node? cur = child_;
+        for (Int i = 0; i < index && cur != Null; ++i) {
+            cur = cur.next_;
+        }
+        return cur.is(Part) ?: assert:bounds as $"Index {index} is out of range";
     }
 
     @Override
@@ -112,13 +124,35 @@ mixin Node
     }
 
     @Override
-    Boolean contains(Part value) {
-        TODO
-    }
+    Boolean contains(Part value) = indexOf(value);
 
     @Override
     conditional Int indexOf(Part value, Int startAt = 0) {
-        TODO
+        // TODO advance to startAt and remember that node (use it instead of child_ below)
+
+        // first, quick-scan for a matching reference
+        Node? cur   = child_;   // TODO not child_
+        Int   index = startAt;
+        while (cur != Null) {
+            if (&cur == &value) {
+                return True, index;
+            }
+            cur = cur.next_;
+            ++index;
+        }
+
+        // otherwise, slow-scan for a matching value using the equality test
+        cur   = child_;         // TODO not child_
+        index = startAt;
+        while (cur != Null) {
+            if (cur.as(Part) == value) {
+                return True, index;
+            }
+            cur = cur.next_;
+            ++index;
+        }
+
+        return False;
     }
 
     @Override
@@ -145,8 +179,143 @@ mixin Node
         TODO
     }
 
+    /**
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     */
     @Override
     Node clear() {
-        TODO
+        // unlink the list
+        for (Node? node = child_; node != Null; ) {
+            node.parent_ = Null;
+            Node prev = node;
+            node = node.next_;
+            prev.next_ = Null;
+        }
+        // discard the head
+        child_ = Null;
+        return this;
+    }
+
+    // ----- internal mutation operations ----------------------------------------------------------
+
+    /**
+     * Internal operation: Delete a `Node` from the `List`.
+     *
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     *
+     * @param index  the index of the `Node` to delete
+     * @param prev   the `Node` preceding the `Node` to delete
+     * @param cur    the `Node` to delete
+     *
+     * @return the `Node` that followed the now-deleted `Node`
+     */
+    protected Node? deleteNode(Int index, Node? prev, Node? cur) {
+        assert:bounds cur != Null as $"No Node exists at index {index}";
+        assert:test cur.&parent_ == &this;
+        Node? next = cur.next_;
+        if (prev == Null) {
+            assert:test &child_ == &cur;
+            child_ = next;
+        } else {
+            assert:test prev.&next_ == &cur;
+            prev.next_ = next;
+        }
+        cur.parent_ = Null;
+        cur.next_   = Null;
+        return next;
+    }
+
+    // ----- List Cursor implementation ------------------------------------------------------------
+
+    protected class CursorImpl(Int index, Node? prev, Node? cur)
+            implements Cursor {
+        // ----- constructors ------------------------------------------------------------------
+
+        /**
+         * Construct a `CursorImpl` that is sitting on the first item in the `List`.
+         *
+         * @param first  the first `Node`/`Part` in the linked list
+         */
+        construct(Node? first) = construct CursorImpl(0, Null, first);
+
+        // ----- properties --------------------------------------------------------------------
+
+        /**
+         * The `Node` before the current `Node`.
+         */
+        protected Node? prev;
+        /**
+         * The current `Node`.
+         */
+        protected Node? cur;
+
+        // ----- Cursor interface --------------------------------------------------------------
+
+        @Override
+        @RO Boolean bidirectional.get() = False;
+
+        @Override
+        Int index.set(Int newIndex) {
+            Int oldIndex = index;
+            if (newIndex != oldIndex) {
+                Node? newPrev;
+                Node? newCur;
+                if (newIndex > oldIndex) {
+                    newPrev = prev;
+                    newCur  = cur;
+                } else {
+                    // have to start at the head
+                    oldIndex = 0;
+                    newPrev  = Null;
+                    newCur   = child_;
+                }
+                for (Int i = oldIndex; i < newIndex; ++i) {
+                    newPrev = newCur;
+                    newCur  = newCur?.next_;
+                    assert:bounds newPrev != Null as $"Cursor index ({newIndex}) out of bounds";
+                }
+                prev = newPrev;
+                cur  = newCur;
+                super(index);
+            }
+        }
+
+        @Override
+        @RO Boolean exists.get() = cur != Null;
+
+        @Override
+        Part value {
+            @Override
+            Part get() {
+                return cur.as(Part);
+            }
+
+            @Override
+            void set(Part value) {
+                TODO
+            }
+        }
+
+        @Override
+        Boolean advance() {
+            if (cur == Null) {
+                return False;
+            }
+            prev = cur;
+            cur  = cur?.next_;
+            return True;
+        }
+
+        @Override
+        void insert(Part value) {
+            TODO
+        }
+
+        @Override
+        void delete() {
+            TODO
+        }
     }
 }
