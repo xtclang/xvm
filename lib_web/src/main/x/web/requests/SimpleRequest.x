@@ -53,7 +53,7 @@ class SimpleRequest
     }
 
     @Override
-    Body ensureBody(MediaType mediaType, Boolean streaming=False) {
+    Body ensureBody(MediaType mediaType, Boolean streaming = False) {
         // this is a simple request; it does not support streaming
         assert:TODO !streaming;
 

@@ -560,7 +560,7 @@ class ModuleGenerator(String moduleName) {
                 for ((DBCategory category, TypeTemplate dbType) : DB_TEMPLATES) {
                     if (typeTemplate.isA(dbType)) {
                         // the property base class can only be a base dbo interface, a schema
-                        // extenstion or a mixin into it; also, it cannot be a virtual child
+                        // extension or a mixin into it; also, it cannot be a virtual child
                         assert Composition dbClass := dbType.fromClass(), dbClass.is(ClassTemplate);
                         if (classTemplate != dbClass) {
                             if (classTemplate.virtualChild) {

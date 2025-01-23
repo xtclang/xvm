@@ -110,7 +110,7 @@ const Http1Request(RequestInfo   info,
     }
 
     @Override
-    Body ensureBody(MediaType mediaType, Boolean streaming=False) {
+    Body ensureBody(MediaType mediaType, Boolean streaming = False) {
         assert Body body ?= this.body as "Body is absent";
         assert body.mediaType == mediaType as $"Body media type is {body.mediaType}";
         return body;

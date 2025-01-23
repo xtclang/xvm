@@ -350,8 +350,9 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             }
         }
 
+        // helper method to retrieve WebService "extras" from an ExtraAware instance
         private void collectExtras(ExtrasAware extraAware, ClassInfo[] classInfos,
-                              Set<String> declaredPaths) {
+                                   Set<String> declaredPaths) {
             for ((Duplicable+WebService) extra : extraAware.extras) {
                 Class<WebService> clz  = &extra.actualClass.as(Class<WebService>);
                 String            path = extra.path;
@@ -360,15 +361,11 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             }
         }
 
-        // collect the Broker info
-        if (Broker sessionBroker := app.sessionBroker.is(ExtrasAware)) {
-            collectExtras(sessionBroker, classInfos, declaredPaths);
-        }
+        // collect the Broker extras
+        collectExtras(app.sessionBroker.is(ExtrasAware)?, classInfos, declaredPaths);
 
-        // collect the Authenticator info
-        if (Authenticator authenticator := app.authenticator.is(ExtrasAware)) {
-            collectExtras(authenticator, classInfos, declaredPaths);
-        }
+        // collect the Authenticator extras
+        collectExtras(app.authenticator.is(ExtrasAware)?, classInfos, declaredPaths);
 
         // collect the ClassInfos for standard WebServices and Session mixins
         scanClasses(app.classes, classInfos, sessionMixins, declaredPaths);

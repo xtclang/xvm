@@ -12,10 +12,7 @@ class SimpleResponse
               MediaType? mediaType = Null,
               Byte[]?    bytes     = Null,
              ) {
-        if (WebService svc := this:service.is(WebService)) {
-            this.request = svc.request;
-        }
-
+        this.request   = this:service.is(WebService)?.request : Null;
         this.status    = status;
         this.mediaType = mediaType ?: Json;
         this.bytes     = bytes ?: [];
@@ -38,7 +35,7 @@ class SimpleResponse
     Body? body;
 
     @Override
-    Body ensureBody(MediaType mediaType, Boolean streaming=False) {
+    Body ensureBody(MediaType mediaType, Boolean streaming = False) {
         // this is a simple response; it does not support streaming
         assert:TODO !streaming;
 

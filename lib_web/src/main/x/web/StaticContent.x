@@ -29,9 +29,7 @@ mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType = Null,
         }
 
         if (path == "") {
-            if (File file := fileNode.is(File)) {
-                return True, createResponse(file);
-            }
+            return True, createResponse(fileNode.is(File)?);
             path = defaultPage;
         }
 

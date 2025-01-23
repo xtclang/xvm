@@ -31,7 +31,7 @@ interface HttpMessage
      * @throws ReadOnly         if the message is immutable
      * @throws IllegalArgument  if the body already exists and has a different `MediaType`
      */
-    Body ensureBody(MediaType mediaType, Boolean streaming=False);
+    Body ensureBody(MediaType mediaType, Boolean streaming = False);
 
     @Override
     immutable HttpMessage freeze(Boolean inPlace = True) {

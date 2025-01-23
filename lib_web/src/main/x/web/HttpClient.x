@@ -348,7 +348,7 @@ const HttpClient
         @RO Body body.get() = this;
 
         @Override
-        Body ensureBody(MediaType mediaType, Boolean streaming=False) {
+        Body ensureBody(MediaType mediaType, Boolean streaming = False) {
             throw new ReadOnly();
         }
 
