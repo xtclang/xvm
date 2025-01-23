@@ -14,6 +14,10 @@ class DocumentNode(Element root)
         TODO
     }
 
+    construct(Document that) {
+        TODO
+    }
+
     // ----- Document API --------------------------------------------------------------------------
 
     @Override

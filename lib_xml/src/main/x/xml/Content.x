@@ -6,6 +6,7 @@
  */
 @Abstract class Content
         implements Part {
+        // TODO no setter (or incorporate Node)
     @Override
     public/protected (Element|Attribute)? parent.set((Element|Attribute)? parent) {
         (Element|Attribute)? oldParent = this.parent;
@@ -15,7 +16,7 @@
     }
 
     /**
-     * The text content of the `Data`.
+     * The text content of the `Content` object.
      */
     @RO String text;
 }
