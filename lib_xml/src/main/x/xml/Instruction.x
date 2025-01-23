@@ -16,8 +16,7 @@ import impl.ElementNode;
  * They can even appear in the middle of an element's value.
  */
 class Instruction(String target, String? text = Null)
-        implements Part
-        incorporates Node {
+        implements Part {
     /**
      * This constructor allows a new orphan Processing `Instruction` (PI) to be created, which can
      * then be added to a [Document] or [Element].
@@ -36,23 +35,16 @@ class Instruction(String target, String? text = Null)
     }
 
     @Override
-    protected (DocumentNode|ElementNode)? parent_;
+    @RO (Document|Element)? parent.get() = Null;
 
-    @Override
-    public/protected (Document|Element)? parent {
-        @Override
-        (Document|Element)? get() {
-            return parent_;
-        }
-
-        @Override
-        void set((Document|Element)? parent) {
-            (Document|Element)? oldParent = this.parent;
-            assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
-                    as "The parent of this Processing Instruction cannot be modified";
-            parent_ = parent.as((DocumentNode|ElementNode)?);
-        }
-    }
+//        @Override
+//        void set((Document|Element)? parent) {
+//            (Document|Element)? oldParent = this.parent;
+//            assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
+//                    as "The parent of this Processing Instruction cannot be modified";
+//            parent_ = parent.as((DocumentNode|ElementNode)?);
+//        }
+//    }
 
     /**
      * The "target" of the Processing `Instruction`.
