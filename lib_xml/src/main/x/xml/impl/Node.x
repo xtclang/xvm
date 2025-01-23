@@ -210,6 +210,131 @@ mixin Node
     // ----- internal operations -------------------------------------------------------------------
 
     /**
+     * Check if the specific `Part` is allowed to be a child of this `Node`, and if it is, produce
+     * a `Node` that represents the `Part` (if the `Part` isn't already a `Node` that is ready to
+     * add as a child to this `Node`.)
+     *
+     * Note: This can be overridden by `Node` implementations to restrict which child `Node` types
+     * it may contain.
+     *
+     * @param part  the `Part` that is being added as a child to this `Node`
+     *
+     * @return `True` iff the `Part` can be added to this `Node` as a child `Node`
+     * @return (conditional) the `Node` to add as a child
+     */
+    protected conditional Node allowsChild(Part part) {
+        return True, makeNode(part);
+    }
+
+    /**
+     * Produce a `Node` that represents the `Part` (if the `Part` isn't already a `Node` that is
+     * ready to add as a child to this `Node`.)
+     *
+     * @param part  a `Part` (which may be a `Node`) that is being added as a child to a `Node`
+     *
+     * @return the `Node` to use
+     */
+    protected static Node makeNode(Part part) {
+        return switch (part.is(_)) {
+            case xml.Element: TODO new ElementNode(part);
+            case Attribute:   TODO new AttributeNode(part);
+            case Data:        TODO new DataNode(part);
+            case CData:       TODO new CDataNode(part);
+            case EntityRef:   TODO new EntityRefNode(part);
+            case Instruction: TODO new InstructionNode(part);
+            case Comment:     TODO new CommentNode(part);
+            case Document:    part.is(Node) && part.parent_ == Null ? part : new DocumentNode(part);
+            default:          assert as $"Unsupported type: {&part.actualType}";
+        };
+    }
+
+    /**
+     * Internal operation: Replace a `Node` in the `List` with a `Node` representing the specified
+     * `Part`.
+     *
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     *
+     * @param index  the index of the `Node` to replace
+     * @param prev   the `Node` preceding the `Node` to replace
+     * @param cur    the `Node` to replace
+     * @param part   the `Part` to replace the specified `Node` with
+     *
+     * @return cur   the `Node` that was the result of the replacement
+     * @return mods  the new mod count
+     */
+    protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
+        assert:arg Node node := allowsChild(part);
+        node.parent_ = this;
+        if (prev == Null) {
+            child_ = node;
+        } else {
+            prev.next_ = node;
+        }
+        node.next_ = cur?.next_ : Null;
+
+        cur?.parent_ = Null;
+        cur?.next_   = Null;
+
+        return node, mod();
+    }
+
+    /**
+     * Internal operation: Insert a `Node` into the `List`.
+     *
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     *
+     * @param index  the index of the `Node` to insert
+     * @param prev   the `Node` preceding the `Node` to insert
+     * @param cur    the `Node` to insert in front of
+     * @param part   the `Part` to insert
+     *
+     * @return cur   the `Node` that was inserted for the `Part`
+     * @return mods  the new mod count
+     */
+    protected (Node? cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
+        assert:arg Node node := allowsChild(part);
+        node.parent_ = this;
+        if (prev == Null) {
+            child_ = node;
+        } else {
+            prev.next_ = node;
+        }
+        node.next_ = cur;
+        return node, mod();
+    }
+
+    /**
+     * Internal operation: Delete a `Node` from the `List`.
+     *
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     *
+     * @param index  the index of the `Node` to delete
+     * @param prev   the `Node` preceding the `Node` to delete
+     * @param cur    the `Node` to delete
+     *
+     * @return cur   the `Node` that followed the now-deleted `Node`
+     * @return mods  the new mod count
+     */
+    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
+        assert:bounds cur != Null as $"No Node exists at index {index}";
+        assert:test cur.&parent_ == &this;
+        Node? next = cur.next_;
+        if (prev == Null) {
+            assert:test &child_ == &cur;
+            child_ = next;
+        } else {
+            assert:test prev.&next_ == &cur;
+            prev.next_ = next;
+        }
+        cur.parent_ = Null;
+        cur.next_   = Null;
+        return next, mod();
+    }
+
+    /**
      * Advance to the specified index in the `List`.
      *
      * @param index  the `List` index to advance to
@@ -285,114 +410,6 @@ mixin Node
 
         // return an "insert at" location of the end of the list
         return False, index, prev, cur;
-    }
-
-    /**
-     * Internal operation: Replace a `Node` in the `List` with a `Node` representing the specified
-     * `Part`.
-     *
-     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
-     * needs to prevent or augment the mutation.
-     *
-     * @param index  the index of the `Node` to replace
-     * @param prev   the `Node` preceding the `Node` to replace
-     * @param cur    the `Node` to replace
-     * @param part   the `Part` to replace the specified `Node` with
-     *
-     * @return cur   the `Node` that was the result of the replacement
-     * @return mods  the new mod count
-     */
-    protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
-        Node node = makeNode(part);
-        node.parent_ = this;
-        if (prev == Null) {
-            child_ = node;
-        } else {
-            prev.next_ = node;
-        }
-        node.next_ = cur?.next_ : Null;
-
-        cur?.parent_ = Null;
-        cur?.next_   = Null;
-
-        return node, mod();
-    }
-
-    /**
-     * Internal operation: Insert a `Node` into the `List`.
-     *
-     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
-     * needs to prevent or augment the mutation.
-     *
-     * @param index  the index of the `Node` to insert
-     * @param prev   the `Node` preceding the `Node` to insert
-     * @param cur    the `Node` to insert in front of
-     * @param part   the `Part` to insert
-     *
-     * @return cur   the `Node` that was inserted for the `Part`
-     * @return mods  the new mod count
-     */
-    protected (Node? cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
-        Node node = makeNode(part);
-        node.parent_ = this;
-        if (prev == Null) {
-            child_ = node;
-        } else {
-            prev.next_ = node;
-        }
-        node.next_ = cur;
-        return node, mod();
-    }
-
-    /**
-     * Internal operation: Delete a `Node` from the `List`.
-     *
-     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
-     * needs to prevent or augment the mutation.
-     *
-     * @param index  the index of the `Node` to delete
-     * @param prev   the `Node` preceding the `Node` to delete
-     * @param cur    the `Node` to delete
-     *
-     * @return cur   the `Node` that followed the now-deleted `Node`
-     * @return mods  the new mod count
-     */
-    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
-        assert:bounds cur != Null as $"No Node exists at index {index}";
-        assert:test cur.&parent_ == &this;
-        Node? next = cur.next_;
-        if (prev == Null) {
-            assert:test &child_ == &cur;
-            child_ = next;
-        } else {
-            assert:test prev.&next_ == &cur;
-            prev.next_ = next;
-        }
-        cur.parent_ = Null;
-        cur.next_   = Null;
-        return next, mod();
-    }
-
-    /**
-     * TODO
-     *
-     * @param part
-     *
-     * @return
-     */
-    Node makeNode(Part part) {
-        return switch (part.is(_)) {
-            case Node:        part;
-            case xml.Element: TODO new ElementNode(part);
-            case Attribute:   TODO new AttributeNode(part);
-            case Data:        TODO new DataNode(part);
-            case CData:       TODO new CDataNode(part);
-            case EntityRef:   TODO new EntityRefNode(part);
-            case Instruction: TODO new InstructionNode(part);
-            case Comment:     TODO new CommentNode(part);
-            case Document:    new DocumentNode(part.as(Document)); // TODO GG should not need .as()
-            default:          assert as $"Unsupported type: {&part.actualType}";
-        };
     }
 
     // ----- List Cursor implementation ------------------------------------------------------------
