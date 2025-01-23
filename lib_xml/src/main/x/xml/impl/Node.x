@@ -33,11 +33,32 @@ mixin Node
     protected UInt32 length_ = 0;
 
     /**
+     * Modification count, used to trigger cache invalidation, resynchronization, or an exception
+     * for [ConcurrentModification].
+     */
+    protected UInt32 mods_ = 0;
+
+    /**
+     * Register a modification.
+     */
+    protected UInt32 mod() = ++mods_;
+
+    /**
+     * Check for any modification.
+     *
+     * @param expectedMods  a previous modification count
+     *
+     * @return `True` iff the data structure has been modified since the passed modification count
+     *         was obtained
+     */
+    protected Boolean modified(Int expectedMods) = mods_ != expectedMods;
+
+    /**
      * This method is called on each `Node` that is about to be frozen in place.
      */
     protected void prepareFreeze() {
-        next_?.prepareFreeze();
         child_?.prepareFreeze();
+        next_?.prepareFreeze();
     }
 
     // ----- List implementation -------------------------------------------------------------------
@@ -68,7 +89,7 @@ mixin Node
     @Override
     conditional Part first() {
         Part? first  = child_;
-        return first == Null ? False : (True, first);
+        return first == Null ? False : (True, first); // ... or: return first.is(Part);
     }
 
     @Override
@@ -98,14 +119,11 @@ mixin Node
 
     @Override
     Cursor cursor(Int index = 0) {
-        Node? prev = Null;
-        Node? cur  = child_;
-        for (Int i = 0; i < index; ++i) {
-            prev = cur;
-            cur  = cur?.next_;
-            assert:bounds prev != Null as $"Cursor index ({index}) out of bounds";
+        CursorImpl cursor = new CursorImpl();
+        if (index != 0) {
+            cursor.index = index;
         }
-        return new CursorImpl(index, prev, cur);    // TODO need a mod count to detect changes?
+        return cursor;
     }
 
     @Override
@@ -120,54 +138,39 @@ mixin Node
 
     @Override
     @Op("[]=") void setElement(Index index, Part value) {
-        TODO
+        (Boolean found, Int bounds, Node? prev, Node? node) = findNode(index);
+        assert:bounds found as $"Index {index} out of bounds ({bounds})";
+        replaceNode(index, prev, node, value);
     }
 
     @Override
-    Boolean contains(Part value) = indexOf(value);
+    Boolean contains(Part value) = findNode(value);
 
     @Override
-    conditional Int indexOf(Part value, Int startAt = 0) {
-        // TODO advance to startAt and remember that node (use it instead of child_ below)
+    conditional Int indexOf(Part value, Int startAt = 0) = findNode(value, startAt);
 
-        // first, quick-scan for a matching reference
-        Node? cur   = child_;   // TODO not child_
-        Int   index = startAt;
-        while (cur != Null) {
-            if (&cur == &value) {
-                return True, index;
-            }
-            cur = cur.next_;
-            ++index;
+    @Override
+    Node add(Part part) {
+        (_, Int index, Node? prev, Node? node) = findNode(Int.MaxValue);
+        insertNode(index, prev, node, part);
+        return this;
+    }
+
+    @Override
+    Node insert(Int index, Part part) {
+        (Boolean found, Int bounds, Node? prev, Node? node) = findNode(index);
+        assert:bounds index <= bounds as $"Index {index} out of bounds ({bounds})";
+        insertNode(index, prev, node, part);
+        return this;
+    }
+
+    @Override
+    @Op("-") Node remove(Part part) {
+        (Boolean found, Int index, Node? prev, Node? node) = findNode(part);
+        if (found) {
+            deleteNode(index, prev, node);
         }
-
-        // otherwise, slow-scan for a matching value using the equality test
-        cur   = child_;         // TODO not child_
-        index = startAt;
-        while (cur != Null) {
-            if (cur.as(Part) == value) {
-                return True, index;
-            }
-            cur = cur.next_;
-            ++index;
-        }
-
-        return False;
-    }
-
-    @Override
-    Node add(Part v) {
-        TODO
-    }
-
-    @Override
-    Node insert(Int index, Part value) {
-        TODO
-    }
-
-    @Override
-    @Op("-") Node remove(Part value) {
-        TODO
+        return this;
     }
 
 // TODO optimizations
@@ -176,7 +179,11 @@ mixin Node
 
     @Override
     Node delete(Int index) {
-        TODO
+        (Boolean found, _, Node? prev, Node? node) = findNode(index);
+        if (found) {
+            deleteNode(index, prev, node);
+        }
+        return this;
     }
 
     /**
@@ -192,12 +199,150 @@ mixin Node
             node = node.next_;
             prev.next_ = Null;
         }
+
         // discard the head
         child_ = Null;
+
+        mod();
         return this;
     }
 
-    // ----- internal mutation operations ----------------------------------------------------------
+    // ----- internal operations -------------------------------------------------------------------
+
+    /**
+     * Advance to the specified index in the `List`.
+     *
+     * @param index  the `List` index to advance to
+     *
+     * @return found  `True` iff the specified index exists in the `List`
+     * @return index  the index advanced to
+     * @return prev   the `Node` located immediately before the specified index; otherwise, the last
+     *                `Node` in the `List`
+     * @return node   the `Node` at the specified index; otherwise, `Null`
+     */
+    (Boolean found, Int index, Node? prev, Node? node) findNode(Int index) {
+        Node? prev = Null;
+        Node? node = child_;
+        for (Int i = 0; i < index; ++i) {
+            if (node == Null) {
+                // return an "insert at" location of the end of the list
+                return False, i, prev, node;
+            }
+            prev = node;
+            node = node.next_;
+        }
+        return node != Null, index, prev, node;
+    }
+
+    /**
+     * Find the specified `Part` in the `List`, and return its location.
+     *
+     * @param part     the `Part` to search for
+     * @param startAt  (optional) the index to start searching for the `Part` from
+     *
+     * @return found  `True` iff the `Part` was found
+     * @return index  the index where the `Part` was found; otherwise, the index immediately beyond
+     *                the end of the `List`
+     * @return prev   the `Node` located immediately before the `Part` that was found; otherwise,
+     *                the last `Node` in the `List`
+     * @return node   the `Node` that is the `Part` that was found; otherwise, `Null`
+     */
+    (Boolean found, Int index, Node? prev, Node? node) findNode(Part part, Int startAt = 0) {
+        Node? startPrev = Null;
+        Node? startNode = child_;
+        if (startAt > 0) {
+            (Boolean found, Int index, startPrev, startNode) = findNode(startAt);
+            if (!found) {
+                return found, index, startPrev, startNode;
+            }
+        }
+
+        // first, quick-scan for a matching reference
+        Node? prev  = startPrev;
+        Node? cur   = startNode;
+        Int   index = startAt;
+        while (cur != Null) {
+            if (&cur == &part) {
+                return True, index, prev, cur;
+            }
+            prev = cur;
+            cur  = cur.next_;
+            ++index;
+        }
+
+        // otherwise, slow-scan for a matching part using the equality test
+        prev  = startPrev;
+        cur   = startNode;
+        index = startAt;
+        while (cur != Null) {
+            if (cur.as(Part) == part) {
+                return True, index, prev, cur;
+            }
+            prev = cur;
+            cur  = cur.next_;
+            ++index;
+        }
+
+        // return an "insert at" location of the end of the list
+        return False, index, prev, cur;
+    }
+
+    /**
+     * Internal operation: Replace a `Node` in the `List` with a `Node` representing the specified
+     * `Part`.
+     *
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     *
+     * @param index  the index of the `Node` to replace
+     * @param prev   the `Node` preceding the `Node` to replace
+     * @param cur    the `Node` to replace
+     * @param part   the `Part` to replace the specified `Node` with
+     *
+     * @return cur   the `Node` that was the result of the replacement
+     * @return mods  the new mod count
+     */
+    protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
+        Node node = makeNode(part);
+        node.parent_ = this;
+        if (prev == Null) {
+            child_ = node;
+        } else {
+            prev.next_ = node;
+        }
+        node.next_ = cur?.next_ : Null;
+
+        cur?.parent_ = Null;
+        cur?.next_   = Null;
+
+        return node, mod();
+    }
+
+    /**
+     * Internal operation: Insert a `Node` into the `List`.
+     *
+     * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+     * needs to prevent or augment the mutation.
+     *
+     * @param index  the index of the `Node` to insert
+     * @param prev   the `Node` preceding the `Node` to insert
+     * @param cur    the `Node` to insert in front of
+     * @param part   the `Part` to insert
+     *
+     * @return cur   the `Node` that was inserted for the `Part`
+     * @return mods  the new mod count
+     */
+    protected (Node? cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
+        Node node = makeNode(part);
+        node.parent_ = this;
+        if (prev == Null) {
+            child_ = node;
+        } else {
+            prev.next_ = node;
+        }
+        node.next_ = cur;
+        return node, mod();
+    }
 
     /**
      * Internal operation: Delete a `Node` from the `List`.
@@ -209,9 +354,10 @@ mixin Node
      * @param prev   the `Node` preceding the `Node` to delete
      * @param cur    the `Node` to delete
      *
-     * @return the `Node` that followed the now-deleted `Node`
+     * @return cur   the `Node` that followed the now-deleted `Node`
+     * @return mods  the new mod count
      */
-    protected Node? deleteNode(Int index, Node? prev, Node? cur) {
+    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
         assert:bounds cur != Null as $"No Node exists at index {index}";
         assert:test cur.&parent_ == &this;
         Node? next = cur.next_;
@@ -224,21 +370,39 @@ mixin Node
         }
         cur.parent_ = Null;
         cur.next_   = Null;
-        return next;
+        return next, mod();
+    }
+
+    Node makeNode(Part part) {
+        return switch (part.is(_)) {
+            case Node:        part;
+//            case Element:     TODO new ElementNode(part);
+            case Attribute:   TODO new AttributeNode(part);
+            case Data:        TODO new DataNode(part);
+            case CData:       TODO new CDataNode(part);
+            case EntityRef:   TODO new EntityRefNode(part);
+//            case Instruction: TODO new InstructionNode(part);
+            case Comment:     TODO new CommentNode(part);
+            case Document:    new DocumentNode(part);
+            default:          assert as $"Unsupported type: {&part.actualType}";
+        };
     }
 
     // ----- List Cursor implementation ------------------------------------------------------------
 
-    protected class CursorImpl(Int index, Node? prev, Node? cur)
+    protected class CursorImpl
             implements Cursor {
         // ----- constructors ------------------------------------------------------------------
 
         /**
          * Construct a `CursorImpl` that is sitting on the first item in the `List`.
-         *
-         * @param first  the first `Node`/`Part` in the linked list
          */
-        construct(Node? first) = construct CursorImpl(0, Null, first);
+        construct() {
+            index   = 0;
+            prev    = Null;
+            cur     = child_;
+            lastMod = mods_;
+        }
 
         // ----- properties --------------------------------------------------------------------
 
@@ -250,6 +414,27 @@ mixin Node
          * The current `Node`.
          */
         protected Node? cur;
+        /**
+         * The last known mod count.
+         */
+        protected UInt32 lastMod;
+
+        // ----- internal ----------------------------------------------------------------------
+
+        void checkMod() {
+            if (modified(lastMod)) {
+                Int prevIndex = index;
+                if (prevIndex == 0) {
+                    // the cursor is already at the start; just reload the start
+                    cur = child_;
+                } else {
+                    // force a rewind and then a fast-forward to where we already were
+                    index = 0;
+                    index = prevIndex;
+                }
+                lastMod = mods_;
+            }
+        }
 
         // ----- Cursor interface --------------------------------------------------------------
 
@@ -258,6 +443,7 @@ mixin Node
 
         @Override
         Int index.set(Int newIndex) {
+            checkMod();
             Int oldIndex = index;
             if (newIndex != oldIndex) {
                 Node? newPrev;
@@ -289,17 +475,20 @@ mixin Node
         Part value {
             @Override
             Part get() {
-                return cur.as(Part);
+                checkMod();
+                return cur ?: assert:bounds;
             }
 
             @Override
             void set(Part value) {
-                TODO
+                checkMod();
+                (cur, lastMod) = replaceNode(index, prev, cur, value);
             }
         }
 
         @Override
         Boolean advance() {
+            checkMod();
             if (cur == Null) {
                 return False;
             }
@@ -310,12 +499,14 @@ mixin Node
 
         @Override
         void insert(Part value) {
-            TODO
+            checkMod();
+            (cur, lastMod) = insertNode(index, prev, cur, value);
         }
 
         @Override
         void delete() {
-            TODO
+            checkMod();
+            (cur, lastMod) = deleteNode(index, prev, cur);
         }
     }
 }
