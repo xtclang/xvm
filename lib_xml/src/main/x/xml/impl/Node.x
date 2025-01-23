@@ -373,17 +373,24 @@ mixin Node
         return next, mod();
     }
 
+    /**
+     * TODO
+     *
+     * @param part
+     *
+     * @return
+     */
     Node makeNode(Part part) {
         return switch (part.is(_)) {
             case Node:        part;
-//            case Element:     TODO new ElementNode(part);
+            case xml.Element: TODO new ElementNode(part);
             case Attribute:   TODO new AttributeNode(part);
             case Data:        TODO new DataNode(part);
             case CData:       TODO new CDataNode(part);
             case EntityRef:   TODO new EntityRefNode(part);
-//            case Instruction: TODO new InstructionNode(part);
+            case Instruction: TODO new InstructionNode(part);
             case Comment:     TODO new CommentNode(part);
-            case Document:    new DocumentNode(part);
+            case Document:    new DocumentNode(part.as(Document)); // TODO GG should not need .as()
             default:          assert as $"Unsupported type: {&part.actualType}";
         };
     }
