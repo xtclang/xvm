@@ -70,7 +70,11 @@ public class IsExpression
         {
         TypeConstant type = expr2.getImplicitType(ctx);
         return new TypeConstant[]
-                {pool().typeBoolean(), type == null ? pool().typeObject() : type.getParamType(0)};
+            {
+            pool().typeBoolean(), type == null || type.containsUnresolved()
+                    ? pool().typeObject()
+                    : type.getParamType(0)
+            };
         }
 
     @Override

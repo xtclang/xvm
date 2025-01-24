@@ -2992,8 +2992,7 @@ public class TypeCompositionStatement
                 if (exprOld.isValidated())
                     {
                     // this could happen for anonymous inner classes, in which case arguments
-                    // are validated by NewExpression
-                    assert ctx.getThisClass().isAnonInnerClass();
+                    // have been validated by NewExpression or a "revisit" after a partial failure
                     continue;
                     }
                 Expression exprNew = exprOld.validate(ctx, atypeArgs[i], errs);
