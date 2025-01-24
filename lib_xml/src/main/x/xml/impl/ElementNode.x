@@ -5,7 +5,7 @@ class ElementNode(String name)
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a new mutable `ElementNode`, copying the content of the passed ElementNode.
+     * Construct a new mutable `ElementNode`, copying the content of the passed `ElementNode`.
      *
      * @param that  the `ElementNode` to copy
      */

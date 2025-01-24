@@ -235,6 +235,7 @@ mixin Node
      * @return the `Node` to use
      */
     protected static Node makeNode(Part part) {
+// TODO if (part.is(Instruction) && ecstasy.collections.CaseInsensitive.areEqual(part.name, "xml")) {
         return switch (part.is(_)) {
             case xml.Element: TODO new ElementNode(part);
             case Attribute:   TODO new AttributeNode(part);
