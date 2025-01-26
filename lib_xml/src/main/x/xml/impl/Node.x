@@ -19,6 +19,7 @@ mixin Node
      */
     protected Node!? child_ = Null;
 
+// TODO move the next two props to a "Parsed" mixin that overrides toString and Stringable methods when mods_==0 (and add lazy expansion support)
     /**
      * For a `Node` that is the result of parsing an XML document, this is the offset of the `Node`
      * within the original document.
@@ -107,7 +108,7 @@ mixin Node
             private Node? node = child_;
 
             @Override
-            conditional Element next() {
+            conditional Part next() {
                 if (Node prev ?= node) {
                     node = prev.next_;
                     return True, prev;
@@ -235,15 +236,20 @@ mixin Node
      * @return the `Node` to use
      */
     protected static Node makeNode(Part part) {
+        if (part.is(Node) && part.parent_ == Null) {
+            return part;
+        }
+
         return switch (part.is(_)) {
             case xml.Element: TODO new ElementNode(part);
             case Attribute:   TODO new AttributeNode(part);
             case Data:        TODO new DataNode(part);
             case CData:       TODO new CDataNode(part);
             case EntityRef:   TODO new EntityRefNode(part);
-            case Instruction: TODO new InstructionNode(part);
+            case Instruction: equalsCaseInsens(part.target, "xml") ? new XmlDeclNode(part) : new InstructionNode(part);
             case Comment:     TODO new CommentNode(part);
-            case Document:    part.is(Node) && part.parent_ == Null ? part : new DocumentNode(part);
+//            case Document:    new DocumentNode(part);
+            case Document:    new DocumentNode(part.as(Document)); // TODO GG no .as
             default:          assert as $"Unsupported type: {&part.actualType}";
         };
     }

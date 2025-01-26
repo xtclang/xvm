@@ -6,6 +6,10 @@ module xml.xtclang.org {
     package convert import convert.xtclang.org;
     import convert.Format;
 
+    static Boolean equalsCaseInsens(String s1, String s2) = ecstasy.collections.CaseInsensitive.areEqual(s1, s2);
+
+    typedef Appender<Parser.Error> as Errors;
+
     /**
      * Create an XML [Document] from the passed XML text.
      *
@@ -15,9 +19,7 @@ module xml.xtclang.org {
      * @return `True` iff the `String` contained a valid XML document
      * @return (optional) the parsed XML [Document]
      */
-    conditional Document parse(String text, Appender<Parser.Error>? errors = Null) {
-        return Parser.DEFAULT.parse(text, errors);
-    }
+    conditional Document parse(String text, Errors? errors = Null) = Parser.DEFAULT.parse(text, errors);
 
     /**
      * Create an XML [Document] from the passed XML text.
@@ -27,9 +29,7 @@ module xml.xtclang.org {
      *
      * @return a new XML [Document] with a root element of the specified name
      */
-    Document create(String name) {
-        TODO
-    }
+    Document create(String name) = new impl.DocumentNode(name);
 
     // ----- XML validation ------------------------------------------------------------------------
 
@@ -142,7 +142,7 @@ module xml.xtclang.org {
      * @return `True` iff the specified instruction target is valid
      */
     static Boolean isValidTarget(String target) {
-        return isValidName(target) && !ecstasy.collections.CaseInsensitive.areEqual(target, "xml");
+    return isValidName(target) && !equalsCaseInsens(target, "xml");
     }
 
     /**

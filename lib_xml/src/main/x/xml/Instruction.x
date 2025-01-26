@@ -37,15 +37,6 @@ class Instruction(String target, String? text = Null)
     @Override
     @RO (Document|Element)? parent.get() = Null;
 
-//        @Override
-//        void set((Document|Element)? parent) {
-//            (Document|Element)? oldParent = this.parent;
-//            assert oldParent == Null || &parent == &oldParent || !oldParent.parts.contains(this)
-//                    as "The parent of this Processing Instruction cannot be modified";
-//            parent_ = parent.as((DocumentNode|ElementNode)?);
-//        }
-//    }
-
     /**
      * The "target" of the Processing `Instruction`.
      */
