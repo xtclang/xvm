@@ -343,6 +343,9 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                     String path = extractPath(webServiceAnno);
                     path = validatePath(path, declaredPaths, webServiceAnno);
                     classInfos += new ClassInfo(path, clz, constructor);
+
+                    // scan classes inside the extra
+                    scanClasses(clz.childClasses, classInfos, sessionMixins, declaredPaths);
                 } else {
                     throw new IllegalState($|"WebService" annotation is missing for "{clz}"
                                           );
@@ -352,20 +355,23 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
 
         // helper method to retrieve WebService "extras" from an ExtraAware instance
         private void collectExtras(ExtrasAware extraAware, ClassInfo[] classInfos,
-                                   Set<String> declaredPaths) {
+                                   Class[] sessionMixins, Set<String> declaredPaths) {
             for ((Duplicable+WebService) extra : extraAware.extras) {
                 Class<WebService> clz  = &extra.actualClass.as(Class<WebService>);
                 String            path = extra.path;
                 path = validatePath(path, declaredPaths, clz);
                 classInfos += new ClassInfo(path, clz, () -> extra.duplicate());
+
+                // scan classes inside the extra
+                scanClasses(clz.childClasses, classInfos, sessionMixins, declaredPaths);
             }
         }
 
         // collect the Broker extras
-        collectExtras(app.sessionBroker.is(ExtrasAware)?, classInfos, declaredPaths);
+        collectExtras(app.sessionBroker.is(ExtrasAware)?, classInfos, sessionMixins, declaredPaths);
 
         // collect the Authenticator extras
-        collectExtras(app.authenticator.is(ExtrasAware)?, classInfos, declaredPaths);
+        collectExtras(app.authenticator.is(ExtrasAware)?, classInfos, sessionMixins, declaredPaths);
 
         // collect the ClassInfos for standard WebServices and Session mixins
         scanClasses(app.classes, classInfos, sessionMixins, declaredPaths);
@@ -412,15 +418,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 }
 
                 // scan classes inside the WebService class
-                Collection<Type>  childTypes   = child.PrivateType.childTypes.values;
-                @Volatile Class[] childClasses = new Class[];
-                childTypes.forEach(t -> {
-                    if (Class c := t.fromClass()) {
-                        childClasses += c;
-                    }
-                });
-
-                scanClasses(childClasses, classInfos, sessionMixins, declaredPaths);
+                scanClasses(child.childClasses, classInfos, sessionMixins, declaredPaths);
             } else if (child.mixesInto(Session)) {
                 sessionMixins += child;
             } else if (child.implements(Package), Object pkg := child.isSingleton()) {

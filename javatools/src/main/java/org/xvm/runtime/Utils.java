@@ -383,6 +383,14 @@ public abstract class Utils
             while (++index < aiReturn.length)
                 {
                 ObjectHandle hValue = ahValue[index];
+                if (hValue == null)
+                    {
+                    // a "null" value can only occur in a conditional assignment; we need to
+                    // avoid the scenario in which some values are assigned and others are not
+                    assert index == 1 && ahValue[0] == xBoolean.FALSE;
+                    return Op.R_RETURN;
+                    }
+
                 if (hValue instanceof DeferredCallHandle hDeferred)
                     {
                     hDeferred.addContinuation(this::updateDeferredValue);

@@ -212,6 +212,20 @@ const Class<PublicType, ProtectedType extends PublicType,
     }
 
     /**
+     * The classes contained immediately within this class.
+     */
+    @Lazy Class!<>[] childClasses.calc() {
+        Collection<Type>     childTypes   = PrivateType.childTypes.values;
+        @Volatile Class!<>[] childClasses = new Class<>[];
+        childTypes.forEach(t -> {
+            if (Class<> c := t.fromClass()) {
+                childClasses += c;
+            }
+        });
+        return childClasses.freeze(inPlace=True);
+    }
+
+    /**
      * Obtain the deannotated form of this class, and the annotations, if any, that were added to
      * the original underlying class. Note that the original underlying class may appear in the
      * source code to be annotated, but the use of the annotation syntax in a class declaration is
