@@ -1,3 +1,11 @@
+/**
+ * An implementation of the [Document] interface using the [Node] framework. For a given XML
+ * document, there's only one [Document] instance, so this implementation does not attempt to
+ * provide any special optimizations, either for time or space. It is the only [Part] of the a
+ * `Document` that allows a special [Instruction] with the otherwise-illegal target of "xml", and
+ * that `Instruction` (if it exists) must be the first `Part` of the `Document`. (The [XmlDeclNode]
+ * class is the only valid representation of that `Instruction`.)
+ */
 class DocumentNode(xml.Element root)
         implements Document
         incorporates Node {
@@ -103,6 +111,7 @@ class DocumentNode(xml.Element root)
             // foot with some non-existent XML version if they really want to
             super(newVer);
             makeXmlDecl();
+            mod();
         }
     }
 
@@ -113,6 +122,7 @@ class DocumentNode(xml.Element root)
             assert:arg isValidEncoding(newEnc?);
             super(newEnc);
             makeXmlDecl();
+            mod();
         }
     }
 
@@ -122,6 +132,7 @@ class DocumentNode(xml.Element root)
         if (newSA != oldSA) {
             super(newSA);
             makeXmlDecl();
+            mod();
         }
     }
 
@@ -144,9 +155,8 @@ class DocumentNode(xml.Element root)
 
     protected XmlDeclNode? makeXmlDecl() {
         // discard any previous XmlDeclNode
-        if (child_.is(XmlDeclNode)) {
-            child_?.parent_ = Null;
-            child_ = child_?.next_;
+        if (XmlDeclNode xmlDecl := child_.is(XmlDeclNode)) {
+            unlink_(Null, xmlDecl);
         }
 
         // if there's no information to include in a new XmlDeclNode, then don't create one
@@ -154,28 +164,8 @@ class DocumentNode(xml.Element root)
             return Null;
         }
 
-        StringBuffer buf = new StringBuffer();
-        "version=\"".appendTo(buf);
-        // TODO GG:  (xmlVersion ?: "1.0").appendTo(buf);
-        if (Version ver ?= xmlVersion) {
-            ver.appendTo(buf);
-        } else {
-            "1.0".appendTo(buf);
-        }
-        buf.add('\"');
-
-        if (String enc ?= encoding) {
-            " encoding=\"".appendTo(buf);
-            enc.appendTo(buf);
-            buf.add('\"');
-        }
-
-        if (Boolean sa ?= standalone) {
-            " standalone=\"".appendTo(buf);
-            (sa ? "yes" : "no").appendTo(buf);
-            buf.add('\"');
-        }
-
-        return new XmlDeclNode(this, "xml", buf.toString());
+        XmlDeclNode xmlDecl = new XmlDeclNode(this, xmlVersion, encoding, standalone);
+        link_(Null, xmlDecl);
+        return xmlDecl;
     }
 }

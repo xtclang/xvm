@@ -19,6 +19,39 @@ mixin Node
      */
     protected Node!? child_ = Null;
 
+    /**
+     * Helper to link in a new child `Node`.
+     *
+     * @param prev  the `Node` preceding the new child `Node`
+     * @param node  the new child `Node`
+     */
+    protected void link_(Node!? prev, Node! node) {
+        if (prev == Null) {
+            node.next_ = child_;
+            child_     = node;
+        } else {
+            node.next_ = prev.next_;
+            prev.next_ = node;
+        }
+        node.parent_ = this;
+    }
+
+    /**
+     * Helper to unlink a new child `Node`.
+     *
+     * @param prev  the `Node` preceding the child `Node` to unlink
+     * @param node  the child `Node` to unlink
+     */
+    protected void unlink_(Node!? prev, Node! node) {
+        if (prev == Null) {
+            child_     = node.next_;
+        } else {
+            prev.next_ = node.next_;
+        }
+        node.next_   = Null;
+        node.parent_ = Null;
+    }
+
 // TODO move the next two props to a "Parsed" mixin that overrides toString and Stringable methods when mods_==0 (and add lazy expansion support)
     /**
      * For a `Node` that is the result of parsing an XML document, this is the offset of the `Node`
