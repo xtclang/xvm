@@ -8,7 +8,8 @@ class ElementNode
      * TODO
      */
     construct(String name) {
-        TODO
+        assert:arg isValidName(name);
+        this.name = name;
     }
 
     /**
@@ -21,10 +22,46 @@ class ElementNode
         TODO
     }
 
+    /**
+     * Construct a new `ElementNode`, copying the content of the passed `Element`.
+     *
+     * @param that  the `Element` to copy
+     */
+    construct(Element that) {
+        Node? prev = Null;
+        EachPart: for (Part part : that.parts) {
+            Node node = makeNode(part);
+            if (node.is(Content)) {
+                // TODO should we build up the element value here, or lazily do it when requested
+            }
+            if (prev == Null) {
+                child_ = node;
+            } else {
+                prev.next_ = node;
+            }
+            prev = node;
+        }
+    } finally {
+        // finish the adoption
+        for (Node? node = child_; node != Null; node = node.next_) {
+            node.parent_ = this;
+        }
+    }
+
     // ----- Element API --------------------------------------------------------------------------
 
     @Override
     @RO (xml.Element|Document)? parent.get() = parent_.as((xml.Element|Document)?);
+
+    @Override
+    String name.set(String newName) {
+        String oldName = name;
+        if (newName != oldName) {
+            assert:arg isValidName(newName);
+            mod();
+            super(newName);
+        }
+    }
 
     @Override
     String? value.set(String? newValue) {
@@ -36,6 +73,7 @@ class ElementNode
             if (newValue != Null) {
                 // TODO add one data part
             }
+            mod();
             super(value);
         }
     }

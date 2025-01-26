@@ -240,15 +240,15 @@ module xml.xtclang.org {
             Int cp = ch.codepoint;
             Int cm = 1 << 0x3F - (cp & 0x3F);
             return 0 !=
-                    //                                                                                        :
-                    //                              0               1               2               3
-                    //                              0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
-                    ~cp & 0x40 << 57 >> 63 & cm & 0b0000000000000000000000000000000000000000000000000000000000100000
-
-                    //                                ABCDEFGHIJKLMNOPQRSTUVWXYZ    _ abcdefghijklmnopqrstuvwxyz                                                   :
-                    //                               4               5               6               7
+                    //                                                                                         :
+                    //                               0               1               2               3
                     //                               0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
-                    + cp & 0x40 << 57 >> 63 & cm & 0b0111111111111111111111111110000101111111111111111111111111100000;
+                    (~cp & 0x40 << 57 >> 63 & cm & 0b0000000000000000000000000000000000000000000000000000000000100000)
+
+                    //                                 ABCDEFGHIJKLMNOPQRSTUVWXYZ    _ abcdefghijklmnopqrstuvwxyz                                                   :
+                    //                                4               5               6               7
+                    //                                0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+                    + (cp & 0x40 << 57 >> 63 & cm & 0b0111111111111111111111111110000101111111111111111111111111100000);
         }
 
         return switch (ch.codepoint) {
@@ -285,15 +285,15 @@ module xml.xtclang.org {
             Int cp = ch.codepoint;
             Int cm = 1 << 0x3F - (cp & 0x3F);
             return 0 !=
-                    //                                                                           -. 0123456789:
-                    //                              0               1               2               3
-                    //                              0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
-                    ~cp & 0x40 << 57 >> 63 & cm & 0b0000000000000000000000000000000000000000000001101111111111100000
-
-                    //                                ABCDEFGHIJKLMNOPQRSTUVWXYZ    _ abcdefghijklmnopqrstuvwxyz                                                   :
-                    //                               4               5               6               7
+                    //                                                                            -. 0123456789:
+                    //                               0               1               2               3
                     //                               0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
-                    + cp & 0x40 << 57 >> 63 & cm & 0b0111111111111111111111111110000101111111111111111111111111100000;
+                    (~cp & 0x40 << 57 >> 63 & cm & 0b0000000000000000000000000000000000000000000001101111111111100000)
+
+                    //                                 ABCDEFGHIJKLMNOPQRSTUVWXYZ    _ abcdefghijklmnopqrstuvwxyz                                                   :
+                    //                                4               5               6               7
+                    //                                0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+                    + (cp & 0x40 << 57 >> 63 & cm & 0b0111111111111111111111111110000101111111111111111111111111100000);
         }
 
         return switch (ch.codepoint) {

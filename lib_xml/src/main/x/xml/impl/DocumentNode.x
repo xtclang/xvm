@@ -55,6 +55,7 @@ class DocumentNode(xml.Element root)
      * @param that  the `Document` to copy
      */
     construct(Document that) {
+        Node? prev = Null;
         EachPart: for (Part part : that.parts) {
             Node node = makeNode(part);
             assert:arg !node.is(XmlDeclNode) || EachPart.first as "The XMLDecl must occur at the start of the document";
@@ -62,6 +63,12 @@ class DocumentNode(xml.Element root)
                 assert:arg !&root.assigned as "An XML document only contains one root element";
                 root = node;
             }
+            if (prev == Null) {
+                child_ = node;
+            } else {
+                prev.next_ = node;
+            }
+            prev = node;
         }
         assert:arg &root.assigned as "An XML document must contain a root element";
     } finally {

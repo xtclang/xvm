@@ -241,15 +241,14 @@ mixin Node
         }
 
         return switch (part.is(_)) {
-            case xml.Element: TODO new ElementNode(part);
+            case xml.Element: new ElementNode(part);
             case Attribute:   TODO new AttributeNode(part);
             case Data:        TODO new DataNode(part);
             case CData:       TODO new CDataNode(part);
             case EntityRef:   TODO new EntityRefNode(part);
             case Instruction: equalsCaseInsens(part.target, "xml") ? new XmlDeclNode(part) : new InstructionNode(part);
             case Comment:     TODO new CommentNode(part);
-//            case Document:    new DocumentNode(part);
-            case Document:    new DocumentNode(part.as(Document)); // TODO GG no .as
+            case Document:    new DocumentNode(part);
             default:          assert as $"Unsupported type: {&part.actualType}";
         };
     }
