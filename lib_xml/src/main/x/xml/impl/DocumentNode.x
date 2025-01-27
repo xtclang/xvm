@@ -153,19 +153,18 @@ class DocumentNode(ElementNode root)
 
     @Override
     Node clear() {
-        // TODO
-        return super();
+        assert as "A Document cannot clear its contents; doing so would delete the root Element";
     }
 
     @Override
     protected conditional Node allowsChild(Part part) {
         if (Node node := super(part)) {
             return switch (node.is(_)) {
+                case XmlDeclNode:
                 case ElementNode:
                 case InstructionNode:
-                case XmlDeclNode:
-                case CommentNode: (True, node);
-                default: False;
+                case CommentNode:     (True, node);
+                default:              False;
             };
         }
         return False;
@@ -173,8 +172,29 @@ class DocumentNode(ElementNode root)
 
     @Override
     protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
-        // TODO
-        return super(index, prev, cur, part);
+        assert:bounds cur != Null;
+        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.actualType}";
+        switch (cur.is(_), node.is(_)) {
+        case (ElementNode, ElementNode):
+            return super(index, prev, cur, part);
+        case (ElementNode, _):
+            assert as "The root Element can not be deleted";
+        case (_, ElementNode):
+            assert as "Only one root Element is permitted on a Document";
+        case (_, XmlDeclNode):
+            // TODO must be index 0
+            // TODO have to parse the XmlDeclNode (probably put helpers on that class)
+            TODO
+        case (XmlDeclNode, _):
+            assert index == 0 && prev == Null;
+            deleteNode(index, Null, cur);
+            return insertNode(0, Null, child_, part);
+        case (_, InstructionNode):
+        case (_, CommentNode):
+            return super(index, prev, cur, part);
+        default:
+            assert as $"Unsupported replacement from {&cur.actualClass} to {&node.actualClass}";
+        }
     }
 
     @Override
@@ -185,8 +205,23 @@ class DocumentNode(ElementNode root)
 
     @Override
     protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
-        // TODO
-        return super(index, prev, cur);
+        switch (cur.is(_)) {
+        case Null:
+            assert:bounds as $"No Node exists at index {index}";
+        case XmlDeclNode:
+            // to delete the XMLDecl, just clear the properties responsible for it existing
+            this.xmlVersion = Null;
+            this.encoding   = Null;
+            this.standalone = Null;
+            break;
+        case ElementNode:
+            assert as "The root Element can not be deleted";
+        case InstructionNode:
+        case CommentNode:
+            return super(index, prev, cur);
+        default:
+            assert as $"Unsupported node: {cur}";
+        }
     }
 
     // ----- internal ------------------------------------------------------------------------------
