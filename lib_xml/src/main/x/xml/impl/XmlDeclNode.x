@@ -82,7 +82,7 @@ class XmlDeclNode
     // ----- Instruction API -----------------------------------------------------------------------
 
     @Override
-    @RO Document? parent.get() = parent_.as(Document?);
+    @RO DocumentNode? parent.get() = parent_.as(DocumentNode?);
 
     @Override
     String target.set(String s) = throw new ReadOnly();     // no direct edits to the XMLDecl
@@ -99,4 +99,9 @@ class XmlDeclNode
             parent.standalone = Null;
         }
     }
+
+    // ----- Node API ------------------------------------------------------------------------------
+
+    @Override
+    protected conditional Node allowsChild(Part part) = False;
 }

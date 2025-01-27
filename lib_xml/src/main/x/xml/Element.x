@@ -108,7 +108,7 @@ interface Element
      * information, so the caller must not assume that the reference added to the `List` is the same
      * reference that is held by the `List`.
      */
-    @RO List<Element> elements;
+    @RO List<Element!> elements;
 
     /**
      * Find the first child `Element` with the specified name and return it.
@@ -118,7 +118,7 @@ interface Element
      * @return `True` iff this `Element` contains a child `Element` with the specified name
      * @return (optional) the first child `Element` that has the specified name
      */
-    conditional Element find(String name) = elements.any(e -> e.name == name);
+    conditional Element! find(String name) = elements.any(e -> e.name == name);
 
     /**
      * Add a new child `Element` with the specified name and optional value. The new child is
@@ -129,7 +129,7 @@ interface Element
      *
      * @return the new child `Element`
      */
-    Element add(String name, String? value = Null);
+    Element! add(String name, String? value = Null);
 
     /**
      * Add a new child `Element` with the specified name and optional value. The new child is
@@ -141,7 +141,7 @@ interface Element
      *
      * @return the new child `Element`
      */
-    <Value> Element add(String name, Value? value, Format<Value> format) {
+    <Value> Element! add(String name, Value? value, Format<Value> format) {
         return add(name, format.encode(value?) : Null);
     }
 
@@ -151,7 +151,7 @@ interface Element
      *
      * @return this `Element`
      */
-    Element remove(String name) {
+    Element! remove(String name) {
         elements.removeAll(e -> e.name == name);
         return this;
     }

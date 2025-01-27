@@ -184,14 +184,14 @@ mixin Node
     conditional Int indexOf(Part value, Int startAt = 0) = findNode(value, startAt);
 
     @Override
-    Node add(Part part) {
+    Node! add(Part part) {
         (_, Int index, Node? prev, Node? node) = findNode(Int.MaxValue);
         insertNode(index, prev, node, part);
         return this;
     }
 
     @Override
-    Node insert(Int index, Part part) {
+    Node! insert(Int index, Part part) {
         (Boolean found, Int bounds, Node? prev, Node? node) = findNode(index);
         assert:bounds index <= bounds as $"Index {index} out of bounds ({bounds})";
         insertNode(index, prev, node, part);
@@ -199,7 +199,7 @@ mixin Node
     }
 
     @Override
-    @Op("-") Node remove(Part part) {
+    @Op("-") Node! remove(Part part) {
         (Boolean found, Int index, Node? prev, Node? node) = findNode(part);
         if (found) {
             deleteNode(index, prev, node);
@@ -208,11 +208,11 @@ mixin Node
     }
 
 // TODO optimizations
-//    @Op("-") Node removeAll(Iterable<Part> values) {
-//    conditional Node removeIfPresent(Part value) {
+//    @Op("-") Node! removeAll(Iterable<Part> values) {
+//    conditional Node! removeIfPresent(Part value) {
 
     @Override
-    Node delete(Int index) {
+    Node! delete(Int index) {
         (Boolean found, _, Node? prev, Node? node) = findNode(index);
         if (found) {
             deleteNode(index, prev, node);
@@ -225,7 +225,7 @@ mixin Node
      * needs to prevent or augment the mutation.
      */
     @Override
-    Node clear() {
+    Node! clear() {
         // unlink the list
         for (Node? node = child_; node != Null; ) {
             node.parent_ = Null;
@@ -256,7 +256,7 @@ mixin Node
      * @return `True` iff the `Part` can be added to this `Node` as a child `Node`
      * @return (conditional) the `Node` to add as a child
      */
-    protected conditional Node allowsChild(Part part) {
+    protected conditional Node! allowsChild(Part part) {
         return True, makeNode(part);
     }
 
@@ -268,11 +268,12 @@ mixin Node
      *
      * @return the `Node` to use
      */
-    protected static Node makeNode(Part part) {
+    protected static Node! makeNode(Part part) {
         if (part.is(Node) && part.parent_ == Null) {
             return part;
         }
 
+        // TODO
         return switch (part.is(_)) {
             case xml.Element: new ElementNode(part);
             case Attribute:   TODO new AttributeNode(part);
@@ -281,7 +282,7 @@ mixin Node
             case EntityRef:   TODO new EntityRefNode(part);
             case Instruction: equalsCaseInsens(part.target, "xml") ? new XmlDeclNode(part) : new InstructionNode(part);
             case Comment:     TODO new CommentNode(part);
-            case Document:    new DocumentNode(part);
+            case Document:    new DocumentNode(part.as(Document));  // TODO GG why does this require a cast?
             default:          assert as $"Unsupported type: {&part.actualType}";
         };
     }
@@ -301,7 +302,7 @@ mixin Node
      * @return cur   the `Node` that was the result of the replacement
      * @return mods  the new mod count
      */
-    protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
+    protected (Node!? cur, UInt32 mods) replaceNode(Int index, Node!? prev, Node!? cur, Part part) {
         assert:arg Node node := allowsChild(part);
         node.parent_ = this;
         if (prev == Null) {
@@ -331,7 +332,7 @@ mixin Node
      * @return cur   the `Node` that was inserted for the `Part`
      * @return mods  the new mod count
      */
-    protected (Node? cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
+    protected (Node!? cur, UInt32 mods) insertNode(Int index, Node!? prev, Node!? cur, Part part) {
         assert:arg Node node := allowsChild(part);
         node.parent_ = this;
         if (prev == Null) {
@@ -356,7 +357,7 @@ mixin Node
      * @return cur   the `Node` that followed the now-deleted `Node`
      * @return mods  the new mod count
      */
-    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
+    protected (Node!? cur, UInt32 mods) deleteNode(Int index, Node!? prev, Node!? cur) {
         assert:bounds cur != Null as $"No Node exists at index {index}";
         assert:test cur.&parent_ == &this;
         Node? next = cur.next_;
@@ -383,7 +384,7 @@ mixin Node
      *                `Node` in the `List`
      * @return node   the `Node` at the specified index; otherwise, `Null`
      */
-    (Boolean found, Int index, Node? prev, Node? node) findNode(Int index) {
+    (Boolean found, Int index, Node!? prev, Node!? node) findNode(Int index) {
         Node? prev = Null;
         Node? node = child_;
         for (Int i = 0; i < index; ++i) {
@@ -410,7 +411,7 @@ mixin Node
      *                the last `Node` in the `List`
      * @return node   the `Node` that is the `Part` that was found; otherwise, `Null`
      */
-    (Boolean found, Int index, Node? prev, Node? node) findNode(Part part, Int startAt = 0) {
+    (Boolean found, Int index, Node!? prev, Node!? node) findNode(Part part, Int startAt = 0) {
         Node? startPrev = Null;
         Node? startNode = child_;
         if (startAt > 0) {
@@ -471,11 +472,11 @@ mixin Node
         /**
          * The `Node` before the current `Node`.
          */
-        protected Node? prev;
+        protected Node!? prev;
         /**
          * The current `Node`.
          */
-        protected Node? cur;
+        protected Node!? cur;
         /**
          * The last known mod count.
          */

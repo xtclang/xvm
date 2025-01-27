@@ -20,6 +20,9 @@ class Instruction(String target, String? text = Null)
     /**
      * This constructor allows a new orphan Processing `Instruction` (PI) to be created, which can
      * then be added to a [Document] or [Element].
+     *
+     * @param target  the "target" of the Processing `Instruction`
+     * @param text    the optional text content of the Processing `Instruction`
      */
     construct(String target, String? text = Null) {
         assert:arg isValidTarget(target) as $"Invalid Processing Instruction target: {target.quoted()}";

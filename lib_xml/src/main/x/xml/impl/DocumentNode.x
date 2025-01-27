@@ -6,7 +6,7 @@
  * that `Instruction` (if it exists) must be the first `Part` of the `Document`. (The [XmlDeclNode]
  * class is the only valid representation of that `Instruction`.)
  */
-class DocumentNode(xml.Element root)
+class DocumentNode(ElementNode root)
         implements Document
         incorporates Node {
     // ----- constructors --------------------------------------------------------------------------
@@ -16,12 +16,10 @@ class DocumentNode(xml.Element root)
      *
      * @param name  the name of the root [Element]
      */
-    construct(String name) {
-        val node = new ElementNode(name);
-        root   = node;
-        child_ = node;
+    construct(String name, String? value = Null) {
+        root = new ElementNode(Null, name, value);
     } finally {
-        root.as(Node).parent_ = this;
+        link_(Null, root);
     }
 
     /**
@@ -69,7 +67,7 @@ class DocumentNode(xml.Element root)
             assert:arg !node.is(XmlDeclNode) || EachPart.first as "The XMLDecl must occur at the start of the document";
             if (node.is(xml.Element)) {
                 assert:arg !&root.assigned as "An XML document only contains one root element";
-                root = node;
+                root = node.as(ElementNode);
             }
             if (prev == Null) {
                 child_ = node;
@@ -149,6 +147,46 @@ class DocumentNode(xml.Element root)
 
         prepareFreeze();
         return makeImmutable();
+    }
+
+    // ----- Node API ------------------------------------------------------------------------------
+
+    @Override
+    Node clear() {
+        // TODO
+        return super();
+    }
+
+    @Override
+    protected conditional Node allowsChild(Part part) {
+        if (Node node := super(part)) {
+            return switch (node.is(_)) {
+                case ElementNode:
+                case InstructionNode:
+                case XmlDeclNode:
+                case CommentNode: (True, node);
+                default: False;
+            };
+        }
+        return False;
+    }
+
+    @Override
+    protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
+        // TODO
+        return super(index, prev, cur, part);
+    }
+
+    @Override
+    protected (Node? cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
+        // TODO
+        return super(index, prev, cur, part);
+    }
+
+    @Override
+    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
+        // TODO
+        return super(index, prev, cur);
     }
 
     // ----- internal ------------------------------------------------------------------------------

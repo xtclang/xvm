@@ -1,3 +1,13 @@
+/**
+ * An implementation of the [Element] interface using the [Node] framework. For a given XML
+ * document, there are likely to be a huge number of [Element] instances, so this implementation is
+ * optimized for space, while still attempting to provide high performance for expected uses.
+ *
+ * TODO
+ * no value vs. cached-only vs. contents-only vs. both
+ * no attr vs. #attrs 20
+ * no sub elements vs. #elements 30
+ */
 class ElementNode
         implements xml.Element
         incorporates Node {
@@ -5,11 +15,17 @@ class ElementNode
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * TODO
+     * Construct an [ElementNode] with the specified name and optional value.
+     *
+     * @param parent  the [Element]'s parent [Node], or `Null`
+     * @param name    the [Element]'s name
+     * @param value   (optional) the [Element]'s value
      */
-    construct(String name) {
+    construct((DocumentNode|ElementNode)? parent, String name, String? value) {
         assert:arg isValidName(name);
-        this.name = name;
+        this.parent_ = parent;
+        this.name    = name;
+        this.value   = value;
     }
 
     /**
@@ -51,7 +67,7 @@ class ElementNode
     // ----- Element API --------------------------------------------------------------------------
 
     @Override
-    @RO (xml.Element|Document)? parent.get() = parent_.as((xml.Element|Document)?);
+    @RO (DocumentNode|ElementNode)? parent.get() = parent_.as((DocumentNode|ElementNode)?);
 
     @Override
     String name.set(String newName) {

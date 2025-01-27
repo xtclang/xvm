@@ -1,15 +1,22 @@
+/**
+ * An implementation of [Instruction] using the [Node] framework.
+ */
 class InstructionNode
         extends Instruction
         incorporates Node {
-// TODO GG
-    construct(String target, String? text = Null) {
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Construct a `InstructionNode` from its constituent pieces.
+     *
+     * @param parent  the [DocumentNode] or [ElementNode] that will contain this `InstructionNode`
+     * @param target  the "target" of the Processing `Instruction`
+     * @param text    the optional text content of the Processing `Instruction`
+     */
+    construct((DocumentNode|ElementNode)? parent, String target, String? text = Null) {
+        parent_ = parent;
         construct Instruction(target, text);
     }
-//class InstructionNode(String target, String? text = Null)
-//        extends Instruction(target, text)
-//        incorporates Node {
-
-    // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a new mutable `InstructionNode`, copying the content of the passed
@@ -35,5 +42,10 @@ class InstructionNode
     // ----- Instruction API -----------------------------------------------------------------------
 
     @Override
-    @RO (Document|xml.Element)? parent.get() = parent_.as((Document|xml.Element)?);
+    @RO (DocumentNode|ElementNode)? parent.get() = parent_.as((DocumentNode|ElementNode)?);
+
+    // ----- Node API ------------------------------------------------------------------------------
+
+    @Override
+    protected conditional Node allowsChild(Part part) = False;
 }
