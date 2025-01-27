@@ -650,46 +650,49 @@ public class CaseManager<CookieType>
                             }
                         }
 
-                    if (!fIfSwitch)
+                    if (fIfSwitch)
                         {
-                        if (collides(constCase, lIgnore, lRange))
-                            {
-                            // collision
-                            stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DUPLICATE,
-                                    constCase.getValueString());
-                            fValid = false;
-                            }
-                        else
-                            {
-                            m_listsetCase.add(constCase);
-                            m_listLabels.add(m_labelCurrent);
+                        continue;
+                        }
 
-                            if (fIntConsts)
+                    if (collides(constCase, lIgnore, lRange))
+                        {
+                        // collision
+                        stmtCase.log(errs, Severity.ERROR, Compiler.SWITCH_CASE_DUPLICATE,
+                                constCase.getValueString());
+                        fValid = false;
+                        }
+                    else
+                        {
+                        m_listsetCase.add(constCase);
+                        m_listLabels.add(m_labelCurrent);
+
+                        if (fIntConsts)
+                            {
+                            if (constCase instanceof MatchAnyConstant)
                                 {
-                                if (constCase instanceof MatchAnyConstant)
-                                    {
-                                    // treated as "default:", so ignore
-                                    }
-                                else if (constCase instanceof RangeConstant constRange)
-                                    {
-                                    incorporateInt(constRange.getFirst().getIntValue());
-                                    incorporateInt(constRange.getLast() .getIntValue());
-                                    }
-                                else
-                                    {
-                                    incorporateInt(constCase.getIntValue());
-                                    }
+                                // treated as "default:", so ignore
                                 }
-
-                            // validate "is(_)" type constants
-                            if (getConditionCount() == 1)
+                            else if (constCase instanceof RangeConstant constRange)
                                 {
-                                if ((m_afIsSwitch & 1L) != 0 &&
-                                        m_listCond.get(0) instanceof Expression exprTest)
-                                    {
-                                    TypeConstant typeCase = (TypeConstant) constCase;
-                                    assert typeCase.isTypeOfType();
+                                incorporateInt(constRange.getFirst().getIntValue());
+                                incorporateInt(constRange.getLast() .getIntValue());
+                                }
+                            else
+                                {
+                                incorporateInt(constCase.getIntValue());
+                                }
+                            }
 
+                        // validate "is(_)" type constants
+                        if (getConditionCount() == 1)
+                            {
+                            if ((m_afIsSwitch & 1L) != 0 &&
+                                    m_listCond.get(0) instanceof Expression exprTest)
+                                {
+                                if (constCase instanceof TypeConstant typeCase &&
+                                        typeCase.isTypeOfType())
+                                    {
                                     typeCase = typeCase.getParamType(0);
 
                                     TypeConstant typeTest = exprTest.getImplicitType(ctx);
@@ -719,18 +722,26 @@ public class CaseManager<CookieType>
                                             }
                                         }
                                     }
-                                }
-                            else if (m_afIsSwitch != 0 && constCase instanceof ArrayConstant constArray)
-                                {
-                                Constant[] aConstCase = constArray.getValue();
-                                for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_afIsSwitch); i < c; i++)
+                                else
                                     {
-                                    if ((m_afIsSwitch & (1L << i)) != 0 &&
-                                            m_listCond.get(i) instanceof Expression exprTest)
+                                    exprNew.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                                        exprTest.toString(), constCase.getValueString());
+                                    fValid = false;
+                                    }
+                                }
+                            }
+                        else if (m_afIsSwitch != 0 && constCase instanceof ArrayConstant constArray)
+                            {
+                            Constant[] aConstCase = constArray.getValue();
+                            for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_afIsSwitch); i < c; i++)
+                                {
+                                if ((m_afIsSwitch & (1L << i)) != 0 &&
+                                        m_listCond.get(i) instanceof Expression exprTest)
+                                    {
+                                    Constant constCaseNext = aConstCase[i];
+                                    if (constCaseNext instanceof TypeConstant typeCase &&
+                                            typeCase.isTypeOfType())
                                         {
-                                        TypeConstant typeCase = (TypeConstant) aConstCase[i];
-                                        assert typeCase.isTypeOfType();
-
                                         typeCase = typeCase.getParamType(0);
 
                                         TypeConstant typeTest = exprTest.getImplicitType(ctx);
@@ -741,6 +752,12 @@ public class CaseManager<CookieType>
                                                 exprTest.toString(), typeCase.getValueString());
                                             fValid = false;
                                             }
+                                        }
+                                    else if (!(constCaseNext instanceof MatchAnyConstant))
+                                        {
+                                        exprNew.log(errs, Severity.ERROR, Compiler.NOT_TYPE_OF_TYPE,
+                                            exprTest.toString(), constCase.getValueString());
+                                        fValid = false;
                                         }
                                     }
                                 }
@@ -786,9 +803,9 @@ public class CaseManager<CookieType>
         if (getConditionCount() == 1)
             {
             if ((m_lTypeExpr & 1L) != 0L &&
-                    m_listCond.get(0) instanceof NameExpression exprTest)
+                    m_listCond.get(0) instanceof NameExpression exprTest &&
+                    constCase instanceof TypeConstant typeCase)
                 {
-                TypeConstant typeCase = (TypeConstant) constCase;
                 assert typeCase.isTypeOfType();
 
                 if ((m_afIsSwitch & 1L) != 0L)
@@ -811,9 +828,9 @@ public class CaseManager<CookieType>
                 {
                 long lPos = 1L << i;
                 if ((m_lTypeExpr & lPos) != 0L &&
-                        m_listCond.get(i) instanceof NameExpression exprTest)
+                        m_listCond.get(i) instanceof NameExpression exprTest &&
+                        aConstCase[i] instanceof TypeConstant typeCase)
                     {
-                    TypeConstant typeCase = (TypeConstant) aConstCase[i];
                     assert typeCase.isTypeOfType();
 
                     if ((m_afIsSwitch & lPos) != 0L)
