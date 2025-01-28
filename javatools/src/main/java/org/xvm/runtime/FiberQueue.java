@@ -19,6 +19,12 @@ public class FiberQueue
     private int m_ixTail = 0;  // past the tail - insertion point
     private int m_cSize  = 0;
 
+    // this value increases every time any fiber that belong to this queue enters the "Waiting" state
+    private long m_lWaitEnterStamp = 0;
+
+    // this value increases every time any fiber that belong to this queue exits the "Waiting" state
+    private long m_lWaitExitStamp = 0;
+
     public FiberQueue(ServiceContext ctx)
         {
         f_context = ctx;
@@ -127,6 +133,22 @@ public class FiberQueue
                 }
             }
         return null;
+        }
+
+    /**
+     * Called when any fiber changes its state to {@link FiberStatus#Waiting}
+     */
+    protected void enterWait()
+        {
+        m_lWaitEnterStamp++;
+        }
+
+    /**
+     * Called when any fiber changes its state from {@link FiberStatus#Waiting} to any other.
+     */
+    protected void exitWait()
+        {
+        m_lWaitExitStamp++;
         }
 
     /**
@@ -254,8 +276,19 @@ public class FiberQueue
      *
      * @return true iff there are any non-concurrent waiting frames
      */
+static int HIT = 0;
+static int ALL = 0;
     private boolean isAnyNonConcurrentWaiting(Fiber fiberCandidate)
         {
+//if (++ALL % 100_000 == 0)
+//    {
+//    System.err.println("*** hits=" + HIT + " out of " + ALL);
+//    }
+        if (fiberCandidate.noChange(m_lWaitEnterStamp, m_lWaitExitStamp))
+            {
+//++HIT;
+            return fiberCandidate.getBlocker() != null;
+            }
         Frame[] aFrame      = m_aFrame;
         Fiber   fiberCaller = fiberCandidate.getCaller();
 
@@ -267,21 +300,19 @@ public class FiberQueue
                 }
 
             Fiber fiber = frame.f_fiber;
-            if (fiber != fiberCandidate)
+            if (fiber != fiberCandidate &&
+                    fiber.getStatus() == FiberStatus.Waiting)
                 {
-                if (fiber.getStatus() == FiberStatus.Waiting)
+                if (frame.isSafeStack() ||
+                    fiberCaller != null && fiberCaller.isContinuationOf(fiber))
                     {
-                    if (frame.isSafeStack() ||
-                        fiberCaller != null && fiberCaller.isContinuationOf(fiber))
-                        {
-                        continue;
-                        }
-                    fiberCandidate.setBlocker(frame);
-                    return true;
+                    continue;
                     }
+                fiberCandidate.setBlocker(frame, m_lWaitExitStamp);
+                return true;
                 }
             }
-        fiberCandidate.setBlocker(null);
+        fiberCandidate.setBlocker(null, m_lWaitEnterStamp);
         return false;
         }
 
