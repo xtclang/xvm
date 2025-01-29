@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -595,7 +596,7 @@ public class NameExpression
         // we need the "raw argument" to determine the actual type
         return arg == null
                 ? null
-                : planCodeGen(ctx, arg, getImplicitTrailingTypeParameters(ctx), typeDesired, errs);
+                : planCodeGen(ctx, arg, getImplicitTrailingTypeParameters(ctx), typeDesired, true, errs);
         }
 
     @Override
@@ -677,7 +678,7 @@ public class NameExpression
             }
 
         // translate the raw argument into the appropriate contextual meaning
-        TypeConstant type = planCodeGen(ctx, argRaw, atypeParams, typeRequired, errs);
+        TypeConstant type = planCodeGen(ctx, argRaw, atypeParams, typeRequired, false, errs);
         if (type == null)
             {
             // an error must've been reported
@@ -1639,10 +1640,12 @@ public class NameExpression
      *
      * @param clz       the containing class
      * @param idMethod  the underlying method
+     * @param cReturns  the number of return values expected by the caller
      *
      * @return the BjarneLambda id
      */
-    private MethodConstant createBjarneLambda(ClassStructure clz, MethodConstant idMethod)
+    private MethodConstant createBjarneLambda(ClassStructure clz, MethodConstant idMethod,
+                                              int cReturns)
         {
         ConstantPool         pool        = pool();
         MultiMethodStructure mms         = clz.ensureMultiMethodStructure("->");
@@ -1650,10 +1653,10 @@ public class NameExpression
         TypeConstant[]       atypeParam  = pool.extractFunctionParams(typeLambda);
         TypeConstant[]       atypeReturn = pool.extractFunctionReturns(typeLambda);
 
-        int cParams  = atypeParam.length;
-        int cReturns = atypeReturn.length;
+        int cParams      = atypeParam.length;
+        int cOrigReturns = atypeReturn.length;
 
-        assert cParams > 0;
+        assert cParams > 0 && cReturns <= cOrigReturns;
 
         org.xvm.asm.Parameter[] aparamParam = new org.xvm.asm.Parameter[cParams];
         for (int i = 0; i < cParams; i++)
@@ -1665,6 +1668,11 @@ public class NameExpression
         for (int i = 0; i < cReturns; i++)
             {
             aparamReturn[i] = new org.xvm.asm.Parameter(pool, atypeReturn[i], null, null, true, i, false);
+            }
+
+        if (cReturns < cOrigReturns)
+            {
+            atypeReturn = Arrays.copyOfRange(atypeReturn, 0, cReturns);
             }
 
         MethodStructure lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
@@ -2538,12 +2546,13 @@ public class NameExpression
      * @param argRaw       the argument to translate
      * @param aTypeParams  the array of (>=0) type parameter types, or null if they are absent
      * @param typeDesired  the (optional) type to attempt to fulfill during translation
+     * @param fDraft       if true, avoid making any structural changes; the plan may change
      * @param errs         the error list to log errors to
      *
      * @return the type of the expression
      */
-    protected TypeConstant planCodeGen(Context ctx, Argument argRaw,
-            TypeConstant[] aTypeParams, TypeConstant typeDesired, ErrorListener errs)
+    protected TypeConstant planCodeGen(Context ctx, Argument argRaw, TypeConstant[] aTypeParams,
+                                       TypeConstant typeDesired, boolean fDraft, ErrorListener errs)
         {
         assert ctx != null && argRaw != null;
         ConstantPool pool           = pool();
@@ -2876,8 +2885,11 @@ public class NameExpression
                                 !typeProp.isA(pool.typeFunction()))
                             {
                             // turn the property into a lambda
-                            m_plan          = Plan.BjarneLambda;
-                            m_idBjarnLambda = createBjarneLambda(ctx.getThisClass(), idProp);
+                            m_plan = Plan.BjarneLambda;
+                            if (!fDraft)
+                                {
+                                m_idBjarnLambda = createBjarneLambda(ctx.getThisClass(), idProp);
+                                }
                             return idProp.getBjarneLambdaType();
                             }
                         else
@@ -3076,9 +3088,16 @@ public class NameExpression
                         else
                             {
                             // turn a method into a "method handle" function
-                            m_plan          = Plan.BjarneLambda;
-                            m_idBjarnLambda = createBjarneLambda(ctx.getThisClass(), idMethod);
-                            typeFn          = idMethod.getBjarneLambdaType();
+                            m_plan = Plan.BjarneLambda;
+                            typeFn = idMethod.getBjarneLambdaType();
+                            if (!fDraft)
+                                {
+                                int cReturns = typeDesired == null
+                                            ? idMethod.getRawReturns().length
+                                            : pool.extractFunctionReturns(typeDesired).length;
+                                m_idBjarnLambda =
+                                    createBjarneLambda(ctx.getThisClass(), idMethod, cReturns);
+                                }
                             }
                         }
                     else
