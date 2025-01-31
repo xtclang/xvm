@@ -136,7 +136,7 @@ public class ListSet<E>
             int cSkip = cSize - index - 1;
             for (int i = m_iHead - 1; true; i--)
                 {
-                Object o = aElem[i % nMask];
+                Object o = aElem[i & nMask];
                 if (o != null && !(o instanceof Stop) && cSkip-- == 0)
                     {
                     return toExternal(o);
@@ -149,7 +149,7 @@ public class ListSet<E>
             int cSkip = index;
             for (int i = m_iTail; true; i++)
                 {
-                Object o = aElem[i % nMask];
+                Object o = aElem[i & nMask];
                 if (o != null && !(o instanceof Stop) && cSkip-- == 0)
                     {
                     return toExternal(o);
@@ -488,9 +488,9 @@ public class ListSet<E>
      */
     private void grow()
         {
-        Object[] aOld     = m_aElem;
-        int      cOld     = aOld.length;
-        int      cNew     = cOld + cOld;
+        Object[] aOld = m_aElem;
+        int      cOld = aOld.length;
+        int      cNew = cOld + cOld;
 
         // it's possible to grow too much; this implementation uses an index that must be larger
         // than the underlying storage; this also conveniently avoids the concern of a signed number

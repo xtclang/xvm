@@ -115,7 +115,7 @@ public class SetTest
             set.add(++c);
             if (c % 1000000 == 0)
                 {
-                out(""+(c/1000000)+"m in " + (System.currentTimeMillis()-start) + "ms");
+                out((c/1000000) + "m in " + (System.currentTimeMillis()-start) + "ms");
                 break;
                 }
             }
@@ -160,7 +160,7 @@ public class SetTest
     static boolean randomTest(int cSteps)
         {
         ArrayList<Op> listOps = new ArrayList<>(cSteps);
-        Data data = new StringData(1+rnd.nextInt(rnd.nextInt(100000)));
+        Data data = new StringData(1+rnd.nextInt(1+rnd.nextInt(100000)));
         Set   setControl = createControlSet();
         Set[] aTestSets  = createTestSets();
         for (int iStep = 0; iStep < cSteps; ++iStep)
@@ -195,15 +195,14 @@ public class SetTest
         String[]      asLine  = Handy.parseDelimitedString(sTest, '\n');
         int           cLines  = asLine.length;
         ArrayList<Op> listOps = new ArrayList<>(cLines);
-        for (int i = 0; i < cLines; ++i)
+        for (String sLine : asLine)
             {
-            String sLine = asLine[i];
             if (!sLine.isEmpty() && sLine.charAt(0) == '[')
                 {
                 int of = sLine.indexOf(']');
                 assert of > 0;
-                String sOp = sLine.substring(of+1).trim();
-                Op     op  = parseOp(sOp);
+                String sOp = sLine.substring(of + 1).trim();
+                Op op = parseOp(sOp);
                 listOps.add(op);
                 }
             }
