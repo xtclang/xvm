@@ -2854,7 +2854,7 @@ public class InvocationExpression
                 return arg;
                 }
             }
-        else if (typeLeft.isSingleUnderlyingClass(true) && !isSuppressCall() && !isAnyArgUnbound())
+        else if (!isSuppressCall() && !isAnyArgUnbound())
             {
             // allow for a function on the "left type" to be called (Bjarne'd):
             //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
