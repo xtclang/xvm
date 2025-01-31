@@ -37,7 +37,7 @@ mixin Node
     }
 
     /**
-     * Helper to unlink a new child `Node`.
+     * Helper to unlink a child `Node`.
      *
      * @param prev  the `Node` preceding the child `Node` to unlink
      * @param node  the child `Node` to unlink
@@ -53,18 +53,18 @@ mixin Node
     }
 
 // TODO move the next two props to a "Parsed" mixin that overrides toString and Stringable methods when mods_==0 (and add lazy expansion support)
-    /**
-     * For a `Node` that is the result of parsing an XML document, this is the offset of the `Node`
-     * within the original document.
-     */
-    protected UInt32 offset_ = 0;
-
-    /**
-     * For a `Node` that is the result of parsing an XML document, this is the length of the `Node`
-     * within the original document. For some implementations of `Node`, it is expected that this
-     * may be calculated on demand.
-     */
-    protected UInt32 length_ = 0;
+//    /**
+//     * For a `Node` that is the result of parsing an XML document, this is the offset of the `Node`
+//     * within the original document.
+//     */
+//    protected UInt32 offset_ = 0;
+//
+//    /**
+//     * For a `Node` that is the result of parsing an XML document, this is the length of the `Node`
+//     * within the original document. For some implementations of `Node`, it is expected that this
+//     * may be calculated on demand.
+//     */
+//    protected UInt32 length_ = 0;
 
     /**
      * Modification count, used to trigger cache invalidation, resynchronization, or an exception
@@ -276,12 +276,12 @@ mixin Node
         // TODO
         return switch (part.is(_)) {
             case xml.Element: new ElementNode(part);
-            case Attribute:   TODO new AttributeNode(part);
-            case Data:        TODO new DataNode(part);
-            case CData:       TODO new CDataNode(part);
-            case EntityRef:   TODO new EntityRefNode(part);
+            case Attribute:   new AttributeNode(part);
+            case Data:        new @ContentNode Data(part);
+            case CData:       new @ContentNode CDataNode(part);
+            case EntityRef:   new @ContentNode EntityRefNode(part);
             case Instruction: equalsCaseInsens(part.target, "xml") ? new XmlDeclNode(part) : new InstructionNode(part);
-            case Comment:     TODO new CommentNode(part);
+            case Comment:     TODO new CommentNode(part);           // TODO CP
             case Document:    new DocumentNode(part.as(Document));  // TODO GG why does this require a cast?
             default:          assert as $"Unsupported type: {&part.actualType}";
         };

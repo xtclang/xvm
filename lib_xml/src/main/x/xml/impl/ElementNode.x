@@ -116,4 +116,10 @@ class ElementNode
 
     // ----- internal ------------------------------------------------------------------------------
 
+    /**
+     * TODO
+     */
+    conditional AttributeNode attributeByName(String name) {
+        TODO
+    }
 }

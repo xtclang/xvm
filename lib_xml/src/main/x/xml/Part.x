@@ -74,14 +74,14 @@ interface Part
     @Override
     static <CompileType extends Part> Int64 hashCode(CompileType value) {
         return switch (value.is(_)) {
-            case Element:     Element    .hashCode(value);  // TODO GG compiler does not accept value.hashCode() here
-            case Attribute:   Attribute  .hashCode(value);
-            case Data:        Data       .hashCode(value);
-            case CData:       CData      .hashCode(value);
-            case EntityRef:   EntityRef  .hashCode(value);
-            case Instruction: Instruction.hashCode(value);
-            case Comment:     Comment    .hashCode(value);
-            case Document:    Document   .hashCode(value);
+            case Element:     value.hashCode();
+            case Attribute:   value.hashCode();
+            case Data:        value.hashCode();
+            case CData:       value.hashCode();
+            case EntityRef:   value.hashCode();
+            case Instruction: value.hashCode();
+            case Comment:     value.hashCode();
+            case Document:    value.hashCode();
             default:          assert as $"Unsupported type: {&value.actualType}";
         };
     }

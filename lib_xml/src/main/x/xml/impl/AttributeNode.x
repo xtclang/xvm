@@ -4,8 +4,9 @@
  * unique **and case-sensitive**. Since there are likely to be a great number of `Attribute`
  * instances, the design optimizes for space.
  *
- * When possible, the `Attribute` maintains its value in a field, but it can lazily instantiate a
- * [Part] to represent the value if and when a caller examines its parts.
+ * When there are no child nodes to hold the data, the `Attribute` maintains its value in a field,
+ * but it can lazily instantiate a [Part] to represent the value if and when a caller requests the
+ * child `Part`s.
  */
 class AttributeNode
         implements Attribute
@@ -34,8 +35,26 @@ class AttributeNode
      */
     @Override
     construct(AttributeNode that) {
-        // TODO
-        TODO
+        this.name        = that.name;
+        this.value       = that.cacheMods_ == that.mods_ || that.oneDataChild() ? that.value : "";
+        this.cachedMods_ = 0;
+        if (!that.oneDataChild()) {
+            Node? prev = Null;
+            for (Part part : that.parts) {
+                Node node = makeNode(part);
+                if (prev == Null) {
+                    child_ = node;
+                } else {
+                    prev.next_ = node;
+                }
+                prev = node;
+            }
+        }
+    } finally {
+        // finish the adoption
+        for (Node? node = child_; node != Null; node = node.next_) {
+            node.parent_ = this;
+        }
     }
 
     /**
@@ -44,23 +63,26 @@ class AttributeNode
      * @param that  the `Attribute` to copy
      */
     construct(Attribute that) {
-        Node? prev = Null;
-        EachPart: for (Part part : that.parts) {
-            Node node = makeNode(part);
-            if (node.is(Content)) {
-                // TODO should we build up the attribute value here, or lazily do it when requested
+        if (that.is(AttributeNode)) {
+            construct AttributeNode(that);
+        } else {
+            Node? prev = Null;
+            EachPart: for (Part part : that.parts) {
+                Node node = makeNode(part);
+                if (prev == Null) {
+                    child_ = node;
+                } else {
+                    prev.next_ = node;
+                }
+                prev = node;
             }
-            if (prev == Null) {
-                child_ = node;
-            } else {
-                prev.next_ = node;
-            }
-            prev = node;
         }
     } finally {
-        // finish the adoption
-        for (Node? node = child_; node != Null; node = node.next_) {
-            node.parent_ = this;
+        if (!that.is(AttributeNode)) {
+            // finish the adoption
+            for (Node? node = child_; node != Null; node = node.next_) {
+                node.parent_ = this;
+            }
         }
     }
 
@@ -75,9 +97,7 @@ class AttributeNode
         if (newName != oldName) {
             assert:arg isValidName(newName);
             // make sure no other sibling attribute has the same name
-            if (ElementNode parent ?= this.parent) {
-                // TODO
-            }
+            assert !parent?.attributeByName(newName) as $"An Attribute with the name {newName.quoted()} already exists";
             mod();
             super(newName);
         }
@@ -87,24 +107,105 @@ class AttributeNode
     String value {
         @Override
         String get() {
-            if (child_ == Null) {
+            if (child_ == Null || cachedMods_ == mods_) {
                 return super();
             }
 
-            // TODO
-            TODO
+            // have to rebuild the text value from the child content node(s)
+            String text;
+            if (Data node := oneDataChild()) {
+                text = node.text;
+            } else {
+                StringBuffer buf = new StringBuffer();
+                ContentNode? node = child_.as(ContentNode);
+                while (node != Null) {
+                    node.text.appendTo(buf);
+                    node = node.next_?.as(ContentNode) : Null;
+                }
+                text = buf.toString();
+            }
+            if (!this.is(immutable)) {
+                set(text, cacheOnly=True);
+            }
+            return text;
         }
 
         @Override
-        void set(String newValue) {
+        void set(String newValue, Boolean cacheOnly = False) {
             String oldValue = this.value;
             if (newValue != oldValue) {
-                // TODO remove all previous parts (or if the first one is a data part, rewrite it)
-                // TODO add one data part
-                mod();
+                if (!cacheOnly) {
+                    // remove all previous parts (or if the first one is a data part, rewrite it)
+                    Node? prev = Null;
+                    Node? node = child_;
+                    if (node.is(Data)) {
+                        prev = node;
+                        node = node.next_;
+                    }
+                    while (node != Null) {
+                        Node? next = node.next_;
+                        unlink_(prev, node);
+                        node = next;
+                    }
+
+                    // use one data part to hold the new text value
+// TODO CP this is just for testing; we only need the "else" part
+                    if (child_ == Null) {
+                        link(Null, new @ContentNode(this) Data(newValue));
+//                        link(Null, new @ContentNode Data(newValue));
+                    } else {
+                        child_.as(Data).text = newValue;
+                    }
+                    mod();
+                }
                 super(value);
+                cachedMods_ = mods_;
             }
         }
+    }
+
+    @Override
+    conditional Int knownSize() = (child_?.next_ : Null) != Null ? False : (True, 1);
+
+    @Override
+    @RO Int size.get() = super().notLessThan(1);    // always has at least one Content child
+
+    @Override
+    @RO Boolean empty.get() = False;                // always has at least one Content child
+
+    @Override
+    conditional Part first() {
+        syncParts();
+        return super();
+    }
+
+    @Override
+    conditional Part last() {
+        syncParts();
+        return super();
+    }
+
+    @Override
+    Iterator<Part> iterator() {
+        syncParts();
+        return super();
+    }
+
+    @Override
+    @Op("[]") Part getElement(Index index) {
+        syncParts();
+        return super(index);
+    }
+
+    @Override
+    @Op("[]=") void setElement(Index index, Part value) {
+        syncParts();
+        super(index, value);
+    }
+
+    @Override
+    Node clear() {
+        assert as "An Attribute cannot clear its contents; doing so would delete its Data";
     }
 
     @Override
@@ -113,9 +214,66 @@ class AttributeNode
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * TODO no value vs. cached-only vs. contents-only vs. both
+     * The mod count when the cached value was created.
      */
-    protected UInt32 partsMod_ = 0;
+    protected UInt32 cachedMods_ = MaxValue;        // init to "cache is invalid"
+
+    /**
+     * Lazily create a [Data] child [Node] if necessary.
+     */
+    protected void syncParts() {
+        if (child_ == Null) {
+            link_(Null, new @ContentNode Data(value));
+        }
+    }
+
+    /**
+     * Determine if there is only a single child [Part] and that it is a [Data] instance.
+     *
+     * @return `True` iff there is only a single child [Part] and that it is a [Data] instance
+     * @return (optional) the one [Data] child instance
+     */
+    conditional Data oneDataChild() {
+        if (Data node := child_.is(Data), node.next_ == Null) {
+            return True, node;
+        }
+        return False;
+    }
+
+    @Override
+    protected conditional Node allowsChild(Part part) = part.is(Content) ? super(part) : False;
+
+    @Override
+    protected (Node!? cur, UInt32 mods) replaceNode(Int index, Node!? prev, Node!? cur, Part part) {
+        syncParts();
+        return super(index, prev, cur, part);
+    }
+
+    @Override
+    protected (Node!? cur, UInt32 mods) insertNode(Int index, Node!? prev, Node!? cur, Part part) {
+        syncParts();
+        return super(index, prev, cur, part);
+    }
+
+    @Override
+    protected (Node!? cur, UInt32 mods) deleteNode(Int index, Node!? prev, Node!? cur) {
+        syncParts();
+        return super(index, prev, cur);
+    }
+
+    @Override
+    (Boolean found, Int index, Node!? prev, Node!? node) findNode(Int index) {
+        syncParts();
+        return super(index);
+    }
+
+    @Override
+    (Boolean found, Int index, Node!? prev, Node!? node) findNode(Part part, Int startAt = 0) {
+        syncParts();
+        return super(part, startAt);
+    }
+
+    // ----- Content List implementation -----------------------------------------------------------
 
     /**
      * A custom router from the `List<Content>` to the `List<Part>`. [Attribute]s can only contain

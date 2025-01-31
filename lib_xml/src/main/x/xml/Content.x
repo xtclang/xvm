@@ -18,5 +18,5 @@
     /**
      * The text content of the `Content` object.
      */
-    @RO String text;
+    String text;
 }
