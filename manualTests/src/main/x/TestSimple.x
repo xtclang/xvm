@@ -1,17 +1,16 @@
 module TestSimple {
 
     @Inject static Console console;
-    void run(String[] args = []) {
-        console.print(filter("aABbcCdDe", Char.asciiUppercase));
+
+    void run() {
+        test(Null);
+        test(Version:2.0);
     }
 
-    String filter(String s, function Boolean(Char) match) {
-        StringBuffer buffer = new StringBuffer(s.size);
-        for (Char ch : s.chars) {
-            if (match(ch)) {    // this used to assert at run time
-                buffer.add(ch);
-            }
-        }
-        return buffer.toString();
+    void test(Version? xmlVersion) {
+        StringBuffer buf = new StringBuffer();
+        (xmlVersion ?: "1.0").appendTo(buf); // this used to fail to compile
+
+        console.print(buf.toString());
     }
 }

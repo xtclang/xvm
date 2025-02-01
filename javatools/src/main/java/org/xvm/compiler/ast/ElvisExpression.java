@@ -166,11 +166,28 @@ public class ElvisExpression
         TypeConstant type2Req = type1 == null
                 ? null
                 : Op.selectCommonType(type1.removeNullable(), null, errs);
-        if (typeRequired != null &&
-                (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit()))
+        if (typeRequired == null)
             {
-            type2Req = typeRequired;
+            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, null).isFit())
+                {
+                // there are no requirements from outside and the second expression is not going to
+                // validate against the first expression type. Compute the narrowest type that expr2
+                // has a chance of validating - a union of type1 and the implicit type for expr2
+                TypeConstant type2 = expr2.getImplicitType(ctx);
+                if (type2 != null)
+                    {
+                    type2Req = type2Req.union(pool, type2);
+                    }
+                }
             }
+        else
+            {
+            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit())
+                {
+                type2Req = typeRequired;
+                }
+            }
+
 
         ctx = ctx.enterFork(true);
         ctx = ctx.exit();
