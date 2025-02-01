@@ -2217,7 +2217,11 @@ public class TypeInfo
                     MethodInfo        info   = entry.getValue();
                     MethodStructure   method = info.getTopmostMethodStructure(this);
 
-                    assert !info.isCapped();
+                    if (info.isCapped())
+                        {
+                        // ignore "capped" methods
+                        continue;
+                        }
 
                     int cAllParams  = sig.getParamCount();
                     int cTypeParams = method.getTypeParamCount();

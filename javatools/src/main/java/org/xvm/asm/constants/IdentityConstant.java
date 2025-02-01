@@ -137,11 +137,10 @@ public abstract class IdentityConstant
         }
 
     /**
-     * Test for a child visibility. This child (A) is said to be a "nest mate" of the specified
-     * class (B) iff
+     * This child (A) is said to be a "nest mate" of the specified class (B) iff
      * <ul>
-     *   <li> both A and B have have the same outermost underlying class, or
-     *   <li> the outermost underlying class of B extends the outermost underlying class of A.
+     *   <li> both A and B have the same outermost parent class, or
+     *   <li> B or an ascendant of B extends (or has a contribution of) the outermost parent of A.
      * </ul>
      * In other words, this class is a nest mate of the specified class if this class is "visible"
      * from the context of the specified class and could be privately accessed in that context.
@@ -155,9 +154,31 @@ public abstract class IdentityConstant
      */
     public boolean isNestMateOf(IdentityConstant idClass)
         {
+        return findNestBase(idClass) != null;
+        }
+
+    /**
+     * Exactly like in the method above, this child (A) is said to be a "nest mate" of the specified
+     * class (B) iff
+     * <ul>
+     *   <li> both A and B have the same outermost parent class, or
+     *   <li> B or an ascendant of B extends (or has a contribution of) the outermost parent of A.
+     * </ul>
+     * If A is a "nest mate" of B, return a "nest base" class which is either B itself or an
+     * ascendant of B that extends the outermost parent of A.
+     * <p/>
+     * For example, Map.Entry is a nest mate of HasherMap.EntrySet and HasherMap is the "nest base".
+     *
+     * @param idClass  the class to test nest the visibility from; note that it can represent
+     *                 a non-virtual (e.g. anonymous) inner class
+     *
+     * @return the base class or null if the classes are not "nest mates"
+     */
+    public IdentityConstant findNestBase(IdentityConstant idClass)
+        {
         if (this.equals(idClass))
             {
-            return true;
+            return idClass;
             }
 
         if (getFormat() == Format.Class && idClass.getFormat() == Format.Class)
@@ -168,7 +189,7 @@ public abstract class IdentityConstant
             ClassStructure clzThis = (ClassStructure) idThis.getComponent();
             if (clzThis.isAnonInnerClass())
                 {
-                return false;
+                return null;
                 }
 
             // check with every parent class on the way up to the outermost
@@ -178,19 +199,19 @@ public abstract class IdentityConstant
                 {
                 if (idBaseThis.equals(idBaseThat))
                     {
-                    return true;
+                    return idBaseThat;
                     }
 
                 ClassStructure clzThat = (ClassStructure) idBaseThat.getComponent();
                 if (clzThat.hasContribution(idBaseThis))
                     {
-                    return true;
+                    return idBaseThat;
                     }
                 idBaseThat = idBaseThat.getParentClass();
                 }
             while (idBaseThat != null);
             }
-        return false;
+        return null;
         }
 
     /**

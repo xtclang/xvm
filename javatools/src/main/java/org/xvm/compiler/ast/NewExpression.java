@@ -1293,9 +1293,9 @@ public class NewExpression
 
         // select a unique (and purposefully syntactically illegal) name for the anonymous inner
         // class
-        AnonInnerClass info     = type.inferAnonInnerClass(errs);
+        AnonInnerClass inner    = type.inferAnonInnerClass(errs);
         Component      parent   = getComponent();
-        String         sDefault = info.getDefaultName();
+        String         sDefault = inner.getDefaultName();
         int            nSuffix  = 1;
         String         sName;
         while (parent.getChild(sName = sDefault + ":" + nSuffix) != null)
@@ -1312,11 +1312,11 @@ public class NewExpression
                 assert m_purposeCurrent == AnonPurpose.None;
                 anon = adopt(new TypeCompositionStatement(
                         this,
-                        clone(info.getAnnotations()),
-                        info.getCategory(),
+                        clone(inner.getAnnotations()),
+                        inner.getCategory(),
                         tokName,
-                        clone(info.getTypeParameters()),
-                        clone(info.getCompositions()),
+                        clone(inner.getTypeParameters()),
+                        clone(inner.getCompositions()),
                         clone(args),
                         (StatementBlock) body.clone(),
                         type.getStartPosition(),
@@ -1328,11 +1328,11 @@ public class NewExpression
                 // generate the final code
                 anon = adopt(new TypeCompositionStatement(
                         this,
-                        info.getAnnotations(),
-                        info.getCategory(),
+                        inner.getAnnotations(),
+                        inner.getCategory(),
                         tokName,
-                        info.getTypeParameters(),
-                        info.getCompositions(),
+                        inner.getTypeParameters(),
+                        inner.getCompositions(),
                         args,
                         body,
                         type.getStartPosition(),

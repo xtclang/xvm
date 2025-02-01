@@ -1009,13 +1009,15 @@ public class NamedTypeExpression
                 IdentityConstant idClass   = clzClass.getIdentityConstant();
                 ClassStructure   clzTarget = (ClassStructure) idTarget.getComponent();
 
-                if (idTarget.isNestMateOf(idClass))
+                IdentityConstant idNestBase = idTarget.findNestBase(idClass);
+                if (idNestBase != null)
                     {
                     if (clzTarget.isVirtualChild())
                         {
                         ClassConstant idBase = isFullyQualifiedChild()
                                 ? idTarget.getAutoNarrowingBase()
-                                : ((ClassConstant) idClass).getOutermost();
+                                : (ClassConstant) idNestBase;
+
                         ClassStructure clzBase = (ClassStructure) idBase.getComponent();
                         if (clzBase.containsUnresolvedContribution())
                             {
