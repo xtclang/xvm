@@ -198,8 +198,11 @@ public class PropertyInfo
             Existence    exAdd   = bodyAdd.getExistence();
             if (!typeAdd.equals(typeResult))
                 {
-                // the property type can be narrowed by a class implementation
-                if (exAdd != Existence.Implied && /* TODO GG+CP exAdd.compareTo(exResult) >= 0 && */ typeAdd.isA(typeResult))
+                // the property type can be narrowed by a class implementation; but also allow it
+                // if one implicit body goes on top of another
+                Existence exBase = getHead().getExistence();
+                if (typeAdd.isA(typeResult) &&
+                        (exAdd != Existence.Implied || exBase == Existence.Implied))
                     {
                     // type has been narrowed
                     typeResult = typeAdd;
