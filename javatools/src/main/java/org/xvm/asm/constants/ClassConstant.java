@@ -158,6 +158,9 @@ public class ClassConstant
         }
 
     /**
+     * This method is almost identical to {@link #getOutermost()} except that a method parent
+     * terminates the "next parent up" search.
+     *
      * @return the class that represents an auto-narrowing base
      */
     public ClassConstant getAutoNarrowingBase()
