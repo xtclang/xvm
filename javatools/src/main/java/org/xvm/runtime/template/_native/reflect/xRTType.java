@@ -1244,6 +1244,8 @@ public class xRTType
         TypeConstant  typeThis = hType.getDataType();
         GenericHandle hAnno    = (GenericHandle) hArg;
         ObjectHandle  hMixin   = hAnno.getField(frame, "mixinClass");
+        TypeConstant  typeAnno;
+
         if (hMixin instanceof ClassHandle hClass)
             {
             ArrayHandle hArgs = (ArrayHandle) hAnno.getField(frame, "arguments");
@@ -1255,29 +1257,45 @@ public class xRTType
                     "Annotation arguments are not yet supported"));
                 }
 
-            TypeConstant typeAnno = hClass.getType().getParamType(0);
+            typeAnno = hClass.getType().getParamType(0);
             if (typeThis.isShared(pool) && typeAnno.isShared(pool))
                 {
-                ClassConstant clzAnno = (ClassConstant) typeAnno.getDefiningConstant();
-                Annotation    anno    = pool.ensureAnnotation(clzAnno);
-
-                TypeConstant typeResult = pool.ensureAnnotatedTypeConstant(typeThis, anno);
-                return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
+                return makeAnnotated(frame, typeThis, typeAnno, iReturn);
                 }
             }
         else if (hMixin instanceof ProxyHandle hProxy)
             {
-            TypeConstant typeTarget = hProxy.getTarget().getUnsafeType();
-            if (typeTarget.isA(pool.typeClass()) || typeTarget.isTypeOfType())
+            typeAnno = hProxy.getTarget().getUnsafeType();
+            if (typeThis.isShared(pool) && typeAnno.isShared(pool))
                 {
-                typeTarget = typeTarget.getParamType(0);
+                return makeAnnotated(frame, typeThis, typeAnno, iReturn);
                 }
-            return frame.raiseException(xException.invalidType(frame, "No common TypeSystem for " +
-                    typeThis.getValueString() + " and " + typeTarget.getValueString()));
+            }
+        else
+            {
+            return frame.raiseException(xException.unsupported(frame, "Unsupported mixin type: " +
+                    hMixin.getType()));
             }
 
-        return frame.raiseException(xException.unsupported(frame, "Unsupported mixin type: " +
-                hMixin.getType()));
+        // at least one of the types is not shared; make the error more descriptive
+        TypeConstant typeForeign = typeAnno.isShared(pool) ? typeThis : typeAnno;
+        if (typeForeign.isA(pool.typeClass()) || typeForeign.isTypeOfType())
+            {
+            typeForeign = typeForeign.getParamType(0);
+            }
+        return frame.raiseException(xException.invalidType(frame, "Type \"" +
+                typeForeign.getValueString() + "\" is not shared with the TypeSystem of module \"" +
+                frame.f_context.f_container.getModule().getName() + '"'));
+        }
+
+    private int makeAnnotated(Frame frame, TypeConstant typeThis, TypeConstant typeAnno, int iReturn)
+        {
+        ConstantPool  pool    = frame.poolContext();
+        ClassConstant clzAnno = (ClassConstant) typeAnno.getDefiningConstant();
+        Annotation    anno    = pool.ensureAnnotation(clzAnno);
+
+        TypeConstant typeResult = pool.ensureAnnotatedTypeConstant(typeThis, anno);
+        return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
         }
 
     /**
