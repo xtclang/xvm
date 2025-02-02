@@ -47,6 +47,7 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
 import org.xvm.runtime.template.Proxy;
+import org.xvm.runtime.template.Proxy.ProxyHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
@@ -665,12 +666,12 @@ public class xRTType
                         {
                         case Op.R_NEXT:
                             return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                    xRTFunction.INSTANCE.getCanonicalClass(), 0);
+                                    xRTFunction.INSTANCE.getCanonicalClass());
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                    xRTFunction.INSTANCE.getCanonicalClass(), 0));
+                                    xRTFunction.INSTANCE.getCanonicalClass()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -814,12 +815,12 @@ public class xRTType
                         {
                         case Op.R_NEXT:
                             return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                    xRTFunction.INSTANCE.getCanonicalClass(), 0);
+                                    xRTFunction.INSTANCE.getCanonicalClass());
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                    xRTFunction.INSTANCE.getCanonicalClass(), 0));
+                                    xRTFunction.INSTANCE.getCanonicalClass()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -916,12 +917,12 @@ public class xRTType
                         {
                         case Op.R_NEXT:
                             return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                    xRTFunction.INSTANCE.getCanonicalClass(), 0);
+                                    xRTFunction.INSTANCE.getCanonicalClass());
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                    xRTFunction.INSTANCE.getCanonicalClass(), 0));
+                                    xRTFunction.INSTANCE.getCanonicalClass()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -997,12 +998,12 @@ public class xRTType
                         {
                         case Op.R_NEXT:
                             return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                    xRTMethod.INSTANCE.getCanonicalClass(), 0);
+                                    xRTMethod.INSTANCE.getCanonicalClass());
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                    xRTMethod.INSTANCE.getCanonicalClass(), 0));
+                                    xRTMethod.INSTANCE.getCanonicalClass()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -1069,12 +1070,12 @@ public class xRTType
                         {
                         case Op.R_NEXT:
                             return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                    xRTProperty.INSTANCE.getCanonicalClass(), 0);
+                                    xRTProperty.INSTANCE.getCanonicalClass());
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                    xRTProperty.INSTANCE.getCanonicalClass(), 0));
+                                    xRTProperty.INSTANCE.getCanonicalClass()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -1187,12 +1188,12 @@ public class xRTType
                         {
                         case Op.R_NEXT:
                             return createProxyArray(frame, (ArrayHandle) frame.popStack(),
-                                    xRTProperty.INSTANCE.getCanonicalClass(), 0);
+                                    xRTProperty.INSTANCE.getCanonicalClass());
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 createProxyArray(frameCaller, (ArrayHandle) frameCaller.popStack(),
-                                    xRTProperty.INSTANCE.getCanonicalClass(), 0));
+                                    xRTProperty.INSTANCE.getCanonicalClass()));
                             return Op.R_CALL;
 
                         case Op.R_EXCEPTION:
@@ -1242,26 +1243,41 @@ public class xRTType
         ConstantPool  pool     = frame.poolContext();
         TypeConstant  typeThis = hType.getDataType();
         GenericHandle hAnno    = (GenericHandle) hArg;
-        ClassHandle   hClass   = (ClassHandle) hAnno.getField(frame, "mixinClass");
-        ArrayHandle   hArgs    = (ArrayHandle) hAnno.getField(frame, "arguments");
-
-        if (xArray.INSTANCE.size(hArgs) > 0)
+        ObjectHandle  hMixin   = hAnno.getField(frame, "mixinClass");
+        if (hMixin instanceof ClassHandle hClass)
             {
-            // TODO args
-            throw new UnsupportedOperationException();
+            ArrayHandle hArgs = (ArrayHandle) hAnno.getField(frame, "arguments");
+
+            if (xArray.INSTANCE.size(hArgs) > 0)
+                {
+                // TODO args
+                return frame.raiseException(xException.notImplemented(frame,
+                    "Annotation arguments are not yet supported"));
+                }
+
+            TypeConstant typeAnno = hClass.getType().getParamType(0);
+            if (typeThis.isShared(pool) && typeAnno.isShared(pool))
+                {
+                ClassConstant clzAnno = (ClassConstant) typeAnno.getDefiningConstant();
+                Annotation    anno    = pool.ensureAnnotation(clzAnno);
+
+                TypeConstant typeResult = pool.ensureAnnotatedTypeConstant(typeThis, anno);
+                return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
+                }
+            }
+        else if (hMixin instanceof ProxyHandle hProxy)
+            {
+            TypeConstant typeTarget = hProxy.getTarget().getUnsafeType();
+            if (typeTarget.isA(pool.typeClass()) || typeTarget.isTypeOfType())
+                {
+                typeTarget = typeTarget.getParamType(0);
+                }
+            return frame.raiseException(xException.invalidType(frame, "No common TypeSystem for " +
+                    typeThis.getValueString() + " and " + typeTarget.getValueString()));
             }
 
-        TypeConstant typeAnno = hClass.getType().getParamType(0);
-        if (typeThis.isShared(pool) && typeAnno.isShared(pool))
-            {
-            ClassConstant clzAnno = (ClassConstant) typeAnno.getDefiningConstant();
-            Annotation    anno    = pool.ensureAnnotation(clzAnno);
-
-            TypeConstant typeResult = pool.ensureAnnotatedTypeConstant(typeThis, anno);
-            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
-            }
-        return frame.raiseException(xException.invalidType(frame,
-                "No common TypeSystem for (" + typeThis + " and " + typeAnno + ")"));
+        return frame.raiseException(xException.unsupported(frame, "Unsupported mixin type: " +
+                hMixin.getType()));
         }
 
     /**
@@ -1567,7 +1583,8 @@ public class xRTType
             {
             // this is temporary; only correct for one type argument
             return frame.raiseException(xException.invalidType(frame,
-                "No common TypeSystem for (" + typeThis + " and " + atypeParams[0] + ")"));
+                "No common TypeSystem for (" + typeThis.getValueString() +
+                " and " + atypeParams[0].getValueString() + ")"));
             }
         }
 
@@ -1880,9 +1897,9 @@ public class xRTType
         }
 
     /**
-     * Convert an array or reflective objects into an array of proxies.
+     * Convert an array or reflective objects into an array of proxies and move it to register zero.
      */
-    private int createProxyArray(Frame frame, ArrayHandle hArray, TypeComposition clzElement, int iReturn)
+    private int createProxyArray(Frame frame, ArrayHandle hArray, TypeComposition clzElement)
         {
         TypeConstant    typeElement = clzElement.getType();
         TypeComposition clzArray    = frame.f_context.f_container.resolveClass(
@@ -1909,7 +1926,7 @@ public class xRTType
                     throw new IllegalStateException();
                 }
             }
-        return frame.assignValue(iReturn, xArray.createImmutableArray(clzArray, ahValue));
+        return frame.assignValue(0, xArray.createImmutableArray(clzArray, ahValue));
         }
 
 
@@ -2026,7 +2043,8 @@ public class xRTType
         else
             {
             return frame.raiseException(xException.invalidType(frame,
-                "No common TypeSystem for (" + type1 + " and " + type2 + ")"));
+                "No common TypeSystem for " + type1.getValueString() +
+                " and " + type2.getValueString()));
             }
 
         TypeConstant typeResult = op.makeRelational(pool, type1, type2);
