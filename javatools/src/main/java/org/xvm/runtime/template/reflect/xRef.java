@@ -190,16 +190,9 @@ public class xRef
                 // explicitly masked
                 assert !clzTarget.isInception();
 
-                // create a ClassHandle for the inception class and mask it
-                TypeConstant typeInception = clzTarget.getInceptionType();
-                if (typeInception.isShared(pool))
+                if (clzTarget.getInceptionType().isShared(pool))
                     {
-                    ObjectHandle hClass = frame.getConstHandle(
-                            pool.ensureClassConstant(typeInception));
-                    return Op.isDeferred(hClass)
-                        ? hClass.proceed(frame, frameCaller ->
-                            maskClassHandle(frameCaller, frameCaller.popStack(), clzTarget, iReturn))
-                        : maskClassHandle(frame, hClass, clzTarget, iReturn);
+                    return ensureMaskedClassHandle(frame, clzTarget, iReturn);
                     }
 
                 // we don't own the class type; send the request to the owner container
@@ -211,9 +204,7 @@ public class xRef
                         {
                         public int process(Frame frame, int iPC)
                             {
-                            ObjectHandle hClass = frame.getConstHandle(
-                                    frame.poolContext().ensureClassConstant(typeInception));
-                            return frame.assignDeferredValue(0, hClass);
+                            return ensureMaskedClassHandle(frame, clzTarget, 0);
                             }
 
                         public String toString()
@@ -237,11 +228,23 @@ public class xRef
                 frame.getConstHandle(pool.ensureClassConstant(type)));
         }
 
-    private int maskClassHandle(Frame frame, ObjectHandle hClass, TypeComposition clz, int iReturn)
+    /**
+     * Create a ClassHandle for the inception class and mask it.
+     */
+    private int ensureMaskedClassHandle(Frame frame, ClassComposition clzTarget, int iReturn)
+        {
+        ObjectHandle hClass = frame.getConstHandle(frame.poolContext().
+                                ensureClassConstant(clzTarget.getInceptionType()));
+        return Op.isDeferred(hClass)
+            ? hClass.proceed(frame, frameCaller ->
+                maskClassHandle(frameCaller, frameCaller.popStack(), clzTarget.getType(), iReturn))
+            : maskClassHandle(frame, hClass, clzTarget.getType(), iReturn);
+        }
+
+    private int maskClassHandle(Frame frame, ObjectHandle hClass, TypeConstant typeMask, int iReturn)
         {
         ConstantPool pool     = frame.poolContext();
         TypeConstant typeOrig = hClass.getType();
-        TypeConstant typeMask = clz.getType();
         TypeConstant typeClz  = pool.ensureParameterizedTypeConstant(pool.typeClass(),
                                     typeMask,
                                     typeMask.ensureAccess(Access.PROTECTED),
