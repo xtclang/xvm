@@ -3385,7 +3385,11 @@ public class Parser
                             Token name    = match(Id.DEFAULT);
                             if (name == null)
                                 {
-                                name = expect(Id.IDENTIFIER);
+                                name = match(Id.NEW);
+                                if (name == null)
+                                    {
+                                    name = expect(Id.IDENTIFIER);
+                                    }
                                 }
                             long                 lEndPos = name.getEndPosition();
                             List<TypeExpression> params  = null;
