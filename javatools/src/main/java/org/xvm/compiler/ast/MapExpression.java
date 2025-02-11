@@ -144,10 +144,8 @@ public class MapExpression
         CheckEntries:
         if (typeRequired != null)
             {
-            TypeConstant typeMap = pool().typeMap();
-
-            if (!typeRequired.isA(typeMap)
-                    || !type.testFit(ctx, typeMap.getType(), fExhaustive, errs).isFit()
+            if (!checkMapType(typeRequired, errs)
+                    || !type.testFit(ctx, pool().typeMap().getType(), fExhaustive, errs).isFit()
                     || !checkMapType(type.getTypeConstant(), errs))
                 {
                 return TypeFit.NoFit;
@@ -484,19 +482,17 @@ public class MapExpression
     // ----- internal helpers ----------------------------------------------------------------------
 
     /**
-     * The actual type must either be Map (in which case a system-selected type will be used), or a
-     * type that is a Map and takes the contents in its constructor, or has a no-parameter
-     * constructor (so the map can be created empty and the items added to it).
+     * Ensure the specified type is a [potentially parameterized] Map.
      */
-    private boolean checkMapType(TypeConstant typeActual, ErrorListener errs)
+    private boolean checkMapType(TypeConstant type, ErrorListener errs)
         {
         ConstantPool pool = pool();
-        if (!typeActual.isSingleUnderlyingClass(true) ||
-                !typeActual.getSingleUnderlyingClass(true).equals(pool.clzMap()))
+        if (!type.isSingleUnderlyingClass(true) ||
+                !type.getSingleUnderlyingClass(true).equals(pool.clzMap()))
             {
             // TODO how to handle another type besides "Map"?
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
-                    pool.typeMap().getValueString(), typeActual.getValueString());
+                    pool.typeMap().getValueString(), type.getValueString());
             return false;
             }
         return true;

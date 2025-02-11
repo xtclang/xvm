@@ -3,14 +3,8 @@ module TestSimple {
     @Inject static Console console;
 
     void run() {
-        test(Null);
-        test(Version:2.0);
-    }
+        Map<Int, String> map = new HashMap([Int:1="A"]); // this used to fail to compile
 
-    void test(Version? xmlVersion) {
-        StringBuffer buf = new StringBuffer();
-        (xmlVersion ?: "1.0").appendTo(buf); // this used to fail to compile
-
-        console.print(buf.toString());
+        console.print(map);
     }
 }
