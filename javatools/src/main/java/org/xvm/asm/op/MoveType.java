@@ -17,7 +17,9 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 
 /**
- * MOV_TYPE rvalue-src, lvalue-dest; place the type of the r-value into the l-value
+ * MOV_TYPE rvalue-src, lvalue-dest; place the type of the r-value (sans explicit immutability) into the l-value
+ *
+ * Note: at the moment, this op is only used to facilitate the virtual construction
  */
 public class MoveType
         extends OpMove
@@ -73,7 +75,7 @@ public class MoveType
         {
         ConstantPool pool = frame.poolContext();
         int          nTo  = m_nToValue;
-        TypeConstant type = hValue.getType();
+        TypeConstant type = hValue.getComposition().getType(); // don't augment the value type
 
         if (frame.isNextRegister(nTo))
             {

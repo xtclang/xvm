@@ -1083,6 +1083,9 @@ public class NewExpression
                         }
 
                     regType = new Register(pool().typeType(), null, Op.A_STACK);
+
+                    // it's a responsibility of the MoveType op to ensure that the explicit
+                    // immutability aspect of the target should not be carried over
                     code.add(new MoveType(argTarget, regType));
                     m_astNew = new NewExprAST(astTarget, idConstruct, aAstArgs);
                     }
