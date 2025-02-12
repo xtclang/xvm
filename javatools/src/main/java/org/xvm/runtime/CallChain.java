@@ -2,20 +2,27 @@ package org.xvm.runtime;
 
 
 import org.xvm.asm.Component;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodBody.Implementation;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.xException;
+import org.xvm.runtime.template.xService.ServiceHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
+import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
 
 /**
@@ -486,6 +493,149 @@ public class CallChain
             return hTarget.getTemplate().setFieldValue(frame, hTarget,
                 f_aMethods[0].getPropertyConstant(), ahArg[0]);
             }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+        }
+
+    /**
+     * A CallChain representing a virtual constructor.
+     */
+    public static class VirtualConstructorChain
+            extends CallChain
+        {
+        public VirtualConstructorChain(ConstantPool pool, MethodConstant idConstructor,
+                                       ObjectHandle hTarget)
+            {
+            super((MethodBody[]) null);
+
+            TypeComposition clzTarget  = hTarget.getComposition();
+            TypeConstant    typeTarget = clzTarget.getType();
+
+            f_idConstructor = idConstructor;
+            f_clzTarget     = clzTarget;
+
+            TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+            MethodInfo infoCtor   = infoTarget.findVirtualConstructor(idConstructor.getSignature());
+            if (infoCtor == null)
+                {
+                f_constructor = null;
+                f_typeCtor    = null;
+                }
+            else
+                {
+                MethodStructure constructor = infoCtor.getTopmostMethodStructure(infoTarget);
+                TypeConstant[]  atypeParam  = constructor.getIdentityConstant().getSignature().
+                                                resolveGenericTypes(pool, typeTarget).getRawParams();
+                f_constructor = constructor;
+                f_typeCtor    = pool.buildFunctionType(atypeParam, typeTarget);
+                }
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int[] aiReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invoke(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int invokeT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+            {
+            throw new IllegalStateException();
+            }
+
+        @Override
+        public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn)
+            {
+            if (f_constructor == null)
+                {
+                return frame.raiseException("Failed to find a virtual constructor " +
+                        f_idConstructor.getValueString() + " at " +
+                        f_clzTarget.getType().getValueString());
+                }
+
+            ObjectHandle hCtor = xRTFunction.makeConstructorHandle(
+                    frame, f_constructor, f_typeCtor, f_clzTarget, f_constructor.getParamArray(), false);
+            if (hTarget instanceof ServiceHandle hService)
+                {
+                if (Op.isDeferred(hCtor))
+                    {
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.assignValue(iReturn,
+                            xRTFunction.makeAsyncDelegatingHandle(hService,
+                                (FunctionHandle) frameCaller.popStack())));
+                    return Op.R_CALL;
+                    }
+                return frame.assignValue(iReturn,
+                        xRTFunction.makeAsyncDelegatingHandle(hService, (FunctionHandle) hCtor));
+                }
+            else
+                {
+                return frame.assignDeferredValue(iReturn, hCtor);
+                }
+            }
+
+        private final MethodConstant  f_idConstructor;
+        private final MethodStructure f_constructor;
+        private final TypeConstant    f_typeCtor;
+        private final TypeComposition f_clzTarget;
         }
 
     /**

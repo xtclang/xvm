@@ -1498,14 +1498,14 @@ public class xRTFunction
                 typeConstructor = container.getConstantPool().
                         ensureAnnotatedTypeConstant(typeConstructor, aAnno);
 
-                TypeComposition clzStruct = INSTANCE.ensureClass(container, constructor).
+                TypeComposition clzConstructor = INSTANCE.ensureClass(container, constructor).
                         ensureAccess(Constants.Access.STRUCT);
 
-                ConstructorHandle hStruct = new ConstructorHandle(
-                        clzStruct, clzTarget, typeConstructor, constructor, aParams, fParent);
+                ConstructorHandle hConstructor = new ConstructorHandle(
+                    clzConstructor, clzTarget, typeConstructor, constructor, aParams, fParent);
 
-                int iResult = hStruct.getTemplate().proceedConstruction(
-                                    frame, null, true, hStruct, Utils.OBJECTS_NONE, Op.A_STACK);
+                int iResult = hConstructor.getTemplate().proceedConstruction(
+                                    frame, null, true, hConstructor, Utils.OBJECTS_NONE, Op.A_STACK);
                 return frame.popResultImmutable(iResult);
                 }
             else
@@ -1538,19 +1538,19 @@ public class xRTFunction
             }
 
         @Override
-        public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        protected int call1Impl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
             // this can only be a call from Call_01
-            return callImpl(frame, ahArg, iReturn);
+            return callImpl(frame, ahVar, iReturn);
             }
 
         @Override
-        public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn)
+        protected int callTImpl(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn)
             {
             TypeConstant    typeTuple = frame.poolContext().ensureTupleType(f_clzTarget.getType());
             TypeComposition clzTuple  = xTuple.INSTANCE.ensureClass(frame.f_context.f_container, typeTuple);
 
-            switch (callImpl(frame, ahArg, Op.A_STACK))
+            switch (callImpl(frame, ahVar, Op.A_STACK))
                 {
                 case Op.R_NEXT:
                     return frame.assignValue(iReturn,
@@ -1591,12 +1591,6 @@ public class xRTFunction
             return constructor == null
                 ? template.proceedConstruction(frame, null, false, ahArg[0], Utils.OBJECTS_NONE, iReturn)
                 : template.construct(frame, constructor, clzTarget, hParent, ahArg, iReturn);
-            }
-
-        @Override
-        protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg)
-            {
-            throw new IllegalStateException();
             }
 
         @Override

@@ -607,6 +607,15 @@ public class SignatureConstant
         }
 
     /**
+     * @return the type of the function that corresponds to this SignatureConstant as a constructor
+     */
+    public TypeConstant asConstructorType(ConstantPool pool, TypeConstant typeTarget)
+        {
+        assert getName().equals("construct") && m_aconstReturns.length == 0;
+        return pool.buildFunctionType(m_aconstParams, typeTarget);
+        }
+
+    /**
      * Truncate some of the signature's parameters.
      *
      * @param ofStart  the first index to retain a parameter at

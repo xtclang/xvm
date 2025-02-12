@@ -13,6 +13,7 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 
 import org.xvm.runtime.CallChain;
+import org.xvm.runtime.CallChain.VirtualConstructorChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.PropertyComposition;
@@ -149,6 +150,13 @@ public abstract class OpInvocable extends Op
             {
             chain = new CallChain(method);
 
+            context.setOpInfo(this, Category.Chain, chain);
+            return chain;
+            }
+
+        if (idMethod.getName().equals("construct"))
+            {
+            chain = new VirtualConstructorChain(frame.poolContext(), idMethod, hTarget);
             context.setOpInfo(this, Category.Chain, chain);
             return chain;
             }

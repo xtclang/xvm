@@ -504,7 +504,7 @@ interface Map<Key, Value>
         // Maps that implement Replicable can be automatically supported via their replicator
         // constructor
         if ((Replicable + Map<Key, Value>) map := this.is(Replicable)) {
-            return new MapCollector<Key, Value>(() -> map.new());
+            return new MapCollector<Key, Value>(map.&new());
         }
 
         // Map implementations that care about producing a specific class of Map, or otherwise wish

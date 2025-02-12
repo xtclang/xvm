@@ -1899,6 +1899,47 @@ public class TypeInfo
         return findCallable("construct", false, false, TypeConstant.NO_TYPES, aArgs);
         }
 
+    /**
+     * Find a virtual constructor that best matches the specified signature.
+     *
+     * Note: this method is used only by the runtime.
+     *
+     * @param sig  the virtual constructor signature
+     *
+     * @return the matching constructor info (null if none found)
+     */
+    public MethodInfo findVirtualConstructor(SignatureConstant sig)
+        {
+        Set<MethodConstant> setConstruct =
+                findMethods("construct", sig.getParamCount(), MethodKind.Constructor);
+
+        MethodInfo methodBest = null;
+        for (MethodConstant idTest : setConstruct)
+            {
+            MethodInfo methodTest = getMethodById(idTest);
+
+            for (MethodBody body : methodTest.getChain())
+                {
+                if (!body.isVirtualConstructor())
+                    {
+                    continue;
+                    }
+                if (body.getSignature().isSubstitutableFor(sig, null))
+                    {
+                    if (methodBest == null)
+                        {
+                        methodBest = methodTest;
+                        }
+                    else
+                        {
+                        methodBest = chooseBest(methodBest, methodTest);
+                        }
+                    }
+                }
+            }
+        return methodBest;
+        }
+
 
     // ----- compiler support ----------------------------------------------------------------------
 

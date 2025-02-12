@@ -472,7 +472,9 @@ public class InvocationExpression
                     }
 
                 TypeConstant typeFn = m_fBindTarget
-                        ? idMethod.getSignature().asFunctionType()
+                        ? method.isVirtualConstructor()
+                            ? idMethod.getSignature().asConstructorType(pool, typeLeft)
+                            : idMethod.getSignature().asFunctionType()
                         : idMethod.getValueType(pool, typeLeft);
 
                 if (cTypeParams > 0)
@@ -1049,7 +1051,9 @@ public class InvocationExpression
                         return null;
                         }
                     TypeConstant typeFn = m_fBindTarget
-                            ? idMethod.getSignature().asFunctionType()
+                            ? method.isVirtualConstructor()
+                                ? idMethod.getSignature().asConstructorType(pool, typeLeft)
+                                : idMethod.getSignature().asFunctionType()
                             : idMethod.getValueType(pool, typeLeft);
 
                     if (cTypeParams > 0)
@@ -1445,47 +1449,62 @@ public class InvocationExpression
 
                 if (m_method.isFunction() || m_method.isConstructor())
                     {
-                    // use the function identity as the argument & drop through to the function handling
-                    assert !m_fBindTarget && (exprLeft == null || !exprLeft.hasSideEffects() ||
-                                              m_fBjarne || m_idFormal != null);
-                    if (m_idFormal == null)
+                    if (m_fBindTarget)
                         {
-                        argFn      = m_method.getIdentityConstant();
-                        fConstruct = m_method.isConstructor();
-                        if (exprLeft instanceof TraceExpression)
-                            {
-                            // give the TraceExpression a chance to generate arguments
-                            exprLeft.generateVoid(ctx, code, errs);
-                            }
+                        // this is a virtual construction, e.g. "map.&new();"
+                        assert m_method.isVirtualConstructor();
+                        Argument argTarget = generateTarget(ctx, code, exprLeft, fLocalPropOk,
+                                                fTargetOnStack, errs);
+
+                        argFn = code.createRegister(
+                                idMethod.getSignature().asConstructorType(pool, argTarget.getType()));
+                        code.add(new MBind(argTarget, idMethod, argFn));
+                        astFn = new BindMethodAST(m_astTarget, idMethod, argFn.getType());
                         }
                     else
                         {
-                        // create a synthetic method constant for the formal type (for a funky
-                        // interface type)
-                        if (exprLeft != null)
+                        // use the function identity as the argument and drop to the function handling
+                        assert exprLeft == null || !exprLeft.hasSideEffects() ||
+                                m_fBjarne || m_idFormal != null;
+                        if (m_idFormal == null)
                             {
-                            TypeConstant typeType = exprLeft.getType();
-                            assert typeType.isTypeOfType();
-                            TypeConstant typeLeft = typeType.getParamType(0);
-
-                            if (typeLeft.isFormalType())
+                            argFn      = m_method.getIdentityConstant();
+                            fConstruct = m_method.isConstructor();
+                            if (exprLeft instanceof TraceExpression)
                                 {
-                                if (exprLeft instanceof TraceExpression)
-                                    {
-                                    // same as above; allow the TraceExpression to generate args
-                                    exprLeft.generateVoid(ctx, code, errs);
-                                    }
-                                }
-                            else
-                                {
-                                Register regType = (Register) exprLeft.generateArgument(
-                                                        ctx, code, fLocalPropOk, false, errs);
-                                m_idFormal = pool.ensureDynamicFormal(ctx.getMethod().getIdentityConstant(),
-                                        regType, m_idFormal, exprName.getName());
+                                // give the TraceExpression a chance to generate arguments
+                                exprLeft.generateVoid(ctx, code, errs);
                                 }
                             }
-                        argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
-                        fConstruct = false;
+                        else
+                            {
+                            // create a synthetic method constant for the formal type (for a funky
+                            // interface type)
+                            if (exprLeft != null)
+                                {
+                                TypeConstant typeType = exprLeft.getType();
+                                assert typeType.isTypeOfType();
+                                TypeConstant typeLeft = typeType.getParamType(0);
+
+                                if (typeLeft.isFormalType())
+                                    {
+                                    if (exprLeft instanceof TraceExpression)
+                                        {
+                                        // same as above; allow the TraceExpression to generate args
+                                        exprLeft.generateVoid(ctx, code, errs);
+                                        }
+                                    }
+                                else
+                                    {
+                                    Register regType = (Register) exprLeft.generateArgument(
+                                                            ctx, code, fLocalPropOk, false, errs);
+                                    m_idFormal = pool.ensureDynamicFormal(ctx.getMethod().getIdentityConstant(),
+                                            regType, m_idFormal, exprName.getName());
+                                    }
+                                }
+                            argFn      = pool.ensureMethodConstant(m_idFormal, idMethod.getSignature());
+                            fConstruct = false;
+                            }
                         }
                     }
                 else
@@ -2991,6 +3010,12 @@ public class InvocationExpression
             return prop.getIdentity();
             }
 
+        if (sName.equals("new"))
+            {
+            sName      = "construct";
+            kind       = MethodKind.Constructor;
+            aRedundant = TypeConstant.NO_TYPES;
+            }
         return findMethod(ctx, typeParent, infoParent, sName, args, kind,
                     m_fCall, fAllowNested, aRedundant, errs);
         }
