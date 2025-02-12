@@ -142,7 +142,7 @@ public class xContainerControl
             TypeComposition   clzModule   = container.resolveClass(idModule.getType());
             CallChain         chain       = clzModule.getMethodCallChain(idMethod.getSignature());
             SingletonConstant constModule = pool.ensureSingletonConstConstant(idModule);
-            FunctionHandle  hFunction = new xRTFunction.AsyncHandle(container, chain)
+            FunctionHandle    hFunction   = new xRTFunction.AsyncHandle(container, chain)
                 {
                 @Override
                 protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService)

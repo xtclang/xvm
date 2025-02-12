@@ -202,9 +202,9 @@ public final class DebugConsole
             return Op.R_NEXT;
             }
 
-        if (frame != m_frame && m_frame != null && hEx == m_frame.m_hException)
+        if (hEx == m_hException)
             {
-            // this is a re-throw (most probable by FINALLY_END); ignore
+            // this is a re-throw (for example, by FINALLY_END); ignore
             return Op.R_NEXT;
             }
 
@@ -224,6 +224,7 @@ public final class DebugConsole
                 m_stepMode = StepMode.StepInto;
                 return Op.R_NEXT;
                 }
+            m_hException = hEx;
             }
 
         // unwind the exception naturally without stopping in the debugger
@@ -2856,6 +2857,11 @@ public final class DebugConsole
      * The current frame.
      */
     private Frame m_frame;
+
+    /**
+     * The last reported exception.
+     */
+    private ExceptionHandle m_hException;
 
     /**
      * Remaining steps before stopping.
