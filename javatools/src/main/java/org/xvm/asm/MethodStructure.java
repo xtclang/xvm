@@ -994,14 +994,16 @@ public class MethodStructure
                     {
                     TypeConstant typeActual = mapTypeParams.get(constParam);
                     TypeConstant typeFormal = atypeMethodParams[iT].getParamType(0);
-                    for (TypeParameterConstant constPending : setPending)
+                    for (Iterator<TypeParameterConstant> iter = setPending.iterator(); iter.hasNext();)
                         {
+                        TypeParameterConstant constPending = iter.next();
+
                         TypeConstant typeResolved =
                                 typeFormal.resolveTypeParameter(typeActual, constPending.getName());
                         if (typeResolved != null)
                             {
                             mapTypeParams.put(constPending, typeResolved);
-                            setPending.remove(constPending);
+                            iter.remove();
                             }
                         }
                     }
