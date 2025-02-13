@@ -2316,8 +2316,14 @@ public class NameExpression
                 TypeConstant typeLeft = left.getImplicitType(ctx);
                 if (typeLeft == null || typeLeft.containsUnresolved())
                     {
-                    log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
-                    return null;
+                    // we need to exempt unresolved annotation parameters with validated dynamic
+                    // "ExpressionConstant" constants (see AnnotationExpression#ensureAnnoation())
+                    if (!(typeLeft instanceof AnnotatedTypeConstant typeAnno)
+                            || typeAnno.getUnderlyingType().containsUnresolved())
+                        {
+                        log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, getName());
+                        return null;
+                        }
                     }
 
                 if (typeLeft.isTypeOfType() && left instanceof NameExpression exprLeft)
@@ -3287,57 +3293,54 @@ public class NameExpression
     protected Meaning getMeaning()
         {
         Argument arg = m_arg;
-        if (arg == null)
+        switch (arg)
             {
-            return Meaning.Unknown;
-            }
+            case null:
+                return Meaning.Unknown;
 
-        if (arg instanceof Register reg)
-            {
-            return reg.isPredefined()
+            case Register reg:
+                return reg.isPredefined()
                     ? reg.isLabel()
-                            ? Meaning.Label
-                            : Meaning.Reserved
+                    ? Meaning.Label
+                    : Meaning.Reserved
                     : Meaning.Variable;
-            }
 
-        if (arg instanceof TargetInfo)
-            {
-            // this indicates an "outer this"
-            return Meaning.Reserved;
-            }
+            case TargetInfo ignored:
+                // this indicates an "outer this"
+                return Meaning.Reserved;
 
-        if (arg instanceof Constant constant)
-            {
-            switch (constant.getFormat())
-                {
+            case Constant constant:
+                switch (constant.getFormat())
+                    {
                     // class ID
-                case Module:
-                case Package:
-                    // relative ID
-                case ThisClass:
-                case ParentClass:
-                    return Meaning.Class;
+                    case Module:
+                    case Package:
+                        // relative ID
+                    case ThisClass:
+                    case ParentClass:
+                        return Meaning.Class;
 
-                case Class:
-                case DecoratedClass:
-                    return m_plan == Plan.TypeOfClass
+                    case Class:
+                    case DecoratedClass:
+                        return m_plan == Plan.TypeOfClass
                             ? Meaning.Type
                             : Meaning.Class;
 
-                case Property:
-                    return Meaning.Property;
+                    case Property:
+                        return Meaning.Property;
 
-                case FormalTypeChild:
-                    return Meaning.FormalChildType;
+                    case FormalTypeChild:
+                        return Meaning.FormalChildType;
 
-                case Method:
-                case MultiMethod:
-                    return Meaning.Method;
+                    case Method:
+                    case MultiMethod:
+                        return Meaning.Method;
 
-                case Typedef:
-                    return Meaning.Type;
-                }
+                    case Typedef:
+                        return Meaning.Type;
+                    }
+
+            default:
             }
 
         throw new IllegalStateException("arg=" + arg);

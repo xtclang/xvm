@@ -46,7 +46,7 @@ public class ExpressionConstant
     @Override
     public Format getFormat()
         {
-        return Format.UnresolvedName;
+        return Format.DeferredValue;
         }
 
     @Override
