@@ -155,6 +155,10 @@ const Uri
         assert:arg scheme != Null || authority != Null || path != Null || fragment != Null
                 as "the URI requires at least one of: scheme, authority, path, or fragment";
 
+        // the path cannot be relative if a scheme or authority is specified
+        assert:arg scheme == Null && authority == Null || path?.startsWith('/')
+                as "a relative path cannot be used in a URI that specifies a scheme or an authority";
+
         construct Uri(Null, scheme, authority, user, host, ip, port, path, query, opaque, fragment);
     }
 
