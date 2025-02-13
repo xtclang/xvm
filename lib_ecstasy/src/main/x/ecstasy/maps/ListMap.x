@@ -83,6 +83,27 @@ class ListMap<Key, Value>
         this.inPlace  = True;
     }
 
+    /**
+     * Construct a `ListMap` pre-populated with the same keys and values as in the specified [Map].
+     *
+     * @param that  the [Map] to obtain the initial keys and values from
+     */
+    construct(Map<Key, Value> that) {
+        if (that.is(ListMap)) {
+            construct ListMap(that);
+        } else {
+            Int     size = that.size;
+            Key[]   keys = new Key[](size);
+            Value[] vals = new Value[](size);
+            for ((Key key, Value val) : that) {
+                keys.add(key);
+                vals.add(val);
+            }
+            assert keys.size == size;
+            construct ListMap(keys, vals, True);
+        }
+    }
+
     // ----- ListMap-specific API ------------------------------------------------------------------
 
     /**
@@ -90,12 +111,11 @@ class ListMap<Key, Value>
      *
      * @return a mutable, [inPlace] `ListMap`
      */
-    ListMap ensureMutable()
-        {
+    ListMap ensureMutable() {
         return inPlace && !this.is(immutable)
                 ? this
                 : new ListMap(this);
-        }
+    }
 
     /**
      * Ensure that the `ListMap` is **not** [inPlace].
@@ -107,8 +127,7 @@ class ListMap<Key, Value>
      *
      * @return a persistent (**not** [inPlace]) `ListMap`
      */
-    ListMap ensurePersistent(Boolean doNotClone = False)
-        {
+    ListMap ensurePersistent(Boolean doNotClone = False) {
         if (!inPlace) {
             return this;
         }
@@ -120,7 +139,7 @@ class ListMap<Key, Value>
         }
 
         return new ListMap(keyArray, valArray);
-        }
+    }
 
     // ----- internal ------------------------------------------------------------------------------
 
