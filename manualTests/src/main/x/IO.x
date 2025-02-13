@@ -342,10 +342,9 @@ module TestIO {
             try {
                 Point point = schema.createObjectInput(new CharArrayReader(json)).read<Point>();
                 console.print($"read: {point}");
-                if (failureExpected)
-                    {
+                if (failureExpected) {
                     console.print($"Test \"{test}\" finished, BUT IT SHOULD HAVE FAILED!!!");
-                    }
+                }
             } catch (Exception e) {
                 if (failureExpected) {
                     console.print($"Test \"{test}\" correctly failed as expected.");
