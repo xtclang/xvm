@@ -311,14 +311,17 @@ public final class DebugConsole
         {
         // for now, let's freeze *all* containers
         Container container = frame.f_context.f_container.getNativeContainer();
-        container.freezeTime();
+        boolean   fUnfreeze = container.freezeTime();
         try
             {
             return enterCommandInternal(frame, iPC, fRender);
             }
         finally
             {
-            container.unfreezeTime();
+            if (fUnfreeze)
+                {
+                container.unfreezeTime();
+                }
             }
         }
 

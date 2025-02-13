@@ -526,12 +526,17 @@ public abstract class Container
 
     /**
      * Freeze the time passing for this container.
+     *
+     * @return true iff the time has not already been frozen
      */
-    public void freezeTime()
+    public boolean freezeTime()
         {
-        assert m_ldtFrozen == 0L;
-
-        m_ldtFrozen = System.currentTimeMillis();
+        if (m_ldtFrozen == 0L)
+            {
+            m_ldtFrozen = System.currentTimeMillis();
+            return true;
+            }
+        return false;
         }
 
     /**
