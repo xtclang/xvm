@@ -22,6 +22,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.ClassComposition.FieldInfo;
 
 import org.xvm.runtime.template.Proxy;
+import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService.ServiceHandle;
 
@@ -413,12 +414,26 @@ public abstract class ObjectHandle
 
         public ObjectHandle getField(Frame frame, PropertyConstant idProp)
             {
-            return getField(frame, getComposition().getFieldInfo(idProp));
+            FieldInfo field = getComposition().getFieldInfo(idProp);
+
+            return field == null
+                    ? missingPropertyException(frame, idProp.getName())
+                    : getField(frame, field);
             }
 
         public ObjectHandle getField(Frame frame, String sProp)
             {
-            return getField(frame, getComposition().getFieldInfo(sProp));
+            FieldInfo field = getComposition().getFieldInfo(sProp);
+
+            return field == null
+                    ? missingPropertyException(frame, sProp)
+                    : getField(frame, field);
+            }
+
+        private ObjectHandle missingPropertyException(Frame frame, String sProp)
+            {
+            return new DeferredCallHandle(
+                    xException.makeHandle(frame, "Missing property: " + sProp));
             }
 
         public ObjectHandle getField(Frame frame, FieldInfo field)

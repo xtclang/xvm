@@ -1002,7 +1002,7 @@ public abstract class ClassTemplate
             return hValue.proceed(frame, frameCaller ->
                 {
                 ObjectHandle hVal = frameCaller.popStack();
-                hThis.setField(frame, idProp, hVal);
+                hThis.setField(frameCaller, idProp, hVal);
                 return frameCaller.assignValue(iReturn, hVal);
                 });
             }
@@ -2109,7 +2109,7 @@ public abstract class ClassTemplate
                 frame.m_frameNext.addContinuation(frameCaller ->
                     {
                     RefHandle hRefPublic = (RefHandle) frameCaller.peekStack();
-                    hRefPublic.setField(frame, GenericHandle.OUTER, hOuter);
+                    hRefPublic.setField(frameCaller, GenericHandle.OUTER, hOuter);
                     hOuter.setField(frameCaller, idProp, hRefPublic);
                     return continuation.proceed(frameCaller);
                     });
