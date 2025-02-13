@@ -756,20 +756,17 @@ public class PropertyStructure
     @Override
     public void collectInjections(Set<InjectionKey> setInjections)
         {
-        TypeConstant type = getType();
         if (isRefAnnotated())
             {
-            Annotation[] annos  = getRefAnnotations();
-            Constant     idAnno = annos[0].getAnnotationClass();
-            if (idAnno.equals(getConstantPool().clzInject()))
+            Annotation[] annos = getRefAnnotations();
+            if (annos[0].getAnnotationClass().equals(getConstantPool().clzInject()))
                 {
-                String     sName       = getName();
                 Constant[] aconstParam = annos[0].getParams();
-                if (aconstParam.length > 0)
-                    {
-                    sName = ((StringConstant) aconstParam[0]).getValue();
-                    }
-                setInjections.add(new InjectionKey(sName, type));
+                String     sName       = aconstParam.length > 0 &&
+                                         aconstParam[0] instanceof StringConstant constName
+                        ? constName.getValue()
+                        : getName();
+                setInjections.add(new InjectionKey(sName, getType()));
                 }
             }
         }
