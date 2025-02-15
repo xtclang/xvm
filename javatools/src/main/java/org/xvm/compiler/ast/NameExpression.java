@@ -866,9 +866,20 @@ public class NameExpression
                             m_propAccessPlan    = PropertyAccess.SingletonParent;
                             m_idSingletonParent = clzParent.getIdentityConstant();
                             }
+                        // there is a read of the implicit "this" variable
+                        else if (getParent() instanceof NameExpression)
+                            {
+                            if (!ctx.requireThis(getStartPosition(), null))
+                                {
+                                // we know that this expression represents a property but there is
+                                // no "this"; we can only proceed with the identity mode here;
+                                // it becomes the outer expression's job to report any errors that
+                                // result from this decision
+                                m_plan = Plan.PropertyIdentity;
+                                }
+                            }
                         else
                             {
-                            // there is a read of the implicit "this" variable
                             ctx.requireThis(getStartPosition(), errs);
                             }
                         }
@@ -1637,7 +1648,7 @@ public class NameExpression
      * Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
      * production of a function that takes an argument "t" of the target type "T" at index zero,
      * this method creates a new lambda performing the following transformation:
-     *      (t, a, ...) -> t.m(a, ...)
+     *      {@code (t, a, ...) -> t.m(a, ...)}
      *
      * @param clz       the containing class
      * @param idMethod  the underlying method
@@ -2262,18 +2273,23 @@ public class NameExpression
                         idLeft = pkg.getImportedModule().getIdentityConstant();
                         }
                     }
-                TypeInfo         info    = getTypeInfo(ctx, idLeft.getType(), errs);
-                IdentityConstant idChild = info.findName(pool, sName);
 
-                if (idChild == null)
+                IdentityConstant idChild;
+                if (idLeft instanceof PropertyConstant idProp)
                     {
-                    // typedefs are not in the TypeInfo, look them up directly
-                    ClassStructure clzLeft = (ClassStructure) idLeft.getComponent();
-                    if (clzLeft != null &&
+                    TypeInfo infoProp = pool.ensurePropertyClassTypeConstant(
+                            idProp.getParentConstant().getFormalType().
+                                ensureAccess(Access.PRIVATE), idProp).ensureTypeInfo(errs);
+                    idChild = infoProp.findName(pool, sName);
+                    }
+                else if (idLeft.getComponent() instanceof ClassStructure clzLeft &&
                             clzLeft.findChildDeep(sName) instanceof TypedefStructure typedef)
-                        {
-                        idChild = typedef.getIdentityConstant();
-                        }
+                    {
+                    idChild = typedef.getIdentityConstant();
+                    }
+                else
+                    {
+                    idChild = getTypeInfo(ctx, idLeft.getType(), errs).findName(pool, sName);
                     }
 
                 if (idChild == null)
@@ -2799,11 +2815,30 @@ public class NameExpression
                         typeLeft = left.getImplicitType(ctx);
                         if (!fClass && isIdentityMode(ctx, false))
                             {
-                            assert typeLeft.isA(pool.typeClass());
-                            typeLeft = typeLeft.getParamType(0);
+                            if (typeLeft.isA(pool.typeClass()))
+                                {
+                                typeLeft = typeLeft.getParamType(0);
+                                }
+                            else
+                                {
+                                // we can only get here if the left side is a property name that is
+                                // being used in identity mode; that means that we need to report
+                                // one of two errors, either the failure from ctx.requireThis()
+                                // (since we don't have the "this" to deref the property), or a type
+                                // mismatch (cannot convert type Property to the required type)
+                                assert left instanceof NameExpression nameLeft
+                                        && nameLeft.getMeaning() == Meaning.Property
+                                        && (nameLeft.m_plan == Plan.None ||
+                                            nameLeft.m_plan == Plan.PropertyIdentity);
+                                if (!idProp.getComponent().isStatic() &&
+                                        !ctx.requireThis(getStartPosition(), errs))
+                                    {
+                                    return null;
+                                    }
+                                }
                             }
                         }
-                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
 
                     if (infoProp == null)
                         {
@@ -2877,11 +2912,31 @@ public class NameExpression
                             return null;
                             }
 
-                        assert typeLeft.isA(pool.typeClass());
-                        if (!fClass)
+                        if (typeLeft.isA(pool.typeClass()))
                             {
-                            typeLeft = typeLeft.getParamType(0);
+                            if (!fClass)
+                                {
+                                typeLeft = typeLeft.getParamType(0);
+                                }
                             }
+                        else
+                            {
+                            // we can only get here if the left side is a property name that is being
+                            // used in identity mode; that means that we need to report one of two
+                            // errors, either the failure from ctx.requireThis() (since we don't
+                            // have the "this" to deref the property), or a type mismatch (cannot
+                            // convert type Property to the required type)
+                            assert left instanceof NameExpression nameLeft
+                                    && nameLeft.getMeaning() == Meaning.Property
+                                    && (nameLeft.m_plan == Plan.None ||
+                                        nameLeft.m_plan == Plan.PropertyIdentity);
+                            if (!prop.isStatic() &&
+                                    !ctx.requireThis(getStartPosition(), errs))
+                                {
+                                return null;
+                                }
+                            }
+
                         infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                         if (infoProp == null)
                             {
@@ -3437,8 +3492,10 @@ public class NameExpression
                 // *[1] must have a left-hand side in identity mode; otherwise it is an Error
                 PropertyStructure prop = (PropertyStructure) getIdentity(ctx).getComponent();
 
-                return !prop.isConstant() && !m_fClassAttribute && left != null
-                        && ((NameExpression) left).isIdentityMode(ctx, false);
+                return !prop.isConstant() && !m_fClassAttribute &&
+                    (left == null
+                        ? m_plan == Plan.PropertyIdentity
+                        : ((NameExpression) left).isIdentityMode(ctx, false));
                 }
             }
 
@@ -3758,15 +3815,18 @@ public class NameExpression
     /**
      * Represents the category of argument that the expression yields.
      */
-    protected enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class, Type, Label}
+    protected enum Meaning {Unknown, Reserved, Variable, Property, FormalChildType, Method, Class,
+            Type, Label}
 
     /**
      * Represents the necessary argument/assignable transformation that the expression will have to
      * produce as part of compilation, if it is asked to produce an argument, an assignable, or an
      * assignment.
      */
-    protected enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef, PropertySelf,
-               TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild, BindTarget, BjarneLambda}
+    protected enum Plan {None, OuterThis, OuterRef, RegisterRef, PropertyDeref, PropertyRef,
+            PropertySelf, PropertyIdentity, TypeOfClass, TypeOfTypedef, Singleton, TypeOfFormalChild,
+            BindTarget, BjarneLambda,
+    }
 
     /**
      * If the plan is None or BindTarget, and this expression represents a method or function,

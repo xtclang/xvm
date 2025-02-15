@@ -1027,7 +1027,7 @@ public class StatementBlock
             ConstantPool     pool      = pool();
             AstNode          node      = f_stmt;
             Source           source    = node == null ? null : node.getSource();
-            boolean          fHasThis  = isMethod() || isConstructor();
+            boolean          fHasThis  = isMethod() || (isConstructor() && !isStaticPropertyInitializer());
             TypeConstant     typeThis  = fHasThis ? ctxFrom.getThisType() : null;
             int              cSteps    = 0;
             Access           access    = Access.PRIVATE;
@@ -1572,6 +1572,11 @@ public class StatementBlock
         public boolean isConstructor()
             {
             return f_method.isConstructor() || f_method.isValidator();
+            }
+
+        public boolean isStaticPropertyInitializer()
+            {
+            return f_method.isPropertyInitializer() && f_method.isStatic();
             }
 
         ModuleStructure getModule()
