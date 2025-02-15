@@ -634,7 +634,8 @@ public class NameExpression
         // resolve the name to a "raw" argument, i.e. what does the name refer to, without
         // consideration to read-only vs. read-write, reference vs. de-reference, static vs.
         // virtual, and so on
-        if (typeRequired != null)
+        boolean fInferring = typeRequired != null && !typeRequired.equals(pool().typeObject());
+        if (fInferring)
             {
             ctx = ctx.enterInferring(typeRequired);
             }
@@ -642,7 +643,7 @@ public class NameExpression
         Argument argRaw = resolveRawArgument(ctx, true, errs);
         boolean  fValid = argRaw != null;
 
-        if (typeRequired != null)
+        if (fInferring)
             {
             ctx = ctx.exit();
             }

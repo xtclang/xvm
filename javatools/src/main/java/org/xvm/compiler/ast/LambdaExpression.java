@@ -1589,10 +1589,14 @@ public class LambdaExpression
             }
 
         @Override
-        public void requireThis(long lPos, ErrorListener errs)
+        public boolean requireThis(long lPos, ErrorListener errs)
             {
-            getOuterContext().requireThis(lPos, errs);
-            captureThis();
+            if (getOuterContext().requireThis(lPos, errs))
+                {
+                captureThis();
+                return true;
+                }
+            return false;
             }
 
         @Override

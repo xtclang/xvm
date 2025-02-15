@@ -1865,16 +1865,18 @@ public class NewExpression
             }
 
         @Override
-        public void requireThis(long lPos, ErrorListener errs)
+        public boolean requireThis(long lPos, ErrorListener errs)
             {
             if (getMethod().isStatic())
                 {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+                if (errs != null)
+                    {
+                    errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+                    }
+                return false;
                 }
-            else
-                {
-                super.requireThis(lPos, errs);
-                }
+
+            return super.requireThis(lPos, errs);
             }
 
         /**

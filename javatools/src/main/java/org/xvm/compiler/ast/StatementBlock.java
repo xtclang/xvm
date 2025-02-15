@@ -650,11 +650,10 @@ public class StatementBlock
                 && stmtType.category.getId() == Token.Id.ENUM_VAL)
             {
             boolean multiline = false;
-            for (int i = 0, c = stmts.size(); i < c; ++i)
+            for (Statement stmt : stmts)
                 {
-                Statement stmt = stmts.get(i);
-                if (stmt instanceof TypeCompositionStatement stmtTypeComp
-                        && stmtTypeComp.category.getId() == Token.Id.ENUM_VAL)
+                if (stmt instanceof TypeCompositionStatement stmtTypeComp &&
+                        stmtTypeComp.category.getId() == Id.ENUM_VAL)
                     {
                     multiline |= stmtType.doc != null || stmtType.body != null;
                     ++firstNonEnum;
@@ -930,17 +929,18 @@ public class StatementBlock
             }
 
         @Override
-        public void requireThis(long lPos, ErrorListener errs)
+        public boolean requireThis(long lPos, ErrorListener errs)
             {
             AstNode parent   = f_stmt.getParent();
             boolean fHasThis = parent instanceof LambdaExpression exprLambda
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis)
+            if (!fHasThis && errs != null)
                 {
                 errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
                 }
+            return fHasThis;
             }
 
         @Override

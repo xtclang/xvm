@@ -631,13 +631,10 @@ public class AnnotationExpression
             }
 
         @Override
-        public void requireThis(long lPos, ErrorListener errs)
+        public boolean requireThis(long lPos, ErrorListener errs)
             {
-            if (!hasThis())
-                {
-                // the super call will log the error
-                super.requireThis(lPos, errs);
-                }
+            // the super call will log the error
+            return hasThis() || super.requireThis(lPos, errs);
             }
 
         @Override

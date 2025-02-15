@@ -396,24 +396,14 @@ public abstract class IdentityConstant
      */
     public IdentityConstant appendNestedIdentity(ConstantPool pool, Object oid)
         {
-        if (oid instanceof String s)
+        return switch (oid)
             {
-            return pool.ensurePropertyConstant(this, s);
-            }
-        else if (oid instanceof SignatureConstant sig)
-            {
-            return pool.ensureMethodConstant(this, sig);
-            }
-        else if (oid instanceof NestedIdentity nid)
-            {
-            return nid.getIdentityConstant().ensureNestedIdentity(pool, this);
-            }
-        else if (oid == null)
-            {
-            return this;
-            }
-
-        throw new IllegalArgumentException("illegal nid: " + oid);
+            case String s              -> pool.ensurePropertyConstant(this, s);
+            case SignatureConstant sig -> pool.ensureMethodConstant(this, sig);
+            case NestedIdentity    nid -> nid.getIdentityConstant().ensureNestedIdentity(pool, this);
+            case null                  -> this;
+            default                    -> throw new IllegalArgumentException("illegal nid: " + oid);
+            };
         }
 
     protected IdentityConstant ensureNestedIdentity(ConstantPool pool, IdentityConstant that)

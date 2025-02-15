@@ -1190,18 +1190,21 @@ public class Context
      *
      * @param lPos  the node's position
      * @param errs  the error list to log to (optional)
+     *
+     * @return true iff the check was successful; otherwise an error has been generated
      */
-    public void requireThis(long lPos, ErrorListener errs)
+    public boolean requireThis(long lPos, ErrorListener errs)
         {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null)
             {
-            errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
+            if (errs != null)
+                {
+                errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
+                }
+            return false;
             }
-        else
-            {
-            ctxOuter.requireThis(lPos, errs);
-            }
+        return ctxOuter.requireThis(lPos, errs);
         }
 
     /**
@@ -2937,9 +2940,10 @@ public class Context
             }
 
         @Override
-        public void requireThis(long lPos, ErrorListener errs)
+        public boolean requireThis(long lPos, ErrorListener errs)
             {
             captureThis();
+            return true;
             }
 
         @Override
