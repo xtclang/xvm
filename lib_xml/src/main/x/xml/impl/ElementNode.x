@@ -63,11 +63,8 @@ class ElementNode
     String? value.set(String? newValue) {
         String? oldValue = this.value;
         if (newValue != oldValue) {
-            if (oldValue != Null) {
+            if (oldValue != Null && contentCount > 0) {
                 // TODO remove all previous parts (or if the first one is a data part, rewrite it)
-            }
-            if (newValue != Null) {
-                // TODO add one data part
             }
             mod();
             super(value);
@@ -75,7 +72,14 @@ class ElementNode
     }
 
     @Override
-    @RO Int size.get() = attributeCount + contentCount + elementCount;  // TODO handle contentCount == 0 and value != Null
+    @RO Int size.get() {
+        Int contentCount = this.contentCount;
+        Int totalCount   = attributeCount + contentCount + elementCount;
+        if (contentCount == 0 && value != Null) {
+            ++totalCount;
+        }
+        return totalCount;
+    }
 
     @Override
     @RO Boolean empty.get() = child_ == Null && value == Null;

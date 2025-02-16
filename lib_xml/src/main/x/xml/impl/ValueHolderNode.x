@@ -229,7 +229,7 @@
      *                the first `Content` `Node` is the first `Node`
      * @return node   the [Node] that is the first [Content] `Node`; otherwise, `Null`
      */
-    @Abstract protected (Node? prev, Node? node) firstContent();
+    @Abstract protected (Node? prev, ContentNode? node) firstContent();
 
     /**
      * Determine if there is only a single child [Part] and that it is a [Data] instance.
@@ -295,23 +295,25 @@
     protected static class ContentList(List<Part> partList)
             implements List<Content> {
         @Override
-        @RO Boolean indexed.get() = partList.indexed;
+        @RO Boolean indexed.get() = False;
 
+// TODO override on ElementNode
         @Override
-        conditional Int knownSize() = partList.knownSize();
+        conditional Int knownSize() = (empty, 0);
 
+// TODO override on ElementNode handle special case: (contentCount == 0 && value != Null)
         @Override
-        @RO Int size.get() = partList.size;
+        @RO Int size.get() = contentCount;
 
+// TODO override on AttributeNode (child_ == Null)
+// TODO override on ElementNode (contentCount == 0 && value == Null)
         @Override
-        @RO Boolean empty.get() = partList.empty;
+        @RO Boolean empty.get() = contentCount == 0;
 
         @Override
         conditional Content first() {
-            if (Part part := partList.first()) {
-                return True, part.as(Content);
-            }
-            return False;
+            (_, ContentNode? node) = firstContent();
+            return node != Null, node;
         }
 
         @Override
