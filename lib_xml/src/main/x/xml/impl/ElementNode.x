@@ -2,14 +2,6 @@
  * An implementation of the [Element] interface using the [Node] framework. For a given XML
  * document, there are likely to be a huge number of [Element] instances, so this implementation is
  * optimized for space, while still attempting to provide high performance for expected uses.
- *
- * TODO
- * no value vs. cached-only vs. contents-only vs. both
- * no attr vs. #attrs 20
- * no sub elements vs. #elements 30
- * challenges:
- * * content and child elements can be interspersed
- * * don't want to create content child part(s) unless necessary
  */
 class ElementNode
         extends ValueHolderNode
@@ -39,7 +31,7 @@ class ElementNode
     @Override
     construct(ElementNode that) {
         construct ValueHolderNode(that);
-        // TODO
+        this.counts_ = that.counts_;
     }
 
     /**
@@ -49,7 +41,7 @@ class ElementNode
      */
     construct(Element that) {
         construct ValueHolderNode(that);
-        // TODO
+        this.counts_ = MaxValue; // forces a lazy re-count
     }
 
     // ----- Element API --------------------------------------------------------------------------
@@ -83,7 +75,7 @@ class ElementNode
     }
 
     @Override
-    @RO Int size.get() = attributeCount + contentCount.notLessThan(1) + elementCount;
+    @RO Int size.get() = attributeCount + contentCount + elementCount;  // TODO handle contentCount == 0 and value != Null
 
     @Override
     @RO Boolean empty.get() = child_ == Null && value == Null;
@@ -111,7 +103,11 @@ class ElementNode
     // ----- internal ------------------------------------------------------------------------------
 
     @Override
-    protected conditional Node allowsChild(Part part) = part.is(Content) ? super(part) : False; // TODO
+    protected conditional Node allowsChild(Part part) {
+        return part.is(Element) || part.is(Attribute) || part.is(Content)
+                ? super(part)
+                : False;
+    }
 
     private UInt32 counts_;
 
@@ -125,13 +121,19 @@ class ElementNode
         @Override
         Int get() {
             Int count = counts_ & Mask;
-            return count == Ones ? parts().filter(n -> n.is(Content)).size() : count;
+            if (count == Ones) {
+                count = parts.filter(n -> n.is(ContentNode)).size;
+                if (count < Ones) {
+                    set(count);
+                }
+            }
+            return count;
         }
 
         @Override
         void set(Int newValue) {
             assert newValue >= 0;
-            counts_ = counts_ & ~Mask | newValue.notGreaterThan(Ones);
+            counts_ = counts_ & ~Mask | newValue.notGreaterThan(Ones).toUInt32();
         }
     }
 
@@ -152,13 +154,19 @@ class ElementNode
         @Override
         Int get() {
             Int count = counts_ & Mask >>> Shift;
-            return count == Ones ? parts().filter(n -> n.is(Attribute)).size() : count;
+            if (count == Ones) {
+                count = parts.filter(n -> n.is(AttributeNode)).size;
+                if (count < Ones) {
+                    set(count);
+                }
+            }
+            return count;
         }
 
         @Override
         void set(Int newValue) {
             assert newValue >= 0;
-            counts_ = counts_ & ~Mask | (newValue.notGreaterThan(Ones) << Shift);
+            counts_ = counts_ & ~Mask | (newValue.notGreaterThan(Ones).toUInt32() << Shift);
         }
     }
 
@@ -174,20 +182,39 @@ class ElementNode
         @Override
         Int get() {
             Int count = counts_ & Mask >>> Shift;
-            return count == Ones ? parts().filter(n -> n.is(Element)).size() : count;
+            if (count == Ones) {
+                count = parts.filter(n -> n.is(ElementNode)).size;
+                if (count < Ones) {
+                    set(count);
+                }
+            }
+            return count;
         }
 
         @Override
         void set(Int newValue) {
             assert newValue >= 0;
-            counts_ = counts_ & ~Mask | (newValue.notGreaterThan(Ones) << Shift);
+            counts_ = counts_ & ~Mask | (newValue.notGreaterThan(Ones).toUInt32() << Shift);
         }
     }
 
     /**
-     * TODO
+     * Determine if any [AttributeNode] of the specified name exists within this `ElementNode`.
+     *
+     * @param name  the [Attribute] name to search for
+     *
+     * @return `True` iff an [Attribute] of the specified name was found
+     * @return (conditional) the [AttributeNode] with the specified name
      */
     /* TODO CP protected */ conditional AttributeNode attributeByName(String name) {
-        TODO
+        // attributes precede all other child nodes, so just go until the node is not an attribute
+        Node? node = child_;
+        while (node.is(AttributeNode)) {
+            if (node.name == name) {
+                return True, node;
+            }
+            node = node.as(Node).next_;     // TODO CP get rid of .as(Node)
+        }
+        return False;
     }
 }
