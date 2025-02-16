@@ -101,8 +101,8 @@ class AttributeNode
     }
 
     @Override
-    protected (Node? prev, Node? node) firstContent() {
-        return Null, child_;
+    protected (Node? prev, ContentNode? node) firstContent() {
+        return Null, child_.as(ContentNode?);
     }
 
     @Override
