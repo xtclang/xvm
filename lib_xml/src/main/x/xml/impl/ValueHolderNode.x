@@ -133,7 +133,8 @@
                     if (newValue != Null && node.is(Data)) {
                         node.text = newValue;
                         prev = node;
-                        node = node.next_;
+                        // node = node.next_;
+                        node = node.as(Node).next_; // TODO GG eliminate .as(Node)
                     }
                     while (node != Null) {
                         Node? next = node.next_;
@@ -196,7 +197,7 @@
 //    }
 
     @Override
-    @RO List<Content> contents.get() = new ContentList(parts);
+    @RO List<Content> contents.get() = new ContentList(parts.as(ValueHolderNode));
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -292,7 +293,7 @@
      * A custom router from the `List<Content>` to the `List<Part>`. [Attribute]s can only contain
      * [Content] children, so the `Content` `List` can delegate to the underling `Part` `List`.
      */
-    protected static class ContentList(List<Part> partList)
+    protected static class ContentList(ValueHolderNode partList)
             implements List<Content> {
         @Override
         @RO Boolean indexed.get() = False;
@@ -303,17 +304,17 @@
 
 // TODO override on ElementNode handle special case: (contentCount == 0 && value != Null)
         @Override
-        @RO Int size.get() = contentCount;
+        @RO Int size.get() = partList.contentCount;
 
 // TODO override on AttributeNode (child_ == Null)
 // TODO override on ElementNode (contentCount == 0 && value == Null)
         @Override
-        @RO Boolean empty.get() = contentCount == 0;
+        @RO Boolean empty.get() = partList.contentCount == 0;
 
         @Override
         conditional Content first() {
-            (_, ContentNode? node) = firstContent();
-            return node != Null, node;
+            (_, ContentNode? node) = partList.firstContent();
+            return node == Null ? False : (True, node);
         }
 
         @Override

@@ -142,7 +142,7 @@ class ElementNode
     }
 
     @Override
-    protected (Node? prev, Node? node) firstContent() {
+    protected (Node? prev, ContentNode? node) firstContent() {
         TODO
     }
 
