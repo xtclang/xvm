@@ -747,7 +747,8 @@ public class NameExpression
                         if (prop.isRuntimeConstant())
                             {
                             constVal = prop.getInitialValue();
-                            if (constVal instanceof DeferredValueConstant)
+                            if (constVal instanceof DeferredValueConstant &&
+                                    !errs.hasSeriousErrors())
                                 {
                                 // this error is very unlikely to surface up; most commonly it
                                 // will simply force another cycle in the name resolution
