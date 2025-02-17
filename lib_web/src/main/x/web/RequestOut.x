@@ -4,20 +4,6 @@
 interface RequestOut
         extends Request {
     /**
-     * Create a copy of this request TODO CP
-     *
-     * @param uri       (optional) new Uri (not all the Uri parts may be allowed)
-     * @param protocol  (optional) new protocol
-     * @param path      (optional) new path
-     * @param accepts   (optional) new accepted media types
-     */
-    RequestOut with(Uri?        uri      = Null,
-                    Protocol?   protocol = Null,
-                    Path?       path     = Null,
-                    AcceptList? accepts  = Null,
-                    );
-
-    /**
      * Add the specified cookie information to the message; if the cookie of the same name already
      * exists, then it is replaced with the new value.
      *

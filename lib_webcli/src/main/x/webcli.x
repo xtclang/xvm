@@ -346,7 +346,7 @@ module webcli.xtclang.org {
             } catch (IOException e) {
                 return ($"Error: {e.message.empty ? &e.actualType : e.message}", ServiceUnavailable);
             }
-            HttpStatus status   = response.status;
+            HttpStatus status = response.status;
             if (status == OK) {
                 assert Body body ?= response.body;
                 Byte[] bytes = body.bytes;

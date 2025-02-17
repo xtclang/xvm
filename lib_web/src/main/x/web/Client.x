@@ -149,24 +149,8 @@ interface Client {
      * @return a new Request object
      */
     RequestOut createRequest(HttpMethod method, Uri uri, Object? content = Null,
-                             MediaType? mediaType = Null) {
-        SimpleRequest request = new SimpleRequest(this, method, uri);
-        defaultHeaders.entries.forEach(entry -> request.add(entry));
-
-        if (content != Null || mediaType != Null) {
-            assert method.body != Forbidden;
-
-            if (mediaType == Null) {
-                if (!(mediaType := registry.inferMediaType(content))) {
-                    throw new IllegalArgument($"Unable to find MediaType for: {&content.actualType}");
-                }
-            }
-            request.header[Header.ContentType] = mediaType.text;
-            request.ensureBody(mediaType).from(content?);
-        }
-        request.header[Header.Accept] = request.accepts.text;
-        return request;
-    }
+                             MediaType? mediaType = Null) =
+            new SimpleRequest(this, method, uri, content, mediaType);
 
     /**
      * Password callback used for authentication.

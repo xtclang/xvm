@@ -5,14 +5,48 @@ import convert.Codec;
  */
 @AutoFreezable
 class SimpleRequest
-        implements RequestOut
-        implements Header
-        implements Body {
+        implements RequestOut, Header, Body
+        implements Duplicable {
 
-    construct(Client client, HttpMethod method, Uri uri) {
-        this.client = client; // REVIEW: all we need is the Registry
-        this.method = method;
-        this.uri    = uri;
+    construct(Client client, HttpMethod method, Uri uri, Object? content = Null,
+              MediaType? mediaType = Null, AcceptList? accepts = Null) {
+
+        this.client  = client;
+        this.method  = method;
+        this.uri     = uri;
+        this.accepts = accepts ?: Everything;
+    } finally {
+        client.defaultHeaders.entries.forEach(entry -> add(entry));
+
+        if (content != Null || mediaType != Null) {
+            assert method.body != Forbidden;
+
+            if (mediaType == Null) {
+                if (!(mediaType := client.registry.inferMediaType(content))) {
+                    throw new IllegalArgument($|Unable to find MediaType for \
+                                               |"{&content.actualType}"
+                                             );
+                }
+            }
+            header[Header.ContentType] = mediaType.text;
+            ensureBody(mediaType).from(content?);
+        }
+        header[Header.Accept] = this.accepts.text;
+    }
+
+    @Override
+    construct(SimpleRequest that) {
+        this.client  = that.client;
+        this.method  = that.method;
+        this.uri     = that.uri;
+        this.accepts = that.accepts;
+        this.entries = that.entries.as(Header.Entry[]).toArray(Mutable, inPlace=False);
+
+        if (that.body != Null) {
+            this.mediaType = that.mediaType;
+            this.bytes     = new Byte[](that.bytes);
+            this.body      = this;
+        }
     }
 
     /**
@@ -20,18 +54,14 @@ class SimpleRequest
      */
     private Client client;
 
+    // ----- SimpleRequest methods -----------------------------------------------------------------
 
-    // ----- RequestOut interface ------------------------------------------------------------------
-
-    @Override
-    SimpleRequest with(Uri?        uri      = Null,
-                       Protocol?   protocol = Null,
-                       Path?       path     = Null,
-                       AcceptList? accepts  = Null,
-                       ) {
-        TODO CP
-    }
-
+    /**
+     * Ensure that the `SimpleRequest` is not `immutable`.
+     *
+     * @return a mutable `SimpleRequest` copy of this request
+     */
+    SimpleRequest ensureMutable() = this.is(immutable) ? new(this) : this;
 
     // ----- Request interface ---------------------------------------------------------------------
 
@@ -42,15 +72,12 @@ class SimpleRequest
     Uri uri;
 
     @Override
-    AcceptList accepts = Everything;
-
+    AcceptList accepts;
 
     // ----- HttpMessage interface -----------------------------------------------------------------
 
     @Override
-    Header header.get() {
-        return this;
-    }
+    Header header.get() = this;
 
     @Override
     Body ensureBody(MediaType mediaType, Boolean streaming = False) {
@@ -70,9 +97,8 @@ class SimpleRequest
 
     @Override
     immutable SimpleRequest freeze(Boolean inPlace = False) {
-        return (inPlace ? this : with()).makeImmutable();
+        return (inPlace ? this : new(this)).makeImmutable();
     }
-
 
     // ----- Header interface ----------------------------------------------------------------------
 
@@ -83,7 +109,6 @@ class SimpleRequest
 
     @Override
     List<Header.Entry> entries = new Array();
-
 
     // ----- Body interface ------------------------------------------------------------------------
 
@@ -109,7 +134,6 @@ class SimpleRequest
         }
         throw new IllegalArgument($"Unable to find Codec for Type {type} on MediaType {mediaType}");
     }
-
 
     // ----- debugging support ---------------------------------------------------------------------
 

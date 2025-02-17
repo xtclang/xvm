@@ -10,9 +10,31 @@ const AcceptList {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct an AcceptList from an array of AcceptTypes.
+     * Construct an `AcceptList` from an array of [MediaType]s.
      *
-     * @param accepts  the array of AcceptTypes
+     * @param accepts  a `MediaType` or an array of `MediaType` objects
+     */
+    construct(MediaType|MediaType[] mediaType) {
+        if (mediaType.is(MediaType)) {
+            String     text   = mediaType.text;
+            AcceptType accept = new AcceptType(mediaType.type, mediaType.subtype);
+            construct AcceptList(text, [accept], [], []);
+        } else {
+            String text = mediaType.appendTo(new StringBuffer(
+                mediaType.estimateStringLength(",", "", "")), ",", "", "").toString();
+
+            AcceptType[] always = [];
+            for (MediaType mt : mediaType) {
+                always += new AcceptType(mt.type, mt.subtype);
+            }
+            construct AcceptList(text, always, [], []);
+        }
+    }
+
+    /**
+     * Construct an `AcceptList` from an array of [AcceptType]s.
+     *
+     * @param accepts  the array of `AcceptTypes`
      */
     construct(AcceptType[] accepts) {
         // render the types as they would appear in an "Accept:" header
@@ -61,12 +83,12 @@ const AcceptList {
 
     /**
      * Given the passed text containing comma-separated AcceptType information, obtain the
-     * corresponding AcceptList object.
+     * corresponding `AcceptList` object.
      *
-     * @param text  a string containing one or more AcceptTypes
+     * @param text  a string containing one or more [AcceptType]s
      *
-     * @return True if the AcceptList could be successfully parsed
-     * @return (conditional) the parsed AcceptList of AcceptTypes
+     * @return True if the `AcceptList` could be successfully parsed
+     * @return (conditional) the parsed `AcceptList` of `AcceptTypes`
      */
     static conditional AcceptList of(String text) {
         if (text == "") {
@@ -113,7 +135,7 @@ const AcceptList {
     /**
      * An empty AcceptList.
      */
-    static AcceptList Nothing = new AcceptList([]);
+    static AcceptList Nothing = new AcceptList(AcceptType[]:[]);
 
     /**
      * An AcceptList that allows everything.
@@ -171,7 +193,7 @@ const AcceptList {
      *                 is a separate "quality" preference, where 1.0 indicates "perfect" and 0.0
      *                 indicates "absolutely not", and everything in between is a gradient thereof
      */
-    static const AcceptType(String type, String subtype, Map<String, String> params=[], Dec quality=1.0) {
+    static const AcceptType(String type, String subtype, Map<String, String> params = [], Dec quality = 1.0) {
         construct(String type, String subtype, Map<String, String> params=[], Dec quality=1.0) {
             assert:arg type == "*" || http.validToken(type) as $"Invalid media type: {type.quoted()}";
             assert:arg subtype == "*" || http.validToken(subtype) as $"Invalid media subtype: {subtype.quoted()}";
