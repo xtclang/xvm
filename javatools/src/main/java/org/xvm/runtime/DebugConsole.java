@@ -122,8 +122,11 @@ public final class DebugConsole
         switch (m_stepMode)
             {
             case NaturalReturn:
-                fDebug  = true;
-                fRender = false;
+                if (frame == m_frame)
+                    {
+                    fDebug  = true;
+                    fRender = false;
+                    }
                 break;
 
             case StepOut: // handled by onReturn()
