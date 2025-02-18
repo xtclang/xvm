@@ -175,6 +175,13 @@ const MediaType {
         return False;
     }
 
+    /**
+     * Check if this `MediaType` is substantially equivalent to the specified `MediaType`
+     *
+     * @return `True` iff this `MediaType` has the same type and subtype as the specified one,
+     *                ignoring all other attributes
+     */
+     Boolean equivalent(MediaType that) = this.type == that.type && this.subtype == that.subtype;
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -334,7 +341,7 @@ const MediaType {
                     return False;
                 }
 
-                (params.empty ? new ListMap<String, String>() : params).put(key, val);
+                params = (params.empty ? new ListMap<String, String>() : params).put(key, val);
             } else {
                 return False;
             }

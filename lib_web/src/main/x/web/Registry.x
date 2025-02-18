@@ -86,21 +86,38 @@ service Registry
      * @return (conditional) the `Codec` for the `Type`
      */
     <Value> conditional Codec<Value> findCodec(MediaType mediaType, Type<Value> type) {
-        if (Map<Type, Codec?> codecsByType := codecsByMedia.get(mediaType)) {
+
+        <Val> conditional Codec<Val>? findCodecByType(Map<Type, Codec?> codecsByType,
+                                                      MediaType mediaType, Type<Val> type) {
             if (Codec? codec := codecsByType.get(type)) {
                 return codec == Null
-                        ? False
-                        : (True, codec.as(Codec<Value>));
+                        ? (True, Null) // a cached miss
+                        : (True, codec.as(Codec<Val>));
             }
 
             for (Codec? codec : codecsByType.values) {
-                if (Codec<Value> newCodec := codec?.forType(type, this)) {
+                if (Codec<Val> newCodec := codec?.forType(type, this)) {
                     registerCodec(mediaType, newCodec);
                     return True, newCodec;
                 }
             }
+            return False;
         }
 
+        // check the exact match
+        if (Map<Type, Codec?> codecsByType := codecsByMedia.get(mediaType),
+                Codec<Value>? codec        := findCodecByType(codecsByType, mediaType, type)) {
+            return codec == Null ? False : (True, codec);
+        }
+
+        // check for any "substantially equivalent" MediaType
+        if (MediaType equivType := codecsByMedia.keys.any(mediaType.equivalent),
+                Map<Type, Codec?> codecsByType := codecsByMedia.get(equivType),
+                Codec<Value>?     codec        := findCodecByType(codecsByType, mediaType, type)) {
+            return codec == Null ? False : (True, codec);
+        }
+
+        // check for any matching Format
         if (String formatName ?= mediaType.format,
                 Format<Value> format := findFormat(formatName, type)) {
             Codec<Value> newCodec = new FormatCodec<Value>(Utf8Codec, format);
