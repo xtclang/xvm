@@ -85,7 +85,7 @@ class ElementNode
     @RO Boolean empty.get() = child_ == Null && value == Null;
 
     @Override
-    @RO List<Content> contents.get() = TODO();
+    @RO List<Content> contents.get() = new ContentList(parts.as(ElementNode));
 
     @Override
     @RO List<Attribute> attributes.get() = TODO();
@@ -103,6 +103,26 @@ class ElementNode
 
     @Override
     Element add(String name, String? value = Null) = TODO();
+
+    // ----- Content List implementation -----------------------------------------------------------
+
+    protected static class ContentList(ElementNode partList)
+            extends ValueHolderNode.ContentList(partList) {
+        @Override
+        conditional Int knownSize() = (True, size);
+
+        @Override
+        @RO Int size.get() {
+            Int count = partList.contentCount;
+            if (count == 0 && partList.value != Null) {
+                count = 1;
+            }
+            return count;
+        }
+
+        @Override
+        @RO Boolean empty.get() = partList.contentCount == 0 && partList.value == Null;
+    }
 
     // ----- internal ------------------------------------------------------------------------------
 
