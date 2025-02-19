@@ -270,6 +270,8 @@ const Uri
 
     // ----- modifiers -----------------------------------------------------------------------------
 
+    enum Deletion {Delete}
+
     /**
      * Construct a new Uri from this Uri with specific changes. This is useful for _adding_
      * information to a Uri, but is not designed to _remove_ information from an Uri.
@@ -283,33 +285,36 @@ const Uri
      * @param query      (optional) the '?' query portion
      * @param fragment   (optional) the '#' fragment portion
      */
-    Uri with(String?    scheme    = Null,
-             String?    authority = Null,
-             String?    user      = Null,
-             String?    host      = Null,
-             IPAddress? ip        = Null,
-             UInt16?    port      = Null,
-             String?    path      = Null,
-             String?    query     = Null,
-             String?    fragment  = Null,
+    Uri with((String   |Deletion)? scheme    = Null,
+             (String   |Deletion)? authority = Null,
+             (String   |Deletion)? user      = Null,
+             (String   |Deletion)? host      = Null,
+             (IPAddress|Deletion)? ip        = Null,
+             (UInt16   |Deletion)? port      = Null,
+             (String   |Deletion)? path      = Null,
+             (String   |Deletion)? query     = Null,
+             (String   |Deletion)? fragment  = Null,
             ) {
-        if (authority == Null) {
-            return new Uri(scheme    = scheme    ?: this.scheme,
-                           user      = user      ?: this.user,
-                           host      = host      ?: this.host,
-                           ip        = ip        ?: this.ip,
-                           port      = port      ?: this.port,
-                           path      = path      ?: this.path,
-                           query     = query     ?: this.query,
-                           fragment  = fragment  ?: this.fragment,
+        if (authority == Null || authority.is(Deletion)) {
+            return new Uri(scheme    = scheme  .is(Deletion) ? Null : scheme   ?: this.scheme,
+                           user      = user    .is(Deletion) ? Null : user     ?: this.user,
+                           host      = host    .is(Deletion) ? Null : host     ?: this.host,
+                           ip        = ip      .is(Deletion) ? Null : ip       ?: this.ip,
+                           port      = port    .is(Deletion) ? Null : port     ?: this.port,
+                           path      = path    .is(Deletion) ? Null : path     ?: this.path,
+                           query     = query   .is(Deletion) ? Null : query    ?: this.query,
+                           fragment  = fragment.is(Deletion) ? Null : fragment ?: this.fragment,
                           );
         } else {
-            assert user == Null && host == Null && ip == Null && port == Null;
-            return new Uri(scheme    = scheme    ?: this.scheme,
+            assert (user == Null || user.is(Deletion)) &&
+                   (host == Null || host.is(Deletion)) &&
+                   (ip   == Null || ip  .is(Deletion)) &&
+                   (port == Null || port.is(Deletion));
+            return new Uri(scheme    = scheme  .is(Deletion) ? Null : scheme   ?: this.scheme,
                            authority = authority,
-                           path      = path      ?: this.path,
-                           query     = query     ?: this.query,
-                           fragment  = fragment  ?: this.fragment,
+                           path      = path    .is(Deletion) ? Null : path     ?: this.path,
+                           query     = query   .is(Deletion) ? Null : query    ?: this.query,
+                           fragment  = fragment.is(Deletion) ? Null : fragment ?: this.fragment,
                           );
         }
     }
