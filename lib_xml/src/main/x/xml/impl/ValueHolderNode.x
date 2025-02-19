@@ -292,6 +292,10 @@
     /**
      * A custom router from the `List<Content>` to the `List<Part>`. [Attribute]s can only contain
      * [Content] children, so the `Content` `List` can delegate to the underling `Part` `List`.
+     *
+     * Unfortunately, this class must be a static child class, because otherwise its type parameter
+     * name `Element` of type `Content` would conflict with the same type parameter name on the
+     * containing [Node] class with the type `Part`.
      */
     protected static class ContentList(ValueHolderNode partList)
             implements List<Content> {

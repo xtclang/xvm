@@ -65,6 +65,9 @@ class AttributeNode
     String value;
 
     @Override
+    @RO List<Content> contents.get() = new ContentList(parts.as(AttributeNode));
+
+    @Override
     conditional Int knownSize() = (child_?.next_ : Null) != Null ? False : (True, 1);
 
     @Override
@@ -76,6 +79,20 @@ class AttributeNode
     @Override
     Node clear() {
         assert as "An Attribute cannot clear its contents; doing so would delete its Data";
+    }
+
+    // ----- Content List implementation -----------------------------------------------------------
+
+    protected static class ContentList(AttributeNode partList)
+            extends ValueHolderNode.ContentList(partList) {
+        @Override
+        conditional Int knownSize() = partList.child_ == Null ? (True, 1) : False;
+
+        @Override
+        @RO Int size.get() = partList.contentCount.notLessThan(1);
+
+        @Override
+        @RO Boolean empty.get() = False; // always at least one Content on an Attribute
     }
 
     // ----- internal ------------------------------------------------------------------------------
