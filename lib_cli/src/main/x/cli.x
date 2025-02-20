@@ -79,10 +79,16 @@ module cli.xtclang.org {
             into Method<Object>;
 
     /**
-     * The mixin into a command method parameter.
+     * The "command description" mixin into a command method parameter.
      *
      * @param text  the parameter description
      */
     mixin Desc(String? text = Null)
+            into Parameter<Object>;
+
+    /**
+     * The "suppress echo" mixin into a command method parameter.
+     */
+    mixin NoEcho()
             into Parameter<Object>;
 }

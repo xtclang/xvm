@@ -246,39 +246,70 @@ static service Runner {
             return True;
         }
 
+        conditional Tuple addArg(Tuple args, Parameter param, String argStr) {
+            Type paramType = param.ParamType;
+
+            if (paramType.form == Union,
+                    (Type leftType, Type rightType) := paramType.relational(),
+                    leftType == Nullable) {
+                if (argStr.empty || argStr == "-" || argStr.toLowercase() == "null") {
+                    return True, args.add(Null);
+                }
+                paramType = rightType;
+            }
+
+            if (paramType.is(Type<Destringable>)) {
+                paramType.DataType argValue = new paramType.DataType(argStr);
+                return True, args.add(argValue);
+            } else if (paramType.is(Type<Boolean>)) {
+                import ecstasy.collections.CaseInsensitive;
+                paramType.DataType argValue = CaseInsensitive.areEqual(argStr, "True");
+                return True, args.add(argValue);
+            } else {
+                console.print($|  Unsupported type "{paramType}" for parameter "{param}"
+                             );
+                return False;
+            }
+        }
+
         if (CmdInfo info := findCommand(head, catalog)) {
             try {
-                Method      method = info.method;
-                Parameter[] params = method.params;
-                if (method.requiredParamCount <= parts-1 <= params.size) {
-                    Tuple args   = Tuple:();
+                Method      method   = info.method;
+                Parameter[] params   = method.params;
+                Int         reqCount = method.requiredParamCount;
+                Int         allCount = params.size;
+                Int         argCount = parts-1;
+                if (argCount <= allCount) {
+                    Tuple args = Tuple:();
+
+                    // collect the specified values
                     for (Int i : 1 ..< parts) {
-                        String    argStr    = command[i];
-                        Parameter param     = params[i-1];
-                        Type      paramType = param.ParamType;
-
-                        if (paramType.form == Union,
-                                (Type leftType, Type rightType) := paramType.relational(),
-                                leftType == Nullable) {
-                            if (argStr.empty || argStr == "-" || argStr.toLowercase() == "null") {
-                                args = args.add(Null);
-                                continue;
-                            }
-                            paramType = rightType;
-                        }
-
-                        if (paramType.is(Type<Destringable>)) {
-                            paramType.DataType argValue = new paramType.DataType(argStr);
-                            args = args.add(argValue);
-                        } else if (paramType.is(Type<Boolean>)) {
-                            import ecstasy.collections.CaseInsensitive;
-                            paramType.DataType argValue = CaseInsensitive.areEqual(argStr, "True");
-                            args = args.add(argValue);
-                        } else {
-                            console.print($|  Unsupported type "{paramType}" for parameter \
-                                           |"{param}"
-                                         );
+                        Parameter param = params[i-1];
+                        if (!(args := addArg(args, param, command[i]))) {
                             return True;
+                        }
+                    }
+                    // if not all values were specified, prompt for the rest
+                    if (argCount < reqCount) {
+                        AddArgs:
+                        for (Int i : argCount ..< allCount) {
+                            Parameter param  = params[i];
+                            String    prompt = param.is(Desc)?.text? : param.hasName()? : assert;
+                            Boolean   noEcho = param.is(NoEcho);
+                            Boolean   opt    = param.defaultValue();
+
+                            String arg;
+                            do {
+                                arg = console.readLine($"  {prompt}{opt ? "(opt) ":""}> ", noEcho);
+                                if (arg.empty && opt) {
+                                    args = args.add(param.defaultValue()?) : assert;
+                                    continue AddArgs;
+                                }
+                            } while (arg.empty);
+
+                            if (!(args := addArg(args, param, arg))) {
+                                return True;
+                            }
                         }
                     }
 
@@ -298,14 +329,7 @@ static service Runner {
                         break;
                     }
                 } else {
-                    if (method.defaultParamCount == 0) {
-                        console.print($"  Required {params.size} arguments");
-
-                    } else {
-                        console.print($|  Number of arguments should be between \
-                                       |{method.requiredParamCount} and {params.size}
-                                     );
-                    }
+                    console.print($"  Number of arguments should be between {reqCount} and {allCount}");
                 }
             } catch (Exception e) {
                 console.print($"  Error: {e.message.empty ? &e.actualType : e.message}");

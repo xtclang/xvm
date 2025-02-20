@@ -26,6 +26,7 @@ module webcli.xtclang.org {
 
     typedef cli.Command as Command;
     typedef cli.Desc    as Desc;
+    typedef cli.NoEcho  as NoEcho;
 
     @Inject Console console;
 
