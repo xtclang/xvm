@@ -1,3 +1,12 @@
+- CP: Prevent requests with "Sec-Fetch-Site=cross-site" from being processed except when an end point
+     explicitly allows it (e.g. @AllowCrossSite)
+
+- CP: Response.Cookie - not implemented and as such not used at all, do we still need it?
+
+- GG: fix HttpClient talking to raw address (127.0.0.1 instead of localhost)
+
+- GG: KeyCredentials doesn't really need the realmName
+
 - GG: a presence of .DS_Store file asserts JsonDB store initialization
      (dataDir.files() -> file.contents.unpackUtf8())
 
