@@ -202,7 +202,7 @@ const Http1Request(RequestInfo   info,
     @Override
     @Lazy Map<String, QueryParameter> queryParams.calc() {
         if (String query ?= uri.query, query.size != 0) {
-            Map<String, String>         rawParams   = query.splitMap();
+            Map<String, String>         rawParams   = query.splitMap(entrySeparator='&');
             Map<String, QueryParameter> queryParams = new HashMap();
 
             for ((String key, String value) : rawParams) {
