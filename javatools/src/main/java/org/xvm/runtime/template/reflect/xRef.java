@@ -186,9 +186,14 @@ public class xRef
             {
             if (hTarget.getComposition() instanceof ClassComposition clzTarget)
                 {
-                // the only way for a handle to be a relational or not shared type is to be
-                // explicitly masked
-                assert !clzTarget.isInception();
+                if (clzTarget.isInception())
+                    {
+                    // the only way for a handle to be a relational or not shared type is to be
+                    // explicitly masked
+                    return frame.raiseException(xException.invalidType(frame, "Type \"" +
+                        type.getValueString() + "\" is not shared with the TypeSystem of module \"" +
+                        frame.f_context.f_container.getModule().getName() + '"'));
+                    }
 
                 if (clzTarget.getInceptionType().isShared(pool))
                     {
@@ -217,7 +222,8 @@ public class xRef
                     return ctxOwner.sendOp1Request(frame, opClassHandle, iReturn);
                     }
                 }
-            return frame.raiseException("Unsupported type: " + type.getValueString());
+            return frame.raiseException(
+                    xException.invalidType(frame, "Unsupported type: " + type.getValueString()));
             }
 
         if (type.isImmutabilitySpecified())
@@ -260,9 +266,18 @@ public class xRef
                                 listAnno.toArray(Annotation.NO_ANNOTATIONS));
                 }
             }
-
-        TypeComposition clzMask = hClass.getTemplate().ensureClass(frame.f_context.f_container, typeClz);
-        return frame.assignValue(iReturn, hClass.cloneAs(clzMask));
+        try
+            {
+            TypeComposition clzMask = hClass.getTemplate().
+                    ensureClass(frame.f_context.f_container, typeClz);
+            return frame.assignValue(iReturn, hClass.cloneAs(clzMask));
+            }
+        catch (Exception e)
+            {
+            return frame.raiseException(
+                    xException.invalidType(frame, "Failed to create a class handle for : " +
+                    typeMask.getValueString()));
+            }
         }
 
     @Override
