@@ -323,7 +323,11 @@ public class PropertyConstant
         TypeConstant type = m_type;
         if (type == null)
             {
-            m_type = type = ((PropertyStructure) getComponent()).getType();
+            // it's not our responsibility to report any errors
+            PropertyStructure prop = (PropertyStructure) getComponent();
+            m_type = type = prop == null
+                    ? getConstantPool().typeObject()
+                    : prop.getType();
             }
         return type;
         }
