@@ -76,17 +76,16 @@ public class TypedefStatement
             // create a structure for this typedef
             Component container = getParent().getComponent();
             String    sName     = (String) alias.getValue();
-            if (container.isClassContainer())
+            if (container != null && container.isClassContainer())
                 {
                 Access           access    = getDefaultAccess();
                 TypeConstant     constType = type.ensureTypeConstant();
                 TypedefStructure typedef   = container.createTypedef(access, constType, sName);
                 setComponent(typedef);
                 }
-            else
+            else if (!errs.hasSeriousErrors())
                 {
                 log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED, sName, container);
-                throw new UnsupportedOperationException("not a typedef container: " + container);
                 }
             }
         }

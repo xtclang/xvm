@@ -556,7 +556,7 @@ public class TypeCompositionStatement
             case ENUM:
             case ENUM_VAL:
             case MIXIN:
-                if (container.isClassContainer())
+                if (container != null && container.isClassContainer())
                     {
                     Format format = switch (category.getId())
                         {
@@ -576,9 +576,9 @@ public class TypeCompositionStatement
                         component.setSynthetic(true);
                         }
                     }
-                else
+                else if (!errs.hasSeriousErrors())
                     {
-                    log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, container.toString());
+                    log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, container);
                     }
                 break;
 
@@ -589,8 +589,11 @@ public class TypeCompositionStatement
         setComponent(component);
         if (component == null)
             {
-            // the only reason for "container.createX()" to fail is a duplicate name
-            log(errs, Severity.ERROR, Compiler.DUPLICATE_NAME, sName);
+            if (!errs.hasSeriousErrors())
+                {
+                // the only reason for "container.createX()" to fail is a duplicate name
+                log(errs, Severity.ERROR, Compiler.DUPLICATE_NAME, sName);
+                }
             return;
             }
 
