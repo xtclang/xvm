@@ -58,4 +58,7 @@ const PlainTextCredential(String name, String password)
 
     @Override
     String[] locators.get() = [name];
+
+    @Override
+    conditional String contains(Form form) = form == Name ? (True, name) : False;
 }

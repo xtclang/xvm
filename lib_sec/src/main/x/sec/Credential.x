@@ -127,25 +127,34 @@
      *
      * @return a copy of this Subject, but with a [status] of [Suspended]
      */
-    Credential suspend() {
-        return status == Suspended ? this : this.with(status=Suspended);
-    }
+    Credential suspend() = status == Suspended ? this : this.with(status=Suspended);
 
     /**
      * If this `Credential` is suspended, then undo the suspension.
      *
      * @return a copy of this Subject, but without the [status] of [Suspended]
      */
-    Credential unsuspend() {
-        return status == Suspended ? this.with(status=Active) : this;
-    }
+    Credential unsuspend() = status == Suspended ? this.with(status=Active) : this;
 
     /**
      * Revoke this `Credential`.
      *
      * @return a copy of this Subject, but with a [status] of [Revoked]
      */
-    Credential revoke() {
-        return status == Revoked ? this : this.with(status=Revoked);
-    }
+    Credential revoke() = status == Revoked ? this : this.with(status=Revoked);
+
+    /**
+     * Forms of the identification that may be known by `Credential` objects. The enumeration may
+     * be expanded in the future.
+     */
+    enum Form {Name, Email, Phone, Device}
+
+    /**
+     * Provide an identification string of the specified `Form`, iff this `Credential` represents
+     * that form.
+     *
+     * @return `True` iff the specified `Form` of the identification is known by this `Credential`
+     * @return (conditional) the corresponding identification string
+     */
+    conditional String contains(Form form) = False;
 }
