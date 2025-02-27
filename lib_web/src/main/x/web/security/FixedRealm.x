@@ -1,4 +1,3 @@
-import sec.Credential;
 import sec.Group;
 import sec.Permission;
 import sec.PlainTextCredential;

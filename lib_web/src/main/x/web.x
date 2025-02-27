@@ -20,6 +20,7 @@ module web.xtclang.org {
 
     typedef net.Uri as Uri;
 
+    import sec.Credential;
     import sec.Entitlement;
     import sec.Principal;
     import sec.Realm;

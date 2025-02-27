@@ -10,6 +10,7 @@ import ecstasy.collections.CollectArray;
 
 import net.UriTemplate;
 
+import sec.Credential;
 import sec.Entitlement;
 import sec.Permission;
 import sec.Principal;
@@ -336,6 +337,7 @@ service ChainBundle {
                 //    does not disagree with any other claim, or (iii) be an non-conferring
                 //    Entitlement Claim
                 Principal[]   principals   = [];
+                Credential?   credential   = Null;
                 Entitlement[] entitlements = [];
                 Attempt[]     alerts       = [];
                 Attempt[]     failures     = [];
@@ -349,6 +351,7 @@ service ChainBundle {
                             val claim = attempt.claim;
                             if (claim.is(Principal)) {
                                 principals := principals.addIfAbsent(claim);
+                                credential  = attempt.credential ?: assert;
                             } else {
                                 assert claim.is(Entitlement);
                                 entitlements := entitlements.addIfAbsent(claim);
@@ -427,7 +430,7 @@ service ChainBundle {
 
                     Principal? principal = principals.empty ? Null : principals[0];
                     if (session != Null) {
-                        session.authenticate(principal, entitlements, trustLevel=Highest);
+                        session.authenticate(principal, credential, entitlements, trustLevel=Highest);
                     }
 
                     // use the raw auth data we just collected

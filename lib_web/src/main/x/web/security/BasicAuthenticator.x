@@ -5,7 +5,6 @@ import responses.SimpleResponse;
 
 import ecstasy.collections.CaseInsensitive;
 
-import sec.Credential;
 import sec.PlainTextCredential;
 
 
@@ -36,28 +35,22 @@ service BasicAuthenticator(Realm realm)
     @Override
     public/protected Realm realm;
 
-    // ----- internal ------------------------------------------------------------------------------
-
-    static const BasicAttempt(Claim? subject, Status status, AuthResponse? response = Null,
-                              PlainTextCredential? credential = Null)
-            extends Attempt(subject, status, response) {
-        @RO Principal? principal.get() = subject.is(Principal) ?: Null;
-    }
 
     // ----- Authenticator API ---------------------------------------------------------------------
 
     @Override
-    BasicAttempt[] findAndRevokeSecrets(RequestIn request) {
-        BasicAttempt[] attempts = scan(request);
+    Attempt[] findAndRevokeSecrets(RequestIn request) {
+        Attempt[] attempts = scan(request);
         if (attempts.empty) {
             return attempts;
         }
 
-        BasicAttempt[] secrets = [];
-        for (BasicAttempt attempt : attempts) {
+        Attempt[] secrets = [];
+        for (Attempt attempt : attempts) {
             if (attempt.status >= NotActive,
-                    Principal principal ?= attempt.principal,
-                              principal := principal.revokeCredential(attempt.credential?)) {
+                    Principal  principal  := attempt.claim.is(Principal),
+                    Credential credential ?= attempt.credential,
+                               principal := principal.revokeCredential(credential)) {
                 realm.updatePrincipal(principal);
                 secrets += attempt;
             }
@@ -66,14 +59,14 @@ service BasicAuthenticator(Realm realm)
     }
 
     @Override
-    BasicAttempt[] authenticate(RequestIn request) {
+    Attempt[] authenticate(RequestIn request) {
         // to cause the client to request the user for a name and password, we need to return an
         // "Unauthorized" error code with a header that directs the client to use basic auth
-        private BasicAttempt[] RequestAuth = [new BasicAttempt(Null, NoData,
+        private Attempt[] RequestAuth = [new Attempt(Null, NoData,
                 $|Basic realm="{realm.name}", charset="UTF-8"
                 )];
 
-        BasicAttempt[] attempts = scan(request);
+        Attempt[] attempts = scan(request);
         return attempts.empty ? RequestAuth : attempts;
     }
 
@@ -86,9 +79,10 @@ service BasicAuthenticator(Realm realm)
      * @return an array of zero or more [Attempt] records, corresponding to the information found in
      *         the `Authorization` headers
      */
-    BasicAttempt[] scan(RequestIn request) {
-        BasicAttempt[] attempts = [];
-        static BasicAttempt Corrupt = new BasicAttempt(Null, Failed);
+    Attempt[] scan(RequestIn request) {
+        static Attempt Corrupt = new Attempt(Null, Failed);
+
+        Attempt[] attempts = [];
         NextHeader: for (String auth : request.header.valuesOf("Authorization")) {
             auth = auth.trim();
             if (CaseInsensitive.stringStartsWith(auth, "Basic ")) {
@@ -113,17 +107,18 @@ service BasicAuthenticator(Realm realm)
                                     && credential.active
                                     && credential.name == name) {
                                 if (credential.password == pwd) {
-                                    attempts += new BasicAttempt(principal, principal.calcStatus(realm)
-                                            == Active ? Success : NotActive, Null, credential);
+                                    attempts += new Attempt(principal,
+                                        principal.calcStatus(realm) == Active ? Success : NotActive,
+                                        Null, credential);
                                     continue NextHeader;
                                 } else {
                                     failure ?:= credential;
                                 }
                             }
                         }
-                        attempts += new BasicAttempt(principal, Failed, Null, failure);
+                        attempts += new Attempt(principal, Failed, Null, failure);
                     } else {
-                        attempts += new BasicAttempt(name, Failed);
+                        attempts += new Attempt(name, Failed);
                     }
                 } else {
                     attempts += Corrupt;

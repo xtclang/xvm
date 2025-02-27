@@ -119,15 +119,21 @@ interface Authenticator
     /**
      * A record of an attempt to authenticate.
      *
-     * @param claim     the [Principal], [Entitlement], or claim thereof; otherwise `Null`
-     * @param status    the status of the authentication claim in the request
-     * @param response  a specific response to send to the client to advance the authentication
-     *                  process or indicate an authentication failure, or delete information on the
-     *                  client (in the case of the [findAndRevokeSecrets] method); `Null` is the
-     *                  preferred value, and indicates that the appropriate default response should
-     *                  be utilized
+     * @param claim       the [Principal], [Entitlement], or claim thereof; otherwise `Null`
+     * @param status      the status of the authentication claim in the request
+     * @param response    (optional) a specific response to send to the client to advance the
+     *                    authentication process or indicate an authentication failure, or delete
+     *                    information on the client (in the case of the [findAndRevokeSecrets]
+     *                    method); `Null` is the preferred value, and indicates that the appropriate
+     *                    default response should be utilized
+     * @param credential  (optional) if the attempt's status is `Success`, the credential that
+     *                    satisfied the authenticator
      */
-    static const Attempt(Claim? claim, Status status, AuthResponse? response = Null);
+    static const Attempt(Claim?        claim,
+                         Status        status,
+                         AuthResponse? response   = Null,
+                         Credential?   credential = Null,
+                        );
 
     /**
      * Check a request that was received in plain text (i.e. **not** TLS) to make sure that it does

@@ -5,6 +5,7 @@ import convert.formats.Base64Format;
 
 import net.IPAddress;
 
+import sec.Credential;
 import sec.Entitlement;
 import sec.Principal;
 
@@ -340,6 +341,9 @@ service SessionImpl
     public/private Principal? principal;
 
     @Override
+    public/private Credential? credential;
+
+    @Override
     public/private Entitlement[] entitlements = [];
 
     @Override
@@ -353,6 +357,7 @@ service SessionImpl
 
     @Override
     void authenticate(Principal?    principal      = Null,
+                      Credential?   credential     = Null,
                       Entitlement[] entitlements   = [],
                       Boolean       exclusiveAgent = False,
                       TrustLevel    trustLevel     = Highest,
@@ -364,13 +369,15 @@ service SessionImpl
            ) {
             if (this.principal? != principal : False
                     || !this.entitlements.empty && this.entitlements != entitlements) {
-                issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(this.principal, this.entitlements),
+                issueEvent_(SessionDeauthenticated, Void,
+                            &sessionDeauthenticated(this.principal, this.credential, this.entitlements),
                             () -> $|An exception in session {this.internalId_} occurred during a\
                                    | deauthentication event
                            );
             }
 
             this.principal         = principal;
+            this.credential        = credential;
             this.entitlements      = entitlements;
             this.exclusiveAgent    = exclusiveAgent;
             this.trustLevel        = trustLevel;
@@ -379,7 +386,8 @@ service SessionImpl
             // reset failed attempt count since we succeeded in logging in
             // TODO
 
-            issueEvent_(SessionAuthenticated, Void, &sessionAuthenticated(principal, entitlements),
+            issueEvent_(SessionAuthenticated, Void,
+                        &sessionAuthenticated(principal, credential, entitlements),
                         () -> $|An exception in session {this.internalId_} occurred during an\
                                | authentication event
                        );
@@ -397,15 +405,18 @@ service SessionImpl
     @Override
     void deauthenticate() {
         Principal?    oldPrincipal    = principal;
+        Credential?   oldCredential   = credential;
         Entitlement[] oldEntitlements = entitlements;
         if (oldPrincipal != Null || !oldEntitlements.empty) {
             principal         = Null;
+            credential        = Null;
             entitlements      = [];
             exclusiveAgent    = False;
             trustLevel        = None;
             lastAuthenticated = Null;
 
-            issueEvent_(SessionDeauthenticated, Void, &sessionDeauthenticated(oldPrincipal, oldEntitlements),
+            issueEvent_(SessionDeauthenticated, Void,
+                        &sessionDeauthenticated(oldPrincipal, oldCredential, oldEntitlements),
                         () -> $|An exception in session {this.internalId_} occurred during a\
                                | deauthentication event
                        );
@@ -447,12 +458,12 @@ service SessionImpl
     }
 
     @Override
-    void sessionAuthenticated(Principal? principal, Entitlement[] entitlements) {
+    void sessionAuthenticated(Principal? principal, Credential? credential, Entitlement[] entitlements) {
         confirmReached_(SessionAuthenticated);
     }
 
     @Override
-    void sessionDeauthenticated(Principal? principal, Entitlement[] entitlements) {
+    void sessionDeauthenticated(Principal? principal, Credential? credential, Entitlement[] entitlements) {
         confirmReached_(SessionDeauthenticated);
     }
 

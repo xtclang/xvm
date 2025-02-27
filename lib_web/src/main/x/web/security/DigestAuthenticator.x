@@ -4,10 +4,8 @@ import crypto.Signer;
 
 import ecstasy.collections.CaseInsensitive;
 
-import sec.Credential;
 import sec.Entity;
 import sec.NonceManager;
-import sec.Principal;
 
 import DigestCredential.Hash;
 import DigestCredential.md5;
@@ -83,7 +81,7 @@ service DigestAuthenticator
     // ----- Authenticator interface ---------------------------------------------------------------
 
     @Override
-    DigestAttempt[] findAndRevokeSecrets(RequestIn request) {
+    Attempt[] findAndRevokeSecrets(RequestIn request) {
         // scan for and cancel all nonces
         for (String auth : request.header.valuesOf("Authorization")) {
             auth = auth.trim();
@@ -101,8 +99,8 @@ service DigestAuthenticator
     }
 
     @Override
-    DigestAttempt[] authenticate(RequestIn request) {
-        static DigestAttempt Corrupt = new DigestAttempt(Null, Failed);
+    Attempt[] authenticate(RequestIn request) {
+        static Attempt Corrupt = new Attempt(Null, Failed);
 
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
@@ -132,7 +130,7 @@ service DigestAuthenticator
 
         // first, check to see if the incoming request includes the necessary authentication
         // information, which will be in one or more "Authorization" header entries
-        DigestAttempt[] attempts = [];
+        Attempt[]       attempts = [];
         Boolean         stale    = False;
         Boolean         passed   = False;
         NextAuthAttempt: for (String auth : request.header.valuesOf("Authorization")) {
@@ -217,7 +215,7 @@ service DigestAuthenticator
                                                         |:{cnonce}:auth:{toString(hashA2)}
                                                                                               , hasher);
                                 if (responseHash == expected) {
-                                    attempts += new DigestAttempt(principal, status, Null, credential);
+                                    attempts += new Attempt(principal, status, Null, credential);
                                     passed    = True;
                                     continue NextAuthAttempt;
                                 } else {
@@ -227,10 +225,10 @@ service DigestAuthenticator
                         }
 
                         // none of the credentials matched
-                        attempts += new DigestAttempt(principal, Failed, challenges(request, stale), failure);
+                        attempts += new Attempt(principal, Failed, challenges(request, stale), failure);
                     } else {
                         // no such user
-                        attempts += new DigestAttempt(locator, Failed, challenges(request, stale));
+                        attempts += new Attempt(locator, Failed, challenges(request, stale));
                     }
                 } else {
                     attempts += Corrupt;
@@ -241,17 +239,13 @@ service DigestAuthenticator
         if (attempts.empty) {
             // to cause the client to request the user for a name and password, we need to return an
             // "Unauthorized" error code with a header that directs the client to use Digest auth
-            attempts = [new DigestAttempt(Null, NoData, challenges(request, stale))];
+            attempts = [new Attempt(Null, NoData, challenges(request, stale))];
         }
 
         return attempts;
     }
 
     // ----- internal ------------------------------------------------------------------------------
-
-    static const DigestAttempt(Claim? claim, Status status, AuthResponse? response = Null,
-                              DigestCredential? credential = Null)
-            extends Attempt(claim, status, response);
 
     /**
      * Parse the text that follows "Digest " in the "Authorization" header.

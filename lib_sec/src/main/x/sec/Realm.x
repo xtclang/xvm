@@ -167,6 +167,23 @@ interface Realm {
     }
 
     /**
+     * Attempt to locate a [Principal] using the [Credential] object.
+     *
+     * @param credential  the `Credential` to look for
+     *
+     * @return `True` if any of credential's locators identify a [Principal] in the `Realm`
+     * @return (conditional) the [Principal] for the specified `Credential`
+     */
+    conditional Principal findPrincipal(Credential credential) {
+        for (String locator : credential.locators) {
+            if (Principal principal := findPrincipal(credential.scheme, locator)) {
+                return True, principal;
+            }
+        }
+        return False;
+    }
+
+    /**
      * Create a new [Principal] in the `Realm`.
      *
      * @param principal  the [Principal] data to use to create a new `Principal` in the `Realm`; the
@@ -371,6 +388,23 @@ interface Realm {
             }
             return True, bestEntitlement;
         }
+    }
+
+    /**
+     * Attempt to locate an [Entitlement] using the [Credential] object.
+     *
+     * @param credential  the `Credential` to look for
+     *
+     * @return `True` if any of credential's locators identify a [Entitlement] in the `Realm`
+     * @return (conditional) the [Entitlement] for the specified `Credential`
+     */
+    conditional Entitlement findEntitlement(Credential credential) {
+        for (String locator : credential.locators) {
+            if (Entitlement entitlement := findEntitlement(credential.scheme, locator)) {
+                return True, entitlement;
+            }
+        }
+        return False;
     }
 
     /**

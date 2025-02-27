@@ -1,7 +1,5 @@
 import crypto.Signer;
 
-import sec.Credential;
-
 /**
  * A `DigestCredential` represents a user name and password, with the password (and potentially the
  * user name) stored as hashes.

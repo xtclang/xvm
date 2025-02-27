@@ -313,6 +313,11 @@ interface Session
     @RO Principal? principal;
 
     /**
+     * The [Credential] that was provided to authenticate the [principal].
+     */
+    @RO Credential? credential;
+
+    /**
      * The authenticated [Entitlement]s for the session.
      */
     @RO Entitlement[] entitlements;
@@ -357,6 +362,17 @@ interface Session
      */
     @RO String sessionId;
 
+    /**
+     * A human readable description of the authenticated user.
+     */
+    String? userName() {
+        if (Credential credential ?= this.credential, String name := credential.contains(Name)) {
+            return name;
+        }
+        return principal?.name;
+        return Null;
+    }
+
     // ----- session control -----------------------------------------------------------------------
 
     /**
@@ -366,6 +382,8 @@ interface Session
      * Either the [Principal] must be non-`Null` or at least one [Entitlement] must be provided.
      *
      * @param principal       (optional) the authenticated [Principal] to associate with the session
+     * @param credential      (optional) the [Credential] that was used to authenticate the
+     *                        `principal`
      * @param entitlements    (optional) the authenticated [Entitlement]s to associate with the
      *                        session
      * @param exclusiveAgent  (optional) pass `True` iff the device and `User-Agent` that the login
@@ -379,6 +397,7 @@ interface Session
      *                        performed
      */
     void authenticate(Principal?    principal      = Null,
+                      Credential?   credential     = Null,
                       Entitlement[] entitlements   = [],
                       Boolean       exclusiveAgent = False,
                       TrustLevel    trustLevel     = Highest,
@@ -479,9 +498,10 @@ interface Session
      * When implementing this method, remember to invoke the `super` function.
      *
      * @param principal     the Principal
+     * @param credential    the Credential
      * @param entitlements  any Entitlements
      */
-    void sessionAuthenticated(Principal? principal, Entitlement[] entitlements);
+    void sessionAuthenticated(Principal? principal, Credential? credential, Entitlement[] entitlements);
 
     /**
      * This event is invoked when a previously authenticated session is deauthenticated, i.e. a user
@@ -491,9 +511,10 @@ interface Session
      * When implementing this method, remember to invoke the `super` function.
      *
      * @param principal     the Principal
+     * @param credential    the Credential
      * @param entitlements  any Entitlements
      */
-    void sessionDeauthenticated(Principal? principal, Entitlement[] entitlements);
+    void sessionDeauthenticated(Principal? principal, Credential? credential, Entitlement[] entitlements);
 
     /**
      * This event is invoked when a TLS connection is re-negotiated. It is possible for non-TLS

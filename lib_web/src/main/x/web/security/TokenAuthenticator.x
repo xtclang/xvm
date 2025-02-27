@@ -1,6 +1,5 @@
 import ecstasy.collections.CaseInsensitive;
 
-import sec.Entitlement;
 import sec.KeyCredential;
 
 
@@ -41,17 +40,17 @@ service TokenAuthenticator
 
     @Override
     Attempt[] findAndRevokeSecrets(RequestIn request) {
-        KeyAttempt[] attempts = scan(request);
+        Attempt[] attempts = scan(request);
         if (attempts.empty) {
             return attempts;
         }
 
-        KeyAttempt[] secrets = [];
-        for (KeyAttempt attempt : attempts) {
+        Attempt[] secrets = [];
+        for (Attempt attempt : attempts) {
             if (attempt.status >= NotActive,
-                    Entitlement entitlement ?= attempt.entitlement,
-                    String      locator     ?= attempt.locator,
-                                entitlement := entitlement.revokeCredential(KeyCredential.Scheme, locator)) {
+                    Entitlement entitlement := attempt.claim.is(Entitlement),
+                    Credential  credential  ?= attempt.credential,
+                                entitlement := entitlement.revokeCredential(credential)) {
                 realm.updateEntitlement(entitlement);
                 secrets += attempt;
             }
@@ -64,7 +63,7 @@ service TokenAuthenticator
         // TLS is a pre-requisite for authentication
         assert request.scheme.tls;
 
-        KeyAttempt[] attempts = scan(request);
+        Attempt[] attempts = scan(request);
         return attempts.empty ? [new Attempt(Null, NoData)] : attempts;
     }
 
@@ -77,8 +76,8 @@ service TokenAuthenticator
      * @return an array of zero or more [Attempt] records, corresponding to the information found in
      *         the `Authorization` headers
      */
-    KeyAttempt[] scan(RequestIn request) {
-        KeyAttempt[] attempts = [];
+    Attempt[] scan(RequestIn request) {
+        Attempt[] attempts = [];
 
         // check to see if the incoming request includes the necessary authentication information,
         // which will be in one or more "Authorization" header entries
@@ -92,27 +91,20 @@ service TokenAuthenticator
                 try {
                     token = auth.substring(7);
                 } catch (Exception e) {
-                    attempts += new KeyAttempt(Null, Failed);
+                    attempts += new Attempt(Null, Failed);
                     continue;
                 }
 
-                String locator = KeyCredential.createLocator(realm.name, token);
+                KeyCredential credential = new KeyCredential(realm.name, token);
 
-                if (Entitlement entitlement := realm.findEntitlement(KeyCredential.Scheme, locator)) {
+                if (Entitlement entitlement := realm.findEntitlement(credential)) {
                     Authenticator.Status status = entitlement.calcStatus(realm) == Active ? Success : NotActive;
-                    attempts += new KeyAttempt(entitlement, status, locator);
+                    attempts += new Attempt(entitlement, status, credential=credential);
                 } else {
-                    attempts += new KeyAttempt(locator, Failed);
+                    attempts += new Attempt(token, Failed);
                 }
             }
         }
         return attempts;
-    }
-
-    // ----- internal ------------------------------------------------------------------------------
-
-    static const KeyAttempt(Claim? subject, Status status, String? locator = Null)
-            extends Attempt(subject, status, Null) {
-        @RO Entitlement? entitlement.get() = subject.is(Entitlement) ?: Null;
     }
 }
