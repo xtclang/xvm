@@ -365,12 +365,11 @@ interface Session
     /**
      * A human readable description of the authenticated user.
      */
-    String? userName() {
+    @RO String? userName.get() {
         if (Credential credential ?= this.credential, String name := credential.contains(Name)) {
             return name;
         }
-        return principal?.name;
-        return Null;
+        return principal?.name : Null;
     }
 
     // ----- session control -----------------------------------------------------------------------
