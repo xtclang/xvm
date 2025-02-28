@@ -188,7 +188,17 @@ interface Transaction<Schema extends RootSchema>
 
             if (e == Null && !rollbackOnly) {
                 try {
-                    commit();
+                    switch(CommitResult result = commit()) {
+                    case RollbackOnly:
+                    case DeferredFailed:
+                    case ConcurrentConflict:
+                    case ValidatorFailed:
+                    case RectifierFailed:
+                    case DistributorFailed:
+                    case DatabaseError:
+                        failure = new CommitFailed(txInfo, result);
+                        break;
+                    }
                 } catch (Exception commitFailed) {
                     failure = commitFailed;
                 }

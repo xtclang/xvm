@@ -379,7 +379,7 @@ module web.xtclang.org {
      * Example:
      *
      *     @OnError
-     *     void handleErrors(RequestIn request, Exception|String) {...}
+     *     ResponseOut handleErrors(RequestIn request, Exception|String) {...}
      */
     mixin OnError
             into Method<WebService, <RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
