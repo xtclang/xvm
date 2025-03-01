@@ -160,7 +160,9 @@ public class xService
         ServiceContext context    = frame.f_context;
         ServiceContext contextNew = context.f_container.createServiceContext(f_sName);
 
-        switch (context.validatePassThrough(frame, contextNew, constructor.getParamTypes(), ahArg))
+        ServiceContext.TypeSupplier supplier = i -> constructor.getParamTypes()[i].
+                resolveGenerics(context.f_pool, clazz.getType());
+        switch (context.validatePassThrough(frame, contextNew, supplier, ahArg))
             {
             case Op.R_NEXT:
                 return contextNew.sendConstructRequest(

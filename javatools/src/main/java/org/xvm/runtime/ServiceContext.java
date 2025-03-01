@@ -19,8 +19,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import java.util.function.Supplier;
-
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.LinkerContext;
@@ -1071,35 +1069,35 @@ public class ServiceContext
      * Check if all the arguments are pass-through from this service to the destination service;
      * replace the proxyable ones with the corresponding proxy handles.
      *
-     * @param frame   the current frame
-     * @param ctxDst  the service context that the arguments are to be sent to
-     * @param atype   (optional) the declared type for the arguments, which, if specified, could be
-     *                used to proxy the values
-     * @param ahArg   the actual arguments
+     * @param frame         the current frame
+     * @param ctxDst        the service context that the arguments are to be sent to
+     * @param typeSupplier  (optional) the supplier of declared types for the arguments, which, if
+     *                      specified, could be used to proxy the values
+     * @param ahArg         the actual arguments
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   TypeConstant[] atype, ObjectHandle[] ahArg)
+                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg)
         {
         // no need to check the container sharing unless we're crossing the container boundaries
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
-        return validatePassThroughArgs(frame, container, atype, ahArg, ahArg.length, 0);
+        return validatePassThroughArgs(frame, container, typeSupplier, ahArg, ahArg.length, 0);
         }
 
     /**
      * Same as the method above, but allows specifying the number of arguments.
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   TypeConstant[] atype, ObjectHandle[] ahArg, int cArgs)
+                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg, int cArgs)
         {
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
-        return validatePassThroughArgs(frame, container, atype, ahArg, cArgs, 0);
+        return validatePassThroughArgs(frame, container, typeSupplier, ahArg, cArgs, 0);
         }
 
-    private int validatePassThroughArgs(Frame frame, Container container, TypeConstant[] atype,
+    private int validatePassThroughArgs(Frame frame, Container container, TypeSupplier typeSupplier,
                                         ObjectHandle[] ahArg, int cArgs, int ixStart)
         {
         for (int i = ixStart; i < cArgs; i++)
@@ -1129,13 +1127,13 @@ public class ServiceContext
                         {
                         ahArg[ix] = frameCaller.popStack();
                         return validatePassThroughArgs(
-                                frameCaller, container, atype, ahArg, cArgs, ix+1);
+                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
                         });
                     }
 
                 switch (hArg.getTemplate().createProxyHandle(
                             frame, this, hArg,
-                            atype == null || atype.length == 0 ? null : atype[i]))
+                            typeSupplier == null ? null : typeSupplier.get(i)))
                     {
                     case Op.R_NEXT:
                         ahArg[i] = frame.popStack();
@@ -1147,7 +1145,7 @@ public class ServiceContext
                             {
                             ahArg[ix] = frameCaller.popStack();
                             return validatePassThroughArgs(
-                                    frameCaller, container, atype, ahArg, cArgs, ix+1);
+                                    frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
                             });
                         return Op.R_CALL;
                         }
@@ -1258,7 +1256,8 @@ public class ServiceContext
         {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
-        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1, () -> typeRet);
+        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
+                                typeRet.length == 0 ? null : i -> typeRet[i]);
 
         addRequest(request, frame.isDynamicVar(iReturn));
 
@@ -1283,7 +1282,8 @@ public class ServiceContext
      */
     public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet)
         {
-        OpRequest request = new OpRequest(frame, op, aiReturn.length, () -> typeRet);
+        int       cRets   = aiReturn.length;
+        OpRequest request = new OpRequest(frame, op, cRets, cRets == 0 ? null : i -> typeRet[i]);
 
         addRequest(request, false);
 
@@ -1417,10 +1417,8 @@ public class ServiceContext
             };
 
 
-        Supplier<TypeConstant[]> supplier = cReturns == 0
-                ? null
-                : () -> resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest request = new OpRequest(frame, opCall, cReturns, supplier);
+        TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
+        OpRequest    request  = new OpRequest(frame, opCall, cReturns, supplier);
 
         boolean fOverwhelmed = addRequest(request, fAsync);
 
@@ -1485,7 +1483,7 @@ public class ServiceContext
                 }
             };
 
-        Supplier<TypeConstant[]>          supplier = () -> resolveFormalReturnTypes(hFunction, ahArg);
+        TypeSupplier                      supplier = resolveFormalReturnTypes(hFunction, ahArg);
         OpRequest                         request  = new OpRequest(frame, opCall, cReturns, supplier);
         CompletableFuture<ObjectHandle[]> future   = request.f_future;
 
@@ -1540,61 +1538,65 @@ public class ServiceContext
      * return types (see ClassTemplate.createProxyHandle), but formal type parameters can only be
      * resolved using the type parameters types that are passed in by the caller.
      */
-    private TypeConstant[] resolveFormalReturnTypes(FunctionHandle hFunction, ObjectHandle[] ahArg)
+    private TypeSupplier resolveFormalReturnTypes(FunctionHandle hFunction, ObjectHandle[] ahArg)
         {
-        TypeConstant[] atype  = hFunction.getReturnTypes();
-        int            cTypes = atype.length;
-
-        if (cTypes > 0)
+        TypeConstant[] atype = hFunction.getReturnTypes();
+        if (atype.length == 0)
             {
-            GenericTypeResolver resolver = new GenericTypeResolver()
+            return null;
+            }
+
+        boolean fFormal = false;
+        for (TypeConstant type : atype)
+            {
+            if (type.containsTypeParameter(true))
                 {
-                @Override
-                public TypeConstant resolveGenericType(String sFormalName)
-                    {
-                    return null;
-                    }
-
-                @Override
-                public TypeConstant resolveFormalType(FormalConstant constFormal)
-                    {
-                    if (constFormal instanceof TypeParameterConstant constTypeParam)
-                        {
-                        int             nRegister = constTypeParam.getRegister();
-                        MethodConstant  idMethod  = hFunction.getMethodId();
-                        MethodStructure method    = idMethod == null
-                                ? null
-                                : (MethodStructure) idMethod.getComponent();
-                        if (method != null && nRegister < method.getTypeParamCount() &&
-                                method.getParam(nRegister).getName().equals(constTypeParam.getName()))
-                            {
-                            return ahArg[nRegister].getType().getParamType(0);
-                            }
-                        }
-
-                    return null;
-                    }
-                };
-
-            boolean fClone = true;
-            for (int i = 0; i < cTypes; i++)
-                {
-                TypeConstant type = atype[i];
-                if (type.containsTypeParameter(true))
-                    {
-                    TypeConstant typeResolved = type.resolveGenerics(f_pool, resolver);
-                    if (typeResolved != type)
-                        {
-                        if (fClone)
-                            {
-                            atype = atype.clone();
-                            }
-                        atype[i] = typeResolved;
-                        }
-                    }
+                fFormal = true;
+                break;
                 }
             }
-        return atype;
+
+        if (!fFormal)
+            {
+            return i -> atype[i];
+            }
+
+        GenericTypeResolver resolver = new GenericTypeResolver()
+            {
+            @Override
+            public TypeConstant resolveGenericType(String sFormalName)
+                {
+                return null;
+                }
+
+            @Override
+            public TypeConstant resolveFormalType(FormalConstant constFormal)
+                {
+                if (constFormal instanceof TypeParameterConstant constTypeParam)
+                    {
+                    int             nRegister = constTypeParam.getRegister();
+                    MethodConstant  idMethod  = hFunction.getMethodId();
+                    MethodStructure method    = idMethod == null
+                            ? null
+                            : (MethodStructure) idMethod.getComponent();
+                    if (method != null && nRegister < method.getTypeParamCount() &&
+                            method.getParam(nRegister).getName().equals(constTypeParam.getName()))
+                        {
+                        return ahArg[nRegister].getType().getParamType(0);
+                        }
+                    }
+
+                return null;
+                }
+            };
+
+        return i ->
+            {
+            TypeConstant type = atype[i];
+            return type.containsTypeParameter(true)
+                    ? type.resolveGenerics(f_pool, resolver)
+                    : type;
+            };
         }
 
     /**
@@ -1666,8 +1668,7 @@ public class ServiceContext
 
         TypeConstant   typeProp = idProp.getType().resolveGenerics(f_pool, hTarget.getType());
         ObjectHandle[] ahValue  = new ObjectHandle[] {hValue};
-        TypeConstant[] atype    = new TypeConstant[] {typeProp};
-        switch (frame.f_context.validatePassThrough(frame, this, atype, ahValue, 1))
+        switch (frame.f_context.validatePassThrough(frame, this, i -> typeProp, ahValue, 1))
             {
             case Op.R_NEXT:
                 return completeSendProperty10(frame, hTarget, idProp, ahValue[0], op);
@@ -1940,16 +1941,16 @@ public class ServiceContext
          * @param supplierRet  (optional) the supplier of return types to be used *only* if the
          *                     request's return values need to be proxied
          */
-        protected OpRequest(Frame frameCaller, Op op, int cReturns, Supplier<TypeConstant[]> supplierRet)
+        protected OpRequest(Frame frameCaller, Op op, int cReturns, TypeSupplier typeSupplier)
             {
             super(frameCaller);
 
-            f_op          = op;
-            f_cReturns    = cReturns;
-            f_supplierRet = supplierRet;
-            f_nDepth      = frameCaller.f_nDepth;
-            f_hTimeout    = frameCaller.f_fiber.getTimeoutHandle();
-            f_ldtTimeout  = frameCaller.f_fiber.getTimeoutStamp();
+            f_op           = op;
+            f_cReturns     = cReturns;
+            f_typeSupplier = typeSupplier;
+            f_nDepth       = frameCaller.f_nDepth;
+            f_hTimeout     = frameCaller.f_fiber.getTimeoutHandle();
+            f_ldtTimeout   = frameCaller.f_fiber.getTimeoutStamp();
             }
 
         @Override
@@ -2023,8 +2024,7 @@ public class ServiceContext
                 case 1:
                     if (frame.m_hException == null)
                         {
-                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst,
-                                        f_supplierRet == null ? null : f_supplierRet.get(),
+                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
                                         frame.f_ahVar, 1);
                         if (iResult == Op.R_EXCEPTION)
                             {
@@ -2095,8 +2095,7 @@ public class ServiceContext
                                 }
                             }
 
-                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst,
-                                        f_supplierRet == null ? null : f_supplierRet.get(),
+                        int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
                                         ahReturn, cReturns);
                         if (iResult == Op.R_EXCEPTION)
                             {
@@ -2116,12 +2115,12 @@ public class ServiceContext
             return f_op.toString();
             }
 
-        private final Op                       f_op;
-        private final int                      f_cReturns;
-        private final Supplier<TypeConstant[]> f_supplierRet;
-        private final int                      f_nDepth;
-        private final ObjectHandle             f_hTimeout;
-        private final long                     f_ldtTimeout;
+        private final Op           f_op;
+        private final int          f_cReturns;
+        private final TypeSupplier f_typeSupplier;
+        private final int          f_nDepth;
+        private final ObjectHandle f_hTimeout;
+        private final long         f_ldtTimeout;
         }
 
     /**
@@ -2298,6 +2297,13 @@ public class ServiceContext
         private TimerTask m_taskCurrent;  // what
         }
 
+    /**
+     * A type supplier.
+     */
+    public interface TypeSupplier
+        {
+        TypeConstant get(int i);
+        }
 
     // ----- constants and fields ------------------------------------------------------------------
 
