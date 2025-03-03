@@ -8,6 +8,7 @@ import java.io.IOException;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpCallable;
 
 import org.xvm.runtime.CallChain;
@@ -92,8 +93,8 @@ public class Call_10
 
                 return isDeferred(hArg)
                         ? hArg.proceed(frame, frameCaller ->
-                            chain.callSuper10(frameCaller, frameCaller.popStack()))
-                        : chain.callSuper10(frame, hArg);
+                            chain.callSuper11(frameCaller, frameCaller.popStack(), Op.A_IGNORE))
+                        : chain.callSuper11(frame, hArg, Op.A_IGNORE);
                 }
 
             if (m_nFunctionId <= CONSTANT_OFFSET)

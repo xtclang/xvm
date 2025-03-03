@@ -295,7 +295,7 @@ public class CallChain
         }
 
     /**
-     * Super invocation with no arguments and a single return.
+     * Super invocation with no arguments and a single return (A_IGNORE for void).
      */
     public int callSuper01(Frame frame, int iReturn)
         {
@@ -319,16 +319,41 @@ public class CallChain
                 ClassTemplate   template  = hThis.getTemplate();
                 MethodStructure method    = bodySuper.getMethodStructure();
                 Component       container = method.getParent().getParent();
+
                 return container instanceof PropertyStructure
                     ? template.invokeNativeGet(frame, container.getName(), hThis, iReturn)
                     : template.invokeNativeN(frame, method, hThis, Utils.OBJECTS_NONE, iReturn);
                 }
-            case Default, Explicit, Delegating:
+
+            case Default, Explicit:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
-                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
 
+                ObjectHandle[] ahVar = new ObjectHandle[methodSuper.getMaxVars()];
                 return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
+                }
+
+            case Delegating:
+                {
+                SignatureConstant sig    = bodySuper.getSignature();
+                PropertyConstant  idProp = bodySuper.getPropertyConstant();
+
+                switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        return completeDelegate(frame, frame.popStack(), sig, iReturn);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            completeDelegate(frameCaller, frameCaller.popStack(), sig, iReturn));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
                 }
 
             default:
@@ -336,10 +361,19 @@ public class CallChain
             }
         }
 
+    private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig, int iReturn)
+        {
+System.err.println("*** FIXING 1 " + sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        return chain.isEmpty()
+                ? missingSuper(frame)
+                : chain.invoke(frame, hTarget, iReturn);
+        }
+
     /**
-     * Super invocation with a single arguments and no returns.
+     * Super invocation with a single arguments and a single return (A_IGNORE for void).
      */
-    public int callSuper10(Frame frame, ObjectHandle hArg)
+    public int callSuper11(Frame frame, ObjectHandle hArg, int iReturn)
         {
         int nDepth = frame.m_nChainDepth + 1;
         if (nDepth >= f_aMethods.length)
@@ -360,7 +394,7 @@ public class CallChain
                 return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
                     hThis, hArg, Op.A_IGNORE);
 
-            case Default, Explicit, Delegating:
+            case Default, Explicit:
                 {
                 MethodStructure methodSuper = bodySuper.getMethodStructure();
                 ObjectHandle[]  ahVar       = new ObjectHandle[Math.max(methodSuper.getMaxVars(), 1)];
@@ -369,9 +403,42 @@ public class CallChain
                 return frame.invoke1(this, nDepth, hThis, ahVar, Op.A_IGNORE);
                 }
 
+            case Delegating:
+                {
+                SignatureConstant sig    = bodySuper.getSignature();
+                PropertyConstant  idProp = bodySuper.getPropertyConstant();
+
+                switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        return completeDelegate(frame, frame.popStack(), sig, hArg);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            completeDelegate(frameCaller, frameCaller.popStack(), sig, hArg));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
             default:
                 throw new IllegalStateException();
             }
+        }
+
+    private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
+                                 ObjectHandle hArg)
+        {
+System.err.println("*** FIXING 1 " + sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        return chain.isEmpty()
+                ? missingSuper(frame)
+                : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
         }
 
     /**
@@ -391,7 +458,7 @@ public class CallChain
 
         switch (bodySuper.getImplementation())
             {
-            case Native ->
+            case Native:
                 {
                 ClassTemplate template = hThis.getTemplate();
                 return fReturnTuple
@@ -401,7 +468,7 @@ public class CallChain
                         : template.invokeNativeN(frame, methodSuper, hThis, ahArg, iReturn);
                 }
 
-            case Default, Explicit, Delegating ->
+            case Default, Explicit:
                 {
                 ObjectHandle[] ahVar = Utils.ensureSize(ahArg, methodSuper.getMaxVars());
                 return fReturnTuple
@@ -409,8 +476,46 @@ public class CallChain
                         : frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
                 }
 
-            default -> throw new IllegalStateException();
+            case Delegating:
+                {
+                SignatureConstant sig    = bodySuper.getSignature();
+                PropertyConstant  idProp = bodySuper.getPropertyConstant();
+
+                switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        return completeDelegate(frame, frame.popStack(),
+                            sig, ahArg, iReturn, fReturnTuple);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            completeDelegate(frameCaller, frameCaller.popStack(),
+                                sig, ahArg, iReturn, fReturnTuple));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            default:
+                throw new IllegalStateException();
             }
+        }
+
+    private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
+                                 ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple)
+        {
+System.err.println("*** FIXING 3 " + sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        return chain.isEmpty()
+                ? missingSuper(frame)
+                : fReturnTuple
+                    ? chain.invokeT(frame, hTarget, ahArg, iReturn)
+                    : chain.invoke(frame, hTarget, ahArg, iReturn);
         }
 
     /**
@@ -428,17 +533,51 @@ public class CallChain
         MethodBody      bodySuper   = f_aMethods[nDepth];
         MethodStructure methodSuper = bodySuper.getMethodStructure();
 
-        return switch (bodySuper.getImplementation())
+        switch (bodySuper.getImplementation())
             {
-            case Native ->
-                hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
+            case Native:
+                return hThis.getTemplate().invokeNativeNN(frame, methodSuper, hThis, ahArg, aiReturn);
 
-            case Default, Explicit, Delegating ->
-                frame.invokeN(this, nDepth, hThis,
+            case Default, Explicit:
+                return frame.invokeN(this, nDepth, hThis,
                         Utils.ensureSize(ahArg, methodSuper.getMaxVars()), aiReturn);
 
-            default -> throw new IllegalStateException();
-            };
+            case Delegating:
+                {
+                SignatureConstant sig    = bodySuper.getSignature();
+                PropertyConstant  idProp = bodySuper.getPropertyConstant();
+
+                switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK))
+                    {
+                    case Op.R_NEXT:
+                        return completeDelegate(frame, frame.popStack(), sig, ahArg, aiReturn);
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            completeDelegate(frameCaller, frameCaller.popStack(), sig, ahArg, aiReturn));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+
+            default:
+                throw new IllegalStateException();
+            }
+        }
+
+    private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
+                                 ObjectHandle[] ahArg, int[] aiReturn)
+        {
+System.err.println("*** FIXING 4 " + sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        return chain.isEmpty()
+                ? missingSuper(frame)
+                : chain.invoke(frame, hTarget, ahArg, aiReturn);
         }
 
     /**

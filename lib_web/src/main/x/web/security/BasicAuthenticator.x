@@ -14,7 +14,7 @@ import sec.PlainTextCredential;
  */
 @Concurrent
 service BasicAuthenticator(Realm realm)
-        implements Duplicable, Authenticator {
+        implements Authenticator {
 
     // ----- constructors --------------------------------------------------------------------------
 

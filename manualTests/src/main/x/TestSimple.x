@@ -1,46 +1,30 @@
 module TestSimple {
     @Inject Console console;
 
-    class Test {
-        String value {
-            static String MSG = "static value";
-            String msg = "instance value";
-        } = "This is a value";
+    interface Iface {
+        void foo();
+    }
 
-        Int x {
-            static Int Bits = 1;
-            @Override Int get() = super() + Bits;  // this used to fail to compile
-        }
+    class C1 implements Iface {
+        @Override
+        void foo() = console.print("C1");
+    }
 
-        Int y {
-            static Int Bits = Test.x.Bits + 1;
-            @Override Int get() = super() + Bits;
-        }
+    class C2(C1 c1)
+            implements Iface
+            delegates Iface(c1) {
 
-        Int z {
-            static Int Bits = x.Bits + 2;  // this used to fail to compile
-            @Override Int get() = super() + Bits;
-        }
-
-        static String test() {
-            return value.MSG;
+        @Override
+        void foo() {
+            console.print("C2");
+            super(); // this used to throw at runtime
         }
     }
 
     void run() {
-        String MSG = Test.value.MSG; // this used to fail to compile
-        console.print($"{MSG=}");
+        C1 c1 = new C1();
+        C2 c2 = new C2(c1);
 
-        Test t = new Test();
-
-        Property<Test, String, Ref<String>> prop = t.value;
-        console.print($"{prop=} {&prop.actualType=}");
-
-        prop.Implementation ref = prop.of(t);
-        console.print($"{&ref.actualType=} {ref.get()=}");
-
-        console.print($"{t.x=} {t.y=}");
-
-        console.print(Test.test());
+        c2.foo();
     }
 }
