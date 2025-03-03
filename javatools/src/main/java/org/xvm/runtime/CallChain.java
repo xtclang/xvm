@@ -363,7 +363,6 @@ public class CallChain
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig, int iReturn)
         {
-System.err.println("*** FIXING 1 " + sig);
         CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
         return chain.isEmpty()
                 ? missingSuper(frame)
@@ -434,7 +433,6 @@ System.err.println("*** FIXING 1 " + sig);
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
                                  ObjectHandle hArg)
         {
-System.err.println("*** FIXING 1 " + sig);
         CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
         return chain.isEmpty()
                 ? missingSuper(frame)
@@ -509,7 +507,6 @@ System.err.println("*** FIXING 1 " + sig);
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
                                  ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple)
         {
-System.err.println("*** FIXING 3 " + sig);
         CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
         return chain.isEmpty()
                 ? missingSuper(frame)
@@ -573,7 +570,6 @@ System.err.println("*** FIXING 3 " + sig);
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
                                  ObjectHandle[] ahArg, int[] aiReturn)
         {
-System.err.println("*** FIXING 4 " + sig);
         CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
         return chain.isEmpty()
                 ? missingSuper(frame)
