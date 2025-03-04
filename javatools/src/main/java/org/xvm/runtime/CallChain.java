@@ -391,7 +391,7 @@ public class CallChain
 
             case Native:
                 return hThis.getTemplate().invokeNative1(frame, bodySuper.getMethodStructure(),
-                    hThis, hArg, Op.A_IGNORE);
+                    hThis, hArg, iReturn);
 
             case Default, Explicit:
                 {
@@ -399,7 +399,7 @@ public class CallChain
                 ObjectHandle[]  ahVar       = new ObjectHandle[Math.max(methodSuper.getMaxVars(), 1)];
                 ahVar[0] = hArg;
 
-                return frame.invoke1(this, nDepth, hThis, ahVar, Op.A_IGNORE);
+                return frame.invoke1(this, nDepth, hThis, ahVar, iReturn);
                 }
 
             case Delegating:
@@ -410,11 +410,11 @@ public class CallChain
                 switch (hThis.getTemplate().getPropertyValue(frame, hThis, idProp, Op.A_STACK))
                     {
                     case Op.R_NEXT:
-                        return completeDelegate(frame, frame.popStack(), sig, hArg);
+                        return completeDelegate(frame, frame.popStack(), sig, hArg, iReturn);
 
                     case Op.R_CALL:
                         frame.m_frameNext.addContinuation(frameCaller ->
-                            completeDelegate(frameCaller, frameCaller.popStack(), sig, hArg));
+                            completeDelegate(frameCaller, frameCaller.popStack(), sig, hArg, iReturn));
                         return Op.R_CALL;
 
                     case Op.R_EXCEPTION:
@@ -431,12 +431,12 @@ public class CallChain
         }
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
-                                 ObjectHandle hArg)
+                                 ObjectHandle hArg, int iReturn)
         {
         CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
         return chain.isEmpty()
                 ? missingSuper(frame)
-                : chain.invoke(frame, hTarget, hArg, Op.A_IGNORE);
+                : chain.invoke(frame, hTarget, hArg, iReturn);
         }
 
     /**

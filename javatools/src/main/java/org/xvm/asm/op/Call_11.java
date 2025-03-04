@@ -97,16 +97,10 @@ public class Call_11
 
                 checkReturnRegister(frame, chain.getSuper(frame));
 
-                ObjectHandle[] ahArg = new ObjectHandle[] {hArg};
-                if (isDeferred(hArg))
-                    {
-                    Frame.Continuation stepNext = frameCaller ->
-                        chain.callSuperN1(frame, ahArg, m_nRetValue, false);
-
-                    return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                    }
-
-                return chain.callSuperN1(frame, ahArg, m_nRetValue, false);
+                return isDeferred(hArg)
+                        ? hArg.proceed(frame, frameCaller ->
+                                chain.callSuper11(frameCaller, hArg, m_nRetValue))
+                        : chain.callSuper11(frame, hArg, m_nRetValue);
                 }
 
             if (m_nFunctionId <= CONSTANT_OFFSET)
