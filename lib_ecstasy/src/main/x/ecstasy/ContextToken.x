@@ -14,6 +14,8 @@ const ContextToken<Value extends service | immutable>
         // store off the previous contextToken; it will be replaced by this contextToken, and restored when
         // this contextToken is closed
         previousContextToken = this:service.findContextToken(name);
+        this.name  = name;
+        this.value = value;
     } finally {
         this:service.registerContextToken(this);
     }
