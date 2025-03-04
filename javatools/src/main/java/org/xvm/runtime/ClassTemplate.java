@@ -787,43 +787,40 @@ public abstract class ClassTemplate
                         }
                     }
                 }
-            else if (!frame.isNative())
+            else if (!frame.isNative() &&
+                      frame.f_function.getParent().getParent() instanceof PropertyStructure prop)
                 {
-                Component container = frame.f_function.getParent().getParent();
-                if (container instanceof PropertyStructure prop)
+                // this is a Ref property access for a non-inflated property;
+                // create a Ref on the stack to access the property (e.g. "assigned")
+                switch (createPropertyRef(frame, hTarget, prop.getIdentityConstant(),
+                            !prop.isVarAccessible(Access.PUBLIC), Op.A_STACK))
                     {
-                    // this is a Ref property access from a non-inflated property;
-                    // create a Ref on the stack to access the property (e.g. "assigned")
-                    switch (createPropertyRef(frame, hTarget, prop.getIdentityConstant(),
-                                !prop.isVarAccessible(Access.PUBLIC), Op.A_STACK))
+                    case Op.R_NEXT:
                         {
-                        case Op.R_NEXT:
-                            {
-                            RefHandle hRef = (RefHandle) frame.popStack();
-                            return hRef.getTemplate().getPropertyValue(frame, hRef, idProp, iReturn);
-                            }
-
-                        case Op.R_CALL:
-                            frame.m_frameNext.addContinuation(frameCaller ->
-                                {
-                                RefHandle hRef = (RefHandle) frameCaller.popStack();
-                                return hRef.getTemplate().
-                                        getPropertyValue(frameCaller, hRef, idProp, iReturn);
-                                });
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            // raise an exception for the original property instead
-                            break ;
-
-                        default:
-                            throw new IllegalStateException();
+                        RefHandle hRef = (RefHandle) frame.popStack();
+                        return hRef.getTemplate().getPropertyValue(frame, hRef, idProp, iReturn);
                         }
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            {
+                            RefHandle hRef = (RefHandle) frameCaller.popStack();
+                            return hRef.getTemplate().
+                                    getPropertyValue(frameCaller, hRef, idProp, iReturn);
+                            });
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        // raise an exception for the original property instead
+                        break ;
+
+                    default:
+                        throw new IllegalStateException();
                     }
                 }
 
             return frame.raiseException(
-                xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
+                    xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
             }
 
         if (chain.isNative())
@@ -1063,10 +1060,24 @@ public abstract class ClassTemplate
         TypeComposition clzTarget = hTarget.getComposition();
         CallChain       chain     = clzTarget.getPropertySetterChain(idProp);
 
+        UnknownProperty:
         if (chain == null)
             {
+            if (hTarget instanceof RefHandle hRef && hRef.isProperty() &&
+                    clzTarget instanceof PropertyComposition clzProp)
+                {
+                // this is likely a property setter for a non-inflated property; ask the parent
+                // instead
+                clzTarget = clzProp.getParentComposition();
+                chain     = clzTarget.getPropertyGetterChain(idProp);
+                if (chain != null)
+                    {
+                    hTarget = hRef.getReferentHolder();
+                    break UnknownProperty;
+                    }
+                }
             return frame.raiseException(
-                xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
+                    xException.unknownProperty(frame, idProp.getName(), hTarget.getType()));
             }
 
         if (chain.isNative())

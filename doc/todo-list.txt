@@ -14,6 +14,12 @@
 
 - GG: group CLI commands into sections (one per class? @CommandGroup?)
 
+- GG: need to be able to do:
+    class Test {
+        String value = "a";
+        void test() { Test.value ref = &value; ref.set("a"); }
+    }
+
 - GG: BAST generation for "map[x] = y" is completely broken; additionally if a class has
       only a setter @Op("[]="), but no getter (@Op"[]") the compiler barfs
 

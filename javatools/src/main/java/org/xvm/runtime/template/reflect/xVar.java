@@ -154,7 +154,7 @@ public class xVar
                 {
                 ObjectHandle hDelegate = hRef.getReferentHolder();
                 return hDelegate.getTemplate().setPropertyValue(
-                    frame, hDelegate, hRef.getPropertyId(), hRef);
+                        frame, hDelegate, hRef.getPropertyId(), hValue);
                 }
 
             case RefHandle.REF_ARRAY:
