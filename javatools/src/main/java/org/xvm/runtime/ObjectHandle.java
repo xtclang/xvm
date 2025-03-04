@@ -989,6 +989,9 @@ public abstract class ObjectHandle
                 case Op.R_EXCEPTION:
                     return Op.R_EXCEPTION;
 
+                case Op.R_REPEAT:
+                    return Op.R_REPEAT;
+
                 default:
                     throw new IllegalStateException();
                 }

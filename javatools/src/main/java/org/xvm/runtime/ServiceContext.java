@@ -2315,7 +2315,7 @@ public class ServiceContext
     /**
      * The queue size threshold at which the caller should be pushed back.
      */
-    public static final int QUEUE_THRESHOLD = 256;
+    public static final int QUEUE_THRESHOLD = 128;
 
     /**
      * The container's ConstantPool.

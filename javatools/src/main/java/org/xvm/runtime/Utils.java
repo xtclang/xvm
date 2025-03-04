@@ -620,19 +620,22 @@ public abstract class Utils
             if (!fMainContext)
                 {
                 ServiceContext ctxMain = ctxCurr.getMainContext();
-
                 if (ctxCurr == ctxMain)
                     {
                     fMainContext = true;
                     }
                 else
                     {
+                    if (ctxMain.isOverwhelmed())
+                        {
+                        return Op.R_REPEAT;
+                        }
                     assert continuation != null;
 
                     // we have at least one non-initialized singleton;
                     // call the main service to initialize them all
                     CompletableFuture<ObjectHandle> cfResult =
-                        ctxMain.sendConstantRequest(frame, listSingletons);
+                            ctxMain.sendConstantRequest(frame, listSingletons);
 
                     if (ctxCurr.getSynchronicity() == Synchronicity.Concurrent)
                         {
