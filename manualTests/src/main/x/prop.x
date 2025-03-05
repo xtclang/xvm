@@ -4,6 +4,7 @@ module TestProps {
     void run() {
         testStandardProperty();
         testMethodProperty();
+        testPropertyProperty();
         testLazyProperty();
         testModuleProperty();
         testDelegation();
@@ -49,6 +50,17 @@ module TestProps {
         }
     }
 
+    void testPropertyProperty() {
+        TestProperty test = new TestProperty();
+        assert test.&value.get() == 42;
+
+        test.&value.setValue(1);
+        assert test.value == 1;
+
+        test.&value.assignValue(2);
+        assert test.value == 2;
+    }
+
     class TestProperty {
         void showMethodProperty() {
             private Int x = 0;
@@ -63,6 +75,18 @@ module TestProps {
 
             console.print($" - in showMethodProperty(), {++x=}, {y=}");
         }
+
+        Int value {
+            void setValue(Int newValue) {
+                set(newValue);
+                assert get() == newValue;
+            }
+
+            void assignValue(Int newValue) {
+                value = newValue;
+                assert value == newValue;
+            }
+        } = 42;
     }
 
     static Int calcStaticProperty() {
@@ -73,17 +97,13 @@ module TestProps {
     }
 
     void testLazyProperty() {
-        console.print("\n** testLazyProperty()");
-        console.print($"{lazy=}");
+        assert lazy == 42;
     }
+
+    @Lazy Int lazy.calc() = 42;
 
     static void testModuleProperty() {
         this:module.console.print("\n** testModuleProperty()");
-    }
-
-    @Lazy Int lazy.calc() {
-        console.print(" - in lazy.calc() " + toString());
-        return 42;
     }
 
     void testDelegation() {
