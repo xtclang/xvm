@@ -246,7 +246,14 @@ public class xService
                         ? frame.raiseException(xException.serviceTerminated(frame, f_sName))
                         : Op.R_NEXT;
 
+            case "findContextToken":
+                // TODO GG: SharedContext.Token? findContextToken(SharedContext ctx);
+                return frame.f_context == hService.f_context
+                    ? frame.raiseException("Not implemented")
+                    : frame.raiseException("Call out of context");
+
             case "registerContextToken":
+                // TODO GG: void registerContextToken(SharedContext.Token? token);
                 return frame.f_context == hService.f_context
                         ? frame.raiseException("Not implemented")
                         : frame.raiseException("Call out of context");

@@ -220,18 +220,13 @@ interface Service {
     @RO ServiceControl serviceControl;
 
     /**
-     * Obtain the named ContextToken using its name.
+     * Obtain the current [SharedContext.Token] (if any exists) using its [SharedContext].
      *
-     * Normally, a developer would access a ContextToken using injection, such as this example which
-     * requires the injection of the token named "customerId":
+     * @param ctx  a [SharedContext] object
      *
-     *     @Inject ContextToken<String> customerId;
-     *
-     * If the token is not guaranteed to exist, then the injection should be made optional, instead:
-     *
-     *     @Inject ContextToken<String>? customerId;      // note the Nullable indicator on the type
+     * @return the current [SharedContext.Token] for the specified [SharedContext], otherwise `Null`
      */
-    ContextToken? findContextToken(String name);
+    <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx);
 
     /**
      * The current SynchronizedSection for the service, if any.
@@ -361,13 +356,13 @@ interface Service {
     void callLater(function void doLater());
 
     /**
-     * Register a ContextToken, replacing any previously registered ContextToken with the same name.
-     * Until the ContextToken is closed, or until the context for that name is erased, the
-     * ContextToken will be available (by its name) from any point within this service. Furthermore,
-     * any calls from this service to another service will have the effect of automatically
-     * registering the same ContextToken with that service for the duration of the call.
+     * Register a [SharedContext.Token], replacing any previously registered `Token` for the same
+     * [SharedContext]. Until the `Token` is closed, the `Token` will be available (via its
+     * `SharedContext`) from any point within this service. Furthermore, any calls from this service
+     * to another service will have the effect of automatically registering the same `Token` with
+     * that service for the duration of that service call, i.e. for the duration of that fiber.
      */
-    void registerContextToken(ContextToken? token);
+    void registerContextToken(SharedContext.Token? token);
 
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.
