@@ -712,7 +712,11 @@ public abstract class Utils
                     {
                     if (ctxMain.isOverwhelmed())
                         {
-                        return Op.R_REPEAT;
+                        Frame frameNext = frame.createNativeFrame(
+                                WAIT_FOR_RELIEF, OBJECTS_NONE, Op.A_IGNORE, null);
+                        frameNext.addContinuation(frameCaller ->
+                                initConstants(frameCaller, listSingletons, continuation));
+                        return frame.call(frameNext);
                         }
                     assert continuation != null;
 
@@ -1778,4 +1782,28 @@ public abstract class Utils
     private static TypeConstant      ARGUMENT_ARRAY_TYPE;
     private static SignatureConstant SIG_FREEZE;
     private static SignatureConstant SIG_GET_RESOURCE;
+
+     /**
+     * Wait until the main context is no longer overwhelmed.
+     */
+    protected static final Op[] WAIT_FOR_RELIEF = new Op[]
+        {
+        new Op()
+            {
+            public int process(Frame frame, int iPC)
+                {
+                ServiceContext ctxCurr = frame.f_context;
+                ServiceContext ctxMain = ctxCurr.getMainContext();
+
+                assert ctxMain != ctxCurr;
+
+                return ctxMain.isOverwhelmed() ? R_PAUSE : R_RETURN;
+                }
+
+            public String toString()
+                {
+                return "WaitForRelief";
+                }
+            }
+        };
     }

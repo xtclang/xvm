@@ -343,34 +343,37 @@ public class ServiceContext
      */
     protected boolean drainWork()
         {
-        ServiceContext[] tloCtx = s_tloContext.get();
-        ServiceContext ctxPrior = tloCtx[0];
+        ServiceContext[] tloCtx   = s_tloContext.get();
+        ServiceContext   ctxPrior = tloCtx[0];
         tloCtx[0] = this;
 
-        try
+        Frame frame = null;
+        try (var ignored = ConstantPool.withPool(f_pool))
             {
-            Frame frame = nextFiber();
-
-            if (frame != null)
+            while (true)
                 {
-                try (var ignored = ConstantPool.withPool(f_pool))
+                frame = nextFiber();
+                if (frame == null)
                     {
-                    frame = execute(frame);
-
-                    if (frame != null)
-                        {
-                        suspendFiber(frame);
-                        return false;
-                        }
+                    return true; // nothing to do here
                     }
-                catch (Throwable e)
+
+                frame = execute(frame);
+
+                if (frame != null)
                     {
-                    // must not happen
-                    terminateFiber(frame.f_fiber);
-                    System.err.println("Unexpected service execution failure: " + f_sName);
-                    e.printStackTrace(System.err);
+                    suspendFiber(frame);
+                    return false;
                     }
                 }
+            }
+        catch (Throwable e)
+            {
+            // must not happen
+            terminateFiber(frame.f_fiber, 0);
+            System.err.println("Unexpected service execution failure: " + f_sName);
+            e.printStackTrace(System.err);
+            return !f_queueSuspended.isReady();
             }
         finally
             {
@@ -383,8 +386,6 @@ public class ServiceContext
                 ctxPrior.processResponses();
                 }
             }
-
-        return !f_queueSuspended.isReady();
         }
 
     /**
@@ -494,11 +495,11 @@ public class ServiceContext
         }
 
     /**
-     * @return true if the service has too many outstanding messages
+     * @return true if the service has too many outstanding fibers
      */
     public boolean isOverwhelmed()
         {
-        return f_queueMsg.size() + f_queueSuspended.size() > QUEUE_THRESHOLD;
+        return f_queueSuspended.size() > QUEUE_THRESHOLD;
         }
 
     /**
@@ -566,10 +567,10 @@ public class ServiceContext
             case Initial -> f_queueSuspended.add(frame);
 
             case Waiting ->
-                    {
-                    m_frameCurrent = null;
-                    f_queueSuspended.add(frame);
-                    }
+                {
+                m_frameCurrent = null;
+                f_queueSuspended.add(frame);
+                }
 
             case Paused -> m_frameCurrent = frame; // we must resume this frame
             }
@@ -618,13 +619,13 @@ public class ServiceContext
         int  cOps = 0;
 
     nextOp:
-        while (true)
+        while (true) // main loop
             {
-            while (iPC >= 0) // main loop
+            while (iPC >= 0) // most common op return loop
                 {
                 frame.m_iPC = iPC;
 
-                if (++cOps > 1_000_000 && !isDebuggerActive())
+                if (++cOps > MAX_OPS_PER_RUN && !isDebuggerActive())
                     {
                     fiber.setStatus(FiberStatus.Paused, cOps);
                     return frame;
@@ -633,17 +634,16 @@ public class ServiceContext
                 try
                     {
                     iPC = aOp[iPC].process(frame, iPCLast = iPC);
+                    if (iPC == Op.R_NEXT)
+                        {
+                        iPC = iPCLast + 1;
+                        }
                     }
                 catch (Throwable e)
                     {
                     e.printStackTrace(System.err);
                     System.err.println(frame.getStackTrace());
                     iPC = frame.raiseException("Run-time error: " + e);
-                    }
-
-                if (iPC == Op.R_NEXT)
-                    {
-                    iPC = iPCLast + 1;
                     }
                 }
 
@@ -719,7 +719,7 @@ public class ServiceContext
                     if (frame == null)
                         {
                         // all done
-                        terminateFiber(fiber);
+                        terminateFiber(fiber, cOps);
                         return m_frameCurrent = null;
                         }
 
@@ -921,10 +921,9 @@ public class ServiceContext
      * Terminate the specified fiber.
      *
      * @param fiber  the fiber that has terminated
-     *
-     * @return a new fiber
+     * @param cOps   the number of ops that have been processed
      */
-    protected void terminateFiber(Fiber fiber)
+    protected void terminateFiber(Fiber fiber, long cOps)
         {
         if (fiber == m_fiberSyncOwner)
             {
@@ -934,11 +933,9 @@ public class ServiceContext
             m_synchronicity  = Synchronicity.Concurrent;
             }
 
-        if (fiber.hasPendingRequests())
-            {
-            fiber.setStatus(FiberStatus.Terminating, 0);
-            }
-        else
+        fiber.setStatus(FiberStatus.Terminating, cOps);
+
+        if (!fiber.hasPendingRequests())
             {
             f_setFibers.remove(fiber);
             }
@@ -2316,6 +2313,11 @@ public class ServiceContext
      * The queue size threshold at which the caller should be pushed back.
      */
     public static final int QUEUE_THRESHOLD = 128;
+
+    /**
+     * The number of ops the service is allowed to execute until it must yield to other services.
+     */
+    public static final int MAX_OPS_PER_RUN = 1_000_000;
 
     /**
      * The container's ConstantPool.

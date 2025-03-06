@@ -1,30 +1,41 @@
 module TestSimple {
     @Inject Console console;
 
-    interface Iface {
-        void foo();
-    }
+    static Int COUNT = 40_000;
+    static Int LOGS  = 20;
+    static Int BATCH = COUNT/LOGS;
 
-    class C1 implements Iface {
-        @Override
-        void foo() = console.print("C1");
-    }
-
-    class C2(C1 c1)
-            implements Iface
-            delegates Iface(c1) {
-
-        @Override
-        void foo() {
-            console.print("C2");
-            super(); // this used to throw at runtime
-        }
-    }
-
+    // this test used to hang or take very long time to finish
     void run() {
-        C1 c1 = new C1();
-        C2 c2 = new C2(c1);
+        Test[] test = new Test[COUNT](_ -> new Test());
+        for (Int i : 0 ..< COUNT) {
+            @Future Tuple result = test[i].test();
+        }
+        @Inject Timer timer;
+        timer.start();
 
-        c2.foo();
+        console.print("waiting");
+        for (Int i = 0; i < COUNT; i++) {
+            test[i].isComplete();
+
+            if ((i+1) % BATCH == 0) {
+                console.print($"completed {i+1}");
+            }
+        }
+        console.print($"done in {timer.elapsed.seconds} sec");
+    }
+
+    service Test {
+        @Future Boolean done = False;
+
+        Boolean isComplete() = done;
+
+        void test() {
+            StringBuffer buf = new StringBuffer();
+            for (Int i : 0 ..< 10) {
+                buf.append(i);
+            }
+            done = True;
+        }
     }
 }

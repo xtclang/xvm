@@ -165,7 +165,7 @@ public class Fiber
      * @param status  the status
      * @param cOps    the number of ops this fiber has processed since the last status update
      */
-    public void setStatus(FiberStatus status, int cOps)
+    public void setStatus(FiberStatus status, long cOps)
         {
         switch (m_status = status)
             {
@@ -324,7 +324,7 @@ public class Fiber
 
             if (--m_cPending == 0 && m_status == FiberStatus.Terminating)
                 {
-                f_context.terminateFiber(this);
+                f_context.terminateFiber(this, 0);
                 }
             });
         }
@@ -410,7 +410,7 @@ public class Fiber
             m_mapPendingUncaptured.remove(future);
             if (--m_cPending == 0 && getStatus() == FiberStatus.Terminating)
                 {
-                f_context.terminateFiber(this);
+                f_context.terminateFiber(this, 0);
                 }
             });
         }
