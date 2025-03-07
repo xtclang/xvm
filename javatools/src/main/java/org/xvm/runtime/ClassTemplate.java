@@ -1069,7 +1069,7 @@ public abstract class ClassTemplate
                 // this is likely a property setter for a non-inflated property; ask the parent
                 // instead
                 clzTarget = clzProp.getParentComposition();
-                chain     = clzTarget.getPropertyGetterChain(idProp);
+                chain     = clzTarget.getPropertySetterChain(idProp);
                 if (chain != null)
                     {
                     hTarget = hRef.getReferentHolder();

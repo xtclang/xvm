@@ -254,7 +254,9 @@ public abstract class OpInvocable extends Op
         }
 
     /**
-     * Check if the specified method represents a property accessor.
+     * Check if the specified method represents a property accessor. Note that the actual accessor
+     * signature could be "extended" from a canonical signature by adding default arguments or
+     * augmenting the return types.
      *
      * @param idMethod  the method constant
      *
@@ -268,14 +270,12 @@ public abstract class OpInvocable extends Op
             SignatureConstant sig    = idMethod.getSignature();
             String            sName  = sig.getName();
 
-            if ("get".equals(sName) && sig.getParamCount() == 0 && sig.getReturnCount() == 1 &&
-                    sig.getRawReturns()[0].isA(idProp.getType()))
+            if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType()))
                 {
                 return idProp;
                 }
 
-            if ("set".equals(sName) && sig.getParamCount() == 1 && sig.getReturnCount() == 0 &&
-                    sig.getRawParams()[0].isA(idProp.getType()))
+            if ("set".equals(sName) && sig.getRawParams()[0].isA(idProp.getType()))
                 {
                 return idProp;
                 }
