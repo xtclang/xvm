@@ -17,7 +17,6 @@ import org.xvm.asm.Op;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ServiceContext.Message;
-import org.xvm.runtime.ServiceContext.Request;
 
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
@@ -312,7 +311,7 @@ public class Fiber
      *
      * @param request  the request
      */
-    public void registerRequest(Request request)
+    public void registerRequest(Message request)
         {
         addDependee(request);
 
@@ -329,7 +328,7 @@ public class Fiber
             });
         }
 
-    protected void addDependee(Request request)
+    protected void addDependee(Message request)
         {
         if (request.m_fiber == this)
             {
@@ -341,21 +340,21 @@ public class Fiber
             {
             m_oPendingRequests = request;
             }
-        else if (oPending instanceof Request requestPrev)
+        else if (oPending instanceof Message requestPrev)
             {
-            Map<CompletableFuture, Request> mapPending = new HashMap<>();
+            Map<CompletableFuture, Message> mapPending = new HashMap<>();
             mapPending.put(requestPrev.f_future, requestPrev);
             mapPending.put(request.f_future, request);
             m_oPendingRequests = mapPending;
             }
         else
             {
-            Map<CompletableFuture, Request> mapPending = (Map<CompletableFuture, Request>) oPending;
+            Map<CompletableFuture, Message> mapPending = (Map<CompletableFuture, Message>) oPending;
             mapPending.put(request.f_future, request);
             }
         }
 
-    protected void removeDependee(Request request)
+    protected void removeDependee(Message request)
         {
         if (request.m_fiber == this)
             {
@@ -363,13 +362,13 @@ public class Fiber
             }
 
         Object oPending = m_oPendingRequests;
-        if (oPending instanceof Request)
+        if (oPending instanceof Message)
             {
             m_oPendingRequests = null;
             }
         else
             {
-            ((Map<CompletableFuture, Request>) oPending).remove(request.f_future);
+            ((Map<CompletableFuture, Message>) oPending).remove(request.f_future);
             }
         }
 
@@ -386,7 +385,7 @@ public class Fiber
      * Uncaptured request is a "fire and forget" call that needs to be tracked and reported
      * to an UnhandledExceptionHandler if such a handle was registered naturally.
      */
-    public void registerUncapturedRequest(Request request)
+    public void registerUncapturedRequest(Message request)
         {
         Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
         if (mapPending == null)
@@ -524,15 +523,15 @@ public class Fiber
             }
 
         // TODO: check for the deadlock
-        if (oPending instanceof Request)
+        if (oPending instanceof Message msg)
             {
-            Fiber fiber = ((Request) oPending).m_fiber;
+            Fiber fiber = msg.m_fiber;
             return " for " + (fiber == null ? "initial" : fiber);
             }
 
         StringBuilder sb     = new StringBuilder(" for [");
         boolean       fFirst = true;
-        for (Request request : ((Map<CompletableFuture, Request>) oPending).values())
+        for (Message request : ((Map<CompletableFuture, Message>) oPending).values())
             {
             if (fFirst)
                 {
@@ -567,7 +566,7 @@ public class Fiber
     @Override
     public boolean equals(Object obj)
         {
-        return obj instanceof Fiber && f_lId == ((Fiber) obj).f_lId;
+        return obj instanceof Fiber fiber && f_lId == fiber.f_lId;
         }
 
     @Override
@@ -710,7 +709,7 @@ public class Fiber
     private int m_cPending;
 
     /**
-     * Pending requests: Request | Map<CompletableFuture, Request>.
+     * Pending requests: Message | Map<CompletableFuture, Message>.
      */
     private Object m_oPendingRequests;
 

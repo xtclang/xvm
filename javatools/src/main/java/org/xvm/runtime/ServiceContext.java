@@ -173,16 +173,6 @@ public class ServiceContext
         }
 
     /**
-     * @return the currently active fiber
-     */
-    public Fiber getCurrentFiber()
-        {
-        // Note: this method can be called by another service
-        Frame frameCurrent = m_frameCurrent;
-        return frameCurrent == null ? null : frameCurrent.f_fiber;
-        }
-
-    /**
      * @return the set of Fibers for this context
      */
     public Set<Fiber> getFibers()
@@ -503,7 +493,7 @@ public class ServiceContext
         }
 
     /**
-     * Add a response message to the service response queue.
+     * Add a response to the service response queue.
      */
     private void respond(Response response)
         {
@@ -1230,7 +1220,7 @@ public class ServiceContext
             return null;
             }
 
-        Request request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
+        Message request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
 
         // TODO: should we reject (throw) if the service overwhelmed?
         addRequest(request, true);
@@ -1792,15 +1782,10 @@ public class ServiceContext
     // --- inner classes ---------------------------------------------------------------------------
 
     /**
-     * Base class for cross-service communications.
+     * Base class for an asynchronous cross-service messages based on a CompletableFuture.
      */
     public abstract static class Message
         {
-        public final Fiber           f_fiberCaller;
-        public final MethodStructure f_fnCaller;
-        public final int             f_iCallerId; // the FrameId of the caller
-        public final int             f_iCallerPC; // the PC of the caller
-
         protected Message(Frame frameCaller)
             {
             if (frameCaller == null)
@@ -1817,6 +1802,8 @@ public class ServiceContext
                 f_iCallerId   = frameCaller.f_iId;
                 f_iCallerPC   = frameCaller.m_iPC;
                 }
+
+            f_future = new CompletableFuture();
             }
 
         /**
@@ -1835,33 +1822,9 @@ public class ServiceContext
         abstract public long getTimeoutStamp();
 
         /**
-         * Create a new frame based on this message at the specified service
+         * Create a new frame based on this Message at the specified service
          */
         abstract Frame createFrame(ServiceContext context);
-        }
-
-    /**
-     * Base class for an asynchronous cross-service Message based on a CompletableFuture.
-     */
-    public abstract static class Request
-            extends Message
-        {
-        protected Request(Frame frameCaller)
-            {
-            super(frameCaller);
-
-            f_future = new CompletableFuture();
-            }
-
-        /**
-         * The CompletableFuture associates with this request.
-         */
-        public final CompletableFuture f_future;
-
-        /**
-         * The Fiber this request runs on (assigned by {@link #createFrame}).
-         */
-        public Fiber m_fiber;
 
         /**
          * Send the specified number of return values back to the caller.
@@ -1926,13 +1889,45 @@ public class ServiceContext
                     }
                 }
             }
+
+        // ----- fields ----------------------------------------------------------------------------
+
+        /**
+         * The CompletableFuture associates with this message.
+         */
+        public final CompletableFuture f_future;
+
+        /**
+         * The Fiber this message runs on (assigned by {@link #createFrame}).
+         */
+        public Fiber m_fiber;
+
+        /**
+         * The caller's Fiber (can be null)
+         */
+        public final Fiber f_fiberCaller;
+
+        /**
+         * The caller's method.
+         */
+        public final MethodStructure f_fnCaller;
+
+        /**
+         * The caller's frame id.
+         */
+        public final int f_iCallerId;
+
+        /**
+         * The caller's frame PC.
+         */
+        public final int f_iCallerPC;
         }
 
     /**
-     * A cross-service Op based Request.
+     * A cross-service Op based Message.
      */
     public static class OpRequest
-            extends Request
+            extends Message
         {
         /**
          * @param supplierRet  (optional) the supplier of return types to be used *only* if the
@@ -2124,7 +2119,7 @@ public class ServiceContext
      * Represents a natural "fire and forget" or a native call request to a service.
      */
     public static class CallLaterRequest
-            extends Request
+            extends Message
         {
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
@@ -2370,7 +2365,7 @@ public class ServiceContext
     private final Queue<Message> f_queueMsg = new ConcurrentLinkedQueue<>();
 
     /**
-     * The queue of message responses.
+     * The queue of responses.
      */
     private final Queue<Response> f_queueResponse = new ConcurrentLinkedQueue<>();
 
