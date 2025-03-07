@@ -1008,7 +1008,7 @@ public class Compiler
     public static final String ANON_CLASS_EXTENDS_UNION           = "COMPILER-100";
     /**
      * The initialization of the property {0} is implied by a constructor parameter, but the
-     * property does not exist or not settable.
+     * property does not exist or is not settable.
      */
     public static final String IMPLICIT_PROP_MISSING              = "COMPILER-101";
     /**

@@ -1341,7 +1341,7 @@ public class MethodStructure
         {
         return "get".equals(getName())
                 && getAccess() == Access.PUBLIC
-                && getReturnCount() == 1 && getParamCount() == 0
+                && getReturnCount() >= 1
                 && !isFunction() && !isConditionalReturn();
         }
 
@@ -1361,7 +1361,7 @@ public class MethodStructure
         ConstantPool pool = getConstantPool();
         return isPotentialGetter() && (getReturn(0).getType().equals(type) || resolver != null &&
                 getReturn(0).getType().resolveGenerics(pool, resolver).
-                    equals(type.resolveGenerics(pool, resolver)));
+                    isA(type.resolveGenerics(pool, resolver)));
         }
 
     /**
@@ -1374,7 +1374,7 @@ public class MethodStructure
         {
         return "set".equals(getName())
                 && getAccess() == Access.PUBLIC
-                && getReturnCount() == 0 && getParamCount() == 1
+                && getParamCount() >= 1
                 && !isFunction() && !isConditionalReturn();
         }
 
@@ -1394,7 +1394,7 @@ public class MethodStructure
         ConstantPool pool = getConstantPool();
         return isPotentialSetter() && (getParam(0).getType().equals(type) || resolver != null &&
                 getParam(0).getType().resolveGenerics(pool, resolver).
-                    equals(type.resolveGenerics(pool, resolver)));
+                    isA(type.resolveGenerics(pool, resolver)));
         }
 
     /**

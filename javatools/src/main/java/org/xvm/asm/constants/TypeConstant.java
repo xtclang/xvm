@@ -5363,13 +5363,11 @@ public abstract class TypeConstant
         // check for incorrect get/set method declarations
         if (methodBadGet != null && methodGet == null)
             {
-            log(errs, Severity.ERROR, VE_PROPERTY_GET_INCOMPATIBLE,
-                    getValueString(), sName);
+            log(errs, Severity.ERROR, VE_PROPERTY_GET_INCOMPATIBLE, getValueString(), sName);
             }
         if (methodBadSet != null && methodSet == null)
             {
-            log(errs, Severity.ERROR, VE_PROPERTY_SET_INCOMPATIBLE,
-                    getValueString(), sName);
+            log(errs, Severity.ERROR, VE_PROPERTY_SET_INCOMPATIBLE, getValueString(), sName);
             }
 
         // check access flags
@@ -5380,7 +5378,7 @@ public abstract class TypeConstant
             log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_STRUCT,
                     getValueString(), sName);
             }
-        else  if (accessVar != null && accessRef.isLessAccessibleThan(accessVar))
+        else if (accessVar != null && accessRef.isLessAccessibleThan(accessVar))
             {
             log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_ILLEGAL,
                     getValueString(), sName);
@@ -5525,6 +5523,13 @@ public abstract class TypeConstant
                 if (fHasRO && (fSetSupers || fHasVarAnno))
                     {
                     // the @RO conflicts with the annotations that require a Var
+                    log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
+                            getValueString(), sName);
+                    }
+
+                if (fSetSupers && fGetBlocksSuper)
+                    {
+                    // there is no way to get to the "set" value; may need a better error
                     log(errs, Severity.ERROR, VE_PROPERTY_READONLY_NOT_VAR,
                             getValueString(), sName);
                     }
