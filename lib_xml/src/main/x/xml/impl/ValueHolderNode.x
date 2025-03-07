@@ -220,6 +220,7 @@
             if (String value ?= value) {
                 Node? prev = firstContent();
                 link_(prev, new @ContentNode Data(value));
+                contentCount = 1;
             }
         }
     }

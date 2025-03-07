@@ -444,7 +444,7 @@ class ElementNode
      * it is the last node from the `AttributeNode` list, or it is the last child [Node] iff it is
      * an [ElementNode] or [ContentNode].
      */
-    private (AttributeNode | ElementNode | ContentNode)? trailing_ = Null;
+    private Node? trailing_ = Null;
 
     /**
      * Bit-encoded counts. Contains the [contentCount], [attributeCount], and [elementCount].
@@ -475,12 +475,6 @@ class ElementNode
             assert newValue >= 0;
             counts_ = counts_ & ~Mask | newValue.notGreaterThan(Ones).toUInt32();
         }
-    }
-
-    @Override
-    protected (Node? prev, ContentNode? node) firstContent() {
-        // TODO
-        TODO
     }
 
     /**
@@ -549,6 +543,10 @@ class ElementNode
      * @return (conditional) the [AttributeNode] with the specified name
      */
     /* TODO CP protected */ conditional AttributeNode attributeByName(String name) {
+        if (attributeCount == 0) {
+            return False;
+        }
+
         // attributes precede all other child nodes, so just go until the node is not an attribute
         Node? prev = Null;
         Node? node = child_;
@@ -561,7 +559,107 @@ class ElementNode
             node = prev.as(Node).next_;     // TODO CP get rid of .as(Node)
         }
 
-        trailing_ = prev?;
+        // didn't find that name, but we can still cache the location of the last AttributeNode
+        trailing_ = prev.as(AttributeNode);
         return False;
+    }
+
+    /**
+     * Find the last [Attribute] [Node] child of this `ElementNode`.
+     *
+     * @return the last child [AttributeNode]; otherwise, `Null`
+     */
+    protected AttributeNode? lastAttribute() {
+        Int count = attributeCount;
+        if (count == 0) {
+            return Null;
+        }
+
+        // if the cached "trailing_" node is an AttributeNode, then it is the last AttributeNode
+        return trailing_.is(AttributeNode)?;
+
+        Node? node = child_;
+        while (--count > 0) {
+            node = node?.next_ : assert;
+        }
+        return trailing_ <- node.as(AttributeNode);
+    }
+
+    /**
+     * TODO
+     */
+    protected (Node? prev, ElementNode? node) firstElement() {
+        if (elementCount == 0) {
+            // by default, the elements follow the attributes and content
+            return lastNode(), Null;
+        }
+
+        // the first element could be the first child; otherwise, we'll start scanning from the
+        // first child
+        Node? node = child_;
+        if (node.is(ElementNode)) {
+            return Null, node;
+        }
+
+        // there's at least one element node so the child_ must not be Null
+        assert node != Null;
+
+        TODO
+    }
+
+    @Override
+    protected (Node? prev, ContentNode? node) firstContent() {
+        if (contentCount == 0) {
+            // by default, the content follows the attributes
+            return lastAttribute(), Null;
+        }
+
+        // the content could be the first child; otherwise, we'll start scanning from the first
+        // child
+        Node? node = child_;
+        if (node.is(ContentNode)) {
+            return Null, node;
+        }
+
+        // there's at least one content node so the child_ must not be Null
+        assert node != Null;
+
+        // we may have already "seeked" to the first content node
+        if (Node prev ?= trailing_) {
+            if (node := prev.as(Node).next_.is(ContentNode)) {  // TODO CP get rid of .as()
+                return prev, node;
+            } else if (prev.is(AttributeNode)) {
+                // optimization: start scanning from the end of the attribute list
+                node = prev;
+            }
+        }
+
+        Node? prev = node;
+        node = node.next_;
+        while (!node.is(ContentNode)) {
+            prev = node;
+            node = node?.next_ : assert; // we know there are ContentNodes in the list!
+        }
+        trailing_ = prev;
+        return prev, node.as(ContentNode); // TODO GG shouldn't need .as()
+    }
+
+    /**
+     * Find the last child [Node] of this `ElementNode`.
+     *
+     * @return the last child [Node]; otherwise, `Null`
+     */
+    protected Node? lastNode() {
+        Node? node = trailing_ ?: child_;
+        if (node == Null) {
+            return Null;
+        }
+
+        Node? next = node.next_;
+        while (next != Null) {
+            node = next;
+            next = node.next_;
+        }
+        return trailing_ <- node;
     }
 }
