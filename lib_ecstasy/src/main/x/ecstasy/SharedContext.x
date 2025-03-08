@@ -166,7 +166,10 @@ const SharedContext<Value extends service | immutable>
             // is [active] is that it is possible that a subsequent `Token` was not properly
             // closed, e.g. by failing to use a "using" or "try"-with-resources construct
             if (registered) {
-                this:service.registerContextToken(previous);
+                this:service.unregisterContextToken(this);
+                if (Token previous ?= this.previous) {
+                    this:service.registerContextToken(previous);
+                }
             }
         }
 

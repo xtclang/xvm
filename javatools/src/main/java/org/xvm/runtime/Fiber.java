@@ -52,6 +52,8 @@ public class Fiber
             f_refCaller  = null;
             m_ldtTimeout = 0L;
             m_hTimeout   = xNullable.NULL;
+            m_mapTokens  = null;
+            m_fCloneMap  = false;
             }
         else
             {
@@ -59,6 +61,8 @@ public class Fiber
             f_refCaller  = new WeakReference<>(fiberCaller);
             m_ldtTimeout = msgCall.getTimeoutStamp();
             m_hTimeout   = msgCall.getTimeoutHandle();
+            m_mapTokens  = msgCall.f_mapTokens;
+            m_fCloneMap  = true;
             }
         }
 
@@ -104,6 +108,33 @@ public class Fiber
     public void clearTimeout()
         {
         m_ldtTimeout = 0L;
+        }
+
+    /**
+     * Get the map of SharedContext.Token objects for read-only access.
+     */
+    public Map<ObjectHandle, ObjectHandle> getTokens()
+        {
+        return m_mapTokens;
+        }
+
+    /**
+     * Get the map of SharedContext.Token objects for write access.
+     */
+    public Map<ObjectHandle, ObjectHandle> ensureTokens()
+        {
+        Map<ObjectHandle, ObjectHandle> map = m_mapTokens;
+        if (map == null)
+            {
+            m_mapTokens = map = new HashMap<>();
+            m_fCloneMap = false;
+            }
+        else if (m_fCloneMap)
+            {
+            m_mapTokens = map = new HashMap<>(map);
+            m_fCloneMap = false;
+            }
+        return map;
         }
 
     /**
@@ -686,6 +717,19 @@ public class Fiber
      * The timeout (timestamp) that this fiber is subject to (optional).
      */
     private long m_ldtTimeout;
+
+    /**
+     * A "service-local" map of SharedContext.Token objects keyed by the SharedContext objects.
+     * This map is using a "copy-on-write" policy.
+     *
+     * Both ContextToken and SharedContext are "consts" and are "pass-through" across services.
+     */
+    private Map<ObjectHandle, ObjectHandle> m_mapTokens;
+
+    /**
+     * This flag indicates that the token map needs to be cloned if {@link #ensureTokens()} is called.
+     */
+    private boolean m_fCloneMap;
 
     /**
      * Metrics: the total number of ops this fiber has executed.

@@ -1794,6 +1794,7 @@ public class ServiceContext
                 f_fnCaller    = null;
                 f_iCallerId   = 0;
                 f_iCallerPC   = -1;
+                f_mapTokens   = null;
                 }
             else
                 {
@@ -1801,6 +1802,7 @@ public class ServiceContext
                 f_fnCaller    = frameCaller.f_function;
                 f_iCallerId   = frameCaller.f_iId;
                 f_iCallerPC   = frameCaller.m_iPC;
+                f_mapTokens   = frameCaller.f_fiber.getTokens();
                 }
 
             f_future = new CompletableFuture();
@@ -1921,6 +1923,11 @@ public class ServiceContext
          * The caller's frame PC.
          */
         public final int f_iCallerPC;
+
+        /**
+         * The caller's context tokens.
+         */
+        public final Map<ObjectHandle, ObjectHandle> f_mapTokens;
         }
 
     /**

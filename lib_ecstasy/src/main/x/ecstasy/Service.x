@@ -220,15 +220,6 @@ interface Service {
     @RO ServiceControl serviceControl;
 
     /**
-     * Obtain the current [SharedContext.Token] (if any exists) using its [SharedContext].
-     *
-     * @param ctx  a [SharedContext] object
-     *
-     * @return the current [SharedContext.Token] for the specified [SharedContext], otherwise `Null`
-     */
-    <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx);
-
-    /**
      * The current SynchronizedSection for the service, if any.
      */
     @RO SynchronizedSection? synchronizedSection;
@@ -356,13 +347,31 @@ interface Service {
     void callLater(function void doLater());
 
     /**
+     * Obtain the current [SharedContext.Token] (if any exists) using its [SharedContext].
+     *
+     * @param ctx  the `SharedContext` object
+     *
+     * @return the current `Token` for the specified `SharedContext`, otherwise `Null`
+     */
+    <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx);
+
+    /**
      * Register a [SharedContext.Token], replacing any previously registered `Token` for the same
      * [SharedContext]. Until the `Token` is closed, the `Token` will be available (via its
      * `SharedContext`) from any point within this service. Furthermore, any calls from this service
      * to another service will have the effect of automatically registering the same `Token` with
      * that service for the duration of that service call, i.e. for the duration of that fiber.
+     *
+     * @param token  the `Token` to register
      */
-    void registerContextToken(SharedContext.Token? token);
+    void registerContextToken(SharedContext.Token token);
+
+    /*
+     * Unregister the [SharedContext.Token] from its [SharedContext].
+     *
+     * @param token  the `Token` to unregister
+     */
+    void unregisterContextToken(SharedContext.Token token);
 
     /**
      * Register a Timeout for the service, replacing any previously registered Timeout.

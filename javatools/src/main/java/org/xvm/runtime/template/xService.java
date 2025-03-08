@@ -2,6 +2,7 @@ package org.xvm.runtime.template;
 
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -246,16 +247,14 @@ public class xService
                         ? frame.raiseException(xException.serviceTerminated(frame, f_sName))
                         : Op.R_NEXT;
 
-            case "findContextToken":
-                // TODO GG: SharedContext.Token? findContextToken(SharedContext ctx);
-                return frame.f_context == hService.f_context
-                    ? frame.raiseException("Not implemented")
-                    : frame.raiseException("Call out of context");
-
             case "registerContextToken":
-                // TODO GG: void registerContextToken(SharedContext.Token? token);
                 return frame.f_context == hService.f_context
-                        ? frame.raiseException("Not implemented")
+                        ? invokeRegisterToken(frame, (GenericHandle) hArg)
+                        : frame.raiseException("Call out of context");
+
+            case "unregisterContextToken":
+                return frame.f_context == hService.f_context
+                        ? invokeUnregisterToken(frame, (GenericHandle) hArg)
                         : frame.raiseException("Call out of context");
 
             case "registerTimeout":
@@ -325,6 +324,11 @@ public class xService
 
         switch (method.getName())
             {
+            case "findContextToken":
+                return frame.f_context == hService.f_context
+                    ? invokeFindToken(frame, ahArg, iReturn)
+                    : frame.raiseException("Call out of context");
+
             case "shutdown":
                 // this method is called by the ServiceControl; it doesn't even exist on the Service
                 assert frame.f_context == hService.f_context;
@@ -508,6 +512,41 @@ public class xService
             }
 
         throw new IllegalStateException("Invalid context");
+        }
+
+    /**
+     * Implementation of "<SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx)"
+     */
+    private int invokeFindToken(Frame frame, ObjectHandle[] ahArg, int iReturn)
+        {
+        ObjectHandle hContext = ahArg[1]; // [0] is unused - the Value type
+
+        Map<ObjectHandle, ObjectHandle> mapTokens = frame.f_fiber.getTokens();
+
+        ObjectHandle hToken = mapTokens == null ? null : mapTokens.get(hContext);
+        return frame.assignValue(iReturn, hToken == null ? xNullable.NULL : hToken);
+        }
+
+    /**
+     * Implementation of "void registerContextToken(SharedContext.Token token)"
+     */
+    private int invokeRegisterToken(Frame frame, GenericHandle hToken)
+        {
+        ObjectHandle hContext = hToken.getField(frame, GenericHandle.OUTER);
+        assert hContext != null;
+        frame.f_fiber.ensureTokens().put(hContext, hToken);
+        return Op.R_NEXT;
+        }
+
+    /**
+     * Implementation of "void unregisterContextToken(SharedContext.Token token)"
+     */
+    private int invokeUnregisterToken(Frame frame, GenericHandle hToken)
+        {
+        ObjectHandle hContext = hToken.getField(frame, GenericHandle.OUTER);
+        assert hContext != null;
+        frame.f_fiber.ensureTokens().remove(hContext);
+        return Op.R_NEXT;
         }
 
 

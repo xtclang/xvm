@@ -1,7 +1,24 @@
 module TestServices {
     @Inject Console console;
 
+    import ecstasy.SharedContext;
+
     void run() {
+        testSharedContext();
+        testAsyncExecution();
+    }
+
+    void testSharedContext() {
+        using (UserId.withValue("u1")) {
+            new TestService("u1").validateContext^();
+        }
+        using (UserId.withValue("u2")) {
+            new TestService("u2").validateContext();
+        }
+        assert !UserId.hasValue();
+    }
+
+    void testAsyncExecution() {
         console.print("*** service tests ***\n");
 
         console.print($"{tag()} creating service");
@@ -102,7 +119,11 @@ module TestServices {
         }
     }
 
-    service TestService {
+    service TestService(String userId = "") {
+        void validateContext() {
+            assert String user := UserId.hasValue(), user == userId;
+        }
+
         Int simulateSlowIO(Duration delay, Boolean log = False) {
             @Inject Console console;
 
@@ -164,4 +185,6 @@ module TestServices {
         static Time base = now();
         return $"{(now() - base).seconds}:\t" + (this:service.serviceName == "TestService" ? "[svc ]" : "[main]");
     }
+
+    static SharedContext<String> UserId = new SharedContext("userId");
 }
