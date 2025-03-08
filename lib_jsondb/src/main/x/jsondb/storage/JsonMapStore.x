@@ -853,7 +853,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Int totalBytes = 0;
         Int totalFiles = 0;
 
-        for (File file : dataDir.files()) {
+        for (File file : findFiles()) {
             String                  fileName   = file.name;
             Byte[]                  bytes      = file.contents;
             String                  jsonStr    = bytes.unpackUtf8();

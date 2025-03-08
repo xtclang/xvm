@@ -138,9 +138,7 @@ service JsonProcessorStore<Message extends immutable Const>
          * @return a map used to view previously collected modifications, but not intended to be
          *         modified by the caller
          */
-        OrderedMap<Message, PidSet> peekScheduleMods() {
-            return scheduleMods ?: NoChanges;
-        }
+        OrderedMap<Message, PidSet> peekScheduleMods() = scheduleMods ?: NoChanges;
 
         /**
          * @return the read/write map used to collect scheduling modifications
@@ -616,7 +614,7 @@ service JsonProcessorStore<Message extends immutable Const>
         Int totalBytes = 0;
         Int totalFiles = 0;
 
-        for (File file : dataDir.files()) {
+        for (File file : findFiles()) {
             String  fileName   = file.name;
             Byte[]  bytes      = file.contents;
             String  jsonStr    = bytes.unpackUtf8();
