@@ -1780,12 +1780,10 @@ public class ConstantPool
                 break;
 
             case ParentClass:
-                fAutoNarrow = true;
                 constTarget = ((ParentClassConstant) constTarget).getChildClass();
                 break;
 
             case ChildClass:
-                fAutoNarrow = true;
                 constTarget = ((ChildClassConstant) constTarget).getParent();
                 break;
             }

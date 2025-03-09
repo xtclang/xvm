@@ -1614,7 +1614,7 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
-        @Final Transaction! parent_; // TODO GG why is "!" required?
+        @Final Transaction parent_;
 
         @Override
         @RO RootTransaction root_.get() = parent_.root_;
