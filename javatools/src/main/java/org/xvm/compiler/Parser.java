@@ -663,7 +663,8 @@ public class Parser
      *
      * @return a list of statements
      */
-    List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts, boolean fFileLevel)
+    List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts,
+                                                   boolean fFileLevel)
         {
         boolean fFoundType = false;
         while (match(Id.R_CURLY) == null)
@@ -1854,11 +1855,11 @@ public class Parser
     List<AstNode> parseConditionList()
         {
         List<AstNode> list = new ArrayList<>(4);
-        list.add(parseCondition(false));
-        while (match(Id.COMMA) != null && !peek(Id.R_PAREN))
+        do
             {
             list.add(parseCondition(false));
             }
+        while (match(Id.COMMA) != null && !peek(Id.R_PAREN));
         return list;
         }
 
@@ -2217,11 +2218,11 @@ public class Parser
             }
 
         List<AstNode> list = new ArrayList<>();
-        list.add(parseSwitchConditionExpression());
-        while (match(Id.COMMA) != null)
+        do
             {
             list.add(parseSwitchConditionExpression());
             }
+        while (match(Id.COMMA) != null);
         return list;
         }
 
@@ -2615,12 +2616,11 @@ public class Parser
             }
 
         List<AssignmentStatement> list = new ArrayList<>();
-        list.add(parseVariableInitializer(fAllowExpr));
-        while (match(Id.COMMA) != null)
+        do
             {
             list.add(parseVariableInitializer(fAllowExpr));
             }
-
+        while (match(Id.COMMA) != null);
         return list;
         }
 
@@ -3927,14 +3927,12 @@ public class Parser
             case LIT_STRING:
             case LIT_BINSTR:
             case LIT_INT:
-            case LIT_INTA:
             case LIT_INT8:
             case LIT_INT16:
             case LIT_INT32:
             case LIT_INT64:
             case LIT_INT128:
             case LIT_INTN:
-            case LIT_UINTA:
             case LIT_UINT8:
             case LIT_UINT16:
             case LIT_UINT32:
@@ -3972,12 +3970,11 @@ public class Parser
                 Object[]         aoParts  = (Object[]) token.getValue();
                 int              cParts   = aoParts.length;
                 List<Expression> listExpr = new ArrayList<>(cParts);
-                for (int i = 0; i < cParts; ++i)
+                for (Object oPart : aoParts)
                     {
-                    Object o = aoParts[i];
-                    if (o instanceof Token[])
+                    if (oPart instanceof Token[] aToken)
                         {
-                        Parser parser = new Parser(this, (Token[]) o);
+                        Parser parser = new Parser(this, aToken);
                         listExpr.add(parser.parseExpression());
                         if (!parser.eof())
                             {
@@ -3987,7 +3984,7 @@ public class Parser
                         }
                     else
                         {
-                        listExpr.add(new LiteralExpression((Token) o));
+                        listExpr.add(new LiteralExpression((Token) oPart));
                         }
                     }
                 return new TemplateExpression(listExpr, lStart, lEnd);

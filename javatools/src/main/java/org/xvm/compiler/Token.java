@@ -624,7 +624,6 @@ public class Token
         LIT_STRING   (null             ),
         LIT_BINSTR   (null             ),
         LIT_INT      (null             ),               // integer literal
-        LIT_INTA     ("Int"            , true, true),   // automatically sized integer
         LIT_INT8     ("Int8"           , true, true),
         LIT_INT16    ("Int16"          , true, true),
         LIT_INT32    ("Int32"          , true, true),
@@ -632,7 +631,6 @@ public class Token
         LIT_INT128   ("Int128"         , true, true),
         LIT_INTN     ("IntN"           , true, true),
         LIT_UINT8    ("UInt8"          , true, true),
-        LIT_UINTA    ("UInt"           , true, true),   // automatically sized unsigned integer
         LIT_UINT16   ("UInt16"         , true, true),
         LIT_UINT32   ("UInt32"         , true, true),
         LIT_UINT64   ("UInt64"         , true, true),
