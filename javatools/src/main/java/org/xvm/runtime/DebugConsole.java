@@ -2088,6 +2088,19 @@ public final class DebugConsole
                 // TODO GG show the array values
                 }
             sb.append(hVal);
+
+            if (hVal.isService())
+                {
+                sb.append(" [container=")
+                  .append(hVal.getService().f_context.f_container.getModule().getName())
+                  .append(']')  ;
+                }
+            else if (hVal instanceof GenericHandle hGeneric && hGeneric.m_owner != null)
+                {
+                sb.append(" [owner=")
+                  .append(hGeneric.m_owner.getModule().getName())
+                  .append(']')  ;
+                }
             }
         else
             {
