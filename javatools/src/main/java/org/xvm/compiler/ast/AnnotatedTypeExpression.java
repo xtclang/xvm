@@ -362,15 +362,15 @@ public class AnnotatedTypeExpression
                     }
                 else
                     {
-                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, idTypedef);
+                    log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION, idTypedef);
                     return null;
                     }
                 }
 
             ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
-            if (clzAnno.getFormat() != Component.Format.MIXIN)
+            if (clzAnno.getFormat() != Component.Format.ANNOTATION)
                 {
-                log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, clzAnno.getName());
+                log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION, clzAnno.getName());
                 return idAnno.getType();
                 }
 

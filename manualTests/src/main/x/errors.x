@@ -127,7 +127,7 @@ module TestCompilerErrors {
         Int j = i; // should not compile - unassigned
     }
 
-    mixin Custom<Referent>
+    annotation Custom<Referent>
             into Var<Referent> {}
 
     void testFinal(Boolean f) {

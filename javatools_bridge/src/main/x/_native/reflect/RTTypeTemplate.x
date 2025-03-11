@@ -31,7 +31,7 @@ const RTTypeTemplate
     @Override TypeTemplate purify();
     @Override conditional TypeTemplate resolveFormalType(String typeName);
     @Override TypeTemplate parameterize(TypeTemplate[] paramTypes = []);
-    @Override TypeTemplate annotate(AnnotationTemplate annotation);
+    @Override TypeTemplate annotate(AnnotationTemplate anno);
 
     // natural:
     //   toString()
@@ -40,10 +40,10 @@ const RTTypeTemplate
 
     // helper method to create an AnnotationComposition
     static conditional Composition createComposition(ClassTemplate baseTemplate,
-                                                     AnnotationTemplate[] annotations) {
+                                                     AnnotationTemplate[] annos) {
         Composition result = baseTemplate;
-        for (AnnotationTemplate annotation : annotations) {
-            result = new AnnotatingComposition(annotation, result);
+        for (AnnotationTemplate anno : annos) {
+            result = new AnnotatingComposition(anno, result);
         }
         return True, result;
     }

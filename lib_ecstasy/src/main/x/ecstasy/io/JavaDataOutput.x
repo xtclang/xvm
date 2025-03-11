@@ -1,11 +1,11 @@
 import io.IllegalUTF;
 
 /**
- * The LegacyDataOutput mixin uses the same wire formats as defined by the Java `DataOutputStream`
- * for bytes, characters, strings, and for the subset of the number types supported by that
- * language.
+ * The LegacyDataOutput annotation uses the same wire formats as defined by the Java
+ * `DataOutputStream` for bytes, characters, strings, and for the subset of the number types
+ *  supported by that language.
  */
-mixin JavaDataOutput
+annotation JavaDataOutput
         into BinaryOutput
         implements DataOutput {
     @Override

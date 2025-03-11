@@ -45,6 +45,6 @@
  *
  * Note: The term "iff" is a well known abbreviation for the phrase "if and only if".
  */
-mixin Iff(Boolean include)
+annotation Iff(Boolean include)
         into Class | Property | Method | Function {
 }

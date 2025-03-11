@@ -1,6 +1,6 @@
 /**
  * A ClassTemplate is a representation of the compiled form of an Ecstasy `module`, `package`,
- * `class`, `const`, `enum`, `service`, `mixin`, or `interface`.
+ * `class`, `const`, `enum`, `service`, `annotation`, `mixin`, or `interface`.
  */
 interface ClassTemplate
         extends ComponentTemplate
@@ -23,7 +23,7 @@ interface ClassTemplate
          */
         @RO ClassTemplate baseTemplate.get() {
             Composition base = this;
-            while ((AnnotationTemplate annotation, base) := base.deannotate()) {}
+            while ((_, base) := base.deannotate()) {}
             assert base.is(ClassTemplate);
             return base;
         }
@@ -38,7 +38,7 @@ interface ClassTemplate
          */
         enum Action {
             /**
-             * AnnotatedBy - The specified `mixin` is applied "around" a class (preceding the
+             * AnnotatedBy - The specified `annotation` is applied "around" a class (preceding the
              * members defined on the underlying `ClassTemplate` for this composition) in order to
              * form a new class.
              */
@@ -52,7 +52,7 @@ interface ClassTemplate
             Extends,
             /**
              * Implements - This represents interface inheritance. The `ingredient` must be an
-             * _interface_ type (i.e. not _class_ or _mixin_type).
+             * _interface_ type (i.e. not _class_, _mixin_ or _annotation_ type).
              */
             Implements,
             /**
@@ -113,8 +113,8 @@ interface ClassTemplate
             }
 
             // unwrap any annotations from the composition that we are testing extension of
-            while ((AnnotationTemplate annotation, composition) := composition.deannotate()) {
-                if (!this.incorporates(annotation.template)) {
+            while ((AnnotationTemplate anno, composition) := composition.deannotate()) {
+                if (!this.incorporates(anno.template)) {
                     return False;
                 }
 
@@ -149,6 +149,9 @@ interface ClassTemplate
                 // only an EnumValue can extend an enum
             case (EnumValue, Enum):
 
+                // only an annotation can extend an annotation
+            case (Annotation, Annotation):
+
                 // only a mixin can extend a mixin
             case (Mixin, Mixin):
 
@@ -173,39 +176,34 @@ interface ClassTemplate
         }
 
         /**
-         * Determine if this composition incorporates (or is) the specified mixin.
+         * Determine if this composition is annotated by (or is) the specified annotation.
          *
-         * @param composition  the composition representing the mixin
+         * @param composition  the composition representing the annotation
          *
-         * @return True iff this Composition incorporates the specified mixin
-         * @return (conditional) True iff the incorporation is conditional
+         * @return True iff this Composition annotated by the specified annotation
          */
-        conditional Boolean incorporates(Composition! composition) {
-            Format  thisFormat   = baseTemplate.format;
-            Format  thatFormat   = composition.baseTemplate.format;
-            Boolean fConditional = False;
+        Boolean annotatedBy(Composition! composition) {
+            Format  thisFormat = baseTemplate.format;
+            Format  thatFormat = composition.baseTemplate.format;
 
-            // interfaces do not incorporate and cannot be incorporated; only a mixin can be
-            // incorporated
-            if (thisFormat == Interface || thatFormat != Mixin) {
+            // interfaces cannot not be annotated; only an annotation can annotate
+            if (thisFormat == Interface || thatFormat != Annotation) {
                 return False;
             }
 
             if (&this == &composition) {
-                return True, False;
+                return True;
             }
 
             // unwrap any annotations from the composition that we are testing extension of
             Composition baseThat = composition;
             while ((AnnotationTemplate annoThat, baseThat) := baseThat.deannotate()) {
-                if (Boolean fCond := this.incorporates(annoThat.template)) {
-                    fConditional |= fCond;
-                } else {
+                if (!this.annotatedBy(annoThat.template)) {
                     return False;
                 }
 
                 if (&this == &baseThat) {
-                    return True, fConditional;
+                    return True;
                 }
             }
 
@@ -215,27 +213,58 @@ interface ClassTemplate
 
             Composition baseThis = this;
             while ((AnnotationTemplate annoThis, baseThis) := baseThis.deannotate()) {
-                if (Boolean fCond := annoThis.template.incorporates(baseThat)) {
-                    fConditional |= fCond;
-                } else {
+                if (!annoThis.template.annotatedBy(baseThat)) {
                     return False;
                 }
 
                 if (&baseThis == &baseThat) {
-                    return True, fConditional;
+                    return True;
                 }
             }
 
-            if (!baseThis.is(ClassTemplate)) {
+            // search through the composition of this class to find the specified annotation
+            for (Contribution contrib : baseThis.contribs) {
+                if (contrib.action != AnnotatedBy, // avoid a infinite recursion
+                    Composition comp := contrib.ingredient.fromClass(),
+                                comp.annotatedBy(baseThat)) {
+                    return True;
+                }
+            }
+
+            return False;
+        }
+
+        /**
+         * Determine if this composition incorporates (or is) the specified mixin.
+         *
+         * @param composition  the composition representing the mixin
+         *
+         * @return True iff this Composition incorporates the specified mixin
+         * @return (conditional) True iff the incorporation is conditional
+         */
+        conditional Boolean incorporates(Composition! composition) {
+            if (&this == &composition) {
+                return True, False;
+            }
+
+            if (!this.is(ClassTemplate) || !composition.is(ClassTemplate)) {
+                return False;
+            }
+
+            Format thisFormat = baseTemplate.format;
+            Format thatFormat = composition.baseTemplate.format;
+
+            // interfaces do not incorporate; only a mixin can be incorporated
+            if (thisFormat == Interface || thatFormat != Mixin) {
                 return False;
             }
 
             // search through the composition of this class to find the specified mixin
-            for (Contribution contrib : baseThis.contribs) {
-                if (contrib.action != AnnotatedBy, // avoid a infinite recursion
-                    Composition comp  := contrib.ingredient.fromClass(),
-                    Boolean     fCond := comp.incorporates(baseThat)) {
-                    fConditional |= fCond |
+            for (Contribution contrib : this.contribs) {
+                if (Composition comp         := contrib.ingredient.fromClass(),
+                    Boolean     fConditional := comp.incorporates(composition)) {
+
+                    fConditional |=
                             (contrib.action == Incorporates && contrib.constraints != Null);
                     return True, fConditional;
                 }
@@ -390,10 +419,11 @@ interface ClassTemplate
         /**
          * Determine if this composition "derives from" (or is) the specified composition.
          *
-         * @param composition  a composition representing an class, mixin, or interface
+         * @param composition  a composition representing an class, annotation, mixin, or interface
          *
          * @return True iff this (or something that this derives from) extends the specified class,
-         *         incorporates the specified mixin, or implements the specified interface
+         *         annotated by the specifed annotation, incorporates the specified mixin, or
+         *         implements the specified interface
          */
         Boolean derivesFrom(Composition! composition) {
             return &this == &composition
@@ -433,13 +463,11 @@ interface ClassTemplate
         /**
          * Produce a new composition that represents an annotation of an existing composition.
          *
-         * @param annotation  the annotation to apply to this existing composition
+         * @param anno  the annotation to apply to this existing composition
          *
          * @return the newly annotated composition
          */
-        Composition! annotate(AnnotationTemplate annotation) {
-            return new AnnotatingComposition(annotation, this);
-        }
+        Composition! annotate(AnnotationTemplate anno) = new AnnotatingComposition(anno, this);
 
         /**
          * Determine if this composition is the result of annotating an existing composition, and if
@@ -463,12 +491,12 @@ interface ClassTemplate
                     assert Composition composition := contrib.ingredient.fromClass();
                     assert composition.is(AnnotatingComposition);
 
-                    AnnotationTemplate annoTemplate = composition.annotation;
+                    AnnotationTemplate annoTemplate = composition.annoTemplate;
                     ClassTemplate      baseTemplate = annoTemplate.template;
 
-                    // if the mixin is not of the requested name, check if it extends one that is
+                    // if the annotation is not of the requested name, check if it extends one
                     if (baseTemplate.displayName == annotationName ||
-                            extendsMixin(baseTemplate, annotationName)) {
+                            extendsAnnotation(baseTemplate, annotationName)) {
                         return True, annoTemplate;
                     }
                 }
@@ -476,16 +504,17 @@ interface ClassTemplate
             return False;
 
             /**
-             * @return True iff the specified mixin template extends a mixin with the specified name
+             * @return True iff the specified annotation template extends an annotation with the
+             *         specified name
              */
-            static Boolean extendsMixin(ClassTemplate template, String mixinName) {
+            static Boolean extendsAnnotation(ClassTemplate template, String annoName) {
                 for (Contribution contrib : template.contribs) {
                     if (contrib.action == Extends) {
                         assert Composition compositionSuper := contrib.ingredient.fromClass();
                         assert compositionSuper.is(ClassTemplate);
                         if (compositionSuper.format == Mixin) {
-                            return compositionSuper.displayName == mixinName
-                                || extendsMixin(compositionSuper, mixinName);
+                            return compositionSuper.displayName == annoName
+                                || extendsAnnotation(compositionSuper, annoName);
                         }
                         break;
                     }
@@ -515,20 +544,20 @@ interface ClassTemplate
     /**
      * Represents an annotated form of an existing composition.
      */
-    static const AnnotatingComposition(AnnotationTemplate annotation, Composition composition)
+    static const AnnotatingComposition(AnnotationTemplate annoTemplate, Composition composition)
             implements Composition {
         assert() {
             assert composition.is(ClassTemplate) || composition.is(AnnotatingComposition);
         }
 
         @Override
-        TypeTemplate type.get() = composition.type.annotate(annotation);
+        TypeTemplate type.get() = composition.type.annotate(annoTemplate);
 
         @Override
         Contribution[] contribs.get() = [];
 
         @Override
-        conditional (AnnotationTemplate, Composition!) deannotate() = (True, annotation, composition);
+        conditional (AnnotationTemplate, Composition!) deannotate() = (True, annoTemplate, composition);
     }
 
     // ----- ClassTemplate API ---------------------------------------------------------------------

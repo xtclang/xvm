@@ -33,7 +33,7 @@ public interface Constants
      * will be displayed if there is a version mismatch, which should save some frustration -- since
      * otherwise the resulting error(s) can be very hard to diagnose.
      */
-    int VERSION_MINOR_CUR = 2024_12_18;
+    int VERSION_MINOR_CUR = 2025_03_11;
 
 
     // ----- names ---------------------------------------------------------------------------------
@@ -235,7 +235,7 @@ public interface Constants
     /**
      * Unexpected "extends" {0} on {1}; an "extends" specifier cannot occur on interfaces (or on the
      * root Object), there must be only one, and it must occur first (after any annotations, and
-     * after the "into" for a mixin).
+     * after the "into" for an annotation or a mixin).
      */
     String VE_EXTENDS_UNEXPECTED                  = "VERIFY-08";
     /**
@@ -260,8 +260,8 @@ public interface Constants
      */
     String VE_ANNOTATION_UNEXPECTED               = "VERIFY-13";
     /**
-     * Unexpected "into" {0} on {1}; an "into" specifier can only occur on a mixin, there must be
-     * only one, and it must occur first (after any annotations).
+     * Unexpected "into" {0} on {1}; an "into" specifier can only occur on an annotation or mixin,
+     * there must be only one, and it must occur first (after any annotations).
      */
     String VE_INTO_UNEXPECTED                     = "VERIFY-14";
     /**
@@ -315,9 +315,9 @@ public interface Constants
      */
     String VE_ANNOTATION_ILLEGAL                  = "VERIFY-26";
     /**
-     * {0} is not a mixin, and thus cannot be used in an annotation.
+     * {0} is not an annotation.
      */
-    String VE_ANNOTATION_NOT_MIXIN                = "VERIFY-27";
+    String VE_CLASS_NOT_ANNOTATION                = "VERIFY-27";
     /**
      * The annotation @{0} is repeated.
      */
@@ -327,9 +327,9 @@ public interface Constants
      */
     String VE_ACCESS_TYPE_ILLEGAL                 = "VERIFY-29";
     /**
-     * {0} is extended by mixin type {1}, but it is not a mixin.
+     * {0} is not a mixin.
      */
-    String VE_EXTENDS_NOT_MIXIN                   = "VERIFY-30";
+    String VE_CLASS_NOT_MIXIN                     = "VERIFY-30";
     /**
      * {0} is not a type that can be parameterized.
      */
@@ -366,7 +366,7 @@ public interface Constants
      */
     String VE_TYPE_PARAM_PROPERTY_INCOMPATIBLE    = "VERIFY-38";
     /**
-     * The {0} property on {1} is annotated by {2}, which is an incompatible mixin for a property.
+     * The {0} property on {1} is annotated by {2}, which is an incompatible annotation for a property.
      */
     String VE_PROPERTY_ANNOTATION_INCOMPATIBLE    = "VERIFY-39";
     /**

@@ -1,8 +1,8 @@
 /**
- * The PackedDataInput mixin uses the packed integer format for integers and the UTF-8 encoding for
- * characters.
+ * The PackedDataInput annotation uses the packed integer format for integers and the UTF-8 encoding
+ * for characters.
  */
-mixin PackedDataInput
+annotation PackedDataInput
         into BinaryInput
         implements DataInput {
     @Override

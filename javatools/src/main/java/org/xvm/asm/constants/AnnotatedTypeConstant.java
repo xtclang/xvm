@@ -157,22 +157,22 @@ public class AnnotatedTypeConstant
             return typeAnno;
             }
 
-        ClassStructure mixin = (ClassStructure) getAnnotationClass().getComponent();
-        if (!mixin.isParameterizedDeep())
+        ClassStructure anno = (ClassStructure) getAnnotationClass().getComponent();
+        if (!anno.isParameterizedDeep())
             {
-            return mixin.getCanonicalType();
+            return anno.getCanonicalType();
             }
 
-        // here we assume that the type parameters for the annotation mixin are
-        // structurally and semantically congruent with the type parameters for the
-        // incorporating class the annotation is mixing into (regardless of the parameter name)
+        // here we assume that the type parameters for the annotations are structurally and
+        // semantically congruent with the type parameters for the class the annotation is mixing
+        // into (regardless of the parameter name)
 
-        TypeConstant typeFormal = mixin.getFormalType();
-        TypeConstant typeInto   = mixin.getTypeInto();
+        TypeConstant typeFormal = anno.getFormalType();
+        TypeConstant typeInto   = anno.getTypeInto();
         TypeConstant typeActual = m_constType;
 
         Map<String, TypeConstant> mapResolve = new HashMap<>();
-        for (Map.Entry<StringConstant, TypeConstant> entry : mixin.getTypeParamsAsList())
+        for (Map.Entry<StringConstant, TypeConstant> entry : anno.getTypeParamsAsList())
             {
             String       sName = entry.getKey().getValue();
             TypeConstant type  = typeInto.resolveTypeParameter(typeActual, sName);
@@ -512,32 +512,32 @@ public class AnnotatedTypeConstant
                 {
                 case AnnotatedType:
                     {
-                    AnnotatedTypeConstant typeAnno   = (AnnotatedTypeConstant) typeCurr;
-                    Annotation            annotation = typeAnno.getAnnotation();
-                    TypeConstant          typeMixin  = typeAnno.getAnnotationType();
+                    AnnotatedTypeConstant constAnno  = (AnnotatedTypeConstant) typeCurr;
+                    Annotation            annotation = constAnno.getAnnotation();
+                    TypeConstant          typeAnno   = constAnno.getAnnotationType();
                     TypeConstant          typeNext   = typeCurr.getUnderlyingType();
 
                     // has to be an explicit class identity
-                    if (!typeMixin.isExplicitClassIdentity(true))
+                    if (!typeAnno.isExplicitClassIdentity(true))
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
-                            typeNext.getValueString(), typeMixin.getValueString());
+                            typeNext.getValueString(), typeAnno.getValueString());
                         return null;
                         }
 
-                    // has to be a mixin
-                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                    // has to be an annotation
+                    if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
                         {
-                        log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                            typeMixin.getValueString());
+                        log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
+                            typeAnno.getValueString());
                         return null;
                         }
 
-                    if (typeMixin.containsAutoNarrowing(false))
+                    if (typeAnno.containsAutoNarrowing(false))
                         {
                         log(errs, Severity.WARNING, VE_UNEXPECTED_AUTO_NARROW,
-                            typeMixin.getValueString(), this.getValueString());
-                        typeMixin = typeMixin.removeAutoNarrowing();
+                            typeAnno.getValueString(), this.getValueString());
+                        typeAnno = typeAnno.removeAutoNarrowing();
                         }
 
                     // check for duplicate annotation
@@ -548,11 +548,11 @@ public class AnnotatedTypeConstant
                         return null;
                         }
 
-                    // the annotation could be a mixin "into Class", which means that it's a
-                    // non-virtual, compile-time mixin (like @Abstract)
-                    TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
+                    // the annotation could be a annotation "into Class", which means that it's a
+                    // non-virtual, compile-time annotation (like @Abstract)
+                    TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
 
-                    // the mixin has to be able to apply to the remainder of the type constant chain
+                    // the annotation has to be able to apply to the remainder of the type chain
                     if (getUnderlyingType().isA(typeInto))
                         {
                         listMixinAnnos.add(annotation);
@@ -565,12 +565,12 @@ public class AnnotatedTypeConstant
                         {
                         log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                             typeCurr.getUnderlyingType().getValueString(),
-                            typeMixin.getValueString(),
+                            typeAnno.getValueString(),
                             typeInto.getValueString());
                         return null;
                         }
 
-                    listAnnoClz.add(typeAnno.getAnnotation().getAnnotationClass());
+                    listAnnoClz.add(constAnno.getAnnotation().getAnnotationClass());
 
                     typeCurr = typeNext;
                     break;
@@ -800,8 +800,8 @@ public class AnnotatedTypeConstant
 
             if (!fBad)
                 {
-                TypeConstant typeMixin = getAnnotationType();
-                TypeConstant typeInto  = typeMixin.getExplicitClassInto(true);
+                TypeConstant typeAnno = getAnnotationType();
+                TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
                 if (!m_constType.isA(typeInto))
                     {
                     log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,

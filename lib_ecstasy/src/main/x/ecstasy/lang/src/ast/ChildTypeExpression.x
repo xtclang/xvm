@@ -58,9 +58,9 @@ const ChildTypeExpression(TypeExpression          parent,
 
             // resolve annotations
             for (AnnotationExpression expr : annotations?) {
-                if (Annotation annotation := expr.resolveAnnotation(typeSystem, hideExceptions)) {
+                if (Annotation anno := expr.resolveAnnotation(typeSystem, hideExceptions)) {
                     try {
-                        type = type.annotate(annotation);
+                        type = type.annotate(anno);
                     } catch (InvalidType e) {
                         if (hideExceptions) {
                             return False;

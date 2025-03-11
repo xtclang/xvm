@@ -53,10 +53,10 @@ public class TypeInfo
      * @param fSynthetic           true if this type info is synthetic (e.g. "as into")
      * @param mapTypeParams        the collected type parameters for the type
      * @param aannoClass           the annotations for the type that mix into "Class"
-     * @param aannoMixin           the mixin annotations (not the incorporate) for the type
+     * @param aannoMixin           the annotations (not the incorporate) for the type
      * @param typeExtends          the type that is extended
      * @param typeRebases          the type that is rebased onto
-     * @param typeInto             for mixins, the type that is mixed into; for interfaces, Object
+     * @param typeInto             for annotations or mixins, the type that is mixed into
      * @param listProcess          the contribution list
      * @param listmapClassChain    the potential call chain of classes
      * @param listmapDefaultChain  the potential call chain of default implementations
@@ -545,7 +545,7 @@ public class TypeInfo
 
     /**
      * @return the format of the topmost structure that the TypeConstant refers to, or
-     *         {@code INTERFACE} for any non-class / non-mixin type (such as a difference type)
+     *         {@code INTERFACE} for any non-class type (such as a difference type)
      */
     public Format getFormat()
         {
@@ -605,7 +605,7 @@ public class TypeInfo
         }
 
     /**
-     * @return true iff this is a class type, which is not an interface type or a mixin type
+     * @return true iff this is a class type, which is not an interface, annotation or mixin type
      */
     public boolean isClass()
         {
@@ -852,7 +852,7 @@ public class TypeInfo
         }
 
     /**
-     * @return the mixin annotations (not incorporation)
+     * @return the "regular" annotations (not incorporation)
      */
     public Annotation[] getMixinAnnotations()
         {
@@ -876,8 +876,8 @@ public class TypeInfo
         }
 
     /**
-     * @return the TypeConstant representing the "mixin into" type for a mixin, or null if it is
-     *         not a mixin
+     * @return the TypeConstant representing the "mixin into" type for an annotation or mixin;
+     *         null otherwise
      */
     public TypeConstant getInto()
         {
@@ -2798,7 +2798,7 @@ public class TypeInfo
     private final Annotation[] f_aannoClass;
 
     /**
-     * The mixin annotations.
+     * The "regular" annotations.
      */
     private final Annotation[] f_aannoMixin;
 
@@ -2814,7 +2814,7 @@ public class TypeInfo
     private final TypeConstant f_typeRebases;
 
     /**
-     * For mixins, the type that is mixed into. For interfaces, this is always Object.
+     * For annotations and mixins, the type that is mixed into. For interfaces this is always Object.
      */
     private final TypeConstant f_typeInto;
 

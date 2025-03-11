@@ -489,10 +489,10 @@ class Parser
      * @return the annotated type expression
      */
     protected AnnotatedTypeExpression parseAnnotatedTypeExpression() {
-        AnnotationExpression annotation = parseAnnotation(True) ?: assert;
+        AnnotationExpression anno = parseAnnotation(True) ?: assert;
         TypeExpression type = parseTypeExpression();
 
-        return new AnnotatedTypeExpression(annotation, type);
+        return new AnnotatedTypeExpression(anno, type);
     }
 
     /**
@@ -593,12 +593,12 @@ class Parser
         TypeExpression? parent      = Null;
         TypeExpression  type;
         do {
-            AnnotationExpression[] annotations = [];
+            AnnotationExpression[] annos = [];
             if (parent != Null && peek(At)) {
-                annotations = new AnnotationExpression[];
+                annos = new AnnotationExpression[];
                 do {
                     // TODO this is not yet implemented in the Java version
-                    annotations.add(parseAnnotation(True)?) : assert;
+                    annos.add(parseAnnotation(True)?) : assert;
                 } while (peek(At));
             }
 
@@ -640,7 +640,7 @@ class Parser
 
             type = parent == Null
                     ? new NamedTypeExpression(moduleNames, names, access, noNarrow, params, lastMatch().end)
-                    : new ChildTypeExpression(parent, annotations, names, params, lastMatch().end);
+                    : new ChildTypeExpression(parent, annos, names, params, lastMatch().end);
             moduleNames = Null;
             parent      = type;
         } while (match(Dot));
@@ -939,9 +939,7 @@ class Parser
      * @throws ParseFailed  iff either the next token does not match or there are no more tokens in
      *                      the token stream
      */
-    protected Token expect(Id id) {
-        return match(id, True) ?: assert;
-    }
+    protected Token expect(Id id) = match(id, True) ?: assert;
 
     /**
      * Verify that the next token matches the specified constraint, and return it.
@@ -953,9 +951,7 @@ class Parser
      * @throws ParseFailed  iff either the next token does not match or there are no more tokens in
      *                      the token stream
      */
-    protected Token expect(function Boolean(Token) matches) {
-        return match(matches, True) ?: assert;
-    }
+    protected Token expect(function Boolean(Token) matches) = match(matches, True) ?: assert;
 
     /**
      * Determine if the next token matches the specified token id, and return it if it does.
@@ -1031,9 +1027,7 @@ class Parser
      *
      * @return the most recent token returned from `match(...)`, or `expect(...)`
      */
-    protected Token lastMatch() {
-        return matchedToken ?: assert;
-    }
+    protected Token lastMatch() = matchedToken ?: assert;
 
     /**
      * Place the specified token in the front of the parse stream. For each call to a method that

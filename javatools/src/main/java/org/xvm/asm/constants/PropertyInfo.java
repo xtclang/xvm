@@ -1410,7 +1410,7 @@ public class PropertyInfo
             MethodBody bodyHead = chain[0];
             if (bodyHead.isNative())
                 {
-                // if a Ref or Var mixin overrides "get" or "set" (e.g. FutureVar), but the
+                // if a Ref or Var annotation overrides "get" or "set" (e.g. FutureVar), but the
                 // implementation is native, we need to replace it with the field access
                 chain = new MethodBody[] {new MethodBody(idMethod, idMethod.getSignature(),
                         Implementation.Field, getFieldIdentity())};

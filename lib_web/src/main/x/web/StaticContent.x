@@ -4,11 +4,11 @@ import responses.SimpleResponse;
 
 
 /**
- * A mixin that represents a static content.
+ * A annotation that represents a static content.
  *
  * The content can be a single file or a directory of files.
  */
-mixin StaticContent(String path, FileNode fileNode, MediaType? mediaType = Null,
+annotation StaticContent(String path, FileNode fileNode, MediaType? mediaType = Null,
                     String defaultPage = "index.html")
         extends WebService(path) {
 

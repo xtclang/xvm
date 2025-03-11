@@ -542,6 +542,7 @@ public class Token
         ASN_EXPR     ("<-"             ),
         ANY          ("_"              ),
         ALLOW        ("allow"          , true),
+        ANNOTATION   ("annotation"     ),
         AS           ("as"             ),
         ASSERT       ("assert"         ),
         ASSERT_RND   ("assert:rnd"     ),

@@ -264,7 +264,7 @@ public class AnonInnerClass
                 throw new IllegalStateException("type=" + type);
             }
 
-        // handling for all class & mixin types
+        // handling for all class, annotation & mixin types
         if (type.isExplicitClassIdentity(true))
             {
             switch (type.getExplicitClassFormat())
@@ -294,6 +294,7 @@ public class AnonInnerClass
                     m_fmt = Format.SERVICE;
                     return;
 
+                case ANNOTATION:
                 case MIXIN:
                     ensureCompositions().add(new Incorporates(null,
                             genKeyword(exprType, Id.INCORPORATES), exprType, null, null));

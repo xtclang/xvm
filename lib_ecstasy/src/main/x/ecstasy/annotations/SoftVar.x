@@ -17,7 +17,7 @@
  *
  * TODO use timer instead of clock
  */
-mixin SoftVar<Referent>(function void ()? notify)
+annotation SoftVar<Referent>(function void ()? notify)
         into Var<Referent> {
     /**
      * The runtime's clock that this reference will stamp itself with on every access. The runtime

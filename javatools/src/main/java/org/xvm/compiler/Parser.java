@@ -316,6 +316,7 @@ public class Parser
      *     "service"
      *     "const"
      *     "enum"
+     *     "annotation"
      *     "mixin"
      *
      * Compositions
@@ -377,6 +378,7 @@ public class Parser
             case SERVICE:
             case CONST:
             case ENUM:
+            case ANNOTATION:
             case MIXIN:
                 category = current();
                 name = expect(Id.IDENTIFIER);
@@ -830,6 +832,7 @@ public class Parser
             case SERVICE:
             case CONST:
             case ENUM:
+            case ANNOTATION:
             case MIXIN:
                 // it's definitely a type composition
                 return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
@@ -1509,6 +1512,7 @@ public class Parser
             case SERVICE:
             case CONST:
             case ENUM:
+            case ANNOTATION:
             case MIXIN:
                 // this is obviously a TypeComposition
                 return parseTypeCompositionStatement();
@@ -4117,7 +4121,8 @@ public class Parser
                         throw new CompilerException("illegal include-file path: " + sb);
                         }
                     // fall through
-                case ALLOW:       case AS:         case ASSERT:    case AVOID:
+                case ALLOW:
+                case ANNOTATION:  case AS:         case ASSERT:    case AVOID:
                 case BREAK:       case CASE:       case CATCH:     case CLASS:
                 case CONDITIONAL: case CONST:      case CONSTRUCT: case CONTINUE:
                 case DEFAULT:     case DELEGATES:  case DESIRED:   case DO:
@@ -4137,7 +4142,8 @@ public class Parser
                         Token tokName;
                         switch (peek().getId())
                             {
-                            case ALLOW:       case AS:         case ASSERT:    case AVOID:
+                            case ALLOW:
+                            case ANNOTATION:  case AS:         case ASSERT:    case AVOID:
                             case BREAK:       case CASE:       case CATCH:     case CLASS:
                             case CONDITIONAL: case CONST:      case CONSTRUCT: case CONTINUE:
                             case DEFAULT:     case DELEGATES:  case DESIRED:   case DO:
@@ -5772,6 +5778,7 @@ public class Parser
                 case R_CURLY:
                     return;
 
+                case ANNOTATION:
                 case ASSERT:
                 case ASSERT_RND:
                 case ASSERT_ARG:

@@ -3,15 +3,15 @@
  */
 module oodb.xtclang.org {
     /**
-     * This mixin is used to mark a module as being a database module.
+     * This annotation is used to mark a module as being a database module.
      */
-    mixin Database
+    annotation Database
             into module {}
 
     /**
      * Marks specific DBObjects as extra-transactional. Applies only to DBCounter and DBLog.
      */
-    mixin NoTx
+    annotation NoTx
             into Property<DBSchema, DBCounter | DBLog> {}
 
     /**
@@ -19,7 +19,7 @@ module oodb.xtclang.org {
      * type does not have a `default` value. For example, the String type does not have a default
      * value, but `String?` does (it defaults to `Null`), as does Boolean (False) and Int (0).
      */
-    mixin Initial<Value>(Value initial)
+    annotation Initial<Value>(Value initial)
              into Property<DBSchema, DBValue<Value>> {}
 
     /**
@@ -27,7 +27,7 @@ module oodb.xtclang.org {
      *
      * @param expiry  the duration of time to hold the log information for
      */
-    mixin AutoExpire(Duration expiry)
+    annotation AutoExpire(Duration expiry)
             into Property<DBSchema, DBLog> {}
 
     /**
@@ -35,7 +35,7 @@ module oodb.xtclang.org {
      *
      * @param sizeLimit  the size limit in bytes
      */
-    mixin AutoTruncate(Int sizeLimit)
+    annotation AutoTruncate(Int sizeLimit)
             into Property<DBSchema, DBLog> {}
 
     /**

@@ -616,7 +616,7 @@ public abstract class RelationalTypeConstant
     protected abstract Map<Object, ParamInfo> mergeTypeParams(TypeInfo info1, TypeInfo info2, ErrorListener errs);
 
     /**
-     * Produce an array of mixin Annotations for a merge of the specified TypeInfos.
+     * Produce an array of Annotations for a merge of the specified TypeInfos.
      *
      * Note, that either of the two TypeInfos can be null.
      *

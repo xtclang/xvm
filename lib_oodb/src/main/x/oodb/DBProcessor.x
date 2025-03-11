@@ -283,7 +283,7 @@ interface DBProcessor<Message extends immutable Const>
      * a separate call to [process] will occur (or the same `Message` will appear multiple times in
      * the argument to [processAll], or some combination of the two).
      */
-    static mixin Dedupe
+    static annotation Dedupe
             into DBProcessor {}
 
     /**
@@ -298,7 +298,7 @@ interface DBProcessor<Message extends immutable Const>
      * separate client, and thus each with a separate transaction) would be used opportunistically
      * to reduce the backlog.
      */
-    static mixin Sequential
+    static annotation Sequential
             into DBProcessor {}
 
     /**
@@ -311,7 +311,7 @@ interface DBProcessor<Message extends immutable Const>
      * is that the `DBProcessor` will _automatically_ gather and [processAll] multiple (and perhaps
      * _all_) `Pending` entries for this `DBProcessor`, inside of the same transaction.
      */
-    static mixin Individual
+    static annotation Individual
             into DBProcessor {}
 
     /**
@@ -323,7 +323,7 @@ interface DBProcessor<Message extends immutable Const>
      * In the absence of this annotation, a database implementation _may_ choose to combine the
      * processing of multiple `DBProcessor` objects within a single transaction, for efficiency.
      */
-    static mixin Isolated
+    static annotation Isolated
             into DBProcessor {}
 
 

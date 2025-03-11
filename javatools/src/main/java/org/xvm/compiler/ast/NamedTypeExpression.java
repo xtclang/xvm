@@ -538,8 +538,8 @@ public class NamedTypeExpression
                     if (clz != null && clz.isTopLevel())
                         {
                         // the only reason we're in the loop in the first place is to look for an
-                        // enclosing mixin of the same name; at this point, we've proven that it is
-                        // not the case
+                        // enclosing annotation or mixin of the same name; at this point, we've
+                        // proven that it is not the case
                         break;
                         }
                     }

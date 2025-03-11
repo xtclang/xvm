@@ -1653,18 +1653,18 @@ public abstract class Utils
      * Construct a {@code reflect.Annotation} constant.
      *
      * @param frame      the current frame
-     * @param hMixin     the mixin class handle
+     * @param hAnno      the annotation class handle
      * @param ahAnnoArg  the array of annotation arguments
      * @param iReturn    the register to assign the value into
      *
      * @return R_CALL or R_EXCEPTION
      */
-    public static int constructAnnotation(Frame frame, ClassHandle hMixin,
+    public static int constructAnnotation(Frame frame, ClassHandle hAnno,
                                           ObjectHandle[] ahAnnoArg, int iReturn)
         {
         MethodStructure constructor = ANNOTATION_CONSTRUCT;
         ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
-        ahArg[0] = hMixin;
+        ahArg[0] = hAnno;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
         ClassTemplate template = ANNOTATION_TEMPLATE;

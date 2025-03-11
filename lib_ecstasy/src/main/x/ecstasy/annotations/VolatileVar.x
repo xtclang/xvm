@@ -3,6 +3,6 @@
  * reference (rather than by value). It's also required if a lambda attempts to mutate a captured
  * variable.
  */
-mixin VolatileVar<Referent>
+annotation VolatileVar<Referent>
         into Var<Referent> {
 }

@@ -1273,7 +1273,7 @@ public class xRTType
             }
         else
             {
-            return frame.raiseException(xException.unsupported(frame, "Unsupported mixin type: " +
+            return frame.raiseException(xException.unsupported(frame, "Unsupported type: " +
                     hMixin.getType()));
             }
 

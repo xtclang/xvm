@@ -308,14 +308,14 @@ public class MethodStructure
                 return false;
                 }
 
-            TypeConstant typeMixin = annotation.getAnnotationType();
-            if (typeMixin.getExplicitClassFormat() != Format.MIXIN)
+            TypeConstant typeAnno = annotation.getAnnotationType();
+            if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION)
                 {
                 // no need to do anything; an error will be reported later
                 return true;
                 }
 
-            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            TypeConstant typeInto = typeAnno.getExplicitClassInto();
             if (typeInto.containsUnresolved())
                 {
                 return false;
@@ -1659,9 +1659,9 @@ public class MethodStructure
         }
 
     /**
-     * Unlike regular classes, mixins can be applied to the underlying classes dynamically via
-     * annotations. In that case, computation of default values for field-based properties requires
-     * additional information that is kept on synthetic (shorthand) mixin constructors.
+     * Unlike regular classes, annotations can be applied to the underlying classes dynamically.
+     * In that case, computation of default values for field-based properties requires additional
+     * information that is kept on synthetic (shorthand) annotation constructors.
      *
      * @param idSuper      the "super" constructor
      * @param aconstSuper  the array of Constants that is passed to the super constructor; all
@@ -1677,10 +1677,10 @@ public class MethodStructure
 
     /**
      * Collect default values for field-based properties that are known to this synthetic
-     * (shorthand) mixin constructor.
+     * (shorthand) annotation constructor.
      *
      * @param aconstArgs  the constant arguments that are passed to this shorthand constructor
-     *                    from {@link Annotation#getParams() an annotation mixin}
+     *                    from {@link Annotation#getParams() an annotation}
      * @param mapValues   the map of the default values keyed by the property names
      */
     public void collectDefaultParams(Constant[] aconstArgs, Map<String, Constant> mapValues)
@@ -1769,9 +1769,9 @@ public class MethodStructure
     @Override
     public void addAnnotation(Annotation annotation)
         {
-        TypeConstant typeMixin = annotation.getAnnotationType();
-        if (typeMixin.getExplicitClassFormat() != Format.MIXIN ||
-                !typeMixin.getExplicitClassInto().isIntoMethodType())
+        TypeConstant typeAnno = annotation.getAnnotationType();
+        if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION ||
+                !typeAnno.getExplicitClassInto().isIntoMethodType())
             {
             throw new IllegalArgumentException("only into Method annotations are allowed");
             }
@@ -3466,14 +3466,15 @@ public class MethodStructure
     private Parameter[] m_aParams;
 
     /**
-     * If this method represents a {@link #isShorthandConstructor() shorthand constructor} for a
-     * mixin, this is an Id of the super constructor that this constructor "supers" to.
+     * If this method represents a {@link #isShorthandConstructor() shorthand constructor} for an
+     * annotation, this is an Id of the super constructor that this constructor "supers" to.
      */
     private MethodConstant m_idSuper;
 
     /**
-     * If this method represents a {@link #isShorthandConstructor() shorthand constructor} for a
-     * mixin, this array contains constant arguments that need to be passed to the super constructor.
+     * If this method represents a {@link #isShorthandConstructor() shorthand constructor} for an
+     * annotation, this array contains constant arguments that need to be passed to the super
+     * constructor.
      */
     private Constant[] m_aconstSuper;
 

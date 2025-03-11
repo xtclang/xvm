@@ -3,10 +3,10 @@ module TestAnnotations {
 
     void run() {
         testWatch();
-        testMixin();
-        testMixin2();
-        testMethodMixin();
-        testClassMixin();
+        testAnnotations();
+        testAnnotations2();
+        testMethodAnno();
+        testClassAnno();
         testDefaultParams();
     }
 
@@ -37,8 +37,8 @@ module TestAnnotations {
         console.print();
     }
 
-    void testMixin() {
-        console.print("\n** testMixin");
+    void testAnnotations() {
+        console.print("\n** testAnnotations");
 
         Int age = 26;
         val p1  = new Named("Jane");
@@ -74,7 +74,7 @@ module TestAnnotations {
         String name;
     }
 
-    mixin Aged into Named {
+    annotation Aged into Named {
         construct(Int age) {
             console.print($"construct (aged) {this}");
             this.age = age;
@@ -89,7 +89,7 @@ module TestAnnotations {
         Int age;
     }
 
-    mixin Skilled into Named {
+    annotation Skilled into Named {
         construct(String skill) {
             console.print($"construct (skill) {this}");
             this.skill = skill;
@@ -104,24 +104,24 @@ module TestAnnotations {
         String skill;
     }
 
-    void testMixin2() {
+    void testAnnotations2() {
         new Parent().test();
 
         String descr = "from outside";
-        new Parent().new @Parent.Mixin(descr) Parent.Child().test();
+        new Parent().new @Parent.Anno(descr) Parent.Child().test();
 
         class Parent {
-            mixin Mixin(String descr) into Child {
+            annotation Anno(String descr) into Child {
                 @Override
                 void test() {
-                    console.print($"in test at Mixin {descr}");
+                    console.print($"in test at Anno {descr}");
                     super();
                 }
             }
 
             void test() {
                 String descr = "from inside";
-                new @Mixin(descr) Child().test();
+                new @Anno(descr) Child().test();
             }
 
             class Child {
@@ -133,15 +133,15 @@ module TestAnnotations {
     }
 
     @Tagged(weight=1)
-    void testMethodMixin(@Tagged(weight=2) (@AutoFreezable Freezable)? o = Null) {
-        Method m = testMethodMixin;
+    void testMethodAnno(@Tagged(weight=2) (@AutoFreezable Freezable)? o = Null) {
+        Method m = testMethodAnno;
         console.print(m);
 
         assert m.is(Tagged);
         assert m.tag == "method" && m.weight == 1;
     }
 
-    void testClassMixin() {
+    void testClassAnno() {
         Inner inner = new Inner();
         assert !inner.is(Tagged);
 
@@ -149,7 +149,7 @@ module TestAnnotations {
         class Inner {}
     }
 
-    mixin Tagged(String tag="", Int weight=-1)
+    annotation Tagged(String tag="", Int weight=-1)
             into Parameter | Method | Class {
         String tag.get() {
             String tag = super();
@@ -179,9 +179,9 @@ module TestAnnotations {
         assert taggedRange.hash == 2 && taggedRange.tag == "const" && taggedRange.weight == 1;
     }
 
-    mixin TaggedObject(String tag="none", Int weight=-1)
+    annotation TaggedObject(String tag="none", Int weight=-1)
         into Object;
 
-    mixin TaggedConst(Int weight=1, Int hash=-1)
+    annotation TaggedConst(Int weight=1, Int hash=-1)
         extends TaggedObject("const", weight);
 }

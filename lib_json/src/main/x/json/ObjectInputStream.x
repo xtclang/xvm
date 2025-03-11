@@ -441,9 +441,9 @@ class ObjectInputStream(Schema schema, Parser parser)
     }
 
     /**
-     * Virtual child mixin "cap" required for all ElementInput / FieldInput implementations.
+     * Virtual child annotation "cap" required for all ElementInput / FieldInput implementations.
      */
-    mixin CloseCap
+    annotation CloseCap
             into DocInputStream {
 
         construct() {} finally {
@@ -947,12 +947,12 @@ class ObjectInputStream(Schema schema, Parser parser)
     }
 
 
-    // ----- PeekAhead mixin -----------------------------------------------------------------------
+    // ----- PeekAhead annotation ------------------------------------------------------------------
 
     /**
      * Adds peek-ahead support for metadata to the ElementInput implementations.
      */
-    mixin PeekAhead
+    annotation PeekAhead
             into (ElementInputStream | ArrayInputStream) {
 
         @Override
@@ -993,13 +993,13 @@ class ObjectInputStream(Schema schema, Parser parser)
     }
 
 
-    // ----- PointerAware mixin --------------------------------------------------------------------
+    // ----- PointerAware annotation ---------------------------------------------------------------
 
     /**
      * Adds pointer-peeking and de-referencing to the object-read operations on the [ElementInput]
      * implementations.
      */
-    mixin PointerAware
+    annotation PointerAware
             into (ElementInputStream | ArrayInputStream) {
         /**
          * To avoid multiple peek-aheads for a pointer on a single read, this flag is used to track

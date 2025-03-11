@@ -75,7 +75,7 @@ module cli.xtclang.org {
      * @param cmd    the command name
      * @param descr  the command description
      */
-    mixin Command(String cmd = "", String descr = "")
+    annotation Command(String cmd = "", String descr = "")
             into Method<Object>;
 
     /**
@@ -83,12 +83,12 @@ module cli.xtclang.org {
      *
      * @param text  the parameter description
      */
-    mixin Desc(String? text = Null)
+    annotation Desc(String? text = Null)
             into Parameter<Object>;
 
     /**
      * The "suppress echo" mixin into a command method parameter.
      */
-    mixin NoEcho()
+    annotation NoEcho()
             into Parameter<Object>;
 }

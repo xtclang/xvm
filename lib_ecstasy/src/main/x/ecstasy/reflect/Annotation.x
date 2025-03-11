@@ -1,6 +1,6 @@
 /**
- * An Annotation represents the information about a mixin class, optionally with constant value
- * constructor arguments, that is used to augment another class via annotation.
+ * An Annotation represents the information about annotation class, optionally with constant value
+ * constructor arguments.
  */
 const Annotation(Class mixinClass, Argument[] arguments = []) {
     // ----- Stringable methods --------------------------------------------------------------------

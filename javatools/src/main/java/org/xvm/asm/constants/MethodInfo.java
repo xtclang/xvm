@@ -946,6 +946,7 @@ public class MethodInfo
                 return infoType.getOptimizedMethodChain(bodyHead.getNarrowingNestedIdentity());
                 }
 
+            boolean fAnno  = infoType.getFormat() == Component.Format.ANNOTATION;
             boolean fMixin = infoType.getFormat() == Component.Format.MIXIN;
 
             // see if the chain will work as-is
@@ -959,10 +960,11 @@ public class MethodInfo
                 switch (impl = body.getImplementation())
                     {
                     case Implicit:
-                        if (fMixin)
+                        if (fAnno || fMixin)
                             {
-                            // since mixins themselves are not concrete (instantiatable) we cannot
-                            // discard the Implicit body; it will be done by the concrete types
+                            // since annotations and mixins themselves are not concrete
+                            // (instantiatable) we cannot discard the Implicit body; it will be done
+                            // by the concrete types
                             if (listNew != null)
                                 {
                                 listNew.add(body);
@@ -1150,6 +1152,7 @@ public class MethodInfo
 
     private MethodBody findSuper(TypeInfo infoType, MethodBody[] chain)
         {
+        boolean    fAnno     = infoType.getFormat() == Component.Format.ANNOTATION;
         boolean    fMixin    = infoType.getFormat() == Component.Format.MIXIN;
         MethodBody bodySuper = null;
         for (int i = 0, cMethods = 0, cAll = chain.length; i < cAll; ++i)
@@ -1158,7 +1161,7 @@ public class MethodInfo
             switch (body.getImplementation())
                 {
                 case Implicit:
-                    if (fMixin)
+                    if (fAnno || fMixin)
                         {
                         cMethods++;
                         }
@@ -1179,9 +1182,9 @@ public class MethodInfo
                 case Field:
                 case Native:
                 case Explicit:
-                    if (cMethods > 0 && !fMixin)
+                    if (cMethods > 0 && !fAnno && !fMixin)
                         {
-                        // some of the bodies could represent an annotation mixins methods
+                        // some of the bodies could represent an annotation or mixin methods
                         // (e.g. @M class C {}, where both C and M have this method),
                         // in which case we need to restart the count at "this type" level
                         TypeConstant typeThis = infoType.getType();

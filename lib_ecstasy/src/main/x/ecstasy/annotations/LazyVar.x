@@ -1,5 +1,5 @@
 /**
- * The LazyVar mixin allows a reference (such as a property) to be lazily populated with a value on
+ * The LazyVar annotation allows a reference (such as a property) to be lazily populated with a value on
  * demand. Specifically, the first time that an attempt is made to de-reference the reference by
  * invoking `get()`, the LazyVar will invoke the deferred calculation of the value and store
  * that value in the reference for subsequent use, before returning that same value.
@@ -26,7 +26,7 @@
  * implement the hash code calculation for a `const` class, as a default implementation is
  * provided.)
  */
-mixin LazyVar<Referent>(function Referent ()? calculate = Null)
+annotation LazyVar<Referent>(function Referent ()? calculate = Null)
         extends VolatileVar<Referent> {
 
     private function Referent ()? calculate;

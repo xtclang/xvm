@@ -1468,9 +1468,11 @@ public class TerminalTypeConstant
                 throw new IllegalStateException("no class format for: " + constId);
             };
 
-        if (structMixin == null || structMixin.getFormat() != Component.Format.MIXIN)
+        if (structMixin == null ||
+                (structMixin.getFormat() != Component.Format.ANNOTATION &&
+                 structMixin.getFormat() != Component.Format.MIXIN))
             {
-            throw new IllegalStateException("mixin=" + structMixin);
+            throw new IllegalStateException("Invalid format for " + structMixin);
             }
 
         return structMixin.getTypeInto();

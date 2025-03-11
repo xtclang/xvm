@@ -846,7 +846,7 @@ public abstract class TypeConstant
             }
 
         // There are two scenarios of non-combinable types:
-        // - class types (not interfaces or mixins) in which one doesn't extend the other
+        // - class types (not interfaces or annotations or mixins) in which one doesn't extend the other
         // - one is a class type that is "final" (Null, True, package/module etc.) and known to not
         //   be the other type
         return !typeThis.isA(typeThat) && !typeThat.isA(typeThis) &&
@@ -2187,7 +2187,7 @@ public abstract class TypeConstant
      * @param struct          the structure of the class that this type is based on
      * @param aAnnoClass      an array of annotations for this type that mix into "Class"
      * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
-     * @param fComplete       if false, the "mixin" annotations have not yet been applied
+     * @param fComplete       if false, the annotations have not yet been applied
      * @param errs            the error list to log to
      *
      * @return the resulting TypeInfo
@@ -2274,7 +2274,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Recursively collect all the mixin annotations for the contributions in the specified list.
+     * Recursively collect all the annotations for the contributions in the specified list.
      * Note: the annotations must be collected in the inverse order.
      */
     private Annotation[] collectMixinAnnotations(List<Contribution> listContrib)
@@ -2327,8 +2327,8 @@ public abstract class TypeConstant
      *
      * @param constId         the identity constant of the class that this type is based on
      * @param struct          the structure of the class that this type is based on
-     * @param aAnnoMixin      an array of "mixin" annotations for this type
-     * @param aAnnoClass      an array of annotations for this type that mix into "Class"
+     * @param aAnnoMixin      an array of "regular" annotations for this type
+     * @param aAnnoClass      an array of into "Class" annotations for this type
      * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
      * @param errs            the error list to log to
      */
@@ -2343,19 +2343,19 @@ public abstract class TypeConstant
 
         for (int c = aAnnoMixin.length, i = c-1; i >= 0; --i)
             {
-            Annotation            anno     = aAnnoMixin[i];
-            AnnotatedTypeConstant typeAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
+            Annotation            anno      = aAnnoMixin[i];
+            AnnotatedTypeConstant constAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
 
-            TypeConstant typeMixin        = typeAnno.getAnnotationType();
-            TypeConstant typeMixinPrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
-            TypeInfo     infoMixin        = typeMixinPrivate.ensureTypeInfoInternal(errs);
+            TypeConstant typeAnno        = constAnno.getAnnotationType();
+            TypeConstant typeAnnoPrivate = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
+            TypeInfo     infoAnno        = typeAnnoPrivate.ensureTypeInfoInternal(errs);
 
-            if (infoMixin == null)
+            if (infoAnno == null)
                 {
                 // we are always called with an incomplete infoBase when building an annotated class
                 // (e.g. @M1 @M2 class TestM {}), rather than a run-time annotated type
-                // (e.g. new @M1 @M2 Test()), so it's permissible to return it if the mixin info
-                // cannot yet be calculated at this time
+                // (e.g. new @M1 @M2 Test()), so it's permissible to return it if the annotation
+                // info cannot yet be calculated at this time
                 return isComplete(infoBase) ? null : infoBase;
                 }
 
@@ -2364,9 +2364,9 @@ public abstract class TypeConstant
             // it has enough information about itself to be used for layering logic
 
             infoNext = typeNext.mergeMixinTypeInfo(this, cInvalidations, constId,
-                    struct, infoNext, infoMixin,
+                    struct, infoNext, infoAnno,
                     i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, anno, errs);
-            typeNext = typeAnno;
+            typeNext = constAnno;
             }
 
         assert infoNext.getType().equals(this);
@@ -2619,18 +2619,13 @@ public abstract class TypeConstant
         listProcess.add(struct.new Contribution(Composition.Equal, this));  // place-holder for "this"
 
         // error check the "into" and "extends" clauses, plus rebasing (they'll get processed later)
-        TypeConstant typeInto    = null;
-        TypeConstant typeExtends = null;
-        TypeConstant typeRebase  = null;
-        switch (struct.getFormat())
+        TypeConstant     typeInto    = null;
+        TypeConstant     typeExtends = null;
+        TypeConstant     typeRebase  = null;
+        Component.Format format      = struct.getFormat();
+        switch (format)
             {
-            case PACKAGE:
-            case MODULE:
-            case ENUMVALUE:
-            case ENUM:
-            case CLASS:
-            case CONST:
-            case SERVICE:
+            case PACKAGE, MODULE, ENUMVALUE, ENUM, CLASS, CONST, SERVICE:
                 {
                 // check for re-basing; this occurs when a class format changes and the system has
                 // to insert a layer of code between this class and the class being extended, such
@@ -2645,7 +2640,7 @@ public abstract class TypeConstant
 
                 if (!fExtends)
                     {
-                    if (struct.getFormat() == Component.Format.ENUMVALUE)
+                    if (format == Component.Format.ENUMVALUE)
                         {
                         log(errs, Severity.ERROR, VE_EXTENDS_EXPECTED, constId.getPathString());
                         }
@@ -2688,10 +2683,10 @@ public abstract class TypeConstant
                 // for now perform a quick sanity check
                 IdentityConstant constExtends  = typeExtends.getSingleUnderlyingClass(true);
                 ClassStructure   structExtends = (ClassStructure) constExtends.getComponent();
-                if (!struct.getFormat().isExtendsLegal(structExtends.getFormat()))
+                if (!format.isExtendsLegal(structExtends.getFormat()))
                     {
                     log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                            constId.getPathString(), struct.getFormat(),
+                            constId.getPathString(), format,
                             constExtends.getPathString(), structExtends.getFormat());
                     typeExtends = null;
                     break;
@@ -2710,7 +2705,7 @@ public abstract class TypeConstant
                         // TODO: need a better error indicating that the parent is not parameterized,
                         //       parameterized incorrectly or a non-virtual extension of a virtual child
                         log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
-                                this.removeAccess().getValueString(), struct.getFormat(),
+                                this.removeAccess().getValueString(), format,
                                 typeExtends.getValueString(), "virtual " + structExtends.getFormat());
                         typeExtends = null;
                         }
@@ -2718,7 +2713,7 @@ public abstract class TypeConstant
                 break;
                 }
 
-            case MIXIN:
+            case ANNOTATION, MIXIN:
                 {
                 // a mixin can extend another mixin, and it can specify an "into" that defines a
                 // base type that defines the environment that it will be working within. if neither
@@ -2752,11 +2747,12 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    // verify that it is a mixin
-                    if (typeExtends.getExplicitClassFormat() != Component.Format.MIXIN)
+                    // verify that it is an annotation or mixin
+                    if (typeExtends.getExplicitClassFormat() != format)
                         {
-                        log(errs, Severity.ERROR, VE_EXTENDS_NOT_MIXIN, typeExtends.getValueString(),
-                                constId.getPathString());
+                        log(errs, Severity.ERROR, VE_EXTENDS_INCOMPATIBLE,
+                                constId.getPathString(), format,
+                                typeExtends.getValueString(), typeExtends.getExplicitClassFormat());
                         typeExtends = null;
                         break;
                         }
@@ -2815,7 +2811,7 @@ public abstract class TypeConstant
                 break;
 
             default:
-                throw new IllegalStateException(getValueString() + "=" + struct.getFormat());
+                throw new IllegalStateException(getValueString() + "=" + format);
             }
 
         // go through the rest of the contributions, and add the ones that need to be processed to
@@ -2840,14 +2836,14 @@ public abstract class TypeConstant
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    // call processMixins() for validation only; the "mixin" annotations will be
-                    // processed separately at the end of buildTypeInfoImpl() method
-                    processMixins(constId, typeContrib, true, struct, new ArrayList<>(), errs);
+                    // validation only; the "mixin" annotations will be processed separately at the
+                    // end of buildTypeInfoImpl() method
+                    validateAnnotation(constId, typeContrib, errs);
                     break;
 
                 case Into:
-                    // only applicable on a mixin, only one allowed, and it should have been earlier
-                    // in the list of contributions
+                    // only applicable on annotations or mixins, only one allowed, and it should
+                    // have been earlier in the list of contributions
                     log(errs, Severity.ERROR, VE_INTO_UNEXPECTED,
                             typeContrib.getValueString(), constId.getPathString());
                     break;
@@ -2866,7 +2862,7 @@ public abstract class TypeConstant
                         break;
                         }
 
-                    processMixins(constId, typeContrib, false, struct, listProcess, errs);
+                    processMixins(constId, typeContrib, struct, listProcess, errs);
                     break;
 
                 case Delegates:
@@ -2906,7 +2902,7 @@ public abstract class TypeConstant
             if (!typeInto.equals(pool.typeObject()) && !typeInto.isAccessSpecified() &&
                     typeInto.isSingleUnderlyingClass(true))
                 {
-                // mixin located inside the "into" class should have private access to it
+                // annotation or mixin should have at least protected access to the "into" class
                 Access access = struct.isDescendant(typeInto.getSingleUnderlyingClass(true))
                         ? Access.PRIVATE
                         : Access.PROTECTED;
@@ -2980,7 +2976,7 @@ public abstract class TypeConstant
             // has to be an explicit class identity
             if (!typeMixin.isExplicitClassIdentity(true))
                 {
-                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                log(errs, Severity.ERROR, VE_INCORPORATES_NOT_CLASS,
                         constId.getPathString(), typeMixin.getValueString());
                 continue;
                 }
@@ -2988,8 +2984,7 @@ public abstract class TypeConstant
             // has to be a mixin
             if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
                 {
-                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                        typeMixin.getValueString());
+                log(errs, Severity.ERROR, VE_CLASS_NOT_MIXIN, typeMixin.getValueString());
                 continue;
                 }
 
@@ -3013,7 +3008,7 @@ public abstract class TypeConstant
             listCondContribs.add(typeMixin);
 
             // call processMixins() for validation only
-            processMixins(constId, typeMixin, false, struct, new ArrayList<>(), errs);
+            processMixins(constId, typeMixin, struct, new ArrayList<>(), errs);
             }
 
         return listCondContribs == null
@@ -3043,15 +3038,63 @@ public abstract class TypeConstant
         }
 
     /**
-     * Process the "incorporates" contribution for annotations or mixins.
+     * Process the "annotation" contributions.
+     */
+    private void validateAnnotation(IdentityConstant constId, TypeConstant typeContrib,
+                                    ErrorListener errs)
+        {
+        if (!typeContrib.isExplicitClassIdentity(true))
+            {
+            log(errs, Severity.ERROR, VE_ANNOTATION_NOT_CLASS,
+                typeContrib.getValueString(),
+                constId.getPathString());
+            return;
+            }
+
+        // validate that the class is an annotation
+        if (typeContrib.getExplicitClassFormat() != Component.Format.ANNOTATION)
+            {
+            log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION, typeContrib.getValueString());
+            return;
+            }
+
+        TypeConstant typeInto = typeContrib.getExplicitClassInto(true);
+        // annotations into Class are "synthetic" (e.g. Abstract, Override); the only
+        // exception is Enumeration, which needs to be processed naturally
+        if (!typeInto.isIntoClassType() || typeInto.isA(getConstantPool().typeEnumeration()))
+            {
+            if (typeContrib.isVirtualChild()
+                && (!this.isVirtualChild() ||
+                    !this.getParentType().isA(typeContrib.getParentType())))
+                {
+                // TODO: we need an annotation specific error message
+                log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE_PARENT,
+                    constId.getPathString(), typeContrib.getValueString(),
+                    typeContrib.getParentType().getValueString());
+                return;
+                }
+
+            // the annotation must be compatible with this type, as specified by its "into"
+            // clause; note: not 100% correct because the presence of this annotation may affect
+            // the answer, so this requires an eventual fix
+            if (!this.isA(typeInto))
+                {
+                log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
+                    constId.getPathString(), typeContrib.getValueString(),
+                    typeInto.getValueString());
+                return;
+                }
+            }
+        }
+
+    /**
+     * Process the "incorporates" contributions.
      */
     private void processMixins(IdentityConstant constId, TypeConstant typeContrib,
-                               boolean fAnno, ClassStructure struct,
+                               ClassStructure struct,
                                List<Contribution> listProcess, ErrorListener errs)
         {
-        ConstantPool pool = getConstantPool();
-
-        if (struct.getFormat() == Component.Format.INTERFACE && !fAnno)
+        if (struct.getFormat() == Component.Format.INTERFACE)
             {
             log(errs, Severity.ERROR, VE_INCORPORATES_UNEXPECTED,
                 typeContrib.getValueString(),
@@ -3077,43 +3120,38 @@ public abstract class TypeConstant
             }
 
         TypeConstant typeInto = typeContrib.getExplicitClassInto(true);
-        // mixins into Class are "synthetic" (e.g. Abstract, Override); the only
-        // exception is Enumeration, which needs to be processed naturally
-        if (!typeInto.isIntoClassType() || typeInto.isA(pool.typeEnumeration()))
+        if (typeContrib.isVirtualChild()
+            && (!this.isVirtualChild() ||
+                !this.getParentType().isA(typeContrib.getParentType())))
             {
-            if (typeContrib.isVirtualChild()
-                && (!this.isVirtualChild() ||
-                    !this.getParentType().isA(typeContrib.getParentType())))
-                {
-                log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE_PARENT,
-                    constId.getPathString(), typeContrib.getValueString(),
-                    typeContrib.getParentType().getValueString());
-                return;
-                }
-
-            // the mixin must be compatible with this type, as specified by its "into"
-            // clause; note: not 100% correct because the presence of this mixin may affect
-            // the answer, so this requires an eventual fix
-            if (!this.isA(typeInto))
-                {
-                log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
-                    constId.getPathString(), typeContrib.getValueString(),
-                    typeInto.getValueString());
-                return;
-                }
-
-            // check for duplicate mixin
-            if (listProcess.stream().anyMatch(contribPrev ->
-                    contribPrev.getTypeConstant().equals(typeContrib)))
-                {
-                log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
-                    constId.getPathString(), typeContrib.getValueString());
-                return;
-                }
-
-            listProcess.add(struct.new Contribution(Composition.Incorporates,
-                pool.ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
+            log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE_PARENT,
+                constId.getPathString(), typeContrib.getValueString(),
+                typeContrib.getParentType().getValueString());
+            return;
             }
+
+        // the mixin must be compatible with this type, as specified by its "into"
+        // clause; note: not 100% correct because the presence of this mixin may affect
+        // the answer, so this requires an eventual fix
+        if (!this.isA(typeInto))
+            {
+            log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE,
+                constId.getPathString(), typeContrib.getValueString(),
+                typeInto.getValueString());
+            return;
+            }
+
+        // check for duplicate mixin
+        if (listProcess.stream().anyMatch(contribPrev ->
+                contribPrev.getTypeConstant().equals(typeContrib)))
+            {
+            log(errs, Severity.ERROR, VE_DUP_INCORPORATES,
+                constId.getPathString(), typeContrib.getValueString());
+            return;
+            }
+
+        listProcess.add(struct.new Contribution(Composition.Incorporates,
+            getConstantPool().ensureAccessTypeConstant(typeContrib, Access.PROTECTED)));
         }
 
     /**
@@ -4123,8 +4161,8 @@ public abstract class TypeConstant
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
         Map<Object, Set<Object>> mapNarrowedNids = null;
         boolean                  fSelf           = contribSource == ContribSource.Self;
-        boolean                  fAnnoMixin      = contribSource == ContribSource.Annotation;
-        boolean                  fOnTop          = fAnnoMixin ||
+        boolean                  fAnnotation     = contribSource == ContribSource.Annotation;
+        boolean                  fOnTop          = fAnnotation ||
                                                    contribSource == ContribSource.ConditionalIncorp;
 
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet())
@@ -4167,9 +4205,9 @@ public abstract class TypeConstant
                         }
                     else
                         {
-                        // In general constructors are not virtual, unless a class or mixin
-                        // implements an interface that declares a virtual constructor or the class
-                        // is a virtual child.
+                        // In general constructors are not virtual, unless a class, annotation or
+                        // mixin implements an interface that declares a virtual constructor or the
+                        // class is a virtual child.
                         //
                         // We keep constructors in the map of methods only for "self" and not
                         // any "super" contributions, except for: i) virtual constructors that are
@@ -4311,7 +4349,7 @@ public abstract class TypeConstant
                                         ? idContrib.resolveNestedIdentity(pool, this)
                                         : idContrib.getNestedIdentity();
 
-            if (fAnnoMixin)
+            if (fAnnotation)
                 {
                 if (bodyContrib.getImplementation() == Implementation.Implicit)
                     {
@@ -4320,7 +4358,7 @@ public abstract class TypeConstant
                     }
                 if (methodContrib.isCapped())
                     {
-                    // the cap was introduced by the mixin itself; keep it as is
+                    // the cap was introduced by the annotation itself; keep it as is
                     mapVirtMods.put(nidContrib, methodContrib);
                     continue;
                     }
@@ -4358,10 +4396,10 @@ public abstract class TypeConstant
                         methodBase   = mapVirtMethods.get(nidBase);
                         if (methodBase.isCapped())
                             {
-                            if (fAnnoMixin)
+                            if (fAnnotation)
                                 {
                                 // the "super" method we found is capped, but the cap itself apparently
-                                // didn't match; this can happen for "into (A | B)" mixins;
+                                // didn't match; this can happen for "into (A | B)" annotations
                                 // replace the capped method with the narrowing one
                                 nidBase = methodBase.getNarrowingMethod(mapVirtMethods);
 
@@ -4509,8 +4547,8 @@ public abstract class TypeConstant
                     if (methodBase != null && methodBase.containsBody(idContrib))
                         {
                         // this has already been processed and capped, which can occur when a method
-                        // on a natural contribution comes after a rebase or a mixin-into has
-                        // already provided that same method; skip the dup
+                        // on a natural contribution comes after a rebase or an "into" contribution
+                        // has already provided that same method; skip the dup
                         continue;
                         }
 
@@ -5152,7 +5190,7 @@ public abstract class TypeConstant
      * @param prop        the PropertyStructure
      * @param constId     the identity of the containing structure (used only for error messages)
      * @param fNative     true if the type is a native rebase
-     * @param fInterface  true if the type is an interface, not a class or mixin (only if not native)
+     * @param fInterface  true if the type is an interface, not a class (only if not native)
      * @param nRank       the property rank
      * @param errs        the error list to log any errors to
      *
@@ -5200,23 +5238,22 @@ public abstract class TypeConstant
         for (int i = 0, c = aRefAnno.length; i < c; ++i)
             {
             Annotation   annotation = aRefAnno[i];
-            Constant     constMixin = annotation.getAnnotationClass();
-            TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
+            Constant     constAnno  = annotation.getAnnotationClass();
+            TypeConstant typeAnno   = pool.ensureTerminalTypeConstant(constAnno);
 
-            if (!typeMixin.isExplicitClassIdentity(true)
-                    || typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+            if (!typeAnno.isExplicitClassIdentity(true)
+                    || typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
                 {
-                log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
-                        typeMixin.getValueString());
+                log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION, typeAnno.getValueString());
                 continue;
                 }
 
-            TypeConstant typeInto    = typeMixin.getExplicitClassInto(true);
+            TypeConstant typeInto    = typeAnno.getExplicitClassInto(true);
             TypeConstant typeIntoCat = typeInto.getIntoPropertyType();
             if (typeIntoCat == null || typeIntoCat.equals(pool.typeProperty()))
                 {
                 log(errs, Severity.ERROR, VE_PROPERTY_ANNOTATION_INCOMPATIBLE,
-                        sName, constId.getPathString(), typeMixin.getValueString());
+                        sName, constId.getPathString(), typeAnno.getValueString());
                 continue;
                 }
 
@@ -5224,17 +5261,19 @@ public abstract class TypeConstant
             // "into Ref" (or some sub-class of Ref, e.g. Var) annotation
             assert typeInto.isA(pool.typeRef());
 
-// TODO verify that the mixin has one and only one type parameter, and it is named Referent, i.e. "mixin M<Referent> into Var<Referent>"
-// TODO does the annotation class provide a hard-coded value for Referent? because if it does, we need to "isA()" test it against the type of the property
+// TODO verify that the annotation has one and only one type parameter, and it is named Referent,
+//      i.e. "annotation M<Referent> into Var<Referent>"
+// TODO does the annotation class provide a hard-coded value for Referent? because if it does,
+//      we need to "isA()" test it against the type of the property
 
-            if (scanForDups(aRefAnno, i, constMixin))
+            if (scanForDups(aRefAnno, i, constAnno))
                 {
                 log(errs, Severity.ERROR, VE_DUP_ANNOTATION,
                         prop.getIdentityConstant().getValueString(),
-                        constMixin.getValueString());
+                        constAnno.getValueString());
                 }
 
-            if (constMixin.equals(pool.clzInject()))
+            if (constAnno.equals(pool.clzInject()))
                 {
                 fHasInject = true;
                 }
@@ -6902,7 +6941,7 @@ public abstract class TypeConstant
 
     /**
      * Determine the "into" type of the explicit class, iff the type is an explicit class identity
-     * and the format of the class is "mixin".
+     * and the format of the class is "annotation" or "mixin".
      *
      * @return a TypeConstant
      */
@@ -6913,7 +6952,7 @@ public abstract class TypeConstant
 
     /**
      * Determine the "into" type of the explicit class, iff the type is an explicit class identity
-     * and the format of the class is "mixin".
+     * and the format of the class is "annotation" or "mixin".
      *
      * @param fResolve  if true, resolve the formal "into" type based on this type constant
      *
@@ -6925,9 +6964,9 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a class to signify
-     *         that the mix-in applies to the meta-data of the class and is not actually mixed into
-     *         the class functionality itself
+     * @return true iff this type can be used in an "into" clause for an annotation for a class to
+     *         signify that the annotation applies to the meta-data of the class and is not actually
+     *         mixed into the class functionality itself
      */
     public boolean isIntoClassType()
         {
@@ -6935,8 +6974,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a method, which
-     *         means that the mix-in applies to the meta-data of the method
+     * @return true iff this type can be used in an "into" clause for an annotation for a method,
+     *         which means that the mix-in applies to the meta-data of the method
      */
     public boolean isIntoMethodType()
         {
@@ -6944,8 +6983,8 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a method parameter,
-     *         which means that the mix-in applies to the meta-data of the parameter
+     * @return true iff this type can be used in an "into" clause for an annotation for a method
+     *         parameter, which means that the mix-in applies to the meta-data of the parameter
      */
     public boolean isIntoMethodParameterType()
         {
@@ -6953,7 +6992,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * Check if this type can be used in an "into" clause for a mixin for the specified target
+     * Check if this type can be used in an "into" clause for an annotation for the specified target
      * (e.g. class, method or method parameter), which means that the mix-in applies to the
      * meta-data of the target rather than the target itself.
      *
@@ -6961,7 +7000,7 @@ public abstract class TypeConstant
      * @param fStrict     if true, the terminal type of this type must be exactly the target type;
      *                    otherwise any subclass of the target is allowed
      *
-     * @return true iff this type can be used in an "into" clause for a mixin for the target type
+     * @return true iff this type can be used in an "into" clause for an annotation on the target type
      */
     public boolean isIntoMetaData(TypeConstant typeTarget, boolean fStrict)
         {
@@ -6969,9 +7008,9 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a property, which
-     *         means that the mix-in applies to the meta-data of the property or to the Ref/Var
-     *         instance used for the property
+     * @return true iff this type can be used in an "into" clause for an annotation for a property,
+     *         which means that the mix-in applies to the meta-data of the property or to the
+     *         Ref/Var instance used for the property
      */
     public boolean isIntoPropertyType()
         {
@@ -6987,7 +7026,7 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this type can be used in an "into" clause for a mixin for a local variable
+     * @return true iff this type can be used in an "into" clause for an annotation for a local variable
      */
     public boolean isIntoVariableType()
         {
@@ -7678,7 +7717,7 @@ public abstract class TypeConstant
      * Contribution source for TypeInfo computation:
      *  - Regular: standard structural contribution (super class, implemented interface, etc.)
      *  - Self: the class itself
-     *  - Annotation: an annotation mixin
+     *  - Annotation: an annotation
      *  - ConditionalIncorp: a conditional incorporate mixin
      */
     protected enum ContribSource {Regular, Self, Annotation, ConditionalIncorp}

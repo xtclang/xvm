@@ -19,9 +19,7 @@ interface Signer
      *
      * @return the [Signature] that corresponds to the contents of the InputStream
      */
-    Signature sign(InputStream in) {
-        return sign(in.readBytes(in.remaining));
-    }
+    Signature sign(InputStream in) = sign(in.readBytes(in.remaining));
 
     /**
      * Produce a signature for the contents of the passed array. To produce a signature for the
@@ -37,12 +35,11 @@ interface Signer
      * Create an output stream that will produce a signature from all of the data written to (or
      * through) it.
      *
-     * @param destination  (optional) an underlying stream that the [OutputSigner] will use to write
-     *                     through all of the data that is written to the `OutputSigner`
-     * @param annotation   (optional) one or more mixins to include in the returned [OutputSigner]
+     * @param dest   (optional) an underlying stream that the [OutputSigner] will use to write
+     *               through all of the data that is written to the `OutputSigner`
+     * @param annos  (optional) one or more [Annotation]s to include in the returned [OutputSigner]
      */
-    OutputSigner createOutputSigner(BinaryOutput? destination = Null,
-                                    Annotations?  annotations = Null);
+    OutputSigner createOutputSigner(BinaryOutput? dest = Null, Annotations? annos = Null);
 
     /**
      * A stateful output stream that collects information as it is written to (or thru) the stream,

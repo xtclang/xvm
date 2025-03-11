@@ -636,10 +636,10 @@ public class PropertyDeclarationStatement
                 ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
                 ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
 
-                if (clzAnno.getFormat() != Format.MIXIN)
+                if (clzAnno.getFormat() != Format.ANNOTATION)
                     {
                     findAnnotationExpression(anno, annotations).
-                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                        log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION,
                             anno.getValueString());
                     return false;
                     }
@@ -681,10 +681,10 @@ public class PropertyDeclarationStatement
             Annotation     anno    = aAnno[iA];
             ClassConstant  idAnno  = (ClassConstant) anno.getAnnotationClass();
             ClassStructure clzAnno = (ClassStructure) idAnno.getComponent();
-            if (clzAnno.getFormat() != Component.Format.MIXIN)
+            if (clzAnno.getFormat() != Format.ANNOTATION)
                 {
                 findAnnotationExpression(anno, annotations).
-                    log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                    log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION,
                         anno.getValueString());
                 break;
                 }
@@ -699,7 +699,7 @@ public class PropertyDeclarationStatement
                 continue;
                 }
 
-            TypeConstant typeMixin;
+            TypeConstant typeAnno;
             if (clzAnno.isParameterized() && cParams > 0)
                 {
                 ListMap<String, TypeConstant> mapResolved = new ListMap<>();
@@ -725,28 +725,28 @@ public class PropertyDeclarationStatement
                             }
                         }
                     }
-                typeMixin = clzAnno.getFormalType().resolveGenerics(pool, mapResolved::get);
+                typeAnno = clzAnno.getFormalType().resolveGenerics(pool, mapResolved::get);
                 }
             else
                 {
-                typeMixin = clzAnno.getCanonicalType();
+                typeAnno = clzAnno.getCanonicalType();
                 }
 
-            TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
+            TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
 
             if (!typeProp.isA(typeInto))
                 {
                 findAnnotationExpression(anno, annotations).
                     log(errs, Severity.ERROR, Constants.VE_ANNOTATION_INCOMPATIBLE,
-                        typeProp.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
+                        typeProp.getValueString(), typeAnno.getValueString(), typeInto.getValueString());
                 break;
                 }
 
             for (int iA2 = iA + 1; iA2 < c; iA2++)
                 {
-                Annotation   anno2      = aAnno[iA2];
-                TypeConstant typeMixin2 = anno2.getAnnotationType();
-                if (typeMixin2.equals(typeMixin))
+                Annotation   anno2     = aAnno[iA2];
+                TypeConstant typeAnno2 = anno2.getAnnotationType();
+                if (typeAnno2.equals(typeAnno))
                     {
                     findAnnotationExpression(anno, annotations).
                         log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,

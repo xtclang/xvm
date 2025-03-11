@@ -1,8 +1,8 @@
 /**
- * The ConditionalTuple mixin represents a tuple whose first field is a Boolean, and access to any
- * further fields, and any modification, is only permitted if the first field Boolean is True.
+ * The ConditionalTuple annotation represents a tuple whose first field is a Boolean, and access to
+ * any further fields, and any modification, is only permitted if the first field Boolean is True.
  */
-mixin ConditionalTuple
+annotation ConditionalTuple
         into Tuple<Boolean> {
     @Override
     @Op("[]") Object getElement(Int index) {

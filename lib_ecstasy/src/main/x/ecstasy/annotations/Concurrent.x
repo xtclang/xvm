@@ -1,5 +1,5 @@
 /**
- * The Concurrent mixin is used to annotate classes, properties, and methods, to indicate that the
+ * The Concurrent annotation is used to annotate classes, properties, and methods, to indicate that the
  * class, property, or method **is safe** for concurrent/reentrant execution.
  *
  * Imagine a simple, provably reentrant- and concurrent-safe counter implementation, with silly
@@ -43,6 +43,6 @@
  *   implementation calls any method that can potentially "yield", doing it **while** retaining any
  *   state (e.g. using a non-concurrent iterator over a collection) should be avoided.
  */
-mixin Concurrent
+annotation Concurrent
         into Class | Property | Method {
 }

@@ -288,19 +288,14 @@ public class TypeCompositionStatement
                 // modules and components are always top level
                 return Zone.TopLevel;
 
-            case CLASS:
-            case INTERFACE:
-            case SERVICE:
-            case CONST:
-            case ENUM:
-            case MIXIN:
+            case CLASS, INTERFACE, SERVICE, CONST, ENUM, ANNOTATION, MIXIN:
                 Component structParent = structThis.getParent();
                 return switch (structParent.getFormat())
                     {
                     case MODULE, PACKAGE ->
                         Zone.TopLevel;
 
-                    case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUMVALUE, MIXIN ->
+                    case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUMVALUE, ANNOTATION, MIXIN ->
                         Zone.InClass;
 
                     case METHOD ->
@@ -449,10 +444,7 @@ public class TypeCompositionStatement
                 {
                 switch (category.getId())
                     {
-                    case MODULE:
-                    case PACKAGE:
-                    case ENUM:
-                    case ENUM_VAL:
+                    case MODULE, PACKAGE, ENUM, ENUM_VAL:
                         // none of these is an inner class
                         break;
 
@@ -460,14 +452,11 @@ public class TypeCompositionStatement
                         IdentityConstant idParent = container.getIdentityConstant();
                         switch (idParent.getFormat())
                             {
-                            case Module:
-                            case Package:
+                            case Module, Package:
                                 // not a virtual child (it's nested under a module or package)
                                 break;
 
-                            case Method:
-                            case Property:
-                            case Class:
+                            case Method, Property, Class:
                                 fInner = true;
                                 break;
 
@@ -549,13 +538,7 @@ public class TypeCompositionStatement
                     }
                 break;
 
-            case CLASS:
-            case INTERFACE:
-            case SERVICE:
-            case CONST:
-            case ENUM:
-            case ENUM_VAL:
-            case MIXIN:
+            case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUM_VAL, ANNOTATION, MIXIN:
                 if (container != null && container.isClassContainer())
                     {
                     Format format = switch (category.getId())
@@ -566,6 +549,7 @@ public class TypeCompositionStatement
                         case CONST     -> Format.CONST;
                         case ENUM      -> Format.ENUM;
                         case ENUM_VAL  -> Format.ENUMVALUE;
+                        case ANNOTATION-> Format.ANNOTATION;
                         case MIXIN     -> Format.MIXIN;
                         default        -> throw new IllegalStateException();
                         };
@@ -678,6 +662,7 @@ public class TypeCompositionStatement
         // service      x           x           x           x
         // const        x           x           x           x
         // enum         x           x           x           (implicit)
+        // annotation   x           x           x
         // mixin        x           x           x
         //
         // modifiers for "inner" namespace structures:
@@ -693,6 +678,7 @@ public class TypeCompositionStatement
         // const        x           x           x           x - required if parent is not const
         // enum         x           x           x           (implicit)
         // - enum val                                       (implicit)
+        // annotation   x           x           x
         // mixin        x           x           x
         //
         // modifiers for "local" namespace structures:
@@ -708,16 +694,13 @@ public class TypeCompositionStatement
         // service                                          x
         // const                                            x
         // enum                                             (implicit)
+        // annotation
         // mixin
         Zone zone     = getDeclarationZone();
         int  nAllowed = 0;
         switch (component.getFormat())
             {
-            case SERVICE:
-            case CONST:
-            case CLASS:
-            case INTERFACE:
-            case MIXIN:
+            case SERVICE, CONST, CLASS, INTERFACE, ANNOTATION, MIXIN:
                 // class is not allowed to be declared static if it is top-level, otherwise all of
                 // these can always be declared static
                 if (!(component.getFormat() == Format.CLASS && zone == Zone.TopLevel))
@@ -725,8 +708,7 @@ public class TypeCompositionStatement
                     nAllowed |= Component.STATIC_BIT;
                     }
                 // fall through
-            case PACKAGE:
-            case ENUM:
+            case PACKAGE, ENUM:
                 {
                 // these are all allowed to be declared public/private/protected, except when they
                 // appear inside a method body
@@ -872,8 +854,7 @@ public class TypeCompositionStatement
         boolean fSingleton = false;
         switch (component.getFormat())
             {
-            case MODULE:
-            case PACKAGE:
+            case MODULE, PACKAGE:
                 fSingleton = true;
                 // type parameters are not permitted
                 disallowTypeParams(errs);
@@ -894,8 +875,7 @@ public class TypeCompositionStatement
                     }
                 break;
 
-            case SERVICE:
-            case CONST:
+            case SERVICE, CONST:
                 // these compositions are new-able, and thus can usually declare type parameters;
                 // the exception is when the composition is not new-able, which is the case for
                 // singleton compositions
@@ -911,9 +891,7 @@ public class TypeCompositionStatement
                 // while an enum is not new-able (it is abstract), it can have type params which
                 // must each be explicitly defined by each enum value; the same goes for constructor
                 // params
-            case CLASS:
-            case INTERFACE:
-            case MIXIN:
+            case CLASS, INTERFACE, ANNOTATION, MIXIN:
                 // register the type parameters
                 if (typeParams != null && !typeParams.isEmpty())
                     {
@@ -970,6 +948,7 @@ public class TypeCompositionStatement
         // enum         0/1 [1]     n           n           n
         // enum-value       [5]     n           n           n
         // mixin        0/1 [6]     n           n           n                         0/1 [7]
+        // annotation   0/1 [6]     n           n           n                         0/1 [7]
         // interface    n   [8]     n [8]       n [9]
         //
         // [1] module/package/const/enum may explicitly extend a class or a const; otherwise
@@ -979,8 +958,9 @@ public class TypeCompositionStatement
         //     Object itself, which does NOT implement itself)
         // [4] service may explicitly extend a class or service; otherwise implements Object
         // [5] enum values always implicitly extend the enum to which they belong
-        // [6] mixin may explicitly extend a mixin
-        // [7] mixins may specify a type that they can be mixed into; otherwise implicitly Object
+        // [6] annotation/mixin may explicitly extend an annotation/mixin correspondingly
+        // [7] annotations and mixins may specify a type that they can be mixed into; otherwise
+        //     implicitly Object
         // [8] in the source code, an interface "extends" any number of interfaces, but the compiler
         //     produces those relationships using the "implements" composition
         // [9] a delegates clause on an interface simply implies default implementations for those
@@ -1017,8 +997,9 @@ public class TypeCompositionStatement
                     typeDefaultSuper = container.getIdentityConstant().getType();
                     break;
 
+                case ANNOTATION:
                 case MIXIN:
-                    // mixins apply to ("mix into") any Object by default
+                    // annotations and mixins apply to ("mix into") any Object by default
                     typeDefaultImpl = null;
                     typeDefaultInto = pool.typeObject();
                     break;
@@ -1265,7 +1246,7 @@ public class TypeCompositionStatement
                     break;
 
                 case INTO:
-                    if (format == Format.MIXIN)
+                    if (format == Format.MIXIN || format == Format.ANNOTATION)
                         {
                         // only one "into" clause is allowed
                         if (fAlreadyIntos)
@@ -1289,7 +1270,7 @@ public class TypeCompositionStatement
                         }
                     else
                         {
-                        // "into" not allowed (only used by mixins)
+                        // "into" not allowed (only used by annotations and mixins)
                         composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
                         }
                     break;
@@ -1855,7 +1836,7 @@ public class TypeCompositionStatement
 
             boolean fReqOverride   = false;
             boolean fAlreadyLogged = false;
-            switch (component.getFormat())
+            switch (format)
                 {
                 case INTERFACE:
                     {
@@ -1899,10 +1880,7 @@ public class TypeCompositionStatement
                     break;
                     }
 
-                case MIXIN:
-                case CLASS:
-                case CONST:
-                case SERVICE:
+                case ANNOTATION, MIXIN, CLASS, CONST, SERVICE:
                     {
                     Contribution contribImplicit = null;
                     for (Contribution contrib : setContrib)
@@ -1912,7 +1890,8 @@ public class TypeCompositionStatement
                             {
                             if (contribImplicit != null)
                                 {
-                                name.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_EXTENDS_MULTIPLE,
+                                name.log(errs, getSource(), Severity.ERROR,
+                                        Compiler.VIRTUAL_CHILD_EXTENDS_MULTIPLE,
                                         name.getValueText());
                                 fAlreadyLogged = true;
                                 break;
@@ -1934,8 +1913,8 @@ public class TypeCompositionStatement
                             }
                         else if (!fAlreadyLogged)
                             {
-                            name.log(errs, getSource(), Severity.ERROR, Compiler.VIRTUAL_CHILD_EXTENDS_INTERFACE,
-                                    name.getValueText());
+                            name.log(errs, getSource(), Severity.ERROR,
+                                    Compiler.VIRTUAL_CHILD_EXTENDS_INTERFACE, name.getValueText());
                             fAlreadyLogged = true;
                             }
                         }
@@ -1947,7 +1926,7 @@ public class TypeCompositionStatement
                             {
                             // there is no super virtual child, and the virtual child does not have
                             // an "extends" clause, so add "implements Object" to the class
-                            if (component.getFormat() != Format.MIXIN)
+                            if (format != Format.ANNOTATION && format != Format.MIXIN)
                                 {
                                 // check if we already added the implicit one on a previous round
                                 List<Contribution> listContribs = component.getContributionsAsList();
@@ -2318,11 +2297,11 @@ public class TypeCompositionStatement
             {
             addImplicitTypeConstraints(component, errs);
             }
-        else if (format == Format.MIXIN)
+        else if (format == Format.MIXIN || format == Format.ANNOTATION)
             {
-            // mixins naturally imply formal type parameters from their contributions (most
-            // likely the "into" clauses); there is logic in NameTypeExpression that defers the name
-            // resolution until the implicit type parameters are added by this method (if any)
+            // mixins and annotations naturally imply formal type parameters from their contributions
+            // (most likely the "into" clauses); there is logic in NameTypeExpression that defers the
+            // name resolution until the implicit type parameters are added by this method (if any)
             errs = errs.branch(this);
             component.addImplicitTypeParameters(pool(), errs);
             errs.merge();
@@ -2475,31 +2454,31 @@ public class TypeCompositionStatement
         {
         for (int i = 0, c = aAnno.length; i < c; i++)
             {
-            Annotation   anno      = aAnno[i];
-            TypeConstant typeMixin = anno.getAnnotationType();
-            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+            Annotation   anno     = aAnno[i];
+            TypeConstant typeAnno = anno.getAnnotationType();
+            if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION)
                 {
                 findAnnotationExpression(anno, annotations).
-                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_NOT_MIXIN,
+                    log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_CLASS_NOT_ANNOTATION,
                         anno.getValueString());
                 return false;
                 }
 
-            TypeConstant typeInto = typeMixin.getExplicitClassInto(true);
+            TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
 
             if (!typeTarget.isA(typeInto))
                 {
                 findAnnotationExpression(anno, annotations).
                     log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_INCOMPATIBLE,
-                        typeTarget.getValueString(), typeMixin.getValueString(), typeInto.getValueString());
+                        typeTarget.getValueString(), typeAnno.getValueString(), typeInto.getValueString());
                 return false;
                 }
 
             for (int j = i+1; j < c; j++)
                 {
-                Annotation   anno2      = aAnno[j];
-                TypeConstant typeMixin2 = anno2.getAnnotationType();
-                if (typeMixin2.equals(typeMixin))
+                Annotation   anno2     = aAnno[j];
+                TypeConstant typeAnno2 = anno2.getAnnotationType();
+                if (typeAnno2.equals(typeAnno))
                     {
                     findAnnotationExpression(anno, annotations).
                         log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_REDUNDANT,

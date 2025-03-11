@@ -6,7 +6,7 @@
  * validated until the patch operations is actually applied, which means that it is possible to
  * construct an invalid set of patches but an exception will be thrown when the patches are applied.
  */
-mixin JsonPatch
+annotation JsonPatch
         into Array<Operation> {
     /**
      * Apply this patch to the specified `Doc`.

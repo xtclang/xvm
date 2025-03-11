@@ -240,14 +240,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     (Class!<> deannotated, Annotation[] annotations) deannotate() {
         Type type = PublicType;
-        if (Annotation annotation := type.annotated()) {
-            Annotation[] annotations = new Annotation[];
+        if (Annotation anno := type.annotated()) {
+            Annotation[] annos = new Annotation[];
             do {
-                annotations.add(annotation);
+                annos.add(anno);
                 assert type.form == Annotated, type := type.modifying();
-            } while (annotation := type.annotated());
+            } while (anno := type.annotated());
             assert Class!<> deannotated := type.fromClass();
-            return deannotated, annotations.reversed();
+            return deannotated, annos.reversed();
         } else {
             return this, [];
         }
@@ -260,18 +260,18 @@ const Class<PublicType, ProtectedType extends PublicType,
      *
      * @return the annotated class
      */
-    Class!<> annotate(Annotation[] | Annotation annotations) {
+    Class!<> annotate(Annotation[] | Annotation annos) {
         Type type = PublicType;
-        if (annotations.is(Annotation[])) {
-            if (annotations.size == 0) {
+        if (annos.is(Annotation[])) {
+            if (annos.size == 0) {
                 return this;
             }
 
-            for (Annotation annotation : annotations) {
-                type = type.annotate(annotation);
+            for (Annotation anno : annos) {
+                type = type.annotate(anno);
             }
         } else {
-            type = type.annotate(annotations);
+            type = type.annotate(annos);
         }
 
         assert Class!<> annotated := type.fromClass();
@@ -377,16 +377,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * True iff the class is abstract.
      */
-    @RO Boolean abstract.get() {
-        return baseTemplate.isAbstract; // TODO CP the composition itself should have abstract as a property
-    }
+    @RO Boolean abstract.get() = baseTemplate.isAbstract;
 
     /**
      * Determine if the class is a virtual child class, which must be instantiated virtually.
      */
-    Boolean virtualChild.get() {
-        return baseTemplate.virtualChild;
-    }
+    Boolean virtualChild.get() = baseTemplate.virtualChild;
 
     /**
      * Determine if the class of the referent extends (or is) the specified class.
@@ -439,12 +435,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * Determine if the class of the referent is annotated by the specified mixin.
      *
-     * @param mix  the mixin class to test if this class is annotated by
+     * @param mix  the annotation class to test if this class is annotated by
      *
      * @return True iff this class is annotated by the specified class
      */
     conditional AnnotationTemplate annotatedBy(Class!<> mix) {
-        // one can only be annotated by a mixin
+        // one can only be annotated by an annotation class
         if (mix.baseTemplate.format != Mixin) {
             return False;
         }
@@ -594,9 +590,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      * @return the PublicType
      */
     @Auto
-    Type toType() {
-        return PublicType;
-    }
+    Type toType() = PublicType;
 
 
     // ----- Stringable methods --------------------------------------------------------------------
@@ -605,12 +599,12 @@ const Class<PublicType, ProtectedType extends PublicType,
     Int estimateStringLength() {
         Int size = 0;
 
-        (_, Annotation[] annotations) = deannotate();
-        if (annotations.size > 0) {
-            for (Annotation annotation : annotations) {
-                size += annotation.estimateStringLength();
+        (_, Annotation[] annos) = deannotate();
+        if (annos.size > 0) {
+            for (Annotation anno : annos) {
+                size += anno.estimateStringLength();
             }
-            size += annotations.size; // spaces
+            size += annos.size; // spaces
         }
 
         size += displayName.size;
@@ -631,10 +625,10 @@ const Class<PublicType, ProtectedType extends PublicType,
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {
-        (_, Annotation[] annotations) = deannotate();
-        if (annotations.size > 0) {
-            for (Annotation annotation : annotations.reversed()) {
-                annotation.appendTo(buf);
+        (_, Annotation[] annos) = deannotate();
+        if (annos.size > 0) {
+            for (Annotation anno : annos.reversed()) {
+                anno.appendTo(buf);
                 buf.add(' ');
             }
         }

@@ -1,5 +1,5 @@
 /**
- * A mixin that represents a set of endpoints for a specific URI path.
+ * A annotation that represents a set of endpoints for a specific URI path.
  *
  * Example:
  *
@@ -49,7 +49,7 @@
  *                    automatically routed to if no version number is present in the URL path; to
  *                    use the latest API version by default, use the same value as `currentVer`
  */
-mixin WebService(String path, Version? currentVer = Null, Version? defaultVer = Null)
+annotation WebService(String path, Version? currentVer = Null, Version? defaultVer = Null)
         into service {
 
     /**

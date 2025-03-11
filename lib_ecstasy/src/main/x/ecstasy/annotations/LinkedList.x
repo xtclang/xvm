@@ -80,7 +80,7 @@ import reflect.Annotation;
  *         }
  *     }
  */
-mixin LinkedList<Element>
+annotation LinkedList<Element>
         into Var<Element?>
         implements List<Element> {
     /**
@@ -89,13 +89,13 @@ mixin LinkedList<Element>
      *
      * The LinkedList annotation is a Var annotation designed to be used on a property that
      * represents either a "list head" pointer or a "next element" pointer. The elements in the list
-     * must have a "next element" pointer (which could be the same property that this mixin is
+     * must have a "next element" pointer (which could be the same property that this annotation is
      * annotated on), and _may_ have a "previous element" pointer (i.e. iff the list is
      * bidirectional).
      *
-     * This mixin implementation needs to be able to assume that the property is on each element,
-     * that the property returns an Element or `Null`, and that the property is settable (a `Var`).
-     * The `Link` type is a simple summary of those requirements.
+     * This annotation implementation needs to be able to assume that the property is on each
+     * element that the property returns an Element or `Null`, and that the property is settable
+     * (a `Var`). The `Link` type is a simple summary of those requirements.
      *
      * Note that this implementation requires the property to be a read/write property, even if the
      * list is read-only.
@@ -108,8 +108,8 @@ mixin LinkedList<Element>
     /**
      * Configure the LinkedList.
      *
-     * The LinkedList is stateless, so the constructor simply validates the mixin arguments. The
-     * arguments of a `Ref`/`Var` annotation are available at runtime from the [Ref] interface;
+     * The LinkedList is stateless, so the constructor simply validates the annotation arguments.
+     * The arguments of a `Ref`/`Var` annotation are available at runtime from the [Ref] interface;
      * since annotation arguments must be constant, the use of the annotation does not need to
      * introduce any additional runtime storage requirement to provide the LinkedList interface,
      * other than the space already being allocated for the property itself.
