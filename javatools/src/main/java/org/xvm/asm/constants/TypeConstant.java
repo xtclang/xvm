@@ -3082,7 +3082,6 @@ public abstract class TypeConstant
                 log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE,
                     constId.getPathString(), typeContrib.getValueString(),
                     typeInto.getValueString());
-                return;
                 }
             }
         }
@@ -5740,7 +5739,7 @@ public abstract class TypeConstant
      * @param infoSource     the TypeInfo containing all previous incorporates
      * @param infoMixin      the TypeInfo for the mixin to be merged with the source TypeInfo
      * @param aAnnoClass     an array of annotations for the type that mix into "Class"
-     * @param annoMixin      (optional) the annotation mixin; null for incorporation
+     * @param annotation     (optional) the annotation; null for incorporation
      * @param errs           the error listener to log into
      *
      * @return the resulting TypeInfo
@@ -5753,7 +5752,7 @@ public abstract class TypeConstant
             TypeInfo         infoSource,
             TypeInfo         infoMixin,
             Annotation[]     aAnnoClass,
-            Annotation       annoMixin,
+            Annotation       annotation,
             ErrorListener    errs)
         {
         ConstantPool pool = getConstantPool();
@@ -5774,19 +5773,20 @@ public abstract class TypeConstant
         typeTarget.layerOnTypeParams(mapTypeParams, typeMixin, mapMixinParams, errs);
 
         Map<String, Constant> mapDefaults = null;
-        if (annoMixin != null)
+        if (annotation != null)
             {
-            Constant[] aconstArgs = annoMixin.getParams();
-
-            // find a shorthand constructor, which is emitted by the TypeCompositionStatement
-            // e.g. 'mixin WebService(String path = "/")'
-            // or 'mixin Get(String path = "") extends Endpoint(HttpMethod.GET, path)'
-            MethodStructure ctorShorthand = infoMixin.getClassStructure().
-                    findMethod("construct", MethodStructure::isShorthandConstructor);
-            if (ctorShorthand != null)
+            Constant[]      aconstArgs = annotation.getParams();
+            MethodStructure ctor       = infoMixin.getClassStructure().findConstructor(
+                                                aconstArgs, typeTarget);
+            if (ctor == null)
+                {
+                log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                        annotation.getValueString(), typeTarget.getValueString());
+                }
+            else
                 {
                 mapDefaults = new HashMap<>();
-                ctorShorthand.collectDefaultParams(aconstArgs, mapDefaults);
+                ctor.collectDefaultParams(aconstArgs, mapDefaults);
                 }
             }
 
@@ -5800,21 +5800,21 @@ public abstract class TypeConstant
                     mapDefaults == null ? null : mapDefaults.get(idProp.getName()), nBaseRank, errs);
             }
 
-        ContribSource contribSource = annoMixin == null
+        ContribSource contribSource = annotation == null
                 ? ContribSource.ConditionalIncorp
                 : ContribSource.Annotation;
         typeTarget.layerOnMethods(idBase, contribSource, null, mapMethods, mapVirtMethods,
                 typeMixin, mapMixinMethods, errs);
 
         List<Contribution> listProcess = new ArrayList<>(infoSource.getContributionList());
-        if (annoMixin == null)
+        if (annotation == null)
             {
             // we don't pass the constraints since the type is known to satisfy the "condition"
             listProcess.add(structBase.new Contribution(typeMixin, (ListMap) null));
             }
         else
             {
-            listProcess.add(structBase.new Contribution(annoMixin, typeMixin));
+            listProcess.add(structBase.new Contribution(annotation, typeMixin));
             }
 
         Annotation[] aAnnoMixin = collectMixinAnnotations(listProcess);

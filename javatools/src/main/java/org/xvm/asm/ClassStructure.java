@@ -2187,6 +2187,49 @@ public class ClassStructure
         }
 
     /**
+     * Find a constructor for this class which should be used for the specified const arguments.
+     *
+     * @param aconstArgs  the arguments that the constructor should match to
+     * @param typeTarget  the type to be used to resolve generics
+     *
+     * @return the matching constructor or null, if not found
+     */
+    public MethodStructure findConstructor(Constant[] aconstArgs, TypeConstant typeTarget)
+        {
+        ConstantPool pool  = typeTarget.getConstantPool();
+        int          cArgs = aconstArgs.length;
+
+        return findMethod("construct",  m ->
+            {
+            if (m.getParamCount() < cArgs || m.getRequiredParamCount() > cArgs)
+                {
+                return false;
+                }
+
+            TypeConstant[] atypeParam = m.getParamTypes();
+            for (int i = 0; i < cArgs; i++)
+                {
+                Constant constArg = aconstArgs[i];
+                if (constArg instanceof FrameDependentConstant)
+                    {
+                    continue;
+                    }
+                // we know the ValueConstants do produce the right type by getType() method,
+                // but some others (as PropertyClassTypeConstant) require special handling;
+                // we may need to augment the logic below for other Constant sub-types
+                TypeConstant typeArg = constArg instanceof PropertyClassTypeConstant constProp
+                        ? constProp.getProperty().getValueType(pool, null)
+                        : constArg.getType();
+                if (!typeArg.isA(atypeParam[i].resolveGenerics(pool, typeTarget)))
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            });
+        }
+
+    /**
      * Helper method to find a property by the name for this class and all its contributions.
      *
      * @param sName  the property name to find

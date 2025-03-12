@@ -2673,7 +2673,7 @@ public class TypeCompositionStatement
 
             for (Map.Entry<Contribution, List<Expression>> entry : m_mapContribArgs.entrySet())
                 {
-                Contribution  contrib = entry.getKey();
+                Contribution contrib = entry.getKey();
 
                 TypeConstant     typeSuper;
                 List<Expression> listSuperArgs;
@@ -3006,9 +3006,9 @@ public class TypeCompositionStatement
                 }
             }
 
-        if (getComponent().getFormat() == Format.MIXIN)
+        if (getComponent().getFormat() == Format.ANNOTATION)
             {
-            // annotation mixins are applied to the underlying classes dynamically and need to
+            // annotations are applied to the underlying classes dynamically and need to
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
             }

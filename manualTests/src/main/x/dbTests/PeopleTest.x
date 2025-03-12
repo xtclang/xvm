@@ -6,7 +6,7 @@
  *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/PeopleTest.x
  */
 module PeopleTest
-        incorporates TerminalApp {
+        incorporates TerminalAppMixin("People DB Test") {
 
     package cli      import cli.xtclang.org;
     package oodb     import oodb.xtclang.org;
@@ -104,22 +104,22 @@ module PeopleTest
             modify(key, p -> p.with(firstName=name));
         }
     }
-    
+
     @Command("middle", "Change or set or remove a middle name")
     void setmiddle(Int key, String name) {
         modify(key, p -> p.with(middleName=name));
     }
-    
+
     @Command("last", "Change or set or remove a last name")
     void setlast(Int key, String name) {
         modify(key, p -> p.with(lastName=name));
     }
-    
+
     @Command("nick", "Change or set or remove a nickname")
     void setNick(Int key, String name) {
         modify(key, p -> p.with(nickName=name));
     }
-    
+
     @Command("phone", "Change or set or remove a phone number")
     void setPhone(Int key, String text) {
         modify(key, p -> p.with(phone=text));
