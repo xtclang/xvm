@@ -226,6 +226,7 @@ public class xRTClassTemplate
                 case CONST:
                 case ENUM:
                 case ENUMVALUE:
+                case ANNOTATION:
                 case MIXIN:
                 case SERVICE:
                     listTemplates.add(xRTClassTemplate.makeHandle(container, (ClassStructure) child));

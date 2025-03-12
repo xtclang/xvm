@@ -369,6 +369,7 @@ public class xRTComponentTemplate
             case INTERFACE:
             case ENUM:
             case ENUMVALUE:
+            case ANNOTATION:
             case MIXIN:
             case SERVICE:
                 return xRTClassTemplate.makeHandle(container, (ClassStructure) component);

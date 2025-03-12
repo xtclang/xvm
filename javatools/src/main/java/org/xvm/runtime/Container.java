@@ -328,15 +328,12 @@ public abstract class Container
             ClassTemplate temp;
             switch (structClass.getFormat())
                 {
-                case ENUMVALUE:
-                case ENUM:
+                case ENUMVALUE, ENUM:
                     temp = new xEnum(this, structClass, false);
                     temp.initNative();
                     break;
 
-                case MIXIN:
-                case CLASS:
-                case INTERFACE:
+                case ANNOTATION, MIXIN, CLASS, INTERFACE:
                     temp = structClass.isInstanceChild()
                         ? new Child(this,   structClass)
                         : new xObject(this, structClass, false);
