@@ -55,7 +55,7 @@ module TestNesting {
             }
         }
 
-        mixin M into A {
+        annotation M into A {
             @Override
             void foo() {
                 console.print("PB.M.foo() this=" + this);
