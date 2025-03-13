@@ -218,6 +218,84 @@ public abstract class CompositionNode
         }
 
 
+    // ----- inner class: Annotates ----------------------------------------------------------------
+
+    public static class Annotates
+            extends CompositionNode
+        {
+        public Annotates(AnnotationExpression annotation)
+            {
+            super(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
+                    Token.Id.ANNOTATION), annotation.type);
+            this.annotation = annotation;
+            }
+
+        public Annotation ensureAnnotation(ConstantPool pool)
+            {
+            return annotation.ensureAnnotation(pool);
+            }
+
+        @Override
+        public long getEndPosition()
+            {
+            List<Expression> listArgs = annotation.args;
+            return listArgs != null && !listArgs.isEmpty()
+                    ? listArgs.getLast().getEndPosition()
+                    : super.getEndPosition();
+            }
+
+        @Override
+        protected Field[] getChildFields()
+            {
+            return CHILD_FIELDS;
+            }
+
+        @Override
+        public String toString()
+            {
+            StringBuilder sb = new StringBuilder();
+
+            if (condition != null)
+                {
+                sb.append("if (")
+                  .append(condition)
+                  .append(") { ");
+                }
+
+            sb.append(keyword.getId().TEXT)
+              .append(' ')
+              .append(annotation.type);
+
+            if (annotation.args != null)
+                {
+                sb.append('(');
+                boolean first = true;
+                for (Expression arg : annotation.args)
+                    {
+                    if (first)
+                        {
+                        first = false;
+                        }
+                    else
+                        {
+                        sb.append(", ");
+                        }
+                    sb.append(arg);
+                    }
+                sb.append(')');
+                }
+
+            sb.append(toEndString());
+            return sb.toString();
+            }
+
+        protected AnnotationExpression annotation;
+
+        private static final Field[] CHILD_FIELDS = fieldsForNames(Annotates.class,
+                "annotation");
+        }
+
+
     // ----- inner class: Incorporates -------------------------------------------------------------
 
     public static class Incorporates
@@ -232,38 +310,12 @@ public abstract class CompositionNode
             }
 
         /**
-         * Converts an annotation to an "incorporate" clause.
-         *
-         * @param annotation  the Annotation to create an Incorporates for
-         */
-        public Incorporates(AnnotationExpression annotation)
-            {
-            this(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
-                    Token.Id.INCORPORATES), annotation.type, annotation.args, null);
-            this.annotation = annotation;
-            }
-
-        /**
          * @return true iff the incorporates clause is conditional based on the generic parameters
          *         of the specified type
          */
         public boolean isConditional()
             {
             return constraints != null;
-            }
-
-        /**
-         * @return true iff this clause represents a class annotation
-         */
-        public boolean isAnnotation()
-            {
-            return annotation != null;
-            }
-
-        public Annotation ensureAnnotation(ConstantPool pool)
-            {
-            assert isAnnotation();
-            return annotation.ensureAnnotation(pool);
             }
 
         /**
@@ -357,10 +409,8 @@ public abstract class CompositionNode
         protected List<Expression> args;
         protected List<Parameter>  constraints;
 
-        protected AnnotationExpression annotation;
-
         private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
-                "condition", "type", "args", "constraints", "annotation");
+                "condition", "type", "args", "constraints");
         }
 
 

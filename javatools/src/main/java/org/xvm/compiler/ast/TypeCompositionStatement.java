@@ -84,6 +84,7 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.CompositionNode.Annotates;
 import org.xvm.compiler.ast.CompositionNode.Default;
 import org.xvm.compiler.ast.CompositionNode.Delegates;
 import org.xvm.compiler.ast.CompositionNode.Extends;
@@ -932,7 +933,7 @@ public class TypeCompositionStatement
             for (AnnotationExpression annotation : annotations)
                 {
                 annotation.ensureAnnotation(pool);
-                compositions.add(new Incorporates(annotation));
+                compositions.add(new Annotates(annotation));
                 }
             }
 
@@ -1346,9 +1347,20 @@ public class TypeCompositionStatement
                         }
                     break;
 
+                case ANNOTATION:
+                    Annotates anno = (Annotates) composition;
+
+                    // these are all OK; other checks will be done after the types are resolvable
+                    for (ClassStructure struct : componentList)
+                        {
+                        // register the annotation
+                        struct.addAnnotation(anno.ensureAnnotation(pool));
+                        }
+                    break;
+
                 case INCORPORATES:
                     Incorporates incorp = (Incorporates) composition;
-                    if (format == Format.INTERFACE && !incorp.isAnnotation())
+                    if (format == Format.INTERFACE)
                         {
                         // interface can't incorporate
                         composition.log(errs, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, keyword.TEXT);
@@ -1356,37 +1368,26 @@ public class TypeCompositionStatement
                     else
                         {
                         // these are all OK; other checks will be done after the types are resolvable
-                        if (incorp.isAnnotation())
+                        ListMap<String, TypeConstant> mapConstraints = null;
+                        if (incorp.isConditional())
                             {
-                            for (ClassStructure struct : componentList)
+                            mapConstraints = new ListMap<>();
+                            for (Parameter constraint : incorp.getConstraints())
                                 {
-                                // register the annotation
-                                struct.addAnnotation(incorp.ensureAnnotation(pool));
+                                // type is null means no constraint
+                                TypeExpression type = constraint.getType();
+                                mapConstraints.put(constraint.getName(),
+                                        type == null ? null : type.ensureTypeConstant());
                                 }
                             }
-                        else
-                            {
-                            ListMap<String, TypeConstant> mapConstraints = null;
-                            if (incorp.isConditional())
-                                {
-                                mapConstraints = new ListMap<>();
-                                for (Parameter constraint : incorp.getConstraints())
-                                    {
-                                    // type is null means no constraint
-                                    TypeExpression type = constraint.getType();
-                                    mapConstraints.put(constraint.getName(),
-                                            type == null ? null : type.ensureTypeConstant());
-                                    }
-                                }
 
-                            for (ClassStructure struct : componentList)
-                                {
-                                // register the mixin that the component incorporates
-                                Contribution contrib = struct.addIncorporates(
-                                        composition.getType().ensureTypeConstant(), mapConstraints);
-                                composition.setContribution(contrib);
-                                m_mapContribArgs.put(contrib, incorp.args);
-                                }
+                        for (ClassStructure struct : componentList)
+                            {
+                            // register the mixin that the component incorporates
+                            Contribution contrib = struct.addIncorporates(
+                                    composition.getType().ensureTypeConstant(), mapConstraints);
+                            composition.setContribution(contrib);
+                            m_mapContribArgs.put(contrib, incorp.args);
                             }
                         }
                     break;
@@ -2243,7 +2244,6 @@ public class TypeCompositionStatement
                         composition instanceof Extends nodeExtends
                             ? nodeExtends.args :
                         composition instanceof Incorporates nodeIncorp
-                                && !nodeIncorp.isAnnotation()
                             ? nodeIncorp.args
                             : null;
 
