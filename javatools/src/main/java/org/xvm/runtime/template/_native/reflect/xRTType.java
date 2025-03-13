@@ -1243,7 +1243,7 @@ public class xRTType
         ConstantPool  pool     = frame.poolContext();
         TypeConstant  typeThis = hType.getDataType();
         GenericHandle hAnno    = (GenericHandle) hArg;
-        ObjectHandle  hMixin   = hAnno.getField(frame, "mixinClass");
+        ObjectHandle  hMixin   = hAnno.getField(frame, "annoClass");
         TypeConstant  typeAnno;
 
         if (hMixin instanceof ClassHandle hClass)

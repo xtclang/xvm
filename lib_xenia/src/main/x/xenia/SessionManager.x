@@ -379,8 +379,8 @@ service SessionManager
      *
      * @param request  the request information
      *
-     * @return a new [SessionImpl] object, including any mixins declared by the application, or the
-     *         [HttpStatus] describing why the session could not be created
+     * @return a new [SessionImpl] object, incorporating all session annotations declared by the
+     *         application, or the [HttpStatus] describing why the session could not be created
      */
     HttpStatus|SessionImpl createSession(RequestIn request) {
         Int64       id      = generateId();

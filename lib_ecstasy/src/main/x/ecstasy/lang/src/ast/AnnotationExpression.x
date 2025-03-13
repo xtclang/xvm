@@ -25,9 +25,9 @@ const AnnotationExpression(TypeExpression name,
      * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
     conditional Annotation resolveAnnotation(TypeSystem typeSystem, Boolean hideExceptions = False) {
-        Class mixinClass;
-        if (Type mixinType  := name.resolveType(typeSystem, hideExceptions),
-                 mixinClass := mixinType.fromClass()) {} else {
+        Class annoClass;
+        if (Type annoType  := name.resolveType(typeSystem, hideExceptions),
+                 annoClass := annoType.fromClass()) {} else {
             return False;
         }
 
@@ -47,7 +47,7 @@ const AnnotationExpression(TypeExpression name,
 
         try {
             // create the annotation
-            return True, new Annotation(mixinClass, values);
+            return True, new Annotation(annoClass, values);
         } catch (InvalidType e) {
             if (hideExceptions) {
                 return False;

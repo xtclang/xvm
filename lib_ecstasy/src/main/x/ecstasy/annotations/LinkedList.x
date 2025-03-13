@@ -153,7 +153,7 @@ annotation LinkedList<Element>
      */
     protected Argument[] annotationArgs.get() {
         for (Annotation anno : annotations) {
-            val clz = anno.mixinClass;
+            val clz = anno.annoClass;
             if (clz == LinkedList || clz.derivesFrom(LinkedList)) {
                 return anno.arguments;
             }

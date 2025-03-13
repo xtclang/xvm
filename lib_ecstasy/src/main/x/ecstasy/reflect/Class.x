@@ -227,13 +227,7 @@ const Class<PublicType, ProtectedType extends PublicType,
 
     /**
      * Obtain the deannotated form of this class, and the annotations, if any, that were added to
-     * the original underlying class. Note that the original underlying class may appear in the
-     * source code to be annotated, but the use of the annotation syntax in a class declaration is
-     * used to incorporate mixins into the underling class definition itself, and are not considered
-     * to be annotations; for example, "MyAnnotation" is incorporated into "MyClass", and is not an
-     * annotation:
-     *
-     *     @MyAnnotation class MyClass {...}
+     * the original underlying class.
      *
      * @return the underlying class
      * @return an array of the annotations that were applied to the underlying class
@@ -417,35 +411,29 @@ const Class<PublicType, ProtectedType extends PublicType,
     }
 
     /**
-     * Determine if the class of the referent is a mixin that applies to the specified type.
+     * Determine if the class of the referent is an annotation or a mixin that applies to the
+     * specified type.
      *
      * @param type  the type to test if this mixin applies to
      *
-     * @return True iff this mixin applies to the specified type
+     * @return True iff this annotation or mixin applies to the specified type
      */
-    Boolean mixesInto(Type type) {
-        // only a mixin can be "into"
-        if (baseTemplate.format != Mixin) {
-            return False;
-        }
-
-        return this.composition.mixesInto(type.template);
-    }
+    Boolean mixesInto(Type type) = this.composition.mixesInto(type.template);
 
     /**
-     * Determine if the class of the referent is annotated by the specified mixin.
+     * Determine if the class of the referent is annotated by the specified annotation.
      *
-     * @param mix  the annotation class to test if this class is annotated by
+     * @param anno  the annotation class to test if this class is annotated by
      *
      * @return True iff this class is annotated by the specified class
      */
-    conditional AnnotationTemplate annotatedBy(Class!<> mix) {
+    conditional AnnotationTemplate annotatedBy(Class!<> anno) {
         // one can only be annotated by an annotation class
-        if (mix.baseTemplate.format != Mixin) {
+        if (anno.baseTemplate.format != Annotation) {
             return False;
         }
 
-        return composition.findAnnotation(mix.displayName);
+        return composition.findAnnotation(anno.displayName);
     }
 
     /**
@@ -476,12 +464,14 @@ const Class<PublicType, ProtectedType extends PublicType,
      * Determine if this class "derives from" another class.
      *
      * @return True iff this (or something that this derives from) extends the specified class,
-     *         incorporates the specified mixin, or implements the specified interface
+     *         incorporates the specified mixin, annotated by the spcified annotation or implements
+     *         the specified interface
      */
     Boolean derivesFrom(Class!<> clz) {
         return &this == &clz
                 || this.extends(clz)
                 || this.incorporates(clz)
+                || this.annotatedBy(clz)
                 || this.implements(clz);
     }
 

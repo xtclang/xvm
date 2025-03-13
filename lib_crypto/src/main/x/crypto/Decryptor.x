@@ -37,7 +37,8 @@ interface Decryptor
      *
      * @param source       an underlying stream that the [Decryptor] will use to read the encrypted
      *                     data that needs to be decrypted
-     * @param annotations  (optional) one or more mixins to include in the returned [BinaryInput]
+     * @param annotations  (optional) one or more annotations to incorporate in the returned
+     *                     [BinaryInput]
      *
      * @return the `BinaryInput` to read the decrypted data from
      */

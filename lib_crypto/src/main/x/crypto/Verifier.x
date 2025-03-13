@@ -61,7 +61,7 @@ interface Verifier
      * @param signature    the previously generated [Signature] (or `Byte[]`) to verify
      * @param destination  (optional) an underlying stream that the [OutputSigner] will use to write
      *                     through all of the data that is written to the `OutputSigner`
-     * @param annotations  (optional) one or more mixins to include in the [OutputSigner]
+     * @param annotations  (optional) one or more annotations to incorporate in the [OutputSigner]
      */
     OutputVerifier createOutputVerifier(Digest        signature,
                                         BinaryOutput? destination = Null,
@@ -87,7 +87,7 @@ interface Verifier
      *
      * @param destination  (optional) an underlying stream that the [InputVerifier] will use to read
      *                     through all of the data that is read from the `InputVerifier`
-     * @param annotations  (optional) one or more mixins to include in the [InputVerifier]
+     * @param annotations  (optional) one or more annotations to incorporate in the [InputVerifier]
      */
     InputVerifier createInputVerifier(BinaryInput  source,
                                       Annotations? annotations = Null);

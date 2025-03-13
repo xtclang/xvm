@@ -216,13 +216,13 @@ service HttpHandler
 
         SessionProducer sessionProducer;
 
-        Class[] sessionMixins = catalog.sessionMixins;
-        Int     mixinCount    = sessionMixins.size;
+        Class[] sessionAnnos = catalog.sessionAnnos;
+        Int     count        = sessionAnnos.size;
 
-        if (mixinCount == 0) {
+        if (count == 0) {
             sessionProducer = (mgr, id, request) -> new SessionImpl(mgr, id, request);
         } else {
-            Annotation[] annotations  = new Annotation[mixinCount] (i -> new Annotation(sessionMixins[i]));
+            Annotation[] annotations  = new Annotation[count] (i -> new Annotation(sessionAnnos[i]));
             Class        sessionClass = SessionImpl.annotate(annotations);
 
             sessionProducer = (mgr, id, request) -> {

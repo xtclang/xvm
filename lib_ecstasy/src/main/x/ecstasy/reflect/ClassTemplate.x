@@ -63,8 +63,9 @@ interface ClassTemplate
              */
             Delegates,
             /**
-             * MixesInto - The `ingredient` represents the constraint type for a `mixin`; it is the
-             * type that the mixin can be applied to as an annotation, or can be incorporated into.
+             * MixesInto - The `ingredient` represents the constraint type for an `annotation` or
+             * a `mixin`; it is the type that the annotation can annotate, or the mixin can
+             * be incorporated into.
              */
             MixesInto,
             /**
@@ -281,13 +282,15 @@ interface ClassTemplate
          * @return True iff this mixin applies to the specified type
          */
         Boolean mixesInto(TypeTemplate type) {
-            // only a mixin can be "into"
-            if (baseTemplate.format != Mixin) {
+            // only annotations and mixins can be "into"
+            if (baseTemplate.format != Annotation && baseTemplate.format != Mixin) {
                 return False;
             }
 
             assert TypeTemplate intoType := findInto(this.as(ClassTemplate)) as
-                    "Mixin {displayName} doesn't have an 'into' contribution";
+                    $|{baseTemplate.format} "{baseTemplate.displayName}" does not have an \
+                     |"into" contribution"
+                     ;
 
             return isInto(intoType, type);
 
@@ -307,8 +310,8 @@ interface ClassTemplate
             }
 
             /**
-             * Given some `mixin M into intoType`, determine if that mixin can be legally mixed into
-             * some class whose type is `testType`.
+             * Given some ``annotation A into intoType` or mixin M into intoType`, determine if that
+             * A or M class can be legally mixed into a class whose type is `testType`.
              *
              * @return True iff the mixin can be legally mixed into the specified `testType`
              */
@@ -428,6 +431,7 @@ interface ClassTemplate
         Boolean derivesFrom(Composition! composition) {
             return &this == &composition
                     || this.extends(composition)
+                    || this.annotatedBy(composition)
                     || this.incorporates(composition)
                     || this.implements(composition);
         }
@@ -439,6 +443,7 @@ interface ClassTemplate
          *   a super-class.
          * * A Class whose category is Module, Package, Const, Enum, or Service will **always** have a
          *   super-class.
+         * * An Annotation _may_ have a super-class, which must be an `annotation`.
          * * A Mixin _may_ have a super-class, which must be a `mixin`.
          * * An Interface will *never* have a super-class.
          *
@@ -512,7 +517,7 @@ interface ClassTemplate
                     if (contrib.action == Extends) {
                         assert Composition compositionSuper := contrib.ingredient.fromClass();
                         assert compositionSuper.is(ClassTemplate);
-                        if (compositionSuper.format == Mixin) {
+                        if (compositionSuper.format == Annotation) {
                             return compositionSuper.displayName == annoName
                                 || extendsAnnotation(compositionSuper, annoName);
                         }

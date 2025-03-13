@@ -136,15 +136,15 @@ import net.IPAddress;
  * properties), and when that authentication occurred (the [lastAuthenticated] property), and the
  * application can explicitly [authenticate] or [deauthenticate] a user. There are also
  * notifications that occur on the session of significant changes and events; these require the
- * application to provide a session mix-in.
+ * application to provide a session mix-in in the form of an annotation.
  *
- * The use of custom mix-ins allows an application (or framework, etc.) to enhance a session by
+ * The use of custom annotations allows an application (or framework, etc.) to enhance a session by
  * adding state and functionality to the session that is created and managed automatically by the
  * server. For example, if an application needs to hold onto some resource in the session, and
  * release the resource if the user logs out (or the session is destroyed), then it can place all of
  * that capability into a session mix-in:
  *
- *     mixin AppSession
+ *     annotation AppSession
  *             into Session {
  *         Resource? resource;
  *
@@ -156,8 +156,8 @@ import net.IPAddress;
  *         }
  *     }
  *
- * The _presence_ of a session mix-in is enough; the server will automatically incorporate each
- * present session mix-in into each session object.
+ * The _presence_ of a session annotation is enough; the server will automatically incorporate
+ * each present session annotation into every session object.
  *
  * There are a few rules that must be followed when creating a session mix-in:
  *
@@ -221,10 +221,10 @@ interface Session
     /**
      * General purpose session attributes.
      *
-     * While it is expected that applications will add their own properties to their session mixins
-     * instead of using this generic dictionary structure, having this built in to the `Session`
-     * interface simplifies the task of building reusable components and frameworks. Specifically,
-     * they can rely on this built-in storage for their session-related information.
+     * While it is expected that applications will add their own properties to their session
+     * annotations instead of using this generic dictionary structure, having this built in to the
+     * `Session` interface simplifies the task of building reusable components and frameworks.
+     * Specifically, they can rely on this built-in storage for their session-related information.
      *
      * The contents of this property may be modified by the application.
      */
