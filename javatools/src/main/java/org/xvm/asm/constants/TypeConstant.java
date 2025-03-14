@@ -4350,7 +4350,7 @@ public abstract class TypeConstant
 
             if (fAnnotation)
                 {
-                if (bodyContrib.getImplementation() == Implementation.Implicit)
+                if (methodContrib.isAbstract())
                     {
                     // this was added synthetically by "asInto" processing; ignore
                     continue;
