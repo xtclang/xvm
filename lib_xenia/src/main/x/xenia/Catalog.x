@@ -80,8 +80,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                                 EndpointInfo?  defaultGet,
                                 MethodInfo[]   interceptors,
                                 MethodInfo[]   observers,
-                                MethodInfo?    onError,
-                                MethodInfo?    route
+                                MethodInfo?    onError
                                 ) {
         /**
          * The number of endpoints for this WebService.
@@ -558,7 +557,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
             MethodInfo[]   interceptors = new MethodInfo[];
             MethodInfo[]   observers    = new MethodInfo[];
             MethodInfo?    onError      = Null;
-            MethodInfo?    route        = Null;
 
             static void validateEndpoint(Method method) {
                 Int returnCount = method.returns.size;
@@ -623,17 +621,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                                               );
                     }
                     break;
-
-                default:
-                    if (method.name == "route" && method.params.size >= 4 &&
-                            method.params[0].ParamType == Session         &&
-                            method.params[1].ParamType == RequestIn       &&
-                            method.params[2].ParamType == Handler         &&
-                            method.params[3].ParamType == ErrorHandler) {
-                        assert route == Null;
-                        route = new MethodInfo(method, wsid);
-                    }
-                    break;
                 }
             }
 
@@ -658,7 +645,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
 
             webServiceInfos += new WebServiceInfo(wsid++,
                     servicePath, classInfo.constructor,
-                    endpoints, defaultGet, interceptors, observers, onError, route);
+                    endpoints, defaultGet, interceptors, observers, onError);
         }
         return webServiceInfos;
     }
