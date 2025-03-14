@@ -6,7 +6,7 @@
  *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/PeopleTest.x
  */
 module PeopleTest
-        incorporates TerminalAppMixin("People DB Test") {
+        incorporates TerminalApp.Mixin("People DB Test") {
 
     package cli      import cli.xtclang.org;
     package oodb     import oodb.xtclang.org;

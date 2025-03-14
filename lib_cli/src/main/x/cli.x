@@ -37,7 +37,6 @@ module cli.xtclang.org {
      */
     annotation TerminalApp
             into module {
-
         /**
          * The annotation constructor.
          *
@@ -66,30 +65,31 @@ module cli.xtclang.org {
          * the framework itself from the output by the user code.
          */
         void print(Object o) = console.print($"{messagePrefix} {o}");
-    }
 
-    /**
-     * TerminalAppMixin is useful when a CLI application needs to override the [run()] method, in
-     * which case the application code would have to start with the following:
-     *
-     *     module MyCommands
-     *             incorporates TerminalAppMixin("My commands") {
-     *
-     *         @Override
-     *         void run(String[] args) {
-     *             // custom implementation
-     *         }
-     *         ...
-     *     }
-     *
-     */
-    @TerminalApp
-    mixin TerminalAppMixin
-            into module {
-        construct(String description   = "",
-                  String commandPrompt = "> ",
-                  String messagePrefix = "# ") {
-            construct TerminalApp(description, commandPrompt, messagePrefix);
+        /**
+         * This mixin is useful when a CLI application needs to override the [run()] method, in
+         * which case the application code would have to start with the following:
+         *
+         *     module MyCommands
+         *             incorporates TerminalApp.Mixin("My commands") {
+         *
+         *         @Override
+         *         void run(String[] args) {
+         *             // custom implementation
+         *         }
+         *         ...
+         *     }
+         *
+         */
+        @TerminalApp
+        static mixin Mixin
+                into module {
+            construct(String description   = "",
+                      String commandPrompt = "> ",
+                      String messagePrefix = "# "
+                     ) {
+                construct TerminalApp(description, commandPrompt, messagePrefix);
+            }
         }
     }
 

@@ -53,7 +53,7 @@ module webcli.xtclang.org {
                            String     messagePrefix = "# ",
                            AuthMethod auth          = Callback,
                            Duration   timeout       = Duration:1m,
-                )
+                           )
             extends cli.TerminalApp(description, commandPrompt, messagePrefix) {
 
         import web.HttpStatus;
@@ -99,6 +99,19 @@ module webcli.xtclang.org {
          */
         (String, HttpStatus) upload(String path, File file, MediaType? mediaType = Null) =
                 Gateway.upload(path, file, mediaType);
+
+        @TerminalApp
+        static mixin Mixin
+                extends cli.TerminalApp.Mixin {
+            construct(String     description   = "",
+                      String     commandPrompt = "> ",
+                      String     messagePrefix = "# ",
+                      AuthMethod auth          = Callback,
+                      Duration   timeout       = Duration:1m,
+                     ) {
+                construct TerminalApp(description, commandPrompt, messagePrefix);
+            }
+        }
     }
 
     static service Gateway {
