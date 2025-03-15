@@ -651,40 +651,32 @@ public abstract class ClassTemplate
             switch (method.getReturnCount())
                 {
                 case 0:
-                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_IGNORE))
+                    return switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_IGNORE))
                         {
-                        case Op.R_NEXT:
-                            return frame.assignValue(iReturn, xTuple.H_VOID);
-
-                        case Op.R_CALL:
+                        case Op.R_NEXT -> frame.assignValue(iReturn, xTuple.H_VOID);
+                        case Op.R_CALL ->
+                            {
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.assignValue(iReturn, xTuple.H_VOID));
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
+                            yield Op.R_CALL;
+                            }
+                        case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+                        default             -> throw new IllegalStateException();
+                        };
 
                 case 1:
-                    switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_STACK))
+                    return switch (invokeNative1(frame, method, hTarget, ahArg[0], Op.A_STACK))
                         {
-                        case Op.R_NEXT:
-                            return frame.assignTuple(iReturn, frame.popStack());
-
-                        case Op.R_CALL:
+                        case Op.R_NEXT -> frame.assignTuple(iReturn, frame.popStack());
+                        case Op.R_CALL ->
+                            {
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.assignTuple(iReturn, frameCaller.popStack()));
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
+                            yield Op.R_CALL;
+                            }
+                        case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+                        default             -> throw new IllegalStateException();
+                        };
 
                 default:
                     // create a temporary frame with N registers; call invokeNativeNN into it
@@ -699,7 +691,13 @@ public abstract class ClassTemplate
                 case 0 ->
                     switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_IGNORE))
                         {
-                        case Op.R_NEXT      -> frame.assignValue(iReturn, xTuple.H_VOID);
+                        case Op.R_NEXT -> frame.assignValue(iReturn, xTuple.H_VOID);
+                        case Op.R_CALL ->
+                            {
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                frameCaller.assignValue(iReturn, xTuple.H_VOID));
+                            yield Op.R_CALL;
+                            }
                         case Op.R_EXCEPTION -> Op.R_EXCEPTION;
                         default             -> throw new IllegalStateException();
                         };
@@ -707,9 +705,15 @@ public abstract class ClassTemplate
                 case 1 ->
                     switch (invokeNativeN(frame, method, hTarget, ahArg, Op.A_STACK))
                         {
-                        case Op.R_NEXT      -> frame.assignTuple(iReturn, frame.popStack());
+                        case Op.R_NEXT -> frame.assignTuple(iReturn, frame.popStack());
+                        case Op.R_CALL ->
+                            {
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                frameCaller.assignValue(iReturn, frameCaller.popStack()));
+                            yield Op.R_CALL;
+                            }
                         case Op.R_EXCEPTION -> Op.R_EXCEPTION;
-                        default             -> throw new IllegalStateException();
+                        default              -> throw new IllegalStateException();
                         };
 
                 default ->
