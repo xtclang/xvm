@@ -2201,7 +2201,7 @@ public class ClassStructure
 
         return findMethod("construct",  m ->
             {
-            if (m.getParamCount() < cArgs || m.getRequiredParamCount() > cArgs)
+            if (cArgs < m.getRequiredParamCount() || cArgs > m.getParamCount())
                 {
                 return false;
                 }

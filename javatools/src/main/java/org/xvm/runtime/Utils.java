@@ -1290,7 +1290,7 @@ public abstract class Utils
             this.aAnno   = aAnno;
             this.ahAnno  = new ObjectHandle[aAnno.length];
             this.iReturn = iReturn;
-            stageNext    = Stage.Anno;
+            stageNext    = Stage.Class;
             }
 
         @Override
@@ -1298,22 +1298,22 @@ public abstract class Utils
             {
             switch (stageNext)
                 {
-                case Anno:
+                case Class:
                     assert iAnno >= 0;
                     ahAnno[iAnno] = frameCaller.popStack();
                     break;
 
                 case ArgumentArray:
-                    hAnno = frameCaller.popStack();
+                    hAnnoClz = frameCaller.popStack();
+                    break;
+
+                case ArgumentValue:
+                    assert iArg >= 0;
+                    ahAnnoArg[iArg] = frameCaller.popStack();
                     break;
 
                 case Argument:
                     hValue = frameCaller.popStack();
-                    break;
-
-                case Value:
-                    assert iArg >= 0;
-                    ahAnnoArg[iArg] = frameCaller.popStack();
                     break;
 
                 default:
@@ -1330,10 +1330,10 @@ public abstract class Utils
                 {
                 switch (stageNext)
                     {
-                    case Anno:
+                    case Class:
                         {
                         // start working on a next Annotation
-                        assert hAnno == null;
+                        assert hAnnoClz  == null;
                         assert ahAnnoArg == null;
 
                         if (++iAnno == aAnno.length)
@@ -1345,19 +1345,19 @@ public abstract class Utils
                         Annotation    anno   = aAnno[iAnno];
                         ClassConstant idAnno = (ClassConstant) anno.getAnnotationClass();
 
-                        hAnno = frameCaller.getConstHandle(idAnno);
+                        hAnnoClz = frameCaller.getConstHandle(idAnno);
                         stageNext = Stage.ArgumentArray;
 
-                        if (Op.isDeferred(hAnno))
+                        if (Op.isDeferred(hAnnoClz))
                             {
-                            return hAnno.proceed(frameCaller, this);
+                            return hAnnoClz.proceed(frameCaller, this);
                             }
                         // fall through;
                         }
 
                     case ArgumentArray:
                         {
-                        assert hAnno != null;
+                        assert hAnnoClz  != null;
                         assert ahAnnoArg == null;
 
                         // start working on the Annotation arguments
@@ -1397,11 +1397,11 @@ public abstract class Utils
 
                         ahAnnoArg = new ObjectHandle[cParamsAll];
                         iArg      = -1;
-                        stageNext = Stage.Value;
+                        stageNext = Stage.ArgumentValue;
                         // break through
                         }
 
-                    case Value:
+                    case ArgumentValue:
                         {
                         assert ahAnnoArg != null;
 
@@ -1436,9 +1436,9 @@ public abstract class Utils
 
                     case Argument:
                         {
-                        assert ahAnnoArg      != null;
+                        assert ahAnnoArg     != null;
                         assert constructAnno != null;
-                        assert hValue         != null;
+                        assert hValue        != null;
 
                         // constructing Argument<Referent extends immutable Const>
                         //                  (Referent value, String? name = Null)
@@ -1452,7 +1452,7 @@ public abstract class Utils
                             {
                             frameCaller.m_frameNext.addContinuation(this);
 
-                            stageNext = CreateAnnos.Stage.Value;
+                            stageNext = Stage.ArgumentValue;
                             }
                         else
                             {
@@ -1463,20 +1463,20 @@ public abstract class Utils
 
                     case Annotation:
                         {
-                        assert hAnno != null;
+                        assert hAnnoClz != null;
                         assert ahAnnoArg != null;
 
-                        int iResult = constructAnnotation(frameCaller, (ClassHandle) hAnno, ahAnnoArg, Op.A_STACK);
+                        int iResult = constructAnnotation(frameCaller, (ClassHandle) hAnnoClz, ahAnnoArg, Op.A_STACK);
                         if (iResult == Op.R_CALL)
                             {
                             frameCaller.m_frameNext.addContinuation(this);
 
                             // when constructed, proceed() will insert the Annotation instance
                             // at iAnno index and continue to the next one
-                            hAnno = null;
-                            ahAnnoArg      = null;
+                            hAnnoClz      = null;
+                            ahAnnoArg     = null;
                             constructAnno = null;
-                            stageNext      = Stage.Anno;
+                            stageNext     = Stage.Class;
                             }
                         else
                             {
@@ -1490,7 +1490,7 @@ public abstract class Utils
                     makeAnnoArrayHandle(frameCaller.f_context.f_container, ahAnno));
             }
 
-        enum Stage {Anno, ArgumentArray, Value, Argument, Annotation}
+        enum Stage {Class, ArgumentArray, ArgumentValue, Argument, Annotation}
         private Stage stageNext;
 
         private final Annotation[]   aAnno;
@@ -1498,7 +1498,7 @@ public abstract class Utils
         private final ObjectHandle[] ahAnno;
 
         private int             iAnno = -1;
-        private ObjectHandle    hAnno;
+        private ObjectHandle    hAnnoClz;
         private MethodStructure constructAnno;
         private ObjectHandle[]  ahAnnoArg;
         private ObjectHandle    hValue;
