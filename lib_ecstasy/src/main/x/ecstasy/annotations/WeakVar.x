@@ -11,6 +11,6 @@
  * enqueued into the service's runtime event queue each time that the weak reference is cleared by
  * the garbage collector; see [Service.pendingRuntimeEvents] and [Service.dispatchRuntimeEvents].
  */
-mixin WeakVar<Referent>(function void ()? notify)
+annotation WeakVar<Referent>(function void ()? notify)
         into Var<Referent> {
 }

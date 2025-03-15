@@ -24,7 +24,7 @@
  * Note: all stateless API can be placed at the main module level. Any stateful API needs to placed
  *       inside of a class or service with a default constructor.
  *
- * In addition to all introspected commands, the TerminalApp mixin provides two built-in commands:
+ * In addition to all introspected commands, the TerminalApp provides two built-in commands:
  *      - help [command-opt]
  *      - quit
  */
@@ -33,13 +33,12 @@ module cli.xtclang.org {
     @Inject Console console;
 
     /**
-     * The mixin into a module.
+     * The module annotation.
      */
-    mixin TerminalApp()
+    annotation TerminalApp
             into module {
-
         /**
-         * The mixin constructor.
+         * The annotation constructor.
          *
          * @param description    the CLI tool description
          * @param commandPrompt  the command prompt
@@ -50,7 +49,6 @@ module cli.xtclang.org {
                   String commandPrompt = "> ",
                   String messagePrefix = "# "
                  ) {
-
             this.messagePrefix = messagePrefix;
             Runner.initialize(description, commandPrompt);
         }
@@ -67,6 +65,32 @@ module cli.xtclang.org {
          * the framework itself from the output by the user code.
          */
         void print(Object o) = console.print($"{messagePrefix} {o}");
+
+        /**
+         * This mixin is useful when a CLI application needs to override the [run()] method, in
+         * which case the application code would have to start with the following:
+         *
+         *     module MyCommands
+         *             incorporates TerminalApp.Mixin("My commands") {
+         *
+         *         @Override
+         *         void run(String[] args) {
+         *             // custom implementation
+         *         }
+         *         ...
+         *     }
+         *
+         */
+        @TerminalApp
+        static mixin Mixin
+                into module {
+            construct(String description   = "",
+                      String commandPrompt = "> ",
+                      String messagePrefix = "# "
+                     ) {
+                construct TerminalApp(description, commandPrompt, messagePrefix);
+            }
+        }
     }
 
     /**
@@ -75,7 +99,7 @@ module cli.xtclang.org {
      * @param cmd    the command name
      * @param descr  the command description
      */
-    mixin Command(String cmd = "", String descr = "")
+    annotation Command(String cmd = "", String descr = "")
             into Method<Object>;
 
     /**
@@ -83,12 +107,12 @@ module cli.xtclang.org {
      *
      * @param text  the parameter description
      */
-    mixin Desc(String? text = Null)
+    annotation Desc(String? text = Null)
             into Parameter<Object>;
 
     /**
      * The "suppress echo" mixin into a command method parameter.
      */
-    mixin NoEcho()
+    annotation NoEcho()
             into Parameter<Object>;
 }

@@ -1,10 +1,10 @@
 /**
- * The DataOutput interface represents a output stream of values of various fundamental Ecstasy
+ * The PackedDataOutput annotation represents an output stream of values of various basic Ecstasy
  * types. It provides default implementations for some methods, but does not prescribe an underlying
  * data format. For example, integers could be fixed length or compressed, and characters could be
  * encoded as UTF-8, UTF-16, UTF-32, or even ASCII.
  */
-mixin PackedDataOutput
+annotation PackedDataOutput
         into BinaryOutput
         implements DataOutput {
     @Override

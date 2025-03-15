@@ -2104,11 +2104,11 @@ public abstract class ClassTemplate
         {
         // call annotation constructors;
         // hRef's type is "struct of annotated type" or PropertyClassTypeConstant
-        AnnotatedTypeConstant typeAnno  = (AnnotatedTypeConstant) hRef.getComposition().getBaseType();
-        TypeConstant          typeMixin = typeAnno.getAnnotationType();
-        ClassTemplate         mixin     = frame.f_context.f_container.getTemplate(typeMixin);
+        AnnotatedTypeConstant constAnno = (AnnotatedTypeConstant) hRef.getComposition().getBaseType();
+        TypeConstant          typeAnno  = constAnno.getAnnotationType();
+        ClassTemplate         anno      = frame.f_context.f_container.getTemplate(typeAnno);
 
-        switch (mixin.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK))
+        switch (anno.proceedConstruction(frame, null, true, hRef, Utils.OBJECTS_NONE, Op.A_STACK))
             {
             case Op.R_NEXT:
                 hRef = (RefHandle) frame.peekStack();
@@ -2476,9 +2476,9 @@ public abstract class ClassTemplate
         private final int             iReturn;
 
         // internal fields
-        private final Annotation[] aAnnoMixin; // annotation mixins to construct
+        private final Annotation[] aAnnoMixin; // annotations to construct
         private final boolean      fAnonymous;
-        private int                ixAnno;     // index of the next annotation mixin
+        private int                ixAnno;     // index of the next annotation
         private List<Frame>        listFinalizable;
         private int                ixStep;
 
@@ -2549,7 +2549,7 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 2: // call annotation mixin constructors
+                    case 2: // call annotation constructors
                         {
                         if (aAnnoMixin.length > 0)
                             {

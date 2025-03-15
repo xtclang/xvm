@@ -46,10 +46,10 @@ module web.xtclang.org {
      */
     enum TrustLevel {None, Normal, High, Highest}
 
-    // ----- WebApp mixins -------------------------------------------------------------------------
+    // ----- WebApp annotations --------------------------------------------------------------------
 
     /**
-     * A mixin to indicate the media-types produced by a particular component.
+     * A annotation to indicate the media-types produced by a particular component.
      *
      * The String `mediaType` value must **not** include wild-cards.
      *
@@ -65,11 +65,11 @@ module web.xtclang.org {
      *     @Produces(Json)
      *     conditional Cart getCart(@UriParam("id") String id, Session session) {...}
      */
-    mixin Produces(MediaType|MediaType[] produces)
+    annotation Produces(MediaType|MediaType[] produces)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
-     * A mixin to indicate the media-types consumed by a particular component.
+     * A annotation to indicate the media-types consumed by a particular component.
      *
      * The String `mediaType` value may include wild-cards, as allowed in an "Accept" header.
      *
@@ -85,7 +85,7 @@ module web.xtclang.org {
      *     @Consumes(Json)
      *     HttpStatus updateItem(@UriParam String id, @BodyParam Item item) {...}
      */
-    mixin Consumes(MediaType|MediaType[] consumes)
+    annotation Consumes(MediaType|MediaType[] consumes)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -112,7 +112,7 @@ module web.xtclang.org {
      * few points where a change occurs from "requiring a session" to "not requiring a session", or
      * vice versa.
      */
-    mixin SessionRequired
+    annotation SessionRequired
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -122,7 +122,7 @@ module web.xtclang.org {
      * For more information, see the detailed description of the [@SessionRequired](SessionRequired)
      * annotation.
      */
-    mixin SessionOptional
+    annotation SessionOptional
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -152,7 +152,7 @@ module web.xtclang.org {
      * @param security  [TrustLevel] of security that is required by the annotated operation or
      *                  web service
      */
-    mixin LoginRequired(TrustLevel security=Normal, Boolean autoRedirect=False)
+    annotation LoginRequired(TrustLevel security=Normal, Boolean autoRedirect=False)
             extends HttpsRequired(autoRedirect);
 
     /**
@@ -163,7 +163,7 @@ module web.xtclang.org {
      * For more information, see the detailed description of the [@LoginRequired](LoginRequired)
      * annotation.
      */
-    mixin LoginOptional
+    annotation LoginOptional
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -189,7 +189,7 @@ module web.xtclang.org {
      *
      *     Boolean accountAccess(RequestIn request) {...}
      */
-    mixin Restrict(String?|Method<WebService, <>, <Boolean>> permission = Null,
+    annotation Restrict(String?|Method<WebService, <>, <Boolean>> permission = Null,
                    Boolean autoRedirect = False)
             extends HttpsRequired(autoRedirect=autoRedirect);
 
@@ -220,7 +220,7 @@ module web.xtclang.org {
      * Regarding the default of the `autoRedirect` of `False`, see the article:
      * [Your API Shouldn't Redirect HTTP to HTTPS](https://jviide.iki.fi/http-redirects)
      */
-    mixin HttpsRequired(Boolean autoRedirect = False)
+    annotation HttpsRequired(Boolean autoRedirect = False)
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -231,7 +231,7 @@ module web.xtclang.org {
      * For more information, see the detailed description of the [@HttpsRequired](HttpsRequired)
      * annotation.
      */
-    mixin HttpsOptional
+    annotation HttpsOptional
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -241,7 +241,7 @@ module web.xtclang.org {
      * memory by streaming the content, instead of reading it entirely into memory before (or while)
      * processing the request.
      */
-    mixin StreamingRequest
+    annotation StreamingRequest
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     /**
@@ -251,7 +251,7 @@ module web.xtclang.org {
      * implementation to save memory by streaming the content, instead of holding it entirely in
      * memory before starting to send it back to the client.
      */
-    mixin StreamingResponse
+    annotation StreamingResponse
             into Class<WebApp> | Class<WebService> | Endpoint;
 
     // ----- handler method annotations ------------------------------------------------------------
@@ -270,7 +270,7 @@ module web.xtclang.org {
      *                    part of the API; `Null` indicates that the API is not versioned or that
      *                    this `Endpoint` has been present since the original version of the API
      */
-    mixin Endpoint(HttpMethod httpMethod, String template = "", Version?|Range<Version> api = Null)
+    annotation Endpoint(HttpMethod httpMethod, String template = "", Version?|Range<Version> api = Null)
             into Method<WebService>;
 
     /**
@@ -282,7 +282,7 @@ module web.xtclang.org {
      *                  part of the API; `Null` indicates that the API is not versioned or that
      *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Get(String template = "", Version?|Range<Version> api = Null)
+    annotation Get(String template = "", Version?|Range<Version> api = Null)
             extends Endpoint(GET, template, api);
 
     /**
@@ -294,7 +294,7 @@ module web.xtclang.org {
      *                  part of the API; `Null` indicates that the API is not versioned or that
      *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Post(String template = "", Version?|Range<Version> api = Null)
+    annotation Post(String template = "", Version?|Range<Version> api = Null)
             extends Endpoint(POST, template, api);
 
     /**
@@ -306,7 +306,7 @@ module web.xtclang.org {
      *                  part of the API; `Null` indicates that the API is not versioned or that
      *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Patch(String template = "", Version?|Range<Version> api = Null)
+    annotation Patch(String template = "", Version?|Range<Version> api = Null)
             extends Endpoint(PATCH, template, api);
 
     /**
@@ -318,7 +318,7 @@ module web.xtclang.org {
      *                  part of the API; `Null` indicates that the API is not versioned or that
      *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Put(String template = "", Version?|Range<Version> api = Null)
+    annotation Put(String template = "", Version?|Range<Version> api = Null)
             extends Endpoint(PUT, template, api);
 
     /**
@@ -330,7 +330,7 @@ module web.xtclang.org {
      *                  part of the API; `Null` indicates that the API is not versioned or that
      *                  this `Endpoint` has been present since the original version of the API
      */
-    mixin Delete(String template = "", Version?|Range<Version> api = Null)
+    annotation Delete(String template = "", Version?|Range<Version> api = Null)
             extends Endpoint(DELETE, template, api);
 
     /**
@@ -342,7 +342,7 @@ module web.xtclang.org {
      *     @Default @Get
      *     ResponseOut handleMiss() {...}
      */
-    mixin Default
+    annotation Default
             into Endpoint;
 
     /**
@@ -353,7 +353,7 @@ module web.xtclang.org {
      *     @Intercept(GET)
      *     ResponseOut interceptGet(RequestIn request, Handler handle) {...}
      */
-    mixin Intercept(HttpMethod? httpMethod=Null)
+    annotation Intercept(HttpMethod? httpMethod=Null)
             into Method<WebService, <RequestIn, Handler>, <ResponseOut>>;
 
     /**
@@ -370,7 +370,7 @@ module web.xtclang.org {
      *     @Observe(DELETE)
      *     void logDeleteRequests(RequestIn request) {...}
      */
-    mixin Observe(HttpMethod? httpMethod=Null)
+    annotation Observe(HttpMethod? httpMethod=Null)
             into Method<WebService, <RequestIn>, <>>;
 
     /**
@@ -381,23 +381,23 @@ module web.xtclang.org {
      *     @OnError
      *     ResponseOut handleErrors(RequestIn request, Exception|String) {...}
      */
-    mixin OnError
+    annotation OnError
             into Method<WebService, <RequestIn, Exception|String|HttpStatus>, <ResponseOut>>;
 
     // ----- parameter annotations -----------------------------------------------------------------
 
     /**
-     * A mixin to indicate that a Parameter is bound to a request value.
+     * A annotation to indicate that a Parameter is bound to a request value.
      *
      * @param bindName  indicates the source of the value that will be bound to the parameter
      * @param format    indicates the textual format that the parameter will
      */
-    @Abstract mixin ParameterBinding(String? bindName = Null,
+    @Abstract annotation ParameterBinding(String? bindName = Null,
                                      String? format   = Null)
             into Parameter;
 
     /**
-     * A mixin to indicate that a Parameter is bound to a request URI path segment.
+     * A annotation to indicate that a Parameter is bound to a request URI path segment.
      *
      * Example:
      *
@@ -414,12 +414,12 @@ module web.xtclang.org {
      * @param format    allows a textual format to be specified if the default format assumption is
      *                  incorrect, or if the default format cannot be determined
      */
-    mixin UriParam(String? bindName = Null,
+    annotation UriParam(String? bindName = Null,
                    String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
-     * A mixin to indicate that a Parameter is bound to a request URI query parameter.
+     * A annotation to indicate that a Parameter is bound to a request URI query parameter.
      *
      * Example:
      *
@@ -445,12 +445,12 @@ module web.xtclang.org {
      * @param format    allows a textual format to be specified if the default format assumption is
      *                  incorrect, or if the default format cannot be determined
      */
-    mixin QueryParam(String? bindName = Null,
+    annotation QueryParam(String? bindName = Null,
                      String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
-     * A mixin to indicate that a Parameter is bound to a request header value.
+     * A annotation to indicate that a Parameter is bound to a request header value.
      *
      * Example:
      *
@@ -462,12 +462,12 @@ module web.xtclang.org {
      * @param format    allows a textual format to be specified if the default format assumption is
      *                  incorrect, or if the default format cannot be determined
      */
-    mixin HeaderParam(String? bindName = Null,
+    annotation HeaderParam(String? bindName = Null,
                       String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
-     * A mixin to indicate that a Parameter is bound to a named cookie value.
+     * A annotation to indicate that a Parameter is bound to a named cookie value.
      *
      * Example:
      *
@@ -480,12 +480,12 @@ module web.xtclang.org {
      * @param format    allows a textual format to be specified if the default format assumption is
      *                  incorrect, or if the default format cannot be determined
      */
-    mixin CookieParam(String? bindName = Null,
+    annotation CookieParam(String? bindName = Null,
                       String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
-     * A mixin to indicate that a value is bound to a request or response body.
+     * A annotation to indicate that a value is bound to a request or response body.
      *
      *     @Post("/{id}/items")
      *     @Consumes(Json)
@@ -495,7 +495,7 @@ module web.xtclang.org {
      * @param format  allows an explicit text [Format] to be specified for instances when the body
      *                is a text-based [MediaType] that does not imply the necessary `Format`
      */
-    mixin BodyParam(String? format = Null)
+    annotation BodyParam(String? format = Null)
             extends ParameterBinding(format=format);
 
     // ----- exceptions ----------------------------------------------------------------------------

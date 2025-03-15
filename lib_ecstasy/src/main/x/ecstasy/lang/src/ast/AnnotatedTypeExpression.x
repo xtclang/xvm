@@ -9,42 +9,35 @@ import reflect.InvalidType;
  *
  *     @AutoFreezable Account
  */
-const AnnotatedTypeExpression(AnnotationExpression annotation,
-                              TypeExpression       type)
+const AnnotatedTypeExpression(AnnotationExpression anno, TypeExpression type)
         extends TypeExpression {
     @Override
-    TextPosition start.get() {
-        return annotation.start;
-    }
+    TextPosition start.get() = anno.start;
 
     @Override
-    TextPosition end.get() {
-        return type.end;
-    }
+    TextPosition end.get() = type.end;
 
     @Override
     conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
         // determine the type that is going to be annotated
-        if (Type       annotatee  := type.resolveType(typeSystem, hideExceptions),
-            Annotation annotation := this.annotation.resolveAnnotation(typeSystem, hideExceptions)) {
+        if (Type       annotatee := type.resolveType(typeSystem, hideExceptions),
+            Annotation anno      := this.anno.resolveAnnotation(typeSystem, hideExceptions)) {
             try {
-                return True, annotatee.annotate(annotation);
+                return True, annotatee.annotate(anno);
             } catch (InvalidType e) {
                 if (hideExceptions) {
                     return False;
                 }
-
                 throw e;
             }
         }
-
         return False;
     }
 
     @Override
     String toString() {
         return type.is(RelationalTypeExpression)
-                ? $"{annotation} ({type})"
-                : $"{annotation} {type}";
+                ? $"{anno} ({type})"
+                : $"{anno} {type}";
     }
 }

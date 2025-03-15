@@ -154,9 +154,11 @@ public abstract class AbstractDependantChildTypeConstant
     public TypeConstant getExplicitClassInto(boolean fResolve)
         {
         ClassStructure struct = getChildStructure();
-        if (struct == null || struct.getFormat() != Component.Format.MIXIN)
+        if (struct == null ||
+                (struct.getFormat() != Component.Format.ANNOTATION &&
+                 struct.getFormat() != Component.Format.MIXIN))
             {
-            throw new IllegalStateException("mixin=" + struct);
+            throw new IllegalStateException("Invalid format for " + struct);
             }
 
         return struct.getTypeInto();

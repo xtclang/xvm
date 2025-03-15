@@ -153,7 +153,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
 
         @Override
         <Serializable> conditional String findPointer(Serializable object) {
-            // this is only implemented by the PointerAware mixins
+            // this is only implemented by the PointerAware annotations
             return False;
         }
 
@@ -298,9 +298,9 @@ class ObjectOutputStream(Schema schema, Writer writer)
     }
 
     /**
-     * Virtual child mixin "cap" required for all ElementOutput / FieldOutput implementations.
+     * Virtual child annotation "cap" required for all ElementOutput / FieldOutput implementations.
      */
-    mixin CloseCap
+    annotation CloseCap
             into DocOutputStream {
 
         construct() {} finally {
@@ -559,7 +559,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
     /**
      * The shared base implementation support for pointers in an ObjectOutputStream.
      */
-    mixin PointerAwareDocOutput
+    annotation PointerAwareDocOutput
             into DocOutputStream {
         /**
          * Recursion indicator: Only writes from the outside are "de-dup'd" using pointers, and this
@@ -641,7 +641,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
     /**
      * This is the pointer-aware implementation of the `ElementOutput` interface.
      */
-    mixin PointerAwareElementOutput
+    annotation PointerAwareElementOutput
             into (ElementOutputStream | ArrayOutputStream)
             extends PointerAwareDocOutput {
 
@@ -694,7 +694,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
     /**
      * This is the pointer-aware implementation of the `FieldOutput` interface.
      */
-    mixin PointerAwareFieldOutput
+    annotation PointerAwareFieldOutput
             into FieldOutputStream
             extends PointerAwareDocOutput {
 

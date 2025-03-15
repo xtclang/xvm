@@ -264,7 +264,7 @@ public class AnonInnerClass
                 throw new IllegalStateException("type=" + type);
             }
 
-        // handling for all class & mixin types
+        // handling for all class, annotation & mixin types
         if (type.isExplicitClassIdentity(true))
             {
             switch (type.getExplicitClassFormat())
@@ -306,7 +306,8 @@ public class AnonInnerClass
                     break;
 
                 default:
-                    throw new IllegalStateException("type=" + type + ", format=" + type.getExplicitClassFormat());
+                    throw new IllegalStateException("type=" + type +
+                                                    ", format=" + type.getExplicitClassFormat());
                 }
             }
 

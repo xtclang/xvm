@@ -45,6 +45,6 @@
  * otherwise-immutable object: Simply hold a reference to a `service` that manages the mutable
  * state.
  */
-mixin Transient
+annotation Transient
         into Property {
 }

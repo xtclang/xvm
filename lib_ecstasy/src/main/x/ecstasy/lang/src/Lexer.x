@@ -2677,6 +2677,7 @@ class Lexer
         Interface    <Object    >("interface"      ),
         Into         <Object    >("into"           , ContextSensitive),
         Is           <Object    >("is"             ),
+        Annotation   <Object    >("annotation"     ),
         Mixin        <Object    >("mixin"          ),
         Module       <Object    >("module"         ),
         New          <Object    >("new"            ),

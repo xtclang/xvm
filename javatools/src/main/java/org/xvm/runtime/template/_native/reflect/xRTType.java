@@ -1243,7 +1243,7 @@ public class xRTType
         ConstantPool  pool     = frame.poolContext();
         TypeConstant  typeThis = hType.getDataType();
         GenericHandle hAnno    = (GenericHandle) hArg;
-        ObjectHandle  hMixin   = hAnno.getField(frame, "mixinClass");
+        ObjectHandle  hMixin   = hAnno.getField(frame, "annoClass");
         TypeConstant  typeAnno;
 
         if (hMixin instanceof ClassHandle hClass)
@@ -1273,7 +1273,7 @@ public class xRTType
             }
         else
             {
-            return frame.raiseException(xException.unsupported(frame, "Unsupported mixin type: " +
+            return frame.raiseException(xException.unsupported(frame, "Unsupported type: " +
                     hMixin.getType()));
             }
 

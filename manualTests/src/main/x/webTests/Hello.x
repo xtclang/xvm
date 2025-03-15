@@ -8,8 +8,8 @@
  * This is an internal test for development and not an "easy to use" example. Defaults assume port
  * forwarding (80 -> 8080, 443 -> 8090).
  */
-module Hello
-        incorporates WebApp {
+@WebApp
+module Hello {
     package json  import json.xtclang.org;
     package net   import net.xtclang.org;
     package web   import web.xtclang.org;
@@ -88,8 +88,6 @@ module Hello
 
     Authenticator createAuthenticator() =
         new DigestAuthenticator(new FixedRealm("Hello", "admin", "addaya"));
-// TODO: test ChainAuthenticator
-//        new BasicAuthenticator(new FixedRealm("Hello", "admin", "addaya"));
 
     sessions.Broker createSessionBroker() = cookieBroker;
 
@@ -97,13 +95,19 @@ module Hello
     // ----- Web services --------------------------------------------------------------------------
 
     /**
-     * This service allows accessing files in the "data" directory.
+     * This service allows accessing files in the "resources/hello" directory.
+     */
+    @StaticContent("/static", /resources/hello)
+    service Content {}
+
+    /**
+     * This service allows accessing files in the "~/data" directory.
      */
     @WebService("/data")
     service ExtraFiles
-            incorporates StaticContent {
-        construct(Directory extra){
-            construct StaticContent(path, extra);
+            incorporates StaticContent.Mixin {
+        construct(Directory data){
+            construct StaticContent.Mixin(data);
         }
     }
 
@@ -171,7 +175,7 @@ module Hello
                 return "what?";
             }
 
-            static mixin SimpleData
+            static annotation SimpleData
                     into Session {
                 Int counter;
             }
@@ -245,8 +249,5 @@ module Hello
                                        );
             }
         }
-
-        @StaticContent("/static", /resources/hello)
-        service Content {}
     }
 }

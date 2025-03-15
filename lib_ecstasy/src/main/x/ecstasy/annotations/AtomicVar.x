@@ -51,7 +51,7 @@
  *       ++Statistics.misses;
  *   }
  */
-mixin AtomicVar<Referent>
+annotation AtomicVar<Referent>
         extends VolatileVar<Referent>
         incorporates conditional AtomicIntNumber<Referent extends IntNumber> {
     /**

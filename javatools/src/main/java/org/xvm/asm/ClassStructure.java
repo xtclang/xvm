@@ -144,21 +144,15 @@ public class ClassStructure
         {
         switch (getFormat())
             {
-            case MODULE:
-            case PACKAGE:
-            case ENUMVALUE:
+            case MODULE, PACKAGE, ENUMVALUE:
                 // these types are always singletons
                 return true;
 
-            case INTERFACE:
-            case CLASS:
-            case ENUM:
-            case MIXIN:
+            case INTERFACE, CLASS, ENUM, ANNOTATION, MIXIN:
                 // these types are never singletons
                 return false;
 
-            case CONST:
-            case SERVICE:
+            case CONST, SERVICE:
                 // these COULD be singletons (if they are static and NOT an inner class)
                 if (isStatic())
                     {
@@ -220,7 +214,7 @@ public class ClassStructure
      * Collect the annotations for this class.
      *
      * @param fIntoClass if true, return only the "Class" annotations (e.g. Abstract); otherwise
-     *                   only the "regular" mixins
+     *                   only the "regular" annotations
      *
      * @return an array of annotations
      */
@@ -270,16 +264,10 @@ public class ClassStructure
         {
         switch (getFormat())
             {
-            case MODULE:
-            case PACKAGE:
+            case MODULE, PACKAGE:
                 return true;
 
-            case INTERFACE:
-            case CLASS:
-            case ENUM:
-            case MIXIN:
-            case CONST:
-            case SERVICE:
+            case INTERFACE, CLASS, ENUM, MIXIN, ANNOTATION, CONST, SERVICE:
                 {
                 Format format = getParent().getFormat();
                 return format == Format.MODULE || format == Format.PACKAGE;
@@ -330,17 +318,10 @@ public class ClassStructure
         {
         switch (getFormat())
             {
-            case MODULE:
-            case PACKAGE:
-            case ENUM:
-            case ENUMVALUE:
+            case MODULE, PACKAGE, ENUM, ENUMVALUE:
                 return false;
 
-            case INTERFACE:
-            case MIXIN:
-            case CLASS:
-            case CONST:
-            case SERVICE:
+            case INTERFACE, ANNOTATION, MIXIN, CLASS, CONST, SERVICE:
                 {
                 if (isSynthetic() || isStatic())
                     {
@@ -470,21 +451,12 @@ public class ClassStructure
             {
             switch (parent.getFormat())
                 {
-                case MULTIMETHOD:
-                case METHOD:
-                case PROPERTY:
+                case MULTIMETHOD, METHOD, PROPERTY:
                     parent = parent.getParent();
                     continue;
 
-                case MODULE:
-                case PACKAGE:
-                case INTERFACE:
-                case CLASS:
-                case CONST:
-                case SERVICE:
-                case ENUM:
-                case ENUMVALUE:
-                case MIXIN:
+                case MODULE, PACKAGE, INTERFACE, CLASS, CONST, SERVICE, ENUM, ENUMVALUE,
+                     ANNOTATION, MIXIN:
                     return (ClassStructure) parent;
 
                 default:
@@ -524,14 +496,10 @@ public class ClassStructure
         {
         switch (getFormat())
             {
-            case MODULE:
-            case PACKAGE:
-            case CONST:
-            case ENUM:
-            case ENUMVALUE:
+            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
                 return true;
 
-            case MIXIN:
+            case ANNOTATION, MIXIN:
                 {
                 TypeConstant typeInto = getTypeInto();
                 if (typeInto.containsUnresolved())
@@ -544,8 +512,7 @@ public class ClassStructure
                     }
                 }
                 // fall through
-            case CLASS:
-            case INTERFACE:
+            case CLASS, INTERFACE:
                 for (Contribution contrib : getContributionsAsList())
                     {
                     if (contrib.getComposition() == Composition.Implements)
@@ -608,7 +575,7 @@ public class ClassStructure
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    fCheck     = !isIntoClassMixin(typeContrib);
+                    fCheck     = !isIntoClassAnnotation(typeContrib);
                     fAllowInto = false;
                     break;
 
@@ -1091,18 +1058,11 @@ public class ClassStructure
         ConcurrencySafety safety;
         switch (getFormat())
             {
-            case MODULE:
-            case PACKAGE:
-            case CONST:
-            case ENUM:
-            case ENUMVALUE:
+            case MODULE, PACKAGE, CONST, ENUM, ENUMVALUE:
                 safety = ConcurrencySafety.Safe;
                 break;
 
-            case CLASS:
-            case INTERFACE:
-            case MIXIN:
-            case SERVICE:
+            case CLASS, INTERFACE, ANNOTATION, MIXIN, SERVICE:
                 ConstantPool pool = getConstantPool();
                 if (containsAnnotation(pool.clzSynchronized()))
                     {
@@ -1240,33 +1200,33 @@ public class ClassStructure
         }
 
     /**
-     * Check if the specified annotation mixin type is "into Class", meaning that the mixin applies
+     * Check if the specified annotation type is "into Class", meaning that the annotation applies
      * to the meta-data of the class and is not actually mixed into the class functionality itself.
      *
-     * A slight complication comes from a scenario when the mixin applies to a union of
+     * A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
      * <code>
      *   <pre>
-     *     mixin Override
+     *     annotation Override
      *         into Class | Property | Method
      *   </pre>
      * </code>
-     * In such a case it may be a "real" mixin, if it applies to the class itself.
+     * In such a case it may be a "real" annotation, if it applies to the class itself.
      *
-     * @param typeMixin  the annotation mixin type
+     * @param typeAnno  the annotation type
      *
-     * @return true iff the annotation mixin applies to the class meta-data
+     * @return true iff the annotation applies to the class meta-data
      */
-    public boolean isIntoClassMixin(TypeConstant typeMixin)
+    public boolean isIntoClassAnnotation(TypeConstant typeAnno)
         {
-        assert typeMixin.isExplicitClassIdentity(true);
+        assert typeAnno.isExplicitClassIdentity(true);
 
-        if (typeMixin.getExplicitClassFormat() != Format.MIXIN)
+        if (typeAnno.getExplicitClassFormat() != Format.ANNOTATION)
             {
             return false;
             }
 
-        TypeConstant typeInto = typeMixin.getExplicitClassInto();
+        TypeConstant typeInto = typeAnno.getExplicitClassInto();
 
         return typeInto.isIntoClassType() &&
                !typeInto.isComposedOfAny(Collections.singleton(getIdentityConstant()));
@@ -1344,7 +1304,7 @@ public class ClassStructure
                     {
                     case Annotation:
                         {
-                        fCheck     = !isIntoClassMixin(typeContrib);
+                        fCheck     = !isIntoClassAnnotation(typeContrib);
                         fAllowInto = false;
                         break;
                         }
@@ -1640,7 +1600,7 @@ public class ClassStructure
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    if (isIntoClassMixin(type))
+                    if (isIntoClassAnnotation(type))
                         {
                         break;
                         }
@@ -1671,15 +1631,18 @@ public class ClassStructure
         }
 
     /**
-     * Determine the "into" type of this mixin.
+     * Determine the "into" type of this annotation or mixin.
      *
      * @return a TypeConstant of the "into" contribution
      */
     public TypeConstant getTypeInto()
         {
-        if (getFormat() != Format.MIXIN)
+        switch (getFormat())
             {
-            throw new IllegalStateException("not a mixin: " + getIdentityConstant());
+            case ANNOTATION, MIXIN:
+                break;
+            default:
+                throw new IllegalStateException("not an annotation or mixin: " + getIdentityConstant());
             }
 
         Contribution contribInto = findContribution(Composition.Into);
@@ -1762,7 +1725,7 @@ public class ClassStructure
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    fCheck     = !isIntoClassMixin(typeContrib);
+                    fCheck     = !isIntoClassAnnotation(typeContrib);
                     fAllowInto = false;
                     break;
 
@@ -1852,7 +1815,7 @@ public class ClassStructure
             switch (contrib.getComposition())
                 {
                 case Annotation:
-                    fCheck     = !isIntoClassMixin(typeContrib);
+                    fCheck     = !isIntoClassAnnotation(typeContrib);
                     fAllowInto = false;
                     break;
 
@@ -2171,7 +2134,7 @@ public class ClassStructure
                         break;
 
                     case Annotation:
-                        if (isIntoClassMixin(typeContrib))
+                        if (isIntoClassAnnotation(typeContrib))
                             {
                             break;
                             }
@@ -2224,6 +2187,49 @@ public class ClassStructure
         }
 
     /**
+     * Find a constructor for this class which should be used for the specified const arguments.
+     *
+     * @param aconstArgs  the arguments that the constructor should match to
+     * @param typeTarget  the type to be used to resolve generics
+     *
+     * @return the matching constructor or null, if not found
+     */
+    public MethodStructure findConstructor(Constant[] aconstArgs, TypeConstant typeTarget)
+        {
+        ConstantPool pool  = typeTarget.getConstantPool();
+        int          cArgs = aconstArgs.length;
+
+        return findMethod("construct",  m ->
+            {
+            if (cArgs < m.getRequiredParamCount() || cArgs > m.getParamCount())
+                {
+                return false;
+                }
+
+            TypeConstant[] atypeParam = m.getParamTypes();
+            for (int i = 0; i < cArgs; i++)
+                {
+                Constant constArg = aconstArgs[i];
+                if (constArg instanceof FrameDependentConstant)
+                    {
+                    continue;
+                    }
+                // we know the ValueConstants do produce the right type by getType() method,
+                // but some others (as PropertyClassTypeConstant) require special handling;
+                // we may need to augment the logic below for other Constant sub-types
+                TypeConstant typeArg = constArg instanceof PropertyClassTypeConstant constProp
+                        ? constProp.getProperty().getValueType(pool, null)
+                        : constArg.getType();
+                if (!typeArg.isA(atypeParam[i].resolveGenerics(pool, typeTarget)))
+                    {
+                    return false;
+                    }
+                }
+            return true;
+            });
+        }
+
+    /**
      * Helper method to find a property by the name for this class and all its contributions.
      *
      * @param sName  the property name to find
@@ -2245,7 +2251,7 @@ public class ClassStructure
                         break;
 
                     case Annotation:
-                        if (isIntoClassMixin(typeContrib))
+                        if (isIntoClassAnnotation(typeContrib))
                             {
                             break;
                             }
@@ -2472,7 +2478,7 @@ public class ClassStructure
                     break;
 
                 case Annotation:
-                    if (isIntoClassMixin(typeContrib))
+                    if (isIntoClassAnnotation(typeContrib))
                         {
                         break;
                         }
@@ -2700,7 +2706,7 @@ public class ClassStructure
                     break;
 
                 case Annotation:
-                    if (isIntoClassMixin(typeContrib))
+                    if (isIntoClassAnnotation(typeContrib))
                         {
                         continue;
                         }
@@ -2850,7 +2856,7 @@ public class ClassStructure
                     break;
 
                 case Annotation:
-                    if (isIntoClassMixin(typeContrib))
+                    if (isIntoClassAnnotation(typeContrib))
                         {
                         continue;
                         }
@@ -3136,7 +3142,7 @@ public class ClassStructure
                     break;
 
                 case Annotation:
-                    if (isIntoClassMixin(typeContrib))
+                    if (isIntoClassAnnotation(typeContrib))
                         {
                         continue;
                         }
@@ -4135,7 +4141,7 @@ public class ClassStructure
      */
     public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs)
         {
-        assert getFormat() == Format.MIXIN;
+        assert getFormat() == Format.MIXIN || getFormat() == Format.ANNOTATION;
 
         ListMap<String, TypeConstant> mapTypeParams = null;
         for (Contribution contrib : getContributionsAsList())
@@ -4360,7 +4366,8 @@ public class ClassStructure
     private transient Annotation[] m_aAnnoClass;
 
     /**
-     * A cached array of the annotations that represent mixins.
+     * A cached array of the annotations that represent "regular" annotations that mix into the
+     * class functionality.
      */
     private transient Annotation[] m_aAnnoMixin;
     }

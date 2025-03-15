@@ -19,6 +19,7 @@ interface ComponentTemplate
         Const      <ClassTemplate      >(False, True ),
         Enum       <ClassTemplate      >(True , False),
         EnumValue  <ClassTemplate      >(True , False),
+        Annotation <ClassTemplate      >(False, True ),
         Mixin      <ClassTemplate      >(False, True ),
         Service    <ClassTemplate      >(False, True ),
         Package    <PackageTemplate    >(True , False),
@@ -26,7 +27,6 @@ interface ComponentTemplate
         TypeDef    <TypedefTemplate    >(False, False),
         Property   <PropertyTemplate   >(False, False),
         Method     <MethodTemplate     >(False, False),
-        Reserved_C <ComponentTemplate  >(False, False),
         Reserved_D <ComponentTemplate  >(False, False),
         MultiMethod<MultiMethodTemplate>(False, False),
         File       <FileTemplate       >(False, False)
@@ -143,12 +143,8 @@ interface ComponentTemplate
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return path.size;
-    }
+    Int estimateStringLength() = path.size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return path.appendTo(buf);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = path.appendTo(buf);
 }

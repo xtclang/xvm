@@ -43,17 +43,17 @@ module webcli.xtclang.org {
     enum AuthMethod {None, Callback, Password, Token}
 
     /**
-     * The extension of cli.TerminalApp mixin.
+     * The extension of cli.TerminalApp annotation.
      *
      * @param auth     the authentication method; [Callback] by default
      * @param timeout  the default http request timeout; one minute by default
      */
-    mixin TerminalApp(String     description   = "",
-                      String     commandPrompt = "> ",
-                      String     messagePrefix = "# ",
-                      AuthMethod auth          = Callback,
-                      Duration   timeout       = Duration:1m,
-                )
+    annotation TerminalApp(String     description   = "",
+                           String     commandPrompt = "> ",
+                           String     messagePrefix = "# ",
+                           AuthMethod auth          = Callback,
+                           Duration   timeout       = Duration:1m,
+                           )
             extends cli.TerminalApp(description, commandPrompt, messagePrefix) {
 
         import web.HttpStatus;
@@ -99,6 +99,19 @@ module webcli.xtclang.org {
          */
         (String, HttpStatus) upload(String path, File file, MediaType? mediaType = Null) =
                 Gateway.upload(path, file, mediaType);
+
+        @TerminalApp
+        static mixin Mixin
+                extends cli.TerminalApp.Mixin {
+            construct(String     description   = "",
+                      String     commandPrompt = "> ",
+                      String     messagePrefix = "# ",
+                      AuthMethod auth          = Callback,
+                      Duration   timeout       = Duration:1m,
+                     ) {
+                construct TerminalApp(description, commandPrompt, messagePrefix);
+            }
+        }
     }
 
     static service Gateway {

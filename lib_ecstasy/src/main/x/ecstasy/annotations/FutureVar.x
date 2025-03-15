@@ -42,7 +42,7 @@
  * * The [set] method can only be invoked by completing the future; the future's value cannot
  *   be modified once it is set.
  */
-mixin FutureVar<Referent>
+annotation FutureVar<Referent>
         extends VolatileVar<Referent>
         implements Closeable {
     /**
@@ -450,6 +450,10 @@ mixin FutureVar<Referent>
 
     // ----- inner classes -------------------------------------------------------------------------
 
+    @FutureVar
+    @Abstract static class BaseFuture<Referent>
+            implements Var<Referent> {}
+
     /**
      * A DependentFuture is the base class for making simple futures that are dependent on the
      * result of another future. Specifically, a future invokes the [parentCompleted()] method
@@ -457,7 +461,7 @@ mixin FutureVar<Referent>
      * the chain.
      */
     static class DependentFuture<Referent, InputType>
-            incorporates FutureVar<Referent>
+            extends BaseFuture<Referent>
             delegates Var<Referent>(resultVar) {
         void parentCompleted(Completion completion, InputType? input, Exception? e) {
             if (!assigned) {

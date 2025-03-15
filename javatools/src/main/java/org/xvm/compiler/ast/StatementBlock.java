@@ -1255,20 +1255,11 @@ public class StatementBlock
                         {
                         switch (component.getFormat())
                             {
-                            case ENUM:
-                            case ENUMVALUE:
-                            case PACKAGE:
-                            case MODULE:
-                            case TYPEDEF:
+                            case ENUM, ENUMVALUE, PACKAGE, MODULE, TYPEDEF:
                                 fHasThis = false;
                                 break;
 
-                            case INTERFACE:
-                            case CLASS:
-                            case CONST:
-                            case MIXIN:
-                            case SERVICE:
-                            case PROPERTY:
+                            case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE, PROPERTY:
                                 fHasThis &= !component.isStatic();
                                 break;
 
@@ -1531,15 +1522,8 @@ public class StatementBlock
                 {
                 switch (parent.getFormat())
                     {
-                    case INTERFACE:
-                    case CLASS:
-                    case CONST:
-                    case ENUM:
-                    case ENUMVALUE:
-                    case MIXIN:
-                    case SERVICE:
-                    case PACKAGE:
-                    case MODULE:
+                    case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, ANNOTATION, MIXIN,
+                         SERVICE, PACKAGE, MODULE:
                         return false;
 
                     case METHOD:
@@ -1556,8 +1540,7 @@ public class StatementBlock
                             }
                         break;
 
-                    case PROPERTY:
-                    case MULTIMETHOD:
+                    case PROPERTY, MULTIMETHOD:
                         break;
 
                     default:

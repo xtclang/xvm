@@ -1,5 +1,5 @@
 /**
- * The Synchronized mixin is used to annotate classes, properties, methods, constructors or functions,
+ * The Synchronized annotation is used to annotate classes, properties, methods, constructors or functions,
  * to indicate that the class, property, method, constructor or function is **not** safe for
  * concurrent/reentrant execution.
  *
@@ -39,6 +39,6 @@
  * * When both `@Synchronized` and `@Concurrent` appear on the same class, property, or method, the
  *   `@Synchronized` annotation takes precedence.
  */
-mixin Synchronized
+annotation Synchronized
         into Class | Property | Method | Function {
 }

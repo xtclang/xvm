@@ -318,6 +318,8 @@ public class xRTComponentTemplate
                 return enumForm.getEnumByName("Enum");
             case ENUMVALUE:
                 return enumForm.getEnumByName("EnumValue");
+            case ANNOTATION:
+                return enumForm.getEnumByName("Annotation");
             case MIXIN:
                 return enumForm.getEnumByName("Mixin");
             case SERVICE:
@@ -332,8 +334,6 @@ public class xRTComponentTemplate
                 return enumForm.getEnumByName("Property");
             case METHOD:
                 return enumForm.getEnumByName("Method");
-            case RSVD_C:
-                return enumForm.getEnumByName("Reserved_C");
             case RSVD_D:
                 return enumForm.getEnumByName("Reserved_D");
             case MULTIMETHOD:
@@ -369,6 +369,7 @@ public class xRTComponentTemplate
             case INTERFACE:
             case ENUM:
             case ENUMVALUE:
+            case ANNOTATION:
             case MIXIN:
             case SERVICE:
                 return xRTClassTemplate.makeHandle(container, (ClassStructure) component);

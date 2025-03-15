@@ -16,7 +16,7 @@ import WebService.ExtrasAware;
 /**
  * The catalog of WebApp endpoints.
  */
-const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
+const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
 
     /**
      * The Restriction could be one of:
@@ -35,9 +35,9 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
     WebServiceInfo[] services;
 
     /**
-     * The list of [Session] mixin classes discovered within the application.
+     * The list of [Session] annotation classes discovered within the application.
      */
-    Class[] sessionMixins;
+    Class[] sessionAnnos;
 
     /**
      * The total number of WebServices.
@@ -80,8 +80,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                                 EndpointInfo?  defaultGet,
                                 MethodInfo[]   interceptors,
                                 MethodInfo[]   observers,
-                                MethodInfo?    onError,
-                                MethodInfo?    route
+                                MethodInfo?    onError
                                 ) {
         /**
          * The number of endpoints for this WebService.
@@ -331,7 +330,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
      */
     static Catalog buildCatalog(WebApp app, Map<Class<WebService>, WSConstructor> extras = []) {
         ClassInfo[] classInfos    = new ClassInfo[];
-        Class[]     sessionMixins = new Class[];
+        Class[]     sessionAnnos = new Class[];
 
         Set<String> declaredPaths = new HashSet<String>();
 
@@ -345,7 +344,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                     classInfos += new ClassInfo(path, clz, constructor);
 
                     // scan classes inside the extra
-                    scanClasses(clz.childClasses, classInfos, sessionMixins, declaredPaths);
+                    scanClasses(clz.childClasses, classInfos, sessionAnnos, declaredPaths);
                 } else {
                     throw new IllegalState($|"WebService" annotation is missing for "{clz}"
                                           );
@@ -355,7 +354,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
 
         // helper method to retrieve WebService "extras" from an ExtraAware instance
         private void collectExtras(ExtrasAware extraAware, ClassInfo[] classInfos,
-                                   Class[] sessionMixins, Set<String> declaredPaths) {
+                                   Class[] sessionAnnos, Set<String> declaredPaths) {
             for ((Duplicable+WebService) extra : extraAware.extras) {
                 Class<WebService> clz  = &extra.actualClass.as(Class<WebService>);
                 String            path = extra.path;
@@ -363,25 +362,25 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 classInfos += new ClassInfo(path, clz, () -> extra.duplicate());
 
                 // scan classes inside the extra
-                scanClasses(clz.childClasses, classInfos, sessionMixins, declaredPaths);
+                scanClasses(clz.childClasses, classInfos, sessionAnnos, declaredPaths);
             }
         }
 
         // collect the Broker extras
-        collectExtras(app.sessionBroker.is(ExtrasAware)?, classInfos, sessionMixins, declaredPaths);
+        collectExtras(app.sessionBroker.is(ExtrasAware)?, classInfos, sessionAnnos, declaredPaths);
 
         // collect the Authenticator extras
-        collectExtras(app.authenticator.is(ExtrasAware)?, classInfos, sessionMixins, declaredPaths);
+        collectExtras(app.authenticator.is(ExtrasAware)?, classInfos, sessionAnnos, declaredPaths);
 
-        // collect the ClassInfos for standard WebServices and Session mixins
-        scanClasses(app.classes, classInfos, sessionMixins, declaredPaths);
+        // collect the ClassInfos for standard WebServices and Session annotations
+        scanClasses(app.classes, classInfos, sessionAnnos, declaredPaths);
 
         // sort the ClassInfos based on their paths (SystemService goes first)
         classInfos.sorted((ci1, ci2) -> (ci1.path <=> ci2.path).reversed, inPlace=True);
 
         // collect all of the endpoints into a Catalog
         WebServiceInfo[] webServiceInfos = collectEndpoints(app, classInfos);
-        return new Catalog(app, webServiceInfos, sessionMixins);
+        return new Catalog(app, webServiceInfos, sessionAnnos);
     }
 
     /**
@@ -391,9 +390,9 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
 
     /**
      * Scan all the specified classes for WebServices and add the corresponding information
-     * to the ClassInfo array along with session mixin class array.
+     * to the ClassInfo array along with session annotations array.
      */
-    private static void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionMixins,
+    private static void scanClasses(Class[] classes, ClassInfo[] classInfos, Class[] sessionAnnos,
                              Set<String> declaredPaths) {
         for (Class child : classes) {
             if (child.annotatedBy(Abstract)) {
@@ -418,15 +417,15 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                 }
 
                 // scan classes inside the WebService class
-                scanClasses(child.childClasses, classInfos, sessionMixins, declaredPaths);
-            } else if (child.mixesInto(Session)) {
-                sessionMixins += child;
+                scanClasses(child.childClasses, classInfos, sessionAnnos, declaredPaths);
+            } else if (child.baseTemplate.format == Annotation && child.mixesInto(Session)) {
+                sessionAnnos += child;
             } else if (child.implements(Package), Object pkg := child.isSingleton()) {
                 assert pkg.is(Package);
 
                 // don't scan imported modules
                 if (!pkg.isModuleImport()) {
-                    scanClasses(pkg.as(Package).classes, classInfos, sessionMixins, declaredPaths);
+                    scanClasses(pkg.as(Package).classes, classInfos, sessionAnnos, declaredPaths);
                 }
             }
         }
@@ -558,7 +557,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
             MethodInfo[]   interceptors = new MethodInfo[];
             MethodInfo[]   observers    = new MethodInfo[];
             MethodInfo?    onError      = Null;
-            MethodInfo?    route        = Null;
 
             static void validateEndpoint(Method method) {
                 Int returnCount = method.returns.size;
@@ -623,17 +621,6 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
                                               );
                     }
                     break;
-
-                default:
-                    if (method.name == "route" && method.params.size >= 4 &&
-                            method.params[0].ParamType == Session         &&
-                            method.params[1].ParamType == RequestIn       &&
-                            method.params[2].ParamType == Handler         &&
-                            method.params[3].ParamType == ErrorHandler) {
-                        assert route == Null;
-                        route = new MethodInfo(method, wsid);
-                    }
-                    break;
                 }
             }
 
@@ -658,7 +645,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionMixins) {
 
             webServiceInfos += new WebServiceInfo(wsid++,
                     servicePath, classInfo.constructor,
-                    endpoints, defaultGet, interceptors, observers, onError, route);
+                    endpoints, defaultGet, interceptors, observers, onError);
         }
         return webServiceInfos;
     }

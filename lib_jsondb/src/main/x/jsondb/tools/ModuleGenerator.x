@@ -274,7 +274,7 @@ class ModuleGenerator(String moduleName) {
                 propertyBaseType   = "DBCounterImpl";
                 propertyTypeParams = "";
 
-                if (AnnotationTemplate annotation := property.findAnnotation("oodb.NoTx")) {
+                if (AnnotationTemplate anno := property.findAnnotation("oodb.NoTx")) {
                     transactional = "False";
                 }
                 break;
@@ -292,10 +292,10 @@ class ModuleGenerator(String moduleName) {
                 propertyTypeParams = $"\"Value\"={valueTypeName}";
 
                 String initialValue = "Null";
-                if (AnnotationTemplate annotation := property.findAnnotation("oodb.Initial")) {
+                if (AnnotationTemplate anno := property.findAnnotation("oodb.Initial")) {
                     // TODO GG: we assume here that "value.toString()" can be compiled back,
                     //          which is only correct for few types
-                    initialValue = displayValue(annotation.arguments[0].value);
+                    initialValue = displayValue(anno.arguments[0].value);
                 }
 
                 if (initialValue == "Null") {
@@ -325,16 +325,16 @@ class ModuleGenerator(String moduleName) {
                 propertyBaseType   = $"DBLogImpl<{elementTypeName}>";
                 propertyTypeParams = $"\"Element\"={elementTypeName}";
 
-                if (AnnotationTemplate annotation := property.findAnnotation("oodb.NoTx")) {
+                if (AnnotationTemplate anno := property.findAnnotation("oodb.NoTx")) {
                     transactional = "False";
                 }
-                if (AnnotationTemplate annotation := property.findAnnotation("oodb.AutoExpire")) {
-                    Duration expiry = annotation.arguments[0].value.as(Duration);
+                if (AnnotationTemplate anno := property.findAnnotation("oodb.AutoExpire")) {
+                    Duration expiry = anno.arguments[0].value.as(Duration);
                     options += $"\"expiry\"=Duration:{expiry.seconds}s";
                 }
 
-                if (AnnotationTemplate annotation := property.findAnnotation("oodb.AutoTruncate")) {
-                    Int truncateSize = annotation.arguments[0].value.as(Int);
+                if (AnnotationTemplate anno := property.findAnnotation("oodb.AutoTruncate")) {
+                    Int truncateSize = anno.arguments[0].value.as(Int);
                     if (options.size > 0) {
                         options += ", ";
                     }
@@ -382,7 +382,7 @@ class ModuleGenerator(String moduleName) {
                 // this check assumes that the property type is one of the eight basic DBObject
                 // types (DBSchema, DBCounter, DBValue, DBMap, DBList, DBQueue, DBProcessor, DBLog)
                 // and doesn't come from the reflected module itself, in which case it must be a
-                //"custom" mixin into one of the basic DBObjects
+                // "custom" mixin into one of the basic DBObjects
                 continue;
             }
 

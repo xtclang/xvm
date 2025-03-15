@@ -226,9 +226,9 @@ public class AnnotationExpression
 
         ClassConstant idAnno = (ClassConstant) constAnno;
 
-        if (idAnno.getComponent().getFormat() != Format.MIXIN)
+        if (idAnno.getComponent().getFormat() != Format.ANNOTATION)
             {
-            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN, anno.getValueString());
+            log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION, anno.getValueString());
             return;
             }
 

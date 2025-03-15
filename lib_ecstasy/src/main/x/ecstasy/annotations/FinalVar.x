@@ -6,7 +6,7 @@
  * when a variable is potentially assigned more than once, and to produce a runtime exception when
  * an attempt to assign to a variable occurs after the variable has already been assigned.
  */
-mixin FinalVar<Referent>
+annotation FinalVar<Referent>
         into Var<Referent> {
 
     @Override

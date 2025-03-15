@@ -1,6 +1,6 @@
 /**
- * The `@Op` mixin is used to annotate a method as being a candidate for an operator. When such a
- * method (matching the necessary argument and return value types) is found, the compiler will use
+ * The `@Op` annotation is used to annotate a method as being a candidate for an operator. When such
+ * a method (matching the necessary argument and return value types) is found, the compiler will use
  * it to implement the operation. For example:
  *
  * * When the compiler encounters a right-associative unary complement `~` expression (or `!`
@@ -87,6 +87,6 @@
  *   cost of the reader, and the more easily that the trade-off is accepted, the more likely it is
  *   to be wrong.**
  */
-mixin Operator(String? token = Null)
+annotation Operator(String? token = Null)
         into Method {
 }

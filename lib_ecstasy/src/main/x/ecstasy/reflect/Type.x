@@ -480,7 +480,7 @@ interface Type<DataType, OuterType>
      *
      * @return the annotated type
      */
-    Type!<> annotate(Annotation annotation);
+    Type!<> annotate(Annotation anno);
 
     /**
      * Create a type that is the intersection of this type and another type.

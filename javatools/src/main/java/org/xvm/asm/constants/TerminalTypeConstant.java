@@ -1468,9 +1468,11 @@ public class TerminalTypeConstant
                 throw new IllegalStateException("no class format for: " + constId);
             };
 
-        if (structMixin == null || structMixin.getFormat() != Component.Format.MIXIN)
+        if (structMixin == null ||
+                (structMixin.getFormat() != Component.Format.ANNOTATION &&
+                 structMixin.getFormat() != Component.Format.MIXIN))
             {
-            throw new IllegalStateException("mixin=" + structMixin);
+            throw new IllegalStateException("Invalid format for " + structMixin);
             }
 
         return structMixin.getTypeInto();
@@ -1740,10 +1742,10 @@ public class TerminalTypeConstant
 
         if (isSingleDefiningConstant())
             {
-            Constant constant = getDefiningConstant();
-            if (constant instanceof KeywordConstant)
+            Constant constLeft = getDefiningConstant();
+            if (constLeft instanceof KeywordConstant)
                 {
-                if (constant.getFormat() == Format.IsClass)
+                if (constLeft.getFormat() == Format.IsClass)
                     {
                     return typeRight.getCategory() == Category.CLASS
                         ? Relation.IS_A
@@ -1754,12 +1756,18 @@ public class TerminalTypeConstant
                     {
                     ClassStructure clzRight = (ClassStructure)
                         typeRight.getSingleUnderlyingClass(true).getComponent();
-                    Component.Format formatClz = clzRight.getFormat();
+                    Component.Format formatRight = clzRight.getFormat();
 
-                    return switch (constant.getFormat())
+                    if (formatRight == Component.Format.ANNOTATION ||
+                        formatRight == Component.Format.MIXIN)
+                        {
+                        return typeRight.getExplicitClassInto().calculateRelation(this);
+                        }
+
+                    return switch (constLeft.getFormat())
                         {
                         case IsConst ->
-                            switch (formatClz)
+                            switch (formatRight)
                                 {
                                 case CONST, ENUMVALUE, PACKAGE, MODULE ->
                                     Relation.IS_A;
@@ -1768,18 +1776,18 @@ public class TerminalTypeConstant
                                 };
 
                         case IsEnum ->
-                            formatClz == Component.Format.ENUMVALUE
+                            formatRight == Component.Format.ENUMVALUE
                                     ? Relation.IS_A
                                     : Relation.INCOMPATIBLE;
 
                         case IsModule ->
-                            formatClz == Component.Format.MODULE
+                            formatRight == Component.Format.MODULE
                                     ? Relation.IS_A
                                     : Relation.INCOMPATIBLE;
 
                         case IsPackage ->
-                            formatClz == Component.Format.MODULE ||
-                            formatClz == Component.Format.PACKAGE
+                            formatRight == Component.Format.MODULE ||
+                            formatRight == Component.Format.PACKAGE
                                     ? Relation.IS_A
                                     : Relation.INCOMPATIBLE;
 

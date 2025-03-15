@@ -1,10 +1,10 @@
 import io.IllegalUTF;
 
 /**
- * The JavaDataInput mixin uses the same wire formats as defined by the Java `DataInputStream` for
- * bytes, characters, strings, and for the subset of the number types supported by that language.
+ * The JavaDataInput annotation uses the same wire formats as defined by the Java `DataInputStream`
+ * for bytes, characters, strings, and for the subset of the number types supported by that language.
  */
-mixin JavaDataInput
+annotation JavaDataInput
         into BinaryInput
         implements DataInput {
 

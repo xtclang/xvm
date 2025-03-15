@@ -42,9 +42,9 @@ interface PropertyTemplate
      * @return the corresponding `AnnotationTemplate` (optional)
      */
     conditional AnnotationTemplate findAnnotation(String annotationName) {
-        for (AnnotationTemplate annotation : annotations) {
-            if (annotation.template.displayName == annotationName) {
-                return True, annotation;
+        for (AnnotationTemplate anno : annotations) {
+            if (anno.template.displayName == annotationName) {
+                return True, anno;
             }
         }
 

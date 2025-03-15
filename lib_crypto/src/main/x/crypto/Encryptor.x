@@ -46,7 +46,8 @@ interface Encryptor
      *
      * @param destination  (optional) an underlying stream that the [Encryptor] will write the
      *                     encrypted data to
-     * @param annotations  (optional) one or more mixins to include in the returned [BinaryOutput]
+     * @param annotations  (optional) one or more annotations to incorporate in the returned
+     *                     [BinaryOutput]
      *
      * @return the `BinaryOutput` to write the data to that needs to be encrypted; remember to close
      *         this returned `BinaryOutput` as soon as all of the data to encrypt has been written

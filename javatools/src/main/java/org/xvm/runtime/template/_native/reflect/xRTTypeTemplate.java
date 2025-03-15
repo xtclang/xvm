@@ -586,7 +586,7 @@ public class xRTTypeTemplate
         IdentityConstant        idMixin   = clzMixin.getIdentityConstant();
         TypeConstant            typeInto  = clzMixin.getTypeInto();
 
-        if (clzMixin.getFormat() == Component.Format.MIXIN)
+        if (clzMixin.getFormat() == Component.Format.ANNOTATION)
             {
             ConstantPool pool = frame.poolContext();
 

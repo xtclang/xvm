@@ -185,7 +185,7 @@ public class MethodBody
             case Delegating:        // delegating methods also represent a redirect
             case Field:             // field access is a terminal (non-abstract) implementation
             case Native:            // native code is a terminal (non-abstract) implementation
-            case Explicit:          // this is actual "user" code in a class or mixin
+            case Explicit:          // this is actual "user" code in a class, annotation or mixin
                 return false;
 
             default:

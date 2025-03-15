@@ -2623,6 +2623,7 @@ public abstract class Component
         CONST,
         ENUM,
         ENUMVALUE,
+        ANNOTATION,
         MIXIN,
         SERVICE,
         PACKAGE,
@@ -2630,7 +2631,6 @@ public abstract class Component
         TYPEDEF,
         PROPERTY,
         METHOD,
-        RSVD_C,
         RSVD_D,
         MULTIMETHOD,
         FILE;
@@ -2661,6 +2661,7 @@ public abstract class Component
                 case CLASS                        -> fmtSuper == CLASS;
                 case CONST, ENUM, PACKAGE, MODULE -> fmtSuper == CONST || fmtSuper == CLASS;
                 case ENUMVALUE                    -> fmtSuper == ENUM;
+                case ANNOTATION                   -> fmtSuper == ANNOTATION;
                 case MIXIN                        -> fmtSuper == MIXIN;
                 case SERVICE                      -> fmtSuper == SERVICE || fmtSuper == CLASS;
                 default                           -> false;
@@ -2693,7 +2694,7 @@ public abstract class Component
                 case PACKAGE ->
                     new PackageStructure(xsParent, nFlags, (PackageConstant) constId, condition);
 
-                case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, MIXIN, SERVICE ->
+                case INTERFACE, CLASS, CONST, ENUM, ENUMVALUE, ANNOTATION, MIXIN, SERVICE ->
                     new ClassStructure(xsParent, nFlags, (ClassConstant) constId, condition);
 
                 case TYPEDEF ->
@@ -2720,7 +2721,8 @@ public abstract class Component
                 case MODULE, PACKAGE, ENUM, ENUMVALUE ->
                     true;
 
-                case INTERFACE, CLASS, CONST, MIXIN, SERVICE, PROPERTY, MULTIMETHOD, METHOD, TYPEDEF ->
+                case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE, PROPERTY, MULTIMETHOD,
+                        METHOD, TYPEDEF ->
                     false;
 
                 default ->
@@ -2735,7 +2737,7 @@ public abstract class Component
                 case MODULE, PACKAGE, ENUM, ENUMVALUE, PROPERTY, MULTIMETHOD, METHOD, TYPEDEF ->
                     false;
 
-                case MIXIN, INTERFACE, CLASS, CONST, SERVICE ->
+                case ANNOTATION, MIXIN, INTERFACE, CLASS, CONST, SERVICE ->
                     true;
 
                 default ->
@@ -2805,7 +2807,8 @@ public abstract class Component
          */
         Delegates,
         /**
-         * Represents that the class being composed is a mixin that applies to the specified type.
+         * Represents that the class being composed is an annotation or a mixin that applies to the
+         * specified type.
          * <p/>
          * The constant is a TypeConstant.
          */

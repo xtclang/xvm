@@ -206,8 +206,8 @@ service ChainBundle {
             Int    wsidNext   = info.wsid;
             if (wsidNext != wsid) {
                 // call to a different service; need to generate a WebService.route() "preamble"
-                // even if the WebService doesn't have any interceptors (it that case it must have
-                // an error handler or an explicitly defined "route()" method)
+                // even if the WebService doesn't have any interceptors (it which case it must have
+                // an error handler)
                 ErrorHandler? onError = ensureErrorHandler(wsid);
 
                 Handler callNext = handle;
@@ -539,8 +539,8 @@ service ChainBundle {
 
     /**
      * Collect interceptors for the specified service. Note, that if a WebService in the path
-     * doesn't have any interceptors, but has an explicitly defined "route" method or an error
-     * handler, we still need to include it in the list.
+     * doesn't have any interceptors, but has an explicitly defined error handler, we still need to
+     * include it in the list.
      */
     private MethodInfo[] collectInterceptors(Int wsid, HttpMethod httpMethod) {
         WebServiceInfo[] serviceInfos = catalog.services;
@@ -553,9 +553,6 @@ service ChainBundle {
                 if (serviceInfo.interceptors.empty) {
                     if (MethodInfo onErrorInfo ?= serviceInfo.onError) {
                         interceptors.add(onErrorInfo);
-                    }
-                    if (MethodInfo routeInfo ?= serviceInfo.route) {
-                        interceptors.add(routeInfo);
                     }
                 } else {
                     interceptors.addAll(serviceInfo.interceptors.filter(m -> m.httpMethod == httpMethod));

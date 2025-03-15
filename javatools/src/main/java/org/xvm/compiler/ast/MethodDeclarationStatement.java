@@ -730,16 +730,16 @@ public class MethodDeclarationStatement
                     break Validate;
                     }
 
-                TypeConstant typeMixin = anno.getFormalType();
-                if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                TypeConstant typeAnno = anno.getFormalType();
+                if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
                     {
                     findAnnotationExpression(anno, annotations).
-                        log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                        log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION,
                             anno.getValueString());
                     return;
                     }
 
-                TypeConstant typeInto    = typeMixin.getExplicitClassInto();
+                TypeConstant typeInto    = typeAnno.getExplicitClassInto();
                 boolean      fApplicable = typeInto.isIntoMetaData(typeBase, true)
                     && typeBase.isA(typeInto.resolveGenerics(pool, typeBase));
 
@@ -753,10 +753,10 @@ public class MethodDeclarationStatement
                 }
             else
                 {
-                // collect the mixin types and check for duplicates
-                TypeConstant[]    atypeMixin = new TypeConstant[cAnnos];
-                TypeConstant[]    atypeInto  = new TypeConstant[cAnnos];
-                Set<TypeConstant> setTypes   = new HashSet<>();
+                // collect the annotation types and check for duplicates
+                TypeConstant[]    atypeAnno = new TypeConstant[cAnnos];
+                TypeConstant[]    atypeInto = new TypeConstant[cAnnos];
+                Set<TypeConstant> setTypes  = new HashSet<>();
                 for (int i = 0; i < cAnnos; i++)
                     {
                     Annotation anno = aAnno[i];
@@ -767,36 +767,36 @@ public class MethodDeclarationStatement
                             return; // an error must've been reported
                             }
                         }
-                    TypeConstant typeMixin = anno.getFormalType();
-                    if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+                    TypeConstant typeAnno = anno.getFormalType();
+                    if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
                         {
                         findAnnotationExpression(anno, annotations).
-                            log(errs, Severity.ERROR, Constants.VE_ANNOTATION_NOT_MIXIN,
+                            log(errs, Severity.ERROR, Constants.VE_CLASS_NOT_ANNOTATION,
                                 anno.getValueString());
                         return;
                         }
-                    if (!setTypes.add(typeMixin))
+                    if (!setTypes.add(typeAnno))
                         {
                         findAnnotationExpression(anno, annotations).
                             log(errs, Severity.ERROR, Constants.VE_ANNOTATION_REDUNDANT,
                                 anno.getValueString());
                         }
-                    atypeMixin[i] = typeMixin;
-                    atypeInto[i]  = typeMixin.getExplicitClassInto();
+                    atypeAnno[i] = typeAnno;
+                    atypeInto[i] = typeAnno.getExplicitClassInto();
                     }
 
                 // While validating applicability we allow the method annotations to be
                 // arranged in the most "readable" fashion, but not strictly "correct" order.
                 // For example, consider Get and Produces annotations from web.xtclang.org.
-                // "Get" extends "Endpoint" mixin, which is "into Method", while "Produces" is into
-                // "Endpoint". The technically correct annotation ordering therefore should be:
+                // "Get" extends "Endpoint" annotation, which is "into Method", while "Produces" is
+                // into "Endpoint". The technically correct annotation ordering therefore should be:
                 //      @Produces @Get void f() {...}
                 // but it doesn't read as well as much more natural sequence:
                 //      @Get @Produces void f() {...}
                 // What we are trying to do here is to automatically reorder an "illegal" sequence
                 // into a legal one.
                 ErrorListener errsTemp = errs.branch(this);
-                if (validateAnnotations(typeBase, aAnno, atypeMixin, atypeInto, errsTemp))
+                if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, errsTemp))
                     {
                     // the original order is good; nothing to do
                     break Validate;
@@ -824,16 +824,16 @@ public class MethodDeclarationStatement
                     // move the applicable annotation to the "next" position
                     shuffle(aAnno,      iFound, iNext);
                     shuffle(atypeInto,  iFound, iNext);
-                    shuffle(atypeMixin, iFound, iNext);
+                    shuffle(atypeAnno, iFound, iNext);
 
-                    if (validateAnnotations(typeBase, aAnno, atypeMixin, atypeInto, ErrorListener.BLACKHOLE))
+                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, ErrorListener.BLACKHOLE))
                         {
                         fReordered = true;
                         break Validate;
                         }
 
                     typeNext = typeNext == null
-                            ? atypeMixin[iNext]
+                            ? atypeAnno[iNext]
                             : new AnnotatedTypeConstant(pool, aAnno[iNext], typeNext);
                     iNext--;
                     }
@@ -930,10 +930,10 @@ public class MethodDeclarationStatement
         }
 
     /**
-     * Validate the applicability of the mixin annotations to the specified base type.
+     * Validate the applicability of the annotations to the specified base type.
      */
     private boolean validateAnnotations(TypeConstant typeBase, Annotation[] aAnno,
-                                        TypeConstant[] atypeMixin, TypeConstant[] atypeInto,
+                                        TypeConstant[] atypeAnno, TypeConstant[] atypeInto,
                                         ErrorListener errs)
         {
         ConstantPool pool     = pool();
@@ -961,7 +961,7 @@ public class MethodDeclarationStatement
             //            type with the constant pool, since it will prematurely register the
             //            annotation before its parameters are fully resolved
             typeNext = typeNext == null
-                    ? atypeMixin[iNext]
+                    ? atypeAnno[iNext]
                     : new AnnotatedTypeConstant(pool, aAnno[iNext], typeNext);
             }
         }
@@ -970,8 +970,8 @@ public class MethodDeclarationStatement
      * Check if the specified "into" type applies to the specified "base" type and potentially
      * to the "next" annotation type.
      *
-     * Note, that the "into" for the first mixin *must* be strictly into the base type (which is
-     * either Method or Function), but the following could also apply to the previous ones.
+     * Note, that the "into" for the first annotation *must* be strictly into the base type (which
+     * is either Method or Function), but the following could also apply to the previous ones.
      */
     private boolean isApplicable(TypeConstant typeInto, TypeConstant typeBase, TypeConstant typeNext)
         {
@@ -1249,7 +1249,7 @@ public class MethodDeclarationStatement
                 return method;
                 }
             }
-        // TODO: check the contributions (super, mixin, etc.)
+        // TODO: check the contributions (super, annotation, mixin, etc.)
         return null;
         }
 

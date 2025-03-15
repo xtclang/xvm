@@ -1014,7 +1014,8 @@ public class xRef
             }
 
         /**
-         * Ensure the RefHandle fields are initialized (only necessary for stateful Ref/Var mixins).
+         * Ensure the RefHandle fields are initialized (only necessary for stateful Ref/Var
+         * annotations).
          *
          * @param frame  the current frame
          *

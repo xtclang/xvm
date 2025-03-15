@@ -372,10 +372,10 @@ public class Annotation
         {
         boolean fHalt = super.validate(errs);
 
-        // it must be a mixin type
-        if (getAnnotationType().getExplicitClassFormat() != Component.Format.MIXIN)
+        // it must be an annotation type
+        if (getAnnotationType().getExplicitClassFormat() != Component.Format.ANNOTATION)
             {
-            fHalt |= log(errs, Severity.ERROR, VE_ANNOTATION_NOT_MIXIN,
+            fHalt |= log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
                     getAnnotationClass().getValueString());
             }
 

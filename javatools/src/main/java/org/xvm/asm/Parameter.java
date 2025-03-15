@@ -177,18 +177,18 @@ public class Parameter
 
         int          cExtract = 0;
         TypeConstant typeBase = typeParam.resolveTypedefs();
-        while (typeBase instanceof AnnotatedTypeConstant typeAnno)
+        while (typeBase instanceof AnnotatedTypeConstant typeAnnotated)
             {
-            Annotation   anno      = typeAnno.getAnnotation();
-            TypeConstant typeMixin = anno.getAnnotationType();
+            Annotation   anno     = typeAnnotated.getAnnotation();
+            TypeConstant typeAnno = anno.getAnnotationType();
 
-            if (typeMixin.getExplicitClassFormat() != Component.Format.MIXIN)
+            if (typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION)
                 {
                 // no need to do anything; an error will be reported later
                 return true;
                 }
 
-            TypeConstant typeInto = typeMixin.getExplicitClassInto();
+            TypeConstant typeInto = typeAnno.getExplicitClassInto();
             if (typeInto.containsUnresolved())
                 {
                 return false;
@@ -198,7 +198,7 @@ public class Parameter
                 {
                 ++cExtract;
                 }
-            typeBase = typeAnno.getUnderlyingType();
+            typeBase = typeAnnotated.getUnderlyingType();
             }
 
         if (cExtract == 0)

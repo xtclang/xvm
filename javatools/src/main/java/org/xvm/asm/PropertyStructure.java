@@ -335,11 +335,12 @@ public class PropertyStructure
             if (contrib.getComposition() == Composition.Annotation)
                 {
                 Annotation   annotation = contrib.getAnnotation();
-                Constant     constMixin = annotation.getAnnotationClass();
-                TypeConstant typeMixin  = pool.ensureTerminalTypeConstant(constMixin);
-                if (typeMixin.isExplicitClassIdentity(true)
-                        && typeMixin.getExplicitClassFormat() == Component.Format.MIXIN
-                        && pool.typeProperty().equals(typeMixin.getExplicitClassInto().getIntoPropertyType()))
+                Constant     constAnno  = annotation.getAnnotationClass();
+                TypeConstant typeAnno   = pool.ensureTerminalTypeConstant(constAnno);
+                if (typeAnno.isExplicitClassIdentity(true)
+                        && typeAnno.getExplicitClassFormat() == Format.ANNOTATION
+                        && pool.typeProperty().equals(
+                                typeAnno.getExplicitClassInto().getIntoPropertyType()))
                     {
                     if (listPropAnno == null)
                         {
@@ -563,13 +564,13 @@ public class PropertyStructure
                     return false;
                     }
 
-                // find the "into" of the mixin
-                ClassStructure structMixin = (ClassStructure) ((IdentityConstant) annotation.getAnnotationClass()).getComponent();
+                // find the "into" of the annotation
+                ClassStructure structAnno  = (ClassStructure) ((IdentityConstant) annotation.getAnnotationClass()).getComponent();
                 Contribution   contribInto = null;
                 Contribution   contribExtends;
-                while (structMixin != null && structMixin.getFormat() == Format.MIXIN
-                        && (contribInto    = structMixin.findContribution(Composition.Into   )) == null
-                        && (contribExtends = structMixin.findContribution(Composition.Extends)) != null)
+                while (structAnno != null && structAnno.getFormat() == Format.ANNOTATION
+                        && (contribInto    = structAnno.findContribution(Composition.Into   )) == null
+                        && (contribExtends = structAnno.findContribution(Composition.Extends)) != null)
                     {
                     TypeConstant typeExtends = contribExtends.getTypeConstant();
                     if (typeExtends.containsUnresolved())
@@ -577,19 +578,19 @@ public class PropertyStructure
                         return false;
                         }
 
-                    structMixin = null;
+                    structAnno = null;
                     if (typeExtends.isExplicitClassIdentity(true))
                         {
                         Constant constExtends = typeExtends.getDefiningConstant();
                         if (constExtends instanceof IdentityConstant idExtends)
                             {
-                            structMixin = (ClassStructure) idExtends.getComponent();
+                            structAnno = (ClassStructure) idExtends.getComponent();
                             }
                         }
                     }
 
-                // see if the mixin applies to a Property or a Ref/Var, in which case it stays in
-                // this list; otherwise (e.g. AutoFreezable), move it into the type itself
+                // see if the annotation applies to a Property or a Ref/Var, in which case it stays
+                // in this list; otherwise (e.g. AutoFreezable), move it into the type itself
                 boolean fMove = true;
                 if (contribInto != null)
                     {

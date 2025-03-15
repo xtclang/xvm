@@ -25,7 +25,7 @@ const RTType<DataType, OuterType>
     @Override @RO Type[]               underlyingTypes                    .get() { TODO("native"); }
 
     @Override conditional Access          accessSpecified()                      { TODO("native"); }
-    @Override             Type            annotate(Annotation annotation)        { TODO("native"); }
+    @Override             Type            annotate(Annotation anno)              { TODO("native"); }
     @Override conditional Annotation      annotated()                            { TODO("native"); }
     @Override conditional Type            contained()                            { TODO("native"); }
     @Override conditional Class<DataType> fromClass()                            { TODO("native"); }
@@ -75,12 +75,8 @@ const RTType<DataType, OuterType>
     }
 
     @Override
-    @Lazy Iterator<DataType> emptyIterator.calc() {
-        return createEmptyIterator();
-    }
+    @Lazy Iterator<DataType> emptyIterator.calc() = createEmptyIterator();
 
     @Override
-    @Lazy Map<String, MultiMethod<DataType>> multimethods.calc() {
-        return collectMultimethods();
-    }
+    @Lazy Map<String, MultiMethod<DataType>> multimethods.calc() = collectMultimethods();
 }

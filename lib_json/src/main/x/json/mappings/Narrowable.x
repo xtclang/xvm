@@ -1,9 +1,9 @@
 /**
- * A mapping mixin for a mapping that may need to replace itself automatically as it reads or writes
- * in order to handle a more specific type (such as a sub-class) than the mapping was instantiated
- * to handle.
+ * A mapping annotation for a mapping that may need to replace itself automatically as it reads or
+ * wrures in order to handle a more specific type (such as a sub-class) than the mapping was
+ * instantiated to handle.
  */
-mixin Narrowable<Serializable>
+annotation Narrowable<Serializable>
         into Mapping<Serializable> {
 
     @Override

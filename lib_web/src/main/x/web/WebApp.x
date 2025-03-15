@@ -13,7 +13,7 @@ import security.NeverAuthenticator;
  * TODO how to import a web module explicitly as "it's ok to trust any web services in this module"
  *      - can the package be annotated as "@Trusted" or something like that?
  */
-mixin WebApp
+annotation WebApp
         into module {
     /**
      * The registry for this WebApp.

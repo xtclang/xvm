@@ -108,12 +108,11 @@ interface TypeTemplate
 
     /**
      * A brief descriptive string for the type, intended to provide clarity for a developer.
+     *
+     * This default implementation should be overridden by any type template that can provide
+     * a more detailed and/or succinct description in a form well-known to developers.
      */
-    @RO String desc.get() {
-        // this default implementation should be overridden by any type template that can provide
-        // a more detailed and/or succinct description in a form well-known to a developer
-        return name ?: this.TypeTemplate.toString();
-    }
+    @RO String desc.get() = name ?: this.TypeTemplate.toString();
 
     /**
      * The form of the type.
@@ -261,11 +260,11 @@ interface TypeTemplate
     /**
      * Add the specified annotation to this type.
      *
-     * @param annotation  the annotation to add to this type
+     * @param anno  the annotation to add to this type
      *
      * @return the annotated type
      */
-    TypeTemplate! annotate(AnnotationTemplate annotation);
+    TypeTemplate! annotate(AnnotationTemplate anno);
 
     /**
      * Test whether this type is type-compatible with the specified second type, such that any
@@ -310,9 +309,7 @@ interface TypeTemplate
     // ----- Stringable ----------------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return 0;
-    }
+    Int estimateStringLength() = 0;
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {
@@ -323,9 +320,9 @@ interface TypeTemplate
 
         case Class:
             assert Composition cmp := fromClass();
-            while ((AnnotationTemplate annotation, cmp) := cmp.deannotate()) {
+            while ((AnnotationTemplate anno, cmp) := cmp.deannotate()) {
                 buf.add('@')
-                   .addAll(annotation.template.name)
+                   .addAll(anno.template.name)
                    .add(' ');
             }
             assert cmp.is(ClassTemplate);
