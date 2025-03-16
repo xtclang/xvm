@@ -147,6 +147,14 @@ public class SwitchStatement
                 if (ctxBlock != null)
                     {
                     assert group != null;
+
+                    if (m_labelContinue == null && ctxBlock.isReachable())
+                        {
+                        listStmts.get(group.iFirstCase).
+                            log(errs, Severity.ERROR, Compiler.SWITCH_BREAK_OR_CONTINUE_EXPECTED);
+                        fValid = false;
+                        }
+
                     group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
                     group.labelContinueTo = m_labelContinue;
                     group = null;
@@ -328,9 +336,11 @@ public class SwitchStatement
                     }
                 }
 
-            ctx.getHolder().setAst(this, new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(),
-                    aconstCase, abastBody));
-
+            if (!errs.hasSeriousErrors())
+                {
+                ctx.getHolder().setAst(this,
+                    new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(), aconstCase, abastBody));
+                }
             // switch never completes normally
             return false;
             }

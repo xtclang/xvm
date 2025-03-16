@@ -2,7 +2,12 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Tuple result = console.print("Hello, world!"); // this used to blow up at runtime
-        console.print(result);
+        switch (1) { // this used to cause the compiler assert
+        case 1:
+            console.print("one");
+        case 2:
+            console.print("two");
+            break;
+        }
     }
 }
