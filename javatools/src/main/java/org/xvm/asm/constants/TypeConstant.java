@@ -3067,8 +3067,7 @@ public abstract class TypeConstant
                 && (!this.isVirtualChild() ||
                     !this.getParentType().isA(typeContrib.getParentType())))
                 {
-                // TODO: we need an annotation specific error message
-                log(errs, Severity.ERROR, VE_INCORPORATES_INCOMPATIBLE_PARENT,
+                log(errs, Severity.ERROR, VE_ANNOTATION_INCOMPATIBLE_PARENT,
                     constId.getPathString(), typeContrib.getValueString(),
                     typeContrib.getParentType().getValueString());
                 return;

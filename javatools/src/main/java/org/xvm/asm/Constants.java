@@ -576,6 +576,10 @@ public interface Constants
      * {0} incorporates {1}, which is a virtual child of {2}, but {0} is not a virtual child of that class.
      */
     String VE_INCORPORATES_INCOMPATIBLE_PARENT   = "VERIFY-90";
+    /**
+     * {0} is annotated  by {1}, which is a virtual child of {2}, but {0} is not a virtual child of that class.
+     */
+    String VE_ANNOTATION_INCOMPATIBLE_PARENT     = "VERIFY-91";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

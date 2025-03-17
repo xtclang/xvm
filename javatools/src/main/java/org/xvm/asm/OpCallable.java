@@ -344,7 +344,11 @@ public abstract class OpCallable extends Op
         if (typeTarget.isVirtualChild())
             {
             TypeConstant typeThis = frame.getThis().getType();
-            assert typeThis.isVirtualChild();
+            if (!typeThis.isVirtualChild())
+                {
+                frame.raiseException("Not a virtual child: \"" + typeTarget.getValueString() + '"');
+                return null;
+                }
 
             String sNameCurrent = frame.f_function.getIdentityConstant().getNamespace().getName();
             String sNameTarget  = idTarget.getName();

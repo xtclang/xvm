@@ -16,6 +16,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
@@ -2634,8 +2635,22 @@ public class InvocationExpression
                             {
                             case Equal:
                                 assert typeContrib.equals(ctx.getThisType());
+                                access = Access.PRIVATE;
+                                break;
 
-                                typeLeft = pool.ensureAccessTypeConstant(typeContrib, Access.PRIVATE);
+                            case Annotation:
+                            case Incorporates:
+                                if (clzThis.isVirtualChild())
+                                    {
+                                    TypeConstant typeParent = ctx.getThisType().getParentType();
+                                    if (typeContrib.isA(typeParent))
+                                        {
+                                        log(errs, Severity.ERROR, Constants.VE_CYCLICAL_CONTRIBUTION,
+                                                clzThis.getIdentityConstant().getPathString(),
+                                                typeContrib.getValueString());
+                                        return null;
+                                        }
+                                    }
                                 break;
 
                             case Extends:
@@ -2643,11 +2658,12 @@ public class InvocationExpression
                                     {
                                     log(errs, Severity.WARNING, Compiler.SUPER_CONSTRUCTOR_SKIPPED);
                                     }
-                                // fall through
+                                break;
+
                             default:
-                                typeLeft = pool.ensureAccessTypeConstant(typeContrib, access);
                                 break;
                             }
+                        typeLeft = pool.ensureAccessTypeConstant(typeContrib, access);
                         infoLeft = typeLeft.ensureTypeInfo(errs);
                         }
                     else
