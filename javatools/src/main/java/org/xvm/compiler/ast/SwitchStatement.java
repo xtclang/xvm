@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -265,7 +266,7 @@ public class SwitchStatement
                 }
             else
                 {
-                m_listContinues.get(0).node().
+                listStmts.getLast().
                     log(errs, Severity.ERROR, Compiler.SWITCH_CONTINUE_NOT_EXPECTED);
                 fValid = false;
                 }
@@ -332,14 +333,14 @@ public class SwitchStatement
                 if (m_listGroups.get(iGroup).labelContinueTo == null)
                     {
                     // if there was no "continue", then we're done
+                    abastBody = Arrays.copyOfRange(abastBody, 0, iCase + 1);
                     break;
                     }
                 }
 
             if (!errs.hasSeriousErrors())
                 {
-                ctx.getHolder().setAst(this,
-                    new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(), aconstCase, abastBody));
+                ctx.getHolder().setAst(this, new StmtBlockAST(abastBody, true));
                 }
             // switch never completes normally
             return false;
