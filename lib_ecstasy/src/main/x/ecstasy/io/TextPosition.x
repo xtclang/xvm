@@ -19,9 +19,7 @@ interface TextPosition
     /**
      * The offset within the current line, starting with zero.
      */
-    @RO Int lineOffset.get() {
-        return offset - lineStartOffset;
-    }
+    @RO Int lineOffset.get() = offset - lineStartOffset;
 
     /**
      * The starting offset of the current line.

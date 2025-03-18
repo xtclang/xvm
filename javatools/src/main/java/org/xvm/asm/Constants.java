@@ -567,23 +567,23 @@ public interface Constants
     /**
      * The type modifier is not permitted for contribution {1} on {0}.
      */
-    String VE_TYPE_MODIFIER_ILLEGAL = "VERIFY-88";
+    String VE_TYPE_MODIFIER_ILLEGAL               = "VERIFY-88";
     /**
      * The parameter {2} for the method {1} on {0} must specify a default value.
      */
-    String VE_DEFAULT_VALUE_MISSING              = "VERIFY-89";
+    String VE_DEFAULT_VALUE_MISSING               = "VERIFY-89";
     /**
      * {0} incorporates {1}, which is a virtual child of {2}, but {0} is not a virtual child of that class.
      */
-    String VE_INCORPORATES_INCOMPATIBLE_PARENT   = "VERIFY-90";
+    String VE_INCORPORATES_INCOMPATIBLE_PARENT    = "VERIFY-90";
     /**
      * {0} is annotated  by {1}, which is a virtual child of {2}, but {0} is not a virtual child of that class.
      */
-    String VE_ANNOTATION_INCOMPATIBLE_PARENT     = "VERIFY-91";
+    String VE_ANNOTATION_INCOMPATIBLE_PARENT      = "VERIFY-91";
     /**
      * {0} is annotated by {1}, which makes its method {2} unreachable.
      */
-    String VE_METHOD_UNREACHABLE                = "VERIFY-92";
+    String VE_METHOD_UNREACHABLE                  = "VERIFY-92";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

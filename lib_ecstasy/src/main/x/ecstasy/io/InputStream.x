@@ -25,14 +25,10 @@ interface InputStream
      * The number of bytes remaining in the stream. This will be equal to `size` at the start of
      * the stream, and equal to `0` at the end of the stream.
      */
-    @RO Int remaining.get() {
-        return (size - offset).notLessThan(0);
-    }
+    @RO Int remaining.get() = (size - offset).notLessThan(0);
 
     /**
      * True iff the end of the stream has been reached.
      */
-    @RO Boolean eof.get() {
-        return remaining == 0;
-    }
+    @RO Boolean eof.get() = remaining == 0;
 }

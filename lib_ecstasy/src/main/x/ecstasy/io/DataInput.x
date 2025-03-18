@@ -205,9 +205,7 @@ interface DataInput
     /**
      * @return  a value of type Duration read from the stream
      */
-    Duration readDuration() {
-        return new Duration(readInt128());
-    }
+    Duration readDuration() = new Duration(readInt128());
 
 
     // ----- aliases -------------------------------------------------------------------------------

@@ -163,9 +163,7 @@ interface Reader
      * @throws IOException  represents the general category of input/output exceptions
      * @throws EndOfFile    if the end of the stream has been reached
      */
-    void nextChars(Char[] chars) {
-        nextChars(chars, 0, chars.size);
-    }
+    void nextChars(Char[] chars) = nextChars(chars, 0, chars.size);
 
     /**
      * Read the specified number of characters into the provided array.
@@ -207,9 +205,7 @@ interface Reader
      *
      * @return a String of the specified size
      */
-    String nextString(Int count) {
-        return new String(nextChars(count));
-    }
+    String nextString(Int count) = new String(nextChars(count));
 
 
     // ----- line oriented operations --------------------------------------------------------------

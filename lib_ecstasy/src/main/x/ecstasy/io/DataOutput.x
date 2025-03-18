@@ -11,18 +11,14 @@ interface DataOutput
      *
      * @param value  a value of type Boolean to write to the stream
      */
-    void writeBoolean(Boolean value) {
-        writeByte(value.toUInt8());
-    }
+    void writeBoolean(Boolean value) = writeByte(value.toUInt8());
 
     /**
      * Write a Char value to the stream.
      *
      * @param value  a value of type Char to write to the stream
      */
-    void writeChar(Char value) {
-        writeUInt32(value.codepoint);
-    }
+    void writeChar(Char value) = writeUInt32(value.codepoint);
 
     /**
      * Write a String value to the stream.
@@ -41,54 +37,42 @@ interface DataOutput
      *
      * @param value  a value of an enumerated type to write to the stream
      */
-    void writeEnum(Enum value) {
-        writeUInt16(value.ordinal.toUInt16());
-    }
+    void writeEnum(Enum value) = writeUInt16(value.ordinal.toUInt16());
 
     /**
      * Write an Int8 value to the stream.
      *
      * @param value  a value of type Int8 to write to the stream
      */
-    void writeInt8(Int8 value) {
-        writeByte(value.toByte());
-    }
+    void writeInt8(Int8 value) = writeByte(value.toByte());
 
     /**
      * Write an Int16 value to the stream.
      *
      * @param value  a value of type Int16 to write to the stream
      */
-    void writeInt16(Int16 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeInt16(Int16 value) = writeBytes(value.toByteArray());
 
     /**
      * Write an Int32 value to the stream.
      *
      * @param value  a value of type Int32 to write to the stream
      */
-    void writeInt32(Int32 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeInt32(Int32 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a 64-bit Int value to the stream.
      *
      * @param value  a value of type Int to write to the stream
      */
-    void writeInt64(Int64 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeInt64(Int64 value) = writeBytes(value.toByteArray());
 
     /**
      * Write an Int128 value to the stream.
      *
      * @param value  a value of type Int128 to write to the stream
      */
-    void writeInt128(Int128 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeInt128(Int128 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a IntN value to the stream.
@@ -200,45 +184,35 @@ interface DataOutput
      *
      * @param value  a value of type Float16 to write to the stream
      */
-    void writeFloat16(Float16 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeFloat16(Float16 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a BFloat16 value to the stream.
      *
      * @param value  a value of type BFloat16 to write to the stream
      */
-    void writeBFloat16(BFloat16 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeBFloat16(BFloat16 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a Float32 value to the stream.
      *
      * @param value  a value of type Float32 to write to the stream
      */
-    void writeFloat32(Float32 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeFloat32(Float32 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a Float64 value to the stream.
      *
      * @param value  a value of type Float64 to write to the stream
      */
-    void writeFloat64(Float64 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeFloat64(Float64 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a Float128 value to the stream.
      *
      * @param value  a value of type Float128 to write to the stream
      */
-    void writeFloat128(Float128 value) {
-        writeBytes(value.toByteArray());
-    }
+    void writeFloat128(Float128 value) = writeBytes(value.toByteArray());
 
     /**
      * Write a FloatN value to the stream.
@@ -256,9 +230,7 @@ interface DataOutput
      *
      * @param value  a value of type Date to write to the stream
      */
-    void writeDate(Date value) {
-        writeInt32(value.epochDay);
-    }
+    void writeDate(Date value) = writeInt32(value.epochDay);
 
     /**
      * Write a TimeOfDay value to the stream.
@@ -301,9 +273,7 @@ interface DataOutput
      *
      * @param value  a value of type Duration to write to the stream
      */
-    void writeDuration(Duration value) {
-        writeInt128(value.picoseconds);
-    }
+    void writeDuration(Duration value) = writeInt128(value.picoseconds);
 
 
     // ----- aliases -------------------------------------------------------------------------------

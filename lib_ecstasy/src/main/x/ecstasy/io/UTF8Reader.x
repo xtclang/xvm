@@ -28,9 +28,7 @@ class UTF8Reader
      */
     protected/private Int rawOffset {
         @Override
-        Int get() {
-            return in.offset - initOffset;
-        }
+        Int get() = in.offset - initOffset;
 
         @Override
         void set(Int offset) {
@@ -42,9 +40,7 @@ class UTF8Reader
      * True iff the reader has encountered any non-ASCII characters (any characters using a
      * multi-byte UTF-8 encoding).
      */
-    protected Boolean anyMultibyte.get() {
-        return offset != rawOffset;
-    }
+    protected Boolean anyMultibyte.get() = offset != rawOffset;
 
 
     // ----- Position implementation ---------------------------------------------------------------

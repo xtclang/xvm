@@ -29,16 +29,12 @@ class CharArrayReader(immutable Char[] chars)
     /**
      * @return the total number of characters represented by the reader
      */
-    Int size.get() {
-        return chars.size;
-    }
+    Int size.get() = chars.size;
 
     /**
      * @return the remaining (yet to be read) number of characters represented by the reader
      */
-    Int remaining.get() {
-        return size - offset;
-    }
+    Int remaining.get() = size - offset;
 
 
     // ----- Position implementation ---------------------------------------------------------------
@@ -176,9 +172,7 @@ class CharArrayReader(immutable Char[] chars)
     // ----- bulk read operations ------------------------------------------------------------------
 
     @Override
-    Boolean hasAtLeast(Int count) {
-        return count <= remaining;
-    }
+    Boolean hasAtLeast(Int count) = count <= remaining;
 
 
     // ----- line oriented operations --------------------------------------------------------------
@@ -199,9 +193,7 @@ class CharArrayReader(immutable Char[] chars)
     /**
      * @return the contents of this entire Reader, as an immutable Array of Char
      */
-    immutable Char[] toCharArray() {
-        return chars;
-    }
+    immutable Char[] toCharArray() = chars;
 
     @Override
     String toString() {

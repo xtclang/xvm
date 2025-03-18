@@ -8,57 +8,35 @@ annotation PackedDataOutput
         into BinaryOutput
         implements DataOutput {
     @Override
-    void writeChar(Char value) {
-        writeUTF8Char(this, value);
-    }
+    void writeChar(Char value) = writeUTF8Char(this, value);
 
     @Override
-    void writeInt16(Int16 value) {
-        writeInt64(value);
-    }
+    void writeInt16(Int16 value) = writeInt64(value);
 
     @Override
-    void writeInt32(Int32 value) {
-        writeInt64(value);
-    }
+    void writeInt32(Int32 value) = writeInt64(value);
 
     @Override
-    void writeInt64(Int64 value) {
-        writePackedInt(this, value);
-    }
+    void writeInt64(Int64 value) = writePackedInt(this, value);
 
     @Override
-    void writeInt128(Int128 value) {
-        writeIntN(value);
-    }
+    void writeInt128(Int128 value) = writeIntN(value);
 
     @Override
-    void writeIntN(IntN value) {
-        writePackedIntN(this, value);
-    }
+    void writeIntN(IntN value) = writePackedIntN(this, value);
 
     @Override
-    void writeUInt16(UInt16 value) {
-        writeInt64(value);
-    }
+    void writeUInt16(UInt16 value) = writeInt64(value);
 
     @Override
-    void writeUInt32(UInt32 value) {
-        writeInt64(value);
-    }
+    void writeUInt32(UInt32 value) = writeInt64(value);
 
     @Override
-    void writeUInt64(UInt64 value) {
-        writeIntN(value);
-    }
+    void writeUInt64(UInt64 value) = writeIntN(value);
 
     @Override
-    void writeUInt128(UInt128 value) {
-        writeIntN(value);
-    }
+    void writeUInt128(UInt128 value) = writeIntN(value);
 
     @Override
-    void writeUIntN(UIntN value) {
-        writeIntN(value);
-    }
+    void writeUIntN(UIntN value) = writeIntN(value);
 }
