@@ -580,6 +580,10 @@ public interface Constants
      * {0} is annotated  by {1}, which is a virtual child of {2}, but {0} is not a virtual child of that class.
      */
     String VE_ANNOTATION_INCOMPATIBLE_PARENT     = "VERIFY-91";
+    /**
+     * {0} is annotated by {1}, which makes its method {2} unreachable.
+     */
+    String VE_METHOD_UNREACHABLE                = "VERIFY-92";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

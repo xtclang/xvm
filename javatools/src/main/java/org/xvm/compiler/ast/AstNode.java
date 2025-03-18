@@ -1886,10 +1886,7 @@ public abstract class AstNode
     protected TypeInfo ensureTypeInfo(TypeConstant type, ErrorListener errs)
         {
         TypeInfo info = type.ensureTypeInfo(errs = errs.branch(this));
-        if (errs.hasSeriousErrors())
-            {
-            errs.merge();
-            }
+        errs.merge();
         return info;
         }
 

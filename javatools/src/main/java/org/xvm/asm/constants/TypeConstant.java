@@ -4510,21 +4510,39 @@ public abstract class TypeConstant
                     for (Object nid : listMatches)
                         {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch != null)
+                        if (methodMatch == null)
                             {
-                            // the fact that @Override is not specified, but there is a match
-                            // among the underlying methods is almost always wrong except two
-                            // special scenarios:
-                            // a) the contribution is identical to the "head", which adds nothing to
-                            //    the chain and the issue either has already been reported, or
-                            //    allowed for some reason - not our responsibility either way
-                            // b) the contribution is identical to the tail of the chain, in which
-                            //    case the override is not necessary
-                            MethodConstant idMethod = methodContrib.getIdentity();
-                            MethodBody     bodyHead = methodMatch.getHead();
-                            MethodBody     bodyTail = methodMatch.getTail();
-                            if (!bodyHead.getIdentity().equals(idMethod) &&
+                            continue;
+                            }
+
+                        // the fact that @Override is not specified, but there is a match
+                        // among the underlying methods is almost always wrong except two
+                        // special scenarios:
+                        // a) the contribution is identical to the "head", which adds nothing to
+                        //    the chain and the issue either has already been reported, or
+                        //    allowed for some reason - not our responsibility either way
+                        // b) the contribution is identical to the tail of the chain, in which
+                        //    case the override is not necessary
+                        MethodConstant idMethod = methodContrib.getIdentity();
+                        MethodBody     bodyHead = methodMatch.getHead();
+                        MethodBody     bodyTail = methodMatch.getTail();
+                        if (!bodyHead.getIdentity().equals(idMethod) &&
                                 (bodyTail == bodyHead || !bodyTail.getIdentity().equals(idMethod)))
+                            {
+                            if (fAnnotation)
+                                {
+                                // the annotation sits on top of the annotated class and makes the
+                                // underlying call chain inaccessible
+                                if (!errs.hasSeriousErrors())
+                                    {
+                                    log(errs, Severity.WARNING, VE_METHOD_UNREACHABLE,
+                                        bodyHead.getIdentity().getNamespace().getValueString(),
+                                        bodyContribTail.getIdentity().getNamespace().getValueString(),
+                                        bodyHead.getSignature().getValueString()
+                                        );
+                                    }
+                                }
+                            else
                                 {
                                 MethodBody bodyOverride = fOnTop ? bodyHead : bodyTail;
                                 log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,

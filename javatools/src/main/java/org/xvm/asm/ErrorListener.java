@@ -189,7 +189,7 @@ public interface ErrorListener
                 }
             else
                 {
-                System.out.println(s);
+                System.out.println(err.getSeverity() + ": " + s);
                 return false;
                 }
             }

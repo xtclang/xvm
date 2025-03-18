@@ -1,18 +1,22 @@
 module TestSimple {
     @Inject Console console;
 
-    void run() {
-        // this used to assert during BAST production
-        switch (1) {
-        case 1:
-            console.print("one");
-            continue;
-        case 2:
-            console.print("two");
-            break;
-        default:
-            console.print("whatever");
-            break;
-        }
+    void run(  ) {
+        new Main().route();
+        new @WebService("test") Base().route();
+    }
+
+    annotation WebService(String path) into service {
+        void route() = console.print($"WebService.route {path=}");
+    }
+
+    @WebService("/")
+    service Main extends Base {
+        @Override
+        void route() = console.print($"Main.route");
+    }
+
+    service Base {
+        void route() = console.print($"Base.route");
     }
 }

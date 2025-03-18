@@ -209,7 +209,10 @@ public class ErrorList
         @Override
         public ErrorListener merge()
             {
-            logTo(f_listener);
+            if (hasErrors())
+                {
+                logTo(f_listener);
+                }
 
             return f_listener;
             }
