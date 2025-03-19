@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -316,9 +315,9 @@ public class SwitchStatement
         {
         CaseManager<CaseGroup> mgr = m_casemgr;
 
-        int         cCases     = mgr.getCaseCount();
-        Constant[]  aconstCase = new Constant[cCases];  // case values (null == default)
-        BinaryAST[] abastBody  = new BinaryAST[cCases]; // case statement blocks (or nulls)
+        int             cCases     = mgr.getCaseCount();
+        Constant[]      aconstCase = new Constant[cCases];  // case values (null == default)
+        List<BinaryAST> listBodies = new ArrayList<>(cCases);
 
         // check for the extremely rare possibility that the switch condition is a constant, and we
         // can tell which branch to use (discarding the rest of the possible case branches)
@@ -329,18 +328,18 @@ public class SwitchStatement
             for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(), iCase = -1;
                     iGroup < cGroups; ++iGroup)
                 {
-                iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, abastBody, iCase, errs);
+                iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, listBodies, iCase, errs);
                 if (m_listGroups.get(iGroup).labelContinueTo == null)
                     {
                     // if there was no "continue", then we're done
-                    abastBody = Arrays.copyOfRange(abastBody, 0, iCase + 1);
                     break;
                     }
                 }
 
             if (!errs.hasSeriousErrors())
                 {
-                ctx.getHolder().setAst(this, new StmtBlockAST(abastBody, true));
+                ctx.getHolder().setAst(this,
+                        new StmtBlockAST(listBodies.toArray(BinaryAST.NO_ASTS), true));
                 }
             // switch never completes normally
             return false;
@@ -362,7 +361,7 @@ public class SwitchStatement
 
         for (int iGroup = 0, cGroups = m_listGroups.size(), iCase = -1; iGroup < cGroups; ++iGroup)
             {
-            iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, abastBody, iCase, errs);
+            iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, listBodies, iCase, errs);
             }
 
         if (mgr.hasDeclarations())
@@ -378,14 +377,14 @@ public class SwitchStatement
             }
 
         ctx.getHolder().setAst(this, new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(),
-                aconstCase, abastBody));
+                aconstCase, listBodies.toArray(BinaryAST.NO_ASTS)));
 
         return mgr.isCompletable();
         }
 
     private int emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup,
-                               Constant[] aconstCase, BinaryAST[] abastBody, int iCase,
-                               ErrorListener errs)
+                              Constant[] aconstCase, List<BinaryAST> listBodies, int iCase,
+                              ErrorListener errs)
         {
         boolean   fCompletes = fReachable;
         CaseGroup group      = m_listGroups.get(iGroup);
@@ -461,8 +460,7 @@ public class SwitchStatement
             code.add(new Exit());
             }
 
-        assert abastBody[iCase] == null;
-        abastBody[iCase] = new StmtBlockAST(listAst.toArray(BinaryAST.NO_ASTS), true);
+        listBodies.add(new StmtBlockAST(listAst.toArray(BinaryAST.NO_ASTS), true));
 
         return iCase;
         }
