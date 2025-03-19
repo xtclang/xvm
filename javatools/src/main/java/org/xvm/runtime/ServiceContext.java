@@ -472,15 +472,12 @@ public class ServiceContext
     /**
      * Add a message to the service request queue.
      *
-     * @param msg     the request message
-     * @param fAsync  if true, avoid the in-line optimization for the request execution
-     *
      * @return true if the service has become "overwhelmed" - too many outstanding messages
      */
-    public boolean addRequest(Message msg, boolean fAsync)
+    public boolean addRequest(Message msg)
         {
         f_queueMsg.add(msg);
-        ensureScheduled(fAsync);
+        ensureScheduled(msg.isAsync());
         return isOverwhelmed();
         }
 
@@ -1223,7 +1220,7 @@ public class ServiceContext
         Message request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
 
         // TODO: should we reject (throw) if the service overwhelmed?
-        addRequest(request, true);
+        addRequest(request);
 
         return request.f_future;
         }
@@ -1244,9 +1241,10 @@ public class ServiceContext
         assert iReturn != Op.A_IGNORE_ASYNC;
 
         OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
+                                frame.isDynamicVar(iReturn),
                                 typeRet.length == 0 ? null : i -> typeRet[i]);
 
-        addRequest(request, frame.isDynamicVar(iReturn));
+        addRequest(request);
 
         frame.f_fiber.registerRequest(request);
 
@@ -1254,7 +1252,7 @@ public class ServiceContext
         }
 
     /**
-     * Send an asynchronous Op-based message to this context with multiple return values.
+     * Send an Op-based message to this context with multiple return values.
      *
      * Note: at the moment, this is only called by a native (synchronous) method. If that changes,
      *       and we need to go async here, the logic from "sendInvokeNRequest" needs to be re-used.
@@ -1270,9 +1268,10 @@ public class ServiceContext
     public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet)
         {
         int       cRets   = aiReturn.length;
-        OpRequest request = new OpRequest(frame, op, cRets, cRets == 0 ? null : i -> typeRet[i]);
+        OpRequest request = new OpRequest(frame, op, cRets, false,
+                                cRets == 0 ? null : i -> typeRet[i]);
 
-        addRequest(request, false);
+        addRequest(request);
 
         frame.f_fiber.registerRequest(request);
 
@@ -1405,9 +1404,9 @@ public class ServiceContext
 
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest    request  = new OpRequest(frame, opCall, cReturns, supplier);
+        OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
 
-        boolean fOverwhelmed = addRequest(request, fAsync);
+        boolean fOverwhelmed = addRequest(request);
 
         Fiber                           fiber  = frame.f_fiber;
         CompletableFuture<ObjectHandle> future = request.f_future;
@@ -1470,28 +1469,28 @@ public class ServiceContext
                 }
             };
 
-        TypeSupplier                      supplier = resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest                         request  = new OpRequest(frame, opCall, cReturns, supplier);
-        CompletableFuture<ObjectHandle[]> future   = request.f_future;
-
-        boolean fAllAsync = true;
+        boolean fAsync = true;
         for (int iReturn : aiReturn)
             {
             if (!frame.isFutureVar(iReturn))
                 {
-                fAllAsync = false;
+                fAsync = false;
                 break;
                 }
             }
 
-        boolean fOverwhelmed = addRequest(request, fAllAsync);
+        TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
+        OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
+
+        CompletableFuture<ObjectHandle[]> future       = request.f_future;
+        boolean                           fOverwhelmed = addRequest(request);
 
         if (cReturns == 0)
             {
             frame.f_fiber.registerUncapturedRequest(request);
             return fOverwhelmed || future.isDone()
-                ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
-                : Op.R_NEXT;
+                    ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
+                    : Op.R_NEXT;
             }
 
         frame.f_fiber.registerRequest(request);
@@ -1502,7 +1501,7 @@ public class ServiceContext
             return frame.assignFutureResult(aiReturn[0], cfReturn);
             }
 
-        if (fAllAsync)
+        if (fAsync)
             {
             for (int i = 0; i < cReturns; i++)
                 {
@@ -1712,9 +1711,9 @@ public class ServiceContext
                 }
             };
 
-        OpRequest request = new OpRequest(frame, opInit, 1, null);
+        OpRequest request = new OpRequest(frame, opInit, 1, false, null);
 
-        addRequest(request, false);
+        addRequest(request);
 
         return request.f_future;
         }
@@ -1807,6 +1806,12 @@ public class ServiceContext
 
             f_future = new CompletableFuture();
             }
+
+        /**
+         * @return true iff the request is sent in asynchronous manner; otherwise the caller is
+         *         blocked waiting for a response
+         */
+        abstract public boolean isAsync();
 
         /**
          * @return the caller's stack depth
@@ -1937,19 +1942,28 @@ public class ServiceContext
             extends Message
         {
         /**
-         * @param supplierRet  (optional) the supplier of return types to be used *only* if the
-         *                     request's return values need to be proxied
+         * @param fAsync        if true, avoid the in-line optimization for the request execution
+         * @param typeSupplier  (optional) the supplier of return types to be used *only* if the
+         *                      request's return values need to be proxied
          */
-        protected OpRequest(Frame frameCaller, Op op, int cReturns, TypeSupplier typeSupplier)
+        protected OpRequest(Frame frameCaller, Op op, int cReturns, boolean fAsync,
+                            TypeSupplier typeSupplier)
             {
             super(frameCaller);
 
             f_op           = op;
             f_cReturns     = cReturns;
+            f_fAsync       = fAsync;
             f_typeSupplier = typeSupplier;
             f_nDepth       = frameCaller.f_nDepth;
             f_hTimeout     = frameCaller.f_fiber.getTimeoutHandle();
             f_ldtTimeout   = frameCaller.f_fiber.getTimeoutStamp();
+            }
+
+        @Override
+        public boolean isAsync()
+            {
+            return f_fAsync;
             }
 
         @Override
@@ -2116,6 +2130,7 @@ public class ServiceContext
 
         private final Op           f_op;
         private final int          f_cReturns;
+        private final boolean      f_fAsync;
         private final TypeSupplier f_typeSupplier;
         private final int          f_nDepth;
         private final ObjectHandle f_hTimeout;
@@ -2142,6 +2157,12 @@ public class ServiceContext
             f_hFunction = hFunction;
             f_ahArg     = ahArg;
             f_cReturns  = cReturns;
+            }
+
+        @Override
+        public boolean isAsync()
+            {
+            return true;
             }
 
         @Override

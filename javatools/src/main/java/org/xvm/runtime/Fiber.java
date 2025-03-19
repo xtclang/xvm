@@ -61,8 +61,19 @@ public class Fiber
             f_refCaller  = new WeakReference<>(fiberCaller);
             m_ldtTimeout = msgCall.getTimeoutStamp();
             m_hTimeout   = msgCall.getTimeoutHandle();
-            m_mapTokens  = msgCall.f_mapTokens;
-            m_fCloneMap  = true;
+
+            // if the call is async, we must clone context tokens on the spot
+            Map<ObjectHandle, ObjectHandle> mapTokens = msgCall.f_mapTokens;
+            if (mapTokens != null && msgCall.isAsync())
+                {
+                m_mapTokens = new HashMap<>(mapTokens);
+                m_fCloneMap = false;
+                }
+            else
+                {
+                m_mapTokens = mapTokens;
+                m_fCloneMap = true;
+                }
             }
         }
 
