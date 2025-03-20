@@ -40,7 +40,7 @@ class JsonArrayBuilder
     Int size.get() = values.size;
 
     /**
-     * Add a value to the `JsonArray`.
+     * Add a value to the `JsonArray` being built by this builder.
      *
      * @param value  the `Doc` value to add
      *
@@ -52,7 +52,31 @@ class JsonArrayBuilder
     }
 
     /**
-     * Add the JSON value created by a `JsonBuilder` to the `JsonArray`.
+     * Add a JsonObject to the `JsonArray` being built by this builder.
+     *
+     * @param value  the `JsonObject` to add
+     *
+     * @return this `JsonArrayBuilder`
+     */
+    JsonArrayBuilder addObject(JsonObject value) {
+        values.add(value);
+        return this;
+    }
+
+    /**
+     * Add a JsonArray to this `JsonArray` being built by this builder.
+     *
+     * @param value  the `JsonArray` to add
+     *
+     * @return this `JsonArrayBuilder`
+     */
+    JsonArrayBuilder addArray(JsonArray value) {
+        values.add(value);
+        return this;
+    }
+
+    /**
+     * Add the JSON value created by a `JsonBuilder` to the `JsonArray` being built by this builder.
      *
      * @param builder  the `JsonBuilder` that will build the `Doc` value to add
      *
@@ -61,7 +85,7 @@ class JsonArrayBuilder
     JsonArrayBuilder add(JsonBuilder builder) = add(builder.build());
 
     /**
-     * Add all the values to the `JsonArray`.
+     * Add all the values to the `JsonArray` being built by this builder.
      *
      * @param docs  an array of JSON `Doc` to add
      *
@@ -134,10 +158,10 @@ class JsonArrayBuilder
     }
 
     /**
-     * Merge a `JsonObject` into the array.
+     * Merge a `JsonObject` into the array being built by this builder.
      *
-     * All of the `JsonObject` keys must be strings that are integer literals in the range between
-     * zero and the current size of the array being built.
+     * All of the `JsonObject` keys must be `IntLiteral` values in the range between zero and the
+     * current size of the array being built.
      */
     @Override
     protected void mergeObject(JsonObject o) {

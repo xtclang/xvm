@@ -2,28 +2,16 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        test();
+        report(UInt:123);
     }
 
-    void test(Int i = 0) {
-        switch (1) { // values 1, 2, 7 and 8 used to assert the compiler
-        case 1, 2:
-            console.print("one or two");
-            break;
+    typedef UInt64 as ID;
 
-        case 5:
-        case 6:
-            console.print("five or six");
-            continue;
+    void report(ID id) {
+        console.print("ID");
+    }
 
-        case 7:
-        case 8:
-            console.print("seven or eight");
-            break;
-
-        default:
-            console.print("whatever");
-            break;
-        }
+    void report(UInt64 id) {
+        console.print("UInt");
     }
 }

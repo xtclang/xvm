@@ -493,7 +493,7 @@ public class MethodDeclarationStatement
 
                 if (method == null)
                     {
-                    log(errs, Severity.ERROR, Compiler.DUPLICATE_METHOD, sName, container);
+                    log(errs, Severity.ERROR, Compiler.DUPLICATE_METHOD, sName);
                     return;
                     }
 
@@ -677,6 +677,16 @@ public class MethodDeclarationStatement
             {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
+            return;
+            }
+
+        // there is a possibility that there is already an identical method with a structure that
+        // differs only due to using "typedef" aliases
+        if (method.getParent().getParent().
+                findMethod(method.getIdentityConstant().getSignature()) != method)
+            {
+            log(errs, Severity.ERROR, Compiler.DUPLICATE_METHOD,
+                    method.getIdentityConstant().getValueString());
             return;
             }
 
