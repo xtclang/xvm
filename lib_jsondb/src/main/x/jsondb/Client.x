@@ -823,8 +823,8 @@ service Client<Schema extends RootSchema> {
          * Holds a deferred function in a linked list of deferred functions for this DBObjectImpl.
          */
         class Deferred_(
-                DBObjectImpl                    dbo,
-                function Boolean(DBObjectImpl)? adjust,
+                DBObjectImpl                     dbo,
+                function Boolean(DBObjectImpl!)? adjust,
                 ) {
             /**
              * The next deferred for the same transaction.
