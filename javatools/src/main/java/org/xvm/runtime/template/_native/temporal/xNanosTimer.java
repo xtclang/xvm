@@ -95,15 +95,15 @@ public class xNanosTimer
             {
             case "start":
                 hTimer.start(frame);
-                return Op.R_NEXT;
+                return frame.assignValue(iReturn, hTimer);
 
             case "stop":
                 hTimer.stop(frame);
-                return Op.R_NEXT;
+                return frame.assignValue(iReturn, hTimer);
 
             case "reset":
                 hTimer.reset(frame);
-                return Op.R_NEXT;
+                return frame.assignValue(iReturn, hTimer);
 
             case "schedule":
                 {

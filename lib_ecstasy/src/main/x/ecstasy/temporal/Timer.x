@@ -11,11 +11,14 @@
  *   Duration elapsed = timer.elapsed;
  */
 interface Timer {
+    typedef function void () as Alarm;
+    typedef function void () as Cancellable;
+
     /**
-     * If the Timer is stopped, then this method starts the Timer, such that the elapsed time begins
-     * accumulating again. If the Timer is already started, then this method has no effect.
+     * The resolution of a Timer is the length (or "period") of the "tick" of the Timer; it defines
+     * the lower bound of the smallest time unit that can be measured.
      */
-    void start();
+    @RO Duration resolution;
 
     /**
      * Obtain the duration of time that has elapsed on this timer. An elapsed value from this Timer
@@ -24,9 +27,6 @@ interface Timer {
      * another.
      */
     @RO Duration elapsed;
-
-    typedef function void () as Alarm;
-    typedef function void () as Cancellable;
 
     /**
      * Schedule an Alarm that will be invoked after the specified Duration has elapsed.
@@ -42,8 +42,18 @@ interface Timer {
      * @param keepAlive  (optional) pass `True` to indicate that pending alarm is not a "daemon
      *                   process", i.e. the container should not terminate while the timer is
      *                   running and the alarm is pending
+     *
+     * @return a function that could be used to cancel the alarm
      */
     Cancellable schedule(Duration delay, Alarm alarm, Boolean keepAlive = False);
+
+    /**
+     * If the Timer is stopped, then this method starts the Timer, such that the elapsed time begins
+     * accumulating again. If the Timer is already started, then this method has no effect.
+     *
+     * @return this `Timer`
+     */
+    Timer start();
 
     /**
      * If the Timer is started, then this method stops the Timer, such that the elapsed time stops
@@ -52,17 +62,10 @@ interface Timer {
      * This method also affects any previously registered alarms that have not already triggered,
      * such that the accumulation of elapsed time for those alarms is also stopped until the Timer
      * is resumed.
+     *
+     * @return this `Timer`
      */
-    void stop();
-
-    /**
-     * Restart the timer, as if the timer were stopped, reset, and re-started.
-     */
-    void restart() {
-        stop();
-        reset();
-        start();
-    }
+    Timer stop();
 
     /**
      * Resets the Timer such that the elapsed time starts accumulating again from zero.
@@ -72,12 +75,20 @@ interface Timer {
      *
      * This method also resets any previously registered alarms that have not already triggered;
      * the alarms are not destroyed, but the period of elapsed time for each alarm is reset to zero.
+     *
+     * @return this `Timer`
      */
-    void reset();
+    Timer reset();
 
     /**
-     * The resolution of a Timer is the length (or "period") of the "tick" of the Timer; it defines
-     * the lower bound of the smallest time unit that can be measured.
+     * Restart the timer, as if the timer were stopped, reset, and re-started.
+     *
+     * @return this `Timer`
      */
-    @RO Duration resolution;
+    Timer restart() {
+        stop();
+        reset();
+        start();
+        return this;
+    }
 }

@@ -5,7 +5,7 @@ service NanosTimer
         implements Timer {
 
     @Override
-    void start();
+    NanosTimer start();
 
     @Override
     @RO Duration elapsed;
@@ -14,10 +14,10 @@ service NanosTimer
     Cancellable schedule(Duration delay, Alarm alarm, Boolean keepAlive = False);
 
     @Override
-    void stop();
+    NanosTimer stop();
 
     @Override
-    void reset();
+    NanosTimer reset();
 
     @Override
     Duration resolution.get() = Duration.Nanosec;
