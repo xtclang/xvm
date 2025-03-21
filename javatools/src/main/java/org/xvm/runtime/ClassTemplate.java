@@ -436,7 +436,8 @@ public abstract class ClassTemplate
      */
     protected int postValidate(Frame frame, ObjectHandle hStruct)
         {
-        if (hStruct.getType().isImmutabilitySpecified())
+        TypeConstant type = hStruct.getType().removeAccess();
+        if (!type.isConst() && type.isImmutable())
             {
             hStruct.makeImmutable();
             }

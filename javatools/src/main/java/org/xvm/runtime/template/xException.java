@@ -122,14 +122,14 @@ public class xException
 
     public static ExceptionHandle notFreezableProperty(Frame frame, String sProp, TypeConstant type)
         {
-        String sDesc = type.isConstant() ? "const" : "an immutable";
+        String sDesc = type.isConst() ? "const" : "an immutable";
         return makeHandle(frame, "Property \"" + sProp + "\" on " + sDesc + " \"" +
                 type.removeAccess().getValueString() + "\" is not freezable");
         }
 
     public static ExceptionHandle immutableObjectProperty(Frame frame, String sProp, TypeConstant type)
         {
-        String sDesc = type.isConstant() ? "const" : "an immutable";
+        String sDesc = type.isConst() ? "const" : "an immutable";
         return makeHandle(frame, s_clzReadOnly,
                 "Attempt to modify property \"" + sProp + "\" on " + sDesc + " \"" +
                     type.removeAccess().getValueString() + '"');

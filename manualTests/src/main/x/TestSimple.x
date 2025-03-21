@@ -2,16 +2,24 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        report(UInt:123);
+        StringWriter w = new StringWriter(17);
+        w.offset = 5; // this must blow at runtime (used to be allowed)
     }
 
-    typedef UInt64 as ID;
-
-    void report(ID id) {
-        console.print("ID");
+    interface TextPosition
+            extends immutable Hashable {
+        @RO Int offset;
     }
 
-    void report(UInt64 id) {
-        console.print("UInt");
+    class StringWriter(Int offset)
+            implements TextPosition {
+
+        @Override
+        String toString() = $"Writer at {offset=}";
+
+        static <CompileType extends StringWriter> Int64 hashCode(CompileType value) {
+            return value.offset.toInt64();
+        }
+
     }
 }
