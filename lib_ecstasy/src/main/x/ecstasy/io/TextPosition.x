@@ -4,7 +4,7 @@
  * producing and consuming position data to efficiently do so.
  */
 interface TextPosition
-        extends immutable Orderable
+        extends Orderable
         extends Hashable {
     /**
      * The character offset within the reader, starting with zero.

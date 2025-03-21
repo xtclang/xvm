@@ -208,13 +208,6 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
-    public boolean isConstant()
-        {
-        return m_constType1.isConstant()
-            && m_constType2.isConstant();
-        }
-
-    @Override
     public boolean isOnlyNullable()
         {
         return m_constType1.isOnlyNullable()

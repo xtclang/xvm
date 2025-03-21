@@ -238,7 +238,7 @@ public class PropertyClassTypeConstant
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isConst()
         {
         return false;
         }

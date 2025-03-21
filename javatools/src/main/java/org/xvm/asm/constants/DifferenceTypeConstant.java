@@ -176,6 +176,12 @@ public class DifferenceTypeConstant
         }
 
     @Override
+    public boolean isConst()
+        {
+        return m_constType1.isConst();
+        }
+
+    @Override
     public boolean isOnlyNullable()
         {
         // difference types are never nullable

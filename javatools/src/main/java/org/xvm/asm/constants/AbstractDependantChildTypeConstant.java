@@ -199,7 +199,7 @@ public abstract class AbstractDependantChildTypeConstant
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isConst()
         {
         return getChildStructure().isConst();
         }

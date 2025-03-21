@@ -687,12 +687,11 @@ public abstract class TypeConstant
         }
 
     /**
-     * @return true iff this TypeConstant is <b>not</b> auto-narrowing, and is not a reference to a
-     *         type parameter, and its type parameters, if any, are also each a constant type
+     * @return true iff this TypeConstant is a "const" type
      */
-    public boolean isConstant()
+    public boolean isConst()
         {
-        return getUnderlyingType().isConstant();
+        return getUnderlyingType().isConst();
         }
 
     /**
