@@ -3,7 +3,7 @@
  *
  * @see [RFC 2616 §9.2](https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html.
  */
-const HttpMethod(String name, BodyRule body=Permitted) {
+const HttpMethod(String name, BodyRule body = Permitted) {
     enum BodyRule {Forbidden, Permitted, Required}
 
     /**

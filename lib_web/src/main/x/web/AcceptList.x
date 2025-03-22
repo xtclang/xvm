@@ -194,17 +194,12 @@ const AcceptList {
      *                 indicates "absolutely not", and everything in between is a gradient thereof
      */
     static const AcceptType(String type, String subtype, Map<String, String> params = [], Dec quality = 1.0) {
-        construct(String type, String subtype, Map<String, String> params=[], Dec quality=1.0) {
+        assert() {
             assert:arg type == "*" || http.validToken(type) as $"Invalid media type: {type.quoted()}";
             assert:arg subtype == "*" || http.validToken(subtype) as $"Invalid media subtype: {subtype.quoted()}";
             assert:arg type != "*" || subtype == "*" as $"Invalid usage of wildcard: \"{type}/{subtype}\"";
             assert:arg params.empty || params.keys.all(k -> http.validToken(k) && k != "q" && k != "Q");
             assert:arg 0 <= quality <= 1;
-
-            this.type    = type;
-            this.subtype = subtype;
-            this.params  = params;
-            this.quality = quality;
         }
 
         /**

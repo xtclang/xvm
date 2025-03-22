@@ -1,7 +1,7 @@
 /**
  * A representation of a protocol used for web services.
  */
-const Protocol(String string, Version? version, String? ALPN_Id=Null) {
+const Protocol(String string, Version? version, String? ALPN_Id = Null) {
 
     /**
      * Construct a protocol from a protocol string.

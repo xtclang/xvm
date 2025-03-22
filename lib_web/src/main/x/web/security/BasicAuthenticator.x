@@ -83,7 +83,7 @@ service BasicAuthenticator(Realm realm)
         static Attempt Corrupt = new Attempt(Null, Failed);
 
         Attempt[] attempts = [];
-        NextHeader: for (String auth : request.header.valuesOf("Authorization")) {
+        NextHeader: for (String auth : request.header.valuesOf(Header.Authorization)) {
             auth = auth.trim();
             if (CaseInsensitive.stringStartsWith(auth, "Basic ")) {
                 try {

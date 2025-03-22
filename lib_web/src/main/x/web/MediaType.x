@@ -266,7 +266,8 @@ const MediaType {
      * @param extension  (optional) one or more file extensions to associate with this `MediaType`
      * @param format     (optional) the format name for the text associated with this `MediaType`
      */
-    private static MediaType predefine(String|String[] name, String|String[] extension = [], String? format=Null) {
+    private static MediaType predefine(String|String[] name, String|String[] extension = [],
+                                       String? format = Null) {
         MediaType[] alternatives = [];
         if (name.is(String[])) {
             alternatives = new MediaType[];

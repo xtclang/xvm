@@ -26,6 +26,12 @@ interface Header
     static String ContentLength          = "Content-Length";
     static String ContentLocation        = "Content-Location";
     static String ContentType            = "Content-Type";
+    static String CORSAllowCredentials   = "Access-Control-Allow-Credentials";
+    static String CORSAllowHeaders       = "Access-Control-Allow-Headers";
+    static String CORSAllowMethods       = "Access-Control-Allow-Methods";
+    static String CORSAllowOrigin        = "Access-Control-Allow-Origin";
+    static String CORSRequestHeaders     = "Access-Control-Request-Headers";
+    static String CORSRequestMethods     = "Access-Control-Request-Methods";
     static String Date                   = "Date";
     static String ETag                   = "ETag";
     static String Expires                = "Expires";
@@ -37,6 +43,7 @@ interface Header
     static String IfUnmodifiedSince      = "If-Unmodified-Since";
     static String LastModified           = "Last-Modified";
     static String Location               = "Location";
+    static String Origin                 = "Origin";
     static String UserAgent              = "User-Agent";
     static String Vary                   = "Vary";
     static String WWWAuthenticate        = "WWW-Authenticate";
@@ -89,7 +96,7 @@ interface Header
      *
      * @return a List of all of the corresponding values from the HTTP headers
      */
-    List<String> valuesOf(String name, Char? expandDelim=Null) {
+    List<String> valuesOf(String name, Char? expandDelim = Null) {
         var result = entries.filter(e -> CaseInsensitive.areEqual(e[0], name))
                             .map(e -> e[1]);
 
@@ -111,7 +118,7 @@ interface Header
      * @return True iff the specified name is found
      * @return (conditional) the corresponding value from the HTTP header
      */
-    conditional String firstOf(String name, Char? expandDelim=Null) {
+    conditional String firstOf(String name, Char? expandDelim = Null) {
         return valuesOf(name, expandDelim).first();
     }
 
@@ -126,7 +133,7 @@ interface Header
      * @return True iff the specified name is found
      * @return (conditional) the corresponding value from the HTTP header
      */
-    conditional String lastOf(String name, Char? expandDelim=Null) {
+    conditional String lastOf(String name, Char? expandDelim = Null) {
         return valuesOf(name, expandDelim).last();
     }
 

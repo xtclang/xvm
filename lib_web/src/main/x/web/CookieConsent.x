@@ -155,7 +155,7 @@ const CookieConsent(Boolean necessary       = False,
      * @return `True` iff a cookie with the specified `Category` and specified third party status is
      *         consented to
      */
-    Boolean allows(Category category, Boolean thirdParty=False) {
+    Boolean allows(Category category, Boolean thirdParty = False) {
         if (!thirdParty && allowFirstParty) {
             return True;
         }

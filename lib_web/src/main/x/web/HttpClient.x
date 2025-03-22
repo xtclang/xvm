@@ -356,7 +356,7 @@ const HttpClient
 
         @Override
         MediaType mediaType.get() {
-            if (String    mediaTypeName := header.valuesOf("Content-Type").first(),
+            if (String    mediaTypeName := header.valuesOf(Header.ContentType).first(),
                 MediaType mediaType     := MediaType.of(mediaTypeName)) {
                 return mediaType;
             }

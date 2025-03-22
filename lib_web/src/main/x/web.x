@@ -152,7 +152,7 @@ module web.xtclang.org {
      * @param security  [TrustLevel] of security that is required by the annotated operation or
      *                  web service
      */
-    annotation LoginRequired(TrustLevel security=Normal, Boolean autoRedirect=False)
+    annotation LoginRequired(TrustLevel security = Normal, Boolean autoRedirect = False)
             extends HttpsRequired(autoRedirect);
 
     /**
@@ -353,7 +353,7 @@ module web.xtclang.org {
      *     @Intercept(GET)
      *     ResponseOut interceptGet(RequestIn request, Handler handle) {...}
      */
-    annotation Intercept(HttpMethod? httpMethod=Null)
+    annotation Intercept(HttpMethod? httpMethod = Null)
             into Method<WebService, <RequestIn, Handler>, <ResponseOut>>;
 
     /**
@@ -370,7 +370,7 @@ module web.xtclang.org {
      *     @Observe(DELETE)
      *     void logDeleteRequests(RequestIn request) {...}
      */
-    annotation Observe(HttpMethod? httpMethod=Null)
+    annotation Observe(HttpMethod? httpMethod = Null)
             into Method<WebService, <RequestIn>, <>>;
 
     /**

@@ -12,7 +12,7 @@ package http {
      * @param httpPort   the HTTP (plain text) port of the HTTP server; the default is 80
      * @param httpsPort  the HTTPS (TLS) port of the HTTP server; the default is 443
      */
-    const HostInfo(Host host, UInt16 httpPort=80, UInt16 httpsPort=443)
+    const HostInfo(Host host, UInt16 httpPort = 80, UInt16 httpsPort = 443)
             implements Destringable {
 
         HostInfo with(Host?   host      = Null,
@@ -236,7 +236,7 @@ package http {
      * @return True iff the `IMF-fixdate` was successfully parsed
      * @return (conditional) the `Time` value corresponding to the `IMF-fixdate`
      */
-    static conditional Time parseImfFixDate(String text, Boolean strict=False) {
+    static conditional Time parseImfFixDate(String text, Boolean strict = False) {
         //           1         2
         // 01234567890123456789012345678
         // Sun, 06 Nov 1994 08:49:37 GMT

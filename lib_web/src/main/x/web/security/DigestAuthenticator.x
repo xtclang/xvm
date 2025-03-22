@@ -83,7 +83,7 @@ service DigestAuthenticator
     @Override
     Attempt[] findAndRevokeSecrets(RequestIn request) {
         // scan for and cancel all nonces
-        for (String auth : request.header.valuesOf("Authorization")) {
+        for (String auth : request.header.valuesOf(Header.Authorization)) {
             auth = auth.trim();
             if (CaseInsensitive.stringStartsWith(auth, "Digest "),
                     (String? realmName, _, _, _, _, _, String nonceText) := parseDigest(auth.substring(7)),
@@ -133,7 +133,7 @@ service DigestAuthenticator
         Attempt[]       attempts = [];
         Boolean         stale    = False;
         Boolean         passed   = False;
-        NextAuthAttempt: for (String auth : request.header.valuesOf("Authorization")) {
+        NextAuthAttempt: for (String auth : request.header.valuesOf(Header.Authorization)) {
             auth = auth.trim();
             if (CaseInsensitive.stringStartsWith(auth, "Digest ")) {
                 if ((   String?  realmName,

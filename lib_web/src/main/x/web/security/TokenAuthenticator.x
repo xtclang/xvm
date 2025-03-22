@@ -82,7 +82,7 @@ service TokenAuthenticator
         // check to see if the incoming request includes the necessary authentication information,
         // which will be in one or more "Authorization" header entries
         // (see https://datatracker.ietf.org/doc/html/rfc6750#section-6.1.1)
-        for (String auth : request.header.valuesOf("Authorization")) {
+        for (String auth : request.header.valuesOf(Header.Authorization)) {
             auth = auth.trim();
 
             // "Authorization" header format: Bearer {b64-token}
