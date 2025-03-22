@@ -236,8 +236,8 @@ const SessionCookie {
      */
     enum CookieId(String cookieName, Boolean tlsOnly, Boolean persistent, String attributes) {
         PlainText(       "xplaintext", False, False, "; Path=/; HttpOnly"),
-        Encrypted("__Host-xtemporary", True , False, "; Path=/; HttpOnly; Secure"),
-        Consent  ("__Host-xconsented", True , True , "; Path=/; HttpOnly; Secure");
+        Encrypted("__Host-xtemporary", True , False, "; Path=/; SameSite=None; HttpOnly; Secure"),
+        Consent  ("__Host-xconsented", True , True , "; Path=/; SameSite=None; HttpOnly; Secure");
 
         /**
          * Turn a bitmask of cookie ID ordinals into an array of corresponding cookie IDs.
