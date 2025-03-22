@@ -233,6 +233,21 @@ service Dispatcher {
             (Int status, String[] names, String[] values, Int responseLength) =
                 Http1Response.prepare(requestInfo.method, r);
             try {
+                // TODO: REMOVE!!!!
+                names  += Header.CORSAllowCredentials;
+                values += "true";
+
+                names  += Header.CORSAllowMethods;
+                values += "GET, POST, PUT, DELETE, PATCH, OPTIONS";
+
+                names  += Header.CORSAllowHeaders;
+                values += "Content-Type, Accept, Origin, X-Requested-With";
+
+                if (String[] origin := requestInfo.getHeaderValuesForName("Origin")) {
+                    names  += Header.CORSAllowOrigin;
+                    values += origin[0];
+                }
+
                 if (responseLength > 0) {
                     // fixed size body
                     requestInfo.respond(status, names, values, r.body?.bytes) : assert;
