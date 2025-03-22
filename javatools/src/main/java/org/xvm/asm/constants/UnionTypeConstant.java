@@ -109,12 +109,12 @@ public class UnionTypeConstant
             {
             setMatching = new HashSet<>();
             }
-        testExtdends(m_constType1, typeMatch, setMatching);
-        testExtdends(m_constType2, typeMatch, setMatching);
+        testExtends(m_constType1, typeMatch, setMatching);
+        testExtends(m_constType2, typeMatch, setMatching);
         return setMatching;
         }
 
-    private void testExtdends(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setSuper)
+    private void testExtends(TypeConstant type, TypeConstant typeMatch, Set<TypeConstant> setSuper)
         {
         if (type.resolveTypedefs() instanceof UnionTypeConstant typeUnion)
             {
@@ -401,6 +401,12 @@ public class UnionTypeConstant
         {
         assert isSingleUnderlyingClass(fAllowInterface);
         return m_constType1.getSingleUnderlyingClass(fAllowInterface);
+        }
+
+    @Override
+    public boolean isConst()
+        {
+        return m_constType1.isConst() && m_constType2.isConst();
         }
 
     @Override

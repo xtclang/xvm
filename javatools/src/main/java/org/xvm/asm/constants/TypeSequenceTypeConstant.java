@@ -137,7 +137,7 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isConst()
         {
         return false;
         }

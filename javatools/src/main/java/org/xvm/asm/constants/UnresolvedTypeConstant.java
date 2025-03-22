@@ -210,9 +210,9 @@ public class UnresolvedTypeConstant
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isConst()
         {
-        return isTypeResolved() && getResolvedType().isConstant();
+        return isTypeResolved() && getResolvedType().isConst();
         }
 
     @Override
