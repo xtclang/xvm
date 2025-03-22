@@ -208,6 +208,10 @@ public class Fiber
      */
     public void setStatus(FiberStatus status, long cOps)
         {
+        if (m_status == FiberStatus.Waiting)
+            {
+            f_context.f_queueSuspended.exitWait();
+            }
         switch (m_status = status)
             {
             default:
@@ -220,6 +224,8 @@ public class Fiber
                 break;
 
             case Waiting:
+                f_context.f_queueSuspended.enterWait();
+                // fall through
             case Paused:
                 long cNanos = f_context.f_container.nanoTime() - m_nanoStarted;
                 m_nanoStarted = 0;
@@ -541,10 +547,26 @@ public class Fiber
 
     /**
      * Set or clear the frame that blocks this fiber's execution.
+     *
+     * @param frameBlocker  null if no blocker exists or the blocker fiber itself
+     * @param lStamp        if no blocker exists, the "wait exit stamp", otherwise the "wait enter
+     *                      stamp" of the fiber queue when this check occurred
      */
-    protected void setBlocker(Frame frameBlocker)
+    protected void setBlocker(Frame frameBlocker, long lStamp)
         {
         m_frameBlocker = frameBlocker;
+        m_lLastStamp   = lStamp;
+        }
+
+    /**
+     * @return true iff there were no wait status changes on the FiberQueue that would change
+     *              the blocker computation result for the fiber
+     */
+    protected boolean noChange(long lLastEnterStamp, long lLastExitStamp)
+        {
+        return m_frameBlocker == null
+            ? lLastEnterStamp == m_lLastStamp
+            : lLastExitStamp  == m_lLastStamp;
         }
 
 
@@ -784,6 +806,11 @@ public class Fiber
      * detection.
      */
     private Frame m_frameBlocker;
+
+    /**
+     * THe FiberQueue stamp of the last time it looked for blockers for this fiber.
+     */
+    private long m_lLastStamp;
 
     /**
      * The counter used to create fibers ids.
