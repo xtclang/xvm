@@ -16,6 +16,8 @@ import web.sessions.Broker;
 service CookieBroker
         implements Broker, WebService.ExtrasAware {
 
+    @Inject Console console;
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -183,6 +185,8 @@ service CookieBroker
         Int         redirectId = session.prepareRedirect_(request);
         Header      header     = response.header;
         Byte        desired    = session.desiredCookies_(request.tls);
+console.print($"buildRedirect {CookieId.from(desired)} for session {session.internalId_}");
+
         for (CookieId cookieId : CookieId.values) {
             if (desired & cookieId.mask != 0) {
                 if ((SessionCookie cookie, Time? sent, Time? verified)
@@ -412,13 +416,18 @@ service CookieBroker
         // new session as the result of a session split
         if (HttpStatus|SessionImpl result := session.isAbandoned_(request)) {
             if (result.is(HttpStatus)) {
+console.print($"Session {session.internalId_} is abandoned: {result}");
                 return True, result, False, CookieId.None;
             }
 
             // some cookies from the old session may need to be erased if they are not used
             // by the new session
             session = result;
-            return True, session, True, present & ~session.desiredCookies_(request.tls);
+
+        Byte eraseId = present & ~session.desiredCookies_(request.tls);
+
+console.print($"Cookie erasure {CookieId.from(eraseId)} for session {session.internalId_}");
+            return True, session, True, eraseId;
         }
 
         return False;
@@ -449,7 +458,6 @@ service CookieBroker
                                SessionImpl.Match_ failure,
                               ) {
         // TODO CP
-        @Inject Console console;
         console.print($|Suspect cookie {value.quoted()} with {failure=}\
                        | for session {session.internalId_}
                        | with known cookies {CookieId.from(session.knownCookies_)}
