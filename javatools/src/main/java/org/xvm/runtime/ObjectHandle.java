@@ -1221,8 +1221,8 @@ public abstract class ObjectHandle
         @Override
         public TypeConstant getType()
             {
-            // we don't need to be to have a handle to answer the "type" question
-            return augmentType(f_constSingleton.getType());
+            // we don't need to have a handle to answer the "type" question
+            return f_constSingleton.getType();
             }
 
         @Override

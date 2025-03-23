@@ -119,6 +119,7 @@ public class Fiber
     public void clearTimeout()
         {
         m_ldtTimeout = 0L;
+        m_hTimeout   = xNullable.NULL;
         }
 
     /**

@@ -53,7 +53,9 @@ import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.util.LinkedIterator;
@@ -1557,11 +1559,11 @@ public class MethodStructure
      */
     public int ensureInitialized(Frame frame, Frame frameNext)
         {
-        if (m_fInitialized)
-            {
-            return frame.call(frameNext);
-            }
+        return m_fInitialized ? frame.call(frameNext) : initialize(frame, frameNext);
+        }
 
+    private int initialize(Frame frame, Frame frameNext)
+        {
         Constant[] aconstLocal = getLocalConstants();
         if (aconstLocal != null && aconstLocal.length > 0)
             {
@@ -1573,11 +1575,26 @@ public class MethodStructure
 
             if (listSingletons != null)
                 {
+                Fiber        fiber      = frame.f_fiber;
+                long         ldtTimeout = fiber.getTimeoutStamp();
+                ObjectHandle hTimeout   = fiber.getTimeoutHandle();
+
+                // we may need to call another service to complete the initialization, but it must
+                // not be allowed to timeout; it may cause a circular initialization error
+                if (ldtTimeout > 0)
+                    {
+                    fiber.clearTimeout();
+                    }
+
                 return Utils.initConstants(frame, listSingletons, frameCaller ->
+                    {
+                    if (ldtTimeout > 0)
                         {
-                        m_fInitialized = true;
-                        return frameCaller.call(frameNext);
-                        });
+                        fiber.setTimeoutHandle(hTimeout, ldtTimeout);
+                        }
+                    m_fInitialized = true;
+                    return frameCaller.call(frameNext);
+                    });
                 }
             }
 

@@ -1,17 +1,19 @@
 module TestSimple {
     @Inject Console console;
 
+    import ecstasy.SharedContext;
+
     void run() {
-        report(UInt:123);
+        using(sharedStringOne.withValue("stringOne")) {
+            using(new Timeout(Duration:0.01S)) { // small timeout used to cause RT error
+                using(sharedStringTwo.withValue("stringTwo")) {
+                    console.print(sharedStringOne.hasValue().as(Tuple));
+                    console.print(sharedStringTwo.hasValue().as(Tuple));
+                }
+            }
+        }
     }
 
-    typedef UInt64 as ID;
-
-    void report(ID id) {
-        console.print("ID");
-    }
-
-    void report(UInt64 id) {
-        console.print("UInt");
-    }
+    static SharedContext<String> sharedStringOne = new SharedContext("sharedStringOne");
+    static SharedContext<String> sharedStringTwo = new SharedContext("sharedStringTwo");
 }
