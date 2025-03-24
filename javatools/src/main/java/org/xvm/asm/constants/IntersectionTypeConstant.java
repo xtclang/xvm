@@ -5,7 +5,6 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -302,6 +301,12 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isConst()
+        {
+        return m_constType1.isConst() || m_constType2.isConst();
+        }
+
+    @Override
     public boolean containsGenericParam(String sName)
         {
         return m_constType1.containsGenericParam(sName)
@@ -453,10 +458,8 @@ public class IntersectionTypeConstant
                 info2.getType().getValueString(), type2.getValueString());
             }
 
-        for (Iterator<Map.Entry<Object, ParamInfo>> iter = map2.entrySet().iterator(); iter.hasNext();)
+        for (Map.Entry<Object, ParamInfo> entry : map2.entrySet())
             {
-            Map.Entry<Object, ParamInfo> entry = iter.next();
-
             Object nid = entry.getKey();
 
             ParamInfo param1 = map1.get(nid);

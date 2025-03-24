@@ -234,7 +234,7 @@ public class RecursiveTypeConstant
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isConst()
         {
         return false;
         }

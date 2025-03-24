@@ -927,20 +927,6 @@ public class ParameterizedTypeConstant
         }
 
     @Override
-    public boolean isConstant()
-        {
-        for (TypeConstant type : m_atypeParams)
-            {
-            if (!type.isConstant())
-                {
-                return false;
-                }
-            }
-
-        return super.isConstant();
-        }
-
-    @Override
     public boolean isNullable()
         {
         assert !m_constType.isNullable();

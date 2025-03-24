@@ -1526,13 +1526,13 @@ public class TerminalTypeConstant
         }
 
     @Override
-    public boolean isConstant()
+    public boolean isConst()
         {
         if (!isSingleDefiningConstant())
             {
             // this can only happen if this type is a Typedef referring to a relational type
             TypedefConstant constId = (TypedefConstant) ensureResolvedConstant();
-            return constId.getReferredToType().isConstant();
+            return constId.getReferredToType().isConst();
             }
 
         Constant constant = getDefiningConstant();
