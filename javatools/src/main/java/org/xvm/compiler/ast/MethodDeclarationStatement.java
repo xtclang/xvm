@@ -682,7 +682,7 @@ public class MethodDeclarationStatement
 
         // there is a possibility that there is already an identical method with a structure that
         // differs only due to using "typedef" aliases
-        if (method.getParent().getParent().
+        if (!method.isLambda() && method.getParent().getParent().
                 findMethod(method.getIdentityConstant().getSignature()) != method)
             {
             log(errs, Severity.ERROR, Compiler.DUPLICATE_METHOD,
