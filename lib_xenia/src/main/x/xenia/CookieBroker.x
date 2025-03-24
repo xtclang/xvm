@@ -149,6 +149,9 @@ service CookieBroker
     @Delete("/{redirect}/{version}")
     ResponseOut delete(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
 
+    @Options("/{redirect}/{version}")
+    ResponseOut options(RequestIn request, Int redirect, Int version) = handle(request, redirect, version);
+
     /**
      * Implements the cookie verification URL.
      *

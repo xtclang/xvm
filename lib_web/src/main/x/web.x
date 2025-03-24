@@ -334,6 +334,18 @@ module web.xtclang.org {
             extends Endpoint(DELETE, template, api);
 
     /**
+     * An HTTP `OPTIONS` method.
+     *
+     * @param template  an optional URI Template describing a path to reach this endpoint
+     * @param api       the [Version] at which this `Endpoint` was introduced, or (for `Endpoints`
+     *                  that have been removed) the range of versions that the `Endpoint` _was_
+     *                  part of the API; `Null` indicates that the API is not versioned or that
+     *                  this `Endpoint` has been present since the original version of the API
+     */
+    annotation Options(String template = "", Version?|Range<Version> api = Null)
+            extends Endpoint(OPTIONS, template, api);
+
+    /**
      * Default route on a WebService, if no other route could be found. At the moment, it only
      * applies to `@Get` endpoints.
      *
