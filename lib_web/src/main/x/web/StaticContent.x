@@ -49,7 +49,7 @@ annotation StaticContent(String path, FileNode fileNode, MediaType? mediaType = 
             assert:arg fileNode.exists && fileNode.readable;
         }
 
-        @Get("{/path}")
+        @Get("{/path?}")
         conditional ResponseOut getResource(String path) {
             ResponseOut createResponse(File file) {
                 MediaType? mediaType = this.mediaType;

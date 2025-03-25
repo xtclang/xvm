@@ -307,6 +307,11 @@ const UriTemplate {
         @RO Char? prefix;
 
         /**
+         * `True` iff at least one required `Variable` exists within the `Expression`.
+         */
+        @RO Boolean anyRequired.get() = vars.any(v -> v.require);
+
+        /**
          * Given the specified value lookup for the variables in the expression, expand the
          * expression following the rules defined in the URI Template specification.
          *
@@ -542,7 +547,7 @@ const UriTemplate {
             if (fromOffset == toOffset) {
                 // 0-length means that we can't match a value for the segment, but if it's at the
                 // very end, it matches as "null" (i.e. nothing placed in the bindings)
-                return fromOffset == sectionLength
+                return !anyRequired && fromOffset == sectionLength
                         ? (True, from, bindings)
                         : False;
             }
@@ -848,6 +853,10 @@ const UriTemplate {
                     }
                     return True, new Variable(name, maxLength=max), offset;
 
+                case '?':       // don't require
+                    ++offset;
+                    return True, new Variable(name, require=False), offset;
+
                 case '!':       // require
                     ++offset;
                     return True, new Variable(name, require=True), offset;
@@ -861,7 +870,7 @@ const UriTemplate {
                     return True, new Variable(name, require=True, explode=True), offset;
 
                 default:
-                    return True, new Variable(name), offset;
+                    return True, new Variable(name, require=True), offset;
                 }
             }
 

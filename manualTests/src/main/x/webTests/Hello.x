@@ -183,7 +183,7 @@ module Hello {
 
         @WebService("/e")
         service Echo {
-            @Get("{/path}{?params*}")
+            @Get("{/path?}{?params*}")
             String[] getEcho(String path="", Map<String, String> params=[]) {
                 assert:debug !path.indexOf("debug");
 

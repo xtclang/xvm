@@ -375,7 +375,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
         // collect the ClassInfos for standard WebServices and Session annotations
         scanClasses(app.classes, classInfos, sessionAnnos, declaredPaths);
 
-        // sort the ClassInfos based on their paths (SystemService goes first)
+        // sort the ClassInfos based on their paths
         classInfos.sorted((ci1, ci2) -> (ci1.path <=> ci2.path).reversed, inPlace=True);
 
         // collect all of the endpoints into a Catalog
@@ -625,8 +625,8 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
             }
 
             // sort the endpoints based on their UriTemplates in such a way, that:
-            //    1) otherwise, the one with a longer prefix goes first
-            //    2) the one with more parts goes first
+            //    1) the one with a longer prefix goes first (Lesser)
+            //    2) otherwise, the one with more parts goes first (Lesser)
             function Ordered(EndpointInfo, EndpointInfo) order = (ep1, ep2) -> {
                         UriTemplate t1  = ep1.template;
                         UriTemplate t2  = ep2.template;
