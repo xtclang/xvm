@@ -137,7 +137,6 @@ module TestAnnotations {
         Method m = testMethodAnno;
         console.print(m);
 
-        assert m.is(Tagged);
         assert m.tag == "method" && m.weight == 1;
     }
 

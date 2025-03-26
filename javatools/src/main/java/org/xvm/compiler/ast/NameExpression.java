@@ -12,6 +12,7 @@ import java.util.Set;
 
 import java.util.stream.Collectors;
 
+import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -3135,7 +3136,16 @@ public class NameExpression
                         {
                         // they explicitly desire a method; give them the method
                         m_plan = Plan.None;
-                        return idMethod.getType();
+                        TypeConstant typeMethod = idMethod.getType();
+                        if (method != null)
+                            {
+                            Annotation[] aAnno = method.getAnnotations();
+                            if (aAnno != null && aAnno.length > 0)
+                                {
+                                typeMethod = pool.ensureAnnotatedTypeConstant(typeMethod, aAnno);
+                                }
+                            }
+                        return typeMethod;
                         }
 
                     if (left instanceof NameExpression exprName &&

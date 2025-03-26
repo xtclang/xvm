@@ -731,8 +731,12 @@ public class Frame
         return getPredefinedArgument(iArgId).getType();
         }
 
-    // create a new "current" scope
-    public int enterScope(int nNextVar)
+    /**
+     * Create a new "current" scope.
+     *
+     * @return the scope id
+     */
+     public int enterScope(int nNextVar)
         {
         // adjust the previous scope accordingly
         f_anNextVar[m_iScope] = nNextVar;
@@ -744,7 +748,9 @@ public class Frame
         return iScope;
         }
 
-    // exit the current scope and clear all the var info
+    /**
+     * Exit the current scope and clear all the var info.
+     */
     public void exitScope()
         {
         int iScope = m_iScope--;
@@ -767,7 +773,9 @@ public class Frame
             }
         }
 
-    // clear the var info for all scopes above the specified one
+    /**
+     * Clear the var info for all scopes above the specified one.
+     */
     public void clearAllScopes(int iScope)
         {
         int iVarFrom = f_anNextVar[iScope];
@@ -787,7 +795,9 @@ public class Frame
             }
         }
 
-    // return "private:this"
+    /**
+     * @return "private:this"
+     */
     public ObjectHandle getThis()
         {
         if (f_hThis == null)
@@ -795,6 +805,14 @@ public class Frame
             throw new IllegalStateException("Frame has no \"this\": " + this);
             }
         return f_hThis;
+        }
+
+    /**
+     * @return true iff this frame represents a method (has "this")
+     */
+    public boolean isMethod()
+        {
+        return f_hThis != null;
         }
 
     /**

@@ -90,12 +90,12 @@ public class xRTMethod
         {
         if (constant instanceof MethodConstant idMethod)
             {
-            IdentityConstant idTarget = idMethod.getNamespace();
-            TypeConstant     typeThis = frame.getThis().getType();
-            TypeConstant     typeTarget;
+            IdentityConstant idTarget   = idMethod.getNamespace();
+            TypeConstant     typeTarget = idTarget.getType();
 
-            if (typeThis.isParameterizedDeep())
+            if (frame.isMethod())
                 {
+                TypeConstant typeThis = frame.getThis().getType();
                 if (typeThis.isNestMateOf(idTarget))
                     {
                     if (idTarget.equals(typeThis.getDefiningConstant()))
@@ -108,21 +108,13 @@ public class xRTMethod
                                 getFormalType().resolveGenerics(frame.poolContext(), typeThis);
                         }
                     }
-                else
-                    {
-                    typeTarget = idTarget.getType();
-                    }
-                }
-            else
-                {
-                typeTarget = idTarget.getType();
                 }
 
             ObjectHandle hMethod = makeHandle(frame, typeTarget, idMethod);
 
             return Op.isDeferred(hMethod)
-                ? hMethod.proceed(frame, Utils.NEXT)
-                : frame.pushStack(hMethod);
+                    ? hMethod.proceed(frame, Utils.NEXT)
+                    : frame.pushStack(hMethod);
             }
 
         return super.createConstHandle(frame, constant);

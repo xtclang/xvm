@@ -2,24 +2,16 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        StringWriter w = new StringWriter(17);
-        w.offset = 5; // this must blow at runtime (used to be allowed)
+        Descr<TestSimple> m = test; // this used to fail to compile
+        testReflection();
     }
 
-    interface TextPosition
-            extends immutable Hashable {
-        @RO Int offset;
-    }
+    @Descr("")
+    void test() {}
 
-    class StringWriter(Int offset)
-            implements TextPosition {
+    annotation Descr(String descr) into Method {}
 
-        @Override
-        String toString() = $"Writer at {offset=}";
-
-        static <CompileType extends StringWriter> Int64 hashCode(CompileType value) {
-            return value.offset.toInt64();
-        }
-
+    static void testReflection() {
+        Method m = TestSimple.test; // this used to assert at runtime
     }
 }
