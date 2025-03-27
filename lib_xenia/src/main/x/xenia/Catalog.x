@@ -2,6 +2,7 @@ import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.Argument;
 
 import net.UriTemplate;
+import net.UriTemplate.Variable;
 import net.UriTemplate.UriParameters;
 
 import sec.Permission;
@@ -142,14 +143,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
             }
 
             // check if the template matches UriParam's in the method
-            Int     requiredParamCount   = 0;
-            Boolean requiredSessionParam = False;
-            Boolean hasBodyParam         = False;
+            Int      requiredParamCount   = 0;
+            Boolean  requiredSessionParam = False;
+            Boolean  hasBodyParam         = False;
+            String[] optionalVars         = [];
             for (Parameter param : method.params) {
                 // well-known types are Session and RequestIn (see ChainBundle.ensureCallChain)
-                if (param.ParamType == RequestIn      ||
-                    param.is(QueryParam)              ||
-                    param.defaultValue()) {
+                if (param.ParamType == RequestIn ||
+                    param.is(QueryParam)) {
                     continue;
                 }
                 if (param.is(BodyParam)) {
@@ -176,7 +177,14 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
                                             |a variable name "{name}": "{templateString}"
                                           );
                 }
-                requiredParamCount++;
+                if (param.defaultValue()) {
+                    optionalVars += name;
+                } else {
+                    requiredParamCount++;
+                }
+            }
+            if (!optionalVars.empty) {
+                this.template = template.withOptionalVariables(optionalVars);
             }
             this.requiredParamCount = requiredParamCount;
 

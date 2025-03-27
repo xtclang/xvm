@@ -190,7 +190,7 @@ module web.xtclang.org {
      *     Boolean accountAccess(RequestIn request) {...}
      */
     annotation Restrict(String?|Method<WebService, <>, <Boolean>> permission = Null,
-                   Boolean autoRedirect = False)
+                        Boolean autoRedirect = False)
             extends HttpsRequired(autoRedirect=autoRedirect);
 
     /**
@@ -405,7 +405,7 @@ module web.xtclang.org {
      * @param format    indicates the textual format that the parameter will
      */
     @Abstract annotation ParameterBinding(String? bindName = Null,
-                                     String? format   = Null)
+                                          String? format   = Null)
             into Parameter;
 
     /**
@@ -427,7 +427,7 @@ module web.xtclang.org {
      *                  incorrect, or if the default format cannot be determined
      */
     annotation UriParam(String? bindName = Null,
-                   String? format   = Null)
+                        String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
@@ -458,7 +458,7 @@ module web.xtclang.org {
      *                  incorrect, or if the default format cannot be determined
      */
     annotation QueryParam(String? bindName = Null,
-                     String? format   = Null)
+                          String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
@@ -475,7 +475,7 @@ module web.xtclang.org {
      *                  incorrect, or if the default format cannot be determined
      */
     annotation HeaderParam(String? bindName = Null,
-                      String? format   = Null)
+                           String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**
@@ -493,7 +493,7 @@ module web.xtclang.org {
      *                  incorrect, or if the default format cannot be determined
      */
     annotation CookieParam(String? bindName = Null,
-                      String? format   = Null)
+                           String? format   = Null)
             extends ParameterBinding(bindName, format);
 
     /**

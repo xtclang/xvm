@@ -10,6 +10,11 @@ const UriTemplate {
      */
     typedef immutable Map<String, Value> as UriParameters;
 
+    /**
+     * A structural part of the UriTemplate.
+     */
+    typedef (String|Expression) as Part;
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -20,7 +25,7 @@ const UriTemplate {
      * @throws IllegalArgument  iff the URI template string cannot be successfully parsed
      */
     construct(String template) {
-        assert:arg ((String|Expression)[] parts, String[] vars) := parse(template)
+        assert:arg (Part[] parts, String[] vars) := parse(template)
                 as $"Failed to parse URI template: {template.quoted()}";
         construct UriTemplate(parts, vars);
     }
@@ -28,7 +33,7 @@ const UriTemplate {
     /**
      * Internal constructor.
      */
-    private construct((String|Expression)[] parts, String[] vars) {
+    private construct(Part[] parts, String[] vars) {
         this.parts = parts;
         this.vars  = vars;
 
@@ -45,12 +50,45 @@ const UriTemplate {
         }
     }
 
+    /**
+     * If necessary, create a `UtiTemplate` that is structurally identical to this template, but has
+     * all the specified vars marked as `not required`.
+     *
+     * @param  the names of variables to that should be marked as "optional"
+     */
+    UriTemplate withOptionalVariables(String[] optionalVars) {
+        Part[]  oldParts = parts;
+        Part[]? newParts = Null;
+        Parts: for (Part oldPart : oldParts) {
+            if (oldPart.is(Expression)) {
+                Variable[]  oldPartVars = oldPart.vars;
+                Variable[]? newPartVars = Null;
+                for (String name : optionalVars) {
+                    if (Int index := oldPartVars.indexOf(v -> v.name == name && v.require)) {
+                        if (newPartVars == Null) {
+                            newPartVars = oldPartVars.toArray(mutability=Fixed); // copies everything
+                        }
+                        newPartVars[index] = oldPartVars[index].ensureOptional();
+                    }
+                }
+                if (newPartVars != Null) {
+                    Expression newPart = oldPart.new(newPartVars);
+                    if (newParts == Null) {
+                        newParts = oldParts.toArray(mutability=Fixed); // copies everything
+                    }
+                    newParts[Parts.count] = newPart;
+                }
+            }
+        }
+        return newParts == Null ? this : new UriTemplate(newParts, this.vars);
+    }
+
     // ----- properties ----------------------------------------------------------------------------
 
     /**
      * The structure of the URI template: A sequence of parts.
      */
-    (String|Expression)[] parts;
+    Part[] parts;
 
     /**
      * The variable names parsed from the URI template.
@@ -87,8 +125,8 @@ const UriTemplate {
 
         // peel off the first literal, if there is one, so that the cadence is always "match
         // expression(s) followed by a literal (or perhaps no literal, at the end)"
-        (String|Expression)[] parts = this.parts;
-        Int                   count = parts.size;
+        Part[] parts = this.parts;
+        Int    count = parts.size;
 
         if (count == 0) {
             // UriTemplate.ROOT only matches the root path
@@ -259,6 +297,11 @@ const UriTemplate {
             assert maxLength == Null || (require == False && explode == False);
         }
 
+        /**
+         * If necessary, create a `Variable` that is equivalent to this one, but is not "required".
+         */
+        Variable ensureOptional() = require ? new Variable(name, maxLength, False, explode) : this;
+
         @Override
         Int estimateStringLength() {
             return name.size + ((require | explode) ? 1 : maxLength?.estimateStringLength() + 1 : 0);
@@ -283,12 +326,20 @@ const UriTemplate {
     }
 
     /**
+     * Virtual interface that allows producing new copies of `Expression` objects.
+     */
+    static interface VariableDuplicable {
+        construct(Variable[] vars);
+    }
+
+    /**
      * Each non-literal part of a URL template is called an "expression".  When expanding a URL
      * template, each expression is expanded by looking up the variables that compose the
      * expression, and formatting the values of those variables following the rules specific to the
      * specific form of the Expression.
      */
-    static @Abstract const Expression(Variable[] vars) {
+    static @Abstract const Expression(Variable[] vars)
+            implements VariableDuplicable {
         /**
          * Some expression types are only valid within a specific Section. If so, then this property
          * will specify that Section.
@@ -721,10 +772,9 @@ const UriTemplate {
     /**
      * Parse the specified template string into the literal and expression parts that compose it.
      */
-    static conditional ((String|Expression)[] parts, String[] vars)
-            parse(String template) {
-        (String|Expression)[] parts = new (String|Expression)[];
-        String[]              vars  = new String[];
+    static conditional (Part[] parts, String[] vars) parse(String template) {
+        Part[]   parts = new Part[];
+        String[] vars  = new String[];
 
         Int offset = 0;
         Int length = template.size;
