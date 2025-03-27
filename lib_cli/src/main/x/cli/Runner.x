@@ -41,6 +41,7 @@ static service Runner {
              function void()? shutdown        = Null,
             ) {
         Catalog catalog = Scanner.buildCatalog(app, extras);
+        catalog.put("quit", new CmdInfo(this, quit));
 
         if (args.size == 0) {
             if (description.empty) {
@@ -343,18 +344,31 @@ static service Runner {
     /**
      * Print the instructions for the specified command or all the commands.
      */
-    void printHelp(String command, Catalog catalog) {
+    void printHelp(String command, Catalog catalog, Boolean printHeader = True) {
         if (command == "") {
-            console.print($|{description}
-                           |
-                           |Commands are:
-                          );
+            if (printHeader) {
+                console.print($|{description}
+                               |
+                               |Commands are:
+                              );
+            }
             Int maxName = catalog.keys.map(s -> s.size)
                                       .reduce(0, (s1, s2) -> s1.maxOf(s2));
             for ((String name, CmdInfo info) : catalog) {
                 console.print($"  {name.leftJustify(maxName+1)} {info.method.descr}");
             }
-        } else if (CmdInfo info := findCommand(command, catalog)) {
+            return;
+        }
+
+        Catalog commands = catalog.filter(entry -> entry.key.startsWith(command));
+        switch (commands.size) {
+        case 0:
+            console.print($"  Unknown command: {command.quoted()}");
+            break;
+
+        case 1:
+            assert CmdInfo info := commands.values.iterator().next();
+
             Command method = info.method;
             console.print($|  {method.descr == "" ? info.method.name : method.descr}
                           );
@@ -365,8 +379,8 @@ static service Runner {
                 console.print("Parameters:");
 
                 String[] names = params.map(p -> {
-                    assert String name := p.hasName();
-                    return p.defaultValue() ? $"{name} (opt)" : name;
+                    assert String param := p.hasName();
+                    return p.defaultValue() ? $"{param} (opt)" : param;
                 }).toArray();
 
                 Int maxName = names.map(n -> n.size)
@@ -378,8 +392,11 @@ static service Runner {
                                    );
                 }
             }
-        } else {
-            console.print($"  Unknown command: {command.quoted()}");
+            break;
+
+        default:
+            printHelp("", commands, False);
+            break;
         }
     }
 
@@ -400,5 +417,8 @@ static service Runner {
             break;
         }
     }
+
+    @Command("quit", "Exit the tool")
+    void quit() {}
 }
 

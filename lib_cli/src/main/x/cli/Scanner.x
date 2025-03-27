@@ -73,8 +73,6 @@ class Scanner {
 
     static class CmdInfo(Object target, Command method) {
         @Override
-        String toString() {
-            return method.toString();
-        }
+        String toString() = method.toString();
     }
 }
