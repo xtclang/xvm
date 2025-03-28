@@ -29,6 +29,12 @@ interface Reader
     Int lineNumber;
 
     /**
+     * The starting offset of the current line.
+     */
+    @Override
+    @RO Int lineStartOffset;
+
+    /**
      * The offset within the current line, starting with zero.
      *
      * When this property is set, the [lineNumber] will remain unchanged but the [offset] may
@@ -41,15 +47,12 @@ interface Reader
     Int lineOffset;
 
     /**
-     * The starting offset of the current line.
+     * The current [TextPosition] within the character stream. It is possible to use this property
+     * to save off and later (optionally) restore a `TextPosition` within the `Reader`, but the main
+     * purpose of this property is to save off information about a location within the `Reader` that
+     * can provide a user with information such as line number and offset.
      */
-    @Override
-    @RO Int lineStartOffset;
-
-    /**
-     * The current [TextPosition] within the character stream.
-     */
-    TextPosition position.get() = snapshot(this);
+    TextPosition position;
 
     /**
      * The known bounds (the "total size") of the `Reader`, including characters that have already
@@ -79,6 +82,9 @@ interface Reader
 
     // ----- Iterator operations -------------------------------------------------------------------
 
+    /**
+     * @return `True` iff no characters remain in the `Reader`; this is the same as eof
+     */
     @Override
     Boolean knownEmpty() = eof;
 
@@ -100,7 +106,7 @@ interface Reader
     }
 
     /**
-     * Note: This method must generally be overridden on an implementation of `Reader`.
+     * Note: Either this method or [next()] must be overridden by implementations of `Reader`.
      */
     @Override
     Char take();
@@ -125,7 +131,7 @@ interface Reader
         // this is inefficient; rewind in particular may be very expensive
         Char ch = take();
         rewind();
-        return ch;
+        return True, ch;
     }
 
     /**
@@ -199,7 +205,15 @@ interface Reader
             return skip(-count);
         }
 
-        offset = (offset - count).notLessThan(0);
+        Int newOffset = offset - count;
+        if (newOffset <= 0) {
+            reset();
+            return this;
+        }
+
+        // warning: implementations must avoid the possibility of infinite recursion between this
+        //          rewind() implementation and the implementation of offset.set()
+        offset = newOffset;
         return this;
     }
 
@@ -236,22 +250,17 @@ interface Reader
             return "";
         }
 
-        String result;
-        try (TextPosition current = position) {
+        try (Int previous = offset) {
             position = indexes.lowerBound;
             if (indexes.lowerExclusive) {
                 take();
             }
 
-            result = nextString(count);
-            if (indexes.descending) {
-                result = result.reversed();
-            }
+            String result = nextString(count);
+            return indexes.descending ? result.reversed() : result;
         } finally {
-            position = current;
+            offset = previous;
         }
-
-        return result;
     }
 
     /**
@@ -271,19 +280,13 @@ interface Reader
             return "";
         }
 
-        Int previous = offset;
-        String result;
-        try {
+        try (Int previous = offset) {
             offset = indexes.effectiveLowerBound;
-            result = nextString(count);
-            if (indexes.descending) {
-                result = result.reversed();
-            }
+            String result = nextString(count);
+            return indexes.descending ? result.reversed() : result;
         } finally {
             offset = previous;
         }
-
-        return result;
     }
 
     // ----- bulk read operations ------------------------------------------------------------------
@@ -370,24 +373,52 @@ interface Reader
         return buf.toString();
     }
 
+    /**
+     * @return the contents of this entire `Reader`, as an `immutable Char[]`
+     */
+    immutable Char[] toCharArray() {
+        Int previous = offset;
+        try {
+            offset = 0;
+            return nextChars(size);
+        } finally {
+            offset = previous;
+        }
+    }
+
+    /**
+     * @return the contents of this entire `Reader`, as a [String]
+     */
+    @Override
+    String toString() {
+        Int previous = offset;
+        try {
+            offset = 0;
+            return nextString(size);
+        } finally {
+            offset = previous;
+        }
+    }
+
     // ----- line oriented operations --------------------------------------------------------------
 
-// TODO review vis-a-vis lineNumber property
     /**
-     * Move the current position to the beginning of the specified line.
+     * Attempt to move the current position to the beginning of the specified line.
      *
-     * @param line  the zero-based line number to seek to the beginning of
+     * Note that failing to find the desired line may still alter the current position within the
+     * `Reader`.
      *
-     * @return this Reader
+     * @param line  the **zero-based** line number to seek to the beginning of
      *
-     * @throws EndOfFile  if an EOF condition is encountered while attempting to seek to the
-     *                    specified line
+     * @return `True` iff the `Reader` contains the specified line, and was able to successfully
+     *         seek to that line
+     * @return (conditional) this `Reader`
      */
-    Reader seekLine(Int line) {
+    conditional Reader seekLine(Int line) {
         switch (line <=> lineNumber) {
         case Equal:
             rewind(lineOffset);
-            return this;
+            return True, this;
 
         case Lesser:
             reset();
@@ -401,13 +432,12 @@ interface Reader
             while (Char ch := next()) {
                 if (lineNumber >= line) {
                     assert lineNumber == line;
-                    return this;
+                    return True, this;
                 }
             }
-            throw new EndOfFile();
+            return False;
         }
     }
-
 
     // ----- redirection ---------------------------------------------------------------------------
 

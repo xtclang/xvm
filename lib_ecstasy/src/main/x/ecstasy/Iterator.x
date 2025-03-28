@@ -34,10 +34,10 @@ interface Iterator<Element> {
      *
      * @return the Element value
      *
-     * @throws IllegalState if the iterator is exhausted
+     * @throws OutOfBounds if the iterator is exhausted
      */
     Element take() {
-        assert Element e := next();
+        assert:bounds Element e := next();
         return e;
     }
 

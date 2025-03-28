@@ -2,10 +2,10 @@ import TextPosition.Snapshot;
 import TextPosition.Stringer;
 
 /**
- * A CharArrayReader provides a Reader interface on top of a raw `Char[]` or a `String`. Because its
- * unit of storage is already in the form of a `Char`, its navigation both forwards and backwards
- * can be more efficient than a format with an underlying variable-length binary encoding, such as
- * UTF-8.
+ * A `CharArrayReader` provides a [Reader] interface on top of a raw `Char[]` or a [String]. Because
+ * its unit of storage is already in the form of a `Char`, its navigation -- both forwards and
+ * backwards -- can be more efficient than a format with an underlying variable-length binary
+ * encoding, such as UTF-8.
  */
 class CharArrayReader(immutable Char[] chars)
         implements Reader {
@@ -16,7 +16,7 @@ class CharArrayReader(immutable Char[] chars)
         this.str = str;
     }
 
-    // ----- properties ----------------------------------------------------------------------------
+    // ----- internal properties -------------------------------------------------------------------
 
     /**
      * The character contents.
@@ -29,142 +29,387 @@ class CharArrayReader(immutable Char[] chars)
     protected/private String? str;
 
     /**
-     * @return the total number of characters represented by the reader
+     * Internal offset.
      */
-    @Override
-    Int size.get() = chars.size;
+    private Int offset_;
 
     /**
-     * @return the remaining (yet to be read) number of characters represented by the reader
+     * Internal line number.
      */
-    conditional Int knownSize() {
+    private Int lineNumber_;
 
     /**
-     * @return the remaining (yet to be read) number of characters represented by the reader
+     * Internal offset of start of line, or -1 to indicate that we're not currently tracking line
+     * info.
      */
-    Int remaining.get() = size - offset;
+    private Int lineStartOffset_;
 
-    // ----- Iterator operations -------------------------------------------------------------------
+    private static @Inject Random rnd;
 
-    @Override
-    Boolean knownEmpty() = eof;
+    /**
+     * A random value used as a non-authoritative identity for this `Reader`.
+     */
+    private Int randomId = rnd.int64();
 
-    @Override
-    conditional Int knownSize() = (True, remaining);
-
-    // ----- Reader operations ---------------------------------------------------------------------
-
-    @Override
-    Int offset; // TODO
+    // ----- Reader interface ----------------------------------------------------------------------
 
     @Override
-    Int lineNumber; // TODO
+    Int offset {
+        @Override
+        Int get() = offset_;
+
+        @Override
+        void set(Int newValue) {
+            Int oldValue = offset_;
+            if (newValue != oldValue) {
+                assert:bounds 0 <= newValue <= size;
+                // use skip() to adjust if we need to maintain line information; otherwise just
+                // update the offset directly
+                if (newValue == 0) {
+                    reset();
+                } else if (hasLineInfo) {
+                    skip(newValue - oldValue);
+                } else {
+                    offset_ = newValue;
+                }
+            }
+        }
+    }
 
     @Override
-    public/private Int lineStartOffset;
+    Int lineNumber {
+        @Override
+        Int get() {
+            // line information isn't always maintained; once we lose it, it stays gone until we
+            // need it, so we need to verify that the line info exists
+            ensureLineInfo();
+            return lineNumber_;
+        }
+
+        @Override
+        void set(Int newValue) {
+            assert:bounds newValue >= 0;
+            assert:bounds seekLine(newValue);
+        }
+    }
+
+    @Override
+    Int lineStartOffset.get() {
+        // line information isn't always maintained; once we lose it, it stays gone until we
+        // need it, so we need to verify that the line info exists
+        ensureLineInfo();
+        return lineStartOffset_;
+    }
+
+    @Override
+    Int lineOffset {
+        @Override
+        Int get() = offset_ - lineStartOffset;      // ensures that line info exists
+
+        @Override
+        void set(Int newValue) {
+            Int oldValue = get();                   // ensures that line info exists
+            if (newValue != oldValue) {
+                assert:bounds newValue >= 0;
+                Int rawOffset = offset_;
+                Int delta     = newValue - oldValue;
+                if (delta > 0) {
+                    // scan forward, to verify no end-of-lines will be passed
+                    assert:bounds delta <= remaining;
+                    for (Int i : rawOffset ..< rawOffset+delta) {
+                        assert:bounds !chars[i].isLineTerminator();
+                    }
+                }
+                offset_ = rawOffset + delta;
+            }
+        }
+    }
 
     @Override
     TextPosition position {
         @Override
         TextPosition get() {
-            return offset <= 0xFFFFFF && lineNumber <= 0xFFFFF && lineOffset <= 0xFFFFF
-                    ? new TinyPos(offset, lineNumber, lineOffset)
-                    : new Snapshot(offset, lineNumber, lineOffset);
+            Int offset     = this.offset;
+            Int lineNumber = this.lineNumber;
+            Int lineOffset = this.lineOffset;
+            return offset <= 0xFFFFF && lineNumber <= 0xFFFF && lineOffset <= 0xFFFF
+                    ? new TaggedCompressed(offset, lineNumber, lineOffset, randomId)
+                    : new TaggedSnapshot(offset, lineNumber, lineOffset, randomId);
         }
 
         @Override
-        void set(TextPosition position) {
-            assert:arg position.is(Snapshot) || position.is(TinyPos);
-
-            offset          = position.offset;
-            lineNumber      = position.lineNumber;
-            lineStartOffset = position.lineStartOffset;
+        void set(TextPosition newPos) {
+            assert:arg newPos.is(Tagged) && newPos.tagMatches(randomId)
+                    as "TextPosition does not match this Reader";
+            offset_          = newPos.offset;
+            lineNumber_      = newPos.lineNumber;
+            lineStartOffset_ = newPos.lineStartOffset;
         }
     }
 
     @Override
-    Boolean eof.get() {
-        return offset >= size;
-    }
+    Int size.get() = chars.size;
 
     @Override
-    Char take() {
-        if (eof) {
-            throw new EndOfFile();
-        }
+    Int remaining.get() = size - offset_;
 
-        Char ch = chars[offset++];
+    @Override
+    Boolean eof.get() = offset_ >= size;
 
-        HandleTerminator: if (ch.isLineTerminator()) {
-            if (ch == '\r' && !eof) {
+    @Override
+    conditional Char next() {
+        Char[] chars = this.chars;
+        Int    of    = offset_;
+        if (of < chars.size) {
+            Char ch = chars[of++];
+            if (hasLineInfo && ch.isLineTerminator()) {
                 // there's a weird situation that hearkens back to the teletype (shortly after the
                 // invention of the wheel), where a CR was required before an LF in order to achieve
                 // the functionality of a "new line"; Microsoft retained this antiquated convention,
                 // so we are forced to peek at the next char, see if it is an LF, and if it is, then
                 // we have to ignore the preceding CR (as if it were a regular character), because
                 // it's followed by something that will actually act as a for-real line terminator
-                if (chars[offset] == '\n') {
-                    break HandleTerminator;
+                if (ch != '\r' || of >= chars.size || chars[of] != '\n') {
+                    ++lineNumber_;
+                    lineStartOffset_ = of;
                 }
             }
-
-            ++lineNumber;
-            lineStartOffset = offset;
+            offset_ = of;
+            return True, ch;
         }
-
-        return ch;
+        return False;
     }
 
     @Override
-    Reader rewind(Int count = 1) {
-        assert:arg count >= 0;
-        if (count > offset) {
-            return reset();
+    conditional Char peek() {
+        Char[] chars = this.chars;
+        Int    of    = offset_;
+        if (of < chars.size) {
+            return True, chars[of];
+        }
+        return False;
+    }
+
+    @Override
+    CharArrayReader rewind(Int count = 1) {
+        if (count < 0) {
+            return skip(-count);
         }
 
-        if (count <= lineOffset) {
-            // rewind within the current line
-            offset -= count;
+        Int oldOffset = offset_;
+        Int newOffset = oldOffset - count;
+        if (newOffset <= 0) {
+            reset();
             return this;
         }
 
-        // TODO this could be optimized further
-        return super(count);
-    }
+        // this tests both for (i) if we're not tracking line info or (ii) we're not rewinding to a
+        // different line; in both cases, we just need to set offset_ and we're done
+        if (lineStartOffset_ <= newOffset) {
+            offset_ = newOffset;
+            return this;
+        }
 
-    @Override
-    Reader reset() {
-        offset          = 0;
-        lineNumber      = 0;
-        lineStartOffset = 0;
+        if (count > (oldOffset >> 2).notLessThan(100)) {
+            // this is rewinding more than a quarter of the way back through the reader, so just
+            // jettison the line information
+            clearLineInfo();
+            offset_ = newOffset;
+            return this;
+        }
 
+        // rewind character by character
+        Char[] chars   = this.chars;
+        Int    of      = lineStartOffset_ - 1;
+        Int    curLine = lineNumber_;
+        while (of > 0) {
+            Char ch = chars[of];
+            if (ch.isLineTerminator() && !(ch == '\r' && of+1 < chars.size && chars[of+1] == '\n')) {
+                if (of < newOffset) {
+                    // we have reached the beginning of the line that contains newOffset; position
+                    // `of` on the first character of the line
+                    ++of;
+                    break;
+                }
+                // otherwise, we are passing a line boundary (in reverse)
+                --curLine;
+            }
+        }
+        offset_          = newOffset;
+        lineStartOffset_ = of;
+        lineNumber_      = curLine;
         return this;
     }
 
-    // ----- bulk read operations ------------------------------------------------------------------
-
     @Override
-    Boolean hasAtLeast(Int count) = count <= remaining;
-
-    // ----- line oriented operations --------------------------------------------------------------
-
-    @Override
-    CharArrayReader seekLine(Int line) {
-        TODO
+    CharArrayReader reset() {
+        offset_          = 0;
+        lineNumber_      = 0;
+        lineStartOffset_ = 0;
+        return this;
     }
 
     @Override
-    String nextLine() {
-        TODO
-    }
-
-    // ----- conversions ---------------------------------------------------------------------------
-
-    /**
-     * @return the contents of this entire Reader, as an immutable Array of Char
-     */
     immutable Char[] toCharArray() = chars;
 
     @Override
     String toString() = str ?: (str <- new String(chars));
+
+    @Override
+    conditional CharArrayReader seekLine(Int line) {
+        if (line == 0) {
+            reset();
+            return True, this;
+        }
+        assert:bounds line > 0;
+
+        // we need to know where we are in the reader to get where we're going
+        if (!hasLineInfo) {
+            reset();
+        }
+
+        // optimize for staying within the same line
+        Int curLine = lineNumber_;
+        if (line == curLine) {
+            offset_ = lineStartOffset_;
+            return True, this;
+        }
+
+        // only go backwards if the distance appears to be relatively close
+        if (line < curLine) {
+            if (line > (curLine >> 1)) {
+                // scan backwards from the beginning of the current line until we reach the
+                // beginning of the specified line; bounds checks are implicit since we know that
+                // the previous lines exist
+                Char[] chars = this.chars;
+                Int    of    = lineStartOffset_;
+                while (True) {
+                    Char ch = chars[--of];
+                    if (ch.isLineTerminator()) {
+                        if (curLine == line) {
+                            // we have found the line terminator that comes before the start of the
+                            // line that we're looking for
+                            ++of;
+                            break;
+                        }
+                        if (!(ch == '\n' && of >= 0 && chars[of] == '\r')) {
+                            --curLine;
+                        }
+                    }
+                }
+                offset_          = of;
+                lineStartOffset_ = of;
+                lineNumber_      = line;
+                return True, this;
+            }
+            // otherwise, start from the beginning of the Reader and go forward
+            reset();
+        }
+
+        Char[] chars   = this.chars;
+        Int    stop    = chars.size;
+        Int    of      = offset_;
+        Int    start   = lineStartOffset_;
+        while (of < stop) {
+            Char ch = chars[of++];
+            if (ch.isLineTerminator() && (ch != '\r' || of >= stop || chars[of] != '\n')) {
+                start = of;
+                if (++curLine == line) {
+                    break;
+                }
+            }
+        }
+        offset_          = of;
+        lineNumber_      = curLine;
+        lineStartOffset_ = start;
+        return line == curLine, this;
+    }
+
+    // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * `True` iff the line number is currently being tracked.
+     */
+    protected Boolean hasLineInfo.get() = lineNumber_ >= 0;
+
+    /**
+     * Ensure the the [lineNumber_] and [lineStartOffset] properties are set.
+     */
+    protected void ensureLineInfo() {
+        if (lineNumber_ < 0) {
+            Char[] chars = this.chars;
+            Int    of    = 0;
+            Int    stop  = offset_;
+            Int    lines = 0;
+            Int    start = 0;
+            while (of < stop) {
+                Char ch = chars[of++];
+                if (ch.isLineTerminator() && (ch != '\r' || of >= chars.size || chars[of] != '\n')) {
+                    ++lines;
+                    start = of;
+                }
+            }
+            lineNumber_      = lines;
+            lineStartOffset_ = start;
+        }
+    }
+
+    /**
+     * Ensure the the [lineNumber_] and [lineStartOffset] properties are obviously invalid.
+     */
+    protected void clearLineInfo() {
+        // these values are illegal, and indicate that the line info is not being actively tracked
+        lineNumber_      = -1;
+        lineStartOffset_ = -1;
+    }
+
+    // TODO GG move these inside Position property
+    //         COMPILER-NI: "Class within a property" is not yet implemented.
+    private static interface Tagged {
+        Boolean tagMatches(Int tag);
+    }
+
+    private static const TaggedSnapshot(Int offset, Int lineNumber, Int lineOffset, Int tag)
+            extends Snapshot(offset, lineNumber, lineOffset)
+            implements Tagged {
+        @Override
+        Boolean tagMatches(Int tag) {
+            return tag == this.tag;
+        }
+    }
+
+    private static const TaggedCompressed
+            implements TextPosition
+            implements Tagged
+            incorporates Stringer {
+
+        construct(Int offset, Int lineNumber, Int lineOffset, Int tag) {
+            // up to 20 bits for offset, 16 bits for line and line offset
+            assert:arg offset     >= 0 && offset     <= 0xFFFFF;
+            assert:arg lineNumber >= 0 && lineNumber <= 0xFFFF;
+            assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
+
+            combo = (tag << 20 | offset << 16 | lineNumber << 16 | lineOffset).toInt64();
+        }
+
+        private Int combo;
+
+        @Override
+        Int offset.get() = combo >>> 32 & 0xFFFFF;
+
+        @Override
+        Int lineNumber.get() = combo >>> 16 & 0xFFFF;
+
+        @Override
+        Int lineOffset.get() = combo & 0xFFFF;
+
+        @Override
+        Int lineStartOffset.get() = offset - lineOffset;
+
+        @Override
+        immutable TextPosition reify() = this;
+
+        @Override
+        Boolean tagMatches(Int tag) = tag & 0xFFF == combo >>> 52;
+    }
 }

@@ -121,25 +121,6 @@ const Char(UInt32 codepoint)
         construct Char(codepoint);
     }
 
-//    /**
-//     * Construct a character from the codepoint indicated by the passed `Byte` value. This is
-//     * primarily useful for codepoints in the ASCII range.
-//     *
-//     * @param codepoint  the codepoint for the character
-//     */
-//    construct(Byte codepoint) {
-//        construct Char(codepoint.toUInt32());
-//    }
-
-//    /**
-//     * Construct a character from the codepoint indicated by the passed `Int` value.
-//     *
-//     * @param n  the codepoint for the character
-//     */
-//    construct(Int n) {
-//        construct Char(codepoint.toUInt32());
-//    }
-
     @Override
     construct(String text) {
         assert:arg text.size == 1;
@@ -1179,7 +1160,7 @@ const Char(UInt32 codepoint)
         Int lower = lowersByCodepoint[codepoint];
         return lower == 0
                 ? this
-                : new Char(lower);
+                : lower.toChar();
     }
 
     /**
@@ -1196,7 +1177,7 @@ const Char(UInt32 codepoint)
         Int upper = uppersByCodepoint[codepoint];
         return upper == 0
                 ? this
-                : new Char(upper);
+                : upper.toChar();
     }
 
     /**
@@ -1213,7 +1194,7 @@ const Char(UInt32 codepoint)
         Int title = titlesByCodepoint[codepoint];
         return title == 0
                 ? this
-                : new Char(title);
+                : title.toChar();
     }
 
     /**

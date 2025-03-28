@@ -92,7 +92,7 @@ interface TextPosition
      */
     static immutable TextPosition snapshot(TextPosition pos) {
         // the TextPosition may already be immutable, in which case, use it as the snapshot
-        return this.is(immutable)?;
+        return pos.is(immutable)?;
 
         Int offset     = pos.offset;
         Int lineNumber = pos.lineNumber;
