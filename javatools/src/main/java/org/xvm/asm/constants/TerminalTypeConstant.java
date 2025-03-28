@@ -1130,6 +1130,10 @@ public class TerminalTypeConstant
             }
 
         Constant constant = getDefiningConstant();
+        if (constant instanceof KeywordConstant constKeyword)
+            {
+            constant = constKeyword.getBaseType().getDefiningConstant();
+            }
         return switch (constant.getFormat())
             {
             case Module, Package, Class ->

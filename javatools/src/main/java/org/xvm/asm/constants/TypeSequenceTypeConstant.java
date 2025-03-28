@@ -161,6 +161,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean extendsClass(IdentityConstant constClass)
+        {
+        return false;
+        }
+
+    @Override
     public boolean containsTypeParameter(boolean fAllowParams)
         {
         return false;

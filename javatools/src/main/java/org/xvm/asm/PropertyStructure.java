@@ -45,7 +45,8 @@ public class PropertyStructure
      * @param constId    the constant that specifies the identity of the Property
      * @param condition  the optional condition for this PropertyStructure
      */
-    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition)
+    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId,
+                                ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
         }
@@ -60,7 +61,8 @@ public class PropertyStructure
      * @param access2
      * @param type
      */
-    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId, ConditionalConstant condition, Access access2, TypeConstant type)
+    protected PropertyStructure(XvmStructure xsParent, int nFlags, PropertyConstant constId,
+                                ConditionalConstant condition, Access access2, TypeConstant type)
         {
         this(xsParent, nFlags, constId, condition);
         if (access2 != null)

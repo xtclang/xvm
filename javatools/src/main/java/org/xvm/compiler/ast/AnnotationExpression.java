@@ -11,11 +11,13 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
@@ -246,7 +248,9 @@ public class AnnotationExpression
         ConstantPool      pool     = pool();
         List<Expression>  listArgs = args;
         int               cArgs    = listArgs == null ? 0 : listArgs.size();
-        ValidatingContext ctx      = new ValidatingContext(getComponent().getContainingClass());
+        Component         comp     = getComponent();
+        ValidatingContext ctx      = new ValidatingContext(comp instanceof ModuleStructure module ?
+                                                            module : comp.getContainingClass());
 
         TypeConstant  typeAnno = type == null
                 ? idAnno.getType()
@@ -543,6 +547,7 @@ public class AnnotationExpression
             {
             super(null, false);
 
+            assert clzContainer != null;
             f_clzContainer = clzContainer;
             }
 

@@ -2840,8 +2840,8 @@ public class NameExpression
                                 }
                             }
                         }
-                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
 
+                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                     if (infoProp == null)
                         {
                         log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
@@ -2880,8 +2880,8 @@ public class NameExpression
                         idProp   = (PropertyConstant) target.getId();
                         typeLeft = target.getTargetType();
                         }
-                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
 
+                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
                     if (infoProp != null)
                         {
                         // check for a narrowed property type

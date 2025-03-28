@@ -1081,11 +1081,10 @@ public abstract class AstNode
         if (setMethods.isEmpty())
             {
             if (!typeTarget.isFormalType() && typeTarget.isSingleDefiningConstant() &&
-                    typeTarget.getAccess() != Access.PRIVATE)
+                    infoTarget.getType().getAccess() != Access.PRIVATE)
                 {
                 // check if there are any potentially matching private methods
-                TypeConstant typePrivate = typeTarget.ensureAccess(Access.PRIVATE);
-                if (!typePrivate.ensureTypeInfo(ErrorListener.BLACKHOLE).
+                if (!typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo(errs).
                         findMethods(sMethodName, cArgs, kind).isEmpty())
                     {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
