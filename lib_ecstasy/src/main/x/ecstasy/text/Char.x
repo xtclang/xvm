@@ -121,25 +121,6 @@ const Char(UInt32 codepoint)
         construct Char(codepoint);
     }
 
-    /**
-     * Construct a character from the codepoint indicated by the passed `Byte` value. This is
-     * primarily useful for codepoints in the ASCII range.
-     *
-     * @param codepoint  the codepoint for the character
-     */
-    construct(Byte codepoint) {
-        construct Char(codepoint.toUInt32());
-    }
-
-    /**
-     * Construct a character from the codepoint indicated by the passed `Int` value.
-     *
-     * @param n  the codepoint for the character
-     */
-    construct(Int n) {
-        construct Char(codepoint.toUInt32());
-    }
-
     @Override
     construct(String text) {
         assert:arg text.size == 1;
@@ -563,6 +544,156 @@ const Char(UInt32 codepoint)
      * Determine if the character is in the ASCII range.
      */
     Boolean ascii.get() = codepoint <= 0x7F;
+
+    /**
+     * ASCII control character `NUL` (hex value 0x00), aka "null", `\0`, and `^@`, was originally
+     * intended to be an ignored character, but is now used by many programming languages including
+     * C to mark the end of a string.
+     */
+    static Char NUL = new Char(0x00);
+    /**
+     * ASCII control character `SOH` (hex value 0x01), aka "Start of Heading".
+     */
+    static Char SOH = new Char(0x01);
+    /**
+     * ASCII control character `STX` (hex value 0x02), aka "Start of Text".
+     */
+    static Char STX = new Char(0x02);
+    /**
+     * ASCII control character `ETX` (hex value 0x03), aka "End of Text".
+     */
+    static Char ETX = new Char(0x03);
+    /**
+     * ASCII control character `EOT` (hex value 0x04), aka "End of Transmission".
+     */
+    static Char EOT = new Char(0x04);
+    /**
+     * ASCII control character `ENQ` (hex value 0x05), aka "Enquiry".
+     */
+    static Char ENQ = new Char(0x05);
+    /**
+     * ASCII control character `ACK` (hex value 0x06), aka "Acknowledge".
+     */
+    static Char ACK = new Char(0x06);
+    /**
+     * ASCII control character `BEL` (hex value 0x07), aka "bell", "alert", `\a`, and `^G`, may
+     * cause the device to emit a warning such as a bell or beep sound or the screen flashing.
+     */
+    static Char BEL = new Char(0x07);
+    /**
+     * ASCII control character `BS` (hex value 0x08), aka "backspace", `\b`, and `^H`, may overprint
+     * the previous character.
+     */
+    static Char BS  = new Char(0x08);
+    /**
+     * ASCII control character `HT` (hex value 0x09), aka "horizontal tab", `\t`, and `^I`, moves
+     * the printing position right to the next tab stop (often every eight character widths).
+     */
+    static Char HT  = new Char(0x09);
+    /**
+     * ASCII control character `LF` (hex value 0x0A), aka "line feed", `\n`, and `^J`, moves the
+     * print head down one line, or to the left edge and down. Used as the end of line marker in
+     * most UNIX systems and variants.
+     */
+    static Char LF  = new Char(0x0A);
+    /**
+     * ASCII control character `VT` (hex value 0x0B), aka "vertical tab", `\v`, and `^K`, moves the
+     * print head down to the next vertical tab stop (often every six lines).
+     */
+    static Char VT  = new Char(0x0B);
+    /**
+     * ASCII control character `FF` (hex value 0x0C), aka "form feed", `\f`, and `^L`, causes a
+     * printer to eject paper to the top of the next page, or a video terminal to clear the screen.
+     */
+    static Char FF  = new Char(0x0C);
+    /**
+     * ASCII control character `CR` (hex value 0x0D), aka "carriage return", `\r`, and `^M`, moves
+     * the printing position to the start of the line, allowing overprinting. Used as the end of
+     * line marker in Classic Mac OS, OS-9, FLEX (and variants). A `CR+LF` pair is used by CP/M-80
+     * and its derivatives including DOS and Windows, and by Application Layer protocols such as
+     * FTP, SMTP, and HTTP.
+     */
+    static Char CR  = new Char(0x0D);
+    /**
+     * ASCII control character `SO` (hex value 0x0E), aka "Shift Out".
+     */
+    static Char SO  = new Char(0x0E);
+    /**
+     * ASCII control character `SI` (hex value 0x0F), aka "Shift Ub".
+     */
+    static Char SI  = new Char(0x0F);
+    /**
+     * ASCII control character `DLE` (hex value 0x10), aka "Data Link Escape".
+     */
+    static Char DLE = new Char(0x10);
+    /**
+     * ASCII control character `DC1` (hex value 0x11), aka "Device Control One (XON)".
+     */
+    static Char DC1 = new Char(0x11);
+    /**
+     * ASCII control character `DC2` (hex value 0x12), aka "Device Control Two".
+     */
+    static Char DC2 = new Char(0x12);
+    /**
+     * ASCII control character `DC3` (hex value 0x13), aka "Device Control Three (XOFF)".
+     */
+    static Char DC3 = new Char(0x13);
+    /**
+     * ASCII control character `DC4` (hex value 0x14), aka "Device Control Four".
+     */
+    static Char DC4 = new Char(0x14);
+    /**
+     * ASCII control character `NAK` (hex value 0x15), aka "Negative Acknowledge".
+     */
+    static Char NAK = new Char(0x15);
+    /**
+     * ASCII control character `SYN` (hex value 0x16), aka "Synchronous Idle".
+     */
+    static Char SYN = new Char(0x16);
+    /**
+     * ASCII control character `ETB` (hex value 0x17), aka "End of Block Transmission".
+     */
+    static Char ETB = new Char(0x17);
+    /**
+     * ASCII control character `CAN` (hex value 0x18), aka "Cancel".
+     */
+    static Char CAN = new Char(0x18);
+    /**
+     * ASCII control character `EM` (hex value 0x19), aka "End of Medium".
+     */
+    static Char EM  = new Char(0x19);
+    /**
+     * ASCII control character `SUB` (hex value 0x1A), aka "substitute", "end of file", `\z` and
+     * `^Z`, acts as an end-of-file for file I/O on some operating systems and in some libraries.
+     */
+    static Char SUB = new Char(0x1A);
+    /**
+     * ASCII control character `ESC` (hex value 0x1B), aka "escape", `\e`, and `^[`, introduces an
+     * escape sequence.
+     */
+    static Char ESC = new Char(0x1B);
+    /**
+     * ASCII control character `FS` (hex value 0x1C), aka "File Separator".
+     */
+    static Char FS  = new Char(0x1C);
+    /**
+     * ASCII control character `GS` (hex value 0x1D), aka "Group Separator".
+     */
+    static Char GS  = new Char(0x1D);
+    /**
+     * ASCII control character `RS` (hex value 0x1E), aka "Record Separator".
+     */
+    static Char RS  = new Char(0x1E);
+    /**
+     * ASCII control character `US` (hex value 0x1F), aka "Unit Separator".
+     */
+    static Char US  = new Char(0x1F);
+    /**
+     * ASCII control character `DEL` (hex value 0x7F), aka "delete", "rubout", `\d`, and `^?`, is
+     * the last character in the ASCII repertoire, and was designed to erase incorrect characters on
+     * paper tape.
+     */
+    static Char DEL = new Char(0x7F);
 
     /**
      * Determine if the character is an ASCII digit, one of the values '0'..'9'.
@@ -1029,7 +1160,7 @@ const Char(UInt32 codepoint)
         Int lower = lowersByCodepoint[codepoint];
         return lower == 0
                 ? this
-                : new Char(lower);
+                : lower.toChar();
     }
 
     /**
@@ -1046,7 +1177,7 @@ const Char(UInt32 codepoint)
         Int upper = uppersByCodepoint[codepoint];
         return upper == 0
                 ? this
-                : new Char(upper);
+                : upper.toChar();
     }
 
     /**
@@ -1063,7 +1194,7 @@ const Char(UInt32 codepoint)
         Int title = titlesByCodepoint[codepoint];
         return title == 0
                 ? this
-                : new Char(title);
+                : title.toChar();
     }
 
     /**
