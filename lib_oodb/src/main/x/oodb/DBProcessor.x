@@ -272,7 +272,7 @@ interface DBProcessor<Message extends immutable Const>
     // ----- annotations ---------------------------------------------------------------------------
 
     /**
-     * The `@Dedupe` annotation indicates that the `DBProcessor` should _automatically_ remove
+     * The `@Dedup` annotation indicates that the `DBProcessor` should _automatically_ remove
      * duplicate `Pending` entries, such that multiple entries for the same `Message` on the same
      * `DBProcessor` that -- at some point in time -- _could_ be processed as multiple invocations
      * of [process], would instead be processed as a single call to [process] that `Message`. This
@@ -283,7 +283,7 @@ interface DBProcessor<Message extends immutable Const>
      * a separate call to [process] will occur (or the same `Message` will appear multiple times in
      * the argument to [processAll], or some combination of the two).
      */
-    static annotation Dedupe
+    static annotation Dedup
             into DBProcessor {}
 
     /**
