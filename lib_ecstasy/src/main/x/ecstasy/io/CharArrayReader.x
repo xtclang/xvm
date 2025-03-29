@@ -258,8 +258,7 @@ class CharArrayReader(immutable Char[] chars)
     @Override
     conditional CharArrayReader seekLine(Int line) {
         if (line == 0) {
-            reset();
-            return True, this;
+            return True, reset();
         }
         assert:bounds line > 0;
 
@@ -385,11 +384,11 @@ class CharArrayReader(immutable Char[] chars)
 
         construct(Int offset, Int lineNumber, Int lineOffset, Int tag) {
             // up to 20 bits for offset, 16 bits for line and line offset
-            assert:arg offset     >= 0 && offset     <= 0xFFFFF;
+            assert:arg offset     >= 0 && offset     <= 0xFFFFF;    // TODO remove or assert:test
             assert:arg lineNumber >= 0 && lineNumber <= 0xFFFF;
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
 
-            combo = (tag << 20 | offset << 16 | lineNumber << 16 | lineOffset).toInt64();
+            combo = tag << 20 | offset << 16 | lineNumber << 16 | lineOffset;
         }
 
         private Int combo;

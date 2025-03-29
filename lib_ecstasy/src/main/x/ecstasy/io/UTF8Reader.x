@@ -61,6 +61,13 @@ class UTF8Reader
      */
     private Int lineStartOffset_;
 
+    private static @Inject Random rnd;
+
+    /**
+     * A random value used as a non-authoritative identity for this `Reader`.
+     */
+    private Int randomId = rnd.int64();
+
     // ----- Reader interface ----------------------------------------------------------------------
 
     @Override
@@ -78,7 +85,6 @@ class UTF8Reader
         Int get() {
             // line information isn't always maintained; once we lose it, it stays gone until we
             // need it, so we need to verify that the line info exists
-            ensureLineInfo();
             return lineNumber_;
         }
 
@@ -91,9 +97,38 @@ class UTF8Reader
 
     @Override
     Int lineStartOffset.get() {
-        // line information isn't always maintained; once we lose it, it stays gone until we
-        // need it, so we need to verify that the line info exists
-        ensureLineInfo();
+        // line start offset isn't always maintained; once we lose it, it stays gone until we need
+        // it, at which point we have to recalculate it
+        if (lineStartOffset_ < 0) {
+            Int oldLineNumber = lineNumber_;
+            if (oldLineNumber == 0) {
+                return lineStartOffset_ <- 0;
+            }
+
+            Int oldRawOffset = rawOffset;
+            Int oldOffset    = offset_;
+            Int count        = 0;
+            assert Char ch := prev();
+            if (ch == '\r') {
+                // this sucks: we started going backwards, and we may have found the first char of
+                // the "\r\n" sequence, which "\r" is NOT treated as a line change (the "\n" is)
+                assert next();  // "\r"
+                if (ch := next(), ch == '\n') {
+                    assert prev();  // "\n"
+                    assert prev();  // "\r"
+                    ch = ' ';       // lie and pretend the char is any non-line-terminator
+                }
+            }
+            while (!ch.isLineTerminator()) {
+                ++count;
+                assert ch := prev();
+            }
+            // restore previous position and include the line offset information
+            rawOffset        = oldRawOffset;
+            offset_          = oldOffset;
+            lineNumber_      = oldLineNumber;
+            lineStartOffset_ = oldOffset - count;
+        }
         return lineStartOffset_;
     }
 
@@ -110,8 +145,21 @@ class UTF8Reader
                 // is the new position to the left or the right of the old position
                 if (newValue > oldValue) {
                     // scan forward, to verify no end-of-lines will be passed
-                    // TODO
-//                        assert:bounds !chars[i].isLineTerminator();
+                    InputStream in           = this.in;
+                    Int         oldRawOffset = in.offset;
+                    Int         advance      = newValue - oldValue;
+                    for (Int i = 0; i < advance; ++i) {
+                        if (in.eof) {
+                            in.offset = oldRawOffset;   // make it look like we didn't advance
+                            throw new OutOfBounds($"eof on line {lineNumber_} at offset {oldValue+i}");
+                        }
+                        Char ch = DataInput.readUTF8Char(in);
+                        if (ch.isLineTerminator()) {
+                            in.offset = oldRawOffset;   // make it look like we didn't advance
+                            throw new OutOfBounds($"end of line {lineNumber_} at offset {oldValue+i}");
+                        }
+                    }
+                    offset_ += advance;
                 } else {
                     rewind(oldValue - newValue);
                 }
@@ -122,42 +170,44 @@ class UTF8Reader
     @Override
     TextPosition position {
         @Override
-        TextPosition get() = snapshot(this);
+        TextPosition get() {
+            Int offset     = this.offset;
+            Int lineNumber = this.lineNumber;
+            Int lineOffset = this.lineOffset;
+            Int rawOffset  = this.rawOffset;
+            Int rawAdjust  = rawOffset - offset;
+            return offset <= 0x3FFFF && lineNumber <= 0x3FFF && lineOffset <= 0xFFF && rawAdjust <= 0xFFF
+                    ? new TaggedCompressed(offset, lineNumber, lineOffset, rawAdjust, randomId)
+                    : new TaggedSnapshot(offset, lineNumber, lineOffset, rawOffset, randomId);
+        }
 
         @Override
         void set(TextPosition newPos) {
-            TODO
+            assert:arg newPos.is(Tagged) && newPos.tagMatches(randomId)
+                    as "TextPosition does not match this Reader";
+            offset_          = newPos.offset;
+            lineNumber_      = newPos.lineNumber;
+            lineStartOffset_ = newPos.lineStartOffset;
+            rawOffset        = newPos.rawOffset;
         }
     }
-// TODO REVIEW? do we need a special carrier that copies raw offset out and back in?
-//    @Override
-//    TextPosition position {
-//        @Override
-//        TextPosition get() {
-//            return offset <= 0xFFFFF && lineNumber <= 0xFFFF && lineOffset <= 0xFFFF
-//                    && (rawOffset - offset) <= 0xFFF
-//                            ? new TinyPos(offset, lineNumber, lineOffset, rawOffset)
-//                            : new SimplePos(offset, lineNumber, lineOffset, rawOffset);
-//        }
-//
-//        @Override
-//        void set(TextPosition position) {
-//            assert:arg position.is(SimplePos) || position.is(TinyPos);
-//
-//            offset          = position.offset;
-//            lineNumber      = position.lineNumber;
-//            lineStartOffset = position.lineStartOffset;
-//            rawOffset       = position.rawOffset;
-//        }
-//    }
 
     @Override
     Int size.get() {
         Int value = size_;
         if (value < 0) {
-            // lazily compute the size, starting from the current offset_
-            // TODO
-            size_ = value;
+            // lazily compute the size, starting from the current offset
+            InputStream in = this.in;
+            try (Int oldRawOffset = in.offset) {
+                value = offset_;
+                while (!in.eof) {
+                    DataInput.readUTF8Char(in);
+                    ++value;
+                }
+                size_ = value;
+            } finally {
+                in.offset = oldRawOffset;
+            }
         }
         return value;
     }
@@ -195,7 +245,7 @@ class UTF8Reader
                 Char chNext = DataInput.readUTF8Char(in);
                 in.offset = ofNext;
                 if (chNext == '\n') {
-                    break HandleTerminator;
+                    break CheckNewLine;
                 }
             }
             ++lineNumber;
@@ -274,18 +324,31 @@ class UTF8Reader
 
     @Override
     Reader rewind(Int count = 1) {
+        if (count < 0) {
+            return skip(-count);
+        }
+
         if (count == 0) {
             return this;
         }
 
-        assert:arg count > 0;
-        Int target = (offset - count).notLessThan(0);
-        if (target == 0) {
+        Int offset = offset_;
+        Int target = offset - count;
+        if (target <= 0) {
             return reset();
         }
 
-        // TODO go backwards but ignore all UTF8 trailing bytes
-        return reset().skip(target);
+        if (count >= offset >> 2 + offset >> 3 + offset >> 4) {
+            // this is rewinding more than 40% of the way back through the reader, so start
+            // at the beginning and go forwards instead (assumption: it's faster, and has line info)
+            return reset().skip(target);
+        }
+
+        // walk backwards
+        for (Int i = 0; i < count; ++i) {
+            assert prev();
+        }
+        return this;
     }
 
     @Override
@@ -300,6 +363,11 @@ class UTF8Reader
 
     @Override
     Boolean hasAtLeast(Int count) {
+        // if the reader size is known, then use it
+        if (size_ >= 0) {
+            return remaining >= count;
+        }
+
         // while UTF-8 allows for up to 6 bytes per character, the legal Unicode codepoint range
         // never exceeds 3 bytes per character
         if (in.remaining / 3 > count) {
@@ -322,8 +390,6 @@ class UTF8Reader
                 DataInput.readUTF8Char(in);
                 --count;
             }
-        } catch (EndOfFile e) {
-            return False;
         } finally {
             in.offset = of;
         }
@@ -333,11 +399,19 @@ class UTF8Reader
 
     @Override
     conditional UTF8Reader seekLine(Int line) {
-        // TODO use the underlying stream directly
-        // for current line, use lineStartOffset
-        // for line > current, seek forward
-        // for line == 0 reset()
-        // for line > 0 but line < current, could go forwards or backwards
+        if (line == 0) {
+            return True, reset();
+        }
+        assert:bounds line > 0;
+
+        // optimize for staying within the same line
+        Int curLine = lineNumber;
+        if (line == curLine) {
+            rewind(lineOffset);
+            return True, this;
+        }
+
+        // TODO
         return super(line);
     }
 
@@ -346,100 +420,61 @@ class UTF8Reader
         in.close(cause);
     }
 
-    // ----- Position implementation ---------------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
-    /**
-     * Abstract base class for the two Position implementations.
-     */
-    @Abstract
-    protected static const AbstractPos
-            implements Reader
-            incorporates Stringer {
-        @Abstract
+    // TODO GG move these inside Position property
+    //         COMPILER-NI: "Class within a property" is not yet implemented.
+    private static interface Tagged {
+        Boolean tagMatches(Int tag);
         @RO Int rawOffset;
     }
 
-    /**
-     * Simple constant implementation of the Position interface.
-     */
-    private static const SimplePos(Int offset, Int lineNumber, Int lineOffset, Int rawOffset)
-            extends AbstractPos;
-
-    /**
-     * A Position implementation that packs all the data into a single Int64.
-     */
-    private static const TinyPos
-            extends AbstractPos {
-        construct(Int offset, Int lineNumber, Int lineOffset, Int rawOffset) {
-            // instead of storing the entire raw offset, just store the amount that it exceeds the
-            rawOffset -= offset;
-
-            // up to 20 bits for raw (byte) offset, 16 bits for line and line offset, and 12 bits
-            // for the character offset vis-a-vis the byte offset
-            assert:arg offset     >= 0 && offset     <= 0xFFFFF;
-            assert:arg lineNumber >= 0 && lineNumber <= 0xFFFF;
-            assert:arg lineOffset >= 0 && lineOffset <= 0xFFFF;
-            assert:arg rawOffset  >= 0 && rawOffset  <= 0xFFF;
-
-            combo = (offset << 16 | lineNumber << 16 | lineOffset << 12 | rawOffset).toInt64();
-        }
-
-        private Int64 combo;
-
+    private static const TaggedSnapshot(Int offset, Int lineNumber, Int lineOffset, Int rawOffset, Int tag)
+            extends Snapshot(offset, lineNumber, lineOffset)
+            implements Tagged {
         @Override
-        Int offset.get() {
-            return combo >>> 44;
-        }
-
-        @Override
-        Int lineNumber.get() {
-            return combo >>> 28 & 0xFFFF;
-        }
-
-        @Override
-        Int lineOffset.get() {
-            return combo >>> 12 & 0xFFFF;
-        }
-
-        @Override
-        Int rawOffset.get() {
-            return offset + (combo & 0xFFF);
+        Boolean tagMatches(Int tag) {
+            return tag == this.tag;
         }
     }
 
-    // ----- internal ------------------------------------------------------------------------------
+    private static const TaggedCompressed
+            implements TextPosition
+            implements Tagged
+            incorporates Stringer {
 
-    /**
-     * Ensure the the [lineNumber_] and [lineStartOffset] properties are set.
-     */
-    protected void ensureLineInfo() {
-        if (lineNumber_ < 0) {
-// TODO
-//            Char chars = this.chars;
-//            Int  of    = 0;
-//            Int  stop  = offset_;
-            Int  lines = 0;
-            Int  start = 0;
-//            while (of < stop) {
-//                Char ch = chars[of++];
-//                if (ch.isLineTerminator() && (ch != '\r' || of >= chars.size || chars[of] != '\n')) {
-//                    ++lines;
-//                    start = of;
-//                }
-//            }
-            lineNumber_      = lines;
-            lineStartOffset_ = start;
-        } else if (lineStartOffset_ < 0) {
-            // TODO
+        construct(Int offset, Int lineNumber, Int lineOffset, Int rawAdjust, Int tag) {
+            // up to 18 bits for offset, 14 bits for line number, 12 bits for line offset, 12 bits
+            // for raw offset adjust, and 8 bits for the tag
+            assert:arg offset     >= 0 && offset     <= 0x3FFFF;    // TODO remove or assert:test
+            assert:arg lineNumber >= 0 && lineNumber <= 0x3FFF;
+            assert:arg lineOffset >= 0 && lineOffset <= 0xFFF;
+            assert:arg rawAdjust  >= 0 && rawAdjust  <= 0xFFF;
+
+            combo = tag << 18 | offset << 14 | lineNumber << 12 | lineOffset << 12 | rawAdjust;
         }
-    }
 
-    /**
-     * Ensure the the [lineNumber_] and [lineStartOffset] properties are obviously invalid.
-     */
-    protected void clearLineInfo() {
-        // these values are illegal, and indicate that the line info is not being actively tracked
-        lineNumber_      = -1;
-        lineStartOffset_ = -1;
+        private Int combo;
+
+        @Override
+        Int offset.get() = combo >>> 38 & 0x3FFFF;
+
+        @Override
+        Int lineNumber.get() = combo >>> 24 & 0x3FFF;
+
+        @Override
+        Int lineOffset.get() = combo >>> 12 & 0xFFF;
+
+        @Override
+        Int rawOffset.get() = offset + combo & 0xFFF;
+
+        @Override
+        Int lineStartOffset.get() = offset - lineOffset;
+
+        @Override
+        immutable TextPosition reify() = this;
+
+        @Override
+        Boolean tagMatches(Int tag) = tag & 0xFF == combo >>> 56;
     }
 }

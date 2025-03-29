@@ -159,7 +159,7 @@ interface TextPosition
             assert:arg lineNumber >= 0 && lineNumber <= 0xFFFFF;
             assert:arg lineOffset >= 0 && lineOffset <= 0xFFFFF;
 
-            combo = (offset << 20 | lineNumber << 20 | lineOffset).toInt64();
+            combo = offset << 20 | lineNumber << 20 | lineOffset;
         }
 
         private Int combo;
