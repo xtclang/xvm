@@ -323,7 +323,7 @@ class UTF8Reader
     }
 
     @Override
-    Reader rewind(Int count = 1) {
+    UTF8Reader rewind(Int count = 1) {
         if (count < 0) {
             return skip(-count);
         }
@@ -352,12 +352,11 @@ class UTF8Reader
     }
 
     @Override
-    Reader reset() {
+    UTF8Reader reset() {
         offset_          = 0;
         lineNumber_      = 0;
         lineStartOffset_ = 0;
         rawOffset        = 0;
-
         return this;
     }
 

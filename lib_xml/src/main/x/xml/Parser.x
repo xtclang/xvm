@@ -73,18 +73,9 @@ class Parser(Boolean ignoreProlog       = False,
      */
     protected Char ch;
 
-    protected conditional Char peek() {
-        return
-    }
+    protected conditional Char peek() = reader.peek();
 
-    protected conditional Char next() {
-        Boolean eof = eof;
-        Char    ch  = ch;
-        if (!ch := reader.next()) {
-            eof = True;
-            ch  =
-        }
-    }
+    protected conditional Char next() = reader.next();
 
     /**
      * TODO
@@ -94,7 +85,9 @@ class Parser(Boolean ignoreProlog       = False,
         Int get() = reader.offset;
 
         @Override
-        void set(Int n) = reader.reset().skip(n);
+        void set(Int n) {
+            reader.offset = n;
+        }
     }
 
     /**
@@ -112,9 +105,7 @@ class Parser(Boolean ignoreProlog       = False,
     /**
      * TODO
      */
-    protected Boolean match(Char ch) {
-        TODO
-    }
+    protected conditional Char match(Char ch) = reader.match(ch);
 
     /**
      * Log an error.
@@ -122,7 +113,7 @@ class Parser(Boolean ignoreProlog       = False,
      * @return `False`
      */
     protected Boolean err(String text) {
-        errors.add($"[{lineNumber}:{lineOffset}] ({offset}) {text}")
+        errors.add($"[{lineNumber}:{lineOffset}] ({offset}) {text}");
         return False;
     }
 }

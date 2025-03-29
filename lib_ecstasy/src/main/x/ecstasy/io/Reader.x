@@ -414,7 +414,7 @@ interface Reader
      *         seek to that line
      * @return (conditional) this `Reader`
      */
-    conditional Reader seekLine(Int line) {
+    conditional Reader seekLine(Int line) {     // TODO add optional param? `Int lineOffset=0`
         switch (line <=> lineNumber) {
         case Equal:
             rewind(lineOffset);
