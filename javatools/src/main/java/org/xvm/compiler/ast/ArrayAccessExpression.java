@@ -752,7 +752,7 @@ public class ArrayAccessExpression
         int              cIndexes  = listIndex.size();
         if (cIndexes == 1)
             {
-            Argument argIndex = listIndex.get(0).generateArgument(ctx, code, true, true, errs);
+            Argument argIndex = listIndex.get(0).generateArgument(ctx, code, true, false, errs);
             return new Assignable(argArray, argIndex);
             }
         else
@@ -761,7 +761,7 @@ public class ArrayAccessExpression
             for (int i = 0; i < cIndexes; ++i)
                 {
                 Expression expr = listIndex.get(i);
-                Argument   arg  = expr.generateArgument(ctx, code, true, true, errs);
+                Argument   arg  = expr.generateArgument(ctx, code, true, false, errs);
                 aArgIndexes[i] = expr.ensurePointInTime(code, arg, listIndex, i);
                 }
             return new Assignable(argArray, aArgIndexes);

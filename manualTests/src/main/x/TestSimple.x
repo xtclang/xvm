@@ -2,8 +2,14 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        if (foo()) {} // this used to produce a strange error message
+        Char[] chars = ['A', 'B', 'C'].toArray(mutability=Fixed);
+
+        Int offset = 0;
+        if (!(chars[offset++] := next())) { // this used to throw at runtime
+            offset = 1;
+        }
+        console.print(chars);
     }
 
-    void foo() {}
+    conditional Char next() = (True, 'a');
 }
