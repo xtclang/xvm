@@ -1265,7 +1265,8 @@ public abstract class AstNode
                     if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0)
                         {
                         errsKeep = errs.branch(this);
-                        log(errsKeep, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cReturns, cMethodRets);
+                        log(errsKeep, Severity.ERROR, Compiler.INCOMPATIBLE_RETURN_COUNT,
+                            sigMethod.getValueString(), cReturns, cMethodRets);
                         }
                     continue;
                     }
