@@ -2308,16 +2308,16 @@ public class InvocationExpression
 
                     arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
                                 true, atypeReturn, ErrorListener.BLACKHOLE);
-                    if (arg instanceof MethodConstant)
+                    if (arg instanceof MethodConstant idMethod)
                         {
-                        MethodStructure method = getMethod(infoLeft, arg);
+                        MethodStructure method = getMethod(infoLeft, idMethod);
                         assert method != null;
 
-                        m_argMethod   = arg;
+                        m_argMethod   = idMethod;
                         m_method      = method;
                         m_fBindTarget = !method.isFunction();
                         m_targetInfo  = new TargetInfo(sName, method, typeLeft, 0);
-                        return arg;
+                        return idMethod;
                         }
                     }
 
@@ -2457,8 +2457,8 @@ public class InvocationExpression
                             fConstruct                                ? MethodKind.Constructor :
                             (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
                                                                         MethodKind.Function;
-                    ErrorListener    errsTemp   = errs.branch(this);
-                    IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
+                    ErrorListener  errsTemp   = errs.branch(this);
+                    MethodConstant idCallable = findMethod(ctx, typeTarget, info, sName,
                             args, kind, !fNoCall, id.isNested(), atypeReturn, errsTemp);
                     if (idCallable == null)
                         {
@@ -2540,7 +2540,7 @@ public class InvocationExpression
                 IdentityConstant idClz      = idMM.getParentConstant();
                 TypeConstant     typeTarget = idClz.getFormalType();
                 TypeInfo         info       = getTypeInfo(ctx, typeTarget, errs);
-                IdentityConstant idCallable = findMethod(ctx, typeTarget, info, sName,
+                MethodConstant   idCallable = findMethod(ctx, typeTarget, info, sName,
                         args, MethodKind.Any, !fNoCall, false, atypeReturn, errs);
                 if (idCallable == null)
                     {
@@ -2765,14 +2765,14 @@ public class InvocationExpression
 
                         Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
                             false, atypeReturn, errsTemp);
-                        if (arg instanceof MethodConstant)
+                        if (arg instanceof MethodConstant idMethod)
                             {
-                            m_argMethod   = arg;
-                            m_method      = getMethod(infoType, arg);
+                            m_argMethod   = idMethod;
+                            m_method      = getMethod(infoType, idMethod);
                             m_fBindTarget = false;
                             m_idFormal    = idProp;
                             errsTemp.merge();
-                            return arg;
+                            return idMethod;
                             }
                         }
                     break;
@@ -2800,14 +2800,14 @@ public class InvocationExpression
 
                     Argument arg = findCallable(ctx, typeFormal, infoLeft, sName, MethodKind.Function,
                                                 false, atypeReturn, errsTemp);
-                    if (arg instanceof MethodConstant)
+                    if (arg instanceof MethodConstant idMethod)
                         {
-                        m_argMethod   = arg;
-                        m_method      = getMethod(infoLeft, arg);
+                        m_argMethod   = idMethod;
+                        m_method      = getMethod(infoLeft, idMethod);
                         m_fBindTarget = false;
                         m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
                         errsTemp.merge();
-                        return arg;
+                        return idMethod;
                         }
                     break;
                     }
@@ -2827,10 +2827,10 @@ public class InvocationExpression
         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
         if (arg != null)
             {
-            if (arg instanceof MethodConstant)
+            if (arg instanceof MethodConstant idMethod)
                 {
-                m_argMethod   = arg;
-                m_method      = getMethod(infoLeft, arg);
+                m_argMethod   = idMethod;
+                m_method      = getMethod(infoLeft, idMethod);
                 m_fBindTarget = m_method != null && !m_method.isFunction();
                 }
             else
@@ -2852,16 +2852,16 @@ public class InvocationExpression
 
             ErrorListener errsAlt = errs.branch(this);
 
-            arg = findMethod(ctx, typeConstraint, infoConstraint, sName, args, MethodKind.Function,
-                        !fNoCall, false, atypeReturn, errsAlt);
-            if (arg != null)
+            MethodConstant idMethod = findMethod(ctx, typeConstraint, infoConstraint, sName,
+                    args, MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
+            if (idMethod != null)
                 {
-                m_argMethod   = arg;
-                m_method      = getMethod(infoConstraint, arg);
+                m_argMethod   = idMethod;
+                m_method      = getMethod(infoConstraint, idMethod);
                 m_fBindTarget = false;
                 m_idFormal    = idFormal;
                 errsAlt.merge();
-                return arg;
+                return idMethod;
                 }
             }
         else if (typeLeft.isTypeOfType())
@@ -2876,17 +2876,17 @@ public class InvocationExpression
 
             ErrorListener errsAlt = errs.branch(this);
 
-            arg = findMethod(ctx, typeDataType, infoDataType, sName, args, MethodKind.Function,
-                        !fNoCall, false, atypeReturn, errsAlt);
-            if (arg != null)
+            MethodConstant idMethod = findMethod(ctx, typeDataType, infoDataType, sName, args,
+                    MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
+            if (idMethod != null)
                 {
-                m_argMethod   = arg;
-                m_method      = getMethod(infoDataType, arg);
+                m_argMethod   = idMethod;
+                m_method      = getMethod(infoDataType, idMethod);
                 m_fBindTarget = false;
                 m_idFormal    = (PropertyConstant) pool.clzType().getComponent().
                                     getChild("DataType").getIdentityConstant();
                 errsAlt.merge();
-                return arg;
+                return idMethod;
                 }
             }
         else if (!isSuppressCall() && !isAnyArgUnbound())
@@ -2898,16 +2898,16 @@ public class InvocationExpression
 
             ErrorListener errsAlt = errs.branch(this);
 
-            arg = findMethod(ctx, typeLeft, infoLeft, sName, listArgs, MethodKind.Function,
-                        !fNoCall, false, atypeReturn, errsAlt);
-            if (arg != null)
+            MethodConstant idMethod = findMethod(ctx, typeLeft, infoLeft, sName, listArgs,
+                    MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
+            if (idMethod != null)
                 {
-                m_argMethod   = arg;
-                m_method      = getMethod(infoLeft, arg);
+                m_argMethod   = idMethod;
+                m_method      = getMethod(infoLeft, idMethod);
                 m_fBindTarget = false;
                 m_fBjarne     = true;
                 errsAlt.merge();
-                return arg;
+                return idMethod;
                 }
             }
 
@@ -2962,16 +2962,12 @@ public class InvocationExpression
     /**
      * @return a method structure for the specified argument; null if not a method constant
      */
-    private MethodStructure getMethod(TypeInfo infoType, Argument arg)
+    private MethodStructure getMethod(TypeInfo infoType, MethodConstant idMethod)
         {
-        if (arg instanceof MethodConstant idMethod)
-            {
-            MethodInfo infoMethod = infoType.getMethodById(idMethod);
-            assert infoMethod != null;
+        MethodInfo infoMethod = infoType.getMethodById(idMethod);
+        assert infoMethod != null;
 
-            return infoMethod.getTopmostMethodStructure(infoType);
-            }
-        return null;
+        return infoMethod.getTopmostMethodStructure(infoType);
         }
 
     /**
