@@ -1107,24 +1107,24 @@ public abstract class AstNode
                 }
             }
 
-        // check if there are any potentially matching private methods to give a better error
-        if (!typeTarget.isAccessSpecified() && typeTarget.isAccessModifiable())
-            {
-            if (!typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo(errs).
-                    findMethods(sMethodName, cArgs, kind).isEmpty())
-                {
-                log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
-                        sMethodName, typeTarget.getValueString());
-                return null;
-                }
-            }
-
         if (errsTemp.hasSeriousErrors())
             {
             errsTemp.merge();
             }
         else
             {
+            // check if there are any potentially matching private methods to give a better error
+            if (!typeTarget.isAccessSpecified() && typeTarget.isAccessModifiable())
+                {
+                if (!typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo(errs).
+                        findMethods(sMethodName, cArgs, kind).isEmpty())
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            sMethodName, typeTarget.getValueString());
+                    return null;
+                    }
+                }
+
             // if there was a problem with parameters or return values, collectMatchingMethods()
             // would have reported an error; simply report a miss as a backstop
             if (kind == MethodKind.Constructor)

@@ -1865,6 +1865,11 @@ public class StatementBlock
             this.type       = typeNarrow;
             }
 
+        public String getName()
+            {
+            return name;
+            }
+
         public IdentityConstant getId()
             {
             return id;

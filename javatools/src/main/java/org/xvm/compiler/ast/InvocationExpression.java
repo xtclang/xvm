@@ -2517,7 +2517,9 @@ public class InvocationExpression
                     PropertyInfo prop = infoTarget.findProperty(idProp);
                     if (prop == null)
                         {
-                        throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
+                        log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                                idProp.getName(), target.getTargetType().getValueString());
+                        return null;
                         }
 
                     if (testFunction(ctx, prop.getType(), 0, 0, atypeReturn, errs) == null)
@@ -2542,7 +2544,8 @@ public class InvocationExpression
                     }
                 else
                     {
-                    throw new IllegalStateException("unsupported constant format: " + id);
+                    log(errs, Severity.ERROR, Compiler.ILLEGAL_INVOCATION, target.getName());
+                    return null;
                     }
                 }
 

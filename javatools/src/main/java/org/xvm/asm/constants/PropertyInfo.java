@@ -824,7 +824,12 @@ public class PropertyInfo
 
         for (PropertyBody body : m_aBody)
             {
-            if (body.isRW())
+            if (body.isRO())
+                {
+                return false;
+                }
+
+            if (body.isRW() || body.isAbstract()) // non-@RO @Abstract can potentially be a Var
                 {
                 return true;
                 }
