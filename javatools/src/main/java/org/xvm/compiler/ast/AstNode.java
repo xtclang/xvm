@@ -1078,22 +1078,7 @@ public abstract class AstNode
             while (idScope.isNested());
             }
 
-        if (setMethods.isEmpty())
-            {
-            if (!typeTarget.isFormalType() && typeTarget.isSingleDefiningConstant() &&
-                    infoTarget.getType().getAccess() != Access.PRIVATE)
-                {
-                // check if there are any potentially matching private methods
-                if (!typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo(errs).
-                        findMethods(sMethodName, cArgs, kind).isEmpty())
-                    {
-                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
-                            sMethodName, typeTarget.getValueString());
-                    return null;
-                    }
-                }
-            }
-        else
+        if (!setMethods.isEmpty())
             {
             // collect all theoretically matching methods
             Set<MethodConstant> setIs      = new HashSet<>();
@@ -1119,6 +1104,18 @@ public abstract class AstNode
                 return fArgsComplete
                         ? chooseBest(setConvert, typeTarget, mapMethods, errs)
                         : setConvert.iterator().next();
+                }
+            }
+
+        // check if there are any potentially matching private methods to give a better error
+        if (!typeTarget.isAccessSpecified() && typeTarget.isAccessModifiable())
+            {
+            if (!typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo(errs).
+                    findMethods(sMethodName, cArgs, kind).isEmpty())
+                {
+                log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                        sMethodName, typeTarget.getValueString());
+                return null;
                 }
             }
 

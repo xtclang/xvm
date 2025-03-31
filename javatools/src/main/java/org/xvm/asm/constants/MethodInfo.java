@@ -1227,6 +1227,26 @@ public class MethodInfo
         }
 
     /**
+     * @return true iff this method is accessible in the context of the specified class
+     */
+    public boolean isVisible(IdentityConstant idClz)
+        {
+        if (getHead().getAccess() == Access.PUBLIC)
+            {
+            return true;
+            }
+
+        for (MethodBody body : m_aBody)
+            {
+            if (body.getIdentity().getClassIdentity().isNestMateOf(idClz))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
+    /**
      * @return true iff this MethodInfo represents an "@Auto" auto-conversion method
      */
     public boolean isAuto()

@@ -109,6 +109,12 @@ public abstract class AbstractDependantTypeConstant
         return Access.PUBLIC;
         }
 
+        @Override
+    public boolean isAccessModifiable()
+        {
+        return false;
+        }
+
     @Override
     public boolean isParamsSpecified()
         {

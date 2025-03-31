@@ -128,6 +128,12 @@ public class AccessTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return true;
+        }
+
+    @Override
     public TypeConstant removeAccess()
         {
         return m_constType;

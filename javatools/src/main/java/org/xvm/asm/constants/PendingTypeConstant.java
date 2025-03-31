@@ -102,6 +102,12 @@ public class PendingTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         return false;

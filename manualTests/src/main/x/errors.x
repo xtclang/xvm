@@ -86,7 +86,7 @@ module TestCompilerErrors {
             }
         }
 
-        mixin Mix
+        annotation Mix
             into Base {
             @Override
             void f(Boolean flag=False) {
@@ -155,5 +155,32 @@ module TestCompilerErrors {
             class Child {}
         }
         Parent.Child child = new Parent.Child(); // should not compile
+    }
+
+    package testAccess {
+        class Base(Int valBasePro, Int valBasePri) {
+            protected Int valBasePro;
+            protected Int fBasePro() = valBasePro;
+            private   Int valBasePri;
+            private   Int fBasePri() = valBasePri;
+
+            void testAccess(Derived node) {
+                // these should not compile - not accessible
+                assert node.valDerivedPro > 0;
+                assert node.fDerivedPro() > 0;
+                Method m = node.fDerivedPro;
+
+                // these should not compile - not found
+                assert node.valBasePri > 0;
+                assert node.fBasePri() > 0;
+            }
+        }
+
+        class Derived(Int valBasePro, Int valDerivedPri, Int valDerivedPro)
+                extends Base(valBasePro, valDerivedPri) {
+            private   Int valDerivedPri;
+            protected Int valDerivedPro;
+            protected Int fDerivedPro() = valDerivedPro;
+        }
     }
 }

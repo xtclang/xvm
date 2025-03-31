@@ -148,6 +148,24 @@ public class IntersectionTypeConstant
         }
 
     @Override
+    public boolean isAccessSpecified()
+        {
+        return m_constType1.isAccessSpecified() || m_constType2.isAccessSpecified();
+        }
+
+    @Override
+    public Access getAccess()
+        {
+        return m_constType1.getAccess().minOf(m_constType2.getAccess());
+        }
+
+    @Override
+    public boolean isAccessModifiable()
+        {
+        return m_constType1.isAccessModifiable() && m_constType2.isAccessModifiable();
+        }
+
+    @Override
     public TypeConstant ensureAccess(Access access)
         {
         TypeConstant type1  = m_constType1;

@@ -105,8 +105,7 @@ public class ImmutableTypeConstant
     public TypeConstant ensureAccess(Access access)
         {
         // make sure it's "immutable private C" rather than "private immutable C"
-        ConstantPool pool = getConstantPool();
-        return cloneSingle(pool, pool.ensureAccessTypeConstant(m_constType, access));
+        return cloneSingle(getConstantPool(), getUnderlyingType().ensureAccess(access));
         }
 
     @Override

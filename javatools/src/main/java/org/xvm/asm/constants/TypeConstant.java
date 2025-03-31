@@ -321,6 +321,15 @@ public abstract class TypeConstant
         }
 
     /**
+     * @return true iff this type allows access modification (i.e. {@link #ensureAccess} can be
+     *         called without throwing an exception)
+     */
+    public boolean isAccessModifiable()
+        {
+        return getUnderlyingType().isAccessModifiable();
+        }
+
+    /**
      * If this type has access specified, calculate the type without an access modifier.
      *
      * @return an equivalent TypeConstant without an access modifier

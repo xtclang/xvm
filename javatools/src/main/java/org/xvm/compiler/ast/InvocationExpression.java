@@ -2310,8 +2310,13 @@ public class InvocationExpression
                                 true, atypeReturn, ErrorListener.BLACKHOLE);
                     if (arg instanceof MethodConstant idMethod)
                         {
-                        MethodStructure method = getMethod(infoLeft, idMethod);
-                        assert method != null;
+                        MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
+                        if (method == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                    idMethod.getValueString(), typeLeft.getValueString());
+                            return null;
+                            }
 
                         m_argMethod   = idMethod;
                         m_method      = method;
@@ -2413,8 +2418,13 @@ public class InvocationExpression
                                     return null;
                                     }
 
-                                MethodStructure ctor = getMethod(infoSuper, idConstruct);
-                                assert ctor != null;
+                                MethodStructure ctor = getMethod(ctx, typeSuper, infoSuper, idConstruct);
+                                if (ctor == null)
+                                    {
+                                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                            idConstruct.getValueString(), typeSuper.getValueString());
+                                    return null;
+                                    }
 
                                 m_argMethod   = idConstruct;
                                 m_method      = ctor;
@@ -2447,7 +2457,7 @@ public class InvocationExpression
             if (arg instanceof TargetInfo target)
                 {
                 TypeConstant     typeTarget = target.getTargetType();
-                TypeInfo         info       = typeTarget.ensureTypeInfo(errs);
+                TypeInfo         infoTarget = typeTarget.ensureTypeInfo(errs);
                 IdentityConstant id         = target.getId();
                 if (id instanceof MultiMethodConstant)
                     {
@@ -2458,14 +2468,14 @@ public class InvocationExpression
                             (fNoCall && fNoFBind) || target.hasThis() ? MethodKind.Any :
                                                                         MethodKind.Function;
                     ErrorListener  errsTemp   = errs.branch(this);
-                    MethodConstant idCallable = findMethod(ctx, typeTarget, info, sName,
+                    MethodConstant idCallable = findMethod(ctx, typeTarget, infoTarget, sName,
                             args, kind, !fNoCall, id.isNested(), atypeReturn, errsTemp);
                     if (idCallable == null)
                         {
                         // check to see if we had found something had we included methods in the
                         // search
                         if (kind == MethodKind.Function &&
-                                findMethod(ctx, typeTarget, info, sName, args, MethodKind.Method,
+                                findMethod(ctx, typeTarget, infoTarget, sName, args, MethodKind.Method,
                                     !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null)
                             {
                             if (target.getStepsOut() > 0)
@@ -2489,8 +2499,14 @@ public class InvocationExpression
                         {
                         m_targetInfo  = target; // (only used for non-constants)
                         m_argMethod   = idCallable;
-                        m_method      = getMethod(info, idCallable);
-                        m_fBindTarget = m_method != null && !m_method.isFunction();
+                        m_method      = getMethod(ctx, typeTarget, infoTarget, idCallable);
+                        if (m_method == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                    idCallable.getValueString(), typeTarget.getValueString());
+                            return null;
+                            }
+                        m_fBindTarget = !m_method.isFunction();
 
                         errsTemp.merge();
                         return idCallable;
@@ -2498,7 +2514,7 @@ public class InvocationExpression
                     }
                 else if (id instanceof PropertyConstant idProp)
                     {
-                    PropertyInfo prop = info.findProperty(idProp);
+                    PropertyInfo prop = infoTarget.findProperty(idProp);
                     if (prop == null)
                         {
                         throw new IllegalStateException("missing property: " + id + " on " + target.getTargetType());
@@ -2539,25 +2555,31 @@ public class InvocationExpression
                 // we only allow functions (not methods or constructors)
                 IdentityConstant idClz      = idMM.getParentConstant();
                 TypeConstant     typeTarget = idClz.getFormalType();
-                TypeInfo         info       = getTypeInfo(ctx, typeTarget, errs);
-                MethodConstant   idCallable = findMethod(ctx, typeTarget, info, sName,
+                TypeInfo         infoTarget = getTypeInfo(ctx, typeTarget, errs);
+                MethodConstant   idMethod   = findMethod(ctx, typeTarget, infoTarget, sName,
                         args, MethodKind.Any, !fNoCall, false, atypeReturn, errs);
-                if (idCallable == null)
+                if (idMethod == null)
                     {
                     return null;
                     }
 
-                MethodStructure method = getMethod(info, idCallable);
+                MethodStructure method = getMethod(ctx, typeTarget, infoTarget, idMethod);
+                if (method == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            idMethod.getValueString(), typeTarget.getValueString());
+                    return null;
+                    }
                 if (!method.isFunction())
                     {
                     exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_PROPERTY,
-                            sName, idCallable.getParentConstant().getValueString());
+                            sName, idMethod.getParentConstant().getValueString());
                     return null;
                     }
                 m_method      = method;
-                m_argMethod   = idCallable;
+                m_argMethod   = idMethod;
                 m_fBindTarget = false;
-                return idCallable;
+                return idMethod;
                 }
 
             if (arg instanceof PropertyConstant idProp)
@@ -2764,11 +2786,17 @@ public class InvocationExpression
                         ErrorListener errsTemp = errs.branch(this);
 
                         Argument arg = findCallable(ctx, type, infoType, sName, MethodKind.Function,
-                            false, atypeReturn, errsTemp);
+                                        false, atypeReturn, errsTemp);
                         if (arg instanceof MethodConstant idMethod)
                             {
-                            m_argMethod   = idMethod;
-                            m_method      = getMethod(infoType, idMethod);
+                            m_argMethod = idMethod;
+                            m_method    = getMethod(ctx, type, infoType, idMethod);
+                            if (m_method == null)
+                                {
+                                log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                        idMethod.getValueString(), type.getValueString());
+                                return null;
+                                }
                             m_fBindTarget = false;
                             m_idFormal    = idProp;
                             errsTemp.merge();
@@ -2795,15 +2823,21 @@ public class InvocationExpression
 
                     assert typeLeft.isTypeOfType();
                     TypeConstant  typeFormal = typeLeft.getParamType(0);
-                    TypeInfo      infoLeft   = typeFormal.ensureTypeInfo(errs);
+                    TypeInfo      infoFormal = typeFormal.ensureTypeInfo(errs);
                     ErrorListener errsTemp   = errs.branch(this);
 
-                    Argument arg = findCallable(ctx, typeFormal, infoLeft, sName, MethodKind.Function,
+                    Argument arg = findCallable(ctx, typeFormal, infoFormal, sName, MethodKind.Function,
                                                 false, atypeReturn, errsTemp);
                     if (arg instanceof MethodConstant idMethod)
                         {
-                        m_argMethod   = idMethod;
-                        m_method      = getMethod(infoLeft, idMethod);
+                        m_argMethod = idMethod;
+                        m_method    = getMethod(ctx, typeFormal, infoFormal, idMethod);
+                        if (m_method == null)
+                            {
+                            log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                    idMethod.getValueString(), typeFormal.getValueString());
+                            return null;
+                            }
                         m_fBindTarget = false;
                         m_idFormal    = (FormalTypeChildConstant) nameLeft.getIdentity(ctx);
                         errsTemp.merge();
@@ -2829,9 +2863,15 @@ public class InvocationExpression
             {
             if (arg instanceof MethodConstant idMethod)
                 {
-                m_argMethod   = idMethod;
-                m_method      = getMethod(infoLeft, idMethod);
-                m_fBindTarget = m_method != null && !m_method.isFunction();
+                m_argMethod = idMethod;
+                m_method    = getMethod(ctx, typeLeft, infoLeft, idMethod);
+                if (m_method == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            idMethod.getValueString(), typeLeft.getValueString());
+                    return null;
+                    }
+                m_fBindTarget = !m_method.isFunction();
                 }
             else
                 {
@@ -2848,7 +2888,7 @@ public class InvocationExpression
             //  CompileType.f(x), where CompileType's constraint type has the function "f(x)"
             FormalConstant idFormal       = (FormalConstant) typeLeft.getParamType(0).getDefiningConstant();
             TypeConstant   typeConstraint = idFormal.getConstraintType();
-            TypeInfo       infoConstraint = typeConstraint.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            TypeInfo       infoConstraint = getTypeInfo(ctx, typeConstraint, errs);
 
             ErrorListener errsAlt = errs.branch(this);
 
@@ -2856,8 +2896,14 @@ public class InvocationExpression
                     args, MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
             if (idMethod != null)
                 {
-                m_argMethod   = idMethod;
-                m_method      = getMethod(infoConstraint, idMethod);
+                m_argMethod = idMethod;
+                m_method    = getMethod(ctx, typeConstraint, infoConstraint, idMethod);
+                if (m_method == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            idMethod.getValueString(), typeConstraint.getValueString());
+                    return null;
+                    }
                 m_fBindTarget = false;
                 m_idFormal    = idFormal;
                 errsAlt.merge();
@@ -2872,7 +2918,7 @@ public class InvocationExpression
             // instead of more explicit
             //      "numType.DataType.fixedBitLength()"
             TypeConstant typeDataType = typeLeft.getParamType(0);
-            TypeInfo     infoDataType = typeDataType.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            TypeInfo     infoDataType = getTypeInfo(ctx, typeDataType, errs);
 
             ErrorListener errsAlt = errs.branch(this);
 
@@ -2880,8 +2926,14 @@ public class InvocationExpression
                     MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
             if (idMethod != null)
                 {
-                m_argMethod   = idMethod;
-                m_method      = getMethod(infoDataType, idMethod);
+                m_argMethod = idMethod;
+                m_method    = getMethod(ctx, typeDataType, infoDataType, idMethod);
+                if (m_method == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            idMethod.getValueString(), typeDataType.getValueString());
+                    return null;
+                    }
                 m_fBindTarget = false;
                 m_idFormal    = (PropertyConstant) pool.clzType().getComponent().
                                     getChild("DataType").getIdentityConstant();
@@ -2902,8 +2954,14 @@ public class InvocationExpression
                     MethodKind.Function, !fNoCall, false, atypeReturn, errsAlt);
             if (idMethod != null)
                 {
-                m_argMethod   = idMethod;
-                m_method      = getMethod(infoLeft, idMethod);
+                m_argMethod = idMethod;
+                m_method    = getMethod(ctx, typeLeft, infoLeft, idMethod);
+                if (m_method == null)
+                    {
+                    log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                            idMethod.getValueString(), typeLeft.getValueString());
+                    return null;
+                    }
                 m_fBindTarget = false;
                 m_fBjarne     = true;
                 errsAlt.merge();
@@ -2953,7 +3011,7 @@ public class InvocationExpression
                 TypeConstant type = m_targetInfo.getTargetType();
                 TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
 
-                method = getMethod(info, idMethod);
+                method = getMethod(ctx, type, info, idMethod);
                 }
             }
         return method;
@@ -2962,12 +3020,22 @@ public class InvocationExpression
     /**
      * @return a method structure for the specified argument; null if not a method constant
      */
-    private MethodStructure getMethod(TypeInfo infoType, MethodConstant idMethod)
+    private MethodStructure getMethod(Context ctx, TypeConstant typeTarget, TypeInfo infoTarget,
+                                      MethodConstant idMethod)
         {
-        MethodInfo infoMethod = infoType.getMethodById(idMethod);
-        assert infoMethod != null;
+        MethodInfo infoMethod = infoTarget.getMethodById(idMethod);
 
-        return infoMethod.getTopmostMethodStructure(infoType);
+        if (infoMethod != null && !typeTarget.isAccessSpecified() &&
+                infoTarget.getType().getAccess() != Access.PRIVATE)
+            {
+            // see the comments in getTypeInfo()
+            if (!infoMethod.isVisible(ctx.getThisClassId()))
+                {
+                return null;
+                }
+            }
+
+        return infoMethod.getTopmostMethodStructure(infoTarget);
         }
 
     /**

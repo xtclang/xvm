@@ -242,6 +242,12 @@ public class UnresolvedTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return isTypeResolved() && getResolvedType().isAccessModifiable();
+        }
+
+    @Override
     public boolean isNullable()
         {
         return isTypeResolved() && getResolvedType().isNullable();

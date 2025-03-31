@@ -1987,13 +1987,34 @@ public abstract class Expression
     /**
      * Obtain a TypeInfo for the specified type in the specified class context.
      *
+     * Note: unless this method returns a "private" access TypeInfo, the caller **must** always
+     *       check teh visibility of properties or methods retrieved using that info.
+     *
      * @param type  the type to get the TypeInfo for; if null - use the context's type
      */
     protected TypeInfo getTypeInfo(Context ctx, TypeConstant type, ErrorListener errs)
         {
-        return type == null
-                ? pool().ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE).ensureTypeInfo(errs)
-                : type.ensureTypeInfo(ctx.getThisClassId(), errs);
+        if (type == null)
+            {
+            return pool().
+                ensureAccessTypeConstant(ctx.getThisType(), Access.PRIVATE).ensureTypeInfo(errs);
+            }
+
+        TypeInfo info = type.ensureTypeInfo(ctx.getThisClassId(), errs);
+        if (info.getType().isAccessSpecified() || !type.isAccessModifiable())
+            {
+            return info;
+            }
+
+        // The "ensureTypeInfo" didn't see any reason to widen the TypeInfo beyond the "public"
+        // access, however:
+        // a) there are some scenarios when "protected" access to some properties or
+        //    methods should still be warranted (e.g. "left" is a subclass of "this");
+        // b) even if the access is not allowed, it's much better to report such an
+        //    error, rather than a generic "name XYZ is not found" message
+        // Therefore, we will widen the search to "protected" access, but will enforce
+        // the visibility check when a property or method is found.
+        return type.ensureAccess(Access.PROTECTED).ensureTypeInfo(errs);
         }
 
     /**

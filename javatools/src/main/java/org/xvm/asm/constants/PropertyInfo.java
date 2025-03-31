@@ -1358,6 +1358,26 @@ public class PropertyInfo
         return getHead().getDelegate();
         }
 
+    /**
+     * @return true iff this property is accessible in the context of the specified class
+     */
+    public boolean isVisible(IdentityConstant idClz)
+        {
+        if (getHead().getRefAccess() == Access.PUBLIC)
+            {
+            return true;
+            }
+
+        for (PropertyBody body : m_aBody)
+            {
+            if (body.getIdentity().getClassIdentity().isNestMateOf(idClz))
+                {
+                return true;
+                }
+            }
+        return false;
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

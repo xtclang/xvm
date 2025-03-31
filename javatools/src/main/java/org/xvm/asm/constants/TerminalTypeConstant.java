@@ -290,6 +290,12 @@ public class TerminalTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return !isFormalType();
+        }
+
+    @Override
     public boolean isParamsSpecified()
         {
         TypeConstant type = resolveTypedefs();

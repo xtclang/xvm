@@ -126,6 +126,16 @@ public class MethodBody
         }
 
     /**
+     * @return the Access required for the method
+     */
+    public Access getAccess()
+        {
+        return m_structMethod == null
+                ? Access.PUBLIC
+                : m_structMethod.getAccess();
+        }
+
+    /**
      * @return the MethodStructure that this MethodBody represents, or null if the method
      *         implementation does not have a MethodStructure, such as when the implementation is
      *         Delegating, Field, or Capped

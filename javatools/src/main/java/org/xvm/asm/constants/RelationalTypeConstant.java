@@ -183,6 +183,12 @@ public abstract class RelationalTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return false;
+        }
+
+    @Override
     public TypeConstant adjustAccess(IdentityConstant idClass)
         {
         return this;

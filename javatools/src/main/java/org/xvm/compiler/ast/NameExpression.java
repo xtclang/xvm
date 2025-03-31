@@ -2452,8 +2452,11 @@ public class NameExpression
                         }
                     }
 
-                TypeInfo         infoLeft = getTypeInfo(ctx, typeLeft, errs);
-                IdentityConstant idChild  = infoLeft.findName(pool, sName);
+                TypeInfo infoLeft     = getTypeInfo(ctx, typeLeft, errs);
+                boolean  fCheckAccess = !typeLeft.isAccessSpecified() &&  // see getTypeInfo() doc
+                                        infoLeft.getType().getAccess() != Access.PRIVATE;
+
+                IdentityConstant idChild = infoLeft.findName(pool, sName);
                 if (idChild == null)
                     {
                     // process the "this.OuterName" construct
@@ -2510,6 +2513,7 @@ public class NameExpression
                 switch (idChild.getFormat())
                     {
                     case Class:
+                        {
                         // the only thing we allow here is a reference to a typedef when a type is
                         // required; e.g.:
                         //   Aggregator<Element> collector = ...
@@ -2526,6 +2530,7 @@ public class NameExpression
                             log(errs, Severity.ERROR, Compiler.CLASS_UNEXPECTED, sName);
                             }
                         break;
+                        }
 
                     case Typedef:
                         log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
@@ -2533,8 +2538,10 @@ public class NameExpression
                         break;
 
                     case Property:
+                        {
                         PropertyInfo infoProp = infoLeft.findProperty((PropertyConstant) idChild);
-                        if (infoProp == null)
+                        if (infoProp == null ||
+                                fCheckAccess && !infoProp.isVisible(ctx.getThisClassId()))
                             {
                             log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
                                     idChild.getName(), typeLeft.getValueString());
@@ -2543,8 +2550,19 @@ public class NameExpression
                         m_arg         = idChild;
                         m_fAssignable = infoProp.isVar();
                         break;
+                        }
 
                     case Method:
+                        {
+                        MethodInfo infoMethod = infoLeft.getMethodById((MethodConstant) idChild);
+                        if (infoMethod == null ||
+                                fCheckAccess && !infoMethod.isVisible(ctx.getThisClassId()))
+                            {
+                            log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
+                                    idChild.getValueString(), typeLeft.getValueString());
+                            return null;
+                            }
+                        }
                         // fall through
                     case MultiMethod:
                         // there are more than one method by that name;
@@ -2841,11 +2859,9 @@ public class NameExpression
                             }
                         }
 
-                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                    infoProp = findProperty(ctx, typeLeft, idProp, errs);
                     if (infoProp == null)
                         {
-                        log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
-                                idProp.getName(), typeLeft.getValueString());
                         return null;
                         }
 
@@ -2881,7 +2897,7 @@ public class NameExpression
                         typeLeft = target.getTargetType();
                         }
 
-                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                    infoProp = findProperty(ctx, typeLeft, idProp, errs);
                     if (infoProp != null)
                         {
                         // check for a narrowed property type
@@ -2939,7 +2955,7 @@ public class NameExpression
                                 }
                             }
 
-                        infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                        infoProp = findProperty(ctx, typeLeft, idProp, errs);
                         if (infoProp == null)
                             {
                             break ComputePropertyInfo;
@@ -2963,7 +2979,7 @@ public class NameExpression
                             }
                         }
 
-                    infoProp = getTypeInfo(ctx, typeLeft, errs).findProperty(idProp);
+                    infoProp = findProperty(ctx, typeLeft, idProp, errs);
                     if (infoProp == null)
                         {
                         break ComputePropertyInfo;
@@ -3075,8 +3091,7 @@ public class NameExpression
 
                 if (infoProp == null)
                     {
-                    log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
-                            prop.getName(), typeLeft.getValueString());
+                    assert errs.hasSeriousErrors();
                     return null;
                     }
 
@@ -3270,6 +3285,24 @@ public class NameExpression
             default:
                 throw new IllegalStateException("constant=" + constant);
             }
+        }
+
+    private PropertyInfo findProperty(Context ctx, TypeConstant typeTarget, PropertyConstant idProp,
+                                      ErrorListener errs)
+        {
+        TypeInfo infoTarget   = getTypeInfo(ctx, typeTarget, errs);
+        boolean  fCheckAccess = !typeTarget.isAccessSpecified(); // see the comments in getTypeInfo()
+
+        PropertyInfo infoProp = infoTarget.findProperty(idProp);
+        if (infoProp == null ||
+                fCheckAccess && !infoProp.isVisible(ctx.getThisClassId()))
+            {
+            log(errs, Severity.ERROR, Compiler.PROPERTY_INACCESSIBLE,
+                    idProp.getName(), typeTarget.getValueString());
+            return null;
+            }
+
+        return infoProp;
         }
 
     /**

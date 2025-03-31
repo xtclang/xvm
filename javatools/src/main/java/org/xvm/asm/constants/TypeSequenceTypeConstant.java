@@ -131,6 +131,12 @@ public class TypeSequenceTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface)
         {
         return false;
