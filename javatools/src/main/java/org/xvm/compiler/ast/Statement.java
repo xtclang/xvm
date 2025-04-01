@@ -98,6 +98,14 @@ public abstract class Statement
         }
 
     /**
+     * @return true iff this statement has any breaks that jump to this statement's exit label
+     */
+    protected boolean hasBreaks()
+        {
+        return m_listBreaks != null;
+        }
+
+    /**
      * Obtain the label to "continue" to.
      *
      * @param nodeOrigin  the "continue" node (the node requesting the label)

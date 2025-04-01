@@ -297,6 +297,7 @@ public class WhileStatement
             // come in two different orders, either the conditions first (for a while loop) followed
             // by the block, or the block first (for a do..while) followed by the conditions.
             boolean fAlwaysTrue = false;
+            Context ctxFork     = null;
             for (int iPart = 1; iPart <= 2; ++iPart)
                 {
                 if ((iPart == 2) == fDoWhile)
@@ -393,7 +394,7 @@ public class WhileStatement
                         }
                     else
                         {
-                        ctx = ctx.enterFork(true);
+                        ctx = ctxFork = ctx.enterFork(true);
                         }
                     ++cExits;
                     }
@@ -488,6 +489,14 @@ public class WhileStatement
             // lazily created loop vars are only created inside the validation of this statement
             m_ctxLabelVars  = null;
             m_errsLabelVars = null;
+
+            if (ctxFork != null && !hasBreaks())
+                {
+                // there are no breaks out of the loop, therefore the only way to get out is for the
+                // condition to be "false" and thus any type inferences from the "true" branch
+                // should be discarded (not retained pass the loop)
+                ctxFork.setReachable(false);
+                }
 
             // unwind local contexts
             while (cExits-- > 0)
