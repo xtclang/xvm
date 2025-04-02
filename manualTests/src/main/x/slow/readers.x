@@ -653,12 +653,12 @@ module readers {
         @Override
         Int nextChars(Char[] chars, Int offset, Int count) {
             Char[][] results = new Char[][readers.size](i -> i == 0 ? chars : chars.duplicate());
-            Int control; // TODO GG change type to String and get wrong error: Method "nextChars" on the "Reader" type is not accessible. ("readers[0].nextChars(results[0], offset, count)")
+            Int control;
             try {
                 control = readers[0].nextChars(results[0], offset, count);
             } catch (Exception e) {
                 for (Int i = 1, Int c = readers.size; i < c; ++i) {
-                    Int? check = Null; // TODO GG change type to String here, too
+                    Int? check = Null;
                     try {
                         check = readers[i].nextChars(results[i], offset, count);
                     } catch (Exception eCheck) {
