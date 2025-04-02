@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardWatchEventKinds;
@@ -30,7 +31,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
-import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.numbers.xInt64;
@@ -128,33 +128,40 @@ public class xOSStorage
                 {
                 StringHandle hPathString = (StringHandle) hArg;
 
-                Path     path   = Paths.get(hPathString.getStringValue());
-                String[] asName = path.toFile().list();
-                int      cNames = asName == null ? 0 : asName.length;
+                try
+                    {
+                    Path     path   = Paths.get(hPathString.getStringValue());
+                    String[] asName = path.toFile().list();
+                    int      cNames = asName == null ? 0 : asName.length;
 
-                return cNames == 0
-                         ? frame.assignValue(iReturn, xString.ensureEmptyArray())
-                         : frame.assignValue(iReturn, xString.makeArrayHandle(asName));
+                    return cNames == 0
+                             ? frame.assignValue(iReturn, xString.ensureEmptyArray())
+                             : frame.assignValue(iReturn, xString.makeArrayHandle(asName));
+                    }
+                catch (InvalidPathException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
                 }
 
             case "createFile":  // (pathString)
                 {
                 StringHandle hPathString = (StringHandle) hArg;
 
-                Path path = Paths.get(hPathString.getStringValue());
-                if (Files.exists(path) && !Files.isDirectory(path))
-                    {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
-
                 try
                     {
+                    Path path = Paths.get(hPathString.getStringValue());
+                    if (Files.exists(path) && !Files.isDirectory(path))
+                        {
+                        return frame.assignValue(iReturn, xBoolean.FALSE);
+                        }
+
                     return frame.assignValue(iReturn,
                         xBoolean.makeHandle(path.toFile().createNewFile()));
                     }
-                catch (IOException e)
+                catch (IOException|InvalidPathException e)
                     {
-                    return raisePathException(frame, e, path.toString());
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
                 }
 
@@ -162,14 +169,21 @@ public class xOSStorage
                 {
                 StringHandle hPathString = (StringHandle) hArg;
 
-                Path path = Paths.get(hPathString.getStringValue());
-                if (Files.exists(path) && Files.isDirectory(path))
+                try
                     {
-                    return frame.assignValue(iReturn, xBoolean.FALSE);
-                    }
+                    Path path = Paths.get(hPathString.getStringValue());
+                    if (Files.exists(path) && Files.isDirectory(path))
+                        {
+                        return frame.assignValue(iReturn, xBoolean.FALSE);
+                        }
 
-                return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(path.toFile().mkdirs()));
+                    return frame.assignValue(iReturn,
+                        xBoolean.makeHandle(path.toFile().mkdirs()));
+                    }
+                catch (InvalidPathException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
                 }
 
             case "delete":  // (pathString)
@@ -190,15 +204,15 @@ public class xOSStorage
                 {
                 StringHandle hPathStringDir = (StringHandle) hArg;
 
-                Path pathDir = Paths.get(hPathStringDir.getStringValue());
                 try
                     {
+                    Path pathDir = Paths.get(hPathStringDir.getStringValue());
                     ensureWatchDaemon(pool()).register(pathDir, hStorage);
                     return Op.R_NEXT;
                     }
-                catch (IOException e)
+                catch (IOException|InvalidPathException e)
                     {
-                    return raisePathException(frame, e, pathDir.toString());
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
                 }
             }
@@ -256,7 +270,7 @@ public class xOSStorage
                         }
                     return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
-                catch (Exception e)
+                catch (InvalidPathException e)
                     {
                     return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
@@ -284,12 +298,6 @@ public class xOSStorage
                 }
             }
         return daemonWatch;
-        }
-
-    protected int raisePathException(Frame frame, IOException e, String sPath)
-        {
-        // TODO: how to get the natural Path efficiently from sPath?
-        return frame.raiseException(xException.pathException(frame, e.getMessage(), xNullable.NULL));
         }
 
     protected static class WatchServiceDaemon

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -95,17 +96,28 @@ public class xOSFileStore
             case "dirFor":  // (pathString)
                 {
                 StringHandle hPathString = (StringHandle) hArg;
-
-                Path path = Paths.get(hPathString.getStringValue());
-                return xOSFileNode.createHandle(frame, hTarget, path, true, iReturn);
+                try
+                    {
+                    Path path = Paths.get(hPathString.getStringValue());
+                    return xOSFileNode.createHandle(frame, hTarget, path, true, iReturn);
+                    }
+                catch (InvalidPathException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
                 }
-
             case "fileFor":  // (pathString)
                 {
                 StringHandle hPathString = (StringHandle) hArg;
-
-                Path path = Paths.get(hPathString.getStringValue());
-                return xOSFileNode.createHandle(frame, hTarget, path, false, iReturn);
+                try
+                    {
+                    Path path = Paths.get(hPathString.getStringValue());
+                    return xOSFileNode.createHandle(frame, hTarget, path, false, iReturn);
+                    }
+                catch (InvalidPathException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
                 }
             }
 
@@ -125,25 +137,28 @@ public class xOSFileStore
                 String       sDest = ((StringHandle) ahArg[3]).getStringValue();
                 boolean      fMove = ((xBoolean.BooleanHandle) ahArg[4]).get();
 
-                Path    pathSrc = Paths.get(sSrc);
-                boolean fDir    = Files.isDirectory(pathSrc);
-                if (Files.notExists(pathSrc))
-                    {
-                    return frame.raiseException(xException.fileNotFoundException(frame, "Could not find file or directory: " + sSrc, hSrc));
-                    }
-
-                Path pathDest = Paths.get(sDest);
-                if (Files.exists(pathDest) && !Files.isDirectory(pathDest))
-                    {
-                    return frame.raiseException(xException.fileAlreadyExistsException(frame, "Could not overwrite file or directory: " + sDest, hDest));
-                    }
-
                 Path pathResult;
                 try
                     {
+                    Path    pathSrc = Paths.get(sSrc);
+                    boolean fDir    = Files.isDirectory(pathSrc);
+                    if (Files.notExists(pathSrc))
+                        {
+                        return frame.raiseException(xException.fileNotFoundException(
+                                frame, "Could not find file or directory: " + sSrc, hSrc));
+                        }
+
+                    Path pathDest = Paths.get(sDest);
+                    if (Files.exists(pathDest) && !Files.isDirectory(pathDest))
+                        {
+                        return frame.raiseException(xException.fileAlreadyExistsException(
+                                frame, "Could not overwrite file or directory: " + sDest, hDest));
+                        }
+
                     pathResult = fMove
                             ? Files.move(pathSrc, pathDest)
                             : Files.copy(pathSrc, pathDest);
+                    return xOSFileNode.createHandle(frame, hTarget, pathResult, fDir, iReturn);
                     }
                 catch (NoSuchFileException | FileNotFoundException e)
                     {
@@ -157,12 +172,10 @@ public class xOSFileStore
                     {
                     return frame.raiseException(xException.accessDeniedException(frame, e.getMessage(), hDest));
                     }
-                catch (IOException e)
+                catch (IOException|InvalidPathException e)
                     {
                     return frame.raiseException(xException.ioException(frame, e.getMessage()));
                     }
-
-                return xOSFileNode.createHandle(frame, hTarget, pathResult, fDir, iReturn);
                 }
             }
 
@@ -178,14 +191,21 @@ public class xOSFileStore
             case "linkAsFile": // pathString
                 {
                 StringHandle hPathString = (StringHandle) ahArg[0];
-                Path         path        = Paths.get(hPathString.getStringValue());
-
-                if (Files.isSymbolicLink(path))
+                try
                     {
-                    // TODO: implement native support for link files
-                    System.err.println("*** File is a link: " + path);
+                    Path path  = Paths.get(hPathString.getStringValue());
+
+                    if (Files.isSymbolicLink(path))
+                        {
+                        // TODO: implement native support for link files
+                        System.err.println("*** File is a link: " + path);
+                        }
+                    return frame.assignValue(aiReturn[0], xBoolean.FALSE);
                     }
-                return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+                catch (InvalidPathException e)
+                    {
+                    return frame.raiseException(xException.ioException(frame, e.getMessage()));
+                    }
                 }
             }
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
