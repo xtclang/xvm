@@ -56,6 +56,7 @@ import ecstasy.io;
 class Array<Element>
         implements ArrayDelegate<Element>
         implements List<Element>
+        implements Duplicable
         implements Freezable
         implements Stringable
         incorporates conditional HashableArray<Element extends Hashable>

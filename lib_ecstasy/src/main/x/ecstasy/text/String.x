@@ -53,9 +53,7 @@ const String
      *
      *     @Iff("test".defined) class ...
      */
-    Boolean defined.get() {
-        return this:service.typeSystem.definedNames.contains(this);
-    }
+    Boolean defined.get() = this:service.typeSystem.definedNames.contains(this);
 
     // ----- operators -----------------------------------------------------------------------------
 
@@ -539,9 +537,7 @@ const String
      *
      * @return True iff this String starts-with the specified character
      */
-    Boolean startsWith(Char ch) {
-        return size > 0 && chars[0] == ch;
-    }
+    Boolean startsWith(Char ch) = size > 0 && chars[0] == ch;
 
     /**
      * Determine if `this` String _starts-with_ `that` String. A String `this` of at least `n`
@@ -553,9 +549,7 @@ const String
      *
      * @return True iff this String starts-with that String
      */
-    Boolean startsWith(String that) {
-        return this.chars.startsWith(that.chars);
-    }
+    Boolean startsWith(String that) = this.chars.startsWith(that.chars);
 
     /**
      * Determine if this String _ends-with_ the specified character.
@@ -579,9 +573,7 @@ const String
      *
      * @return True iff this String ends-with that String
      */
-    Boolean endsWith(String that) {
-        return this.chars.endsWith(that.chars);
-    }
+    Boolean endsWith(String that) = this.chars.endsWith(that.chars);
 
     /**
      * Look for the specified character starting at the specified index.
@@ -592,9 +584,7 @@ const String
      * @return True iff this string contains the character, at or after the `startAt` index
      * @return (conditional) the index at which the specified character was found
      */
-    conditional Int indexOf(Char value, Int startAt = 0) {
-        return chars.indexOf(value, startAt);
-    }
+    conditional Int indexOf(Char value, Int startAt = 0) = chars.indexOf(value, startAt);
 
     /**
      * Look for the specified character starting at the specified index and searching backwards.
@@ -605,9 +595,7 @@ const String
      * @return True iff this string contains the character, at or before the `startAt` index
      * @return (conditional) the index at which the specified character was found
      */
-    conditional Int lastIndexOf(Char value, Int startAt = MaxValue) {
-        return chars.lastIndexOf(value, startAt);
-    }
+    conditional Int lastIndexOf(Char value, Int startAt = MaxValue) = chars.lastIndexOf(value, startAt);
 
     /**
      * Look for the specified `that` starting at the specified index.
@@ -719,9 +707,7 @@ const String
      * @return True iff this entire String matches the pattern
      * @return (conditional) a Matcher resulting from matching the regular expression with this String
      */
-    conditional Match matches(RegEx pattern) {
-        return pattern.match(this);
-    }
+    conditional Match matches(RegEx pattern) = pattern.match(this);
 
     /**
      * Match the start of this String to a regular expression pattern.
@@ -734,9 +720,7 @@ const String
      * @return True iff this String starts with a sub-sequence that matches the regular expression
      * @return (conditional) a Matcher resulting from matching the start of this String
      */
-    conditional Match prefixMatches(RegEx pattern) {
-        return pattern.matchPrefix(this);
-    }
+    conditional Match prefixMatches(RegEx pattern) = pattern.matchPrefix(this);
 
     /**
      * Find the first sub-sequence of characters in this String that match a regular expression
@@ -754,9 +738,7 @@ const String
      * @return True iff the input contains a sub-sequence that matches the pattern
      * @return (conditional) a Match resulting from matching the pattern
      */
-    conditional Match containsMatch(RegEx pattern, Int offset = 0) {
-        return pattern.find(this, offset);
-    }
+    conditional Match containsMatch(RegEx pattern, Int offset = 0) = pattern.find(this, offset);
 
     /**
      * Replaces every subsequence of this String that matches the pattern with the given
@@ -969,28 +951,20 @@ const String
     // ----- Iterable methods ----------------------------------------------------------------------
 
     @Override
-    Int size.get() {
-        return chars.size;
-    }
+    Int size.get() = chars.size;
 
     @Override
-    Iterator<Char> iterator() {
-        return chars.iterator();
-    }
+    Iterator<Char> iterator() = chars.iterator();
 
     // ----- UniformIndexed methods ----------------------------------------------------------------
 
     @Override
-    @Op("[]") Char getElement(Int index) {
-        return chars[index];
-    }
+    @Op("[]") Char getElement(Int index) = chars[index];
 
     // ----- Sliceable methods ---------------------------------------------------------------------
 
     @Override
-    @Op("[..]") String slice(Range<Int> indexes) {
-        return new String(chars[indexes]);
-    }
+    @Op("[..]") String slice(Range<Int> indexes) = new String(chars[indexes]);
 
     // ----- conversions ---------------------------------------------------------------------------
 
@@ -1008,21 +982,15 @@ const String
     /**
      * @return the characters of this String as an array
      */
-    immutable Char[] toCharArray() {
-        return chars;
-    }
+    immutable Char[] toCharArray() = chars;
 
     /**
      * @return a Reader over the characters of this String
      */
-    Reader toReader() {
-        return new io.CharArrayReader(this);
-    }
+    Reader toReader() = new io.CharArrayReader(this);
 
     @Override
-    String! toString() {
-        return this;
-    }
+    String! toString() = this;
 
     /**
      * Convert this `String` to its all-upper-case form.
@@ -1151,9 +1119,7 @@ const String
     // ----- Hashable functions --------------------------------------------------------------------
 
     @Override
-    static <CompileType extends String> Int64 hashCode(CompileType value) {
-        return value.hash;
-    }
+    static <CompileType extends String> Int64 hashCode(CompileType value) = value.hash;
 
     @Override
     static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2) {
@@ -1163,12 +1129,8 @@ const String
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return size;
-    }
+    Int estimateStringLength() = size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return buf.addAll(chars);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = buf.addAll(chars);
 }

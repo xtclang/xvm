@@ -34,10 +34,10 @@ interface Iterator<Element> {
      *
      * @return the Element value
      *
-     * @throws IllegalState if the iterator is exhausted
+     * @throws OutOfBounds if the iterator is exhausted
      */
     Element take() {
-        assert Element e := next();
+        assert:bounds Element e := next();
         return e;
     }
 
@@ -279,8 +279,8 @@ interface Iterator<Element> {
     /**
      * Metadata: Is the iterator known to be empty?
      *
-     * @return True iff the iterator is known to be empty; False if the iterator is not known to be
-     *         empty (which means that it still _could_ be empty)
+     * @return `True` iff the `Iterator` is known to be empty or exhausted; `False` if the iterator is
+     *         not known to be empty (which means that it still _could_ be empty)
      */
     Boolean knownEmpty() {
         if (Int size := knownSize()) {
@@ -291,10 +291,10 @@ interface Iterator<Element> {
     }
 
     /**
-     * Metadata: Is the iterator of a known size?
+     * Metadata: Is the `Iterator` of a known size?
      *
-     * @return True iff the iterator size is efficiently known
-     * @return (conditional) the number of elements in the iterator
+     * @return `True` iff the `Iterator` size is efficiently known
+     * @return (conditional) the number of elements remaining in the `Iterator`
      */
     conditional Int knownSize() {
         return False;
@@ -434,19 +434,20 @@ interface Iterator<Element> {
      * performing the provided action on each element of the resulting iterator as elements are
      * consumed from it. This capability is considered particularly useful for debugging purposes.
      *
-     * This iterator must not be used after this operation.
+     * This `Iterator` must not be used after this operation; only the resulting `Iterator` should
+     * be used.
      *
      * @param accept  a function to perform on the elements as they are consumed from the resulting
      *                iterator
      *
      * @return a new iterator with the specified functionality attached to it
      */
-    Iterator! peek(function void observe(Element)) {
+    Iterator! observe(function void observe(Element)) {
         if (knownEmpty()) {
             return this;
         }
 
-        return new iterators.PeekingIterator<Element>(this, observe);
+        return new iterators.ObservingIterator<Element>(this, observe);
     }
 
     /**

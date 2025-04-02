@@ -270,7 +270,7 @@ module TestArray {
             switch (i) {
             case 1:
                 console.print("\n   --> peeking test");
-                iter = iter.peek(s -> console.print($"peeking at {s}"));
+                iter = iter.observe(s -> console.print($"peeking at {s}"));
                 break;
 
             case 2:

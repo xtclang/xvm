@@ -5,48 +5,31 @@ const EmptyIterator<Element>
         implements Iterator<Element>
         implements Markable {
     @Override
-    conditional Element next() {
-        return False;
-    }
+    conditional Element next() = False;
 
     @Override
-    Element take() {
-        assert;
-    }
+    Element take() = assert;
 
     @Override
-    Boolean whileEach(function Boolean process(Element)) {
-        return True;
-    }
+    Boolean whileEach(function Boolean process(Element)) = True;
 
     @Override
-    conditional Element untilAny(function Boolean process(Element)) {
-        return False;
-    }
+    conditional Element untilAny(function Boolean process(Element)) = False;
 
     @Override
-    void forEach(function void (Element) process) {
-    }
+    void forEach(function void (Element) process) {}
 
     @Override
-    conditional Element min(Orderer? order = Null) {
-        return False;
-    }
+    conditional Element min(Orderer? order = Null) = False;
 
     @Override
-    conditional Element max(Orderer? order = Null) {
-        return False;
-    }
+    conditional Element max(Orderer? order = Null) = False;
 
     @Override
-    conditional Range<Element> range(Orderer? order = Null) {
-        return False;
-    }
+    conditional Range<Element> range(Orderer? order = Null) = False;
 
     @Override
-    Int count() {
-        return 0;
-    }
+    Int count() = 0;
 
     @Override
     Element[] toArray(Array.Mutability? mutability = Null) {
@@ -56,34 +39,22 @@ const EmptyIterator<Element>
     }
 
     @Override
-    Boolean knownDistinct() {
-        return True;
-    }
+    Boolean knownDistinct() = True;
 
     @Override
-    conditional Orderer knownOrder() {
-        return False;
-    }
+    conditional Orderer knownOrder() = False;
 
     @Override
-    Boolean knownEmpty() {
-        return True;
-    }
+    Boolean knownEmpty() = True;
 
     @Override
-    conditional Int knownSize() {
-        return True, 0;
-    }
+    conditional Int knownSize() = (True, 0);
 
     @Override
-    Iterator<Element> concat(Iterator<Element> that) {
-        return that;
-    }
+    Iterator<Element> concat(Iterator<Element> that) = that;
 
     @Override
-    Iterator<Element> filter(function Boolean(Element) include) {
-        return this;
-    }
+    Iterator<Element> filter(function Boolean(Element) include) = this;
 
     @Override
     <Result> Iterator<Result> map(function Result (Element) apply) {
@@ -100,66 +71,41 @@ const EmptyIterator<Element>
     }
 
     @Override
-    Iterator<Element> dedup() {
-        return this;
-    }
+    Iterator<Element> dedup() = this;
 
     @Override
-    Iterator<Element> sorted(Orderer? order = Null) {
-        return this;
-    }
+    Iterator<Element> sorted(Orderer? order = Null) = this;
 
     @Override
-    Iterator<Element> reversed() {
-        return this;
-    }
+    Iterator<Element> reversed() = this;
 
     @Override
-    Iterator<Element> peek(function void observe(Element)) {
-        return this;
-    }
+    Iterator<Element> observe(function void observe(Element)) = this;
 
     @Override
-    Iterator<Element> skip(Int count) {
-        return this;
-    }
+    Iterator<Element> skip(Int count) = this;
 
     @Override
-    Iterator<Element> limit(Int count) {
-        return this;
-    }
+    Iterator<Element> limit(Int count) = this;
 
     @Override
-    Iterator<Element> extract(Interval<Int> interval) {
-        return this;
-    }
+    Iterator<Element> extract(Interval<Int> interval) = this;
 
     @Override
-    (Iterator<Element>, Iterator<Element>) bifurcate() {
-        return this, this;
-    }
+    (Iterator<Element>, Iterator<Element>) bifurcate() = (this, this);
 
     @Override
-    Element reduce(Element identity, function Element accumulate(Element, Element)) {
-        return identity;
-    }
+    Element reduce(Element identity, function Element accumulate(Element, Element)) = identity;
 
     @Override
-    conditional Element reduce(function Element accumulate(Element, Element)) {
-        return False;
-    }
+    conditional Element reduce(function Element accumulate(Element, Element)) = False;
 
     @Override
-    Iterator<Element> + Markable ensureMarkable() {
-        return this;
-    }
+    Iterator<Element> + Markable ensureMarkable() = this;
 
     @Override
-    immutable Object mark() {
-        return this;
-    }
+    immutable Object mark() = this;
 
     @Override
-    void restore(immutable Object mark, Boolean unmark = False) {
-    }
+    void restore(immutable Object mark, Boolean unmark = False) {}
 }

@@ -2180,9 +2180,9 @@ class Lexer
 
         if (containsUnicodeEscapes || containsCRLFs) {
             private Boolean matchEscape(Char u, Int count) {
-                scan: if (reader.nextChar() == u) {
+                scan: if (reader.take() == u) {
                     while (count-- > 0) {
-                        if (!reader.nextChar().asciiHexit()) {
+                        if (!reader.take().asciiHexit()) {
                             break scan;
                         }
                     }
@@ -2203,11 +2203,11 @@ class Lexer
                 // that the character isn't part of a sequence of characters that was translated to
                 // a single character when we previously read it
                 reader.rewind(1);
-                Char ch = reader.nextChar();
+                Char ch = reader.take();
                 reader.rewind(1);
                 if (containsCRLFs && ch == '\n' && offset > 0) {
                     reader.rewind(1);
-                    Char ch2 = reader.nextChar();
+                    Char ch2 = reader.take();
                     if (ch2 == '\r') {
                         --offset;
                         reader.rewind(1);
@@ -2217,7 +2217,7 @@ class Lexer
                     // previous 3 or 7 chars need to be hexit, preceded by 'u' or 'U', preceded
                     // by '\\'; first check for the '\\' + 'u' version
                     reader.rewind(5);
-                    Char ch2 = reader.nextChar();
+                    Char ch2 = reader.take();
                     if (ch2 == '\\') {
                         if (matchEscape('u', 3)) {
                             reader.rewind(5);
@@ -2226,7 +2226,7 @@ class Lexer
                     } else if (ch2.asciiHexit() && offset >= 9) {
                         // it could be the 'U' form
                         reader.rewind(5);
-                        ch2 = reader.nextChar();
+                        ch2 = reader.take();
                         if (ch2 == '\\') {
                             if (matchEscape('U', 7)) {
                                 reader.rewind(9);

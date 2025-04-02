@@ -1,15 +1,15 @@
 /**
  * An iterator that issues an event on every "next" call.
  */
-class PeekingIterator<Element>(Iterator<Element> iter, function void observe(Element))
+class ObservingIterator<Element>(Iterator<Element> iter, function void observer(Element))
         extends DelegatingIterator<Element>(iter) {
 
-    protected/private function void observe(Element);
+    protected/private function void observer(Element);
 
     @Override
     conditional Element next() {
         if (Element el := iter.next()) {
-            observe(el);
+            observer(el);
             return True, el;
         }
 
