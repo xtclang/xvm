@@ -234,6 +234,14 @@ public class PropertyDeclarationStatement
         }
 
     @Override
+    protected int getCodeContainerCounter()
+        {
+        return isInMethod()
+                ? super.getCodeContainerCounter()
+                : m_counter++;
+        }
+
+    @Override
     protected Field[] getChildFields()
         {
         return CHILD_FIELDS;
@@ -988,6 +996,11 @@ public class PropertyDeclarationStatement
      * Indicates that this property declaration is "synthetic".
      */
     protected transient boolean m_fSynthetic;
+
+    /**
+     * A unique counter with the context of this property.
+     */
+    protected transient int m_counter;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
             "condition", "annotations", "type", "value", "body", "initializer", "assignment");

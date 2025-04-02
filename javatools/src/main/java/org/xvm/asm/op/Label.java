@@ -18,15 +18,11 @@ public class Label
         extends Op.Prefix
     {
     /**
-     * Construct a label op.
+     * Construct a label op based on a unique counter value.
      */
-    public Label()
+    public Label(int counter)
         {
-        this(String.valueOf(++f_cLabels));
-        if (f_cLabels >= 9999)
-            {
-            f_cLabels = 0;
-            }
+        this(String.valueOf(counter));
         }
 
     /**
@@ -96,11 +92,6 @@ public class Label
 
         return sb.toString();
         }
-
-    /**
-     * A counter to give labels different names while debugging. Race conditions are not a concern.
-     */
-    static private int f_cLabels;
 
     /**
      * A name of the label, which is typically auto-generated. This is only for debugging; it is

@@ -176,6 +176,17 @@ public class VariableDeclarationStatement
     // ----- compilation ---------------------------------------------------------------------------
 
     @Override
+    public void resolveNames(StageMgr mgr, ErrorListener errs)
+        {
+        if (name.getId() == Token.Id.ANY)
+            {
+            // make a unique and syntactically invalid name
+            name = name.withValue("_:" + getCodeContainerCounter());
+            }
+        super.resolveNames(mgr, errs);
+        }
+
+    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs)
         {
         ConstantPool   pool    = pool();

@@ -306,7 +306,7 @@ public class IfStatement
         //   Exit:
         //   EXIT                   // iff cond specifies that it needs a scope
         Label labelElse = getElseLabel();
-        Label labelExit = new Label();
+        Label labelExit = new Label(getCodeContainerCounter());
 
         boolean fScope = false;
         for (AstNode cond : conds)

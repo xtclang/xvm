@@ -311,6 +311,11 @@ public class MethodDeclarationStatement
         return null;
         }
 
+    @Override
+    protected int getCodeContainerCounter()
+        {
+        return m_counter++;
+        }
 
     // ----- compile phases ------------------------------------------------------------------------
 
@@ -1500,6 +1505,11 @@ public class MethodDeclarationStatement
 
     // complementary statement for the constructor points to the finalizer and vice versa
     private transient MethodDeclarationStatement m_stmtComplement;
+
+    /**
+     * A unique counter with the context of this method.
+     */
+    static protected int m_counter;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
             "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");

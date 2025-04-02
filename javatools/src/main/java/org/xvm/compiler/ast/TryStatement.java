@@ -389,13 +389,13 @@ public class TryStatement
                     ? code.createRegister(pool.typeException१())
                     : m_regFinallyException;
             opFinallyBlock = new FinallyStart(regFinallyException);
-            labelCatchEnd  = new Label();
+            labelCatchEnd  = new Label(getCodeContainerCounter());
             code.add(new GuardAll(opFinallyBlock));
             }
         else if (resources != null)
             {
             // resources without "finally" add their own "FinallyStart" ops
-            labelCatchEnd = new Label();
+            labelCatchEnd = new Label(getCodeContainerCounter());
             }
 
         // try..catch
@@ -499,7 +499,7 @@ public class TryStatement
                 Argument argResource      = resources.get(i).getLValueExpression()
                                           .generateArgument(ctx, code, false, false, errs);
                 Label    labelSkipClose   = new Label("skip_close");
-                Label    labelFallThrough = new Label();
+                Label    labelFallThrough = new Label(getCodeContainerCounter());
                 if (!argResource.getType().isA(typeCloseable))
                     {
                     code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));

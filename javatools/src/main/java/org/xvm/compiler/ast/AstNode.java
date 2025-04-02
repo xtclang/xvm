@@ -433,6 +433,17 @@ public abstract class AstNode
         }
 
     /**
+     * @return a unique counter in the context of the code container
+     */
+    protected int getCodeContainerCounter()
+        {
+        AstNode parent = getParent();
+        return parent == null
+                ? null
+                : parent.getCodeContainerCounter();
+        }
+
+    /**
      * @return the closest StatementBlock parent
      */
     public StatementBlock getParentBlock()

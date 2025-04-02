@@ -47,7 +47,7 @@ public abstract class Statement
         Label label = m_labelEnd;
         if (label == null)
             {
-            m_labelEnd = label = new Label();
+            m_labelEnd = label = new Label(getCodeContainerCounter());
             }
         return label;
         }

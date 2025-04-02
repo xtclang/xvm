@@ -49,6 +49,14 @@ public class Token
         }
 
     /**
+     * Create a token that is structurally identical to this token, but with a different value.
+     */
+    public Token withValue(Object oValue)
+        {
+        return new Token(m_lStartPos, m_lEndPos, m_id, oValue);
+        }
+
+    /**
      * Record whitespace information onto the token.
      *
      * @param fWhitespaceBefore

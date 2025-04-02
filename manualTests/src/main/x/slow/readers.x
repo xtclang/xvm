@@ -24,16 +24,16 @@ module readers {
             for (Int i : 0..<len) {
                 switch (UInt32 n = rnd.int(58).toUInt32()) {
                 case 0..25:
-                    buf.append('A' + n);
+                    buf.append('a' + n);
                     break;
                 case 26..35:
-                    buf.append(0xC0 + n - 26);
+                    buf.append('\u00C0' + n - 26);
                     break;
                 case 36..44:
-                    buf.append(0x98F + n - 36);
+                    buf.append('\u098F' + n - 36);
                     break;
                 case 45..51:
-                    buf.append(0x10192 + n - 45);
+                    buf.append('\U00010192' + n - 45);
                     break;
                 case 52:
                     buf.append(' ');
@@ -73,7 +73,6 @@ module readers {
         }
     }
 
-    // TODO GG
     Char? TODO_GG(Char? ch) = ch;
 
     void test1(Reader r) {
@@ -84,8 +83,7 @@ module readers {
             Char? ch2 = Null;
             ch1 := r.peek();
             ch2 := r.next();
-// TODO GG  assert eof == (ch1 == Null) == (ch2 == Null);
-            assert eof && ch1 == Null && ch2 == Null || !eof && ch1 != Null && ch2 != Null;
+            assert eof == (ch1 == Null) == (ch2 == Null);
             ch1 = TODO_GG(ch1); ch2 = TODO_GG(ch2); // TODO GG get rid of this
             assert ch1 == ch2;
             if (eof) {
@@ -122,20 +120,12 @@ module readers {
     }
 
     void test3(Reader r) {
-// TODO GG
-//        val _ = r.eof;
-//        val _ = r.remaining;
-//        val _ = r.size;
-//        val _ = r.remaining;
-//        val _ = r.next();
-//        val _ = r.remaining;
-
-        val e  = r.eof;
-        val r2 = r.remaining;
-        val s  = r.size;
-        val r3 = r.remaining;
-        val n  = r.next();
-        val r4 = r.remaining;
+        val _ = r.eof;
+        val _ = r.remaining;
+        val _ = r.size;
+        val _ = r.remaining;
+        val _ = r.next();
+        val _ = r.remaining;
     }
 
     void test4(Reader r) {

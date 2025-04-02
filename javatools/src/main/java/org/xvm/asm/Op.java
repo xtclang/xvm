@@ -253,7 +253,7 @@ public abstract class Op
                 // some data structures were built assuming the label type
                 if (!(opPrefix instanceof Label))
                     {
-                    aop[iPC] = opPrefix = new Label().append(opPrefix);
+                    aop[iPC] = opPrefix = new Label(iPC).append(opPrefix);
                     }
 
                 return opPrefix;
