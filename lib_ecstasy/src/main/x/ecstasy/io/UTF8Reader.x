@@ -190,6 +190,57 @@ class UTF8Reader
             lineStartOffset_ = newPos.lineStartOffset;
             rawOffset        = newPos.rawOffset;
         }
+
+        private static interface Tagged {
+            Boolean tagMatches(Int tag);
+            @RO Int rawOffset;
+        }
+
+        private static const TaggedSnapshot(Int offset, Int lineNumber, Int lineOffset, Int rawOffset, Int tag)
+                extends Snapshot(offset, lineNumber, lineOffset)
+                implements Tagged {
+            @Override
+            Boolean tagMatches(Int tag) {
+                return tag == this.tag;
+            }
+        }
+
+        private static const TaggedCompressed
+                implements TextPosition
+                implements Tagged
+                incorporates Stringer {
+
+            construct(Int offset, Int lineNumber, Int lineOffset, Int rawAdjust, Int tag) {
+                // up to 18 bits for offset, 14 bits for line number, 12 bits for line offset, 12 bits
+                // for raw offset adjust, and 8 bits for the tag
+                assert:test offset     >= 0 && offset     <= 0x3FFFF;
+                assert:test lineNumber >= 0 && lineNumber <= 0x3FFF;
+                assert:test lineOffset >= 0 && lineOffset <= 0xFFF;
+                assert:test rawAdjust  >= 0 && rawAdjust  <= 0xFFF;
+
+                combo = tag << 18 | offset << 14 | lineNumber << 12 | lineOffset << 12 | rawAdjust;
+            }
+
+            private Int combo;
+
+            @Override
+            Int offset.get() = combo >>> 38 & 0x3FFFF;
+
+            @Override
+            Int lineNumber.get() = combo >>> 24 & 0x3FFF;
+
+            @Override
+            Int lineOffset.get() = combo >>> 12 & 0xFFF;
+
+            @Override
+            Int rawOffset.get() = offset + combo & 0xFFF;
+
+            @Override
+            Int lineStartOffset.get() = offset - lineOffset;
+
+            @Override
+            Boolean tagMatches(Int tag) = tag & 0xFF == combo >>> 56;
+        }
     }
 
     @Override
@@ -402,59 +453,4 @@ class UTF8Reader
 
     @Override
     void close(Exception? cause = Null) = in.close(cause);
-
-    // ----- internal ------------------------------------------------------------------------------
-
-    // TODO GG move these inside Position property
-    //         COMPILER-NI: "Class within a property" is not yet implemented.
-    private static interface Tagged {
-        Boolean tagMatches(Int tag);
-        @RO Int rawOffset;
-    }
-
-    private static const TaggedSnapshot(Int offset, Int lineNumber, Int lineOffset, Int rawOffset, Int tag)
-            extends Snapshot(offset, lineNumber, lineOffset)
-            implements Tagged {
-        @Override
-        Boolean tagMatches(Int tag) {
-            return tag == this.tag;
-        }
-    }
-
-    private static const TaggedCompressed
-            implements TextPosition
-            implements Tagged
-            incorporates Stringer {
-
-        construct(Int offset, Int lineNumber, Int lineOffset, Int rawAdjust, Int tag) {
-            // up to 18 bits for offset, 14 bits for line number, 12 bits for line offset, 12 bits
-            // for raw offset adjust, and 8 bits for the tag
-            assert:test offset     >= 0 && offset     <= 0x3FFFF;
-            assert:test lineNumber >= 0 && lineNumber <= 0x3FFF;
-            assert:test lineOffset >= 0 && lineOffset <= 0xFFF;
-            assert:test rawAdjust  >= 0 && rawAdjust  <= 0xFFF;
-
-            combo = tag << 18 | offset << 14 | lineNumber << 12 | lineOffset << 12 | rawAdjust;
-        }
-
-        private Int combo;
-
-        @Override
-        Int offset.get() = combo >>> 38 & 0x3FFFF;
-
-        @Override
-        Int lineNumber.get() = combo >>> 24 & 0x3FFF;
-
-        @Override
-        Int lineOffset.get() = combo >>> 12 & 0xFFF;
-
-        @Override
-        Int rawOffset.get() = offset + combo & 0xFFF;
-
-        @Override
-        Int lineStartOffset.get() = offset - lineOffset;
-
-        @Override
-        Boolean tagMatches(Int tag) = tag & 0xFF == combo >>> 56;
-    }
 }
