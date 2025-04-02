@@ -793,7 +793,9 @@ public class TypeCompositionStatement
         switch (zone)
             {
             case InProperty:
-                log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED, "Class within a property");
+                PropertyStructure prop = (PropertyStructure) component.getParent();
+                fImplicitlyStatic |= prop.isStatic() ||
+                                     prop.getContainingClass().isSingleton();
                 break;
 
             case InMethod:

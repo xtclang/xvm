@@ -150,6 +150,51 @@ class CharArrayReader(immutable Char[] chars)
             lineNumber_      = newPos.lineNumber;
             lineStartOffset_ = newPos.lineStartOffset;
         }
+
+        private static interface Tagged {
+            Boolean tagMatches(Int tag);
+        }
+
+        private static const TaggedSnapshot(Int offset, Int lineNumber, Int lineOffset, Int tag)
+                extends Snapshot(offset, lineNumber, lineOffset)
+                implements Tagged {
+            @Override
+            Boolean tagMatches(Int tag) {
+                return tag == this.tag;
+            }
+        }
+
+        private static const TaggedCompressed
+                implements TextPosition
+                implements Tagged
+                incorporates Stringer {
+
+            construct(Int offset, Int lineNumber, Int lineOffset, Int tag) {
+                // up to 20 bits for offset, 16 bits for line and line offset
+                assert:test offset     >= 0 && offset     <= 0xFFFFF;
+                assert:test lineNumber >= 0 && lineNumber <= 0xFFFF;
+                assert:test lineOffset >= 0 && lineOffset <= 0xFFFF;
+
+                combo = tag << 20 | offset << 16 | lineNumber << 16 | lineOffset;
+            }
+
+            private Int combo;
+
+            @Override
+            Int offset.get() = combo >>> 32 & 0xFFFFF;
+
+            @Override
+            Int lineNumber.get() = combo >>> 16 & 0xFFFF;
+
+            @Override
+            Int lineOffset.get() = combo & 0xFFFF;
+
+            @Override
+            Int lineStartOffset.get() = offset - lineOffset;
+
+            @Override
+            Boolean tagMatches(Int tag) = tag & 0xFFF == combo >>> 52;
+        }
     }
 
     @Override
@@ -316,52 +361,5 @@ class CharArrayReader(immutable Char[] chars)
         // these values are illegal, and indicate that the line info is not being actively tracked
         lineNumber_      = -1;
         lineStartOffset_ = -1;
-    }
-
-    // TODO GG move these inside Position property
-    //         COMPILER-NI: "Class within a property" is not yet implemented.
-    private static interface Tagged {
-        Boolean tagMatches(Int tag);
-    }
-
-    private static const TaggedSnapshot(Int offset, Int lineNumber, Int lineOffset, Int tag)
-            extends Snapshot(offset, lineNumber, lineOffset)
-            implements Tagged {
-        @Override
-        Boolean tagMatches(Int tag) {
-            return tag == this.tag;
-        }
-    }
-
-    private static const TaggedCompressed
-            implements TextPosition
-            implements Tagged
-            incorporates Stringer {
-
-        construct(Int offset, Int lineNumber, Int lineOffset, Int tag) {
-            // up to 20 bits for offset, 16 bits for line and line offset
-            assert:test offset     >= 0 && offset     <= 0xFFFFF;
-            assert:test lineNumber >= 0 && lineNumber <= 0xFFFF;
-            assert:test lineOffset >= 0 && lineOffset <= 0xFFFF;
-
-            combo = tag << 20 | offset << 16 | lineNumber << 16 | lineOffset;
-        }
-
-        private Int combo;
-
-        @Override
-        Int offset.get() = combo >>> 32 & 0xFFFFF;
-
-        @Override
-        Int lineNumber.get() = combo >>> 16 & 0xFFFF;
-
-        @Override
-        Int lineOffset.get() = combo & 0xFFFF;
-
-        @Override
-        Int lineStartOffset.get() = offset - lineOffset;
-
-        @Override
-        Boolean tagMatches(Int tag) = tag & 0xFFF == combo >>> 52;
     }
 }
