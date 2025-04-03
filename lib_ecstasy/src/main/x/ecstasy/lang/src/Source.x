@@ -17,7 +17,7 @@ const Source {
      * @param path      the path corresponding to this source code (which may be a directory), used
      *                  to evaluate file and directory literals
      */
-    construct(String contents, Directory? root = Null, Path? path=Null) {
+    construct(String contents, Directory? root = Null, Path? path = Null) {
         this.contents = contents;
         this.root     = root;
         this.path     = path;
@@ -66,7 +66,7 @@ const Source {
     /**
      * @return a `Reader` for the [contents] of the `Source`
      */
-    Reader createReader()= new CharArrayReader(contents);
+    Reader createReader() = new CharArrayReader(contents);
 
     /**
      * Resolve a path relative to this `Source`, or absolute based on the provided [root] Directory.
@@ -122,7 +122,7 @@ const Source {
     static String loadText(File file) {
         // REVIEW this code does not belong here, and it should be streaming (instead of "contents")
 
-        enum Encoding(Int charLen=1) {Ascii, Utf8, Utf16LE(2), Utf16BE(2), Utf32LE(4), Utf32BE(4)}
+        enum Encoding(Int charLen = 1) {Ascii, Utf8, Utf16LE(2), Utf16BE(2), Utf32LE(4), Utf32BE(4)}
 
         Byte[]   bytes    = file.contents;
         Int      bytesLen = bytes.size;
@@ -142,7 +142,6 @@ const Source {
                 headLen  = 4;
                 break;
             }
-
             continue;
 
         case 3:
@@ -151,7 +150,6 @@ const Source {
                 headLen  = 3;
                 break;
             }
-
             continue;
 
         case 2:
@@ -180,7 +178,6 @@ const Source {
                 encoding = Utf16LE;
                 break;
             }
-
             continue;
 
         case 1:
