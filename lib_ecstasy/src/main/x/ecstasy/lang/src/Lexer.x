@@ -1,6 +1,5 @@
 import io.TextPosition;
 
-
 /**
  * A lexical analyzer (tokenizer) for the Ecstasy language.
  */
@@ -47,7 +46,6 @@ class Lexer
         reader = source.createReader();
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -91,7 +89,6 @@ class Lexer
      */
     public/private ErrorList errs;
 
-
     // ----- Iterator methods ----------------------------------------------------------------------
 
     @Override
@@ -118,7 +115,6 @@ class Lexer
         return True, new Token(id, posBefore, posAfter, value, spaceBefore, spaceAfter);
     }
 
-
     // ----- Markable methods ----------------------------------------------------------------------
 
     /**
@@ -136,7 +132,6 @@ class Lexer
         this.pastEOF    = mark.pastEOF;
         this.whitespace = mark.whitespace;
     }
-
 
     // ----- simulated Lexer -----------------------------------------------------------------------
 
@@ -171,7 +166,6 @@ class Lexer
             }
         };
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -1254,7 +1248,8 @@ class Lexer
     protected (IntLiteral value, Int radix) eatIntLiteral(TextPosition? before        = Null,
                                                           IntLiteral?   min           = Null,
                                                           IntLiteral?   max           = Null,
-                                                          Boolean       explicitlyInt = False) {
+                                                          Boolean       explicitlyInt = False,
+                                                         ) {
         StringBuffer buf   = new StringBuffer();
         TextPosition start = before ?: reader.position;
 
@@ -1931,7 +1926,6 @@ class Lexer
         return whitespace;
     }
 
-
     // ----- reader behavior -----------------------------------------------------------------------
 
     private Boolean containsUnicodeEscapes = False;
@@ -2262,7 +2256,7 @@ class Lexer
      *         this point if it is able to
      */
     protected Boolean log(Severity severity, ErrorMsg errmsg, Object[] params, TextPosition before, TextPosition after) {
-        return errs.log(new Error(severity, errmsg.code, ErrorMsg.lookup, params, source, before, after));
+        return errs.log(new Error(source, before, after, severity, errmsg, Null, params));
     }
 
     /**
@@ -2271,7 +2265,8 @@ class Lexer
      * While it may appear that the error messages are hard-coded, the text found here is simply
      * the default error text; it will eventually be localized as necessary.
      */
-    enum ErrorMsg(String code, String message) {
+    enum ErrorMsg(String code, String message)
+            implements ErrorCode {
         UnexpectedEof     ("LEXER-01", "Unexpected End-Of-File (SUB character)."),
         ExpectedEndComment("LEXER-02", "Expected a comment-ending \"star slash\" but never found one."),
         IllegalChar       ("LEXER-03", "Invalid character: \"{0}\"."),
@@ -2315,7 +2310,6 @@ class Lexer
         }
     }
 
-
     // ----- types ---------------------------------------------------------------------------------
 
     /**
@@ -2329,8 +2323,8 @@ class Lexer
             TextPosition end,
             Object       value,
             Boolean      spaceBefore = False,
-            Boolean      spaceAfter  = False) {
-
+            Boolean      spaceAfter  = False,
+           ) {
         assert() {
             assert value.is(id.Value);
         }
@@ -2343,7 +2337,8 @@ class Lexer
                    TextPosition? end         = Null,
                    Object?       value       = Null,
                    Boolean?      spaceBefore = Null,
-                   Boolean?      spaceAfter  = Null) {
+                   Boolean?      spaceAfter  = Null,
+                  ) {
               return new Token(id          ?: this.id,
                                start       ?: this.start,
                                end         ?: this.end,
@@ -2807,7 +2802,6 @@ class Lexer
             return map.makeImmutable();
         };
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

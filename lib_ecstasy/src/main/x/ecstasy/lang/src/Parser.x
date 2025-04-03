@@ -1123,7 +1123,7 @@ class Parser
      *         this point if it is able to
      */
     protected Boolean log(Severity severity, ErrorMsg errmsg, Object[] params, TextPosition before, TextPosition after) {
-        return errs.log(new Error(severity, errmsg.code, ErrorMsg.lookup, params, source, before, after));
+        return errs.log(new Error(source, before, after, severity, errmsg, Null, params));
     }
 
     /**
@@ -1132,7 +1132,8 @@ class Parser
      * While it may appear that the error messages are hard-coded, the text found here is simply
      * the default error text; it will eventually be localized as necessary.
      */
-    enum ErrorMsg(String code, String message) {
+    enum ErrorMsg(String code, String message)
+            implements ErrorCode {
         FatalError      ("PARSER-01", "Unknown fatal parser error: \"{0}\"."),
         UnexpectedEof   ("PARSER-02", "Unexpected End-Of-File (token exhaustion)."),
         ExpectedToken   ("PARSER-03", "Expected token {0}; found {1}."),

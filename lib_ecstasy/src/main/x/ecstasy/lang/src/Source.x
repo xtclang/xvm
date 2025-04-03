@@ -2,7 +2,6 @@ import io.ByteArrayInputStream;
 import io.CharArrayReader;
 import io.IllegalUTF;
 
-
 /**
  * Represents a unit of source code.
  */
@@ -36,7 +35,6 @@ const Source {
         construct Source(loadText(file), root, file.path);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
@@ -63,15 +61,12 @@ const Source {
      */
     Path? path;
 
-
     // ----- API -----------------------------------------------------------------------------------
 
     /**
      * @return a `Reader` for the [contents] of the `Source`
      */
-    Reader createReader() {
-        return new CharArrayReader(contents);
-    }
+    Reader createReader()= new CharArrayReader(contents);
 
     /**
      * Resolve a path relative to this `Source`, or absolute based on the provided [root] Directory.

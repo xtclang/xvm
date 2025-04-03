@@ -1,72 +1,61 @@
 /**
- * An error list is designed for collecting errors, summarizing those errors, and reporting when
+ * An `ErrorList` is designed for collecting [Error]s, summarizing those errors, and reporting when
  * some arbitrary limit of errors has been reached.
  */
-class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null) {
+class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null)
+        implements Stringable {
 
     assert() {
         assert:arg maxSize >= 0;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The number of serious errors encountered.
+     * The number of serious [Error]s encountered.
      */
     public/private Int seriousCount;
 
     /**
-     * The worst severity encountered.
+     * The worst [Severity] encountered.
      */
     public/private Severity severity = None;
 
     /**
-     * The accumulated list of errors, which may be read-only.
+     * The accumulated list of [Error]s, which may be read-only.
      */
-    public Error[] errors.get() {
-        return &list.assigned ? list : [];
-    }
+    public Error[] errors.get() = &list.assigned ? list : [];
 
     /**
-     * The internal list of errors, which is read-write if the max size is greater than zero.
+     * The internal list of [Error]s, which is read-write if the max size is greater than zero.
      */
-    protected/private @Lazy Error[] list.calc() {
-        return maxSize == 0 ? [] : new Error[];
-    }
+    protected/private @Lazy Error[] list.calc() = maxSize == 0 ? [] : new Error[];
 
     /**
-     * The UIDs of previously logged errors.
+     * The unique ids of previously logged [Error]s.
      */
-    private @Lazy HashSet<String> uniqueIds.calc() {
-        return new HashSet();
-    }
+    private @Lazy HashSet<String> uniqueIds.calc() = new HashSet();
 
     /**
-     * True indicates that at least one error has been logged with at least the Severity of Error.
+     * `True` indicates that at least one error has been logged with at least the Severity of Error.
      */
-    Boolean hasSeriousErrors.get() {
-        return seriousCount > 0;
-    }
+    Boolean hasSeriousErrors.get() = seriousCount > 0;
 
     /**
-     * True indicates that the process that reported the error should attempt to abort at this point
-     * if it is able to do so.
+     * `True` indicates that the process that reported the [Error] should attempt to abort at this
+     * point if it is able to do so.
      */
-    Boolean abortDesired.get() {
-        return hasSeriousErrors && seriousCount >= maxSize;
-    }
-
+    Boolean abortDesired.get() = hasSeriousErrors && seriousCount >= maxSize;
 
     // ----- API -----------------------------------------------------------------------------------
 
     /**
-     * Log an error.
+     * Log an [Error].
      *
-     * @param err  the error
+     * @param err  the [Error]
      *
-     * @return True indicates that the process that reported the error should attempt to abort at
-     *         this point if it is able to
+     * @return `True` indicates that the process that reported the [Error] should attempt to abort
+     *         at this point if it is able to
      */
     Boolean log(Error err) {
         // keep track of the most serious error encountered
@@ -88,7 +77,7 @@ class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null) {
                 if (errors.size < maxSize) {
                     list.add(err);
                 } else {
-                    // find a less-sever error to throw away to make room for this error
+                    // find a less-severe error to throw away to make room for this error
                     Loop: for (Error errLogged : errors) {
                         if (errLogged.severity < err.severity) {
                             list.delete(Loop.count); // yes, it's inefficient
@@ -105,11 +94,11 @@ class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null) {
     }
 
     /**
-     * Log all of the errors in this error list into another error list.
+     * Log all of the [Error]s in this `ErrorList` into another `ErrorList`.
      *
-     * @param that  another ErrorList to log errors into
+     * @param that  another `ErrorList` to log [Error]s into
      *
-     * @return True iff the other ErrorList indicates that an abort is desired
+     * @return `True` iff the other `ErrorList` indicates that an abort is desired
      */
     Boolean logTo(ErrorList that) {
         Boolean abort = False;
@@ -130,10 +119,10 @@ class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null) {
     }
 
     /**
-     * Branch this ErrorList by creating a new one that will collect subsequent errors in the same
-     * manner as this one until a [merge] occurs or it is discarded.
+     * Branch this `ErrorList` by creating a new one that will collect subsequent [Error]s in the
+     * same manner as this one until a [merge] occurs or it is discarded.
      *
-     * @return the branched ErrorList
+     * @return the branched `ErrorList`
      */
     ErrorList branch(Int branchMax = MaxValue) {
         branchMax = branchMax.notLessThan(maxSize == 0 ? 0 : 1).notGreaterThan(maxSize - seriousCount);
@@ -141,9 +130,9 @@ class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null) {
     }
 
     /**
-     * Merge all errors collected by this ErrorList into the ErrorList that it is a branch of.
+     * Merge all [Error]s collected by this `ErrorList` into the `ErrorList` that it is a branch of.
      *
-     * @return the ErrorList that this branched from
+     * @return the `ErrorList` that this branched from
      */
     ErrorList merge() {
         ErrorList result = parent ?: assert;
@@ -157,13 +146,56 @@ class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null) {
     }
 
     /**
-     * Scan the ErrorList for the specified error code.
-     *
-     * @param code  the error code
-     *
-     * @return True iff an error has been logged (and retained) with the specified code
+     * Reset the `ErrorList` to its initial empty state.
      */
-    Boolean hasError(String code) {
-        return errors.iterator().untilAny(err -> err.code == code);
+    ErrorList reset() {
+        seriousCount = 0;
+        severity     = None;
+        if (&list.assigned) {
+            list.clear();
+        }
+        if (&uniqueIds.assigned) {
+            uniqueIds.clear();
+        }
+        return this;
+    }
+
+    /**
+     * Scan the `ErrorList` for the specified [Error] code.
+     *
+     * @param code  the [Error] code
+     *
+     * @return `True` iff an [Error] has been logged (and retained) with the specified code
+     */
+    Boolean hasError(String code) = errors.any(err -> err.code == code);
+
+    @Override
+    Int estimateStringLength() {
+        // unfortunately, there are too many allocations required to build a suitable estimate of
+        // the buffer size, which would cost far more than simply resizing the buffer as needed
+        return errors.empty ? 9 : 100 * errors.size;
+    }
+
+    @Override
+    Appender<Char> appendTo(Appender<Char> buf) {
+        Error[] errors = this.errors;
+        if (errors.empty) {
+            return buf.addAll("No errors");
+        }
+
+        errors.size.appendTo(buf);
+        " errors (".appendTo(buf);
+        seriousCount.appendTo(buf);
+        " serious, severity=".appendTo(buf);
+        severity.appendTo(buf);
+        buf.addAll("):");
+
+        Errors: for (Error error : errors) {
+            "\n  [".appendTo(buf);
+            Errors.count.appendTo(buf);
+            "] ".appendTo(buf);
+            error.appendTo(buf);
+        }
+        return buf;
     }
 }

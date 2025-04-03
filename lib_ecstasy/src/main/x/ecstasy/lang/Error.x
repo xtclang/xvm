@@ -1,26 +1,67 @@
 /**
- * An abstract error representation, for logging errors (instead of throwing exceptions), such as
+ * A general error representation, for logging errors (instead of throwing exceptions), such as
  * when one or more errors occur during compilation, and need to be collected for display to a
  * developer.
+ *
+ * An `Error` consists of a location description (the source of the error), the severity of the
+ * error, an error code (the type of, or identifier for the error), and the error description, which
+ * may be parameterized according to the details of the error.
  */
-@Abstract const Error
-        implements Stringable {
+const Error {
+    // ----- constructors --------------------------------------------------------------------------
+    
+    /**
+     * Construct an `Error` object.
+     *
+     * @param severity   the severity of the error
+     * @param errorCode  identity of the error message
+     * @param message    the literal message or the function to use to look up the unformatted error
+     *                   message using the error code string
+     * @param params     the values to use to populate the parameters of the error message
+     * @param location   a description of the location of the error
+     */
+    construct(Severity         severity,
+              String|ErrorCode errorCode,
+              (String|Lookup)? message  = Null,
+              Object[]         params   = [],
+              String?          location = Null,
+             ) {
+        this.severity  = severity;
+        this.errorCode = errorCode;
+        this.template  = message.is(String)?;
+        this.lookup    = message.is(Lookup)?;
+        this.params    = params;
+        this.location  = location?;
+    }
+
+    // ----- types ---------------------------------------------------------------------------------
+
+    /**
+     * A function that takes an error code and returns an unformatted message.
+     */
+    typedef function String(String) as Lookup;
+
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The location information for the error.
+     * The location information for the `Error`.
      */
-    @RO String location;
+    String? location;
 
     /**
-     * The severity of the error information.
+     * The severity of the `Error`.
      */
     Severity severity;
 
     /**
-     * The error code corresponding to the error.
+     * Either the string identity of the error code, or an [ErrorCode] containing the identity.
      */
-    String code;
+    String|ErrorCode errorCode;
+
+    /**
+     * The string identity of the error code corresponding to the error.
+     */
+    String code.get() = errorCode.is(ErrorCode)?.code : errorCode;
 
     /**
      * The parameters used to fill in information in the error message related to the error code.
@@ -28,17 +69,40 @@
     Object[] params;
 
     /**
-     * The unformatted error message for the error code. (This property encapsulates the resource
-     * resolution that provides an unformatted message for an error code.)
+     * The function that provides an unformatted message based on an error code. This provides the
+     * capability of a "localizable resource" file.
      */
-    @RO String unformattedMessage;
+    Lookup? lookup;
+
+    /**
+     * The unformatted error message for the error code. This property encapsulates the resource
+     * resolution that provides an unformatted message for an error code. The order of preference
+     * for obtaining the unformatted error message is (i) using the lookup function if one is
+     * provided; (ii) using the message text provided explicitly to this `Error` on construction;
+     * and (iii) using the default message text from the [ErrorCode], if one was provided.
+     */
+    String? template.get() = lookup?(code) : super() ?: errorCode.is(ErrorCode)?.message : Null;
+//    String? template.get() {
+//        String? s = lookup?(code) : Null;
+//        if (s == Null) {
+//            s = super();
+//        }
+//        if (s == Null) {
+//            s = errorCode.message;
+//        }
+//        return s;
+//    }
 
     /**
      * A formatted error message describing the error code, with the parameters included.
      */
-    String message.get() {
-        String message    = unformattedMessage;
-        Int    paramCount = this.params.size;
+    String? message.get() {
+        String? message = template;
+        if (message == Null) {
+            return Null;
+        }
+
+        Int paramCount = this.params.size;
         if (paramCount > 0) {
             enum State {Normal, Escaped, Param, Number}
 
@@ -150,23 +214,19 @@
      * A string value that can be used to quickly detect likely-duplicate errors.
      */
     String uniqueId.get() {
-        String       location = this.location;
-        String       code     = this.code;
-        StringBuffer buf      = new StringBuffer(location.size + 1 + code.size);
-        buf.addAll(location)
-           .add(':')
+        String   code     = this.code;
+        String?  location = this.location;
+        Object[] params   = this.params;
+        StringBuffer buf  = new StringBuffer();
+        location?.appendTo(buf);
+        buf.add(':')
            .addAll(code);
+        for (Object param : params) {
+            buf.add(';')
+               .append(param);
+        }
         return buf.toString();
     }
-
-    /**
-     * An optional String that provides some context for the error, such as a snippet of source
-     * code.
-     */
-    @RO String? context.get() {
-        return Null;
-    }
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -179,20 +239,15 @@
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {
-        buf.addAll(location)
-           .add(' ')
-           .addAll(message);
-
-        if (String context ?= this.context) {
-            if (context.size > 60) {
-                context = context[0..57] + "...";
-            }
-
-            buf.addAll(" (");
-            context.appendEscaped(buf);
-            buf.add(')');
+        if (String location ?= location) {
+            buf.addAll(location)
+               .add(' ');
         }
-
+        buf.addAll(code);
+        if (String message ?= message) {
+            buf.add(' ')
+               .addAll(message);
+        }
         return buf;
     }
 }

@@ -20,7 +20,6 @@ interface Enum
      */
     @RO String name;
 
-
     // ----- Sequential methods --------------------------------------------------------------------
 
     /**
@@ -31,7 +30,6 @@ interface Enum
         if (ordinal + 1 < enumeration.count) {
             return True, enumeration.values[ordinal + 1];
         }
-
         return False;
     }
 
@@ -43,10 +41,8 @@ interface Enum
         if (ordinal > 0) {
             return True, enumeration.values[ordinal - 1];
         }
-
         return False;
     }
-
 
     // ----- Orderable and Hashable ----------------------------------------------------------------
 
@@ -71,16 +67,11 @@ interface Enum
         return value1.ordinal == value2.ordinal;
     }
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return name.size;
-    }
+    Int estimateStringLength() = name.size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return name.appendTo(buf);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = name.appendTo(buf);
 }

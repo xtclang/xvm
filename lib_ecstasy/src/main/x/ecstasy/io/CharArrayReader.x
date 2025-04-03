@@ -144,11 +144,15 @@ class CharArrayReader(immutable Char[] chars)
 
         @Override
         void set(TextPosition newPos) {
-            assert:arg newPos.is(Tagged) && newPos.tagMatches(randomId)
-                    as "TextPosition does not match this Reader";
-            offset_          = newPos.offset;
-            lineNumber_      = newPos.lineNumber;
-            lineStartOffset_ = newPos.lineStartOffset;
+            if (newPos.is(Tagged) && newPos.tagMatches(randomId)) {
+                offset_          = newPos.offset;
+                lineNumber_      = newPos.lineNumber;
+                lineStartOffset_ = newPos.lineStartOffset;
+            } else {
+                offset = newPos.offset;
+                assert:arg lineNumber == newPos.lineNumber;
+                assert:arg lineStartOffset == newPos.lineStartOffset;
+            }
         }
 
         private static interface Tagged {

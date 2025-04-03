@@ -10,40 +10,40 @@ const Error
     /**
      * Construct an Ecstasy source code error.
      *
-     * @param severity  the severity of the error
-     * @param code      the error message identity
-     * @param lookup    the function to use to get the unformatted error message
-     * @param params    the values to use to populate the parameters of the error message
-     * @param source    the source containing the text that caused the error to be logged
-     * @param before    the TextPosition of the first character (inclusive) related to the error
-     * @param after     the TextPosition of the last character (exclusive) related to the error
+     * @param source     the source containing the text that caused the error to be logged
+     * @param before     the TextPosition of the first character (inclusive) related to the error
+     * @param after      the TextPosition of the last character (exclusive) related to the error
+     * @param severity   the severity of the error
+     * @param errorCode  identity of the error message
+     * @param message    the literal message or the function to use to look up the unformatted error
+     *                   message using the error code string
+     * @param params     the values to use to populate the parameters of the error message
      */
-    construct(Severity severity, String code, MessageLookup lookup, Object[] params,
-              Source source, TextPosition before, TextPosition after) {
-        this.severity = severity;
-        this.code     = code;
-        this.lookup   = lookup;
-        this.params   = params;
-        this.source   = source;
-        this.before   = before;
-        this.after    = after;
+    construct(Source|Reader    source,
+              TextPosition     before,
+              TextPosition     after,
+              Severity         severity,
+              String|ErrorCode errorCode,
+              (String|Lookup)? message = Null,
+              Object[]         params  = [],
+             ) {
+        construct lang.Error(severity, errorCode, message, params);
+        this.source = source;
+        this.before = before;
+        this.after  = after;
     }
-
-
-    // ----- types ---------------------------------------------------------------------------------
-
-    /**
-     * A function that takes an error code and returns an unformatted message.
-     */
-    typedef function String (String) as MessageLookup;
-
 
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The source code within which the error was detected.
+     * The source code, represented as a [Source] or [Reader], within which the error was detected.
      */
-    Source source;
+    Source|Reader source;
+
+    /**
+     * A source code `Reader`.
+     */
+    Reader reader.get() = source.is(Reader)? : source.createReader();
 
     /**
      * The location within source code at which the error was detected.
@@ -57,7 +57,7 @@ const Error
 
     @Override
     String location.get() {
-        String?      name = source.file?.name : Null;
+        String?      name = source.is(Source)?.file?.name : Null;
         StringBuffer buf  = new StringBuffer(16 + (name?.size : 0));
 
         if (name != Null) {
@@ -81,18 +81,23 @@ const Error
     }
 
     /**
-     * The function that provides an unformatted message based on an error code. This provides the
-     * capability of a "localizable resource" file.
+     * The `context` is the text section that the error is related to.
      */
-    MessageLookup lookup;
+    String? context.get() = before == after ? Null : reader[before..after];
+
+    // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    String unformattedMessage.get() {
-        return lookup(code);
-    }
-
-    @Override
-    String? context.get() {
-        return before == after ? Null : source.createReader()[before..after];
+    Appender<Char> appendTo(Appender<Char> buf) {
+        super(buf);
+        if (String context ?= this.context) {
+            if (context.size > 60) {
+                context = context[0..57] + "...";
+            }
+            buf.addAll(" (");
+            context.appendEscaped(buf);
+            buf.add(')');
+        }
+        return buf;
     }
 }
