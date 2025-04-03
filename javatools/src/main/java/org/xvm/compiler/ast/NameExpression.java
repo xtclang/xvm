@@ -3091,7 +3091,11 @@ public class NameExpression
 
                 if (infoProp == null)
                     {
-                    assert errs.hasSeriousErrors();
+                    if (!errs.hasSeriousErrors())
+                        {
+                        log(errs, Severity.ERROR, Compiler.NAME_MISSING, idProp.getName(),
+                            typeLeft.getValueString());
+                        }
                     return null;
                     }
 
