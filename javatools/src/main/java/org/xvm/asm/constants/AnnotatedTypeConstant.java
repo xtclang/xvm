@@ -263,6 +263,12 @@ public class AnnotatedTypeConstant
         }
 
     @Override
+    public boolean isAccessModifiable()
+        {
+        return false;
+        }
+
+    @Override
     public boolean isAnnotated()
         {
         return true;
