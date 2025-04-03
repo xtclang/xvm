@@ -23,9 +23,9 @@ class DocumentNode(ElementNode root)
     }
 
     /**
-     * TODO
+     * Create a `DocumentNode` that
      */
-    construct(Node firstNode, Boolean thisIsntUsedGetRidOfIt) {
+    construct(Parsed firstNode) { // TODO GG change Parsed to Node
         TODO
     }
 

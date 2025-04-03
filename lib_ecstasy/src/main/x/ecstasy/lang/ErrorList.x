@@ -3,6 +3,7 @@
  * some arbitrary limit of errors has been reached.
  */
 class ErrorList(Int maxSize = MaxValue, ErrorList? parent = Null)
+        delegates Iterable<Error>(errors)
         implements Stringable {
 
     assert() {
