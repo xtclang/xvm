@@ -4,5 +4,7 @@
                 implements RootSchema_ {
 %PropertyGetters%
 %SchemaMethods%
+        @Override
+        String toString() = info_.toString();
         }
 %ChildSchemas%

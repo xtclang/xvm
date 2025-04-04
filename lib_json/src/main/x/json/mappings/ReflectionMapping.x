@@ -62,7 +62,8 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
     void write(ElementOutput out, Serializable value) {
         Schema schema = out.schema;
 
-        assert StructType structure := &value.revealAs(StructType);
+        assert StructType structure := &value.revealAs(StructType) as
+                $"Value of type \"{&value.actualType}\" doesn't belong to this TypeSystem";
 
         using (FieldOutput fieldOutput = out.openObject()) {
             for (PropertyMapping<StructType> field : fields) {
