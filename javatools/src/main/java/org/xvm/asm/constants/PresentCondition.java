@@ -61,7 +61,7 @@ public class PresentCondition
     @Override
     protected void resolveConstants()
         {
-        m_constStruct = (IdentityConstant) getConstantPool().getConstant(m_iStruct);
+        m_constStruct = getConstantPool().getConstant(m_iStruct);
         assert     m_constStruct instanceof ModuleConstant
                 || m_constStruct instanceof PackageConstant
                 || m_constStruct instanceof ClassConstant

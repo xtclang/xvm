@@ -202,10 +202,9 @@ public class ArrayConstant
             return true;
             }
 
-        Constant[] aconstVal = m_aconstVal;
-        for (int i = 0, c = aconstVal.length; i < c; ++i)
+        for (Constant constant : m_aconstVal)
             {
-            if (aconstVal[i].containsUnresolved())
+            if (constant.containsUnresolved())
                 {
                 return true;
                 }
@@ -218,10 +217,9 @@ public class ArrayConstant
     public void forEachUnderlying(Consumer<Constant> visitor)
         {
         visitor.accept(m_constType);
-        Constant[] aconst = m_aconstVal;
-        for (int i = 0, c = aconst.length; i < c; ++i)
+        for (Constant constant : m_aconstVal)
             {
-            visitor.accept(aconst[i]);
+            visitor.accept(constant);
             }
         }
 
@@ -343,11 +341,10 @@ public class ArrayConstant
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constType.getPosition());
         Constant[] aconst  = m_aconstVal;
-        int        cConsts = aconst.length;
-        writePackedLong(out, cConsts);
-        for (int i = 0; i < cConsts; ++i)
+        writePackedLong(out, aconst.length);
+        for (Constant constant : aconst)
             {
-            writePackedLong(out, aconst[i].getPosition());
+            writePackedLong(out, constant.getPosition());
             }
         }
 

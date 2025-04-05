@@ -20,7 +20,7 @@ import org.xvm.runtime.Container;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.template.xBoolean;
+
 import org.xvm.util.Hash;
 
 

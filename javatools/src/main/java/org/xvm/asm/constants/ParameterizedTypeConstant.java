@@ -157,9 +157,9 @@ public class ParameterizedTypeConstant
             return false;
             }
 
-        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+        for (TypeConstant typeParam : m_atypeParams)
             {
-            if (!m_atypeParams[i].isShared(poolOther))
+            if (!typeParam.isShared(poolOther))
                 {
                 return false;
                 }
@@ -220,9 +220,9 @@ public class ParameterizedTypeConstant
             return true;
             }
 
-        for (int i = 0, c = m_atypeParams.length; i < c; ++i)
+        for (TypeConstant typeParam : m_atypeParams)
             {
-            if (m_atypeParams[i].containsAutoNarrowing(fAllowVirtChild))
+            if (typeParam.containsAutoNarrowing(fAllowVirtChild))
                 {
                 return true;
                 }

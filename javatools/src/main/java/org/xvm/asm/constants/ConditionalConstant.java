@@ -666,10 +666,10 @@ public abstract class ConditionalConstant
                 ConditionalConstant[] acondThis   = thisAll.m_aconstCond;
                 if (acondThis.length < acondThat.length)
                     {
-                    for (int i = 0, c = acondThis.length; i < c; ++i)
+                    for (ConditionalConstant consCond : acondThis)
                         {
                         MultiCondition condBefore = (MultiCondition) condReduced;
-                        condReduced = condBefore.remove(acondThis[i]);
+                        condReduced = condBefore.remove(consCond);
                         if (condReduced == condBefore)
                             {
                             break MatchPieces;

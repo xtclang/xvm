@@ -329,12 +329,11 @@ public abstract class MultiCondition
 
         final ConditionalConstant[] aconstCond = m_aconstCond;
 
-        final int c = aconstCond.length;
-        writePackedLong(out, c);
+        writePackedLong(out, aconstCond.length);
 
-        for (int i = 0; i < c; ++i)
+        for (ConditionalConstant constCond : aconstCond)
             {
-            writePackedLong(out, aconstCond[i].getPosition());
+            writePackedLong(out, constCond.getPosition());
             }
         }
 

@@ -156,9 +156,9 @@ public class AnyCondition
                 {
                 ConditionalConstant[] acondNew = new ConditionalConstant[cConds - 1];
                 int                   cNew     = 0;
-                for (int iOld = 0; iOld < cConds; ++iOld)
+                for (ConditionalConstant constCond : acondOld)
                     {
-                    VersionedCondition cond = (VersionedCondition) acondOld[iOld];
+                    VersionedCondition cond = (VersionedCondition) constCond;
                     if (!ver.equals(cond.getVersion()))
                         {
                         acondNew[cNew++] = cond;
