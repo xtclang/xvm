@@ -186,6 +186,12 @@ public class RecursiveTypeConstant
         }
 
     @Override
+    public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName)
+        {
+        return null;
+        }
+
+    @Override
     public boolean isTuple()
         {
         return false;
