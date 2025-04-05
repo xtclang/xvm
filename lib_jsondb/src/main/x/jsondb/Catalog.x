@@ -69,7 +69,7 @@ service Catalog<Schema extends RootSchema>
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Open the catalog for the specified directory.
+     * Open the `Catalog` for the specified directory.
      *
      * @param dir       the directory that contains (or may contain) the catalog
      * @param metadata  (optional) the `CatalogMetadata` for this `Catalog`; if the metadata is not
@@ -81,14 +81,13 @@ service Catalog<Schema extends RootSchema>
         assert:arg dir.exists && dir.readable && (readOnly || dir.writable);
         assert metadata != Null || Schema == RootSchema;
 
-        this.timestamp   = clock.now;
-        this.dir         = dir;
-        this.metadata    = metadata;
-        this.version     = metadata?.version : Null;
-        this.readOnly    = readOnly;
-        this.status      = Closed;
+        this.timestamp = clock.now;
+        this.dir       = dir;
+        this.metadata  = metadata;
+        this.version   = metadata?.version : Null;
+        this.readOnly  = readOnly;
+        this.status    = Closed;
     }
-
 
     // ----- built-in system schema ----------------------------------------------------------------
 
@@ -121,16 +120,12 @@ service Catalog<Schema extends RootSchema>
          * The internal id of the built-in database object. The root schema is 0, while the rest of
          * the built-in database objects use negative ids.
          */
-        Int id.get() {
-            return -ordinal;
-        }
+        Int id.get() = -ordinal;
 
         /**
          * The DboInfo for the built-in database object.
          */
-        DboInfo info.get() {
-            return SystemInfos[ordinal];
-        }
+        DboInfo info.get() = SystemInfos[ordinal];
 
         /**
          * Obtain the BuiltIn enum value for the specified built-in database object id.
@@ -223,7 +218,7 @@ service Catalog<Schema extends RootSchema>
     @Inject Clock clock;
 
     /**
-     * The timestamp from when this Catalog was created; used as an assumed-unique identifier.
+     * The timestamp from when this `Catalog` was created; used as an assumed-unique identifier.
      */
     @Concurrent
     public/private Time timestamp;
@@ -244,15 +239,13 @@ service Catalog<Schema extends RootSchema>
     public/private CatalogMetadata<Schema>? metadata;
 
     /**
-     * The JSON Schema to use.
+     * The JSON `Schema` to use.
      */
     @Concurrent
-    @Lazy json.Schema jsonSchema.calc() {
-        return metadata?.jsonSchema : internalJsonSchema;
-    }
+    @Lazy json.Schema jsonSchema.calc() = metadata?.jsonSchema : internalJsonSchema;
 
     /**
-     * The JSON Schema to use for the various classes in the database implementation itself.
+     * The JSON `Schema` to use for the various classes in the database implementation itself.
      */
     @Concurrent
     @Lazy json.Schema internalJsonSchema.calc() {
@@ -268,12 +261,10 @@ service Catalog<Schema extends RootSchema>
      * A JSON Mapping to use to serialize instances of SysInfo.
      */
     @Concurrent
-    @Lazy Mapping<SysInfo> sysInfoMapping.calc() {
-        return internalJsonSchema.ensureMapping(SysInfo);
-    }
+    @Lazy Mapping<SysInfo> sysInfoMapping.calc() = internalJsonSchema.ensureMapping(SysInfo);
 
     /**
-     * True iff the database was opened in read-only mode.
+     * `True` iff the database was opened in read-only mode.
      */
     @Concurrent
     public/private Boolean readOnly;
@@ -326,18 +317,14 @@ service Catalog<Schema extends RootSchema>
      * sequential ordered (non-concurrent) application of potentially concurrent transactions.
      */
     @Concurrent
-    @Lazy public/private TxManager txManager.calc() {
-        return new TxManager(this);
-    }
+    @Lazy public/private TxManager txManager.calc() = new TxManager(this);
 
     /**
      * The process scheduler for this `Catalog` object. The scheduler supports the asynchronous
      * processing by the database.
      */
     @Concurrent
-    @Lazy public/private Scheduler scheduler.calc() {
-        return new Scheduler(this);
-    }
+    @Lazy public/private Scheduler scheduler.calc() = new Scheduler(this);
 
     /**
      * The existing client representations for this `Catalog` object. Each client may have a single
@@ -720,7 +707,8 @@ service Catalog<Schema extends RootSchema>
      */
     @Synchronized
     void edit() {
-        transition([Closed, Recovering, Running], Configuring, snapshot -> !snapshot.empty && !snapshot.lockedOut);
+        transition([Closed, Recovering, Running], Configuring,
+                snapshot -> !snapshot.empty && !snapshot.lockedOut);
     }
 
     /**
@@ -731,7 +719,8 @@ service Catalog<Schema extends RootSchema>
      */
     @Synchronized
     void recover() {
-        transition(Closed, Recovering, snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
+        transition(Closed, Recovering,
+                snapshot -> !snapshot.empty || sysDir.exists, ignoreLock = True);
 
         Boolean success = False;
         Recovery: try {
@@ -759,9 +748,9 @@ service Catalog<Schema extends RootSchema>
      * For an existent database, if this `Catalog` is `Closed`, `Recovering`, or `Configuring`, then
      * transition to the `Running` state, allowing access and modification of the database contents.
      *
-     * @return True iff the catalog is `Open`
+     * @return `True` iff the catalog is `Open`
      *
-     * @throws IllegalState  if the Catalog is not `Closed`, `Recovering`, or `Configuring`
+     * @throws IllegalState if the `Catalog` is not `Closed`, `Recovering`, or `Configuring`
      */
     @Synchronized
     Boolean open() {
@@ -839,7 +828,7 @@ service Catalog<Schema extends RootSchema>
      * @param targetStatus    the ending `Status` to transition to
      * @param performAction   a function to execute while the lock is held
      *
-     * @return True if the status has been changed
+     * @return `True` if the status has been changed
      */
     @Synchronized
     protected void transition(Status | Status[]         requiredStatus,
@@ -889,23 +878,19 @@ service Catalog<Schema extends RootSchema>
      */
     const Glance(SysInfo? info, Lock? lock, Exception? error) {
         /*
-         * True iff at the moment of the snapshot, the observing `Catalog` detected that the
+         * `True` iff at the moment of the snapshot, the observing `Catalog` detected that the
          * directory did not appear to contain a configured database.
          */
-        Boolean empty.get() {
-            return error == Null && info == Null;
-        }
+        Boolean empty.get() = error == Null && info == Null;
 
         /**
-         * True iff at the moment of the snapshot, the observing `Catalog` detected that the
+         * `True` iff at the moment of the snapshot, the observing `Catalog` detected that the
          * directory was not owned.
          */
-        Boolean unowned.get() {
-            return error == Null && (info?.status == Closed : True);
-        }
+        Boolean unowned.get() = error == Null && (info?.status == Closed : True);
 
         /**
-         * True iff at the moment of the snapshot, the observing `Catalog` detected that it (and
+         * `True` iff at the moment of the snapshot, the observing `Catalog` detected that it (and
          * not some other `Catalog` instance) was the owner of the directory.
          */
         Boolean owned.get() {
@@ -913,7 +898,7 @@ service Catalog<Schema extends RootSchema>
         }
 
         /**
-         * True iff at the moment of the snapshot, that the observing `Catalog` detected the
+         * `True` iff at the moment of the snapshot, that the observing `Catalog` detected the
          * _possibility_ that the directory has already been opened by another `Catalog` instance,
          * and is currently in use. (It is also possible that the directory was open previously,
          * and a clean shut-down did not occur.)
@@ -975,24 +960,19 @@ service Catalog<Schema extends RootSchema>
         return new Glance(info, lock, error);
     }
 
-
     // ----- catalog lock and status file management -----------------------------------------------
 
     /**
      * The file used to indicate a short-term lock.
      */
     @Concurrent
-    @Lazy File lockFile.calc() {
-        return dir.fileFor("sys.lock");
-    }
+    @Lazy File lockFile.calc() = dir.fileFor("sys.lock");
 
     /**
      * The directory containing the system schema data and other internal files.
      */
     @Concurrent
-    @Lazy Directory sysDir.calc() {
-        return dir.dirFor("sys");
-    }
+    @Lazy Directory sysDir.calc() = dir.dirFor("sys");
 
     /**
      * Obtain the lock on the catalog.
@@ -1035,7 +1015,6 @@ service Catalog<Schema extends RootSchema>
         };
     }
 
-
     // ----- Client (Connection) management --------------------------------------------------------
 
     /**
@@ -1045,9 +1024,7 @@ service Catalog<Schema extends RootSchema>
      *                defaults to the database super-user
      */
     @Concurrent
-    Connection createConnection(DBUser? dbUser = Null) {
-        return createClient(dbUser).conn ?: assert;
-    }
+    Connection createConnection(DBUser? dbUser = Null) = createClient(dbUser).conn ?: assert;
 
     /**
      * Create a `Client` that will access the database represented by this `Catalog`  on behalf of
@@ -1056,11 +1033,11 @@ service Catalog<Schema extends RootSchema>
      * be provided in a type-safe manner.
      *
      * @param dbUser        (optional) the user that the `Client` will represent
-     * @param readOnly      (optional) pass True to indicate that client is not permitted to modify
+     * @param readOnly      (optional) pass `True` to indicate that client is not permitted to modify
      *                      any data
-     * @param system        (optional) pass True to indicate that the client is an internal (or
+     * @param system        (optional) pass `True` to indicate that the client is an internal (or
      *                      "system") client, that does client work on behalf of the system itself
-     * @param autoShutdown  (optional) pass True to indicate that the database should be closed
+     * @param autoShutdown  (optional) pass `True` to indicate that the database should be closed
      *                      when the connection is closed
      *
      * @return a new `Client` instance
@@ -1088,9 +1065,7 @@ service Catalog<Schema extends RootSchema>
      *
      * @return a new client id
      */
-    protected Int genClientId() {
-        return ++clientCounter;
-    }
+    protected Int genClientId() = ++clientCounter;
 
     /**
      * Generate a unique client id for an internal (system) client. These clients are pooled, so the
@@ -1098,23 +1073,19 @@ service Catalog<Schema extends RootSchema>
      *
      * @return a new client id
      */
-    protected Int genInternalClientId() {
-        return -(++systemCounter);
-    }
+    protected Int genInternalClientId() = -(++systemCounter);
 
     /**
      * @param id  a client id
      *
-     * @return True iff the id specifies an "internal" (or "system") client id
+     * @return `True` iff the id specifies an "internal" (or "system") client id
      */
-    static Boolean isInternalClientId(Int id) {
-        return id < 0;
-    }
+    static Boolean isInternalClientId(Int id) = id < 0;
 
     /**
-     * Register a Client instance.
+     * Register a [Client] instance.
      *
-     * @param client  the Client object to register
+     * @param client  the `Client` object to register
      */
     @Concurrent
     protected void registerClient(Client client) {
@@ -1122,10 +1093,10 @@ service Catalog<Schema extends RootSchema>
     }
 
     /**
-     * Unregister a Client instance.
+     * Unregister a [Client] instance.
      *
-     * @param client    the Client object to unregister
-     * @param shutdown  pass True to indicate that the database should be closed
+     * @param client    the `Client` object to unregister
+     * @param shutdown  pass `True` to indicate that the database should be closed
      */
     @Concurrent
     protected void unregisterClient(Client client, Boolean shutdown) {

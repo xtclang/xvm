@@ -49,7 +49,6 @@ service JsonCounterStore(Catalog catalog, DboInfo info)
                 store(txId, value);
             }
         }
-
         return value;
     }
 

@@ -13,7 +13,7 @@ service JsonLogStoreBase<Element extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DboInfo     info,
+              DboInfo          info,
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,
@@ -28,7 +28,6 @@ service JsonLogStoreBase<Element extends immutable Const>
         this.maxFileSize    = maxFileSize.notGreaterThan(this.truncateSize/2);
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     @Inject Clock clock;
@@ -39,7 +38,7 @@ service JsonLogStoreBase<Element extends immutable Const>
     public/protected json.Schema jsonSchema;
 
     /**
-     * The JSON Mapping for the log elements.
+     * The JSON `Mapping` for the log elements.
      */
     public/protected Mapping<Element> elementMapping;
 
@@ -52,7 +51,7 @@ service JsonLogStoreBase<Element extends immutable Const>
     }
 
     /**
-     * A LogStorageSupport.
+     * A [LogStorageSupport].
      */
     @Lazy protected LogStorageSupport support.calc() {
         return new LogStorageSupport(dataDir, "log");
@@ -123,7 +122,6 @@ service JsonLogStoreBase<Element extends immutable Const>
 
     @Override
     void unload() {}
-
 
     // ----- internal ------------------------------------------------------------------------------
 

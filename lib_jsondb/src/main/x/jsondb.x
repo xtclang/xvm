@@ -328,7 +328,7 @@ module jsondb.xtclang.org {
 
         /**
          * The Injector service that provides a minimum set of resources for Database modules and
-         * maps all * Directory resources as relative to the specified home directory.
+         * maps all `FileStore` resources as relative to the specified home directory.
          */
         service Injector(Directory homeDir)
                 extends BasicResourceProvider {

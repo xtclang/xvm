@@ -1,5 +1,3 @@
-import json.Doc;
-import json.Lexer;
 import json.Lexer.Token;
 import json.Mapping;
 import json.ObjectInputStream;
@@ -8,7 +6,6 @@ import json.Parser;
 import model.DboInfo;
 
 import TxManager.NO_TX;
-
 
 /**
  * The disk storage implementation for a database "single value".
@@ -29,10 +26,10 @@ service JsonValueStore<Value extends immutable Const>
         implements ValueStore<Value> {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Catalog          catalog,
-              DboInfo     info,
-              Mapping<Value>   valueMapping,
-              Value            initial,
+    construct(Catalog        catalog,
+              DboInfo        info,
+              Mapping<Value> valueMapping,
+              Value          initial,
               ) {
         construct ObjectStore(catalog, info);
 
@@ -63,9 +60,7 @@ service JsonValueStore<Value extends immutable Const>
     /**
      * The file used to store the data for the DBValue.
      */
-    @Lazy File dataFile.calc() {
-        return dataDir.fileFor("value.json");
-    }
+    @Lazy File dataFile.calc() = dataDir.fileFor("value.json");
 
     @Concurrent
     @Override
@@ -155,7 +150,6 @@ service JsonValueStore<Value extends immutable Const>
         tx.value    = value;
         tx.modified = True;
     }
-
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
@@ -417,7 +411,6 @@ service JsonValueStore<Value extends immutable Const>
         assert Value latest := history.get(readId);
         return latest;
     }
-
 
     // ----- IO operations -------------------------------------------------------------------------
 

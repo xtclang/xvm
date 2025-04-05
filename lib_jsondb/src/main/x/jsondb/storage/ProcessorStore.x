@@ -7,7 +7,6 @@ import DBProcessor.Schedule;
 
 import Transaction.CommitResult;
 
-
 /**
  * A "processor" storage API, to support DBProcessor objects.
  */
@@ -75,7 +74,7 @@ interface ProcessorStore<Message extends immutable Const> {
     /**
      * Notify the store that an attempt to process a scheduled message has successfully completed.
      *
-     * The Scheduler will call this method after the successful completion of a PID.
+     * The scheduler will call this method after the successful completion of a PID.
      *
      * @param txId     the "write" transaction identifier
      * @param message  the message

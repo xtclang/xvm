@@ -1,9 +1,4 @@
-import json.Mapping;
-import json.Lexer;
-import json.Lexer.Token;
-
 import model.DboInfo;
-
 
 /**
  * The disk storage implementation for a database schema.
@@ -19,7 +14,5 @@ service SchemaStore
     }
 
     @Override
-    Boolean quickScan() {
-        return True;
-    }
+    Boolean quickScan() = True;
 }

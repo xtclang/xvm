@@ -33,7 +33,7 @@ const LogStorageSupport {
      *
      * @param file  a possible log file
      *
-     * @return the Time that the LogFile was rotated, or Null if it is the current log file
+     * @return the [Time] that the `LogFile` was rotated, or `Null` if it is the current log file
      */
     conditional Time? isLogFile(File file) {
         String name = file.name;

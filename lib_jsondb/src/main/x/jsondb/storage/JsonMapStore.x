@@ -31,10 +31,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         incorporates KeyBasedStore<Key> {
     // ----- constructors --------------------------------------------------------------------------
 
-    construct(Catalog          catalog,
-              DboInfo     info,
-              Mapping<Key>     keyMapping,
-              Mapping<Value>   valueMapping,
+    construct(Catalog        catalog,
+              DboInfo        info,
+              Mapping<Key>   keyMapping,
+              Mapping<Value> valueMapping,
               ) {
         construct ObjectStore(catalog, info);
 
@@ -52,12 +52,12 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     public/protected json.Schema jsonSchema;
 
     /**
-     * The JSON Mapping for the keys in the Map.
+     * The JSON `Mapping` for the keys in the Map.
      */
     public/protected Mapping<Key> keyMapping;
 
     /**
-     * The JSON Mapping for the values in the Map.
+     * The JSON `Mapping` for the values in the Map.
      */
     public/protected Mapping<Value> valueMapping;
 
@@ -158,7 +158,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * Set of file names that contain transactions that could now be safely deleted.
      */
     public/protected Set<String> cleanupPending = new HashSet();
-
 
     // ----- storage API exposed to the client -----------------------------------------------------
 
@@ -379,7 +378,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     void delete(Int txId, Key key) {
         storeImpl(txId, key, Deletion.Deleted);
     }
-
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
@@ -827,7 +825,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         return False;
     }
 
-
     // ----- IO operations -------------------------------------------------------------------------
 
     @Override
@@ -1085,7 +1082,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         fileNames.clear();
         sizeByTx.clear();
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

@@ -5,40 +5,36 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
     // ----- Map operations support ----------------------------------------------------------------
 
     /**
-     * Determine if the Map is empty at the completion of the specified transaction id.
+     * Determine if the `MapStore` is empty at the completion of the specified transaction id.
      *
      * @param txId  the transaction identifier that specifies the point in the transactional history
      *              of the storage at which to evaluate the request; may be a read or write txId
      *
-     * @return True iff no key/value pairs exist in the DBMap as of the specified transaction
+     * @return True iff no key/value pairs exist in the `MapStore` as of the specified transaction
      */
-    Boolean emptyAt(Int txId) {
-        return sizeAt(txId) == 0;
-    }
+    Boolean emptyAt(Int txId) = sizeAt(txId) == 0;
 
     /**
-     * Determine the size of the Map at the completion of the specified transaction id.
+     * Determine the size of the `MapStore` at the completion of the specified transaction id.
      *
      * @param txId  the transaction identifier that specifies the point in the transactional history
      *              of the storage at which to evaluate the request; may be a read or write txId
      *
-     * @return the number of key/value pairs in the DBMap as of the specified transaction
+     * @return the number of key/value pairs in the `MapStore` as of the specified transaction
      */
     Int sizeAt(Int txId);
 
     /**
-     * Determine if this map contains the specified key at the completion of the specified
+     * Determine if this `MapStore` contains the specified key at the completion of the specified
      * transaction id. The key must be specified in its domain model form, or in the JSON URI form,
      * or both if both are available.
      *
      * @param txId  the "write" transaction identifier
      * @param key   specifies the key to test for
      *
-     * @return the True iff the specified key exists in the map
+     * @return `True` iff the specified key exists in the `MapStore`
      */
-    Boolean existsAt(Int txId, Key key) {
-        return load(txId, key);
-    }
+    Boolean existsAt(Int txId, Key key) = load(txId, key);
 
     /**
      * Obtain an iterator over all of the keys that exist for the specified transaction.
@@ -55,14 +51,14 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
 
     /**
      * Obtain the value associated with the specified key (in its internal URI format), iff that key
-     * is present in the map. If the key is not present in the map, then this method returns a
-     * conditional `False`.
+     * is present in the `MapStore`. If the key is not present in the `MapStore`, then this method
+     * returns `False`.
      *
      * @param txId  the "write" transaction identifier
      * @param key   specifies the key in the Ecstasy domain model form, if available
      *
-     * @return a True iff the value associated with the specified key exists in the DBMap as of the
-     *         specified transaction
+     * @return `True` iff the value associated with the specified key exists in the `MapStore` as
+     *         of the specified transaction
      * @return (conditional) the value associated with the specified key
      */
     conditional Value load(Int txId, Key key);
@@ -78,7 +74,7 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
     void store(Int txId, Key key, Value value);
 
     /**
-     * Remove the specified key and any associated value from this map.
+     * Remove the specified key and any associated value from this `MapStore`.
      *
      * @param txId  the "write" transaction identifier
      * @param key   specifies the key
@@ -91,7 +87,8 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
 //     *
 //     * @param txId  the transaction identifier
 //     *
-//     * @return an Iterator of the Key and Value objects in the DBMap as of the specified transaction
+//     * @return an `Iterator` of the `Key` and `Value` objects in the `MapStore` as of the specified
+//     *         transaction
 //     */
 //    Iterator<Tuple<Key, Value>> keysAndValuesAt(Int txId);
 //
@@ -101,8 +98,8 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
 //     *
 //     * @param txId  the transaction identifier
 //     *
-//     * @return an Iterator of the keys, in the internal JSON URI format used for key storage, that
-//     *         were present in the DBMap as of the specified transaction
+//     * @return an `Iterator` of the keys, in the internal JSON URI format used for key storage,
+//     *         that were present in the `MapStore` as of the specified transaction
 //     */
 //    Iterator<String> urisAt(Int txId);
 //
@@ -118,14 +115,14 @@ interface MapStore<Key extends immutable Const, Value extends immutable Const> {
 //    Iterator<Tuple<String, Value>> urisAndValuesAt(Int txId);
 //
 //    /**
-//     * Obtain the value associated with the specified key, iff that key is present in the map. If
-//     * the key is not present in the map, then this method returns a conditional `False`.
+//     * Obtain the value associated with the specified key, iff that key is present in the
+//     * `MapStore`. If the key is not present in the `MapStore`, then this method returns `False`.
 //     *
 //     * @param txId  the "write" transaction identifier
 //     * @param key   specifies the key in the Ecstasy domain model form, if available
 //     *
-//     * @return a True iff the value associated with the specified key exists in the DBMap as of the
-//     *         specified transaction
+//     * @return `True` iff the value associated with the specified key exists in the `MapStore` as
+//     *         of the specified transaction
 //     * @return (conditional) the value associated with the specified key
 //     */
 //    conditional Value loadByUri(Int txId, String uri);

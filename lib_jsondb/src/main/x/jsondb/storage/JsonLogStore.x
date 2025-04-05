@@ -12,7 +12,7 @@ service JsonLogStore<Element extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DboInfo     info,
+              DboInfo          info,
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,
@@ -20,7 +20,6 @@ service JsonLogStore<Element extends immutable Const>
               ) {
         construct JsonLogStoreBase(catalog, info, elementMapping, expiry, truncateSize, maxFileSize);
     }
-
 
     // ----- storage API exposed to the client -----------------------------------------------------
 

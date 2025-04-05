@@ -12,7 +12,7 @@ service JsonNtxLogStore<Element extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DboInfo     info,
+              DboInfo          info,
               Mapping<Element> elementMapping,
               Duration         expiry,
               Int              truncateSize,

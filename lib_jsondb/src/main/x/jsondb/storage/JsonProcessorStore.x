@@ -15,7 +15,6 @@ import oodb.Transaction.CommitResult;
 
 import TxManager.NO_TX;
 
-
 /**
  * Provides the low-level I/O for a DBProcessor, which represents the combination of a queue (with
  * scheduling) and a processor of the messages in the queue.
@@ -41,7 +40,7 @@ service JsonProcessorStore<Message extends immutable Const>
     // ----- constructors --------------------------------------------------------------------------
 
     construct(Catalog          catalog,
-              DboInfo     info,
+              DboInfo          info,
               Mapping<Message> messageMapping,
               ) {
         construct ObjectStore(catalog, info);
@@ -51,18 +50,15 @@ service JsonProcessorStore<Message extends immutable Const>
         this.clock          = catalog.clock;
     }
 
-
     // ----- properties ----------------------------------------------------------------------------
 
     /**
-     * The transaction manager that this ObjectStore is being managed by. A reference to the
-     * TxManager is lazily obtained from the Catalog service and then cached here, to avoid service
-     * hopping just to get a reference to the TxManager every time that it is needed.
+     * The transaction manager that this `ObjectStore` is being managed by. A reference to the
+     * `TxManager` is lazily obtained from the Catalog service and then cached here, to avoid service
+     * hopping just to get a reference to the `TxManager` every time that it is needed.
      */
     @Concurrent
-    protected @Lazy Scheduler scheduler.calc() {
-        return catalog.scheduler;
-    }
+    protected @Lazy Scheduler scheduler.calc() = catalog.scheduler;
 
     public/private Clock clock;
 
@@ -277,7 +273,6 @@ service JsonProcessorStore<Message extends immutable Const>
     void abandonPending(Int txId, Message message, Int pid, Range<Time> elapsed, CommitResult | Exception result) {
         TODO
     }
-
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
 
@@ -597,7 +592,6 @@ service JsonProcessorStore<Message extends immutable Const>
         // TODO
     }
 
-
     // ----- IO operations -------------------------------------------------------------------------
 
     @Override
@@ -861,7 +855,6 @@ service JsonProcessorStore<Message extends immutable Const>
         scheduleModsByTx.clear();
         fileNames.clear();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 

@@ -5,14 +5,13 @@ import json.Parser;
 
 import TxManager.NO_TX;
 
-
 /**
  * Common functionality for key-based json stores.
  */
 mixin KeyBasedStore<Key extends Hashable>
         into ObjectStore {
     /**
-     * The files names used to store the data for the keys. For Large model, this map will be
+     * The files names used to store the data for the keys. For `Large` model, this map will be
      * actively purged, retaining only most recently/frequently used keys. For all other models, it
      * contains all existing keys (lazily added).
      */
@@ -42,11 +41,11 @@ mixin KeyBasedStore<Key extends Hashable>
     /**
      * Analyze all store files for provided seals and reconstruct their up-to-date contents.
      *
-     * @param sealsByTxId  a Map, keyed and ordered by transaction id, with the seal information
+     * @param sealsByTxId  a map, keyed and ordered by transaction id, with the seal information
      * @param keyName      the name of the key in the json docs used by this store
      *
-     * @return True iff recovery was successful
-     * @return (conditional) a map of reconstructed StringBuffers per file name
+     * @return `True` iff recovery was successful
+     * @return (conditional) a map of reconstructed `StringBuffer` objects per file name
      * @return (conditional) a map of last transaction id per file name
      */
     conditional (Map<String, StringBuffer>, Map<String, Int>) recoverContents(
@@ -155,7 +154,7 @@ mixin KeyBasedStore<Key extends Hashable>
     }
 
     /**
-     * Append a json record to the specified StringBuffer.
+     * Append a json record to the specified `StringBuffer`.
      */
     protected void appendChange(StringBuffer buf,  Int txId,
                                 String keyName,    Token[] keyTokens,

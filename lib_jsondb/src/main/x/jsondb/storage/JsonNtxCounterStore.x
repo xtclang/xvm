@@ -26,9 +26,7 @@ service JsonNtxCounterStore(Catalog catalog, DboInfo info)
      * The file owned by this ObjectStore for purpose of its data storage. The ObjectStore may
      * create, modify, and remove this file.
      */
-    @Lazy public/private File dataFile.calc() {
-        return dataDir.fileFor("value.json");
-    }
+    @Lazy public/private File dataFile.calc() = dataDir.fileFor("value.json");
 
     @Override
     Int load(Int txId) {

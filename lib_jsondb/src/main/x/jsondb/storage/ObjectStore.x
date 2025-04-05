@@ -1,13 +1,11 @@
 import Catalog.Status;
 import TxManager.NO_TX;
 
-import json.Doc;
 import json.Lexer.Token;
 
 import model.DboInfo;
 
-import oodb.DBObject.DBCategory as Category;
-
+import oodb.DBObject.DBCategory;
 
 /**
  * This is an abstract base class for storage services, each of which manages information-on-disk on
@@ -59,23 +57,17 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * hopping just to get a reference to the TxManager every time that it is needed.
      */
     @Concurrent
-    protected @Lazy TxManager txManager.calc() {
-        return catalog.txManager;
-    }
+    protected @Lazy TxManager txManager.calc() = catalog.txManager;
 
     /**
      * The id of the `DBObject` for which this storage exists.
      */
-    Int id.get() {
-        return info.id;
-    }
+    Int id.get() = info.id;
 
     /**
      * The `DBCategory` of the `DBObject` for which this storage exists.
      */
-    Category category.get() {
-        return info.category;
-    }
+    DBCategory category.get() = info.category;
 
     /**
      * The current [Status] of this ObjectStore.
@@ -97,9 +89,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * The path that specifies this `DBObject`, and that implies the directory location for the data
      * managed by this `ObjectStore` and represented by the corresponding `DBObject`.
      */
-    Path path.get() {
-        return info.path;
-    }
+    Path path.get() = info.path;
 
     /**
      * The directory within which the named ObjectStore file or directory exists. That file or
@@ -128,9 +118,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * the file nodes named `A`, `B`, or `C`.)
      */
     @Concurrent
-    @Lazy public/private Directory dataDir.calc() {
-        return containingDir.dirFor(info.name).ensure();
-    }
+    @Lazy public/private Directory dataDir.calc() = containingDir.dirFor(info.name).ensure();
 
     /**
      * Statistics: The estimated number of bytes on disk in use by this storage object.
@@ -229,9 +217,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
         /**
          * The worker to dump CPU intensive serialization and deserialization work onto.
          */
-        @Lazy Client.Worker worker.calc() {
-            return txManager.workerFor(writeId);
-        }
+        @Lazy Client.Worker worker.calc() = txManager.workerFor(writeId);
 
         /**
          * Set to True when the transaction has been prepared. Note that the prepare phase can
@@ -819,9 +805,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * @param err  an error message to add to the log
      */
     @Concurrent
-    void log(String err) {
-        catalog.log^(err);
-    }
+    void log(String err) = catalog.log^(err);
 
     /**
      * Update the access statistics.
