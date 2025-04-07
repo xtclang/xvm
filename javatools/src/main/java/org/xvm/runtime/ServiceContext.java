@@ -40,6 +40,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle.WrapperException;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
+import org.xvm.runtime.template.Proxy.ProxyHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.xException;
@@ -1101,6 +1102,12 @@ public class ServiceContext
                     // executed in the context of this service
                     ahArg[i] = xRTFunction.makeAsyncDelegatingHandle(getService(), hFn);
                     }
+                }
+            else if (hArg instanceof ProxyHandle hProxy)
+                {
+                // ProxyHandle is the service and therefore pass-through; the only reason we're
+                // here is that the proxy is being sent back to the owner; we need to unwrap it
+                ahArg[i] = hProxy.getTarget();
                 }
             else
                 {

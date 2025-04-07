@@ -500,6 +500,13 @@ public class Proxy
             }
 
         @Override
+        public boolean isPassThrough(Container container)
+            {
+            // if the container is the owner, the caller needs to unwrap the proxy
+            return container == null || container != getOwner();
+            }
+
+        @Override
         public boolean isShared(Container container, Map<ObjectHandle, Boolean> mapVisited)
             {
             return true;
