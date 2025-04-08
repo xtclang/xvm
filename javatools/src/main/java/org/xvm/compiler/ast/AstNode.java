@@ -883,6 +883,10 @@ public abstract class AstNode
                     errsTemp.merge();
                     return false;
                     }
+                if (cTries == 20)
+                    {
+                    mgrKids.markLastAttempt();
+                    }
                 }
 
             stageOldest = stageNext;

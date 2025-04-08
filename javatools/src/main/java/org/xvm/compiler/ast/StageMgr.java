@@ -116,11 +116,19 @@ public class StageMgr
             {
             int cIters = 0;
             m_target = Stage.Registered;
-            while (!fDone && cIters < cMaxIters)
+            while (!fDone && cIters <= cMaxIters)
                 {
                 m_listRevisit = listSingle;
-                while (!processComplete() && ++cIters < cMaxIters)
+                while (!processComplete())
                     {
+                    if (++cIters == cMaxIters)
+                        {
+                        markLastAttempt();
+                        }
+                    else if (cIters > cMaxIters)
+                        {
+                        break;
+                        }
                     }
 
                 if (isComplete())

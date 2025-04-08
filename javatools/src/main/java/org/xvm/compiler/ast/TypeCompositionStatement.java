@@ -2742,11 +2742,6 @@ public class TypeCompositionStatement
                             getMethodById(idSuper).getHead().getMethodStructure();
 
                     assert constructSuper != null;
-                    if (!constructSuper.hasOps())
-                        {
-                        mgr.requestRevisit();
-                        return;
-                        }
 
                     listSuperArgs = validateSuperParameters(ctx, constructor, idSuper,
                                         constructSuper, listSuperArgs, errs);

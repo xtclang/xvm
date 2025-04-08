@@ -84,16 +84,12 @@ interface DBObject {
     /**
      * The "current" Transaction, if any.
      */
-    @RO Transaction? transaction.get() {
-        return connection.transaction;
-    }
+    @RO Transaction? transaction.get() = connection.transaction;
 
     /**
      * The root database object.
      */
-    @RO RootSchema dbRoot.get() {
-        return dbParent?.dbRoot : this.as(RootSchema);
-    }
+    @RO RootSchema dbRoot.get() = dbParent?.dbRoot : this.as(RootSchema);
 
     /**
      * The parent database object, or `Null` if this is the root (the database itself).
@@ -120,9 +116,7 @@ interface DBObject {
     /**
      * Each `DBObject` has a uniquely identifying path that identifies it within its database.
      */
-    @RO Path dbPath.get() {
-        return dbParent?.dbPath + dbName : Path.ROOT;
-    }
+    @RO Path dbPath.get() = dbParent?.dbPath + dbName : Path.ROOT;
 
     /**
      * Each `DBObject` potentially contains nested database objects. This `Map` represents all of
@@ -393,9 +387,7 @@ interface DBObject {
      *   such as would be expected from an "error log" use case;
      * * A [DBSchema] is stateless, and thus it is non-transactional.
      */
-    @RO Boolean transactional.get() {
-        return True;
-    }
+    @RO Boolean transactional.get() = True;
 
     /**
      * Represents a change within a transactional database object.

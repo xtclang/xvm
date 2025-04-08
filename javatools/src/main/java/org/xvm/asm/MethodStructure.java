@@ -2653,6 +2653,12 @@ public class MethodStructure
          */
         public boolean isNoOp()
             {
+            if (m_listOps == null && m_aop == null)
+                {
+                // too early to ask
+                return false;
+                }
+
             Op[] aOp = ensureOps();
             switch (aOp.length)
                 {

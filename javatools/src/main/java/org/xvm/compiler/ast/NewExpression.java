@@ -40,6 +40,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -684,9 +685,9 @@ public class NewExpression
             }
 
         List<Expression> listArgs = args;
-
-        MethodConstant idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
-                        MethodKind.Constructor, true, false, null, errsTemp);
+        MethodConstant   idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
+                                        MethodKind.Constructor, true, false, null, errsTemp);
+        MethodStructure constructor  = null;
         if (fAnonymous)
             {
             // first, see if the constructor that we're looking for is on the anonymous
@@ -719,9 +720,12 @@ public class NewExpression
                 // correctly invoke it
                 destroyDefaultConstructor();
 
-                MethodStructure methodSuper =
-                        infoSuper.getMethodById(idSuper).getHead().getMethodStructure();
-                idConstruct = createPassThroughConstructor(idSuper, methodSuper);
+                MethodInfo      methodInfo  = infoSuper.getMethodById(idSuper);
+                MethodStructure methodSuper = methodInfo.getHead().getMethodStructure();
+
+                constructor = createPassThroughConstructor(methodSuper);
+                idConstruct = infoSuper.resolveMethodConstant(methodInfo);
+                infoTarget  = infoSuper;
 
                 // since we just modified the component, flush the TypeInfo cache for
                 // the type of the anonymous inner class
@@ -758,12 +762,15 @@ public class NewExpression
             return null;
             }
 
-        MethodStructure constructor = (MethodStructure) idConstruct.getComponent();
         if (constructor == null)
             {
-            constructor = infoTarget.getMethodById(idConstruct).
-                            getTopmostMethodStructure(infoTarget);
-            assert constructor != null;
+            constructor = (MethodStructure) idConstruct.getComponent();
+            if (constructor == null)
+                {
+                constructor = infoTarget.getMethodById(idConstruct).
+                                getTopmostMethodStructure(infoTarget);
+                assert constructor != null;
+                }
             }
         m_constructor = constructor;
 
@@ -1446,19 +1453,18 @@ public class NewExpression
     /**
      * Create a synthetic constructor on the inner class that calls the specified super constructor.
      *
-     * @param idSuper      the super constructor id
      * @param methodSuper  the super constructor method
      *
-     * @return the identity of the new constructor on the anonymous inner class
+     * @return the new constructor on the anonymous inner class
      */
-    private MethodConstant createPassThroughConstructor(MethodConstant idSuper,
-                                                        MethodStructure methodSuper)
+    private MethodStructure createPassThroughConstructor(MethodStructure methodSuper)
         {
         // create a constructor that matches the one that we need to route to on the super class
-        Parameter[]     aParams     = methodSuper.getParamArray();
-        int             cParams     = aParams.length;
-        ClassStructure  clzAnon     = (ClassStructure) anon.getComponent();
-        MethodStructure constrThis  = clzAnon.createMethod(true, Access.PUBLIC, null,
+        Parameter[]     aParams    = methodSuper.getParamArray();
+        int             cParams    = aParams.length;
+        MethodConstant  idSuper    = methodSuper.getIdentityConstant();
+        ClassStructure  clzAnon    = (ClassStructure) anon.getComponent();
+        MethodStructure constrThis = clzAnon.createMethod(true, Access.PUBLIC, null,
                 Parameter.NO_PARAMS, "construct", aParams, true, false);
         constrThis.setSynthetic(true);
 
@@ -1500,7 +1506,7 @@ public class NewExpression
                 new ConstantExprAST(idSuper), TypeConstant.NO_TYPES, aAstArgs, false));
         constrThis.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstArgs);
 
-        return constrThis.getIdentityConstant();
+        return constrThis;
         }
 
     /**

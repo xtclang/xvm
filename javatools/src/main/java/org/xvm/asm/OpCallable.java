@@ -379,7 +379,7 @@ public abstract class OpCallable extends Op
 
             if (constructor == null)
                 {
-                frame.raiseException("Unresolvable or constructor \"" +
+                frame.raiseException("Unresolvable constructor \"" +
                     idCtor.getValueString() + "\" for " + typeTarget.getValueString());
                 return null;
                 }

@@ -884,8 +884,10 @@ service Client<Schema extends RootSchema> {
             @Override
             Iterator<Entry<String, DBObject>> iterator() {
                 return new Iterator() {
-                    Iterator<String>              keyIterator = keys.iterator();
-                    CursorEntry<String, DBObject> entry       = new CursorEntry(this.Map);
+                    Iterator<String> keyIterator = keys.iterator();
+
+                    // make CursorEntry a "service" by creating a trivial anonymous sub-class
+                    CursorEntry<String, DBObject> entry = new CursorEntry(this.Map) {};
 
                     @Override
                     conditional Entry<String, DBObject> next() {

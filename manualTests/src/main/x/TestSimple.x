@@ -1,23 +1,18 @@
 module TestSimple {
+
     @Inject Console console;
 
     void run() {
-    }
-
-    interface Node {
-        Node? prev;
-        Node? next;
-    }
-
-    class ElementNode(Node? prev, Node? next)
-            implements Node {
-
-        ElementNode test(Node? node) {
-            while (!node.is(ElementNode)) {
-                prev = node;
-                node = node?.next;
+        Runner r = new Runner() { // this used to fail to compile
+            @Override
+            void run() {
+                console.print($"runner @ {this:service}");
             }
-            return node; // used to fail to compile
-        }
+        };
+        r.run();
+    }
+
+    class Runner() {
+        void run() {}
     }
 }

@@ -261,9 +261,7 @@ interface Iterator<Element> {
     /**
      * Metadata: Are the elements of the iterator known to be distinct?
      */
-    Boolean knownDistinct() {
-        return False;
-    }
+    Boolean knownDistinct() = False;
 
     /**
      * Metadata: Is the iterator in an order that is a function of its elements? And if so, what is
@@ -272,9 +270,7 @@ interface Iterator<Element> {
      * @return True iff the iterator in an order that is a function of its elements
      * @return (conditional) the Orderer that represents the order
      */
-    conditional Orderer knownOrder() {
-        return False;
-    }
+    conditional Orderer knownOrder() = False;
 
     /**
      * Metadata: Is the iterator known to be empty?
@@ -296,9 +292,7 @@ interface Iterator<Element> {
      * @return `True` iff the `Iterator` size is efficiently known
      * @return (conditional) the number of elements remaining in the `Iterator`
      */
-    conditional Int knownSize() {
-        return False;
-    }
+    conditional Int knownSize() = False;
 
 
     // ----- intermediate operations ---------------------------------------------------------------
