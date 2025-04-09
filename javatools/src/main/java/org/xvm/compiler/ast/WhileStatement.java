@@ -306,13 +306,18 @@ public class WhileStatement
                     // expression plays a role of an "if", since the block cannot be entered
                     // if this expression evaluates to "false"; in the case of "do-while", it
                     // is *only* used to calculate the impact of the "while"
-                    ctx = ctx.enterIf();
-                    ++cExits;
+                    ctx     = ctx.enterIf();
+                    cExits += cConds;
 
                     for (int i = 0; i < cConds; ++i)
                         {
                         AstNode condOld = conds.get(i);
                         AstNode condNew;
+
+                        if (i > 0)
+                            {
+                            ctx = ctx.enterAndIf();
+                            }
 
                         // the condition is either a boolean expression or an assignment
                         // statement whose R-value is a multi-value with the first value

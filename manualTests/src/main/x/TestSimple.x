@@ -3,16 +3,14 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Runner r = new Runner() { // this used to fail to compile
-            @Override
-            void run() {
-                console.print($"runner @ {this:service}");
-            }
-        };
-        r.run();
     }
 
-    class Runner() {
-        void run() {}
+    void test(Boolean hex) {
+        while (Char ch := next(),
+               val n := hex ? ch.asciiHexit() : ch.asciiDigit()) { // used to fail to compile
+            console.print(ch);
+        }
     }
+
+    conditional Char next() = False;
 }
