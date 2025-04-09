@@ -2,20 +2,18 @@
  * A stand-alone db evolution facility.
  *
  * To run, from "./manualTests/" directory:
- *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/DbEvolver.x
+ *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/DbEvolver2.x
  */
-module PeopleDbEvolver {
-    package json   import json.xtclang.org;
-    package jsondb import jsondb.xtclang.org;
+module PeopleDbEvolver2 {
     package oodb   import oodb.xtclang.org;
 
     import oodb.Connection;
-
-    import json.Doc;
-    import json.JsonObject;
-    import jsondb.evolution.JsonEvolver;
+    import oodb.evolution.Evolver;
 
     @Inject Console console;
+
+    package v1 import peopleDB require v:1.0;
+    package v2 import peopleDB require v:2.0;
 
     void run() {
         @Inject Console   console;
@@ -45,16 +43,18 @@ module PeopleDbEvolver {
         }
     }
 
-    class EvolverV1_V2(Connection oldDb, Connection newDB)
-            extends JsonEvolver(oldDb, newDB) {
-        @Override
-        protected conditional (Doc, Doc) transformMapEntry(Path path, Doc key, Doc value) {
-            if (path == Path:/people) {
-                JsonObject person = value.as(JsonObject);
-                person["middleName"] = person.getOrNull("nickName");
-                return (True, key, person);
-            }
-            return False;
-        }
+
+    class EvolverV1_V2(Connection oldDB, Connection newDB)
+            extends Evolver(oldDb, newDB) {
+    protected void evolveDBMap(DBMap oldDBMap, DBMap newDBMap);
+
+    /**
+     * Evolve an old `DBValue` into a new one.
+     */
+    @Abstract
+    protected void evolveDBValue(DBValue oldDBValue, DBValue newDBValue);
+
     }
+    v1.Person p1 = ...;
+    v2.Person p2 = new v2.Person(p1.firstName, p1.lastName, middleName="whatever new", ...);
 }

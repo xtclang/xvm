@@ -886,7 +886,6 @@ service Client<Schema extends RootSchema> {
                 return new Iterator() {
                     Iterator<String> keyIterator = keys.iterator();
 
-                    // make CursorEntry a "service" by creating a trivial anonymous sub-class
                     CursorEntry<String, DBObject> entry = new CursorEntry(this.Map) {};
 
                     @Override

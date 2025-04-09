@@ -2,7 +2,7 @@
  * PeopleDB v2.
  *
  * To compile, from "./manualTests/" directory:
- *      xcc -L build/xtc/main/lib -o lib/v1 src/main/x/dbTests/v2/PeopleDB.x
+ *      xcc -L build/xtc/main/lib -o lib/v1 --set-version 2.0 src/main/x/dbTests/v2/PeopleDB.x
  */
 @Database
 module PeopleDB {

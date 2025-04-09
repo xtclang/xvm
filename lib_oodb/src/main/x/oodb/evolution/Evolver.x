@@ -7,5 +7,5 @@ interface Evolver {
      *
      * @throws an exception if the db can not be evolved
      */
-    void evolve(Connection oldDB, Connection newDB);
+    void evolve();
 }
