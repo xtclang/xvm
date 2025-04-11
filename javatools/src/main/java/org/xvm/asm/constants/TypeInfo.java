@@ -1414,6 +1414,8 @@ public class TypeInfo
     /**
      * Same as the method above, but allowing for relaxed run-time matching rules.
      *
+     * Note: this method should not be called to retrieve "regular" (non-virtual) constructors
+     *
      * @param sig       a SignatureConstant to find the method for
      * @param fRuntime  true iff this method is called by the runtime chain computation logic
      *
@@ -1465,6 +1467,13 @@ public class TypeInfo
                 TypeConstant typeCtx = methodTest.isFunction() || methodTest.isConstructor()
                         ? null
                         : typeThis;
+
+                if (methodTest.isConstructor() && !methodTest.containsVirtualConstructor())
+                    {
+                    // if the "sig" represents a constructor, this method should be called *only*
+                    // for virtual constructor chains, therefore it cannot not match a regular one
+                    continue;
+                    }
 
                 // test the actual body signature
                 SignatureConstant sigTest0 = body.getSignature();

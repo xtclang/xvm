@@ -4192,6 +4192,8 @@ public abstract class TypeConstant
                 Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
                 if (methodContrib.isConstructor())
                     {
+                    // not top-level or annotation constructors are not part of this type
+                    // constructor call chains; however the annotation "validators" are
                     if (!idContrib.isTopLevel())
                         {
                         continue;
@@ -4209,7 +4211,7 @@ public abstract class TypeConstant
                             methodContrib = methodBase.layerOnValidator(methodContrib);
                             }
                         }
-                    else
+                    else if (!fAnnotation)
                         {
                         // In general constructors are not virtual, unless a class, annotation or
                         // mixin implements an interface that declares a virtual constructor or the
@@ -4541,12 +4543,12 @@ public abstract class TypeConstant
                                 {
                                 // the annotation sits on top of the annotated class and makes the
                                 // underlying call chain inaccessible
-                                if (!errs.hasSeriousErrors())
+                                if (!errs.hasSeriousErrors() && !bodyHead.isAbstract())
                                     {
                                     log(errs, Severity.WARNING, VE_METHOD_UNREACHABLE,
                                         bodyHead.getIdentity().getNamespace().getValueString(),
-                                        bodyContribTail.getIdentity().getNamespace().getValueString(),
-                                        bodyHead.getSignature().getValueString()
+                                        bodyContrib.getIdentity().getNamespace().getValueString(),
+                                        bodyHead.getIdentity().getPathString()
                                         );
                                     }
                                 }

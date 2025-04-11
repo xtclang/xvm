@@ -746,15 +746,19 @@ public class UnionTypeConstant
         NextEntry:
         for (Map.Entry<SignatureConstant, MethodInfo> entry : info1.ensureMethodsBySignature().entrySet())
             {
-            SignatureConstant sig = entry.getKey();
+            SignatureConstant sig     = entry.getKey();
+            MethodInfo        method1 = entry.getValue();
+
+            if (method1.isConstructor())
+                {
+                continue;
+                }
 
             MethodInfo method2 = info2.getMethodBySignature(sig);
             if (method2 != null && !method2.isConstructor())
                 {
                 // the method exists in both maps;
                 // check for a "common" structure and build a "subset" info
-
-                MethodInfo method1 = entry.getValue();
                 if (method1.equals(method2))
                     {
                     // trivial "equality" scenario

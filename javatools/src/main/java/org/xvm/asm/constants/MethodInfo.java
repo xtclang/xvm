@@ -807,6 +807,10 @@ public class MethodInfo
         }
 
     /**
+     * <b>Note: </b>this method only checks for constructors declared on interfaces. To check
+     * whether or not a constructor is a part of a virtual construction chain use
+     * {@link #containsVirtualConstructor()} method.
+     *
      * @return true iff the method represents a constructor that must be overridden by
      *         all extending classes
      */
