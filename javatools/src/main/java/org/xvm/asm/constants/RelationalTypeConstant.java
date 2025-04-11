@@ -522,9 +522,12 @@ public abstract class RelationalTypeConstant
     @Override
     protected TypeInfo buildTypeInfo(ErrorListener errs)
         {
-        int       cInvals = getConstantPool().getInvalidationCount();
-        TypeInfo  info1   = m_constType1.ensureTypeInfoInternal(errs);
-        TypeInfo  info2   = m_constType2.ensureTypeInfoInternal(errs);
+        // most of the time, we come here from {@link TypeConstant#ensureTypeInfo}, where we always
+        // resolve auto-narrowing and normalize parameters; however there are some scenarios (e.g.:
+        // relational type contributions) that bypass that normalization
+        int      cInvals = getConstantPool().getInvalidationCount();
+        TypeInfo info1   = m_constType1.removeAutoNarrowing().normalizeParameters().ensureTypeInfoInternal(errs);
+        TypeInfo info2   = m_constType2.removeAutoNarrowing().normalizeParameters().ensureTypeInfoInternal(errs);
 
         if (info1 == null && info2 == null)
             {

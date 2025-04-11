@@ -1767,7 +1767,7 @@ public abstract class TypeConstant
         if (typeResolved != this)
             {
             info = typeResolved.ensureTypeInfo(errs);
-            setTypeInfo(info);
+            typeResolved.setTypeInfo(info);
             return info;
             }
 
