@@ -2646,14 +2646,32 @@ public class TypeInfo
             }
         }
 
-    Progress getProgress()
+    protected Progress getProgress()
         {
         return f_progress;
         }
 
-    boolean isPlaceHolder()
+    protected boolean isPlaceHolder()
         {
         return f_progress == Progress.Building;
+        }
+
+    /**
+     * Indicates that this TypeInfo may have been retained despite errors encountered during the
+     * TypeInfo computation. Those errors could be transient, caused by the insufficient information
+     * from the type contributions (most likely annotations).
+     */
+    public void markWithError()
+        {
+        m_fHasErrors = true;
+        }
+
+    /**
+     * @return true iff there were errors encountered during the TypeInfo computation
+     */
+    public boolean hasErrors()
+        {
+        return m_fHasErrors;
         }
 
 
@@ -2901,6 +2919,7 @@ public class TypeInfo
      */
     private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
 
+    private       boolean                         m_fHasErrors;
     private       boolean                         m_fCacheReady;
     private       boolean                         m_fChildrenChecked;
     private final Map<MethodConstant, MethodInfo> f_cacheById;

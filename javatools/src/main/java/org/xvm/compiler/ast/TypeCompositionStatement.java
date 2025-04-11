@@ -2430,9 +2430,21 @@ public class TypeCompositionStatement
                 }
             }
 
-        TypeConstant typeThis  = component.getFormalType();
+        TypeConstant typeThis = component.getFormalType();
         TypeConstant typeClass = pool.ensureParameterizedTypeConstant(
                                     pool.typeClass(), component.getIdentityConstant().getType());
+
+        // ensure the TypeInfo doesn't report any problems
+        TypeInfo info = ensureTypeInfo(typeThis.ensureAccess(Access.PRIVATE), errs);
+        if (info.hasErrors() && !errs.hasSeriousErrors())
+            {
+            // it appears that the TypeInfo was retained even though errors were detected when we
+            // built the TypeInfo the last time; the errors may not have been reported, so this will
+            // force a rebuild, and if any errors remain, they will be reported
+            typeThis.invalidateTypeInfo();
+            ensureTypeInfo(typeThis, errs);
+            }
+
         if (validateAnnotations(component.collectAnnotations(false), typeThis, errs) &&
             validateAnnotations(component.collectAnnotations(true),  typeClass, errs))
             {

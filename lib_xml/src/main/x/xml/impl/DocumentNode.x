@@ -90,7 +90,7 @@ class DocumentNode(ElementNode root)
      *
      * @param firstNode  the first [Parsed] [Node] in the linked list of nodes
      */
-    construct(Parsed firstNode) { // TODO GG change Parsed to Node
+    construct(Parsed firstNode) {
         for (Node? node = firstNode; node != Null; node = node.next_) {
             if (node.is(XmlDeclNode)) {
                 assert this.xmlVersion == Null;

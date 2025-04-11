@@ -6,7 +6,7 @@
  */
 @Abstract class Content(String text)
         implements Part {
-    @Override // TODO GG this compiled without an @Override
+    @Override
     @RO (Element|Attribute)? parent.get() = Null;
 
     @Override

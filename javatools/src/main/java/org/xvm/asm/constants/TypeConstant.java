@@ -1934,6 +1934,10 @@ public abstract class TypeConstant
             if (info != null)
                 {
                 setTypeInfo(info);
+                if (errs.hasSeriousErrors())
+                    {
+                    info.markWithError();
+                    }
                 }
             }
 

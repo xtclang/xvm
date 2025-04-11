@@ -500,7 +500,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
         @Override
-        FieldInputStream<ElementInputStream> openObject(Boolean peekAhead=False) {
+        FieldInputStream<ElementInputStream> openObject(Boolean peekAhead = False) {
             prepareRead();
             canRead = False;
             return new @CloseCap FieldInputStream(this, peekingAhead=peekAhead);
@@ -606,7 +606,7 @@ class ObjectInputStream(Schema schema, Parser parser)
         }
 
         @Override
-        FieldInputStream<ArrayInputStream> openObject(Boolean peekAhead=False) {
+        FieldInputStream<ArrayInputStream> openObject(Boolean peekAhead = False) {
             prepareRead();
             return new @CloseCap FieldInputStream(this, peekingAhead=peekAhead);
         }
@@ -956,7 +956,7 @@ class ObjectInputStream(Schema schema, Parser parser)
             into (ElementInputStream | ArrayInputStream) {
 
         @Override
-        FieldInputStream<PeekAhead> openObject(Boolean peekAhead=False) {
+        FieldInputStream<PeekAhead> openObject(Boolean peekAhead = False) {
             DocInputStream<>? current = this.ObjectInputStream.current;
             if (current.is(FieldInputStream)
                     && current.peekingAhead
