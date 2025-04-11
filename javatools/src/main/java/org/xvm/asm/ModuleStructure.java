@@ -657,7 +657,7 @@ public class ModuleStructure
      * <li>Optional indicates that the dependency is supported, but leaves the decision regarding
      *     whether or not to import the module to the linker;</li>
      * <li>Desired also indicates that the dependency is supported, but even though the dependency
-     *     is not required, the linker should make a best effort to obtain and link in the
+     *     is not required, the linker should make the best effort to obtain and link in the
      *     module;</li>
      * <li>Required indicates that the primary module can not be loaded unless the fingerprint
      *     module is obtained and linked in by the linker.</li>

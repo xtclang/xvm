@@ -428,10 +428,9 @@ public class VersionTree<V>
     private Node<V> ensureNode(Version ver)
         {
         Node<V> node  = root;
-        int[]   parts = ver.getIntArray();
-        for (int i = 0, c = parts.length; i < c; ++i)
+        for (int part : ver.getIntArray())
             {
-            node = node.ensureChild(parts[i]);
+            node = node.ensureChild(part);
             }
         node.version = ver;
         return node;
@@ -598,9 +597,8 @@ public class VersionTree<V>
             Node[] kids = this.kids;
             if (kids != null)
                 {
-                for (int i = 0, c = kids.length; i < c; ++i)
+                for (Node kid : kids)
                     {
-                    Node kid = kids[i];
                     if (kid == null)
                         {
                         // no more kids
@@ -863,9 +861,8 @@ public class VersionTree<V>
 
             if (kids != null)
                 {
-                for (int i = 0, c = kids.length; i < c; ++i)
+                for (Node kid : kids)
                     {
-                    Node kid = kids[i];
                     if (kid == null)
                         {
                         return;
@@ -881,7 +878,7 @@ public class VersionTree<V>
         @Override
         public String toString()
             {
-            return getVersion() + "=" + value;
+            return parent == null ? "root" : getVersion() + "=" + value;
             }
 
         void render(StringBuilder sb, String sIndentFirst, String sIndent)
