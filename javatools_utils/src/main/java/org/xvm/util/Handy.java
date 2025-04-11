@@ -863,6 +863,14 @@ public final class Handy
                     return sb.append("\\'");
                 case '\"':
                     return sb.append("\\\"");
+                case 0x00:
+                    return sb.append("\\0");
+                case 0x0B:
+                    return sb.append("\\v");
+                case 0x1A:
+                    return sb.append("\\z");
+                case 0x1B:
+                    return sb.append("\\e");
                 case 0x7F:              // DEL
                     return sb.append("\\d");
                 default:

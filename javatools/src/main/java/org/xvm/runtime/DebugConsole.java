@@ -1072,6 +1072,8 @@ public final class DebugConsole
                 switch (cArgs)
                     {
                     case 0:
+                        writer.println(hruler(m_cWidth));
+                        writer.println(vruler(m_cHeight-2, 3));
                         writer.println("Current debugger text width=" + m_cWidth +
                                        " characters, height= " + m_cHeight + " lines.");
                         return Op.R_REPEAT;
@@ -1079,7 +1081,7 @@ public final class DebugConsole
                     case 2:
                         {
                         int n = parseNonNegative(asParts[2]);
-                        if (n >= 10 && n < 1000)
+                        if (n >= 10 && n <= 120)
                             {
                             writer.println("Altering debugger text height from " + m_cHeight +
                                            " to " + n + " lines.");
@@ -1096,7 +1098,7 @@ public final class DebugConsole
                     case 1:
                         {
                         int n = parseNonNegative(asParts[1]);
-                        if (n >= 40 && n < 1000)
+                        if (n >= 40 && n <= 240)
                             {
                             writer.println("Altering debugger text width from " + m_cWidth +
                                            " to " + n + " characters.");
@@ -1107,6 +1109,8 @@ public final class DebugConsole
                             {
                             writer.println("Illegal text width: " + asParts[1]);
                             }
+                        writer.println(hruler(m_cWidth));
+                        writer.println(vruler(m_cHeight-2, cArgs+3));
                         return Op.R_REPEAT;
                         }
                     }
@@ -1679,8 +1683,6 @@ public final class DebugConsole
 
     private String renderDebugger()
         {
-        StringBuilder sb = new StringBuilder();
-
         String   sFHeader  = "Call stack frames:";
         String[] asFrames  = renderFrames();
         int      cchFrames = Math.min(Math.max(longestOf(asFrames), sFHeader.length()), m_cWidth/2);
@@ -1708,7 +1710,14 @@ public final class DebugConsole
                 cchVars   = max - cchFrames;
                 }
             }
+        int    cFrames = asFrames.length;
+        int    cVars   = asVars.length;
+        int    cBot    = Math.max(cFrames, cVars) + 5;              // call stack and vars at bottom
+        int    cTop    = Math.max(xTerminalConsole.CONSOLE_LOG.size(), 1) + 2;     // console at top
+        int    cMid    = m_cHeight - cBot - cTop;                              // code in the middle
 
+        StringBuilder sb = new StringBuilder();
+        sb.append('\n');
         if (m_cHeight > 0 && m_frameFocus != null && m_frameFocus.f_function != null)
             {
             MethodStructure method   = m_frameFocus.f_function;
@@ -1722,25 +1731,30 @@ public final class DebugConsole
                 // default to showing the entire method
                 iFirst = method.getSourceLineNumber();
                 cLines = method.getSourceLineCount();
-                if (cLines > m_cHeight)
+                if (cLines > cMid)
                     {
+                    // adjust the amount of code and console displayed based on vertical constraints
+                    int cAvail = m_cHeight - cBot;
+                    cMid = Math.min(cLines, Math.max(7, Math.max(cAvail-cTop, cAvail/2)));
+                    cTop = cAvail - cMid;
+
                     // need to show just a portion; nLine is the current (1-based) line of code that
                     // the execution is at, so we want to show it in the middle
-                    int iDesiredFirst = nLine - (m_cHeight / 2);
+                    int iDesiredFirst = nLine - (cMid / 2);
                     if (iDesiredFirst > iFirst)
                         {
                         int iLast         = iFirst + cLines - 1;
-                        int iDesiredLast  = iDesiredFirst + m_cHeight - 1;
+                        int iDesiredLast  = iDesiredFirst + cMid - 1;
                         if (iDesiredLast > iLast)
                             {
-                            iFirst = iLast - m_cHeight + 1;
+                            iFirst = iLast - cMid + 1;
                             }
                         else
                             {
                             iFirst = iDesiredFirst;
                             }
                         }
-                    cLines = m_cHeight;
+                    cLines = cMid;
                     }
 
                 String[] asLine = method.getSourceLines(iFirst, cLines, true);
@@ -1794,10 +1808,8 @@ public final class DebugConsole
           .append(dup('-', cchVars));
 
         int    iFrame  = 0;
-        int    cFrames = asFrames.length;
         String sFrame  = null;
         int    iVar    = 0;
-        int    cVars   = asVars.length;
         String sVar    = null;
         while (true)
             {
@@ -1836,7 +1848,7 @@ public final class DebugConsole
 
             if (sFrame == null && sVar == null)
                 {
-                return sb.toString();
+                return "\u001B[2J\u001B[H" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, cTop) + sb.toString();
                 }
 
             sb.append('\n');
@@ -2371,6 +2383,32 @@ public final class DebugConsole
             s = " ".repeat(cSpaces) + s;
             }
         return s;
+        }
+
+    private static String hruler(int c)
+        {
+        StringBuilder sb1 = new StringBuilder(c*2+1);
+        StringBuilder sb2 = new StringBuilder(c);
+        for (int i = 0; i < c; ++i)
+            {
+            sb1.append(i % 10 == 0 ? (char) ('0' + (i / 10 % 10)) : ' ');
+            sb2.append(i % 10);
+            }
+
+        return sb1.append('\n')
+                  .append(sb2)
+                  .toString();
+        }
+
+    private static String vruler(int c, int skip)
+        {
+        int digits = c > 100 ? 3 : c > 10 ? 2 : 1;
+        StringBuilder sb = new StringBuilder(c * (digits + 1));
+        for (int i = skip; i < c; ++i)
+            {
+            sb.append(rjust(Integer.toString((i % 10) == 0 ? i : i % 10), digits)).append('\n');
+            }
+        return sb.deleteCharAt(sb.length()-1).toString();
         }
 
     private static int parseNonNegative(String sNumber)

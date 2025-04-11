@@ -433,8 +433,9 @@ public class xString
         public String toString()
             {
             StringBuilder sb = new StringBuilder(super.toString());
+            sb.append('\"');
             Handy.appendString(sb, getStringValue());
-            return sb.toString();
+            return sb.append('\"').toString();
             }
         }
 
