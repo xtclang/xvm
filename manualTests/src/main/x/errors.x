@@ -166,8 +166,8 @@ module TestCompilerErrors {
 
             void testAccess(Derived node) {
                 // these should not compile - not accessible
-                assert node.valDerivedPro > 0;
-                assert node.fDerivedPro() > 0;
+                Int _ = node.valDerivedPro;
+                Int _ = node.fDerivedPro();
                 Method m = node.fDerivedPro;
 
                 // these should not compile - not found
@@ -181,6 +181,23 @@ module TestCompilerErrors {
             private   Int valDerivedPri;
             protected Int valDerivedPro;
             protected Int fDerivedPro() = valDerivedPro;
+        }
+    }
+
+    package testAnnos {
+        // this should generate an "unreachable method" warning
+        annotation WebService(String path) into service {
+            void route() = TODO
+        }
+
+        @WebService("/")
+        service Main extends Base {
+            @Override
+            void route() = TODO
+        }
+
+        service Base {
+            void route() = TODO
         }
     }
 }
