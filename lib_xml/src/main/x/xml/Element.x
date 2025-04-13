@@ -185,7 +185,7 @@ interface Element
             } else {
                 if (stag) {
                     buf.add('>');
-                    newIndent = indent + "  ";
+                    newIndent = pretty ? indent + "  " : indent;
                     stag      = False;
                 }
 
