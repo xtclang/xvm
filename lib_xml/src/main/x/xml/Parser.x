@@ -1,8 +1,10 @@
 import ecstasy.io.TextPosition;
-import ecstasy.lang.src.Error;
+import ecstasy.io.Reader;
 import ecstasy.lang.ErrorList;
 import ecstasy.lang.ErrorCode;
 import ecstasy.lang.Severity;
+import ecstasy.lang.src.Error;
+import ecstasy.lang.src.Source;
 
 import impl.*;
 
@@ -706,7 +708,7 @@ class Parser(Boolean ignoreProlog       = False,
      *
      * @param firstNode  the first [Node] in a linked list, or `Null` if no nodes are in the list
      * @param lastNode   the last [Node] in a linked list, or `Null` if no nodes are in the list
-     * @param newNode    the [Node] to add to the end of the linked list 
+     * @param newNode    the [Node] to add to the end of the linked list
      *
      * @return the first [Node] in the linked list
      * @return the last [Node] in the linked list
@@ -721,8 +723,8 @@ class Parser(Boolean ignoreProlog       = False,
         if (firstNode == Null) {
             assert lastNode == Null;
             return newNode, newNode;
-        }                  
-        
+        }
+
         assert lastNode != Null;
         assert val lastNodeRW := &lastNode.revealAs((protected Node));
         lastNodeRW.next_ = newNode;
@@ -968,7 +970,11 @@ class Parser(Boolean ignoreProlog       = False,
             offset    = after;
             after     = position;
         }
-        Boolean result = errs.log(new Error(reader, before, after, severity, errmsg, Null, params));
+        (Reader|Source) source = reader;
+        if (!source.is(immutable)) {
+            source = new Source(reader.toString());
+        }
+        Boolean result = errs.log(new Error(source, before, after, severity, errmsg, Null, params));
         offset = restore?;
         return result;
     }
