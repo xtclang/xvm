@@ -31,6 +31,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ConstantExprAST;
@@ -230,6 +231,15 @@ public abstract class AstNode
     protected Field[] getChildFields()
         {
         return NO_FIELDS;
+        }
+
+    /**
+     * @return TODO
+     */
+    public ModuleRepository getRepository()
+        {
+        AstNode parent = getParent();
+        return parent == null ? null : parent.getRepository();
         }
 
     @Override

@@ -167,6 +167,7 @@ public class FileStructure
         m_nMajorVer = fileStructure.m_nMajorVer;
         m_nMinorVer = fileStructure.m_nMinorVer;
         m_pool      = new ConstantPool(this);
+        m_vtree.putAll(fileStructure.getVersionTree());
 
         merge(module, fSynthesize, true);
         }
@@ -178,7 +179,7 @@ public class FileStructure
      * @param fSynthesize  if true, synthesize all necessary structures
      * @param fTakeFile    if true, merge the os-file info as well
      */
-    public void merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile)
+    public ModuleStructure merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile)
         {
         ModuleStructure moduleClone = module.cloneBody();
         moduleClone.setContaining(this);
@@ -222,6 +223,7 @@ public class FileStructure
             m_sModuleName = module.getName();
             m_file        = module.getFileStructure().m_file;
             }
+        return moduleClone;
         }
 
 
@@ -505,13 +507,17 @@ public class FileStructure
                 return sModule;
                 }
 
-            ModuleStructure moduleUnlinked = repository.loadModule(sModule); // TODO versions etc.
-            if (moduleUnlinked == null)
+            ModuleStructure moduleOrigin = moduleFingerprint.getFingerprintOrigin();
+            if (moduleOrigin == null)
                 {
-                return sModule;
+                moduleOrigin = repository.loadModule(sModule); // TODO versions etc.
+                if (moduleOrigin == null)
+                    {
+                    return sModule;
+                    }
                 }
 
-            FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
+            FileStructure fileOrigin = moduleOrigin.getFileStructure();
             if (fRuntime)
                 {
                 if (moduleFingerprint.isLinked())
@@ -520,17 +526,17 @@ public class FileStructure
                     // module
                     continue;
                     }
-                listReplace.add(moduleUnlinked);
+                listReplace.add(moduleOrigin);
 
                 // TODO eventually we need to handle the case that these are actual modules and not
                 //      just pointers to the modules
-                listModulesTodo.addAll(fileUnlinked.moduleNames());
+                listModulesTodo.addAll(fileOrigin.moduleNames());
                 }
             else // compile-time
                 {
                 if (!moduleFingerprint.isLinked())
                     {
-                    moduleFingerprint.setFingerprintOrigin(moduleUnlinked);
+                    moduleFingerprint.setFingerprintOrigin(moduleOrigin);
                     }
 
                 if (fileTop.getModule(sModule) == null)
@@ -540,7 +546,7 @@ public class FileStructure
 
                 if (!setFilesDone.contains(sModule))
                     {
-                    listFilesTodo.add(fileUnlinked); // recurse downstream
+                    listFilesTodo.add(fileOrigin); // recurse downstream
                     }
                 }
             }
@@ -639,7 +645,7 @@ public class FileStructure
      */
     public boolean containsVersion(Version ver)
         {
-        return getVersionTree().get(ver);
+        return getVersionTree().get(ver) != null;
         }
 
     /**
@@ -1076,9 +1082,15 @@ public class FileStructure
         disassembleChildren(in, m_fLazyDeser);
 
         // must be at least one module (the first module is considered to be the "main" module)
-        if (getModule() == null)
+        ModuleStructure modulePrim = getModule();
+        if (modulePrim == null)
             {
             throw new IOException("the file does not contain a primary module");
+            }
+        Version version = modulePrim.getVersion();
+        if (version != null)
+            {
+            m_vtree.put(version, Boolean.TRUE);
             }
         }
 

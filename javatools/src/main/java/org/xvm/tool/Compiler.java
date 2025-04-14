@@ -22,11 +22,12 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
 import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
 
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.util.Handy.resolveFile;
@@ -383,11 +384,13 @@ public class Compiler
         for (Node node : allNodes)
             {
             // create a module/package/class structure for each dir/file node in the "module tree"
-            if (node.type().getCategory().getId() != Token.Id.MODULE)
+            TypeCompositionStatement stmtModule = node.type();
+            if (stmtModule.getCategory().getId() != Token.Id.MODULE)
                 {
                 log(Severity.ERROR, "File \"" + node + "\" doesn't contain a module statement");
                 continue;
                 }
+            stmtModule.setRepository(repo);
 
             var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
             FileStructure struct   = compiler.generateInitialFileStructure();

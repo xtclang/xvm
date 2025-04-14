@@ -2245,7 +2245,7 @@ public abstract class Component
      *
      * @param collThat  a collection of child components to clone
      */
-    protected void cloneChildren(Collection<? extends Component> collThat)
+    public void cloneChildren(Collection<? extends Component> collThat)
         {
         for (Component childThat : collThat)
             {

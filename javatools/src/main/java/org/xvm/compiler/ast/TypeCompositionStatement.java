@@ -14,31 +14,13 @@ import java.util.Map;
 
 import java.util.stream.Collectors;
 
-import org.xvm.asm.Annotation;
-import org.xvm.asm.Argument;
-import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.*;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.Injection;
-import org.xvm.asm.ComponentBifurcator;
-import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileStructure;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Op;
-import org.xvm.asm.PackageStructure;
-import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.Register;
-import org.xvm.asm.Version;
-import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.ast.AssignAST;
 import org.xvm.asm.ast.BinaryAST;
@@ -317,6 +299,17 @@ public class TypeCompositionStatement
             default:
                 throw new IllegalStateException("this=" + structThis.getFormat());
             }
+        }
+
+    @Override
+    public ModuleRepository getRepository()
+        {
+        return repo == null ? super.getRepository() : repo;
+        }
+
+    public void setRepository(ModuleRepository repo)
+        {
+        this.repo = repo;
         }
 
     @Override
@@ -1129,20 +1122,52 @@ public class TypeCompositionStatement
                         break;
                         }
 
+                    FileStructure         fileStruct   = component.getFileStructure();
+                    List<VersionOverride> listVersions = ((Import) composition).vers;
+                    ModuleRepository      repo         = getRepository();
+                    ModuleStructure       moduleActual;
+
+                    if (listVersions == null)
+                        {
+                        moduleActual = repo.loadModule(sModule);
+                        }
+                    else
+                        {
+                        Version version = listVersions.get(0).getVersion(); // TODO: not quite right
+                        if (repo == null)
+                            {
+                            composition.log(errs, Severity.ERROR, Compiler.MODULE_MISSING,
+                                sModule + " v:" + version);
+                            return;
+                            }
+                        moduleActual = repo.loadModule(sModule, version, false);
+                        sModule      = sModule + ".PACKAGE." + sName;
+
+                        // Rules:
+                        //   1) if there are two different version of the same module, the versions
+                        //      *must* be orthogonal (neither can "cover" the other)
+                        //   2) the same module cannot be imported twice as a different package
+                        }
                     boolean fNewFingerprint = false;
+
+                    // create the fingerprint
+                    moduleImport = (ModuleStructure) fileStruct.getChild(sModule);
                     if (moduleImport == null)
                         {
-                        // create the fingerprint
-                        moduleImport = (ModuleStructure) component.getFileStructure().getChild(sModule);
-                        if (moduleImport == null)
+                        moduleImport    = fileStruct.ensureModule(sModule);
+                        fNewFingerprint = true;
+                        if (moduleActual != null)
                             {
-                            moduleImport    = component.getFileStructure().ensureModule(sModule);
-                            fNewFingerprint = true;
+                            ModuleStructure moduleClone = moduleActual.cloneBody();
+                            moduleClone.cloneChildren(moduleActual.children());
+                            moduleImport.fingerprintRequired();
+                            moduleImport.setFingerprintOrigin(moduleClone);
                             }
-                        // note that the component is not bifurcated because import compositions
-                        // are not allowed to be conditional
-                        ((PackageStructure) component).setImportedModule(moduleImport);
                         }
+
+                    // note that the component is not bifurcated because import compositions
+                    // are not allowed to be conditional
+                    ((PackageStructure) component).setImportedModule(moduleImport);
 
                     // incorporate version requirements into the package information where the
                     // module is being mounted
@@ -1161,7 +1186,7 @@ public class TypeCompositionStatement
                             composition.log(errs, Severity.ERROR, Compiler.ILLEGAL_SELF_IMPORT);
                             }
                         }
-                    else
+                    else if (fNewFingerprint)
                         {
                         switch (compImport.getImplicitModifier())
                             {
@@ -1210,7 +1235,7 @@ public class TypeCompositionStatement
                                 }
                             else if (!vtreeOld.equals(vtreeAllow))
                                 {
-                                composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
+                                // composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
                                 }
                             }
                         }
@@ -3618,6 +3643,7 @@ public class TypeCompositionStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    protected ModuleRepository           repo;
     protected Source                     source;
     protected Expression                 condition;
     protected List<Token>                modifiers;

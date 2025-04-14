@@ -396,7 +396,7 @@ public class ModuleStructure
         }
 
     @Override
-    protected ModuleStructure cloneBody()
+    public ModuleStructure cloneBody()
         {
         ModuleStructure that = (ModuleStructure) super.cloneBody();
 
