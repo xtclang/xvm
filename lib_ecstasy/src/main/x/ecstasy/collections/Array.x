@@ -1,6 +1,5 @@
 import ecstasy.io;
 
-
 /**
  * Array is **the** fundamental implementation of the List interface; it is an Int-indexed container
  * of elements of a specific type, and it can be assumed to have an `O(1)` element access time, both
@@ -94,7 +93,10 @@ class Array<Element>
 
     /**
      * Construct a fixed size array with the specified size and initial value. An initial value is
-     * always required
+     * always required; this constructor is used by the following Ecstasy syntax, which allows the
+     * compiler to supply the default value for the type automatically:
+     *
+     *     val array = new Int[5];
      *
      * @param size    the size of the fixed size array
      * @param supply  the value or the supply function for initializing the elements of the array
@@ -153,7 +155,6 @@ class Array<Element>
             makeImmutable();
         }
     }
-
 
     // ----- ArrayDelegate -------------------------------------------------------------------------
 
@@ -233,7 +234,6 @@ class Array<Element>
      */
     private ArrayDelegate<Element> delegate;
 
-
     // ----- variable Mutability -------------------------------------------------------------------
 
     /**
@@ -284,7 +284,6 @@ class Array<Element>
     @Override
     public/private Mutability mutability;
 
-
     // ----- Duplicable interface ------------------------------------------------------------------
 
     @Override
@@ -294,7 +293,6 @@ class Array<Element>
                 : this;
     }
 
-
     // ----- Freezable interface -------------------------------------------------------------------
 
     /**
@@ -303,17 +301,18 @@ class Array<Element>
      * All mutating calls to a `const` array will result in the creation of a new
      * `const` array with the requested changes incorporated.
      *
-     * @param inPlace  pass True to indicate that the Array should make a frozen copy of itself if
-     *                 it does not have to; the reason that making a copy is the default behavior is
-     *                 to protect any object that already has a reference to the unfrozen array
+     * @param inPlace  pass True to indicate that the Array should **not** make a frozen copy of
+     *                 itself if it does not have to; the reason that making a copy is the default
+     *                 behavior is to protect any object or execution frame that is holding a
+     *                 reference to the previously unfrozen array
      *
      * @throws Exception if any of the values in the array are not `service`, not `const`, and not
      *         [Freezable]
      */
     @Override
     immutable Array freeze(Boolean inPlace = False) {
-        if (&this.isImmutable) {
-            return this.as(immutable Array);
+        if (this.is(immutable)) {
+            return this;
         }
 
         if (delegate.mutability == Constant) {
@@ -347,6 +346,24 @@ class Array<Element>
         return makeImmutable();
     }
 
+    @Override
+    immutable Array makeImmutable() {
+        if (this.is(immutable)) {
+            return this;
+        }
+
+        Mutability oldMutability = mutability;
+        try {
+            this.mutability = Constant;
+            return super();
+        } catch (Exception e) {
+            try {
+                mutability = oldMutability;
+            } catch (Exception _) {
+            }
+            throw e;
+        }
+    }
 
     // ----- Array interface -----------------------------------------------------------------------
 
@@ -404,14 +421,11 @@ class Array<Element>
         }
     }
 
-
     // ----- UniformIndexed interface --------------------------------------------------------------
 
     @Override
     @Op("[]")
-    Element getElement(Int index) {
-        return delegate.elementAt(index).get();
-    }
+    Element getElement(Int index) = delegate.elementAt(index).get();
 
     @Override
     @Op("[]=")
@@ -424,10 +438,7 @@ class Array<Element>
     }
 
     @Override
-    Var<Element> elementAt(Int index) {
-        return delegate.elementAt(index);
-    }
-
+    Var<Element> elementAt(Int index) = delegate.elementAt(index);
 
     // ----- Collection interface ------------------------------------------------------------------
 
@@ -443,9 +454,7 @@ class Array<Element>
     }
 
     @Override
-    Int size.get() {
-        return delegate.size;
-    }
+    Int size.get() = delegate.size;
 
     @Override
     Boolean contains(Element value) {
@@ -627,7 +636,6 @@ class Array<Element>
                 : new Array<Element>(reifiedDelegate, mutability ?: this.mutability);
     }
 
-
     // ----- List interface ------------------------------------------------------------------------
 
     @Override
@@ -645,9 +653,7 @@ class Array<Element>
     }
 
     @Override
-    Array shuffled(Boolean inPlace = False) {
-        return super(inPlace).as(Array);
-    }
+    Array shuffled(Boolean inPlace = False) = super(inPlace).as(Array);
 
     @Override
     Array replace(Int index, Element value) {
@@ -821,9 +827,7 @@ class Array<Element>
             }
 
             @Override
-            SlicingDelegate duplicate() {
-                return this;
-            }
+            SlicingDelegate duplicate() = this;
 
             @Override
             Mutability mutability.get() {
@@ -834,9 +838,7 @@ class Array<Element>
             @Override
             Int capacity {
                 @Override
-                Int get() {
-                    return size;
-                }
+                Int get() = size;
 
                 @Override
                 void set(Int newCapacity) {
@@ -847,24 +849,16 @@ class Array<Element>
             }
 
             @Override
-            Int size.get() {
-                return indexes.size;
-            }
+            Int size.get() = indexes.size;
 
             @Override
-            Var<Element> elementAt(Int index) {
-                return unsliced.elementAt(translateIndex(index));
-            }
+            Var<Element> elementAt(Int index) = unsliced.elementAt(translateIndex(index));
 
             @Override
-            Array<Element> insert(Int index, Element value) {
-                throw new ReadOnly();
-            }
+            Array<Element> insert(Int index, Element value) = throw new ReadOnly();
 
             @Override
-            Array<Element> delete(Int index) {
-                throw new ReadOnly();
-            }
+            Array<Element> delete(Int index) = throw new ReadOnly();
 
             @Override
             Array<Element> reify(Mutability? mutability = Null) {
@@ -888,7 +882,6 @@ class Array<Element>
         }
     }
 
-
     // ----- List extensions -----------------------------------------------------------------------
 
     /**
@@ -906,7 +899,6 @@ class Array<Element>
         if (Int index := indexOf(value)) {
             return deleteUnordered(index);
         }
-
         return this;
     }
 
@@ -938,7 +930,6 @@ class Array<Element>
         return this;
     }
 
-
     // ----- Comparable ----------------------------------------------------------------------------
 
     /**
@@ -961,7 +952,6 @@ class Array<Element>
 
         return True;
     }
-
 
     // ----- Orderable mixin -----------------------------------------------------------------------
 
@@ -1143,7 +1133,6 @@ class Array<Element>
             return array1.size <=> array2.size;
         }
     }
-
 
     // ----- Hashable mixin ------------------------------------------------------------------------
 
