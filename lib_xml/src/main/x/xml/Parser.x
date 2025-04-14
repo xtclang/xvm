@@ -1,10 +1,9 @@
-import ecstasy.io.TextPosition;
 import ecstasy.io.Reader;
+import ecstasy.io.TextPosition;
 import ecstasy.lang.ErrorList;
 import ecstasy.lang.ErrorCode;
 import ecstasy.lang.Severity;
 import ecstasy.lang.src.Error;
-import ecstasy.lang.src.Source;
 
 import impl.*;
 
@@ -970,11 +969,7 @@ class Parser(Boolean ignoreProlog       = False,
             offset    = after;
             after     = position;
         }
-        (Reader|Source) source = reader;
-        if (!source.is(immutable)) {
-            source = new Source(reader.toString());
-        }
-        Boolean result = errs.log(new Error(source, before, after, severity, errmsg, Null, params));
+        Boolean result = errs.log(new Error(reader, before, after, severity, errmsg, Null, params));
         offset = restore?;
         return result;
     }

@@ -28,7 +28,12 @@ const Error
               Object[]         params  = [],
              ) {
         construct lang.Error(severity, errorCode, message, params);
-        this.source = source;
+        if (source.is(Source)) {
+            this.source = source;
+        } else {
+            this.context = source[before..<after];
+        }
+
         this.before = before;
         this.after  = after;
     }
@@ -38,12 +43,7 @@ const Error
     /**
      * The source code, represented as a [Source] or [Reader], within which the error was detected.
      */
-    Source|Reader source;
-
-    /**
-     * A source code `Reader`.
-     */
-    Reader reader.get() = source.is(Reader)? : source.createReader();
+    Source? source;
 
     /**
      * The location within source code at which the error was detected.
@@ -83,7 +83,7 @@ const Error
     /**
      * The `context` is the text section that the error is related to.
      */
-    String? context.get() = before == after ? Null : reader[before..after];
+    String? context.get() = super() ?: source?.createReader()[before..<after] : Null;
 
     // ----- Stringable methods --------------------------------------------------------------------
 
