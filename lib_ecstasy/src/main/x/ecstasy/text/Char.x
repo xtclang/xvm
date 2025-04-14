@@ -154,7 +154,11 @@ const Char(UInt32 codepoint)
     // ----- operators ---------------------------------------------------------------------------
 
     @Op("+")
-    Char add(UInt32 n) = new Char(codepoint + n);
+    Char add(Int n) {
+        assert:bounds -codepoint <= n <= 0x10FFFF-codepoint as
+                $"Adding {n} to character code-point {codepoint} would exceed the Unicode range";
+        return new Char((codepoint + n).toUInt32());
+    }
 
     @Op("+")
     String add(Char ch) = new StringBuffer(2).add(this).add(ch).toString();
@@ -163,7 +167,11 @@ const Char(UInt32 codepoint)
     String add(String s) = new StringBuffer(1 + s.size).add(this).addAll(s).toString();
 
     @Op("-")
-    Char sub(UInt32 n) = new Char(codepoint - n);
+    Char sub(Int n) {
+        assert:bounds -(0x10FFFF-codepoint) <= n <= codepoint as
+                $"Subtracting {n} from character code-point {codepoint} would exceed the Unicode range";
+        return new Char((codepoint - n).toUInt32());
+    }
 
     @Op("-")
     UInt32 sub(Char ch) = this.codepoint - ch.codepoint;

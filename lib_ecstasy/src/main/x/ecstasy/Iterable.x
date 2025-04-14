@@ -25,17 +25,13 @@ interface Iterable<Element> {
     Iterator<Element> iterator();
 
     /**
-     * Obtain the contents of this iterable source as an indexed, stably-ordered [List], which is
-     * used as the array type in Ecstasy. Generally, the [Array] class will be used to satisfy this
-     * request.
+     * Obtain the contents of this iterable source as an [Array].
      *
      * @param mutability  the requested [Mutability](Array.Mutability) of the resulting array, or
-     *                    `Null` to allow the iterable source to produce a [List] of its choosing;
-     *                    if mutability is not specified, then the resulting array is not guaranteed
-     *                    to be a stable snapshot until the caller [reifies](Collection.reify()] the
-     *                    result
+     *                    `Null` (the default) to indicate that the mutability of the result does
+     *                    not matter
      *
-     * @return a `List` of elements from this iterable source
+     * @return an `Array` of elements from this iterable source
      */
     Element[] toArray(Array.Mutability? mutability = Null) {
         Element[] result = new Element[](size); // mutable

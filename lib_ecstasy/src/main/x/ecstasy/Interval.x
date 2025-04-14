@@ -17,7 +17,7 @@ mixin Interval<Element extends immutable Sequential>
     /**
      * Determine the first value that could exist in the range. Note that the value may not actually
      * exist in the range, because the lower and upper bound may preclude it, as would occur in an
-     * integer range of `(0, 1)`, for example.
+     * integer range of `0 >..< 1`, for example.
      */
     Element effectiveFirst.get() {
         return descending ? effectiveUpperBound : effectiveLowerBound;
@@ -26,7 +26,7 @@ mixin Interval<Element extends immutable Sequential>
     /**
      * Determine the last value that could exist in the range. Note that the value may not actually
      * exist in the range, because the lower and upper bound may preclude it, as would occur in an
-     * integer range of `(0, 1)`, for example.
+     * integer range of `0 >..< 1`, for example.
      */
     Element effectiveLast.get() {
         return descending ? effectiveLowerBound : effectiveUpperBound;
@@ -52,7 +52,7 @@ mixin Interval<Element extends immutable Sequential>
     /**
      * Determine the lowest value that could exist in the range. Note that the value may not
      * actually exist in the range, because the upper bound may preclude it, as would occur in an
-     * integer range of `(0, 1)`, for example.
+     * integer range of `0 >..< 1`, for example.
      */
     Element effectiveLowerBound.get() {
         return lowerExclusive ? lowerBound.nextValue() : lowerBound;
@@ -61,7 +61,7 @@ mixin Interval<Element extends immutable Sequential>
     /**
      * Determine the highest value that could exist in the range. Note that the value may not
      * actually exist in the range, because the lower bound may preclude it, as would occur in an
-     * integer range of `(0, 1)`, for example.
+     * integer range of `0 >..< 1`, for example.
      */
     Element effectiveUpperBound.get() {
         return upperExclusive ? upperBound.prevValue() : upperBound;
@@ -85,18 +85,18 @@ mixin Interval<Element extends immutable Sequential>
     }
 
     /**
-     * The size of an Interval is defined as the number of steps from the lower bound of the
-     * interval to the higher bound of the interval.
+     * The size of an Interval is defined as the number of steps from the effective lower bound of
+     * the interval to the first `Element` that exceeds the effective upper bound.
      *
      * Consider these examples:
-     * * The size of ['a'..'a'] is 1
-     * * The size of ['a'..'a') is 0
-     * * The size of ['a'..'b'] is 2
-     * * The size of ['a'..'b') is 1
-     * * The size of ['a'..'z'] is 26
-     * * The size of ['a'..'z') is 25
-     * * The size of ['z'..'a'] is 26
-     * * The size of ['z'..'a') is 25
+     * * The size of 'a'..'a' is 1
+     * * The size of 'a'..<'a' is 0
+     * * The size of 'a'..'b' is 2
+     * * The size of 'a'..<'b' is 1
+     * * The size of 'a'..'z' is 26
+     * * The size of 'a'..<'z' is 25
+     * * The size of 'z'..'a' is 26
+     * * The size of 'z'..<'a' is 25
      *
      * If the size exceeds the range of a 64-bit signed integer, the maximum Int value is returned.
      */
