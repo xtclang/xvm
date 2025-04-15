@@ -27,6 +27,8 @@ import java.util.prefs.Preferences;
 import org.jline.reader.LineReader;
 import org.jline.reader.UserInterruptException;
 
+import org.jline.terminal.Terminal;
+
 import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -85,6 +87,9 @@ public final class DebugConsole
             {
             LINE_READER = xTerminalConsole.ensureLineReader(null);
             READER      = xTerminalConsole.CONSOLE_IN;
+            TERMINAL    = xTerminalConsole.TERMINAL;
+
+            resizeTerminal();
             }
 
         frame.f_context.setDebuggerActive(true);
@@ -1072,6 +1077,8 @@ public final class DebugConsole
                 switch (cArgs)
                     {
                     case 0:
+                        resizeTerminal();
+
                         writer.println(hruler(m_cWidth));
                         writer.println(vruler(m_cHeight-2, 3));
                         writer.println("Current debugger text width=" + m_cWidth +
@@ -1681,6 +1688,15 @@ public final class DebugConsole
         return "Console:\n" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, m_cHeight-1);
         }
 
+    private void resizeTerminal()
+        {
+        if (TERMINAL != null)
+            {
+            m_cWidth  = TERMINAL.getWidth();
+            m_cHeight = TERMINAL.getHeight();
+            }
+        }
+
     private String renderDebugger()
         {
         String   sFHeader  = "Call stack frames:";
@@ -1848,7 +1864,7 @@ public final class DebugConsole
 
             if (sFrame == null && sVar == null)
                 {
-                return "\u001B[2J\u001B[H" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, cTop) + sb.toString();
+                return "\u001B[2J\u001B[H" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, cTop) + sb;
                 }
 
             sb.append('\n');
@@ -2888,6 +2904,11 @@ public final class DebugConsole
      * JLine reader, if available.
      */
     private static LineReader LINE_READER;
+
+    /**
+     * JLine terminal, if available.
+     */
+    private static Terminal TERMINAL;
 
     /**
      * Standard reader.

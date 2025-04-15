@@ -220,7 +220,8 @@ public class xTerminalConsole
                         builder = builder.variable(LineReader.HISTORY_FILE, pathHist)
                                          .history(history);
                         }
-                    READER = builder.build();
+                    READER   = builder.build();
+                    TERMINAL = terminal;
                     }
                 }
             catch (IOException ignore) {}
@@ -270,6 +271,7 @@ public class xTerminalConsole
     public static final PrintWriter    CONSOLE_OUT;
     public static final ConsoleLog     CONSOLE_LOG = new ConsoleLog();
     public static       LineReader     READER;
+    public static       Terminal       TERMINAL;
     static
         {
         CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
