@@ -31,7 +31,7 @@ const Error
         if (source.is(Source)) {
             this.source = source;
         } else {
-            this.context = source[before..<after];
+            this.context = after > before ? source[before..<after] : Null;
         }
 
         this.before = before;
@@ -83,7 +83,13 @@ const Error
     /**
      * The `context` is the text section that the error is related to.
      */
-    String? context.get() = super() ?: source?.createReader()[before..<after] : Null;
+    String? context.get() {
+        return super()?;
+        if (after.offset > before.offset) {
+            return source?.createReader()[before..<after];
+        }
+        return Null;
+    }
 
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -94,9 +100,9 @@ const Error
             if (context.size > 60) {
                 context = context[0..57] + "...";
             }
-            buf.addAll(" (");
+            buf.addAll(" (\"");
             context.appendEscaped(buf);
-            buf.add(')');
+            buf.addAll("\")");
         }
         return buf;
     }
