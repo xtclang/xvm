@@ -108,12 +108,6 @@
                 for (Node? node = child_; node != Null; node = node.next_) {
                     node.is(ContentNode)?.text.appendTo(buf);
                 }
-// TODO CP: the access is fixed; do we still need this code?
-//                ContentNode? node = child_.as(ContentNode);
-//                while (node != Null) {
-//                    node.text.appendTo(buf);
-//                    node = node.next_?.as(ContentNode) : Null;
-//                }
                 text = buf.toString();
             }
             if (!this.is(immutable)) {
@@ -198,11 +192,11 @@
         super(index, value);
     }
 
-// TODO
-//    @Override
-//    Node clear() {
-//        ...
-//    }
+    @Override
+    Node clear() {
+        value = Null;
+        return super();
+    }
 
     // ----- internal ------------------------------------------------------------------------------
 
