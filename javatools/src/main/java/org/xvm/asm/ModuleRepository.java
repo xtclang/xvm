@@ -97,9 +97,9 @@ public interface ModuleRepository
     default ModuleStructure loadModule(String sModule, Version version, boolean fExact)
         {
         ModuleStructure module = loadModule(sModule);
-        if (module == null)
+        if (module == null || version == null)
             {
-            return null;
+            return module;
             }
 
         Version       useVersion = null;

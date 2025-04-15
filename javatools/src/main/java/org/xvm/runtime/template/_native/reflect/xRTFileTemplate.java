@@ -148,7 +148,7 @@ public class xRTFileTemplate
             case "getModule": // conditional ModuleTemplate getModule(String name)
                 {
                 StringHandle    hName  = (StringHandle) ahArg[0];
-                ModuleStructure module = file.getModule(hName.getStringValue());
+                ModuleStructure module = file.getChild(hName.getStringValue());
                 return module == null
                     ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                     : frame.assignValues(aiReturn,
@@ -222,12 +222,10 @@ public class xRTFileTemplate
 
         if (hRepo.getTemplate() instanceof xCoreRepository)
             {
-            String sMissing = file.linkModules(f_container.getModuleRepository(), true);
-            if (sMissing != null)
-                {
-                return frame.raiseException("Missing dependent module: " + sMissing);
-                }
-            return frame.assignValue(iReturn, makeHandle(container, file));
+            ModuleConstant idMissing = file.linkModules(f_container.getModuleRepository(), true);
+            return idMissing == null
+                    ? frame.assignValue(iReturn, makeHandle(container, file))
+                    : frame.raiseException("Missing dependent module: " + idMissing.getName());
             }
 
         ObjectHandle[] ahArg = new ObjectHandle[LINK_MODULES_METHOD.getMaxVars()];
@@ -268,12 +266,12 @@ public class xRTFileTemplate
             {
             ComponentTemplateHandle hModule           = (ComponentTemplateHandle) haGeneric.get(i);
             ModuleStructure         moduleUnlinked    = (ModuleStructure) hModule.getComponent();
-            ModuleStructure         moduleFingerprint = file.getModule(moduleUnlinked.getName());
+            ModuleStructure         moduleFingerprint = file.getChild(moduleUnlinked.getName());
             if (moduleFingerprint == null || !moduleFingerprint.isFingerprint())
                 {
                 return frame.raiseException(
                         (moduleFingerprint == null ? "Missing" : "Not a fingerprint") +
-                        " module \"" + moduleUnlinked.getName() + "\" at " + file.getModuleName());
+                        " module \"" + moduleUnlinked.getName() + "\" at " + file.getModuleId());
                 }
             listUnlinked.add(moduleUnlinked);
             }
@@ -301,7 +299,7 @@ public class xRTFileTemplate
             {
             if (!idDep.equals(module.getIdentityConstant()))
                 {
-                ahModule[index++] = makeComponentHandle(container, file.getModule(idDep.getName()));
+                ahModule[index++] = makeComponentHandle(container, file.getChild(idDep.getName()));
                 }
             }
         assert index == cModules;
@@ -316,7 +314,7 @@ public class xRTFileTemplate
     protected int buildStringValue(Frame frame, ObjectHandle hTarget, int iReturn)
         {
         FileStructure module = (FileStructure) ((ComponentTemplateHandle) hTarget).getComponent();
-        return frame.assignValue(iReturn, xString.makeHandle(module.getModuleName()));
+        return frame.assignValue(iReturn, xString.makeHandle(module.getModuleId().getName()));
         }
 
 

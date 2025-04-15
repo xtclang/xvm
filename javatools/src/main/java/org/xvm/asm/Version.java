@@ -192,12 +192,11 @@ public class Version
                 {
                 // parse the build string, which must be the remainder of the version
                 sBuild = sLiteral.substring(ix + 1);
-                ix = cLen;
 
                 // semver states that only A..Z, a..z, 0..9, and '-' may occur in the build
                 // metadata, but the examples given also include '.', so Ecstasy considers the
                 // '.' to be legal
-                if (!sBuild.matches("[A-Za-z0-9\\-\\.]*"))
+                if (!sBuild.matches("[A-Za-z0-9\\-.]*"))
                     {
                     sErr = "illegal build string \"" + sBuild + "\"; only A-Z, a-z, 0-9, '-', and '.' are permitted";
                     }

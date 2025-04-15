@@ -1,16 +1,10 @@
 package org.xvm.api;
 
 
-import java.io.File;
-
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.DirRepository;
-import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
@@ -45,40 +39,9 @@ public class Connector
      */
     public Connector(ModuleRepository repository)
         {
-        m_repository      = repository;
+        f_repository      = repository;
         f_runtime         = new Runtime();
         f_containerNative = new NativeContainer(f_runtime, repository);
-        }
-
-    /**
-     * Add a module repository.
-     */
-    public void addModuleRepository(File fileRepo)
-        {
-        if (m_containerMain != null)
-            {
-            throw new IllegalStateException("Connector is already activated");
-            }
-
-        ModuleRepository repo = fileRepo.isFile()
-            ? new FileRepository(fileRepo, true)
-            : new DirRepository(fileRepo, true);
-
-        if (m_repository == null)
-            {
-            m_repository = repo;
-            }
-        else if (m_repository instanceof LinkedRepository)
-            {
-            List<ModuleRepository> listRepo = ((LinkedRepository) m_repository).asList();
-            listRepo.add(repo);
-
-            m_repository = new LinkedRepository(listRepo.toArray(ModuleRepository.NO_REPOS));
-            }
-        else
-            {
-            m_repository = new LinkedRepository(m_repository, repo);
-            }
         }
 
     /**
@@ -91,23 +54,20 @@ public class Connector
             throw new IllegalStateException("Connector is already activated");
             }
 
-        ModuleStructure moduleApp = m_repository.loadModule(sAppName);
+        ModuleStructure moduleApp = f_repository.loadModule(sAppName);
         if (moduleApp == null)
             {
             throw new IllegalStateException("Unable to load module \"" + sAppName + "\"");
             }
 
-        FileStructure structApp = f_containerNative.createFileStructure(moduleApp);
-        String        sMissing  = structApp.linkModules(m_repository, true);
-        if (sMissing != null)
+        FileStructure  structApp = f_containerNative.createFileStructure(moduleApp);
+        ModuleConstant idMissing = structApp.linkModules(f_repository, true);
+        if (idMissing != null)
             {
-            throw new IllegalStateException("Unable to load module \"" + sMissing + "\"");
+            throw new IllegalStateException("Unable to load module \"" + idMissing.getName() + "\"");
             }
 
-        ModuleConstant idApp = (ModuleConstant) structApp.
-                getChild(moduleApp.getName()).getIdentityConstant();
-
-        m_containerMain = new MainContainer(f_runtime, f_containerNative, idApp);
+        m_containerMain = new MainContainer(f_runtime, f_containerNative, structApp.getModuleId());
         }
 
     /**
@@ -115,7 +75,7 @@ public class Connector
      */
     public ConstantPool getConstantPool()
         {
-        return m_containerMain.getModule().getConstantPool();
+        return m_containerMain.getConstantPool();
         }
 
     /**
@@ -176,7 +136,7 @@ public class Connector
     /**
      * The module repository.
      */
-    private ModuleRepository m_repository;
+    private final ModuleRepository f_repository;
 
     /**
      * The runtime associated with this Connector.
@@ -186,7 +146,7 @@ public class Connector
     /**
      * The native container associated with this Connector.
      */
-    protected NativeContainer f_containerNative;
+    private final NativeContainer f_containerNative;
 
     /**
      * The main container currently associated with this Connector.
