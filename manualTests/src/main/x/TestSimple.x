@@ -20,9 +20,16 @@ module TestSimple {
             "<test/>",
             "<test></test>",
             "<test>stuff</test>",
+            "<test name='gene' other='cam'>stuff<test>more stuff</test></test>",
+            "<test name='gene other='cam'>stuff<test>more stuff</test></test>",
+            "<test><![CDATA[hello]]></test>",
+            "<test><![CDATA[hello]]></tessst>",
+            "<test><![CDATA[hello]]></blah>",
+            "<test><test2/>",
+            "<xml><xml/>",
         ];
-//        assert:debug;
         for (String test : tests) {
+//            assert:debug Loop.count != 5;
             parseXml(test);
         }
     }

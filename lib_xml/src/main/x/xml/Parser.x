@@ -232,7 +232,7 @@ class Parser(Boolean ignoreProlog       = False,
             }
 
             if (!closed) {
-                log(offset, offset, Error, PiCloseExpected, [peek()?.quoted() : "EOF"]);
+                log(offset, offset, Error, PiCloseExpected, [peek()?.quoted() : eofText]);
                 // find closing "?>"
                 while (Char ch := next()) {
                     if (ch == '?' && match('>')) {
@@ -512,7 +512,7 @@ class Parser(Boolean ignoreProlog       = False,
                 }
                 if (eof) {
                     // EOF before we found ETag
-                    log(offset, offset, Error, Expected, [$"</{elementName}>", "EOF"]);
+                    log(offset, offset, Error, Expected, [$"</{elementName}>", eofText]);
                     break;
                 }
             } while (!quit);
@@ -743,7 +743,7 @@ class Parser(Boolean ignoreProlog       = False,
     // ----- lexing --------------------------------------------------------------------------------
 
     /**
-     * Provides [Reader.eof]
+     * Provides [Reader.eof].
      */
     protected Boolean eof.get() = reader.eof;
 
@@ -866,7 +866,7 @@ class Parser(Boolean ignoreProlog       = False,
             return True;
         }
 
-        log(offset, offset+1, Error, Expected, [ch.quoted(), peek()?.quoted() : "EOF"]);
+        log(offset, offset+1, Error, Expected, [ch.quoted(), peek()?.quoted() : eofText]);
         return False;
     }
 
@@ -882,7 +882,7 @@ class Parser(Boolean ignoreProlog       = False,
             return True, ch;
         }
 
-        log(offset, offset+1, Error, Unexpected, [peek()?.quoted() : "EOF"]);
+        log(offset, offset+1, Error, Unexpected, [peek()?.quoted() : eofText]);
         return False;
     }
 
@@ -922,7 +922,7 @@ class Parser(Boolean ignoreProlog       = False,
             found = reader[start..<offset];
             offset = start;
         }
-        log(offset, offset+1, Error, Expected, [s.quoted(), found?.quoted() : "EOF"]);
+        log(offset, offset+1, Error, Expected, [s.quoted(), found?.quoted() : eofText]);
         return False;
     }
 
@@ -970,7 +970,21 @@ class Parser(Boolean ignoreProlog       = False,
     /**
      * Indicates when the `Parser` should give up on parsing.
      */
-    Boolean quit.get() = eof || errs.abortDesired;
+    Boolean quit.get() = eofReported || errs.abortDesired;
+
+    /**
+     * Set this to `True` after logging an error caused by EOF.
+     */
+    protected Boolean eofReported = False;
+
+    /**
+     * Return the string used to indicate EOF in the error log, and also assume that an error has
+     * been logged for EOF having been reached without finishing parsing.
+     */
+    protected String eofText.get() {
+        eofReported = True;
+        return "EOF";
+    }
 
     /**
      * Log an error.

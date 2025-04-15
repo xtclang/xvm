@@ -158,7 +158,34 @@ interface Element
 
     @Override
     Int estimateStringLength(Boolean pretty = False, Int indent=0) {
-        return 3; // TODO
+        List<Part> parts = this.parts;
+        if (parts.empty) {
+            return indent + name.size + 3;
+        }
+
+        if (pretty) {
+            Int size = (indent + name.size + 3) * 2;    // includes a newline
+            for (Part part : parts) {
+                // long story short: attributes add " " (first only) or ", ", so call that 2, and
+                // elements add a new line, but content adds nothing, so just assume +2 for each
+                size += 2 + part.estimateStringLength(pretty, indent + 2);
+            }
+            return size;
+        }
+
+        Int     size        = name.size + 2 * 2 + 5;
+        Boolean passedAttrs = False;
+        Each: for (Part part : parts) {
+            if (!passedAttrs) {
+                if (part.is(Attribute)) {
+                    size += Each.first ? 1 : 2;
+                } else {
+                    passedAttrs = True;
+                }
+            }
+            size += part.estimateStringLength();
+        }
+        return size;
     }
 
     @Override
@@ -209,11 +236,18 @@ interface Element
 
     @Override
     static <CompileType extends Element> Int64 hashCode(CompileType value) {
-        TODO
+        // an element is mutable, so its hash code should only contain things that represent its
+        // permanent state; unfortunately, we can assume that is its name meets that criteria, and
+        // even its name can be modified
+        return value.name.hashCode();
     }
 
     @Override
     static <CompileType extends Element> Boolean equals(CompileType value1, CompileType value2) {
-        TODO
+        // two elements are considered identical if they have the same name and value, and are
+        // composed of the same parts
+        return value1.name  == value2.name
+            && value1.value == value2.value
+            && value1.parts == value2.parts;
     }
 }
