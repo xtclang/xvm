@@ -2605,6 +2605,7 @@ public class InvocationExpression
         // the left expression provides the scope to search for a matching method/function;
         // if the left expression is itself a NameExpression, and it's in identity mode (i.e. a
         // possible identity), then check the identity first
+        boolean fIdentityMode = false;
         if (exprLeft instanceof NameExpression nameLeft)
             {
             if ("super".equals(nameLeft.getName()))
@@ -2761,6 +2762,7 @@ public class InvocationExpression
                     errsTemp.merge();
                     return testStaticProperty(ctx, idProp, atypeReturn, errs);
                     }
+                fIdentityMode = true;
                 }
 
             switch (nameLeft.getMeaning())
@@ -2944,7 +2946,7 @@ public class InvocationExpression
                 return idMethod;
                 }
             }
-        else if (!isSuppressCall() && !isAnyArgUnbound())
+        else if (!isSuppressCall() && !isAnyArgUnbound() && !fIdentityMode)
             {
             // allow for a function on the "left type" to be called (Bjarne'd):
             //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
