@@ -66,6 +66,9 @@ class Parser(Boolean ignoreProlog       = False,
                 return True, doc;
             }
             return False;
+        } catch (StackOverflow e) {
+            log(reader.offset, reader.offset, Fatal, MaxDepthExceeded);
+            return False;
         } finally {
             reader_ = Null;
         }
@@ -1034,6 +1037,7 @@ class Parser(Boolean ignoreProlog       = False,
         Unexpected      ("XML-02", "Unexpected character: {0}."),
         UnknownRef      ("XML-03", "Unknown reference: {0}."),
         CharRefRange    ("XML-04", "Character reference is illegal or out of range: {0}."),
+        MaxDepthExceeded("XML-05", "XML Document nesting exceeds the maximum supported depth."),
         XmlDeclNoVer    ("XML-11", "Missing XML \"version\" attribute."),
         XmlDeclBadVer   ("XML-12", "Invalid XML \"version\" attribute: {0}."),
         XmlDeclUnsuppVer("XML-13", "Invalid XML \"version\" attribute: {0}."),

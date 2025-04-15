@@ -36,6 +36,7 @@ import ecstasy.ReadOnly;
 import ecstasy.Sequential;
 import ecstasy.Service;
 import ecstasy.Sliceable;
+import ecstasy.StackOverflow;
 import ecstasy.Timeout;
 import ecstasy.TimedOut;
 import ecstasy.Unsupported;
