@@ -76,11 +76,11 @@ class ElementNode
             } else if (node.is(ContentNode)) {
                 ++contentCount;
             }
-            this.attributeCount = attributeCount;
-            this.elementCount   = elementCount;
-            this.contentCount   = contentCount;
         }
-        this.child_  = firstNode;
+        this.child_         = firstNode;
+        this.attributeCount = attributeCount;
+        this.elementCount   = elementCount;
+        this.contentCount   = contentCount;
     }
 
     // ----- Element API --------------------------------------------------------------------------

@@ -53,7 +53,13 @@ class AttributeNode
     construct(String name, Parsed? firstNode) {
         this.name = name;
     } finally {
-        TODO(); // TODO adopt the nodes and upate the counts
+        Int contentCount = 0;
+        for (Node? node = firstNode; node != Null; node = node.next_) {
+            ++contentCount;
+            node.parent_ = this;
+        }
+        this.contentCount = contentCount;   // note: not retained by this class, so this is a no-op
+        this.child_       = firstNode;
     }
 
     // ----- Attribute API --------------------------------------------------------------------------
