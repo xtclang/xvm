@@ -56,6 +56,7 @@ public class xException
             s_clzOutOfBounds                = f_container.getTemplate("OutOfBounds"                  ).getCanonicalClass();
             s_clzReadOnly                   = f_container.getTemplate("ReadOnly"                     ).getCanonicalClass();
             s_clzSizeLimited                = f_container.getTemplate("collections.SizeLimited"      ).getCanonicalClass();
+            s_clzStackOverflow              = f_container.getTemplate("StackOverflow"                ).getCanonicalClass();
             s_clzTimedOut                   = f_container.getTemplate("TimedOut"                     ).getCanonicalClass();
             s_clzTypeMismatch               = f_container.getTemplate("TypeMismatch"                 ).getCanonicalClass();
             s_clzUnsupported                = f_container.getTemplate("Unsupported"                  ).getCanonicalClass();
@@ -215,6 +216,11 @@ public class xException
     public static ExceptionHandle sizeLimited(Frame frame, String sMsg)
         {
         return makeHandle(frame, s_clzSizeLimited, sMsg);
+        }
+
+    public static ExceptionHandle stackOverflow(Frame frame)
+        {
+        return makeHandle(frame, s_clzStackOverflow, null);
         }
 
     public static ExceptionHandle timedOut(Frame frame, String sMsg, ObjectHandle hTimeout)
@@ -391,6 +397,7 @@ public class xException
     private static ClassComposition s_clzOutOfBounds;
     private static ClassComposition s_clzReadOnly;
     private static ClassComposition s_clzSizeLimited;
+    private static ClassComposition s_clzStackOverflow;
     private static ClassComposition s_clzTimedOut;
     private static ClassComposition s_clzTypeMismatch;
     private static ClassComposition s_clzUnsupported;
