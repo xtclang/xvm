@@ -624,7 +624,17 @@ class Parser(Boolean ignoreProlog       = False,
      * @return (conditional) the [Parsed] [CData] [ContentNode]
      */
     protected conditional Parsed+ContentNode+CData parseCData() {
-        // TODO
+        Int start = offset;
+        if (match("<![CDATA[")) {
+            while (Char ch := next()) {
+                if (ch == ']' && match("]>")) {
+                    return True, new @Parsed(start, offset-start)
+                            @ContentNode
+                            CData(reader[start+9 ..< offset-3]);
+                }
+            }
+            log(start, position, Error, CDataNoEnd);
+        }
         return False;
     }
 
@@ -888,7 +898,31 @@ class Parser(Boolean ignoreProlog       = False,
             return True;
         }
 
-        log(offset, offset+1, Error, Expected, [s.quoted(), peek()?.quoted() : "EOF"]);
+        // assemble what we found instead of the match string
+        Int     start    = offset;
+        Boolean isName   = True;
+        Int     matchLen = s.size;
+        String? found    = Null;
+        if (!eof) {
+            Each: while (Char ch := next()) {
+                if (isName) {
+                    if (!isNameChar(ch)) {
+                        isName = False;
+                        if (offset-start > matchLen) {
+                            reader.rewind(1);
+                            break;
+                        }
+                    }
+                } else {
+                    if (Each.count >= matchLen) {
+                        break;
+                    }
+                }
+            }
+            found = reader[start..<offset];
+            offset = start;
+        }
+        log(offset, offset+1, Error, Expected, [s.quoted(), found?.quoted() : "EOF"]);
         return False;
     }
 
@@ -1001,6 +1035,7 @@ class Parser(Boolean ignoreProlog       = False,
         NoRootElement   ("XML-41", "Missing XML root element."),
         ElementExpected ("XML-42", "XML element expected."),
         CDataExpected   ("XML-51", "XML CData expected."),
+        CDataNoEnd      ("XML-52", "No XML CData terminator (\"]]>\") was found."),
         ;
 
         /**
