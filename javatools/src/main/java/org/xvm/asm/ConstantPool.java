@@ -270,9 +270,9 @@ public class ConstantPool
         if (set.add(this))
             {
             FileStructure file = getFileStructure();
-            for (String sModule : file.moduleNames())
+            for (ModuleConstant idModule : file.moduleIds())
                 {
-                ModuleStructure moduleFingerprint = file.getModule(sModule);
+                ModuleStructure moduleFingerprint = file.getModule(idModule);
                 if (moduleFingerprint.isFingerprint())
                     {
                     ModuleStructure moduleUpstream = moduleFingerprint.getFingerprintOrigin();
@@ -3023,7 +3023,7 @@ public class ConstantPool
         {
         StringBuilder sb = new StringBuilder();
         sb.append("module=")
-          .append(getFileStructure().getModuleName())
+          .append(getFileStructure().getModuleId().getName())
           .append(", size=")
           .append(m_listConst.size());
 
@@ -4015,9 +4015,8 @@ public class ConstantPool
         Constant[] aconst = new Constant[cBefore];
         int cAfter        = 0;
 
-        for (int i = 0; i < cBefore; i++)
+        for (Constant constant : list)
             {
-            Constant constant = list.get(i);
             if (constant.hasRefs())
                 {
                 aconst[cAfter++] = constant;

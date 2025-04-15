@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorListener.ErrorInfo;
 
-import org.xvm.asm.constants.ClassConstant;
-
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
@@ -36,12 +34,12 @@ import static org.xvm.util.Handy.byteArrayToHexDump;
  */
 public class FileStructureTest
     {
-    @Test @Disabled("TODO: Reenable test")
+    @Test @Disabled("TODO: Re-enable test")
     public void testEmptyModule()
             throws IOException
         {
         FileStructure structfile = new FileStructure("Test");
-        assertEquals("Test", structfile.getModuleName());
+        assertEquals("Test", structfile.getModuleId().getName());
         assertEquals("Test", structfile.getModule().getName());
         assertTrue(structfile.getModule().isPackageContainer());
         assertTrue(structfile.getModule().isClassContainer());
@@ -51,7 +49,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-    @Test @Disabled("TODO: Reenable test")
+    @Test @Disabled("TODO: Re-enable test")
     public void testMinimumModule()
             throws IOException
         {
@@ -61,7 +59,7 @@ public class FileStructureTest
         testFileStructure(structfile);
         }
 
-    @Test @Disabled("TODO: Reenable test")
+    @Test @Disabled("TODO: Re-enable test")
     public void testBaseClass()
             throws IOException
         {
@@ -81,11 +79,11 @@ public class FileStructureTest
                 "collections", null);
         ClassStructure structclz = structpkg.createClass(Constants.Access.PUBLIC,
                 Component.Format.INTERFACE, "List", null);
-        structclz.addTypeParam("Element", ((ClassConstant) structobj.getIdentityConstant()).getType());
+        structclz.addTypeParam("Element", structobj.getIdentityConstant().getType());
         testFileStructure(structfile);
         }
 
-    @Test @Disabled("TODO: Reenable test")
+    @Test @Disabled("TODO: Re-enable test")
     public void testMapClass()
             throws IOException
         {
@@ -95,11 +93,11 @@ public class FileStructureTest
         PackageStructure pkgColl = module.createPackage(Constants.Access.PUBLIC, "collections", null);
         ClassStructure   clzHash = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Hashable", null);
         ClassStructure   clzMap  = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.INTERFACE, "Map", null);
-        clzMap.addTypeParam("Key", ((ClassConstant) clzObj.getIdentityConstant()).getType());
-        clzMap.addTypeParam("Value", ((ClassConstant) clzObj.getIdentityConstant()).getType());
+        clzMap.addTypeParam("Key", clzObj.getIdentityConstant().getType());
+        clzMap.addTypeParam("Value", clzObj.getIdentityConstant().getType());
         ClassStructure clzHashMap = pkgColl.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "HashMap", null);
-        clzHashMap.addTypeParam("Key", ((ClassConstant) clzHash.getIdentityConstant()).getType());
-        clzHashMap.addTypeParam("Value", ((ClassConstant) clzObj.getIdentityConstant()).getType());
+        clzHashMap.addTypeParam("Key", clzHash.getIdentityConstant().getType());
+        clzHashMap.addTypeParam("Value", clzObj.getIdentityConstant().getType());
         clzHashMap.addContribution(ClassStructure.Composition.Implements, clzMap.getIdentityConstant().getType());
 
         testFileStructure(file);
@@ -179,7 +177,7 @@ public class FileStructureTest
             }
 
         FileStructure structfile2 = new FileStructure(new ByteArrayInputStream(ab));
-        assertEquals(structfile.getModuleName(), structfile2.getModuleName());
+        assertEquals(structfile.getModuleId(), structfile2.getModuleId());
 
         if (DEBUG)
             {
@@ -205,19 +203,19 @@ public class FileStructureTest
                 FileStructure structfile3 = new FileStructure(new ByteArrayInputStream(ab2));
                 System.out.println("structfile3:");
                 structfile3.dump(new PrintWriter(System.out, true));
-                assertEquals(structfile.getModuleName(), structfile3.getModuleName());
+                assertEquals(structfile.getModuleId(), structfile3.getModuleId());
                 }
             }
 
         assertArrayEquals(ab, ab2);
         }
 
-    @Test @Disabled("TODO: Reenable test")
+    @Test @Disabled("TODO: Re-enable test")
     public void testFoo()
             throws IOException
         {
         FileStructure structfile = new FileStructure("test");
-        assertEquals("test", structfile.getModuleName());
+        assertEquals("test", structfile.getModuleId().getName());
 
         ModuleStructure  structmodule  = structfile.getModule();
         PackageStructure structpackage = structmodule.createPackage(Constants.Access.PUBLIC, "classes", null);

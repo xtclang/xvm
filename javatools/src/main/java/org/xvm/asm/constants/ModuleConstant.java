@@ -158,8 +158,7 @@ public class ModuleConstant
     @Override
     public Component getComponent()
         {
-        String          sName  = getName();
-        ModuleStructure struct = getFileStructure().getModule(sName);
+        ModuleStructure struct = getFileStructure().getModule(this);
         if (struct == null)
             {
             return null;
@@ -231,11 +230,11 @@ public class ModuleConstant
     @Override
     protected int compareDetails(Constant that)
         {
-        if (!(that instanceof ModuleConstant))
+        if (!(that instanceof ModuleConstant idThat))
             {
             return -1;
             }
-        return this.m_constName.compareTo(((ModuleConstant) that).m_constName);
+        return this.m_constName.compareTo(idThat.m_constName);
         }
 
     @Override

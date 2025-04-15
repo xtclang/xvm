@@ -50,15 +50,16 @@ public class ModuleStructure
      * @param constId    the constant that specifies the identity of the Module
      * @param condition  the optional condition for this ModuleStructure
      */
-    protected ModuleStructure(XvmStructure xsParent, int nFlags, ModuleConstant constId, ConditionalConstant condition)
+    protected ModuleStructure(XvmStructure xsParent, int nFlags, ModuleConstant constId,
+                              ConditionalConstant condition)
         {
         super(xsParent, nFlags, constId, condition);
 
         // when the main module is created in the FileStructure, the name has not yet been
         // configured, so if this is being created and the file already has a main module name, then
         // this module is being created to act as a fingerprint
-        String sPrimary = xsParent.getFileStructure().getModuleName();
-        if (sPrimary != null && !sPrimary.equals(constId.getName()))
+        ModuleConstant idPrimary = xsParent.getFileStructure().getModuleId();
+        if (idPrimary != null && !idPrimary.equals(constId))
             {
             moduletype           = ModuleType.Optional;
             vtreeImportAllowVers = new VersionTree<>();
@@ -94,7 +95,7 @@ public class ModuleStructure
     public boolean isMainModule()
         {
         return moduletype == ModuleType.Primary &&
-                getName().equals(getFileStructure().getModuleName());
+                getIdentityConstant().equals(getFileStructure().getModuleId());
         }
 
     /**

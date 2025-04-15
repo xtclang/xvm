@@ -28,6 +28,8 @@ import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
+import org.xvm.asm.constants.ModuleConstant;
+
 import org.xvm.compiler.BuildRepository;
 
 import org.xvm.tool.ModuleInfo.Node;
@@ -35,7 +37,6 @@ import org.xvm.tool.ModuleInfo.Node;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
 
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 
@@ -1166,9 +1167,9 @@ public abstract class Launcher
                         {
                         sb.append(sIndent)
                           .append("   ")
-                          .append(entry.getKey())
+                          .append(e.getKey())
                           .append("=")
-                          .append(quotedString(String.valueOf(entry.getValue())))
+                          .append(quotedString(String.valueOf(e.getValue())))
                           .append('\n');
                         }
                     }
@@ -1397,11 +1398,11 @@ public abstract class Launcher
         FileStructure structEcstasy = moduleEcstasy.getFileStructure();
         if (structEcstasy != null)
             {
-            String sMissing = structEcstasy.linkModules(reposLib, false);
-            if (sMissing != null)
+            ModuleConstant idMissing = structEcstasy.linkModules(reposLib, false);
+            if (idMissing != null)
                 {
                 log(Severity.FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
-                    + " due to missing module:" + sMissing);
+                    + " due to missing module:" + idMissing.getName());
                 }
             }
 
@@ -1414,11 +1415,11 @@ public abstract class Launcher
         FileStructure structTurtle = moduleTurtle .getFileStructure();
         if (structTurtle != null)
             {
-            String sMissing = structTurtle.linkModules(reposLib, false);
-            if (sMissing != null)
+            ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);
+            if (idMissing != null)
                 {
                 log(Severity.FATAL, "Unable to link module " + Constants.TURTLE_MODULE
-                    + " due to missing module:" + sMissing);
+                    + " due to missing module:" + idMissing.getName());
                 }
             }
         }
