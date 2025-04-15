@@ -70,6 +70,13 @@ module ecstasy.xtclang.org {
             extends Exception(text, cause);
 
     /**
+     * A `StackOverflow` exception indicates that the maximum call stack depth of the runtime, OS,
+     * or machine has been exceeded.
+     */
+    const StackOverflow(String? text = Null, Exception? cause = Null)
+            extends Exception(text, cause);
+
+    /**
      * A `ReadOnly` exception is raised when an attempt is made to modify a read-only value.
      */
     const ReadOnly(String? text = Null, Exception? cause = Null)
