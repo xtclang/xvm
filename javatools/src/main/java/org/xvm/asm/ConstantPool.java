@@ -1086,17 +1086,25 @@ public class ConstantPool
      */
     public ModuleConstant ensureModuleConstant(String sName)
         {
+        return ensureModuleConstant(sName, null);
+        }
+
+    /**
+     * Obtain a Constant that represents the specified module for a specified version.
+     *
+     * @param sName    a fully qualified module name
+     * @param version  a module version
+     *
+     * @return the ModuleConstant for the specified qualified module name and version
+     */
+    public ModuleConstant ensureModuleConstant(String sName, Version version)
+        {
         if (!isValidQualifiedModule(sName))
             {
             throw new IllegalArgumentException("illegal qualified module name: " + quotedString(sName));
             }
 
-        ModuleConstant constant = (ModuleConstant) ensureLocatorLookup(Format.Module).get(sName);
-        if (constant == null)
-            {
-            constant = (ModuleConstant) register(new ModuleConstant(this, sName));
-            }
-        return constant;
+        return (ModuleConstant) register(new ModuleConstant(this, sName, version));
         }
 
     /**

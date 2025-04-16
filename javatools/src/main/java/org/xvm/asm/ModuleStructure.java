@@ -61,9 +61,9 @@ public class ModuleStructure
         ModuleConstant idPrimary = xsParent.getFileStructure().getModuleId();
         if (idPrimary != null && !idPrimary.equals(constId))
             {
-            moduletype           = ModuleType.Optional;
-            vtreeImportAllowVers = new VersionTree<>();
-            listImportPreferVers = new ArrayList<>();
+            m_moduletype           = ModuleType.Optional;
+            m_vtreeImportAllowVers = new VersionTree<>();
+            m_listImportPreferVers = new ArrayList<>();
             }
         }
 
@@ -86,7 +86,7 @@ public class ModuleStructure
      */
     public ModuleType getModuleType()
         {
-        return moduletype;
+        return m_moduletype;
         }
 
     /**
@@ -94,7 +94,7 @@ public class ModuleStructure
      */
     public boolean isMainModule()
         {
-        return moduletype == ModuleType.Primary &&
+        return m_moduletype == ModuleType.Primary &&
                 getIdentityConstant().equals(getFileStructure().getModuleId());
         }
 
@@ -107,7 +107,7 @@ public class ModuleStructure
      */
     public boolean isFingerprint()
         {
-        return switch (moduletype)
+        return switch (m_moduletype)
             {
             case Optional, Desired, Required -> true;
             case Primary, Embedded           -> false;
@@ -172,7 +172,7 @@ public class ModuleStructure
     public VersionConstant getVersionConstant()
         {
         assert !isFingerprint();
-        return version;
+        return m_constVersion;
         }
 
     /**
@@ -193,7 +193,7 @@ public class ModuleStructure
         {
         assert !isFingerprint();
         markModified();
-        this.version = getConstantPool().ensureVersionConstant(version);
+        m_constVersion = getConstantPool().ensureVersionConstant(version);
         }
 
     /**
@@ -214,7 +214,7 @@ public class ModuleStructure
     public VersionTree<Boolean> getFingerprintVersions()
         {
         assert isFingerprint();
-        return vtreeImportAllowVers;
+        return m_vtreeImportAllowVers;
         }
 
     /**
@@ -225,8 +225,8 @@ public class ModuleStructure
     public void setFingerprintVersions(VersionTree<Boolean> vtreeAllow)
         {
         assert isFingerprint();
-        vtreeImportAllowVers.clear();
-        vtreeImportAllowVers.putAll(vtreeAllow);
+        m_vtreeImportAllowVers.clear();
+        m_vtreeImportAllowVers.putAll(vtreeAllow);
         markModified();
         }
 
@@ -239,7 +239,7 @@ public class ModuleStructure
         {
         assert isFingerprint();
 
-        List<Version> list = listImportPreferVers;
+        List<Version> list = m_listImportPreferVers;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
         }
@@ -252,8 +252,8 @@ public class ModuleStructure
     public void setFingerprintVersionPrefs(List<Version> listPrefer)
         {
         assert isFingerprint();
-        listImportPreferVers.clear();
-        listImportPreferVers.addAll(listPrefer);
+        m_listImportPreferVers.clear();
+        m_listImportPreferVers.addAll(listPrefer);
         markModified();
         }
 
@@ -271,9 +271,9 @@ public class ModuleStructure
     public void fingerprintDesired()
         {
         assert isFingerprint();
-        if (moduletype == ModuleType.Optional)
+        if (m_moduletype == ModuleType.Optional)
             {
-            moduletype = ModuleType.Desired;
+            m_moduletype = ModuleType.Desired;
             markModified();
             }
         }
@@ -284,9 +284,9 @@ public class ModuleStructure
     public void fingerprintRequired()
         {
         assert isFingerprint();
-        if (moduletype == ModuleType.Optional || moduletype == ModuleType.Desired)
+        if (m_moduletype == ModuleType.Optional || m_moduletype == ModuleType.Desired)
             {
-            moduletype = ModuleType.Required;
+            m_moduletype = ModuleType.Required;
             markModified();
             }
         }
@@ -297,8 +297,8 @@ public class ModuleStructure
      */
     public boolean isEmbeddedModule()
         {
-        assert (moduletype == ModuleType.Embedded) == (!isMainModule() && !isFingerprint());
-        return moduletype == ModuleType.Embedded;
+        assert (m_moduletype == ModuleType.Embedded) == (!isMainModule() && !isFingerprint());
+        return m_moduletype == ModuleType.Embedded;
         }
 
     /**
@@ -401,16 +401,16 @@ public class ModuleStructure
         {
         ModuleStructure that = (ModuleStructure) super.cloneBody();
 
-        if (this.vtreeImportAllowVers != null)
+        if (this.m_vtreeImportAllowVers != null)
             {
-            that.vtreeImportAllowVers = new VersionTree<>();
-            that.vtreeImportAllowVers.putAll(this.vtreeImportAllowVers);
+            that.m_vtreeImportAllowVers = new VersionTree<>();
+            that.m_vtreeImportAllowVers.putAll(this.m_vtreeImportAllowVers);
             }
 
-        if (this.listImportPreferVers != null)
+        if (this.m_listImportPreferVers != null)
             {
-            that.listImportPreferVers = new ArrayList<>();
-            that.listImportPreferVers.addAll(this.listImportPreferVers);
+            that.m_listImportPreferVers = new ArrayList<>();
+            that.m_listImportPreferVers.addAll(this.m_listImportPreferVers);
             }
 
         return that;
@@ -445,7 +445,7 @@ public class ModuleStructure
         {
         super.disassemble(in);
 
-        moduletype = ModuleType.valueOf(in.readUnsignedByte());
+        m_moduletype = ModuleType.valueOf(in.readUnsignedByte());
 
         ConstantPool pool = getConstantPool();
         if (isFingerprint())
@@ -468,14 +468,14 @@ public class ModuleStructure
                     }
                 }
 
-            vtreeImportAllowVers = vtreeAllow;
-            listImportPreferVers = listPrefer;
+            m_vtreeImportAllowVers = vtreeAllow;
+            m_listImportPreferVers = listPrefer;
             }
         else
             {
             if (in.readBoolean())
                 {
-                version = (VersionConstant) pool.getConstant(readMagnitude(in));
+                m_constVersion = (VersionConstant) pool.getConstant(readMagnitude(in));
                 }
             }
 
@@ -490,19 +490,19 @@ public class ModuleStructure
 
         if (isFingerprint())
             {
-            for (Version ver : vtreeImportAllowVers)
+            for (Version ver : m_vtreeImportAllowVers)
                 {
                 pool.ensureVersionConstant(ver);
                 }
 
-            for (Version ver : listImportPreferVers)
+            for (Version ver : m_listImportPreferVers)
                 {
                 pool.ensureVersionConstant(ver);
                 }
             }
-        else if (version != null)
+        else if (m_constVersion != null)
             {
-            version = (VersionConstant) pool.register(version);
+            m_constVersion = (VersionConstant) pool.register(m_constVersion);
             }
 
         m_constDir       = (LiteralConstant) pool.register(m_constDir);
@@ -515,13 +515,13 @@ public class ModuleStructure
         {
         super.assemble(out);
 
-        out.writeByte(moduletype.ordinal());
+        out.writeByte(m_moduletype.ordinal());
 
         ConstantPool pool = getConstantPool();
 
         if (isFingerprint())
             {
-            VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
+            VersionTree<Boolean> vtreeAllow = m_vtreeImportAllowVers;
             writePackedLong(out, vtreeAllow.size());
             for (Version ver : vtreeAllow)
                 {
@@ -529,7 +529,7 @@ public class ModuleStructure
                 out.writeBoolean(vtreeAllow.get(ver));
                 }
 
-            List<Version> listPrefer = listImportPreferVers;
+            List<Version> listPrefer = m_listImportPreferVers;
             writePackedLong(out, listPrefer.size());
             for (Version ver : listPrefer)
                 {
@@ -538,14 +538,14 @@ public class ModuleStructure
             }
         else
             {
-            if (version == null)
+            if (m_constVersion == null)
                 {
                 out.writeBoolean(false);
                 }
             else
                 {
                 out.writeBoolean(true);
-                writePackedLong(out, version.getPosition());
+                writePackedLong(out, m_constVersion.getPosition());
                 }
             }
 
@@ -560,14 +560,14 @@ public class ModuleStructure
         sb.append(super.getDescription());
 
         sb.append(", module type=")
-                .append(moduletype);
+          .append(m_moduletype);
 
         if (isFingerprint())
             {
             sb.append(", fingerprint=true");
 
-            VersionTree<Boolean> vtreeAllow = vtreeImportAllowVers;
-            List<Version>        listPrefer = listImportPreferVers;
+            VersionTree<Boolean> vtreeAllow = m_vtreeImportAllowVers;
+            List<Version>        listPrefer = m_listImportPreferVers;
             if (!vtreeAllow.isEmpty() || !listPrefer.isEmpty())
                 {
                 sb.append(", version={");
@@ -602,10 +602,10 @@ public class ModuleStructure
             }
         else
             {
-            if (version != null)
+            if (m_constVersion != null)
                 {
                 sb.append(", version={")
-                  .append(version.getVersion())
+                  .append(m_constVersion.getVersion())
                   .append('}');
                 }
             }
@@ -635,9 +635,10 @@ public class ModuleStructure
             }
 
         // compare versions
-        return this.moduletype == that.moduletype
-                && Handy.equals(this.vtreeImportAllowVers, that.vtreeImportAllowVers)
-                && Handy.equals(this.listImportPreferVers, that.listImportPreferVers)
+        return this.m_moduletype == that.m_moduletype
+                && Handy.equals(this.m_vtreeImportAllowVers, that.m_vtreeImportAllowVers)
+                && Handy.equals(this.m_listImportPreferVers, that.m_listImportPreferVers)
+                && Handy.equals(this.m_constVersion,         that.m_constVersion)
                 && Handy.equals(this.m_constDir, that.m_constDir);
         }
 
@@ -704,24 +705,24 @@ public class ModuleStructure
     /**
      * Module type.
      */
-    private ModuleType moduletype = ModuleType.Primary;
+    private ModuleType m_moduletype = ModuleType.Primary;
 
     /**
      * Module version; always null for fingerprints.
      */
-    private VersionConstant version;
+    private VersionConstant m_constVersion;
 
     /**
      * If this is a fingerprint, then this will be a non-null version tree (but potentially empty)
      * specifying which versions are allowed (via a TRUE value) and avoided (via a FALSE value).
      */
-    private VersionTree<Boolean> vtreeImportAllowVers;
+    private VersionTree<Boolean> m_vtreeImportAllowVers;
 
     /**
      * If this is a fingerprint, then this will be a non-null (but potentially empty) list of
      * versions that are specified as preferred, in their order of preference.
      */
-    private List<Version> listImportPreferVers;
+    private List<Version> m_listImportPreferVers;
 
     /**
      * If this is a fingerprint, during compilation this will hold the actual module from which the

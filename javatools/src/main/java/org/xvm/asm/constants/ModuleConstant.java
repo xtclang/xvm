@@ -14,8 +14,11 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Version;
+
 import org.xvm.util.Hash;
 
+import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -39,9 +42,22 @@ public class ModuleConstant
      */
     public ModuleConstant(ConstantPool pool, String sName)
         {
+        this(pool, sName, null);
+        }
+
+    /**
+     * Construct a constant whose value is a module identifier.
+     *
+     * @param pool     the ConstantPool that will contain this Constant
+     * @param sName    the qualified module name
+     * @param version  the module version
+     */
+    public ModuleConstant(ConstantPool pool, String sName, Version version)
+        {
         super(pool);
 
-        m_constName = pool.ensureStringConstant(sName);
+        m_constName    = pool.ensureStringConstant(sName);
+        m_constVersion = version == null ? null : pool.ensureVersionConstant(version);
         }
 
     /**
@@ -58,13 +74,17 @@ public class ModuleConstant
         {
         super(pool);
 
-        m_iName = readMagnitude(in);
+        m_iName    = readMagnitude(in);
+        m_iVersion = readIndex(in);
         }
 
     @Override
     protected void resolveConstants()
         {
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
+        ConstantPool pool = getConstantPool();
+
+        m_constName    = (StringConstant)  pool.getConstant(m_iName);
+        m_constVersion = (VersionConstant) pool.getConstant(m_iVersion);
         }
 
 
@@ -93,6 +113,17 @@ public class ModuleConstant
         String sName = getName();
         int ofDot = sName.indexOf('.');
         return ofDot < 0 ? null : sName.substring(ofDot + 1);
+        }
+
+    /**
+     * Extract the module version.
+     *
+     * @return the unqualified module name
+     */
+    public Version getVersion()
+        {
+        VersionConstant constVersion = m_constVersion;
+        return constVersion == null ? null : constVersion.getVersion();
         }
 
     /**
@@ -222,25 +253,39 @@ public class ModuleConstant
         }
 
     @Override
-    public Object getLocator()
-        {
-        return m_constName.getLocator();
-        }
-
-    @Override
     protected int compareDetails(Constant that)
         {
         if (!(that instanceof ModuleConstant idThat))
             {
             return -1;
             }
-        return this.m_constName.compareTo(idThat.m_constName);
+
+        int n = this.m_constName.compareTo(idThat.m_constName);
+        if (n != 0)
+            {
+            return n;
+            }
+
+        return this.m_constVersion == null
+            ? idThat.m_constVersion == null
+                ? 0
+                : -1
+            : idThat.m_constVersion == null
+                ? 1
+                : this.m_constVersion.compareDetails(idThat.m_constVersion);
         }
 
     @Override
     public String getValueString()
         {
-        return m_constName.getValue();
+        StringBuilder sb = new StringBuilder();
+        sb.append(m_constName.getValue());
+        if (m_constVersion != null)
+            {
+            sb.append(" v:")
+              .append(m_constVersion.getVersion());
+            }
+        return sb.toString();
         }
 
 
@@ -249,7 +294,8 @@ public class ModuleConstant
     @Override
     protected void registerConstants(ConstantPool pool)
         {
-        m_constName = (StringConstant) pool.register(m_constName);
+        m_constName    = (StringConstant)  pool.register(m_constName);
+        m_constVersion = (VersionConstant) pool.register(m_constVersion);
         }
 
     @Override
@@ -258,6 +304,7 @@ public class ModuleConstant
         {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constName.getPosition());
+        writePackedLong(out, Constant.indexOf(m_constVersion));
         }
 
     @Override
@@ -272,7 +319,8 @@ public class ModuleConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(m_constName);
+        return Hash.of(m_constName,
+               Hash.of(m_constVersion));
         }
 
 
@@ -284,7 +332,17 @@ public class ModuleConstant
     private int m_iName;
 
     /**
+     * During disassembly, this holds the index of the constant that specifies the version.
+     */
+    private int m_iVersion;
+
+    /**
      * The constant that holds the qualified name of the module.
      */
     private StringConstant m_constName;
+
+    /**
+     * The constant that holds the version of the module (optional).
+     */
+    private VersionConstant m_constVersion;
     }

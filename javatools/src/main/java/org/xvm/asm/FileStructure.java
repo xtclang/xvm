@@ -367,6 +367,25 @@ public class FileStructure
         }
 
     /**
+     * Find a module with the specified name at this FileStructure.
+     *
+     * @param sName  the qualified module name
+     *
+     * @return the specified module or null if not found
+     */
+    public ModuleStructure findModule(String sName)
+        {
+        for (ModuleStructure module : f_moduleByConstant.values())
+            {
+            if (module.getName().equals(sName))
+                {
+                return module;
+                }
+            }
+        return null;
+        }
+
+    /**
      * Link the modules in this FileStructure.
      *
      * @param repository  the module repository to load modules from
@@ -482,9 +501,9 @@ public class FileStructure
      * @return null iff success, otherwise the id of the first module that could not be linked to
      */
     private ModuleConstant linkModules(ModuleRepository repository, FileStructure fileTop,
-                                       Set<String> setFilesDone, boolean fRuntime)
+                                       Set<ModuleConstant> setFilesDone, boolean fRuntime)
         {
-        if (!setFilesDone.add(getModuleId().getName()))
+        if (!setFilesDone.add(getModuleId()))
             {
             return null;
             }
@@ -514,7 +533,8 @@ public class FileStructure
                 return idModule;
                 }
 
-            ModuleStructure moduleUnlinked = repository.loadModule(idModule.getName()); // TODO versions etc.
+            ModuleStructure moduleUnlinked = repository.loadModule(
+                                                idModule.getName(), idModule.getVersion(), !fRuntime);
             if (moduleUnlinked == null)
                 {
                 return idModule;
@@ -547,7 +567,7 @@ public class FileStructure
                     fileTop.addChild(moduleFingerprint);
                     }
 
-                if (!setFilesDone.contains(idModule.getName()))
+                if (!setFilesDone.contains(idModule))
                     {
                     listFilesTodo.add(fileUnlinked); // recurse downstream
                     }
@@ -648,7 +668,7 @@ public class FileStructure
      */
     public boolean containsVersion(Version ver)
         {
-        return getVersionTree().get(ver);
+        return getVersionTree().contains(ver);
         }
 
     /**
@@ -1313,8 +1333,8 @@ public class FileStructure
             return this.m_nMajorVer == that.m_nMajorVer
                     && this.m_nMinorVer == that.m_nMinorVer
                     && this.m_idModule.equals(that.m_idModule)
-                    && this.getChildByNameMap().equals(
-                       that.getChildByNameMap()); // TODO need "childrenEquals()"?
+                    && this.f_vtree.equals(that.f_vtree)
+                    && this.f_moduleByConstant.equals(that.f_moduleByConstant);
             }
 
         return false;
