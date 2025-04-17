@@ -201,7 +201,7 @@ mixin Node
     @Op("-") Node! remove(Part part) {
         (Boolean found, Int index, Node? prev, Node? node) = findNode(part);
         if (found) {
-            deleteNode(index, prev, node);
+            deleteNode(index, prev, node ?: assert);
         }
         return this;
     }
@@ -210,7 +210,7 @@ mixin Node
     conditional Node! removeIfPresent(Part part) {
         (Boolean found, Int index, Node? prev, Node? node) = findNode(part);
         if (found) {
-            deleteNode(index, prev, node);
+            deleteNode(index, prev, node ?: assert);
             return True, this;
         }
         return False;
@@ -220,7 +220,7 @@ mixin Node
     Node! delete(Int index) {
         (Boolean found, _, Node? prev, Node? node) = findNode(index);
         if (found) {
-            deleteNode(index, prev, node);
+            deleteNode(index, prev, node ?: assert);
         }
         return this;
     }
@@ -298,7 +298,7 @@ mixin Node
      * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
      * needs to prevent or augment the mutation.
      *
-     * @param index  the index of the `Node` to replace
+     * @param index  the index of the `Node` to replace (unused, other than assertions/messages)
      * @param prev   the `Node` preceding the `Node` to replace
      * @param cur    the `Node` to replace
      * @param part   the `Part` to replace the specified `Node` with
@@ -306,7 +306,7 @@ mixin Node
      * @return cur   the `Node` that was the result of the replacement
      * @return mods  the new mod count
      */
-    protected (Node!? cur, UInt32 mods) replaceNode(Int index, Node!? prev, Node!? cur, Part part) {
+    protected (Node! cur, UInt32 mods) replaceNode(Int index, Node!? prev, Node!? cur, Part part) {
         assert:arg Node node := allowsChild(part);
         node.parent_ = this;
         if (prev == Null) {
@@ -328,7 +328,7 @@ mixin Node
      * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
      * needs to prevent or augment the mutation.
      *
-     * @param index  the index of the `Node` to insert
+     * @param index  the index of the `Node` to insert (unused, other than assertions/messages)
      * @param prev   the `Node` preceding the `Node` to insert
      * @param cur    the `Node` to insert in front of
      * @param part   the `Part` to insert
@@ -336,7 +336,7 @@ mixin Node
      * @return cur   the `Node` that was inserted for the `Part`
      * @return mods  the new mod count
      */
-    protected (Node!? cur, UInt32 mods) insertNode(Int index, Node!? prev, Node!? cur, Part part) {
+    protected (Node! cur, UInt32 mods) insertNode(Int index, Node!? prev, Node!? cur, Part part) {
         assert:arg Node node := allowsChild(part);
         node.parent_ = this;
         if (prev == Null) {
@@ -354,15 +354,14 @@ mixin Node
      * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
      * needs to prevent or augment the mutation.
      *
-     * @param index  the index of the `Node` to delete
+     * @param index  the index of the `Node` to delete (unused, other than assertions/messages)
      * @param prev   the `Node` preceding the `Node` to delete
      * @param cur    the `Node` to delete
      *
      * @return cur   the `Node` that followed the now-deleted `Node`
      * @return mods  the new mod count
      */
-    protected (Node!? cur, UInt32 mods) deleteNode(Int index, Node!? prev, Node!? cur) {
-        assert:bounds cur != Null as $"No Node exists at index {index}";
+    protected (Node!? cur, UInt32 mods) deleteNode(Int index, Node!? prev, Node! cur) {
         assert:test cur.&parent_ == &this;
         Node? next = cur.next_;
         if (prev == Null) {
@@ -488,7 +487,10 @@ mixin Node
 
         // ----- internal ----------------------------------------------------------------------
 
-        void checkMod() {
+        /**
+         * Check for modification, and update internally cached information as necessary.
+         */
+        protected void checkMod() {
             if (modified(lastMod)) {
                 Int prevIndex = index;
                 if (prevIndex == 0) {
@@ -573,7 +575,7 @@ mixin Node
         @Override
         void delete() {
             checkMod();
-            (cur, lastMod) = deleteNode(index, prev, cur);
+            (cur, lastMod) = deleteNode(index, prev, cur ?: assert:bounds);
         }
     }
 }

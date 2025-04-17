@@ -609,7 +609,7 @@ class Parser(Boolean ignoreProlog       = False,
                 }
             }
             return True, firstNode == Null
-                    ? new @Parsed(attrOffset, offset-attrOffset) AttributeNode(Null, name, value)
+                    ? new @Parsed(attrOffset, offset-attrOffset) AttributeNode(name, value)
                     : new @Parsed(attrOffset, offset-attrOffset) AttributeNode(name, firstNode);
         }
         return False;

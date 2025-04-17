@@ -21,8 +21,8 @@ class AttributeNode
      * @param name    the [Attribute]'s name
      * @param value   the [Attribute]'s value
      */
-    construct(ElementNode? parent, String name, String value) {
-        construct ValueHolderNode(parent, name, value);
+    construct(String name, String value) {
+        construct ValueHolderNode(name, value);
     }
 
     /**
@@ -131,7 +131,7 @@ class AttributeNode
 
         @Override
         void set(Int newValue) {
-            // value is not cached
+            // the count not cached; there will be no field in the structure for the count
         }
     }
 

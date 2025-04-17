@@ -17,7 +17,7 @@ class DocumentNode(ElementNode root)
      * @param name  the name of the root [Element]
      */
     construct(String name, String? value = Null) {
-        root = new ElementNode(Null, name, value);
+        root = new ElementNode(name, value);
     } finally {
         link_(Null, root);
     }
@@ -194,13 +194,15 @@ class DocumentNode(ElementNode root)
     }
 
     @Override
-    protected (Node? cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
+    protected (Node cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
         assert:bounds cur != Null;
         assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.actualType}";
 
         switch (cur.is(_), node.is(_)) {
         case (ElementNode, ElementNode):
-            return super(index, prev, cur, part);
+            (Node result, UInt32 mods) = super(index, prev, cur, part);
+            root = result.as(ElementNode);
+            return result, mods;
         case (ElementNode, _):
             assert as "The root Element can not be deleted";
         case (_, ElementNode):
@@ -208,13 +210,16 @@ class DocumentNode(ElementNode root)
         case (_, XmlDeclNode):
             assert:bounds index == 0 as "XMLDecl must occur at the very start of the XML Document";
             (Version xmlVersion, String? encoding, Boolean? standalone) = node.settings();
-            if (!child_?.is(XmlDeclNode)) {
-                deleteNode(0, Null, child_);
+            if (Node oldNode ?= child_, !oldNode.is(XmlDeclNode)) {
+                // we're replacing a node that is NOT an XmlDeclNode, so just delete the old node
+                deleteNode(0, Null, oldNode);
             }
+            // setting these properties will have the side effect of creating a new (or modifying an
+            // existing) XmlDeclNode
             this.xmlVersion = xmlVersion;
             this.encoding   = encoding;
             this.standalone = standalone;
-            return child_, mods_;
+            return child_.as(XmlDeclNode), mods_;
         case (XmlDeclNode, _):
             assert index == 0 && prev == Null;
             deleteNode(0, Null, cur);
@@ -228,7 +233,7 @@ class DocumentNode(ElementNode root)
     }
 
     @Override
-    protected (Node? cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
+    protected (Node cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
         assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.actualType}";
         switch (node.is(_)) {
         case ElementNode:
@@ -239,14 +244,14 @@ class DocumentNode(ElementNode root)
             this.xmlVersion = xmlVersion;
             this.encoding   = encoding;
             this.standalone = standalone;
-            return child_, mods_;
+            return child_.as(XmlDeclNode), mods_;
         default:
             return super(index, prev, cur, part);
         }
     }
 
     @Override
-    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node? cur) {
+    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node cur) {
         switch (cur.is(_)) {
         case Null:
             assert:bounds as $"No Node exists at index {index}";

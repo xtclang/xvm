@@ -18,13 +18,11 @@
     /**
      * Construct an [ValueHolderNode] with the specified name and optional value.
      *
-     * @param parent  the [ValueHolder]'s parent [Node], or `Null`
      * @param name    the [ValueHolder]'s name
      * @param value   the [ValueHolder]'s value
      */
-    construct((DocumentNode|ElementNode)? parent, String name, String? value) {
+    construct(String name, String? value) {
         assert:arg isValidName(name);
-        this.parent_ = parent;
         this.name    = name;
         this.value   = value;
     }
@@ -249,31 +247,31 @@
     }
 
     @Override
-    protected (Node!? cur, UInt32 mods) replaceNode(Int index, Node!? prev, Node!? cur, Part part) {
+    protected (Node cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
         syncParts();
         return super(index, prev, cur, part);
     }
 
     @Override
-    protected (Node!? cur, UInt32 mods) insertNode(Int index, Node!? prev, Node!? cur, Part part) {
+    protected (Node cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
         syncParts();
         return super(index, prev, cur, part);
     }
 
     @Override
-    protected (Node!? cur, UInt32 mods) deleteNode(Int index, Node!? prev, Node!? cur) {
+    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node cur) {
         syncParts();
         return super(index, prev, cur);
     }
 
     @Override
-    (Boolean found, Int index, Node!? prev, Node!? node) findNode(Int index) {
+    (Boolean found, Int index, Node? prev, Node? node) findNode(Int index) {
         syncParts();
         return super(index);
     }
 
     @Override
-    (Boolean found, Int index, Node!? prev, Node!? node) findNode(Part part, Int startAt = 0) {
+    (Boolean found, Int index, Node? prev, Node? node) findNode(Part part, Int startAt = 0) {
         syncParts();
         return super(part, startAt);
     }

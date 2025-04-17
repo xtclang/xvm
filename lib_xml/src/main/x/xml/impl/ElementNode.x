@@ -22,15 +22,11 @@ class ElementNode
     /**
      * Construct an [ElementNode] with the specified name and optional value.
      *
-     * @param parent  the [Element]'s parent [Node], or `Null`
      * @param name    the [Element]'s name
      * @param value   (optional) the [Element]'s value
      */
-    construct((DocumentNode|ElementNode)? parent, String name, String? value) {
-        assert:arg isValidName(name);
-        this.parent_ = parent;
-        this.name    = name;
-        this.value   = value;
+    construct(String name, String? value) {
+        construct ValueHolderNode(name, value);
     }
 
     /**
@@ -155,6 +151,7 @@ class ElementNode
 
     @Override
     @RO Int size.get() {
+        // we defer creating a `Part` for the `Content` represented by the `value` until we have to
         Int contentCount = this.contentCount;
         Int totalCount   = attributeCount + contentCount + elementCount;
         if (contentCount == 0 && value != Null) {
@@ -173,7 +170,7 @@ class ElementNode
     @RO List<Attribute> attributes.get() = new AttributeList(this);
 
     @Override
-    @RO Map<String, Attribute> attributesByName.get() = TODO new AttributeMap(this);
+    @RO Map<String, Attribute> attributesByName.get() = new AttributeMap(this);
 
     @Override
     Attribute setAttribute(String name, String value) {
@@ -184,21 +181,24 @@ class ElementNode
                 node.value = value;
                 return node;
             }
+            // if the attribute was NOT found, then `trailing_` will be the last attribute (the node
+            // before the insertion point)
             prev = trailing_;
         }
-        AttributeNode node = new AttributeNode(this, name, value);
+        AttributeNode node = new AttributeNode(name, value);
         link_(prev, node);
         attributeCount = count + 1;
-        return node;
+        mod();
+        return trailing_ <- node;
     }
 
     @Override
-    @RO List<xml.Element> elements.get() = TODO new ElementList(this);
+    @RO List<xml.Element> elements.get() = new ElementList(this);
 
     @Override
     Element add(String name, String? value = Null) {
-        // TODO
-        TODO
+        val node = insertNode(size, lastNode(), Null, new ElementNode(name, value));
+        return trailing_ <- node.as(ElementNode);
     }
 
     // ----- Content List implementation -----------------------------------------------------------
@@ -246,22 +246,10 @@ class ElementNode
 
         @Override
         conditional Attribute last() {
-            if (AttributeNode node := partList.trailing_.is(AttributeNode)) {
+            if (AttributeNode node ?= partList.lastAttribute()) {
                 return True, node;
             }
-
-            Node? node = partList.child_;
-            if (!node.is(AttributeNode)) {
-                return False;
-            }
-
-            Node? next = node.as(private Node).next_;
-            while (next.is(AttributeNode)) {
-                node = next;
-                next = node.as(protected Node).next_;
-            }
-            partList.trailing_ = node;
-            return True, node;
+            return False;
         }
 
         @Override
@@ -333,7 +321,7 @@ class ElementNode
         @Op("-") AttributeList! remove(Attribute attribute) {
             (Boolean found, Int index, Node? prev, Node? node) = findNode(attribute);
             if (found) {
-                partList.deleteNode(index, prev, node);
+                partList.deleteNode(index, prev, node ?: assert);
             }
             return this;
         }
@@ -342,7 +330,7 @@ class ElementNode
         conditional AttributeList! removeIfPresent(Attribute attribute) {
             (Boolean found, Int index, Node? prev, Node? node) = findNode(attribute);
             if (found) {
-                partList.deleteNode(index, prev, node);
+                partList.deleteNode(index, prev, node ?: assert);
                 return True, this;
             }
             return False;
@@ -352,7 +340,7 @@ class ElementNode
         AttributeList! delete(Int index) {
             (Boolean found, _, Node? prev, Node? node) = findNode(index);
             if (found) {
-                partList.deleteNode(index, prev, node);
+                partList.deleteNode(index, prev, node ?: assert);
             }
             return this;
         }
@@ -398,9 +386,8 @@ class ElementNode
             }
 
             if (index >= count) {
-                // TODO position at last attribute
-                Node prev = partList.trailing_ ?: assert;
-                return False, count, prev.as(AttributeNode), Null;
+                AttributeNode prev = partList.lastAttribute() ?: assert;
+                return False, count, prev, Null;
             }
 
             AttributeNode? prev = Null;
@@ -415,20 +402,58 @@ class ElementNode
         /**
          * Find the specified `Attribute` in the `List`, and return its location.
          *
-         * @param part     the `Attribute` to search for
-         * @param startAt  (optional) the index to start searching for the `Attribute` from
+         * @param attribute  the `Attribute` to search for
+         * @param startAt    (optional) the index to start searching for the `Attribute` from
          *
-         * @return found  `True` iff the `Attribute` was found
-         * @return index  the index where the `Attribute` was found; otherwise, the index
-         *                immediately beyond the end of the `List`
-         * @return prev   the `AttributeNode` located immediately before the `Attribute` that was
-         *                found; otherwise, the last `AttributeNode` in the `List`
-         * @return node   the `AttributeNode` that is the `Attribute` that was found; otherwise,
-         *                `Null`
+         * @return found    `True` iff the `Attribute` was found
+         * @return index    the index where the `Attribute` was found; otherwise, the index
+         *                  immediately beyond the end of the `List`
+         * @return prev     the `AttributeNode` located immediately before the `Attribute` that was
+         *                  found; otherwise, the last `AttributeNode` in the `List`
+         * @return node     the `AttributeNode` that is the `Attribute` that was found; otherwise,
+         *                  `Null`
          */
         (Boolean found, Int index, AttributeNode!? prev, AttributeNode!? node)
                 findNode(Attribute attribute, Int startAt = 0) {
-            TODO
+            Int count = partList.attributeCount;
+            if (count == 0) {
+                return False, 0, Null, Null;
+            }
+
+            if (startAt >= count) {
+                AttributeNode prev = partList.lastAttribute() ?: assert;
+                return False, count, prev, Null;
+            }
+
+            Int            index = 0;
+            AttributeNode? prev  = Null;
+            AttributeNode  node  = partList.child_.as(AttributeNode);
+            // fast-forward if necessary
+            if (index < startAt) {
+                Node almost = node;
+                while (index < startAt-1) {
+                    almost = almost.next_ ?: assert;
+                    ++index;
+                }
+                prev = almost.as(AttributeNode);
+                node = prev.next_.as(AttributeNode);
+            }
+            // scan remaining attributes for a match
+            String name  = attribute.name;
+            String value = attribute.value;
+            while (True) {
+                if (node.name == name && node.value == value) {
+                    return True, index, prev, node;
+                }
+
+                // advance to the next attribute node (or quit if we're past the last one)
+                if (++index >= count) {
+                    partList.trailing_ = node;          // remember the last attribute node
+                    return False, index, node, Null;
+                }
+                prev = node;
+                node = node.next_.as(AttributeNode);
+            }
         }
     }
 
@@ -439,8 +464,163 @@ class ElementNode
      * `ElementNode`.
      */
     protected static class AttributeMap(ElementNode partList)
-            implements Map<String, Attribute> {
-        // TODO
+            extends ecstasy.maps.KeyBasedMap<String, Attribute> {
+        @Override
+        conditional Int knownSize() = (True, size);
+
+        @Override
+        Int size.get() = partList.attributeCount;
+
+        @Override
+        @RO Boolean empty.get() = partList.attributeCount == 0;
+
+        @Override
+        conditional Value get(Key key) {
+            if ((_, _, AttributeNode? node) := findNode(key), node != Null) {
+                return True, node;
+            }
+            return False;
+        }
+
+        @Override
+        protected Iterator<Key> keyIterator() {
+            return new Iterator<String>() {     // TODO GG could not use "Key" instead of "String"
+                private AttributeNode? node    = partList.child_.is(AttributeNode) ?: Null;
+                private UInt32         lastMod = partList.mods_;
+
+                @Override
+                conditional String next() {     // TODO GG could not use "Key" instead of "String"
+                    if (AttributeNode node ?= node) {
+                        ElementNode partList = partList;
+                        if (partList.modified(lastMod)) {
+                            // verify that the next node is still present
+                            if (node.&parent_ != &partList) {
+                                throw new ConcurrentModification();
+                            }
+                            lastMod = partList.mods_;
+                        }
+
+                        Node prev = node;
+                        this.node = prev.next_.is(AttributeNode) ?: Null;
+                        iteratorAdvanced(prev);
+                        return True, prev.name;
+                    }
+                    return False;
+                }
+            };
+        }
+
+        @Override
+        AttributeMap put(Key key, Value value) {
+            (Boolean found, Int index, AttributeNode? prev, AttributeNode? node) = findNode(key);
+            if (found) {
+                assert node != Null;
+                (_, lastMod) = partList.replaceNode(index, prev, node, value);
+            } else {
+                (_, lastMod) = partList.insertNode(index, prev, node, value);
+            }
+            return this;
+        }
+
+        @Override
+        AttributeMap remove(Key key) {
+            if ((Int index, AttributeNode? prev, AttributeNode? node) := findNode(key)) {
+                (_, lastMod) = partList.deleteNode(index, prev, node ?: assert);
+            }
+            return this;
+        }
+
+        /**
+         * The last known mod count.
+         */
+        protected UInt32 lastMod;
+        /**
+         * A cached "previous node".
+         */
+        protected AttributeNode? cachePrev;
+        /**
+         * A cached "current node".
+         */
+        protected AttributeNode? cacheNode;
+
+        /**
+         * Verify the cache.
+         */
+        protected void checkMod() {
+            if (partList.modified(lastMod)) {
+                ElementNode partList = partList;
+                if (cachePrev?.&parent_ != &partList) {
+                    cachePrev = Null;
+                    cacheNode = Null;
+                } else {
+                    // make sure that the cached node is always the node that follow the cached prev
+                    cacheNode = cachePrev?.next_?.is(AttributeNode)? : Null;
+                }
+                lastMod = partList.mods_;
+            }
+        }
+
+        /**
+         * @param node  the `Attribute` being emitted by an `Iterator` over this `AttributeMap`
+         */
+        protected void iteratorAdvanced(AttributeNode node) {
+            checkMod();
+            if (cacheNode?.&next_ == &node) {
+                // the iterator is advancing
+                cachePrev = cacheNode;
+                cacheNode = node;
+            } else if (partList.&child_ == &node) {
+                // it's the first attribute being iterated
+                cachePrev = Null;
+                cacheNode = node;
+            }
+        }
+
+        /**
+         * Find the specified `Attribute` in the `Map`, and return its location.
+         *
+         * @param name     the `Attribute` name to search for
+         *
+         * @return found  `True` iff the `Attribute` was found
+         * @return index  the index of the `Attribute` or `-1` if the index was not calculated
+         * @return prev   the `AttributeNode` located immediately before the `Attribute` that was
+         *                found; otherwise, the last `AttributeNode` in the `List`
+         * @return node   the `AttributeNode` that is the `Attribute` that was found; otherwise,
+         *                `Null`
+         */
+        (Boolean found, Int index, AttributeNode? prev, AttributeNode? node) findNode(String name) {
+            Int count = partList.attributeCount;
+            if (count == 0) {
+                return False, 0, Null, Null;
+            }
+
+            // validate the cache
+            checkMod();
+
+            // check cache
+            if (cacheNode?.name == name) {
+                return True, -1, cachePrev, cacheNode;
+            }
+
+            AttributeNode? prev  = Null;
+            AttributeNode  node  = partList.child_.as(AttributeNode);
+            Int            index = 0;
+            while (True) {
+                if (node.name == name) {
+                    cachePrev = prev;
+                    cacheNode = node;
+                    return True, index, prev, node;
+                }
+
+                // advance to the next attribute node (or quit if we're past the last one)
+                if (++index >= count) {
+                    partList.trailing_ = node;          // remember the last attribute node
+                    return False, index, node, Null;
+                }
+                prev = node;
+                node = node.next_.as(AttributeNode);
+            }
+        }
     }
 
     // ----- Element List implementation ---------------------------------------------------------
@@ -454,7 +634,229 @@ class ElementNode
      */
     protected static class ElementList(ElementNode partList)
             implements List<Element> {
-        // TODO
+        @Override
+        @RO Boolean indexed.get() = False;
+
+        @Override
+        @RO Int size.get() = partList.elementCount;
+
+        @Override
+        conditional ElementNode first() {
+            (_, ElementNode? node) = partList.firstElement();
+            return node.is(ElementNode);
+        }
+
+        @Override
+        conditional ElementNode last() {
+            if (ElementNode node ?= partList.lastElement()) {
+                return True, node;
+            }
+            return False;
+        }
+
+        @Override
+        Iterator<Element> iterator() {
+            return new Iterator() {
+                private Node? node = partList.child_;
+
+                @Override
+                conditional Element next() {
+                    if (Node prev := node.is(ElementNode)) {
+                        node = prev.next_;
+                        return True, prev;
+                    }
+                    return False;
+                }
+            };
+        }
+
+        @Override
+        Cursor cursor(Int index = 0) {
+            TODO
+// TODO
+//            CursorImpl cursor = new CursorImpl();
+//            if (index != 0) {
+//                cursor.index = index;
+//            }
+//            return cursor;
+        }
+
+        @Override
+        @Op("[]") Element getElement(Index index) {
+            assert:bounds index >= 0;
+            Node? cur = partList.child_;
+            for (Int i = 0; i < index && cur != Null; ++i) {
+                cur = cur.next_;
+            }
+            return cur.is(ElementNode) ?: assert:bounds as $"Index {index} is out of range";
+        }
+
+        @Override
+        @Op("[]=") void setElement(Index index, Element value) {
+            (Boolean found, Int bounds, Node? prev, Node? node) = findNode(index);
+            assert:bounds found as $"Index {index} out of bounds ({bounds})";
+            partList.replaceNode(index, prev, node, value);
+        }
+
+        @Override
+        Boolean contains(Element value) = findNode(value);
+
+        @Override
+        conditional Int indexOf(Element value, Int startAt = 0) = findNode(value, startAt);
+
+        @Override
+        ElementList! add(Element element) {
+            (_, Int index, Node? prev, Node? node) = findNode(Int.MaxValue);
+            partList.insertNode(index, prev, node, element);
+            return this;
+        }
+
+        @Override
+        ElementList! insert(Int index, Element element) {
+            (Boolean found, Int bounds, Node? prev, Node? node) = findNode(index);
+            assert:bounds index <= bounds as $"Index {index} out of bounds ({bounds})";
+            partList.insertNode(index, prev, node, element);
+            return this;
+        }
+
+        @Override
+        @Op("-") ElementList! remove(Element element) {
+            (Boolean found, Int index, Node? prev, Node? node) = findNode(element);
+            if (found) {
+                partList.deleteNode(index, prev, node ?: assert);
+            }
+            return this;
+        }
+
+        @Override
+        conditional ElementList! removeIfPresent(Element element) {
+            (Boolean found, Int index, Node? prev, Node? node) = findNode(element);
+            if (found) {
+                partList.deleteNode(index, prev, node ?: assert);
+                return True, this;
+            }
+            return False;
+        }
+
+        @Override
+        ElementList! delete(Int index) {
+            (Boolean found, _, Node? prev, Node? node) = findNode(index);
+            if (found) {
+                partList.deleteNode(index, prev, node ?: assert);
+            }
+            return this;
+        }
+
+        /**
+         * Note: This is a mutating operation, and must be overridden by any `Node` implementation that
+         * needs to prevent or augment the mutation.
+         */
+        @Override
+        ElementList! clear() {
+            // unlink the list of parts up to the first non-element
+            Node? node = partList.child_;
+            while (node.is(ElementNode)) {
+                node.parent_ = Null;
+                Node prev = node;
+                node = node.next_;
+                prev.next_ = Null;
+            }
+            partList.child_ = node;
+            if (partList.trailing_.is(ElementNode)) {
+                partList.trailing_ = Null;
+            }
+            partList.elementCount = 0;
+            partList.mod();
+            return this;
+        }
+
+        /**
+         * Advance to the specified index in the `List`.
+         *
+         * @param index  the `List` index to advance to
+         *
+         * @return found  `True` iff the specified index exists in the `List`
+         * @return index  the index advanced to
+         * @return prev   the `Node` located immediately before the specified index; otherwise, the
+         *                last `Node` in the `List`
+         * @return node   the `Node` at the specified index; otherwise, `Null`
+         */
+        (Boolean found, Int index, ElementNode!? prev, ElementNode!? node) findNode(Int index) {
+            Int count = partList.elementCount;
+            if (count == 0) {
+                return False, 0, Null, Null;
+            }
+
+            if (index >= count) {
+                ElementNode prev = last() ?: assert;
+                return False, count, prev, Null;
+            }
+
+            ElementNode? prev = Null;
+            ElementNode  node = partList.child_.as(ElementNode);
+            for (Int i = 0; i < index; ++i) {
+                prev = node;
+                node = node.next_.as(ElementNode);
+            }
+            return True, index, prev, node;
+        }
+
+        /**
+         * Find the specified `Element` in the `List`, and return its location.
+         *
+         * @param part     the `Element` to search for
+         * @param startAt  (optional) the index to start searching for the `Element` from
+         *
+         * @return found  `True` iff the `Element` was found
+         * @return index  the index where the `Element` was found; otherwise, the index
+         *                immediately beyond the end of the `List`
+         * @return prev   the `ElementNode` located immediately before the `Element` that was
+         *                found; otherwise, the last `ElementNode` in the `List`
+         * @return node   the `ElementNode` that is the `Element` that was found; otherwise,
+         *                `Null`
+         */
+        (Boolean found, Int index, ElementNode!? prev, ElementNode!? node)
+                findNode(Element element, Int startAt = 0) {
+            Int count = partList.elementCount;
+            if (count == 0) {
+                return False, 0, Null, Null;
+            }
+
+            if (startAt >= count) {
+                ElementNode prev = last() ?: assert;
+                return False, count, prev, Null;
+            }
+
+            Int            index = 0;
+            ElementNode? prev  = Null;
+            ElementNode  node  = partList.child_.as(ElementNode);
+            // fast-forward if necessary
+            if (index < startAt) {
+                Node almost = node;
+                while (index < startAt-1) {
+                    almost = almost.next_ ?: assert;
+                    ++index;
+                }
+                prev = almost.as(ElementNode);
+                node = prev.next_.as(ElementNode);
+            }
+            // scan remaining elements for a match
+            String  name  = element.name;
+            String? value = element.value;
+            while (True) {
+                if (node.name == name && node.value == value) {
+                    return True, index, prev, node;
+                }
+
+                // advance to the next element node (or quit if we're past the last one)
+                if (++index >= count) {
+                    partList.trailing_ = node;          // remember the last element node
+                    return False, index, node, Null;
+                }
+                prev = node;
+                node = node.next_.as(ElementNode);
+            }
+        }
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -561,6 +963,86 @@ class ElementNode
         }
     }
 
+    @Override
+    protected (Node cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
+        (Node result, UInt32 mods) = super(index, prev, cur, part);
+        Boolean sameType = False;
+        switch (cur.is(_), result.is(_)) {
+            case (ElementNode,   AttributeNode):
+                --elementCount;
+                ++attributeCount;
+                break;
+            case (ElementNode,   ContentNode  ):
+                --elementCount;
+                ++contentCount;
+                break;
+            case (AttributeNode, ElementNode  ):
+                --attributeCount;
+                ++elementCount;
+                break;
+            case (AttributeNode, ContentNode  ):
+                --attributeCount;
+                ++contentCount;
+                break;
+            case (ContentNode,   ElementNode  ):
+                --contentCount;
+                ++elementCount;
+                break;
+            case (ContentNode,   AttributeNode):
+                --contentCount;
+                ++attributeCount;
+                break;
+            default:
+                sameType = True;
+                break;
+        }
+        if (&trailing_ == &cur) {
+            trailing_ = sameType ? result : Null;
+        }
+        return result, mods;
+    }
+
+    @Override
+    protected (Node cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
+        (Node result, UInt32 mods) = super(index, prev, cur, part);
+        if (result.is(ElementNode)) {
+            ++elementCount;
+            if (result.next_ == Null) {
+                trailing_ = result;
+            } else if (trailing_.is(ElementNode)) {
+                trailing_ = Null;
+            }
+        } else if (result.is(AttributeNode)) {
+            if (index == attributeCount++) {
+                trailing_ = result;
+            }
+        } else {
+            ++contentCount;
+            if (result.next_ == Null) {
+                trailing_ = result;
+            } else if (trailing_.is(ContentNode)) {
+                trailing_ = Null;
+            }
+        }
+        return result, mods;
+    }
+
+    @Override
+    protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node cur) {
+        (Node? result, UInt32 mods) = super(index, prev, cur);
+        if (cur.is(ElementNode)) {
+            --elementCount;
+        } else if (cur.is(AttributeNode)) {
+            --attributeCount;
+        } else {
+            --contentCount;
+        }
+        if (&cur == &trailing_) {
+            trailing_ = Null;
+        }
+        return result, mods;
+    }
+
     /**
      * Determine if any [AttributeNode] of the specified name exists within this `ElementNode`.
      * This method sets up the [trailing_] property if the end of the attribute list is reached.
@@ -588,7 +1070,7 @@ class ElementNode
         }
 
         // didn't find that name, but we can still cache the location of the last AttributeNode
-        trailing_ = prev.as(AttributeNode);
+        trailing_ = prev;
         return False;
     }
 
@@ -633,6 +1115,29 @@ class ElementNode
             node = node?.next_ : assert; // we know there are ElementNodes in the list!
         }
         return prev, node;
+    }
+
+    /**
+     * Find the last [Element] [Node] child of this `ElementNode`.
+     *
+     * @return the last child [ElementNode]; otherwise, `Null`
+     */
+    protected ElementNode? lastElement() {
+        Int count = elementCount;
+        if (count == 0) {
+            return Null;
+        }
+
+        // if the cached "trailing_" node is an ElementNode, then it is the last ElementNode
+        return trailing_.is(ElementNode)?;
+
+        Node node = firstElement() ?: assert;
+        while (True) {
+            if (node.is(ElementNode), --count == 0) {
+                return trailing_ <- node;
+            }
+            node = node.next_ ?: assert;
+        }
     }
 
     @Override
