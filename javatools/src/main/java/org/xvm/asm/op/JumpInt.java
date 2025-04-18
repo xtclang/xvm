@@ -82,12 +82,14 @@ public class JumpInt
     @Override
     public void resolveAddresses(Op[] aop)
         {
+        int cCases;
         if (m_aOpCase == null)
             {
             int ofThis = getAddress();
-            int c      = m_aofCase.length;
-            m_aOpCase = new Op[c];
-            for (int i = 0; i < c; i++)
+
+            cCases    = m_aofCase.length;
+            m_aOpCase = new Op[cCases];
+            for (int i = 0; i < cCases; i++)
                 {
                 int ofOp = adjustRelativeAddress(aop, m_aofCase[i]);
                 m_aofCase[i] = ofOp;
@@ -100,14 +102,21 @@ public class JumpInt
             }
         else
             {
-            int c = m_aOpCase.length;
-            m_aofCase = new int[c];
-            for (int i = 0; i < c; i++)
+            cCases    = m_aOpCase.length;
+            m_aofCase = new int[cCases];
+            for (int i = 0; i < cCases; i++)
                 {
                 m_aofCase[i] = calcRelativeAddress(m_aOpCase[i]);
                 }
             m_ofDefault = calcRelativeAddress(m_opDefault);
             }
+
+        m_acExits = new int[cCases];
+        for (int i = 0; i < cCases; i++)
+            {
+            m_acExits[i] = calcExits(m_aOpCase[i]);
+            }
+        m_cDefaultExits = calcExits(m_opDefault);
         }
 
     @Override
@@ -130,10 +139,10 @@ public class JumpInt
 
     protected int complete(Frame frame, int iPC, ObjectHandle hValue)
         {
-        long lValue = ((JavaLong) hValue).getValue();
-        return lValue >= 0 && lValue < m_aofCase.length
-            ? iPC + m_aofCase[(int) lValue]
-            : iPC + m_ofDefault;
+        int nCase = (int) ((JavaLong) hValue).getValue();
+        return nCase >= 0 && nCase < m_aofCase.length
+                ? jump(frame, iPC + m_aofCase[nCase], m_acExits[nCase])
+                : jump(frame, iPC + m_ofDefault, m_cDefaultExits);
         }
 
     @Override
@@ -218,4 +227,7 @@ public class JumpInt
     private Argument m_argVal;
     private Op[]     m_aOpCase;
     private Op       m_opDefault;
+
+    private transient int[] m_acExits;
+    private transient int   m_cDefaultExits;
     }

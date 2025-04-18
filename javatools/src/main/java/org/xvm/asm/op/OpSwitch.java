@@ -96,12 +96,14 @@ public abstract class OpSwitch
     @Override
     public void resolveAddresses(Op[] aop)
         {
+        int cCases;
         if (m_aOpCase == null)
             {
             int ofThis = getAddress();
-            int c      = m_aofCase.length;
-            m_aOpCase = new Op[c];
-            for (int i = 0; i < c; i++)
+
+            cCases    = m_aofCase.length;
+            m_aOpCase = new Op[cCases];
+            for (int i = 0; i < cCases; i++)
                 {
                 int ofOp = adjustRelativeAddress(aop, m_aofCase[i]);
                 m_aofCase[i] = ofOp;
@@ -113,15 +115,21 @@ public abstract class OpSwitch
             }
         else
             {
-            int c = m_aOpCase.length;
-
-            m_aofCase = new int[c];
-            for (int i = 0; i < c; i++)
+            cCases    = m_aOpCase.length;
+            m_aofCase = new int[cCases];
+            for (int i = 0; i < cCases; i++)
                 {
                 m_aofCase[i] = calcRelativeAddress(m_aOpCase[i]);
                 }
             m_ofDefault = calcRelativeAddress(m_opDefault);
             }
+
+        m_acExits = new int[cCases];
+        for (int i = 0; i < cCases; i++)
+            {
+            m_acExits[i] = calcExits(m_aOpCase[i]);
+            }
+        m_cDefaultExits = calcExits(m_opDefault);
         }
 
     @Override
@@ -302,6 +310,9 @@ public abstract class OpSwitch
     private Constant[] m_aConstCase;
     private Op[]       m_aOpCase;
     private Op         m_opDefault;
+
+    protected transient int[] m_acExits;
+    protected transient int   m_cDefaultExits;
 
     enum Algorithm
         {

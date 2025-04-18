@@ -151,12 +151,14 @@ public class JumpVal
                 // check the exact match first
                 Index = mapJump.get(hValue);
 
-                List<Object[]> listRanges = m_listRanges;
-                for (int iR = 0, cR = listRanges.size(); iR < cR; iR++)
+                if (!hValue.isNativeEqual())
                     {
-                    Object[] ao = listRanges.get(iR);
-
-                    int     index = (Integer) ao[2];
+                    break; // REVIEW: should we assert instead?
+                    }
+                List<Object[]> listRanges = m_listRanges;
+                for (Object[] ao : listRanges)
+                    {
+                    int index = (Integer) ao[2];
                     boolean fLoEx = (index & LO_EX) != 0;
                     boolean fHiEx = (index & HI_EX) != 0;
 
@@ -169,16 +171,13 @@ public class JumpVal
                         ObjectHandle hLow  = (ObjectHandle) ao[0];
                         ObjectHandle hHigh = (ObjectHandle) ao[1];
 
-                        if (hValue.isNativeEqual())
-                            {
-                            int nCmpLo = hValue.compareTo(hLow);
-                            int nCmpHi = hValue.compareTo(hHigh);
+                        int nCmpLo = hValue.compareTo(hLow);
+                        int nCmpHi = hValue.compareTo(hHigh);
 
-                            if (    (fLoEx ? nCmpLo > 0 : nCmpLo >= 0) &&
-                                    (fHiEx ? nCmpHi < 0 : nCmpHi <= 0))
-                                {
-                                return iPC + index;
-                                }
+                        if ((fLoEx ? nCmpLo > 0 : nCmpLo >= 0) &&
+                            (fHiEx ? nCmpHi < 0 : nCmpHi <= 0))
+                            {
+                            return jump(frame, iPC + m_aofCase[index], m_acExits[index]);
                             }
                         }
                     }
@@ -190,8 +189,8 @@ public class JumpVal
             }
 
         return Index == null
-            ? iPC + m_ofDefault
-            : iPC + Index;
+                ? jump(frame, iPC + m_ofDefault, m_cDefaultExits)
+                : jump(frame, iPC + m_aofCase[Index], m_acExits[Index]);
         }
 
     /**
@@ -231,14 +230,14 @@ public class JumpVal
                                 if (frame.popStack() == xBoolean.TRUE)
                                     {
                                     // it's a match
-                                    return iPC + m_aofCase[iCase];
+                                    return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
                                     }
                             continue;
 
                             case Op.R_CALL:
                                 frame.m_frameNext.addContinuation(frameCaller ->
                                     frameCaller.popStack() == xBoolean.TRUE
-                                        ? iPC + m_aofCase[iCurrent]
+                                        ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
                                         : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
                                 return Op.R_CALL;
 
@@ -260,14 +259,14 @@ public class JumpVal
                             if (frame.popStack() == xBoolean.TRUE)
                                 {
                                 // it's a match
-                                return iPC + m_aofCase[iCase];
+                                return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
                                 }
                             continue;
 
                         case Op.R_CALL:
                             frame.m_frameNext.addContinuation(frameCaller ->
                                 frameCaller.popStack() == xBoolean.TRUE
-                                    ? iPC + m_aofCase[iCurrent]
+                                    ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
                                     : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
                             return Op.R_CALL;
 
@@ -281,7 +280,7 @@ public class JumpVal
                 }
             }
         // nothing matched
-        return iPC + m_ofDefault;
+        return jump(frame, iPC + m_ofDefault, m_cDefaultExits);
         }
 
     /**
@@ -295,9 +294,7 @@ public class JumpVal
             return;
             }
 
-        int[] aofCase = m_aofCase;
-        int   cCases  = ahCase.length;
-
+        int                        cCases  = ahCase.length;
         Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
 
         Algorithm    algorithm  = Algorithm.NativeSimple;
@@ -306,19 +303,19 @@ public class JumpVal
         ConstHeap    heap       = frame.f_context.f_container.f_heap;
         ConstantPool poolTarget = frame.f_function.getConstantPool();
 
-        for (int i = 0; i < cCases; i++ )
+        for (int iCase = 0; iCase < cCases; iCase++ )
             {
-            ObjectHandle hCase = ahCase[i];
+            ObjectHandle hCase = ahCase[iCase];
 
             assert !hCase.isMutable();
 
             // caching a constant linked to the current pool would "leak" the current container
             if (hCase.getComposition().getConstantPool() != poolTarget)
                 {
-                hCase = heap.relocateConst(hCase, frame.getConstant(m_anConstCase[i]));
+                hCase = heap.relocateConst(hCase, frame.getConstant(m_anConstCase[iCase]));
 
                 assert hCase != null;
-                ahCase[i] = hCase;
+                ahCase[iCase] = hCase;
                 }
 
             TypeConstant typeCase = hCase.getType();
@@ -328,11 +325,11 @@ public class JumpVal
                 {
                 if (hCase.isNativeEqual())
                     {
-                    mapJump.put(hCase, Integer.valueOf(aofCase[i]));
+                    mapJump.put(hCase, Integer.valueOf(iCase));
                     }
                 else if (fRange)
                     {
-                    if (addRange((GenericHandle) hCase, aofCase[i]))
+                    if (addRange((GenericHandle) hCase, iCase))
                         {
                         algorithm = Algorithm.NativeRange;
                         }
@@ -352,13 +349,13 @@ public class JumpVal
                     {
                     algorithm = Algorithm.NaturalRange;
 
-                    addRange((GenericHandle) hCase, i);
+                    addRange((GenericHandle) hCase, iCase);
                     }
                 else
                     {
                     algorithm = algorithm.worstOf(Algorithm.NaturalSimple);
 
-                    mapJump.put(hCase, Integer.valueOf(aofCase[i]));
+                    mapJump.put(hCase, Integer.valueOf(iCase));
                     }
                 }
             }
