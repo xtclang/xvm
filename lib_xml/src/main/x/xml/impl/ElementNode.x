@@ -104,17 +104,12 @@ class ElementNode
                 String? oldValue = this.value;
                 if (newValue != oldValue) {
                     if (oldValue != Null) {
-                        Int contentCount = this.contentCount;
-                        if (contentCount > 0) {
-                            Node? prev = Null;
-                            Node? node = child_;
-                            // fast-skip attributes
-                            Int attributeCount = this.attributeCount;
-                            for (Int i : 0..<attributeCount) {
-                                assert node.is(AttributeNode);
-                                prev = node;
-                                node = node.next_;
-                            }
+                        // TODO GG if (&contentCount.nonZero) {
+                        // TODO GG if (contentCount_nonZero) {
+                        if (!&contentCount.isZero()) {
+                            Int contentCount = this.contentCount;
+                            Node? prev = lastAttribute();
+                            Node? node = prev?.next_ : Null;
                             // remove all previous content parts
                             Boolean replaced  = False;
                             Int     remaining = contentCount;
@@ -152,10 +147,13 @@ class ElementNode
     @Override
     @RO Int size.get() {
         // we defer creating a `Part` for the `Content` represented by the `value` until we have to
-        Int contentCount = this.contentCount;
-        Int totalCount   = attributeCount + contentCount + elementCount;
-        if (contentCount == 0 && value != Null) {
-            ++totalCount;
+        Int totalCount = attributeCount + elementCount;
+        if (&contentCount.isZero()) {
+            if (value != Null) {
+                ++totalCount;
+            }
+        } else {
+            totalCount += contentCount;
         }
         return totalCount;
     }
@@ -174,9 +172,8 @@ class ElementNode
 
     @Override
     Attribute setAttribute(String name, String value) {
-        Int   count = attributeCount;
         Node? prev  = Null;
-        if (count > 0) {
+        if (!&attributeCount.isZero()) {
             if (AttributeNode node := attributeByName(name)) {
                 node.value = value;
                 return node;
@@ -187,7 +184,7 @@ class ElementNode
         }
         AttributeNode node = new AttributeNode(name, value);
         link_(prev, node);
-        attributeCount = count + 1;
+        &attributeCount.inc();
         mod();
         return trailing_ <- node;
     }
@@ -210,15 +207,14 @@ class ElementNode
 
         @Override
         @RO Int size.get() {
-            Int count = partList.contentCount;
-            if (count == 0 && partList.value != Null) {
-                count = 1;
+            if (partList.&contentCount.isZero()) {
+                return partList.value == Null ? 0 : 1;
             }
-            return count;
+            return partList.contentCount;
         }
 
         @Override
-        @RO Boolean empty.get() = partList.contentCount == 0 && partList.value == Null;
+        @RO Boolean empty.get() = partList.&contentCount.isZero() && partList.value == Null;
     }
 
     // ----- Attribute List implementation ---------------------------------------------------------
@@ -472,7 +468,7 @@ class ElementNode
         Int size.get() = partList.attributeCount;
 
         @Override
-        @RO Boolean empty.get() = partList.attributeCount == 0;
+        @RO Boolean empty.get() = partList.&attributeCount.isZero();
 
         @Override
         conditional Value get(Key key) {
@@ -589,15 +585,12 @@ class ElementNode
          *                `Null`
          */
         (Boolean found, Int index, AttributeNode? prev, AttributeNode? node) findNode(String name) {
-            Int count = partList.attributeCount;
-            if (count == 0) {
+            if (partList.&attributeCount.isZero()) {
                 return False, 0, Null, Null;
             }
 
-            // validate the cache
-            checkMod();
-
             // check cache
+            checkMod();
             if (cacheNode?.name == name) {
                 return True, -1, cachePrev, cacheNode;
             }
@@ -605,6 +598,7 @@ class ElementNode
             AttributeNode? prev  = Null;
             AttributeNode  node  = partList.child_.as(AttributeNode);
             Int            index = 0;
+            Int            count = partList.attributeCount;
             while (True) {
                 if (node.name == name) {
                     cachePrev = prev;
@@ -881,12 +875,21 @@ class ElementNode
      */
     private UInt32 counts_ = 0;
 
+    // TODO GG couldn't get this to work either
+    // Boolean contentCount_nonZero.get() {
+    //     return counts_ & &contentCount.Mask != 0;
+    //     return counts_ & ElementNode.contentCount.Mask != 0;  // <- bad exception from this option
+    // }
+
     @Override
-    protected Int contentCount {
-        static Int    Bits  = 7;
+    /* TODO GG protected */ Int contentCount {
+        static Int    Bits  = 5;
         static UInt32 Ones  = (1 << Bits) - 1;
         static Int    Shift = 0;
         static UInt32 Mask  = Ones << Shift;
+
+        // TODO GG
+        // Boolean nonZero.get() = counts_ & Mask != 0;
 
         @Override
         Int get() {
@@ -905,13 +908,42 @@ class ElementNode
             assert newValue >= 0;
             counts_ = counts_ & ~Mask | newValue.notGreaterThan(Ones).toUInt32();
         }
+
+        /**
+         * @return `True` iff the value is zero.
+         */
+        Boolean isZero() = counts_ & Mask == 0;
+
+        /**
+         * @return `True` iff the value is maxed aka overflowed.
+         */
+        Boolean isMaxed() = counts_ & Mask == Mask;
+
+        /**
+         * Increment the value.
+         */
+        void inc() {
+            if (!isMaxed()) {
+                set(get()+1);
+            }
+        }
+
+        /**
+         * Decrement the value.
+         */
+        void dec() {
+            assert !isZero();
+            if (!isMaxed()) {
+                set(get()-1);
+            }
+        }
     }
 
     /**
      * The number of [Attribute] child [Node]s this `ElementNode` contains.
      */
     protected Int attributeCount {
-        static Int    Bits  = 7;
+        static Int    Bits  = 11;
         static UInt32 Ones  = (1 << Bits) - 1;
         static Int    Shift = contentCount.Bits;
         static UInt32 Mask  = Ones << Shift;
@@ -920,10 +952,17 @@ class ElementNode
         Int get() {
             Int count = counts_ & Mask >>> Shift;
             if (count == Ones) {
-                count = parts.filter(n -> n.is(AttributeNode)).size;
+                count = 0;
+                Node? node = child_;
+                AttributeNode? last = Null;
+                while (node.is(AttributeNode)) {
+                    ++count;
+                    last = node;
+                }
                 if (count < Ones) {
                     set(count);
                 }
+                trailing_ = last?;
             }
             return count;
         }
@@ -932,6 +971,35 @@ class ElementNode
         void set(Int newValue) {
             assert newValue >= 0;
             counts_ = counts_ & ~Mask | (newValue.notGreaterThan(Ones).toUInt32() << Shift);
+        }
+
+        /**
+         * @return `True` iff the value is zero.
+         */
+        Boolean isZero() = counts_ & Mask == 0;
+
+        /**
+         * @return `True` iff the value is maxed aka overflowed.
+         */
+        Boolean isMaxed() = counts_ & Mask == Mask;
+
+        /**
+         * Increment the value.
+         */
+        void inc() {
+            if (!isMaxed()) {
+                set(get()+1);
+            }
+        }
+
+        /**
+         * Decrement the value.
+         */
+        void dec() {
+            assert !isZero();
+            if (!isMaxed()) {
+                set(get()-1);
+            }
         }
     }
 
@@ -961,6 +1029,35 @@ class ElementNode
             assert newValue >= 0;
             counts_ = counts_ & ~Mask | (newValue.notGreaterThan(Ones).toUInt32() << Shift);
         }
+
+        /**
+         * @return `True` iff the value is zero.
+         */
+        Boolean isZero() = counts_ & Mask == 0;
+
+        /**
+         * @return `True` iff the value is maxed aka overflowed.
+         */
+        Boolean isMaxed() = counts_ & Mask == Mask;
+
+        /**
+         * Increment the value.
+         */
+        void inc() {
+            if (!isMaxed()) {
+                set(get()+1);
+            }
+        }
+
+        /**
+         * Decrement the value.
+         */
+        void dec() {
+            assert !isZero();
+            if (!isMaxed()) {
+                set(get()-1);
+            }
+        }
     }
 
     @Override
@@ -969,28 +1066,28 @@ class ElementNode
         Boolean sameType = False;
         switch (cur.is(_), result.is(_)) {
             case (ElementNode,   AttributeNode):
-                --elementCount;
-                ++attributeCount;
+                &elementCount.dec();
+                &attributeCount.inc();
                 break;
             case (ElementNode,   ContentNode  ):
-                --elementCount;
-                ++contentCount;
+                &elementCount.dec();
+                &contentCount.inc();
                 break;
             case (AttributeNode, ElementNode  ):
-                --attributeCount;
-                ++elementCount;
+                &attributeCount.dec();
+                &elementCount.inc();
                 break;
             case (AttributeNode, ContentNode  ):
-                --attributeCount;
-                ++contentCount;
+                &attributeCount.dec();
+                &contentCount.inc();
                 break;
             case (ContentNode,   ElementNode  ):
-                --contentCount;
-                ++elementCount;
+                &contentCount.dec();
+                &elementCount.inc();
                 break;
             case (ContentNode,   AttributeNode):
-                --contentCount;
-                ++attributeCount;
+                &contentCount.dec();
+                &attributeCount.inc();
                 break;
             default:
                 sameType = True;
@@ -1006,7 +1103,7 @@ class ElementNode
     protected (Node cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
         (Node result, UInt32 mods) = super(index, prev, cur, part);
         if (result.is(ElementNode)) {
-            ++elementCount;
+            &elementCount.inc();
             if (result.next_ == Null) {
                 trailing_ = result;
             } else if (trailing_.is(ElementNode)) {
@@ -1017,7 +1114,7 @@ class ElementNode
                 trailing_ = result;
             }
         } else {
-            ++contentCount;
+            &contentCount.inc();
             if (result.next_ == Null) {
                 trailing_ = result;
             } else if (trailing_.is(ContentNode)) {
@@ -1031,11 +1128,11 @@ class ElementNode
     protected (Node? cur, UInt32 mods) deleteNode(Int index, Node? prev, Node cur) {
         (Node? result, UInt32 mods) = super(index, prev, cur);
         if (cur.is(ElementNode)) {
-            --elementCount;
+            &elementCount.dec();
         } else if (cur.is(AttributeNode)) {
-            --attributeCount;
+            &attributeCount.dec();
         } else {
-            --contentCount;
+            &contentCount.dec();
         }
         if (&cur == &trailing_) {
             trailing_ = Null;
@@ -1053,7 +1150,7 @@ class ElementNode
      * @return (conditional) the [AttributeNode] with the specified name
      */
     /* TODO CP protected */ conditional AttributeNode attributeByName(String name) {
-        if (attributeCount == 0) {
+        if (&attributeCount.isZero()) {
             return False;
         }
 
@@ -1080,15 +1177,15 @@ class ElementNode
      * @return the last child [AttributeNode]; otherwise, `Null`
      */
     protected AttributeNode? lastAttribute() {
-        Int count = attributeCount;
-        if (count == 0) {
+        if (&attributeCount.isZero()) {
             return Null;
         }
 
         // if the cached "trailing_" node is an AttributeNode, then it is the last AttributeNode
         return trailing_.is(AttributeNode)?;
 
-        Node? node = child_;
+        Node? node  = child_;
+        Int   count = attributeCount;
         while (--count > 0) {
             node = node?.next_ : assert;
         }
@@ -1103,7 +1200,7 @@ class ElementNode
      * @return node   the [Node] that is the first [Content] `Node`; otherwise, `Null`
      */
     protected (Node? prev, ElementNode? node) firstElement() {
-        if (elementCount == 0) {
+        if (&elementCount.isZero()) {
             // by default, the elements follow the attributes and content
             return lastNode(), Null;
         }
@@ -1142,7 +1239,7 @@ class ElementNode
 
     @Override
     protected (Node? prev, ContentNode? node) firstContent() {
-        if (contentCount == 0) {
+        if (&contentCount.isZero()) {
             // by default, the content follows the attributes
             return lastAttribute(), Null;
         }
