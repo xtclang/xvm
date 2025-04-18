@@ -108,7 +108,7 @@ class Parser(Boolean ignoreProlog       = False,
             (firstNode, lastNode) = link(firstNode, lastNode, node);
         }
 
-        if (Parsed node := parseElement()) { // TODO GG @Parsed ElementNode instead of Parsed+ElementNode
+        if (Parsed node := parseElement()) {
             (firstNode, lastNode) = link(firstNode, lastNode, node);
         } else {
             log(offset, offset, Error, NoRootElement);

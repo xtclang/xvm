@@ -1,3 +1,39 @@
+- GG/CP: update the CookieBroker doc regarding the cookies (SameSite, Secure etc)
+
+- GG:
+        String str;
+        if (True) {
+            str = "Hello, world!";
+        }
+        // str is not definitely assigned
+
+- GG: Fix incorrect type inference: this should not compile:
+        if ((i1 != Null) != (i2 != Null)) {
+            return i1 + i2;
+        }
+
+- GG: allow super() call to have named arguments
+        class Base {
+            void f(String s, Int value = 1) = console.print($"{s=} {value=}");
+        }
+        class Derived extends Base {
+            @Override
+            void f(String s, Int value = 2) = super(s, value=3);
+        }
+
+- GG: allow type declarations for l-value to have "naked" annotations (without arguments), e.g.:
+        @Parsed ElementNode node = ...
+            instead of
+        Parsed+ElementNode node = ...
+
+    at the moment, the compiler doesn't allow it since there is no no-arg constructor for Parsed
+
+- CP:
+    void run() {
+        console.print("no semicolon")
+    }
+    // would be nice as to have a simple "`;` is missing" error
+
 - CP: Prevent requests with "Sec-Fetch-Site=cross-site" from being processed except when an end point
      explicitly allows it (e.g. @AllowCrossSite)
 
@@ -5,14 +41,13 @@
 
 - GG: fix HttpClient talking to raw address (127.0.0.1 instead of localhost)
 
-- GG: KeyCredentials doesn't really need the realmName
-
-- GG: a presence of .DS_Store file asserts JsonDB store initialization
-     (dataDir.files() -> file.contents.unpackUtf8())
-
-- GG: missing "Content-Type" header blows the Dispatcher
-
+- GG: add "quit" to the cli "help"
+- GG: add batch commands support to cli
 - GG: group CLI commands into sections (one per class? @CommandGroup?)
+
+- GG: add compiler error for assigning non-transient properties for module or package
+
+- GG: add typeExpected, typeActual to TypeMismatch exception
 
 - GG: need to be able to do:
     class Test {
@@ -29,6 +64,9 @@
         }
         @Op("[]=") void put(String name, String value) {}
     }
+
+- GG: incoming request info without "Content-Type" header asserts the Http1Request construction;
+      it should respond with UnsupportedMediaType (415)
 
 - CP: how to prevent a DoS attack by a "curl" loop to overwhelm the session cache
 
@@ -69,8 +107,6 @@
 
 - add a method to Map API to evaluate the "worst lookup cost" based on the current content
   (Mark's suggestion to evaluated keys' hashCode distribution)
-
-- consider allowing comparison between T and T?; for example making Null always "Lesser"
 
 - consider using (new ConcurrentSection()) to get "pre-switching" notification
 
