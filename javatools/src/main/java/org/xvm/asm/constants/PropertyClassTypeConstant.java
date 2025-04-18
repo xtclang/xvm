@@ -124,7 +124,12 @@ public class PropertyClassTypeConstant
         PropertyInfo info = m_info;
         if (info == null)
             {
-            m_info = info = m_typeParent.ensureTypeInfo().findProperty(m_idProp);
+            TypeConstant typeParent = m_typeParent;
+            if (typeParent.isSingleDefiningConstant() && !typeParent.isFormalType())
+                {
+                typeParent = typeParent.ensureAccess(Access.PRIVATE);
+                }
+            m_info = info = typeParent.ensureTypeInfo().findProperty(m_idProp);
             assert info != null;
             }
         return info;
