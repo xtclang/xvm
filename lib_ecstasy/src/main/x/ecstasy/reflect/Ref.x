@@ -158,6 +158,8 @@ interface Ref<Referent> {
      * * Inner   - the referent exists within a container created within the current container;
      * * Outer   - the referent exists within a container that created the current container, but
      *             **not** within the current container;
+     * * Other   - the referent exists within a container that is not related to (not in the lineage
+     *             of) the current container
      *
      * Each `Zone` implies a variation in _trust_. For the purpose of security, a container must not
      * trust references from `Inner` containers.
@@ -165,7 +167,7 @@ interface Ref<Referent> {
      * Object references from an `Outer` container are necessarily opaque to code executing in the
      * `Current` container; it is not possible to use [revealAs] against `Outer` references.
      */
-    enum Zone {Current, Inner, Outer}
+    enum Zone {Current, Inner, Outer, Other}
 
     /**
      * The [Zone] of the referent in relation to the `Current` container.
