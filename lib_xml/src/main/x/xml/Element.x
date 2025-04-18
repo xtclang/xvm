@@ -192,7 +192,6 @@ interface Element
     Writer appendTo(Writer buf, Boolean pretty = False, String indent = "") {
         List<Part> parts = this.parts;
 
-        indent.appendTo(buf);
         buf.add('<');
         name.appendTo(buf);
         if (parts.empty) {
@@ -228,7 +227,10 @@ interface Element
             return "/>".appendTo(buf);
         }
 
-        indent.appendTo(buf);
+        if (pretty) {
+            buf.add('\n');
+            indent.appendTo(buf);
+        }
         "</".appendTo(buf);
         name.appendTo(buf);
         return buf.add('>');
