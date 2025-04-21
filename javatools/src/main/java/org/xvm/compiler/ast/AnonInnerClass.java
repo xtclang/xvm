@@ -4,15 +4,12 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -110,14 +107,6 @@ public class AnonInnerClass
     public List<AnnotationExpression> getAnnotations()
         {
         return m_listAnnos == null ? Collections.emptyList() : m_listAnnos;
-        }
-
-    /**
-     * @return the type parameters suggested for the anonymous inner class
-     */
-    public List<Parameter> getTypeParameters()
-        {
-        return m_listParams;
         }
 
 
@@ -300,8 +289,6 @@ public class AnonInnerClass
                     return;
 
                 case INTERFACE:
-                    exprType = processFormalTypes((NamedTypeExpression) exprType,
-                            type.getSingleUnderlyingClass(true));
                     // fall out of this switch
                     break;
 
@@ -375,109 +362,7 @@ public class AnonInnerClass
             return;
             }
 
-        TypeExpression exprSuper = processFormalTypes((NamedTypeExpression) exprType, idSuper);
-
-        list.addFirst(new Extends(null, genKeyword(exprSuper, Id.EXTENDS), exprSuper));
-        }
-
-    /**
-     * Process the formal types of the anonymous class declaration and produce a new
-     * {@link NamedTypeExpression} that represents the corresponding generic anonymous type.
-     *
-     * @param exprThis  the original expression
-     * @param idBase    the id of the underlying class
-     *
-     * @return a new {@link NamedTypeExpression} that should replace the original
-     */
-    private NamedTypeExpression processFormalTypes(NamedTypeExpression exprThis, IdentityConstant idBase)
-        {
-        // Let's imagine there is code that looks like following:
-        //
-        // Class C<ElType>
-        //     {
-        //     Map<ElType, Int> foo()
-        //        {
-        //        return new Map()
-        //             {
-        //             ...
-        //             }
-        //        }
-        //    }
-        //
-        // By default it creates a synthetic (anonymous) TypeCompositionStatement
-        //
-        //  class Map:1
-        //          implements Map<C.ElType, Int>
-        //      {
-        //      ...
-        //      }
-        //
-        // which requires creation of a special type, e.g. C<Element>.foo().Map:1 to be handled
-        // correctly by the run-time.
-        //
-        // The idea behind this method is to transform the original expression to another
-        // synthetic TypeCompositionStatement that looks like this:
-        //
-        //  class Map:1<Map:1.Key extends C.ElType>
-        //          implements Map<Map:1.Key, Int>
-        //      {
-        //      ...
-        //      }
-        //
-        // and the formal type value is "injected" by the run time
-        //
-        // This approach also solves the issue with formal type parameters:
-        //
-        // static <Key> Map<Key, Int> foo(Set<Key> keys)
-        //    {
-        //    return new Map()
-        //         {
-        //         ...
-        //         }
-        //    }
-        //
-
-        ClassStructure clzBase = (ClassStructure) idBase.getComponent();
-
-        int cFormalTypes = clzBase.getTypeParamCount();
-        if (cFormalTypes == 0)
-            {
-            return exprThis;
-            }
-
-        long                 ofStart    = exprThis.getStartPosition();
-        long                 ofEnd      = exprThis.getEndPosition();
-        List<Parameter>      listFormal = new ArrayList<>(cFormalTypes);
-        List<TypeExpression> listImpl   = new ArrayList<>(cFormalTypes);
-
-        for (Map.Entry<StringConstant, TypeConstant> entry : clzBase.getTypeParamsAsList())
-            {
-            String       sName          = entry.getKey().getValue();
-            TypeConstant typeConstraint = exprThis.ensureTypeConstant().resolveGenericType(sName);
-
-            if (typeConstraint == null || !typeConstraint.containsFormalType(true))
-                {
-                continue;
-                }
-
-            Token          tok       = new Token(ofStart, ofStart, Id.IDENTIFIER, sName);
-            TypeExpression exprParam = new NamedTypeExpression(null,
-                    Collections.singletonList(tok), null, null, null, ofEnd);
-            listImpl.add(exprParam);
-
-            TypeExpression exprExtends = new NamedTypeExpression(exprThis, typeConstraint);
-            listFormal.add(new Parameter(exprExtends, tok));
-            }
-
-        if (listFormal.isEmpty())
-            {
-            return exprThis;
-            }
-
-         m_listParams = listFormal;
-
-        return new NamedTypeExpression(exprThis.immutable, exprThis.names,
-                exprThis.access, exprThis.nonnarrow, listImpl, ofEnd);
+        list.addFirst(new Extends(null, genKeyword(exprType, Id.EXTENDS), exprType));
         }
 
     /**
@@ -516,22 +401,6 @@ public class AnonInnerClass
           .append(' ')
           .append(getDefaultName());
 
-        if (m_listParams != null)
-            {
-            sb.append('<');
-            for (int i = 0, c = m_listParams.size(); i < c; i++)
-                {
-                Parameter param = m_listParams.get(i);
-                if (i > 0)
-                    {
-                    sb.append(", ");
-                    }
-
-                sb.append(param.getName());
-                }
-            sb.append('>');
-            }
-
         for (CompositionNode comp : getCompositions())
             {
             sb.append(' ')
@@ -564,11 +433,6 @@ public class AnonInnerClass
      * The annotations that have been collected for the AnonInnerClass.
      */
     private List<AnnotationExpression> m_listAnnos;
-
-    /**
-     * The type parameters that have been collected for the AnonInnerClass.
-     */
-    private List<Parameter> m_listParams;
 
     /**
      * The contributions for the AnonInnerClass, starting with the Extends contribution, if any.

@@ -480,12 +480,12 @@ class ElementNode
 
         @Override
         protected Iterator<Key> keyIterator() {
-            return new Iterator<String>() {     // TODO GG could not use "Key" instead of "String"
+            return new Iterator<Key>() {
                 private AttributeNode? node    = partList.child_.is(AttributeNode) ?: Null;
                 private UInt32         lastMod = partList.mods_;
 
                 @Override
-                conditional String next() {     // TODO GG could not use "Key" instead of "String"
+                conditional Key next() {
                     if (AttributeNode node ?= node) {
                         ElementNode partList = partList;
                         if (partList.modified(lastMod)) {
@@ -499,7 +499,7 @@ class ElementNode
                         Node prev = node;
                         this.node = prev.next_.is(AttributeNode) ?: Null;
                         iteratorAdvanced(prev);
-                        return True, prev.name;
+                        return True, prev.name.as(Key);
                     }
                     return False;
                 }
