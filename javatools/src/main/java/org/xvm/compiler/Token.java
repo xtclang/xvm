@@ -165,7 +165,19 @@ public class Token
         }
 
     /**
-     * If the token is an identifier that is also a context sensitive keyword, obtain that keyword.
+     * Determine the alternative identity of the token, if any, assuming that the token were to be
+     * used in a context-sensitive manner.
+     *
+     * @return the context-sensitive identity of the token, if the token is an "identifier" whose
+     *         name also is a context-sensitive keyword
+     */
+    public Id getContextSensitiveId()
+        {
+        return m_id == Id.IDENTIFIER ? Id.valueByContextSensitiveText(m_oValue.toString()) : null;
+        }
+
+    /**
+     * If the token is an identifier that is also a context-sensitive keyword, obtain that keyword.
      *
      * @return a keyword token that represents the same text as this identifier token
      */
@@ -564,9 +576,9 @@ public class Token
         BREAK        ("break"          ),
         CASE         ("case"           ),
         CATCH        ("catch"          ),
-        CLASS        ("class"          ),
+        CLASS        ("class"          , true),
         CONDITIONAL  ("conditional"    ),
-        CONST        ("const"          ),
+        CONST        ("const"          , true),
         CONSTRUCT    ("construct"      ),
         CONTINUE     ("continue"       ),
         DEFAULT      ("default"        ),
@@ -575,7 +587,7 @@ public class Token
         DO           ("do"             ),
         ELSE         ("else"           ),
         EMBEDDED     ("embedded"       , true),
-        ENUM         ("enum"           ),
+        ENUM         ("enum"           , true),
         EXTENDS      ("extends"        , true),
         FINALLY      ("finally"        ),
         FOR          ("for"            ),
@@ -586,24 +598,24 @@ public class Token
         IMPORT       ("import"         ),
         INCORPORATES ("incorporates"   , true),
         INJECT       ("inject"         , true),
-        INTERFACE    ("interface"      ),
+        INTERFACE    ("interface"      , true),
         INTO         ("into"           , true),
         IS           ("is"             ),
-        MIXIN        ("mixin"          ),
-        MODULE       ("module"         ),
+        MIXIN        ("mixin"          , true),
+        MODULE       ("module"         , true),
         NEW          ("new"            ),
         OPTIONAL     ("optional"       , true),
         OUTER        ("outer"          , true, true),
-        PACKAGE      ("package"        ),
+        PACKAGE      ("package"        , true),
         PREFER       ("prefer"         , true),
         PRIVATE      ("private"        ),
         PROTECTED    ("protected"      ),
         PUBLIC       ("public"         ),
         REQUIRED     ("required"       , true),
         RETURN       ("return"         ),
-        SERVICE      ("service"        ),
+        SERVICE      ("service"        , true),
         STATIC       ("static"         ),
-        STRUCT       ("struct"         ),
+        STRUCT       ("struct"         , true),
         SUPER        ("super"          , true, true),
         SWITCH       ("switch"         ),
         THIS         ("this"           , true, true),

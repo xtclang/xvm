@@ -998,6 +998,13 @@ public class ClassStructure
                     return true;
                     }
                 }
+            else if (getFormat() == Format.INTERFACE)
+                {
+                if (contrib.getComposition() == Composition.Extends && contrib.getTypeConstant().isTuple())
+                    {
+                    return true;
+                    }
+                }
             }
         return false;
         }

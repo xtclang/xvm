@@ -20,14 +20,14 @@ module TestContainer {
             Container container =
                 new Container(template, Lightweight, repository, SimpleResourceProvider);
 
-            container.invoke("run", Tuple:(depth+1));
+            container.invoke("run", (depth+1));
         } else {
             // run TestSimple
             ModuleTemplate   template = repository.getResolvedModule("TestSimple");
             ResourceProvider injector = new BasicResourceProvider();
 
             Container container = new Container(template, Lightweight, repository, injector);
-            container.invoke("run", Tuple:());
+            container.invoke("run", ());
 
             // run TestContained
             contained.run();

@@ -51,7 +51,7 @@ const NamedTypeExpression(Token[]?          moduleNames,
         }
 
         // process names
-        Type type = &mod.actualType;
+        Type type = &mod.type;
         Loop: for (Token name : names) {
             if (type := type.childTypes.get(name.valueText)) {
                 // a type exists by that name

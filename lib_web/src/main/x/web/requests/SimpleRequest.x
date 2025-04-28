@@ -24,7 +24,7 @@ class SimpleRequest
             if (mediaType == Null) {
                 if (!(mediaType := client.registry.inferMediaType(content))) {
                     throw new IllegalArgument($|Unable to find MediaType for \
-                                               |"{&content.actualType}"
+                                               |"{&content.type}"
                                              );
                 }
             }
@@ -127,7 +127,7 @@ class SimpleRequest
             return this;
         }
 
-        Type type = &content.actualType;
+        Type type = &content.type;
         if (Codec codec := client.registry.findCodec(mediaType, type)) {
             this.bytes = codec.encode(content);
             return this;

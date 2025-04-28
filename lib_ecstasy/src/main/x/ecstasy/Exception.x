@@ -23,7 +23,7 @@ const Exception {
 
     @Override
     String toString() {
-        String name       = &this.actualClass.name;
+        String name       = &this.class.name;
         String stackTrace = formatStackTrace();
         return formatExceptionString(name, stackTrace);
     }

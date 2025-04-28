@@ -194,7 +194,7 @@ service ChainBundle {
         handle = binders.empty
             ? ((request) -> respond(request, boundMethod()))
             : ((request) -> {
-                Tuple values = Tuple:();
+                Tuple values = ();
                 for (ParameterBinder bind : binders) {
                     values = bind(request, values);
                 }
@@ -649,7 +649,7 @@ service ChainBundle {
      * Convert the specified value into the specified type using the specified format (optional).
      */
     private Object convertValue(UriTemplate.Value value, Type type, String? formatName) {
-        if (&value.actualType.isA(type)) {
+        if (&value.type.isA(type)) {
             return value;
         }
 
@@ -703,7 +703,7 @@ service ChainBundle {
                     } catch (ecstasy.TypeMismatch e) {
                         throw new IllegalState($|Incoming data type for parameter "{name}" does not \
                                                 |match its type "{paramType.DataType}"; \
-                                                |actualType is "{e.text}"
+                                                |actual type is "{e.text}"
                                               );
                     }
                     if (String formatName ?= param.format) {

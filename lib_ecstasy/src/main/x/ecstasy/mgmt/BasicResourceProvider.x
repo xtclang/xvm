@@ -12,7 +12,7 @@
  *       ResourceProvider injector = new BasicResourceProvider();
  *
  *       Container container = new Container(template, Lightweight, repository, injector);
- *       container.invoke("run", Tuple:());
+ *       container.invoke("run", ());
  *   }
  */
 service BasicResourceProvider

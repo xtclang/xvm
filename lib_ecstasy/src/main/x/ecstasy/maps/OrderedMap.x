@@ -86,6 +86,7 @@ interface OrderedMap<Key extends Orderable, Value>
      * the value associated with each key in the first `OrderedMap` is equal to the value associated
      * with the same key in the second `OrderedMap`.
      */
+    @Override
     static <CompileType extends OrderedMap> Boolean equals(CompileType map1, CompileType map2) {
         // some simple optimizations: two empty maps are equal, and two maps of different sizes are
         // not equal

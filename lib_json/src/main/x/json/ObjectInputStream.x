@@ -281,7 +281,7 @@ class ObjectInputStream(Schema schema, Parser parser)
 
                 throw new IllegalJSON(
                         $"Type mismatch for JSON pointer \"{pointer}\" from node \"{this.pointer}\""
-                        + $"; required type={Serializable}, actual type={&value.actualType}");
+                        + $"; required type={Serializable}, actual type={&value.type}");
             }
 
             throw new IllegalJSON($"Missing value for JSON pointer \"{pointer}\" from node"
@@ -1052,7 +1052,7 @@ class ObjectInputStream(Schema schema, Parser parser)
                     this.loadNext();
                     return True, dereference(pointer);
                 } else if (pointer != Null) {
-                    throw new IllegalJSON($"Pointer type {&pointer.actualType} from node"
+                    throw new IllegalJSON($"Pointer type {&pointer.type} from node"
                             + $" \"{this.pointer}\"; String expected");
                 }
             }

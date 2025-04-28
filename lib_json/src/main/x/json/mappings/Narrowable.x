@@ -34,7 +34,7 @@ annotation Narrowable<Serializable>
 
     @Override
     void write(ElementOutput out, Serializable value) {
-        Type<Serializable> type = &value.actualType;
+        Type<Serializable> type = &value.type;
         if (type != Serializable) {
             Schema schema = out.schema;
             if (schema.enableMetadata) {

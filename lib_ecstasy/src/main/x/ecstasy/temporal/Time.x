@@ -170,6 +170,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
     /**
      * Compare two Time values for order.
      */
+    @Override
     static <CompileType extends Time> Ordered compare(CompileType value1, CompileType value2) {
         assert value1.timezone.isNoTZ == value2.timezone.isNoTZ;
         return value1.epochPicos <=> value2.epochPicos;
@@ -178,6 +179,7 @@ const Time(Int128 epochPicos, TimeZone timezone = UTC)
     /**
      * Compare two Time values for equality.
      */
+    @Override
     static <CompileType extends Time> Boolean equals(CompileType value1, CompileType value2) {
         assert value1.timezone.isNoTZ == value2.timezone.isNoTZ;
         return value1.epochPicos == value2.epochPicos;

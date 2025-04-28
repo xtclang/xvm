@@ -79,7 +79,7 @@ module TestTimeouts {
                 } else {
                     console.print("Failed to timeout");
                 }
-                done = Tuple:();
+                done = ();
             });
             return done;
         }
@@ -98,7 +98,7 @@ module TestTimeouts {
                 } else {
                     console.print("Failed to timeout");
                 }
-                done = Tuple:();
+                done = ();
             });
             return done;
         }
@@ -144,7 +144,7 @@ module TestTimeouts {
             @Inject Timer timer;
             @Future Tuple done;
             timer.start();
-            timer.schedule(duration, () -> {done = Tuple:();});
+            timer.schedule(duration, () -> {done = ();});
 
             return done;
         }

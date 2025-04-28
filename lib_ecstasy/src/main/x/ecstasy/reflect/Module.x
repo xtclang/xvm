@@ -15,7 +15,7 @@ interface Module
      * The fully qualified name of the module, such as "ecstasy.xtclang.org".
      */
     @RO String qualifiedName.get() {
-        return &this.actualClass.name;
+        return &this.class.name;
     }
 
     /**

@@ -15,7 +15,7 @@
      * @throws InvalidType  if a type exception occurs and `hideExceptions` is not specified
      */
     conditional Type resolveType(TypeSystem typeSystem, Boolean hideExceptions = False) {
-        Class clz = &this.actualClass;
+        Class clz = &this.class;
         TODO($"clz={clz}");
     }
 }

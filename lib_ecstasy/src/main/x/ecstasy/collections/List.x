@@ -1288,6 +1288,7 @@ interface List<Element>
      * Two lists are equal iff they are of the same size, and they contain the same values, in the
      * same order.
      */
+    @Override
     static <CompileType extends List> Boolean equals(CompileType list1, CompileType list2) {
         if (Int size1 := list1.knownSize(),
             Int size2 := list2.knownSize()) {

@@ -73,7 +73,7 @@ module TestCrypto {
         console.print(cert);
 
         assert CryptoPassword pwd := keystore.getPassword(pwdName);
-        console.print($"{pwd}; type={&pwd.actualType}");
+        console.print($"{pwd}; type={&pwd.type}");
 
         store.delete();
     }

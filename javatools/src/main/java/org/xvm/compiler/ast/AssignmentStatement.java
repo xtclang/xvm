@@ -515,9 +515,8 @@ public class AssignmentStatement
         lvalueExpr = exprLeft;
         exprLeft.requireAssignable(ctxLValue, errs);
 
-        Expression     exprRight    = rvalue;
-        Expression     exprRightNew = null;
-        TypeConstant[] atypeRight   = null;     // used only to update the left type info
+        Expression     exprRight  = null;
+        TypeConstant[] atypeRight = null;     // used only to update the left type info
         switch (getCategory())
             {
             case Assign:
@@ -537,12 +536,12 @@ public class AssignmentStatement
                         {
                         // test for a future assignment first
                         TypeConstant typeFuture = pool.ensureFutureVar(typeLeft);
-                        if (exprRight.testFit(ctxRValue, typeFuture, false, null).isFit())
+                        if (rvalue.testFit(ctxRValue, typeFuture, false, null).isFit())
                             {
                             typeLeft = typeFuture;
                             }
                         }
-                    exprRightNew = exprRight.validate(ctxRValue, typeLeft, errs);
+                    exprRight = rvalue.validate(ctxRValue, typeLeft, errs);
 
                     if (fInfer)
                         {
@@ -563,8 +562,7 @@ public class AssignmentStatement
                 else
                     {
                     // (LVal0, LVal1, ..., LValN) = RVal
-                    exprRightNew = exprRight.validateMulti(ctxRValue, exprLeft.getTypes(), errs);
-
+                    exprRight = rvalue.validateMulti(ctxRValue, exprLeft.getTypes(), errs);
                     if (exprRight instanceof InvocationExpression exprInvoke && exprInvoke.isAsync() &&
                             exprLeft instanceof MultipleLValueStatement.MultipleLValueExpression exprLMulti)
                         {
@@ -586,10 +584,10 @@ public class AssignmentStatement
                 merge(ctxRValue, ctxLValue);
 
                 // prevent unnecessary errors and mark an unconditional assignment even if the validation failed
-                exprLeft.markAssignment(ctxRValue, exprRightNew != null && exprRightNew.isConditionalResult(), errs);
-                if (exprRightNew != null)
+                exprLeft.markAssignment(ctxRValue, exprRight != null && exprRight.isConditionalResult(), errs);
+                if (exprRight != null)
                     {
-                    atypeRight = exprRightNew.getTypes();
+                    atypeRight = exprRight.getTypes();
                     }
                 break;
 
@@ -610,14 +608,14 @@ public class AssignmentStatement
                         typeReq = typeReq.ensureNullable();
                         }
 
-                    exprRightNew = exprRight.validate(ctxRValue, typeReq, errs);
+                    exprRight = rvalue.validate(ctxRValue, typeReq, errs);
 
                     merge(ctxRValue, ctxLValue);
 
                     exprLeft.markAssignment(ctxRValue, fConditional, errs);
-                    if (exprRightNew != null)
+                    if (exprRight != null)
                         {
-                        atypeRight = exprRightNew.getTypes();
+                        atypeRight = exprRight.getTypes();
                         if (atypeRight.length == 1)
                             {
                             TypeConstant typeRight = atypeRight[0];
@@ -626,7 +624,7 @@ public class AssignmentStatement
                                 typeRight  = typeRight.removeNullable();
                                 atypeRight = new TypeConstant[]{typeRight};
 
-                                if (exprRightNew instanceof NameExpression exprName)
+                                if (exprRight instanceof NameExpression exprName)
                                     {
                                     exprName.narrowType(ctx, Branch.WhenTrue,  typeRight);
                                     exprName.narrowType(ctx, Branch.WhenFalse, pool.typeNull());
@@ -634,7 +632,7 @@ public class AssignmentStatement
                                 }
                             else
                                 {
-                                exprRight.log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
+                                rvalue.log(errs, Severity.ERROR, Compiler.EXPRESSION_NOT_NULLABLE,
                                         typeRight.getValueString());
                                 }
                             }
@@ -650,9 +648,8 @@ public class AssignmentStatement
                     atypeReq[0] = pool().typeBoolean();
                     System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
 
-                    exprRightNew = exprRight.validateMulti(ctxRValue, atypeReq, errs);
-
-                    if (exprRightNew == null)
+                    exprRight = rvalue.validateMulti(ctxRValue, atypeReq, errs);
+                    if (exprRight == null)
                         {
                         return null;
                         }
@@ -662,9 +659,9 @@ public class AssignmentStatement
                     merge(ctxRValue, ctxLValue);
 
                     exprLeft.markAssignment(ctxRValue,
-                        fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
+                    fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
 
-                    TypeConstant[] atypeAll = exprRightNew.getTypes();
+                    TypeConstant[] atypeAll = exprRight.getTypes();
                     int            cTypes   = atypeAll.length - 1;
                     if (cTypes >= 1)
                         {
@@ -695,7 +692,7 @@ public class AssignmentStatement
                     ctxRValue = ctxRValue.enterInferring(typeLeft);
                     }
 
-                BiExpression exprFakeRValue    = createBiExpression(exprLeftCopy, op, exprRight);
+                BiExpression exprFakeRValue    = createBiExpression(exprLeftCopy, op, rvalue);
                 Expression   exprFakeRValueNew = exprFakeRValue.validate(ctxRValue, typeLeft, errs);
 
                 if (exprFakeRValueNew instanceof ConvertExpression exprConv)
@@ -704,10 +701,10 @@ public class AssignmentStatement
                     }
                 if (exprFakeRValueNew instanceof BiExpression exprBi)
                     {
-                    exprRightNew = exprBi.getExpression2();
+                    exprRight = exprBi.getExpression2();
                     if (getCategory() == Category.CondLeft)
                         {
-                        atypeRight = exprRightNew.getTypes();
+                        atypeRight = exprRight.getTypes();
                         }
                     }
 
@@ -722,14 +719,13 @@ public class AssignmentStatement
                 }
             }
 
-        if (exprRightNew == null)
+        if (exprRight == null)
             {
             nodeLeft.resetLValueTypes(ctx);
             return null;
             }
 
-        rvalue = exprRightNew;
-
+        rvalue = exprRight;
         if (atypeRight != null)
             {
             // AssertStatement handles the assignment inference itself

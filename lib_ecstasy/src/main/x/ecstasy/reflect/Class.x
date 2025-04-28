@@ -14,8 +14,8 @@ import reflect.ClassTemplate.Composition;
  *   Class.
  * * From inside an object, the Class of the object is `this:class`. From outside of the object, the
  *   class may be obtained from the object's type iff the type is _classy_; for example, one can
- *   obtain the Class for an object `o`: `Class c = &o.actualClass;`. However, an object that is
- *   injected into a container may hide the _classy_ `actualType` and only expose an interface type,
+ *   obtain the Class for an object `o`: `Class c = &o.class;`. However, an object that is
+ *   injected into a container may hide the _classy_ `type` and only expose an interface type,
  *   which results in the class of the injected object being hidden from the code running inside the
  *   container.
  * * Since _everything is an object_, it follows that everything -- all objects -- were created,
@@ -349,7 +349,7 @@ const Class<PublicType, ProtectedType extends PublicType,
         Allocator? alloc = allocateStruct;
         assert baseTemplate.singleton && alloc != Null;
         PublicType instance = instantiate(alloc(Null));
-        assert &instance.isConst || &instance.isService;
+        assert instance.is(const) || instance.is(service);
         return instance;
     }
 

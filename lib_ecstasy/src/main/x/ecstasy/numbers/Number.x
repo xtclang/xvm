@@ -552,8 +552,8 @@
 
     @Override
     static <CompileType extends Number> Ordered compare(CompileType value1, CompileType value2) {
-        Type<Number> type1 = &value1.actualType;
-        Type<Number> type2 = &value2.actualType;
+        Type<Number> type1 = &value1.type;
+        Type<Number> type2 = &value2.type;
         if (type1 == type2) {
             return value1.as(type1.DataType) <=> value2.as(type1.DataType);
         }

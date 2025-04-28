@@ -336,7 +336,7 @@
             if (original.is(Replicable)) {
                 // it's Replicable but with a different Value type, so rewrite the type with the
                 // correct Value type
-                val origType = &original.actualType;
+                val origType = &original.type;
                 Type[] typeParams;
                 if (typeParams := origType.parameterized()) {
                     typeParams = typeParams.replace(1, Value);

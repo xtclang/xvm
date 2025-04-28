@@ -20,7 +20,7 @@ const LiteralMapping<Serializable extends Doc>
             return value.toFPLiteral().as(Serializable);
         }
 
-        throw new IllegalJSON($"Type expected={Serializable}; actual={&value.actualType}");
+        throw new IllegalJSON($"Type expected={Serializable}; actual={&value.type}");
     }
 
     @Override

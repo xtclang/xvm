@@ -93,6 +93,7 @@ interface OrderedSet<Element extends Orderable>
      *
      * @return True iff the sets are equal, according to the definition of an ordered set
      */
+    @Override
     static <CompileType extends OrderedSet> Boolean equals(CompileType set1, CompileType set2) {
         // some simple optimizations: two empty sets are equal, and two sets of different sizes are
         // not equal

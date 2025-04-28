@@ -28,12 +28,12 @@ interface Package
 
     @Override
     Int estimateStringLength() {
-        return &this.actualClass.name.size;
+        return &this.class.name.size;
     }
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {
-        return &this.actualClass.name.appendTo(buf);
+        return &this.class.name.appendTo(buf);
     }
 
 
@@ -41,7 +41,7 @@ interface Package
 
     @Override
     static <CompileType extends Package> Int64 hashCode(CompileType value) {
-        return &value.actualClass.name.hashCode();
+        return &value.class.name.hashCode();
     }
 
     @Override

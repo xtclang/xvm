@@ -196,7 +196,7 @@ class DocumentNode(ElementNode root)
     @Override
     protected (Node cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
         assert:bounds cur != Null;
-        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.actualType}";
+        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.type}";
 
         switch (cur.is(_), node.is(_)) {
         case (ElementNode, ElementNode):
@@ -228,13 +228,13 @@ class DocumentNode(ElementNode root)
         case (_, CommentNode):
             return super(index, prev, cur, part);
         default:
-            assert as $"Unsupported replacement from {&cur.actualClass} to {&node.actualClass}";
+            assert as $"Unsupported replacement from {&cur.class} to {&node.class}";
         }
     }
 
     @Override
     protected (Node cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
-        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.actualType}";
+        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.type}";
         switch (node.is(_)) {
         case ElementNode:
             assert as "Only one root Element is permitted on a Document";
@@ -267,7 +267,7 @@ class DocumentNode(ElementNode root)
         case CommentNode:
             return super(index, prev, cur);
         default:
-            assert as $"Unsupported node: {&cur.actualClass}";
+            assert as $"Unsupported node: {&cur.class}";
         }
     }
 

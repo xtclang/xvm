@@ -50,8 +50,7 @@ module TestReflection {
         console.print("\n** testInstanceOf");
 
         Object o = new HashMap<Int, String>();
-        assert &o.instanceOf(Map<Int, String>);
-        assert !&o.instanceOf(Map<String, String>);
+        assert !o.is(Map<String, String>);
     }
 
     void testMaskReveal() {
@@ -69,7 +68,6 @@ module TestReflection {
         console.print("tmpDir=" + tmpDir.toString());
 
         assert !tmpDir.is(Stringable);
-        assert !&tmpDir.instanceOf(Stringable);
 
         try {
             Stringable str = tmpDir.as(Stringable);
@@ -81,12 +79,12 @@ module TestReflection {
         if (Stringable str := &tmpDir.revealAs(Stringable)) {
             assert;
         }
-        console.print($"cannot be revealed: {&tmpDir.actualType}");
+        console.print($"cannot be revealed: {&tmpDir.type}");
 
         Point      p   = new Point(1, 1);
         Stringable str = &p.maskAs<Stringable>(Stringable);
 
-        assert !&str.instanceOf(Point);
+        assert !str.is(Point);
         try {
             p = str.as(Point);
             assert;
@@ -97,7 +95,7 @@ module TestReflection {
         assert p := &str.revealAs(Point);
         console.print($"p={p}");
 
-        assert (struct Point) p2 := &str.revealAs((struct Point));
+        assert (struct Point) p2 := &str.revealStruct();
         console.print($"p2={p2}");
     }
 
@@ -130,17 +128,17 @@ module TestReflection {
             console.print($"prop={prop} prop.get(point)={prop.get(point)}");
 
             Ref impl = prop.of(point);
-            console.print($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+            console.print($"Ref={impl}, type={impl.type}, get()={impl.get()}");
 
-            Type typeImpl = &impl.actualType;
+            Type typeImpl = &impl.type;
             assert Property prop2 := typeImpl.fromProperty();
             console.print($"impl.fromProp={prop2}");
         }
 
         Ref impl = point.&x;
-        console.print($"Ref={impl}, type={impl.actualType}, get()={impl.get()}");
+        console.print($"Ref={impl}, type={impl.type}, get()={impl.get()}");
 
-        Type typeImpl = &impl.actualType;
+        Type typeImpl = &impl.type;
         assert Property propX := typeImpl.fromProperty();
         console.print($"impl.fromProp={propX} val={propX.get(point)}");
 
@@ -187,7 +185,7 @@ module TestReflection {
 
         val fnSelf = testInvoke;
         console.print($"func name={fnSelf.name}");
-        console.print($"func type={&fnSelf.actualType}");
+        console.print($"func type={&fnSelf.type}");
 
         void foo(Int x, String s) {
             console.print($" -> in foo() x={x}, s={s}");
@@ -203,7 +201,7 @@ module TestReflection {
         val f6  =  foo(_, "hello");  console.print($"f6  = {f6 } -> {f6 (1)}");
         val f6b = &foo(_, "hello");  console.print($"f6b = {f6b} -> {f6b(1)}");
 
-        f2.invoke(Tuple:());
+        f2.invoke(());
         f4.invoke((42, "goodbye"));
     }
 
@@ -232,7 +230,7 @@ module TestReflection {
         Point<Int> p = new Point(3, 4, "world");
         console.print($"Point p={p}, sum={p.sum}, foo()={p.foo()}");
 
-        val t = &p.actualType.as(Type<Point<Int>>);
+        val t = &p.type.as(Type<Point<Int>>);
         console.print($"Type={t}, foo={p.&foo()}");
         console.print($"Type={t}");
 
@@ -250,7 +248,7 @@ module TestReflection {
         console.print($"method={method}");
         console.print($|method.invoke()=\
                          |{method.as(Method<Point<Number>, Tuple<>, Tuple<Int>>).
-                         |   invoke(p, Tuple:())[0]}
+                         |   invoke(p, ())[0]}
                         );
 
         for (val constructor : t.constructors) {
@@ -260,7 +258,7 @@ module TestReflection {
                 assert (struct Point) structure := clz.allocate();
                 structure.x = Int:1;
                 structure.y = Int:2;
-                Tuple<Point<Int>> p2 = constructor.invoke(Tuple:(structure));
+                Tuple<Point<Int>> p2 = constructor.invoke((structure));
                 console.print($"construct(structure)={p2[0]}");
                 break;
 
@@ -285,15 +283,15 @@ module TestReflection {
         function Int (Duration) calc = svc.calcSomethingBig;
 
         console.print("calling sync");
-        Tuple resultS = calc.invoke(Tuple:(Duration.ofMillis(10)));
+        Tuple resultS = calc.invoke((Duration.ofMillis(10)));
         console.print(resultS[0]);
 
         console.print("calling sync &Future.get()");
-        @Future Tuple resultS2 = calc.invoke(Tuple:(Duration.ofMillis(10)));
+        @Future Tuple resultS2 = calc.invoke((Duration.ofMillis(10)));
         console.print(&resultS2.get());
 
         console.print("calling async");
-        @Future Tuple resultA = calc.invoke(Tuple:(Duration.ofMillis(20)));
+        @Future Tuple resultA = calc.invoke((Duration.ofMillis(20)));
         &resultA.whenComplete((t, e) -> {
             assert t != Null && t[0].as(Int) == 20;
         });
@@ -380,7 +378,7 @@ module TestReflection {
         Point3D p3d = new Point3D(5,6,7);
         analyzeStructure(p3d);
 
-        if (Point3D.StructType p3s := &p3d.revealAs(Point3D.StructType)) {
+        if (Point3D.StructType p3s := &p3d.revealStruct()) {
             Point3D p3d2 = Point3D.instantiate(p3s);
             assert p3d2 == p3d;
         }
@@ -418,7 +416,7 @@ module TestReflection {
 
     void analyzeStructure(Object o) {
         // don't "toString" the object; it may change the lazy properties' state
-        Type t = &o.actualType;
+        Type t = &o.type;
         console.print($"Analyzing: {t}");
 
         if (Class c := t.fromClass()) {
@@ -439,15 +437,14 @@ module TestReflection {
                 // need to get a Ref for the property:
                 // - must be assigned
                 // - actual type cannot be Service
-                assert val s := &o.revealAs(c.StructType);
+                assert c.StructType s := &o.revealStruct();
                 val ref = prop.of(s);
-                console.print($|     assigned={ref.assigned}, peek()={ref.peek()}, actualType={ref.actualType}
-                               |     isService={ref.isService}, isConst={ref.isConst}
-                               |     isImmutable={ref.isImmutable}, hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
+                console.print($|     assigned={ref.assigned}, peek()={ref.peek()}, type={ref.type}
+                               |     hasName={{String name = "n/a"; name := ref.hasName(); return name;}}, var={ref.is(Var)}
                                );
             }
 
-            if (val s := &o.revealAs(Struct)) {
+            if (val s := &o.revealStruct()) {
                 Object clone = c.instantiate(s);
                 console.print($"clone={clone}");
             }
@@ -572,7 +569,7 @@ module TestReflection {
     {
         val container = new Container<String,Int,Char>();
         val containee = container.new Containee<Char,String,Map<Int, String>>();
-        console.print($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.actualType}");
+        console.print($"Container<String,Int,Char>.Containee<Char,String,Map<Int, String>> = {&containee.type}");
         }
     }
 }

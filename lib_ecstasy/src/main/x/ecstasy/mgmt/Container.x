@@ -428,7 +428,7 @@ service Container
          * @throws IllegalState  if the container is in the `Dead` state, or if `runWithin` is
          *                       specified but not a service within this container
          */
-        Tuple invoke(String methodName, Tuple args = Tuple:(), Service? runWithin = Null);
+        Tuple invoke(String methodName, Tuple args = (), Service? runWithin = Null);
 
         /**
          * Get the `TypeSystem` for services running inside this container.

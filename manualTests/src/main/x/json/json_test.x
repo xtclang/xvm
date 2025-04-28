@@ -9,7 +9,7 @@ module json_test.xtclang.org {
 
     void run() {
         console.print("JSON tests");
-        Class<Package> clz  = &this.actualClass.as(Class<Package>);
+        Class<Package> clz  = &this.class.as(Class<Package>);
         (Int passed, Int failed) = runTests(clz);
         console.print("JSON tests completed");
         console.print($"Passed: {passed}");

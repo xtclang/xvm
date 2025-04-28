@@ -260,8 +260,8 @@ import ecstasy.maps.HasherMap;
                         ? each.locators.contains(locator)
                         : locator.any(l -> each.locators.contains(l)))) {
                 modified = True;
-                subject  = subject.with(
-                                credentials=subject.credentials.replace(Each.count, each.revoke()));
+                subject  = subject.with(credentials=
+                        subject.credentials.replace(Each.count, each.revoke()));
             }
         }
         return modified, subject;

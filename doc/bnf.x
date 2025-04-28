@@ -29,7 +29,7 @@ Annotation
     "@" NoWhitespace NamedTypeExpression NoWhitespace ArgumentList-opt
 
 ParameterList
-    "(" Parameters ")"
+    "(" Parameters ","-opt ")"     // TODO CP trailing comma support
 
 Parameters
     Parameter
@@ -61,7 +61,7 @@ NamedArgument
     Name "="
 
 TypeParameterList
-    "<" TypeParameters ">"
+    "<" TypeParameters ","-opt ">"      // TODO CP trailing comma support
 
 TypeParameters
     TypeParameter
@@ -77,8 +77,11 @@ TypeParameterTypeList
     "<" TypeExpressionList ">"
 
 TypeExpressionList
+    TypeExpressionListElement ","-opt      // TODO CP trailing comma support
+
+TypeExpressionListElements
     TypeExpressionListElement
-    TypeExpressionList "," TypeExpressionListElement
+    TypeExpressionListElements "," TypeExpressionListElement
 
 TypeExpressionListElement
     TypeParameterTypeList                                       # indicates a "type sequence type"
@@ -178,7 +181,10 @@ ImportModifier
     "optional"
 
 VersionRequirement
-    Version VersionOverrides-opt
+    Version VersionOverridesList-opt
+
+VersionOverridesList
+    VersionOverrides ","-opt            // TODO CP optional trailing comma
 
 VersionOverrides
     VersionOverride
@@ -229,7 +235,10 @@ TypeCompositionBody
     ";"
 
 EnumBody
-    Enums EnumBodyFinish-opt
+    EnumList EnumBodyFinish-opt
+
+EnumList
+    Enums ","-opt       // TODO CP trailing optional comma
 
 Enums
     Enum
@@ -321,8 +330,11 @@ SingleReturnList
     TypeExpression
 
 MultiReturnList
+    MultiReturns ","-opt    // TODO CP trailing comma support
+
+MultiReturns
     MultiReturn
-    MultiReturnList "," MultiReturn
+    MultiReturns "," MultiReturn
 
 MultiReturn
     TypeExpression Name-opt
@@ -375,14 +387,14 @@ Statements
 
 VariableDeclaration
     VariableTypeExpression Name VariableInitializerFinish-opt
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
+    "(" OptionalDeclarations "," OptionalDeclaration ","-opt ")" "=" Expression      // TODO CP optional trailing comma
 
 VariableInitializerFinish
     "=" Expression
 
-OptionalDeclarationList
+OptionalDeclarations
     OptionalDeclaration
-    OptionalDeclarationList "," OptionalDeclaration
+    OptionalDeclarations "," OptionalDeclaration
 
 OptionalDeclaration
     Assignable
@@ -398,7 +410,7 @@ Assignment
 
 Assignee
     Assignable
-    "(" AssignableList "," Assignable ")"
+    "(" AssignableList "," Assignable ","-opt ")"   // TODO CP optional trailing comma
 
 AssignableList
     Assignable
@@ -456,19 +468,25 @@ ForStatement
 ForCondition
     VariableInitializationList-opt ";" ConditionList-opt ";" VariableModificationList-opt
     OptionalDeclaration ":" Expression
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" ":" Expression
+    "(" OptionalDeclarations "," OptionalDeclaration ","-opt ")" ":" Expression  // TODO CP optional trailing comma
 
 VariableInitializationList
+    VariableInitializers ","-opt    // TODO CP optional trailing comma
+
+VariableInitializers
     VariableInitializer
-    VariableInitializationList "," VariableInitializer
+    VariableInitializers "," VariableInitializer
 
 VariableInitializer
     OptionalDeclaration "=" Expression
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
+    "(" OptionalDeclarations "," OptionalDeclaration ","-opt ")" "=" Expression  // TODO CP optional trailing comma
 
 VariableModificationList
+    VariableModifications ","-opt       // TODO CP optional trailing comma
+
+VariableModifications
     VariableModification
-    VariableModificationList "," VariableModification
+    VariableModifications "," VariableModification
 
 VariableModification
     Assignment
@@ -488,8 +506,11 @@ WhileStatement
     "while" "(" ConditionList ")" StatementBlock
 
 ConditionList
+    Conditions ","-opt  // TODO CP optional trailing comma
+
+Conditions
     Condition
-    ConditionList "," Condition
+    Conditions "," Condition
 
 Condition
     ConditionalAssignmentCondition
@@ -498,7 +519,7 @@ Condition
 
 ConditionalAssignmentCondition
     OptionalDeclaration ConditionalAssignmentOp Expression
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" ConditionalAssignmentOp Expression
+    "(" OptionalDeclarations "," OptionalDeclaration ","-opt ")" ConditionalAssignmentOp Expression  // TODO CP optional trailing comma
 
 ConditionalAssignmentOp
     ":="
@@ -520,13 +541,16 @@ ReturnValue
     ExpressionList
 
 SwitchStatement
-    "switch" "(" SwitchCondition ")" "{" SwitchBlocks "}"
+    "switch" "(" SwitchConditionList ")" "{" SwitchBlocks "}"
+
+SwitchConditionList
+    SwitchConditions ","-opt        // TODO CP optional trailing comma
+
+SwitchConditions
+    SwitchCondition
+    SwitchConditions "," SwitchCondition
 
 SwitchCondition
-    SwitchConditionExpression
-    SwitchCondition "," SwitchConditionExpression
-
-SwitchConditionExpression
     VariableInitializer
     Expression
 
@@ -542,55 +566,62 @@ SwitchLabels
     SwitchLabel
     SwitchLabels SwitchLabel
 
-# 1) for a SwitchStatement with a SwitchCondition, each "case" expression must be a
-#    "constant expression", i.e. compiler has to be able to determine the value (or a constant that
-#    points to a value that is constant at run-time, e.g. a property constant for a static property)
-# 2) for a SwitchStatement without a SwitchCondition, each "case" expression must be of type Boolean
-#    and is not required to be a constant
-# 3) for a SwitchStatement with a SwitchCondition, a case may specify a list of values, which is
-#    semantically identical to having that same number of "case" labels each with one of those values.
-# 4) for a SwitchStatement with multiple SwitchConditionExpressions in the SwitchCondition or with
-#    a single SwitchConditionExpression of a tuple type, each "case" value must be either:
+# 1) for a SwitchStatement or SwitchExpression, each "case" expression must be a "runtime constant
+#    expression", i.e. the compiler must be able to determine the value, or the value is known to be
+#    a runtime constant, e.g. a property constant for a static property).
+# 2) for a SwitchStatement or SwitchExpression, a case may specify a list of values, which is
+#    semantically identical to having that same number of "case" labels each with one of those
+#    values.
+# 3) for a SwitchStatement or SwitchExpression with multiple SwitchConditions in the
+#    SwitchConditionList or with a single SwitchCondition of a tuple type, each "case" value must be
+#    either:
 #    (a) a parenthesized list of expressions (a compatible tuple constant), or
 #    (b) a constant expression of a compatible tuple type
-# 5) each "case" expression may be any of:
+# 4) each "case" expression may be any of:
 #    (a) the type of the corresponding expression (or tuple field value) in the SwitchCondition;
 #    (b) a Range of that type; or
 #    (c) the wild-card "_" (compiled as the "blackhole" constant)
-#    a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
+# 5) a CaseExpressionList of all wild-cards is semantically equivalent to the use of a "default"
 #    label, and would predictably conflict with the same if both were specified.
+
 SwitchLabel
     "case" CaseOptionList ":"
     "default" ":"
 
-SwitchBlockFinish:
+SwitchBlockFinish
     BreakStatement
     ContinueStatement
 
-BreakStatement:
+BreakStatement
     "break" Name-opt ";"
 
-ContinueStatement:
+ContinueStatement
     "continue" Name-opt ";"
 
-CaseOptionList:
-    CaseOption
-    CaseOptionList "," CaseOption
+CaseOptionList
+    CaseOptions ","-opt     // TODO CP optional trailing comma
 
-CaseOption:
-    "(" CaseExpressionList "," CaseExpression ")"
+CaseOptions
+    CaseOption
+    CaseOptions "," CaseOption
+
+CaseOption
+    "(" CaseExpressionList ")"
     SafeCaseExpression
 
-CaseExpressionList:
-    CaseExpression
-    CaseExpressionList "," CaseExpression
+CaseExpressionList
+    CaseExpressions "," CaseExpression ","-opt   // TODO CP optional trailing comma
 
-CaseExpression:
+CaseExpressions
+    CaseExpression
+    CaseExpressions "," CaseExpression
+
+CaseExpression
     "_"
     Expression
 
 # parse for "case TernaryExpression:" because Expression parsing looks for a possible trailing ':'
-SafeCaseExpression:
+SafeCaseExpression
     "_"
     TernaryExpression
 
@@ -598,7 +629,7 @@ TryStatement
     "try" TryResources-opt StatementBlock TryFinish
 
 TryResources
-    "(" VariableInitializationList ")"
+    "(" UsingResourceList ")"       // TODO CP verify that "try" parses the same as "using"
 
 TryFinish
     Catches
@@ -611,13 +642,16 @@ Catches
 Catch
     "catch" "(" TypeExpression Name ")" StatementBlock
 
+UsingResourceList
+    UsingResources ","-opt  // TODO CP optional trailing comma
+
 UsingResources
     UsingResource
     UsingResources "," UsingResource
 
 UsingResource
     OptionalDeclaration "=" Expression
-    "(" OptionalDeclarationList "," OptionalDeclaration ")" "=" Expression
+    "(" OptionalDeclarations "," OptionalDeclaration ","-opt ")" "=" Expression      // TODO CP optional trailing comma (and can this be simplified to not require >1?)
     Expression                                          # implicitly "val _ = Expression"
 
 UsingStatement
@@ -780,7 +814,10 @@ PostfixExpression
     PostfixExpression ".is" "(" AnyTypeExpression ")"
 
 ArrayDims
-    "[" DimIndicators-opt "]"
+    "[" DimIndicatorList-opt "]"
+
+DimIndicatorList
+    DimIndicators ","-opt       // TODO CP optional trailing comma
 
 DimIndicators
     DimIndicator
@@ -793,8 +830,11 @@ ArrayIndexes
     "[" ExpressionList "]"
 
 ExpressionList
+    Expressions ","-opt // TODO CP optional trailing comma
+
+Expressions
     Expression
-    ExpressionList "," Expression
+    Expressions "," Expression
 
 DotNameFinish
     Name TypeParameterTypeList-opt
@@ -841,7 +881,7 @@ StatementExpression
     "assert"                        # non-completing
 
 SwitchExpression
-    "switch" "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
+    "switch" "(" SwitchConditionList ")" "{" SwitchExpressionBlocks "}"
 
 SwitchExpressionBlocks
     SwitchExpressionBlock
@@ -859,7 +899,7 @@ LambdaInputs
     LambdaParameterList
 
 LambdaInferredList
-    "(" LambdaParameterNames ")"
+    "(" LambdaParameterNames ","-opt ")"
 
 LambdaParameterNames
     LambdaParameterName
@@ -909,16 +949,16 @@ Literal
     DirectoryLiteral
     FileStoreLiteral
 
-TypedNumericLiteral:
+TypedNumericLiteral
     IntTypeName ":" IntLiteral
     FPTypeName ":" FPLiteral
 
-FPLiteral:
+FPLiteral
     IntLiteral
     FPDecimalLiteral
     FPBinaryLiteral
 
-IntTypeName:
+IntTypeName
     "Int"
     "Int8"
     "Int16"
@@ -935,7 +975,7 @@ IntTypeName:
     "UInt128"
     "UIntN"
 
-FPTypeName:
+FPTypeName
     "Dec"
     "Dec32"
     "Dec64"
@@ -980,7 +1020,7 @@ BinaryLiteral
     "#" NoWhitespace File                                       # file to include as binary data
 
 TupleLiteral
-    "(" ExpressionList "," Expression ")"                       # compile/runtime type is Tuple
+    "(" ExpressionList-opt ")"                                  # implicit type is Tuple, except for a single expression
     TypeExpression NoWhitespace ":" "(" ExpressionList-opt ")"  # type must be a Tuple
 
 CollectionLiteral
@@ -988,8 +1028,11 @@ CollectionLiteral
     TypeExpression NoWhitespace ":" "[" ExpressionList-opt "]"  # type must be Collection, Set, List, or Array
 
 MapLiteral
-    "[" Entries-opt "]"                                         # compile/runtime type is Map
+    "[" EntryList-opt "]"                                         # compile/runtime type is Map
     TypeExpression NoWhitespace ":" "[" Entries-opt "]"         # type must be Map
+
+EntryList
+    Entries ","-opt     // TODO CP trailing comma support
 
 Entries
     Entry
@@ -1010,7 +1053,7 @@ VersionNumbers
     DigitsNoUnderscores
     VersionNumbers NoWhitespace "." NoWhitespace DigitsNoUnderscores
 
-VersionFinish:
+VersionFinish
      "-" NoWhitespace NonGASuffix
      "." NoWhitespace NonGASuffix
      NonGASuffix
@@ -1037,7 +1080,7 @@ BuildChar
     "-"
     "."
 
-NonGAPrefix:        # note: not (!!!) case sensitive
+NonGAPrefix         # note: not (!!!) case sensitive
     "dev"           # developer build (default compiler stamp)
     "ci"            # continuous integration build (automated build, automated test)
     "qc"            # build selected for internal Quality Control
@@ -1234,8 +1277,11 @@ TypeValueSet
     "{" TypeValueList "}"
 
 TypeValueList
+    TypeValues ","-opt  // TODO CP trailing comma support
+
+TypeValues
     TypeValue
-    TypeValueList "," TypeValue
+    TypeValues "," TypeValue
 
 # 1. the expression must be a "constant expression", i.e. compiler has to be able to determine the
 #    value (or a constant that points to a value that is constant at run-time)

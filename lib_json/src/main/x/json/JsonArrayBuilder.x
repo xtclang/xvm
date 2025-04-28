@@ -152,7 +152,7 @@ class JsonArrayBuilder
                 set(index, value);
                 break;
             default:
-                assert as $"Cannot merge a {&value.actualType} into a {&existing.actualType}";
+                assert as $"Cannot merge a {&value.type} into a {&existing.type}";
             }
         }
     }

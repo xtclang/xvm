@@ -1,29 +1,50 @@
 /**
- * A Tuple is a container type for an arbitrary number of elements, each of its own arbitrary type.
+ * A [Tuple] is a container type for an arbitrary number of elements, each with its own type.
  *
  * Generally, the broad use of tuples is discouraged in type-safe, object-oriented languages,
  * because they are considered to be poor analogues of classes. However, there are several natural
  * occurrences of Tuples within Ecstasy, and these uses are pervasive in the languages:
  *
- * * Parameter lists
+ * * The arguments passed to a method or function;
+ * * The values returned from a method or function, including "conditional" returns.
  *
- * * Return values, including "conditional" returns
+ * Because [Tuple] values are defined using parenthesis, and parenthesis are also used for enclosing
+ * an expression for precedence, the [Tuple] literal `(v)` that contains a single value `v` of type
+ * `V` and has no trailing comma will have the _implicit_ type `V` instead of `Tuple<V>`. Because it
+ * is in the form of both a [Tuple] literal and a parenthesized expression, it can be used anywhere
+ * that a `Tuple<V>` is required, though; consider the following examples:
  *
- * Because tuple values are defined using parenthesis, and parenthesis are also used for method
- * invocations and to explicitly denote order of precedence, a number of conventions are used:
+ *     V v = ...            // assume that there exists some value `v`
+ *     val   a = (v);       // the type of "a" is V, because that is its implicit type
+ *     Tuple b = (v);       // the type of "b" is Tuple<V>, because a Tuple is required
+ *     val   c = (v,);      // the type of "c" is Tuple<V>, because of the trailing comma
+ *     val   d = Tuple:(v); // the type of "d" is Tuple<V>, because of the explicit type literal
  *
- * * The empty tuple and a tuple with a single value must use an explicit type literal declaration:
- *   `Tuple:()` or `Tuple:(a)`
+ * The `return` statement can return multiple values either as a [Tuple] or as comma-delimited list
+ * of values; for a function declared as returning three values, both `return (a, b, c);` and
+ * `return a, b, c;` are legal, and there is no difference from the caller's perspective. Similarly,
+ * a caller can obtain the return value(s) from a method as either a comma-delimited list or as a
+ * [Tuple], regardless of how the `return` statement in the function was constructed; consider a
+ * caller of the function declared as `(Int, String) baz()`:
  *
- * * The return statement can return multiple comma-delimited values _without_ the use of
- *   parenthesis: `return a, b, c;`
+ *     (Int i, String s)    = baz();    // assign the two results of the function to `i` and `s`
+ *     Tuple<Int, String> t = baz();    // assign the tuple result of the function to `t`
  *
- * * All other cases should use a comma-delimited set of values within a matching pair of
- *   parenthesis: `(Int i, String s) = (0, "hello");`
+ * As illustrated above, for each returned value from a function, the resulting [Tuple] will have
+ * one corresponding value. A `void` function returns zero values, which means that when a caller
+ * of a `void` function receives back a [Tuple] as a result of the call, that [Tuple] will be of
+ * size zero; for example, consider a caller of the function declared as `void bar()`:
  *
- * Due to the complexity of the non-uniform element type, Tuple is not intended to be implemented by
- * the developer; rather, it is a data type provided by the runtime, and whose type safety is
- * explicitly supported by both the compiler and the runtime.
+ *     Object o = bar();    // compile error: bar() does not return a value
+ *     void   v = bar();    // compile error: void is not a type
+ *     Tuple  t = bar();    // OK: "t" will be the empty Tuple
+ *
+ * Both L-values and R-values can use [Tuple] syntax, e.g. `(Int i, String s) = (0, "hello");`
+ *
+ * Due to the complexity of the non-uniform element types represented by a [Tuple]'s `ElementTypes`,
+ * the [Tuple] interface is not intended to be implementable by an Ecstasy developer; rather, it is
+ * a data type supported by the Ecstasy compiler and runtime, which provide [Tuple] type safety and
+ * any necessary implementations of the interface.
  *
  * All mutating operations on a tuple will result in the creation of a new tuple with the requested
  * changes incorporated; the original Tuple is left unchanged. This style of mutation is called a
@@ -31,17 +52,19 @@
  * [Persistent](Array.Mutability.Persistent) mutability option. The tuple may or may not be
  * `immutable`; to ensure that a tuple is immutable, use the [freeze] method.
  *
- * The run-time also provides an implementation of the `Freezable` interface. Additionally, for a
- * tuple that contains only `immutable`, `service`, and `AutoFreezable` elements, the Tuple will
- * automatically incorporate `AutoFreezable(inPlace=False)`.
+ * The run-time also provides an implementation of the [Freezable] interface. Additionally, for a
+ * Tuple with `ElementTypes` that specify only `immutable`, `service`, and `AutoFreezable` types,
+ * the [Tuple] will automatically be annotated by [AutoFreezable(inPlace=False)](AutoFreezable).
  */
 interface Tuple<ElementTypes extends Tuple<ElementTypes>>
+        extends Iterable<Object>
         extends Freezable
         extends Stringable {
     /**
      * The number of elements in the tuple. A tuple cannot change its size; a size change requires
      * the creation of a new tuple.
      */
+    @Override
     @RO Int size;
 
     /**
@@ -62,6 +85,25 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
      */
     Ref<Object> elementAt(Int index);
 
+    @Override
+    Iterator<Object> iterator() {
+        class TupleIterator(Int i = 0)
+                implements Iterator<Object> {
+            @Override
+            conditional Element next() {
+                return i < this.Tuple.size
+                        ? (True, this.Tuple[i++])
+                        : False;
+            }
+
+            @Override
+            conditional Int knownSize() = (True, this.Tuple.size - i);
+
+            @Override
+            (TupleIterator, TupleIterator) bifurcate() = (this, new TupleIterator(i));
+        }
+        return new TupleIterator();
+    }
 
     // ----- tuple manipulations -------------------------------------------------------------------
 
@@ -125,13 +167,13 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
     Tuple!<> removeAll(Interval<Int> interval);
 
     /**
-     * Return an `immutable` tuple of the same element types and values as are present in this tuple.
+     * Return an `immutable` [Tuple] of the same element types and values as are present in this
+     * [Tuple].
      *
-     * @throws Exception if any of the values in the tuple are not [Shareable]
+     * @throws Exception  if any of the values in the [Tuple] are not [Shareable]
      */
     @Override
     immutable Tuple freeze(Boolean inPlace = False);
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 
@@ -161,12 +203,12 @@ interface Tuple<ElementTypes extends Tuple<ElementTypes>>
         return buf.add(')');
     }
 
-
     // ----- Comparable ----------------------------------------------------------------------------
 
     /**
      * Tuples are equal if their types are comparable and the contents are equal.
      */
+    @Override
     static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2) {
         Int c = value1.size;
         if (c != value2.size) {

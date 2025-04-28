@@ -68,10 +68,12 @@ const OSFileNode
 
     // ----- equality support ----------------------------------------------------------------------
 
+    @Override
     static <CompileType extends OSFileNode> Int64 hashCode(CompileType value) {
         return String.hashCode(value.pathString);
     }
 
+    @Override
     static <CompileType extends OSFileNode> Boolean equals(CompileType node1, CompileType node2) {
         return node1.pathString == node2.pathString &&
                node1.is(OSFile) == node2.is(OSFile);

@@ -10,7 +10,7 @@ const VirtualHasher<Value extends Hashable>
         implements Hasher<Value> {
     @Override
     Int64 hashOf(Value value) {
-        Type actualType = &value.actualType;
+        Type actualType = &value.type;
 
         return virtualHash(value.as(actualType.DataType));
 

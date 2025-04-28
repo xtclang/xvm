@@ -20,7 +20,7 @@ const TupleMapping<Serializable extends Tuple>(Mapping[] valueMappings)
     @Override
     Serializable read(ElementInput in) {
         Schema schema = in.schema;
-        Tuple  tuple  = Tuple:();
+        Tuple  tuple  = ();
 
         using (FieldInput mapInput = in.openObject()) {
             using (ElementInput entriesInput = mapInput.openArray("e")) {

@@ -56,7 +56,7 @@ class ConstHelper {
             return o.toString();
         } catch (Exception e) {
             String msg = e.message;
-            return $"? ({&e.actualClass.name}{msg.size == 0 ? "" : $": {msg}"})";
+            return $"? ({&e.class.name}{msg.size == 0 ? "" : $": {msg}"})";
         }
     }
 

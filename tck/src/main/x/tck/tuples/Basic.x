@@ -45,7 +45,7 @@ class Basic {
         assert t1 == t2;
 
         Tuple<Int, String, Char> t3 = (1, "big", '?');
-        Tuple t4 = Tuple:().add(Int:1).add("big").add('?');
+        Tuple t4 = ().add(Int:1).add("big").add('?');
         assert t3 == t4;
     }
 

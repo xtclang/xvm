@@ -197,6 +197,7 @@ module TestMaps {
 
         // test very bad hashing
         const Point(Int x) {
+            @Override
             static <CompileType extends Point> Int64 hashCode(CompileType value) {
                 return 100 + value.x.toInt64() % 3;
             }
@@ -224,7 +225,7 @@ module TestMaps {
     }
 
     void testMapIteration(Map<String, Int> map) {
-        console.print($"\n** testMapIteration({&map.actualType.underlyingTypes[0]})");
+        console.print($"\n** testMapIteration({&map.type.underlyingTypes[0]})");
 
         map.put("hello", 1);
         map.put("goodbye", 2);
@@ -293,12 +294,12 @@ module TestMaps {
             Map<String, String> mapNew;
             try {
                 mapNew = map.put("1", "a");
-                assert mapNew != map as $"Invalid modification for {&map.actualType}";
+                assert mapNew != map as $"Invalid modification for {&map.type}";
             } catch (ReadOnly e) {}
 
             try {
                 mapNew = map.put("2", "b");
-                assert mapNew != map as $"Invalid insert for {&map.actualType}";
+                assert mapNew != map as $"Invalid insert for {&map.type}";
             } catch (ReadOnly e) {}
         }
 
@@ -468,7 +469,7 @@ module TestMaps {
     }
 
     void testConcurrentProcess(Map<Int, Int> map) {
-        console.print($"\n** testConcurrentProcess({&map.actualClass.name})");
+        console.print($"\n** testConcurrentProcess({&map.class.name})");
         map.put(0, 0);
 
         @Volatile Int count = 0;

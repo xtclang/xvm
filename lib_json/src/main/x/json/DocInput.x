@@ -187,7 +187,7 @@ interface DocInput<ParentInput extends (ElementInput | FieldInput)?>
         return $|{array ? "An array" : "A value"} of "{requiredType}" required\
                 |{{if (name != Null) {$.append(" for ").append(name.quoted());}}}\
                 |{{if (pointer != "") {$.append(" at ").append(pointer.quoted());}}}\
-                |, but {doc == Null ? "no value" : &doc.actualType.toString().quoted()} found
+                |, but {doc == Null ? "no value" : &doc.type.toString().quoted()} found
                 ;
     }
 }

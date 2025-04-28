@@ -738,7 +738,8 @@ class Parser(Boolean ignoreProlog       = False,
         }
 
         assert lastNode != Null;
-        assert val lastNodeRW := &lastNode.revealAs((protected Node));
+        assert (protected Node) lastNodeRW := &lastNode.as(Ref<Node>).revealAs((protected Node));
+        // TODO GG assert val lastNodeRW := &lastNode.revealAs((protected Node));
         lastNodeRW.next_ = newNode;
         return firstNode, newNode;
     }

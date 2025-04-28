@@ -208,7 +208,7 @@ module SockShopCartApi
                 {
                 @Inject Console console;
                 console.print("Shutting down");
-                result=Tuple:();
+                result=();
                 }
             });
 
@@ -224,7 +224,7 @@ module SockShopCartApi
                 {
                 @Inject Console console;
                 console.print("Webserver has stopped");
-                result.set(Tuple:());
+                result.set(());
                 }
             }
 

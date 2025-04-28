@@ -198,7 +198,7 @@ service Registry
             return findMediaType(content.name);
         }
 
-        Type type = &content.actualType;
+        Type type = &content.type;
 
         if (jsonSchema.findMapping(type)) {
             // there's a Json schema for this type, so it's convertible (serializable) as Json

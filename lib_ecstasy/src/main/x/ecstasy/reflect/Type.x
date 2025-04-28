@@ -397,7 +397,7 @@ interface Type<DataType, OuterType>
      * Test whether the specified object is an instance of this type.
      */
     Boolean isInstance(Object o) {
-        return &o.actualType.isA(this);
+        return &o.type.isA(this);
     }
 
     /**
@@ -406,7 +406,7 @@ interface Type<DataType, OuterType>
     DataType cast(Object o) {
         return isInstance(o)
                 ? o.as(DataType)
-                : throw new InvalidType($"Type mismatch (actualType={&o.actualType}, this={this}");
+                : throw new InvalidType($"Type mismatch (type={&o.type}, this={this}");
     }
 
     /**
@@ -888,17 +888,20 @@ interface Type<DataType, OuterType>
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
+    @Override
     static <CompileType extends Type> Int64 hashCode(CompileType value) {
         return value.methods   .hashCode()
              ^ value.properties.hashCode();
     }
 
+    @Override
     static <CompileType extends Type> Boolean equals(CompileType value1, CompileType value2) {
         // the definition for type equality is fairly simple: each of the two types must be
         // type-compatible with the other
         return value1.isA(value2) && value2.isA(value1);
     }
 
+    @Override
     static <CompileType extends Type> Ordered compare(CompileType value1, CompileType value2) {
         if (value1 == value2) {
             return Equal;
@@ -964,7 +967,7 @@ interface Type<DataType, OuterType>
                     return True, new Hasher<DataType>() {
                         @Override
                         Int64 hashOf(Value value) {
-                            if (&value.actualType.isA(t1)) {
+                            if (&value.type.isA(t1)) {
                                 assert Hasher<t1.DataType> hasher := t1.DataType.hashed();
                                 return hasher.hashOf(value.as(t1.DataType));
                             } else {
@@ -975,8 +978,8 @@ interface Type<DataType, OuterType>
 
                         @Override
                         Boolean areEqual(Value value1, Value value2) {
-                            Type actualType1 = &value1.actualType;
-                            Type actualType2 = &value2.actualType;
+                            Type actualType1 = &value1.type;
+                            Type actualType2 = &value2.type;
 
                             if (actualType1.isA(t1) && actualType2.isA(t1)) {
                                 assert Hasher<t1.DataType> hasher := t1.DataType.hashed();

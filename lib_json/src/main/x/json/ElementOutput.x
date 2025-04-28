@@ -90,7 +90,7 @@ interface ElementOutput<ParentOutput extends (ElementOutput | FieldOutput)?>
             return add(Null);
         }
 
-        val type = &value.actualType;
+        val type = &value.type;
         if (type != mapping.Serializable) {
             // the "mapping.Serializable" type could be narrower than "Serializable";
             // we should not pass "Serializable" to the "narrow()" method, which expects a matching

@@ -52,9 +52,9 @@ const Schema
         // verify that the type system is the TypeSystem that includes this class, or a TypeSystem
         // that derives from the TypeSystem that includes this class
         if (typeSystem == Null) {
-            typeSystem = &this.actualType.typeSystem;
+            typeSystem = &this.type.typeSystem;
         } else {
-            assert typeSystem == &this.actualType.typeSystem || &this.actualClass.pathWithin(typeSystem);
+            assert typeSystem == &this.type.typeSystem || &this.class.pathWithin(typeSystem);
         }
 
         // use the module version if no version is specified

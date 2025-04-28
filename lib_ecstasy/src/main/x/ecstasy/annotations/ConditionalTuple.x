@@ -1,9 +1,17 @@
 /**
- * The ConditionalTuple annotation represents a tuple whose first field is a Boolean, and access to
- * any further fields, and any modification, is only permitted if the first field Boolean is True.
+ * The [ConditionalTuple] annotation represents a [Tuple] whose first element is a [Boolean], and
+ * access to any further elements and the ability to perform any modifications is subject to the
+ * first element being the [Boolean] value `True`.
  */
 annotation ConditionalTuple
         into Tuple<Boolean> {
+    /**
+     * The number of elements in the [ConditionalTuple], which is always `1` when the first element
+     * contains a [Boolean] `False` value.
+     */
+    @Override
+    @RO Int size.get() = this[0] ? super() : 1;
+
     @Override
     @Op("[]") Object getElement(Int index) {
         assert index == 0 || super(0) == True;

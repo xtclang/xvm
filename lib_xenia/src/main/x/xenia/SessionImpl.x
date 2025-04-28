@@ -163,7 +163,7 @@ service SessionImpl
     /**
      * The value representing a "default result" for "void" event handlers.
      */
-    static Tuple<> Void = Tuple:();
+    static Tuple<> Void = ();
 
     /**
      * Internal recording of events related to the session, maintained for security and debugging
