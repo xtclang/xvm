@@ -481,13 +481,6 @@ public class Proxy
             }
 
         @Override
-        protected TypeConstant augmentType(TypeConstant type)
-            {
-            // don't augment the proxy type
-            return type;
-            }
-
-        @Override
         public TypeConstant getUnsafeType()
             {
             return f_fStrict ? super.getUnsafeType() : f_hTarget.getUnsafeType();
