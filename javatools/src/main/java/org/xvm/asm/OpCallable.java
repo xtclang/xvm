@@ -21,6 +21,8 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
+import org.xvm.runtime.template.xException;
+
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -312,6 +314,16 @@ public abstract class OpCallable extends Op
         return frame.raiseException(
                 "Missing constructor \"" + constructor.getIdentityConstant().getPathString() +
                 "\" at class " + idParent.getValueString());
+        }
+
+    /**
+     * @return R_EXCEPTION
+     */
+    protected int reportNonExtendable(Frame frame, MethodStructure constructor)
+        {
+        return frame.raiseException(xException.unsupported(frame,
+            "Class \"" + constructor.getContainingClass().getIdentityConstant().getPathString() +
+            "\" is not extendable"));
         }
 
     /**

@@ -82,6 +82,11 @@ public class Construct_N
                 return R_EXCEPTION;
                 }
 
+            if (constructor.isNative())
+                {
+                return reportNonExtendable(frame, constructor);
+                }
+
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
 
             if (anyDeferred(ahVar))

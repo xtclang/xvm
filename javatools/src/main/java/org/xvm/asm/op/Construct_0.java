@@ -58,6 +58,11 @@ public class Construct_0
             return R_EXCEPTION;
             }
 
+        if (constructor.isNative())
+            {
+            return reportNonExtendable(frame, constructor);
+            }
+
         if (constructor.isNoOp())
             {
             return iPC + 1;

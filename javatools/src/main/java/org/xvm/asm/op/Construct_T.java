@@ -102,6 +102,11 @@ public class Construct_T
             return R_EXCEPTION;
             }
 
+        if (constructor.isNative())
+            {
+            return reportNonExtendable(frame, constructor);
+            }
+
         if (constructor.isNoOp())
             {
             return R_NEXT;

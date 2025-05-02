@@ -1477,6 +1477,16 @@ public class MethodStructure
      */
     public boolean isNoOp()
         {
+        if (isNative())
+            {
+            return false;
+            }
+
+        if (!hasCode())
+            {
+            return true;
+            }
+
         // a no-op constructor that has a finalizer cannot be trivially optimized out
         return ensureCode().isNoOp() &&
             (!isConstructor() || getConstructFinally() == null);
