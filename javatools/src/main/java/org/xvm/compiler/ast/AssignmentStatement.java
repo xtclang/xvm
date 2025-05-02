@@ -649,24 +649,23 @@ public class AssignmentStatement
                     System.arraycopy(atypeLVals, 0, atypeReq, 1, cLVals);
 
                     exprRight = rvalue.validateMulti(ctxRValue, atypeReq, errs);
-                    if (exprRight == null)
-                        {
-                        return null;
-                        }
 
                     // conditional expressions can update the LVal type from the RVal type,
                     // but the initial boolean is discarded
                     merge(ctxRValue, ctxLValue);
 
                     exprLeft.markAssignment(ctxRValue,
-                    fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
+                            fConditional && exprRight != null && exprRight.isConditionalResult(), errs);
 
-                    TypeConstant[] atypeAll = exprRight.getTypes();
-                    int            cTypes   = atypeAll.length - 1;
-                    if (cTypes >= 1)
+                    if (exprRight != null)
                         {
-                        atypeRight = new TypeConstant[cTypes];
-                        System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                        TypeConstant[] atypeAll = exprRight.getTypes();
+                        int            cTypes   = atypeAll.length - 1;
+                        if (cTypes >= 1)
+                            {
+                            atypeRight = new TypeConstant[cTypes];
+                            System.arraycopy(atypeAll, 1, atypeRight, 0, cTypes);
+                            }
                         }
                     }
 

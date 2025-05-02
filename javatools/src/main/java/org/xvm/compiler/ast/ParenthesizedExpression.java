@@ -124,18 +124,6 @@ public class ParenthesizedExpression
             TypeFit fitValue = super.testFit(ctx, typeRequired, true, null);
             if (fitTuple.betterThan(fitValue))
                 {
-                // this expression is actually a tuple literal, which means the delegated expression
-                // is the first and only element of the tuple
-                TypeConstant typeTuple = mightBeTuple(typeRequired);
-                assert typeTuple != null;
-                List<TypeConstant> listElements = typeTuple.getTupleParamTypes();
-                TypeConstant typeElementRequired = null;
-                if (listElements != null && !listElements.isEmpty())
-                    {
-                    assert listElements.size() == 1;
-                    typeElementRequired = listElements.getFirst();
-                    }
-
                 // replace this parenthesized expression with an actual tuple expression containing
                 // the one element `(expr)`
                 TupleExpression exprTuple = new TupleExpression(null, new ArrayList<>(List.of(expr)),
