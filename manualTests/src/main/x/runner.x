@@ -45,7 +45,7 @@ module Runner {
 
             buffer.print($"++++++ Loading module: {moduleName} +++++++\n");
             using (new Timeout(Duration:1m)) {
-                @Future Tuple result = container.invoke("run", Tuple:());
+                @Future Tuple result = container.invoke("run", ());
                 return (&result, buffer);
             }
         } catch (Exception e) {

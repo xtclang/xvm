@@ -49,7 +49,7 @@ module CounterTest {
             try {
                 connection.close();
             } catch (Exception ignore) {}
-            result=Tuple:();
+            result=();
         });
         return result;
     }

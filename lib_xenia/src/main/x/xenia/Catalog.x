@@ -364,7 +364,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
         private void collectExtras(ExtrasAware extraAware, ClassInfo[] classInfos,
                                    Class[] sessionAnnos, Set<String> declaredPaths) {
             for ((Duplicable+WebService) extra : extraAware.extras) {
-                Class<WebService> clz  = &extra.actualClass.as(Class<WebService>);
+                Class<WebService> clz  = &extra.class.as(Class<WebService>);
                 String            path = extra.path;
                 path = validatePath(path, declaredPaths, clz);
                 classInfos += new ClassInfo(path, clz, () -> extra.duplicate());
@@ -494,7 +494,7 @@ const Catalog(WebApp webApp, WebServiceInfo[] services, Class[] sessionAnnos) {
     private static WebServiceInfo[] collectEndpoints(WebApp app, ClassInfo[] classInfos) {
         typedef MediaType|MediaType[] as MediaTypes;
 
-        Class       clzWebApp          = &app.actualClass;
+        Class       clzWebApp          = &app.class;
         TrustLevel  appTrustLevel      = clzWebApp.is(LoginRequired) ? clzWebApp.security : None;
         Boolean     appTls             = clzWebApp.is(HttpsRequired);
         Boolean     appRedirectTls     = clzWebApp.is(HttpsRequired) && clzWebApp.autoRedirect;

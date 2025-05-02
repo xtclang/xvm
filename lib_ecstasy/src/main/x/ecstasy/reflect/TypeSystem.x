@@ -100,7 +100,7 @@ const TypeSystem {
         while (!parser.eof) {
             ImportStatement stmt = parser.parseImportStatement();
             Module?         mod  = mackModule;
-            Type            type = &mod.actualType;
+            Type            type = &mod.type;
             for (Token name : stmt.names) {
                 assert type := type.childTypes.get(name.valueText);
             }
@@ -198,7 +198,7 @@ const TypeSystem {
      */
     conditional Type typeForName(String name, Boolean hideExceptions = False) {
         if (name == "") {
-            return True, &primaryModule.actualType;
+            return True, &primaryModule.type;
         }
 
         if (CacheEntry entry ?= lookupCache[name]) {
@@ -239,7 +239,7 @@ const TypeSystem {
         if (failure == Null && exception != Null) {
             failure = $"Type name contains unparsable element(s): {name.quoted()}";
             if (exception.text == Null) {
-                failure += &exception.actualClass.name;
+                failure += &exception.class.name;
             } else {
                 failure += ": " + exception.text;
             }

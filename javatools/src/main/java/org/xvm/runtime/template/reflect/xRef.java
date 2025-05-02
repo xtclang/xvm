@@ -107,7 +107,6 @@ public class xRef
         {
         s_sigGet = getStructure().findMethod("get", 0).getIdentityConstant().getSignature();
 
-        markNativeProperty("isService");
         markNativeMethod("equals", null, BOOLEAN);
 
         invalidateTypeInfo();
@@ -138,11 +137,11 @@ public class xRef
 
         switch (sPropName)
             {
-            case "actualType":
+            case "type":
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn, h.getType().ensureTypeHandle(frame.f_context.f_container)));
 
-            case "actualClass":
+            case "class":
                 return actOnReferent(frame, hRef, h -> ensureClassHandle(frame, h, iReturn));
 
             case "annotations":
@@ -155,19 +154,7 @@ public class xRef
                 return actOnReferent(frame, hRef,
                     h -> frame.assignValue(iReturn, Identity.ensureIdentity(h)));
 
-            case "isService":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn, xBoolean.makeHandle(h.isService())));
-
-            case "isConst":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn, xBoolean.makeHandle(h.getComposition().isConst())));
-
-            case "isImmutable":
-                return actOnReferent(frame, hRef,
-                    h -> frame.assignValue(iReturn, xBoolean.makeHandle(!h.isMutable())));
-
-            case "byteLength":
+            case "size":
                 return frame.assignValue(iReturn, xInt64.makeHandle(8)); // TODO
 
             case "selfContained":
@@ -354,6 +341,10 @@ public class xRef
             case "revealAs":
                 return actOnReferent(frame, hRef,
                     h -> revealAs(frame, h, (TypeHandle) ahArg[1], aiReturn));
+
+            case "revealStruct":
+                return actOnReferent(frame, hRef,
+                    h -> revealStruct(frame, h, (TypeHandle) ahArg[0], aiReturn));
             }
 
         return super.invokeNativeNN(frame, method, hTarget, ahArg, aiReturn);
@@ -830,7 +821,7 @@ public class xRef
      * @param frame     the current frame
      * @param hTarget   the target object
      * @param hType     the type handle to reveal as
-     * @param aiReturn  the register to return the conditional result into
+     * @param aiReturn  the registers to return the conditional result into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
      */
@@ -840,22 +831,46 @@ public class xRef
             {
             ConstantPool pool       = frame.poolContext();
             TypeConstant typeReveal = hType.getDataType();
+            if (!typeReveal.isA(pool.typeStruct()))
+                {
+                ObjectHandle hRevealed = hGeneric.revealAs(frame, typeReveal);
+                if (hRevealed != null)
+                    {
+                    return frame.assignValues(aiReturn, xBoolean.TRUE, hRevealed);
+                    }
+                }
+            }
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+        }
 
-            if (typeReveal.equals(pool.typeStruct()))
+    /**
+     * Reveal the specified target as a structure type.
+     *
+     * @param frame     the current frame
+     * @param hTarget   the target object
+     * @param hType     the structure type to reveal as
+     * @param aiReturn  the registers to return the conditional result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int revealStruct(Frame frame, ObjectHandle hTarget, TypeHandle hType, int[] aiReturn)
+        {
+        if (hTarget instanceof GenericHandle hGeneric)
+            {
+            ConstantPool pool       = frame.poolContext();
+            TypeConstant typeReveal = hType.getDataType();
+            if (typeReveal.isA(pool.typeStruct()))
                 {
                 typeReveal = pool.ensureAccessTypeConstant(hTarget.getType(), Access.STRUCT);
+                ObjectHandle hRevealed = hGeneric.revealAs(frame, typeReveal);
+                if (hRevealed != null)
+                    {
+                    return frame.assignValues(aiReturn, xBoolean.TRUE, hRevealed);
+                    }
                 }
-
-            ObjectHandle hRevealed = hGeneric.revealAs(frame, typeReveal);
-
-            return hRevealed == null
-                ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
-                : frame.assignValues(aiReturn, xBoolean.TRUE, hRevealed);
             }
-        else
-            {
-            return frame.raiseException(xException.unsupported(frame, "revealAs"));
-            }
+
+        return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 
     /**

@@ -1806,7 +1806,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
         @Override
         void dump(Log log, String desc) {
-            log.add($"{desc}={&this.actualClass.name}<{Element}> valueOffset={valueOffset}, height={height}");
+            log.add($"{desc}={&this.class.name}<{Element}> valueOffset={valueOffset}, height={height}");
         }
 
         // ----- internal ---------------------------------------------------------------------
@@ -1942,7 +1942,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
         @Override
         void dump(Log log, String desc) {
-            log.add($"{desc}={&this.actualClass.name}<{Element}>, actualStore:");
+            log.add($"{desc}={&this.class.name}<{Element}>, actualStore:");
             actualStore.dump(log, desc);
         }
 
@@ -2037,7 +2037,7 @@ class SkiplistMap<Key extends Orderable, Value>
 
         @Override
         void dump(Log log, String desc) {
-            log.add($"{desc}={&this.actualClass.name}<{Element}>, enumeration={enumeration}, actualStore:");
+            log.add($"{desc}={&this.class.name}<{Element}>, enumeration={enumeration}, actualStore:");
             actualStore.dump(log, desc);
         }
 

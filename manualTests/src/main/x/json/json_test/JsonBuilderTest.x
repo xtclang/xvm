@@ -65,7 +65,7 @@ class JsonBuilderTest {
                 assert copy == source;
                 break;
             default:
-                assert as $"source and copy are different types source={&source.actualType} copy={&copy.actualType}";
+                assert as $"source and copy are different types source={&source.type} copy={&copy.type}";
         }
     }
 

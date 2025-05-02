@@ -320,8 +320,8 @@ const Range<Element extends Orderable>
         return firstExclusive.toInt64() + 2 + lastExclusive.toInt64()
             + (Element.is(Type<Stringable>)
                 ? first.estimateStringLength() + last.estimateStringLength()
-                : (first.is(Stringable) ? first.estimateStringLength() : 8)
-                    + (last.is(Stringable) ? last.estimateStringLength() : 8));
+                : (first.is(Stringable)?.estimateStringLength() : 8)
+                    + (last.is(Stringable)?.estimateStringLength() : 8));
     }
 
     @Override

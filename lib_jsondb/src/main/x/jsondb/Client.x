@@ -1035,7 +1035,7 @@ service Client<Schema extends RootSchema> {
                     }
                 } catch (Exception e) {
                     this.Client.log($|An exception occurred while evaluating Validator \
-                                     |"{&validator.actualClass.displayName}": {e}
+                                     |"{&validator.class.displayName}": {e}
                                      );
                     return False;
                 }
@@ -1059,7 +1059,7 @@ service Client<Schema extends RootSchema> {
                     }
                 } catch (Exception e) {
                     this.Client.log($|An exception occurred while processing Rectifier \
-                                     |"{&rectifier.actualClass.displayName}": {e}
+                                     |"{&rectifier.class.displayName}": {e}
                                      );
                     return False;
                 }
@@ -1083,7 +1083,7 @@ service Client<Schema extends RootSchema> {
                     }
                 } catch (Exception e) {
                     this.Client.log($|An exception occurred while processing Distributor \
-                                     |"{&distributor.actualClass.displayName}": {e}
+                                     |"{&distributor.class.displayName}": {e}
                                      );
                     return False;
                 }

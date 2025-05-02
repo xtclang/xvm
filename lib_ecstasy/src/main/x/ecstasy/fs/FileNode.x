@@ -169,6 +169,7 @@ interface FileNode
      * Two file nodes are equal iff they belong to the same store, have the same path and both are
      * files or both are directories.
      */
+    @Override
     static <CompileType extends FileNode> Boolean equals(CompileType node1, CompileType node2) {
         return node1.&store == node2.&store && node1.path == node2.path &&
                node1.is(File) == node2.is(File);

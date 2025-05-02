@@ -634,7 +634,7 @@ class ObjectOutputStream(Schema schema, Writer writer)
                 return value.size < 80;
             }
 
-            return &value.actualClass.isSingleton();
+            return &value.class.isSingleton();
         }
     }
 

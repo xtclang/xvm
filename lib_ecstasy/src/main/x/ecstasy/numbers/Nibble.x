@@ -327,6 +327,7 @@ const Nibble(Bit[] bits)
     /**
      * Calculate a hash code for the specified Enum value.
      */
+    @Override
     static <CompileType extends Nibble> Int64 hashCode(CompileType value) {
         return value.toInt64();
     }
@@ -334,6 +335,7 @@ const Nibble(Bit[] bits)
     /**
      * Compare two enumerated values that belong to the same enumeration purposes of ordering.
      */
+    @Override
     static <CompileType extends Nibble> Ordered compare(CompileType value1, CompileType value2) {
         return value1.toUInt8() <=> value2.toUInt8();
     }
@@ -341,6 +343,7 @@ const Nibble(Bit[] bits)
     /**
      * Compare two enumerated values that belong to the same enumeration for equality.
      */
+    @Override
     static <CompileType extends Nibble> Boolean equals(CompileType value1, CompileType value2) {
         return value1.toUInt8() == value2.toUInt8();
     }

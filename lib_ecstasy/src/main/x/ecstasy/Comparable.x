@@ -27,13 +27,13 @@ interface Comparable {
         }
 
         // if they're both of the same runtime type, then use that type
-        Type shared = thisRef.actualType;
-        if (shared == thatRef.actualType) {
+        Type shared = thisRef.type;
+        if (shared == thatRef.type) {
             return this.as(shared.DataType) == that.as(shared.DataType);
         }
 
         // otherwise, verify that they are of the same actual class, and use that class' public type
-        shared = thisRef.actualClass.PublicType;
+        shared = thisRef.class.PublicType;
         return this.is(shared.DataType)? == that.is(shared.DataType)? : False;
     }
 }

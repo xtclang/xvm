@@ -1087,7 +1087,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             Int              writeId  = rec.writeId;
             for (Int storeId : storeIds) {
                 @Future Tuple<> storeOne = storeFor(storeId).commit(writeId);
-                storeAll = storeAll?.and(&storeOne, (_, _) -> Tuple:()) : &storeOne;
+                storeAll = storeAll?.and(&storeOne, (_, _) -> ()) : &storeOne;
             }
             assert storeAll != Null;
 
@@ -2018,7 +2018,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             FutureVar<Tuple<>>? commitAll = Null;
             for (Int storeId : enlisted) {
                 Tuple<> commitOne = storeFor(storeId).commit^(writeId);
-                commitAll = commitAll?.and(&commitOne, (_, _) -> Tuple:()) : &commitOne;
+                commitAll = commitAll?.and(&commitOne, (_, _) -> ()) : &commitOne;
             }
             assert commitAll != Null;
             commitAll.whenComplete((t, e) -> {
@@ -2118,7 +2118,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     Tuple<> result = storeFor(storeId).rollback^(writeId);
                     &result.handle(e -> {
                         log($"Exception occurred while rolling back transaction {idString} in store {storeId}: {e}");
-                        return Tuple:();
+                        return ();
                     });
                 }
 

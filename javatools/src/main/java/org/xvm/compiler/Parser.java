@@ -158,31 +158,35 @@ public class Parser
 
             Loop: while (!eof())
                 {
-                switch (current().getId())
+                if (match(Id.MODULE) != null)
                     {
-                    case MODULE:
-                        if (!eof())
+                    if (!eof())
+                        {
+                        m_errorListener = new ErrorList(1);
+                        List<Token> tokens = parseQualifiedName();
+                        if (!m_errorListener.hasSeriousErrors())
                             {
-                            m_errorListener = new ErrorList(1);
-                            List<Token> tokens = parseQualifiedName();
-                            if (!m_errorListener.hasSeriousErrors())
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 0, c = tokens.size(); i < c; ++i)
                                 {
-                                StringBuilder sb = new StringBuilder();
-                                for (int i = 0, c = tokens.size(); i < c; ++i)
+                                if (i > 0)
                                     {
-                                    if (i > 0)
-                                        {
-                                        sb.append('.');
-                                        }
-                                    sb.append(tokens.get(i).getValueText());
+                                    sb.append('.');
                                     }
-                                return sb.toString();
+                                sb.append(tokens.get(i).getValueText());
                                 }
+                            return sb.toString();
                             }
-
-                    case L_CURLY:
-                    case R_CURLY:
-                        break Loop;
+                        }
+                    }
+                else
+                    {
+                    switch (current().getId())
+                        {
+                        case L_CURLY:
+                        case R_CURLY:
+                            break Loop;
+                        }
                     }
                 }
             }
@@ -370,24 +374,22 @@ public class Parser
         Token category;
         Token name;
         List<Token> qualified = null;
-        switch (peek().getId())
+        if (       (category = match(Id.PACKAGE   )) != null
+                || (category = match(Id.CLASS     )) != null
+                || (category = match(Id.INTERFACE )) != null
+                || (category = match(Id.SERVICE   )) != null
+                || (category = match(Id.CONST     )) != null
+                || (category = match(Id.ENUM      )) != null
+                || (category = match(Id.ANNOTATION)) != null
+                || (category = match(Id.MIXIN     )) != null)
             {
-            case PACKAGE:
-            case CLASS:
-            case INTERFACE:
-            case SERVICE:
-            case CONST:
-            case ENUM:
-            case ANNOTATION:
-            case MIXIN:
-                category = current();
-                name = expect(Id.IDENTIFIER);
-                break;
-
-            default:
-                category = expect(Id.MODULE);
-                qualified = parseQualifiedName();
-                name = qualified.get(0);
+            name = expect(Id.IDENTIFIER);
+            }
+        else
+            {
+            category  = expect(Id.MODULE);
+            qualified = parseQualifiedName();
+            name      = qualified.get(0);
             }
 
         // optional type parameters
@@ -820,24 +822,6 @@ public class Parser
         // type-composition has a category keyword next
         switch (peek().getId())
             {
-            case MODULE:
-            case PACKAGE:
-                if (fInMethod)
-                    {
-                    log(Severity.ERROR, NO_TOP_LEVEL, peek().getStartPosition(), peek().getEndPosition());
-                    }
-                // fall through
-            case CLASS:
-            case INTERFACE:
-            case SERVICE:
-            case CONST:
-            case ENUM:
-            case ANNOTATION:
-            case MIXIN:
-                // it's definitely a type composition
-                return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
-                        modifiers, annotations);
-
             case TYPEDEF:
                 // evaluate annotations
                 if (annotations != null)
@@ -930,6 +914,7 @@ public class Parser
                 List<Token>      listName  = new ArrayList<>();
                 boolean          fAnyNames = false;
 
+                // TODO CP REVIEW this for type parsing changes
                 Token start = expect(Id.L_PAREN);
                 do
                     {
@@ -1032,6 +1017,26 @@ public class Parser
                 }
             // fall through
             default:
+                Token category;
+                if (       (category = match(Id.MODULE    )) != null
+                        || (category = match(Id.PACKAGE   )) != null
+                        || (category = match(Id.CLASS     )) != null
+                        || (category = match(Id.INTERFACE )) != null
+                        || (category = match(Id.SERVICE   )) != null
+                        || (category = match(Id.CONST     )) != null
+                        || (category = match(Id.ENUM      )) != null
+                        || (category = match(Id.ANNOTATION)) != null
+                        || (category = match(Id.MIXIN     )) != null)
+                    {
+                    putBack(category);
+                    if (fInMethod && (category.getId() == Id.MODULE || category.getId() == Id.PACKAGE))
+                        {
+                        log(Severity.ERROR, NO_TOP_LEVEL, peek().getStartPosition(), peek().getEndPosition());
+                        }
+                    // it's definitely a type composition
+                    return parseTypeDeclarationStatementAfterModifiers(lStartPos, exprCondition, doc,
+                                                                       modifiers, annotations);
+                    }
 
             // the following two case options are listed here solely for doc purposes; while they
             // can be "matched", they cannot be "peeked" (because they're context sensitive)
@@ -1507,17 +1512,20 @@ public class Parser
             case WHILE:
                 return parseWhileStatement();
 
-            case CLASS:
-            case INTERFACE:
-            case SERVICE:
-            case CONST:
-            case ENUM:
-            case ANNOTATION:
-            case MIXIN:
-                // this is obviously a TypeComposition
-                return parseTypeCompositionStatement();
-
             case IDENTIFIER:
+                Token decl = null;
+                if (       (decl = match(Id.CLASS     )) != null
+                        || (decl = match(Id.INTERFACE )) != null
+                        || (decl = match(Id.SERVICE   )) != null
+                        || (decl = match(Id.CONST     )) != null
+                        || (decl = match(Id.ENUM      )) != null
+                        || (decl = match(Id.ANNOTATION)) != null
+                        || (decl = match(Id.MIXIN     )) != null)
+                    {
+                    putBack(decl);
+                    return parseTypeCompositionStatement();
+                    }
+
                 {
                 // check if it is a LabeledStatement
                 Token name = expect(Id.IDENTIFIER);
@@ -2373,6 +2381,7 @@ public class Parser
      */
     MultipleLValueStatement peekMultiVariableInitializer()
         {
+        // TODO CP REVIEW this for type parsing changes
         if (!peek(Id.L_PAREN))
             {
             return null;
@@ -3136,7 +3145,7 @@ public class Parser
     Expression parseBitwiseExpression(boolean fExtended)
         {
         Expression expr = parseAdditiveExpression(fExtended);
-// TODO CP special handling if expr is a type?
+// TODO CP is any special type handling necessary for BIT_OR (`|`) if expr came back as a type
         while (true)
             {
             switch (peek().getId())
@@ -3695,13 +3704,6 @@ public class Parser
             case PUBLIC:
             case PROTECTED:
             case PRIVATE:
-            case STRUCT:
-            case CONST:
-            case ENUM:
-            case MODULE:
-            case PACKAGE:
-            case SERVICE:
-            case CLASS:
                 if (fExtended)
                     {
                     return parseExtendedTypeExpression();
@@ -3712,6 +3714,22 @@ public class Parser
             case CONSTRUCT:
             case IDENTIFIER:
                 {
+                if (fExtended)
+                    {
+                    Token decl;
+                    if (       (decl = match(Id.CONST  )) != null
+                            || (decl = match(Id.ENUM   )) != null
+                            || (decl = match(Id.MODULE )) != null
+                            || (decl = match(Id.PACKAGE)) != null
+                            || (decl = match(Id.SERVICE)) != null
+                            || (decl = match(Id.CLASS  )) != null
+                            || (decl = match(Id.STRUCT )) != null)
+                        {
+                        putBack(decl);
+                        return parseExtendedTypeExpression();
+                        }
+                    }
+
                 // the preamble can contain a leading "&" and a leading "construct". the "construct"
                 // ends up getting relocated from the left most position where it is parsed, to the
                 // right-most position in the name itself, e.g. "construct A.B.C" becomes a name
@@ -3840,14 +3858,39 @@ public class Parser
 
             case L_PAREN:
                 {
-                // this could be a tuple literal, a parenthesized expression, or a lambda
+                // this could be a tuple literal, a tuple assignee of a `<-` expression, a simple
+                // parenthesized expression, a parenthesized type expression, or a lambda
                 // expression's parameter list
+                //
+                // to differentiate, we need to look forward, for example to see:
+                // * are the parenthesis empty?
+                // * within the parenthesis, are the contents comma-delimited or comma-trailed?
+                // * after the closing parenthesis, is there a lambda operator "->"?
+                // * after the closing parenthesis, is there an expression assignment operator "<-"?
+                // * are there any explicit type indicators used, such as "private" or "struct"
+                //   followed by an identifier?
+                //
+                // determine which one of these needs to be parsed:
+                // normal expression
+                // type expression
+                // tuple expression
+                // name or other lvalue list (known to be followed by `->` or `<-`)
+                // type+name list (known to be followed by `->`)
                 Token tokLParen = expect(Id.L_PAREN);
-                if (match(Id.R_PAREN) != null)
+                if (match(Id.R_PAREN, match(Id.COMMA) != null) != null)
                     {
-                    // zero-argument lambda
-                    return new LambdaExpression(Collections.emptyList(), expect(Id.LAMBDA),
-                            parseLambdaBody(), tokLParen.getStartPosition());
+                    Token lambdaOp = match(Id.LAMBDA);
+                    if (lambdaOp != null)
+                        {
+                        // zero-argument lambda
+                        return new LambdaExpression(Collections.emptyList(), lambdaOp,
+                                parseLambdaBody(), tokLParen.getStartPosition());
+                        }
+                    else
+                        {
+                        // the empty tuple: "()" (or the empty tuple with a trailing comma: "(,)")
+                        return new TupleExpression(null, null, tokLParen.getStartPosition(), prev().getEndPosition());
+                        }
                     }
 
                 Expression expr = parseExtendedExpression();
@@ -3859,11 +3902,10 @@ public class Parser
                         // parsed to see if it's followed by a lambda operator
                         List<Expression> exprs = new ArrayList<>();
                         exprs.add(expr);
-                        while (match(Id.COMMA) != null)
+                        while (match(Id.R_PAREN, match(Id.COMMA) == null) == null)
                             {
                             exprs.add(parseExpression());
                             }
-                        expect(Id.R_PAREN);
 
                         if (peek(Id.LAMBDA))
                             {
@@ -3897,13 +3939,12 @@ public class Parser
                         {
                         List<Parameter> params = new ArrayList<>();
                         params.add(new Parameter(expr.toTypeExpression(), expectNameOrAny()));
-                        while (match(Id.COMMA) != null)
+                        while (match(Id.R_PAREN, match(Id.COMMA) == null) == null)
                             {
                             TypeExpression type  = parseTypeExpression();
                             Token          name  = expectNameOrAny();
                             params.add(new Parameter(type, name));
                             }
-                        expect(Id.R_PAREN);
 
                         return new LambdaExpression(params, expect(Id.LAMBDA),
                                 parseLambdaBody(), tokLParen.getStartPosition());
@@ -4770,27 +4811,9 @@ public class Parser
                 break;
                 }
 
-            case CONST:
-            case ENUM:
-            case MODULE:
-            case PACKAGE:
-            case SERVICE:
-            case CLASS:
-                {
-                Token tokKeyword = current();
-                if (!fExtended)
-                    {
-                    log(Severity.ERROR, EXT_TYPE_SYNTAX, tokKeyword.getStartPosition(),
-                            tokKeyword.getEndPosition(), tokKeyword.getValueText());
-                    }
-                type = new KeywordTypeExpression(tokKeyword);
-                return type;
-                }
-
             case ANY:
                 return new KeywordTypeExpression(current());
 
-            case STRUCT:
             case PUBLIC:
             case PROTECTED:
             case PRIVATE:
@@ -4802,6 +4825,20 @@ public class Parser
                     }
                 // fall through
             default:
+                if (fExtended && tokAccess == null)
+                    {
+                    Token tokKeyword;
+                    if (       (tokKeyword = match(Id.CONST  )) != null
+                            || (tokKeyword = match(Id.ENUM   )) != null
+                            || (tokKeyword = match(Id.MODULE )) != null
+                            || (tokKeyword = match(Id.PACKAGE)) != null
+                            || (tokKeyword = match(Id.SERVICE)) != null
+                            || (tokKeyword = match(Id.CLASS  )) != null)
+                        {
+                        return new KeywordTypeExpression(tokKeyword);
+                        }
+                    tokAccess = match(Id.STRUCT);
+                    }
                 type = parseNamedTypeExpression(tokAccess);
                 break;
             }
@@ -4995,8 +5032,8 @@ public class Parser
 
             if (expr == null)
                 {
-                expr = new NamedTypeExpression(null, names, tokAccess, tokNarrow,
-                        params, prev().getEndPosition());
+                expr = new NamedTypeExpression(null, names, tokAccess, tokNarrow, params,
+                        prev().getEndPosition());
                 }
             else
                 {
@@ -5778,7 +5815,6 @@ public class Parser
                 case R_CURLY:
                     return;
 
-                case ANNOTATION:
                 case ASSERT:
                 case ASSERT_RND:
                 case ASSERT_ARG:
@@ -5788,20 +5824,12 @@ public class Parser
                 case ASSERT_TEST:
                 case ASSERT_DBG:
                 case BREAK:
-                case CLASS:
-                case CONST:
                 case CONSTRUCT:
                 case CONTINUE:
                 case DO:
-                case ENUM:
                 case IF:
                 case IMPORT:
-                case INTERFACE:
-                case MIXIN:
-                case MODULE:
-                case PACKAGE:
                 case RETURN:
-                case SERVICE:
                 case SWITCH:
                 case THROW:
                 case TODO:
@@ -5812,6 +5840,21 @@ public class Parser
                     return;
 
                 default:
+                    Token category;
+                    if (       (category = match(Id.MODULE    )) != null
+                            || (category = match(Id.PACKAGE   )) != null
+                            || (category = match(Id.CLASS     )) != null
+                            || (category = match(Id.INTERFACE )) != null
+                            || (category = match(Id.SERVICE   )) != null
+                            || (category = match(Id.CONST     )) != null
+                            || (category = match(Id.ENUM      )) != null
+                            || (category = match(Id.ANNOTATION)) != null
+                            || (category = match(Id.MIXIN     )) != null)
+                        {
+                        putBack(category);
+                        return;
+                        }
+
                     next();
                     break;
                 }

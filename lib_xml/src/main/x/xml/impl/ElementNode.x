@@ -895,6 +895,7 @@ class ElementNode
         Int get() {
             Int count = counts_ & Mask;
             if (count == Ones) {
+                // TODO CP optimize
                 count = parts.filter(n -> n.is(ContentNode)).size;
                 if (count < Ones) {
                     set(count);

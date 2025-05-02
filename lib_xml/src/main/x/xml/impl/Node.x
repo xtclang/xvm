@@ -287,7 +287,7 @@ mixin Node
             case Instruction: equalsCaseInsens(part.target, "xml") ? new XmlDeclNode(part) : new InstructionNode(part);
             case Comment:     new CommentNode(part);
             case Document:    new DocumentNode(part);
-            default:          assert as $"Unsupported type: {&part.actualType}";
+            default:          assert as $"Unsupported type: {&part.type}";
         };
     }
 

@@ -112,13 +112,13 @@ module TestInnerOuter {
                     compare(CompileType value1, CompileType value2) {
                 @Inject Console console;
 
-                console.print($"CompileType={CompileType}");
-                console.print($"CompileType.OuterType={CompileType.OuterType}");
-                console.print($"CompileType.OuterType.Element={CompileType.OuterType.Element}");
-                console.print($"value1={value1}");
-                console.print($"value1.outer={value1.outer}");
-                console.print($"value1.outer.name={value1.outer.name}");
-                console.print($"value1.&outer.actualType={value1.&outer.actualType}");
+                console.print($"{CompileType=}");
+                console.print($"{CompileType.OuterType=}");
+                console.print($"{CompileType.OuterType.Element=}");
+                console.print($"{value1=}");
+                console.print($"{value1.outer=}");
+                console.print($"{value1.outer.name=}");
+                console.print($"{value1.&outer.type=}");
 
                 return (value1.e <=> value2.e).reversed;
             }

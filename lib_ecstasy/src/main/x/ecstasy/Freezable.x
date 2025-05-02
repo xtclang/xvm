@@ -43,11 +43,11 @@ interface Freezable {
      * @param inPlace  (optional) specify that the object should make itself immutable if it can,
      *                 instead of creating a new immutable copy of itself
      *
-     * @return True iff the object is Freezable and must be frozen, False iff the object reference
-     *         is already frozen (or a service)
+     * @return `True` iff the object is [Freezable] and must be frozen; `False` iff the object
+     *         reference is already immutable or a service
      *
-     * @throws NotShareable if the object is not already immutable (i.e. it has not yet been frozen),
-     *         is not a `service`, and is not `Freezable`
+     * @throws NotShareable  if the object is not already immutable (i.e. it has not yet been
+     *         frozen), is not a `service`, and is not `Freezable`
      */
     static <AnyType> AnyType+Shareable frozen(AnyType object, Boolean inPlace=False) {
         if (val notYetFrozen := requiresFreeze(object)) {

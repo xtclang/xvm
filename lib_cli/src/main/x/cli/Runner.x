@@ -45,7 +45,7 @@ static service Runner {
 
         if (args.size == 0) {
             if (description.empty) {
-                description = &app.actualClass.name;
+                description = &app.class.name;
             }
 
             if (!suppressWelcome) {
@@ -281,7 +281,7 @@ static service Runner {
                 Int         allCount = params.size;
                 Int         argCount = parts-1;
                 if (argCount <= allCount) {
-                    Tuple args = Tuple:();
+                    Tuple args = ();
 
                     // collect the specified values
                     for (Int i : 1 ..< parts) {
@@ -333,7 +333,7 @@ static service Runner {
                     console.print($"  Number of arguments should be between {reqCount} and {allCount}");
                 }
             } catch (Exception e) {
-                console.print($"  Error: {e.message.empty ? &e.actualType : e.message}");
+                console.print($"  Error: {e.message.empty ? &e.type : e.message}");
             }
         } else {
             console.print($"  Unknown command: {head.quoted()}");

@@ -358,7 +358,7 @@ module webcli.xtclang.org {
             } catch (TimedOut e) {
                 return $"Request timed out after {requestTimeout.seconds} sec", ConnectionTimedOut;
             } catch (IOException e) {
-                return ($"Error: {e.message.empty ? &e.actualType : e.message}", ServiceUnavailable);
+                return ($"Error: {e.message.empty ? &e.type : e.message}", ServiceUnavailable);
             }
             HttpStatus status = response.status;
             if (status == OK) {

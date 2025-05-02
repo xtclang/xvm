@@ -53,7 +53,7 @@ module AddressBookDB_jsondb
                 enableMetadata   = True,
                 enablePointers   = True,
                 enableReflection = True,
-                typeSystem       = &this.actualType.typeSystem,
+                typeSystem       = &this.type.typeSystem,
                 );
         }
 
@@ -140,7 +140,7 @@ module AddressBookDB_jsondb
             // ----- DBObject interface ------------------------------------------------------------
 
             @Override
-            Tuple dbInvoke(String | Function fn, Tuple args = Tuple:(), (Duration|Time)? when = Null)
+            Tuple dbInvoke(String | Function fn, Tuple args = (), (Duration|Time)? when = Null)
                 {
                 if (fn == "addPhone" && when == Null)
                     {

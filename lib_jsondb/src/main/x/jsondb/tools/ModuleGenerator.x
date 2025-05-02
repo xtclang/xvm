@@ -584,7 +584,7 @@ class ModuleGenerator(String moduleName) {
                                 }
                             }
                         }
-                        properties += Tuple:(prop, category);
+                        properties += (prop, category);
                         continue NextProperty;
                     }
                 }
@@ -680,7 +680,7 @@ class ModuleGenerator(String moduleName) {
      * Obtain a display value for the specified constant.
      */
     String displayValue(Object value) {
-        Type typeActual = &value.actualType;
+        Type typeActual = &value.type;
         if (typeActual.is(Type<String>)) {
             return value.as(String).quoted();
         }

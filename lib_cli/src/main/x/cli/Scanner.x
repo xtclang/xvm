@@ -5,10 +5,10 @@ class Scanner {
     static Map<String, CmdInfo> buildCatalog(TerminalApp app, Object[] extras = []) {
         Map<String, CmdInfo> cmdInfos = new ListMap();
 
-        scanCommands(() -> app, &app.actualClass, cmdInfos);
+        scanCommands(() -> app, &app.class, cmdInfos);
         if (!extras.empty) {
             extras.forEach(extra ->
-                scanCommands(() -> extra, &extra.actualClass, cmdInfos));
+                scanCommands(() -> extra, &extra.class, cmdInfos));
         }
         scanClasses(app.classes, cmdInfos);
         return cmdInfos;

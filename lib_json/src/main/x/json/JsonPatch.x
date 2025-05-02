@@ -98,7 +98,7 @@ annotation JsonPatch
             case JsonObject: applyAddToObject(target, path, value, options);
             case JsonArray:  applyAddToArray(target, path, value, options);
             case Primitive:  applyAddToPrimitive(target, path, value);
-            default:         assert as $"Invalid JSON type {&target.actualType}";
+            default:         assert as $"Invalid JSON type {&target.type}";
         };
     }
 
@@ -202,7 +202,7 @@ annotation JsonPatch
             case JsonObject: applyRemoveFromObject(target, path, options);
             case JsonArray:  applyRemoveFromArray(target, path, options);
             case Primitive:  applyRemoveFromPrimitive(target, path);
-            default:         assert as "invalid JSON type {&doc.actualType}";
+            default:         assert as "invalid JSON type {&doc.type}";
         };
     }
 
@@ -310,7 +310,7 @@ annotation JsonPatch
             case JsonObject: applyReplaceToObject(target, path, value, options);
             case JsonArray:  applyReplaceToArray(target, path, value, options);
             case Primitive:  applyReplaceToPrimitive(target, path, value);
-            default:         assert as $"Invalid JSON type {&target.actualType}";
+            default:         assert as $"Invalid JSON type {&target.type}";
         };
     }
 
@@ -520,6 +520,7 @@ annotation JsonPatch
 
         // ----- equality support ------------------------------------------------------------------
 
+        @Override
         static <CompileType extends Operation> Boolean equals(CompileType value1, CompileType value2) {
             if (value1.op != value2.op) {
                 return False;

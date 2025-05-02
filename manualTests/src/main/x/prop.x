@@ -260,8 +260,7 @@ module TestProps {
             }
 
             void validateImmutable(Var<String[]> var) {
-                assert var.is(immutable);
-                assert !var.assigned || var.isImmutable;
+                assert !var.assigned || var.is(immutable);
                 try {
                     var.set([""]);
                     assert;

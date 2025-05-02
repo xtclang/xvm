@@ -1162,6 +1162,7 @@ interface Collection<Element>
     /**
      * Two collections are equal iff they are they contain the same values.
      */
+    @Override
     static <CompileType extends Collection>
             Boolean equals(CompileType collection1, CompileType collection2) {
         // they must be of the same arity

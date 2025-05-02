@@ -8,9 +8,9 @@
  * * A _type_;
  * * An _identity_.
  *
- * The type portion of an Ecstasy reference, represented by the _actualType_ property of the Ref, is
- * simply the set of operations that can be invoked against the referent and the set of properties
- * that it contains. Regardless of the actual operations that the referent object implements, only
+ * The type portion of an Ecstasy reference, represented by the [type] property of the [Ref], is
+ * simply the set of operations that can be invoked against the [Referent] and the set of properties
+ * that it contains. Regardless of the actual operations that the [Referent] object implements, only
  * those present in the type of the reference can be invoked through the reference. This allows
  * references to be purposefully narrowed; an obvious example is when an object only provides a
  * reference to its _public_ members.
@@ -18,7 +18,7 @@
  * The Ref also has a Referent property, which is its _type constraint_. For example, when a Ref
  * represents a compile time concept such as a _variable_ or a _property_, the Referent is the
  * _compile time type_ of the reference. The reference may contain additional operations at runtime;
- * the actualType is always a super-set (⊇) of the Referent.
+ * the [type] is always a super-set (⊇) of the Referent.
  *
  * The identity portion of an Ecstasy reference is itself unrepresentable in Ecstasy. In fact, it is
  * this very unrepresentability that necessitates the Ref abstraction in the first place. For
@@ -83,36 +83,48 @@ interface Ref<Referent> {
     }
 
     /**
-     * Obtain the actual runtime type of the reference that this Ref currently holds. The actualType
-     * represents the full set of methods that can be invoked against the referent, and is always a
-     * super-set of the Referent:
+     * Obtain the actual runtime [Type] of the reference that this [Ref] currently holds. The [type]
+     * represents the full set of methods that can be invoked against the [Referent], and is always
+     * a super-set of the [Referent]:
      *
-     *   actualType ⊇ Referent
+     *     type ⊇ Referent
      *
-     * (The Referent denotes the constraint of the reference, i.e. the reference must "be of" the
-     * Referent, but is not limited to only having the methods of the Referent; the Referent is
-     * often the _compile-time type_ of the reference.)
+     * (The [Referent] denotes the constraint of the reference, i.e. the reference must "be of" the
+     * [Referent], but is not limited to only having the methods of the [Referent]; the [Referent]
+     * is often the _compile-time [Type]_ of the reference.)
      */
-    @RO Type<Referent> actualType;
+    @RO Type<Referent> type;
 
     /**
      * Obtain the class of the referent. If the reference is masked, and the caller is not permitted
-     * to reveal the type of the referent, then the `actualClass` is the class of the interface type
+     * to reveal the type of the referent, then the `class` is the class of the interface type
      * used to mask the reference, and not the class of the referent itself.
      */
-    @RO Class actualClass;
+    @RO Class class;
 
     /**
-     * Obtain an opaque object that represents the identity of the reference held by this Ref. The
-     * identity can be used for comparison with other identities to determine whether two identities
+     * Obtain an opaque object that represents the identity of the reference held by this [Ref]. An
+     * [Identity] can be compared with another [Identity] to determine whether the two identities
      * originate from the same object.
      *
-     * As long as the reference to the `Identity` is held, any subsequent requests for an identity
-     * from the same underlying object will provide an `Identity` that yields the same result from
-     * the `hashCode()` function. If the Identity is permitted to be garbage-collected, subsequent
-     * requests for an identity from the same underlying object _may_ provide an `Identity` that
-     * yields a different result from the `hashCode()` function; in other words, the hash code is
-     * treated as ephemeral data.
+     * It is _possible_ for two separately created objects to yield the same reference [Identity],
+     * iff the objects possess identical immutable [Struct]s. The [Struct]s are considered identical
+     * iff the [Ref] in each and every field in the first [Struct] yields the same [Identity] as the
+     * [Ref] in the corresponding field in the second [Struct]. This reference [Identity] sharing
+     * behavior is never guaranteed, but it should not be surprising in the case of [selfContained]
+     * references, and it is also _possible_ in references that are **not** [selfContained]. The
+     * rationale is that two deeply immutable structures that are "bitwise identical" can safely
+     * share a reference [Identity], and there space and time efficiencies for doing so.
+     *
+     * As long as a reference to the [Identity] of an [Object] is held, the [Object] will not be
+     * garbage-collected, and any subsequent request for an [Identity] from the same underlying
+     * [Object] will provide an [Identity] that yields the same [hashCode()](Identity.hashCode). If
+     * the last [Identity] for an [Object] is permitted to be garbage-collected, subsequent requests
+     * for an [Identity] from that same [Object] _may_ provide a different opaque [Identity]
+     * instance, and that [Identity] _may_ produces a different [hashCode()](Identity.hashCode); in
+     * other words, the [Identity] for an [Object] and the [hashCode()](Identity.hashCode) of that
+     * [Identity] must be assumed to be stable only for the lifetime of the [Identity] instance
+     * itself, as if an [Object] retains its [Identity] using a [Weak] reference.
      */
     @RO Identity identity;
 
@@ -120,7 +132,7 @@ interface Ref<Referent> {
      * Obtain a new reference to the referent such that the reference contains only the methods and
      * properties in the specified [Type]. The members of the requested type must be satisfied
      * by the members defined by the object's class. The requested type must be a subset of the
-     * referent's [actualType].
+     * referent's [type].
      *
      * This method will result in a reference that only contains the members in the specified type,
      * stripping the runtime reference of any members that are not present in the specified type.
@@ -135,7 +147,7 @@ interface Ref<Referent> {
      * Obtain a new reference to the referent such that the reference contains the methods and
      * properties in the specified [Type]. The members of the requested type must be satisfied by
      * the members defined by the object's class. The requested type may be a superset of the
-     * referent's [actualType].
+     * referent's [type].
      *
      * For a reference to an object instantiated within the `Current` or `Inner` [zone], this method
      * will return a reference of the requested type, iff the underlying object is actually of that
@@ -147,7 +159,23 @@ interface Ref<Referent> {
      *         this reference is [Zone.Current] or [Zone.Inner]
      * @return (conditional) a reference of the desired type
      */
-    <Unmasked> conditional Unmasked revealAs(Type<Unmasked> revealType);
+    <Unmasked> conditional Referent+Unmasked revealAs(Type<Unmasked> revealType);
+
+    /**
+     * Obtain the [Struct] of the referenced [Object] (aka the [Referent]), if possible. The
+     * [Struct] provides access to the internal state of the [Object], sometimes referred to as the
+     * "fields" of the [Object].
+     *
+     * For a [Ref] to a mutable [Object], the [Struct] can only be revealed if the [Object] belongs
+     * to (i.e. was instantiated within) the current [Service]. For a [Ref] to an immutable
+     * [Object], the [Struct] can only be revealed if the `private` type of the [Object] can be
+     * revealed by the [revealAs] method.
+     *
+     * @return True iff the referred-to [Object]'s structure is of `SpecificType`, and the [Struct]
+     *         of the referred-to [Object] is allowed to be revealed
+     * @return (conditional) the [Struct] of the referred-to [Object]
+     */
+    <SpecificStruct extends Struct> conditional SpecificStruct revealStruct();
 
     /**
      * Each object exists within a container, and a `Zone` describes the relationship between the
@@ -185,47 +213,6 @@ interface Ref<Referent> {
     @RO Boolean local;
 
     /**
-     * Determine if the referent is an "instance of" the specified type.
-     *
-     * @param type  the type to test for
-     *
-     * @return True iff the referent is of the specified type
-     */
-    Boolean instanceOf(Type type) {
-        if (peek()) {
-            return actualType.isA(type);
-        }
-
-        return False;
-    }
-
-    /**
-     * Determine if the referent is a `service`.
-     */
-    @RO Boolean isService.get() {
-        if (actualType.is(Type<Service>)) {
-            return True;
-        }
-
-        Referent referent = get();
-        return referent.is(Inner) && referent.&outer.isService;
-    }
-
-    /**
-     * Determine if the referent is an `immutable const`.
-     */
-    @RO Boolean isConst.get() {
-        return actualType.is(Type<immutable Const>);
-    }
-
-    /**
-     * Determine if the referent is `immutable`.
-     */
-    @RO Boolean isImmutable.get() {
-        return actualType.is(Type<immutable Object>);
-    }
-
-    /**
      * The optional name of the reference. References are used for arguments, local variables,
      * object properties, constant pool values, array elements, fields of structures, elements of
      * tuples, and many other purposes; in some of these uses, it is common for a reference to be
@@ -244,9 +231,11 @@ interface Ref<Referent> {
 
     /**
     * The reference annotations. These are the annotations that apply to the reference itself (i.e.
-    * they mix into `Ref` or `Var`), such as `@Future` and `@Lazy`. The order of the annotations in
-    * the array is "left-to-right"; so for example an annotated Var:
+    * they mix into [Ref] or [Var]), such as [@Future](FutureVar) and [@Lazy](LazyVar). The order of
+    * the annotations in the array is "left-to-right"; so for example an annotated Var:
+    *
     *     @A1 @A2 List list = ...
+    *
     * would produce the `annotations` array holding `A1` at index zero.
     */
     @RO Annotation[] annotations;
@@ -255,13 +244,14 @@ interface Ref<Referent> {
      * The reference uses a number of bytes for its own storage; while the size of the reference is
      * not expected to dynamically change, reference sizes may vary from one reference to another.
      * References may be larger than expected, because references may include additional information
-     * -- and potentially even the entire referent -- within the reference itself.
+     * -- and potentially even the entire `Referent` -- within the reference itself.
      */
-    @RO Int byteLength;
+    @RO Int size;
 
     /**
-     * Determine if the reference is completely self-contained, in that the referent is actually
-     * embedded within the reference itself.
+     * `True` iff the reference is completely self-contained, in that the `Referent` (the [Object],
+     * including it state as represented by its [Struct]) is actually embedded within the reference
+     * itself.
      */
     @RO Boolean selfContained;
 
@@ -272,6 +262,7 @@ interface Ref<Referent> {
      * two references to two separate runtime objects are equal, in the case where both references
      * are to immutable objects whose structures are identical.
      */
+    @Override
     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2) {
         return value1.identity == value2.identity;
     }

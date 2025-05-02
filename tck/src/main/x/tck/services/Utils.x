@@ -16,7 +16,7 @@ class Utils {
         void simulate(Duration duration) {
             @Inject Clock clock;
             @Future Tuple done;
-            clock.schedule(duration, () -> {done = Tuple:();});
+            clock.schedule(duration, () -> {done = ();});
 
             return done;
         }

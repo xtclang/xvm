@@ -317,7 +317,7 @@ class Array<Element>
 
         if (delegate.mutability == Constant) {
             // the underlying delegate is already frozen
-            assert &delegate.isImmutable;
+            assert delegate.is(immutable);
             mutability = Constant;
             return this.makeImmutable();
         }
@@ -938,6 +938,7 @@ class Array<Element>
      * @return True iff the arrays have the same size, and for each index _i_, the element at that
      *         index from each array is equal
      */
+    @Override
     static <CompileType extends Array> Boolean equals(CompileType value1, CompileType value2) {
         Int size = value1.size;
         if (value2.size != size) {
@@ -1139,9 +1140,7 @@ class Array<Element>
     private static mixin HashableArray<Element extends Hashable>
             into Array<Element>
             implements Hashable {
-        /**
-         * Calculate a hash code for a given array.
-         */
+        @Override
         static <CompileType extends HashableArray> Int64 hashCode(CompileType array) {
             Int64 hash = 0;
             for (CompileType.Element el : array) {

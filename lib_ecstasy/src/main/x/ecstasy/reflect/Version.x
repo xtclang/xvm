@@ -618,6 +618,7 @@ const Version
 
     // ----- Hashable and Comparable ---------------------------------------------------------------
 
+    @Override
     static <CompileType extends Version> Int64 hashCode(CompileType version) {
         Version? parent = version.parent;
         return parent == Null
@@ -631,6 +632,7 @@ const Version
      * other words, version "1.2.1" is identical only to version "1.2.1" (which is identical to
      * version "1.2.1.0").
      */
+    @Override
     static <CompileType extends Version> Boolean equals(CompileType version1, CompileType version2) {
         switch (version1.size <=> version2.size) {
         case Lesser:
@@ -645,10 +647,7 @@ const Version
         }
     }
 
-    /**
-     * The existence of a real implementation of comparison for Orderable instances will be checked
-     * by the run-time.
-     */
+    @Override
     static <CompileType extends Version> Ordered compare(CompileType version1, CompileType version2) {
         switch (version1.size <=> version2.size) {
         case Lesser:

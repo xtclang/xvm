@@ -82,7 +82,7 @@ interface Part
             case Instruction: value.hashCode();
             case Comment:     value.hashCode();
             case Document:    value.hashCode();
-            default:          assert as $"Unsupported type: {&value.actualType}";
+            default:          assert as $"Unsupported type: {&value.type}";
         };
     }
 
@@ -97,7 +97,7 @@ interface Part
             case Instruction: value2.is(Instruction) && value1 == value2;
             case Comment:     value2.is(Comment    ) && value1 == value2;
             case Document:    value2.is(Document   ) && value1 == value2;
-            default:          assert as $"Unsupported type: {&value1.actualType}";
+            default:          assert as $"Unsupported type: {&value1.type}";
         };
     }
 }

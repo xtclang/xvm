@@ -403,16 +403,19 @@ interface TypeTemplate
 
     // ----- Comparable, Hashable, and Orderable ---------------------------------------------------
 
+    @Override
     static <CompileType extends TypeTemplate> Int64 hashCode(CompileType value) {
         TODO
     }
 
+    @Override
     static <CompileType extends TypeTemplate> Boolean equals(CompileType value1, CompileType value2) {
         // the definition for type equality is fairly simple: each of the two types must be
         // type-compatible with the other
         return value1.isA(value2) && value2.isA(value1);
     }
 
+    @Override
     static <CompileType extends TypeTemplate> Ordered compare(CompileType value1, CompileType value2) {
         if (value1 == value2) {
             return Equal;
