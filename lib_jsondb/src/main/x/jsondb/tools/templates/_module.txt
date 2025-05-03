@@ -47,7 +47,7 @@ module %appName%_jsondb%qualifier%
                 enableMetadata   = True,
                 enablePointers   = True,
                 enableReflection = True,
-                typeSystem       = &this.actualType.typeSystem,
+                typeSystem       = &this.type.typeSystem,
                 );
     }
 
