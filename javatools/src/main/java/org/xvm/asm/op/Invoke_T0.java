@@ -25,8 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * NVOK_T0 rvalue-target, CONST-METHOD, rvalue-params-tuple
  */
 public class Invoke_T0
-        extends OpInvocable
-    {
+        extends OpInvocable {
     /**
      * Construct an NVOK_T0 op based on the passed arguments.
      *
@@ -34,12 +33,11 @@ public class Invoke_T0
      * @param constMethod  the method constant
      * @param argValue     the value Argument
      */
-    public Invoke_T0(Argument argTarget, MethodConstant constMethod, Argument argValue)
-        {
+    public Invoke_T0(Argument argTarget, MethodConstant constMethod, Argument argValue) {
         super(argTarget, constMethod);
 
         m_argValue = argValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -48,38 +46,32 @@ public class Invoke_T0
      * @param aconst  an array of constants used within the method
      */
     public Invoke_T0(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nArgTupleValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argValue != null)
-            {
+        if (m_argValue != null) {
             m_nArgTupleValue = encodeArgument(m_argValue, registry);
-            }
+        }
 
         writePackedLong(out, m_nArgTupleValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NVOK_T0;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
             ObjectHandle hArg    = frame.getArgument(m_nArgTupleValue);
 
@@ -87,37 +79,32 @@ public class Invoke_T0
                     ? hTarget.proceed(frame, frameCaller ->
                          resolveTuple(frameCaller, frameCaller.popStack(), hArg))
                     : resolveTuple(frame, hTarget, hArg);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int resolveTuple(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
-        {
+    protected int resolveTuple(Frame frame, ObjectHandle hTarget, ObjectHandle hArg) {
         return isDeferred(hArg)
                 ? hArg.proceed(frame, frameCaller ->
                      complete(frameCaller, hTarget,
                          ((TupleHandle) frameCaller.popStack()).m_ahValue))
                 : complete(frame, hTarget,
                     ((TupleHandle) hArg).m_ahValue);
-        }
+    }
 
-    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg) {
         return getCallChain(frame, hTarget).invoke(frame, hTarget, ahArg, A_IGNORE);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_argValue = registerArgument(m_argValue, registry);
-        }
+    }
 
     private int m_nArgTupleValue;
 
     private Argument m_argValue;
-    }
+}

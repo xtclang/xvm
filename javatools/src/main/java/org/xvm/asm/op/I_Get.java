@@ -22,8 +22,7 @@ import org.xvm.runtime.template.IndexSupport;
  * I_GET rvalue-target, rvalue-ix, lvalue ; T = T[ix]
  */
 public class I_Get
-        extends OpIndex
-    {
+        extends OpIndex {
     /**
      * Construct an I_GET op for the passed arguments.
      *
@@ -31,10 +30,9 @@ public class I_Get
      * @param argIndex   the index Argument
      * @param argReturn  the Argument to store the result into
      */
-    public I_Get(Argument argTarget, Argument argIndex, Argument argReturn)
-        {
+    public I_Get(Argument argTarget, Argument argIndex, Argument argReturn) {
         super(argTarget, argIndex, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -43,50 +41,42 @@ public class I_Get
      * @param aconst  an array of constants used within the method
      */
     public I_Get(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_I_GET;
-        }
+    }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex) {
         ClassTemplate template = hTarget.getTemplate();
-        if (template instanceof IndexSupport)
-            {
+        if (template instanceof IndexSupport) {
             long lIndex = ((JavaLong) hIndex).getValue();
 
-            if (frame.isNextRegister(m_nRetValue))
-                {
+            if (frame.isNextRegister(m_nRetValue)) {
                 frame.introduceElementVar(m_nTarget, (int) lIndex);
-                }
-            return ((IndexSupport) template).extractArrayValue(frame, hTarget, lIndex, m_nRetValue);
             }
+            return ((IndexSupport) template).extractArrayValue(frame, hTarget, lIndex, m_nRetValue);
+        }
 
         CallChain chain = getOpChain(frame, hTarget.getType());
-        if (chain == null)
-            {
+        if (chain == null) {
             chain = template.findOpChain(hTarget, "getElement", "[]", hIndex);
-            if (chain == null)
-                {
+            if (chain == null) {
                 return frame.raiseException("Invalid op: \"[]\"");
-                }
-            saveOpChain(frame, hTarget.getType(), chain);
             }
+            saveOpChain(frame, hTarget.getType(), chain);
+        }
 
         MethodStructure method = chain.getTop();
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
+        if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceResolvedVar(m_nTarget, method.getReturnTypes()[0]);
-            }
+        }
 
         return chain.invoke(frame, hTarget, hIndex, m_nRetValue);
-        }
     }
+}

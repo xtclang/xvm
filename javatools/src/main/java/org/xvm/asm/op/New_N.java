@@ -29,8 +29,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * NEW_N CONSTRUCT, #params:(rvalue), lvalue-return
  */
 public class New_N
-        extends OpCallable
-    {
+        extends OpCallable {
     /**
      * Construct a NEW_1 op based on the passed arguments.
      *
@@ -38,15 +37,14 @@ public class New_N
      * @param aArgValue    the array of value Arguments
      * @param argReturn    the return Argument
      */
-    public New_N(MethodConstant constMethod, Argument[] aArgValue, Argument argReturn)
-        {
+    public New_N(MethodConstant constMethod, Argument[] aArgValue, Argument argReturn) {
         super(constMethod);
 
         checkElementsNonNull(aArgValue);
 
         m_aArgValue = aArgValue;
         m_argReturn = argReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -55,89 +53,76 @@ public class New_N
      * @param aconst  an array of constants used within the method
      */
     public New_N(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_anArgValue = readIntArray(in);
         m_nRetValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgValue != null)
-            {
+        if (m_aArgValue != null) {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
             m_nRetValue = encodeArgument(m_argReturn, registry);
-            }
+        }
 
         writeIntArray(out, m_anArgValue);
         writePackedLong(out, m_nRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NEW_N;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         MethodStructure constructor = getMethodStructure(frame);
-        if (constructor == null)
-            {
+        if (constructor == null) {
             return R_EXCEPTION;
-            }
+        }
 
-        try
-            {
+        try {
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
 
             IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
             ClassTemplate    template  = frame.ensureTemplate(constClz);
             ClassComposition clzTarget = template.getCanonicalClass(frame.f_context.f_container);
 
-            if (frame.isNextRegister(m_nRetValue))
-                {
+            if (frame.isNextRegister(m_nRetValue)) {
                 frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-                }
+            }
 
-            if (anyDeferred(ahVar))
-                {
+            if (anyDeferred(ahVar)) {
                 Frame.Continuation stepNext = frameCaller ->
                     template.construct(frameCaller, constructor, clzTarget, null, ahVar, m_nRetValue);
 
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
+            }
 
             return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     @Override
-    protected String getParamsString()
-        {
+    protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
-        }
+    }
 
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
-    }
+}

@@ -16,18 +16,16 @@ import org.xvm.runtime.ObjectHandle;
  * GP_COMPL rvalue, lvalue   ; ~T -> T
  */
 public class GP_Compl
-        extends OpGeneral
-    {
+        extends OpGeneral {
     /**
      * Construct a GP_COMPL op for the passed arguments.
      *
      * @param argValue   the Argument to calculate the complement of
      * @param argResult  the Argument to store the result in
      */
-    public GP_Compl(Argument argValue, Argument argResult)
-        {
+    public GP_Compl(Argument argValue, Argument argResult) {
         super(argValue, argResult);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -36,26 +34,22 @@ public class GP_Compl
      * @param aconst  an array of constants used within the method
      */
     public GP_Compl(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_GP_COMPL;
-        }
-
-    @Override
-    protected boolean isBinaryOp()
-        {
-        return false;
-        }
-
-    @Override
-    protected int completeUnary(Frame frame, ObjectHandle hTarget)
-        {
-        return hTarget.getOpSupport().invokeCompl(frame, hTarget, m_nRetValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_GP_COMPL;
+    }
+
+    @Override
+    protected boolean isBinaryOp() {
+        return false;
+    }
+
+    @Override
+    protected int completeUnary(Frame frame, ObjectHandle hTarget) {
+        return hTarget.getOpSupport().invokeCompl(frame, hTarget, m_nRetValue);
+    }
+}

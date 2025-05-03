@@ -21,19 +21,18 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
  * IS_NEQ rvalue, rvalue, lvalue-return ; T != T -> Boolean
  */
 public class IsNotEq
-        extends OpTest
-    {
+        extends OpTest {
     /**
      * Construct an IS_NEQ op based on the specified arguments.
      *
+     * @param type       the compile-time type
      * @param arg1       the first value Argument
      * @param arg2       the second value Argument
      * @param argReturn  the location to store the Boolean result
      */
-    public IsNotEq(Argument arg1, Argument arg2, Argument argReturn)
-        {
-        super(arg1, arg2, argReturn);
-        }
+    public IsNotEq(TypeConstant type, Argument arg1, Argument arg2, Argument argReturn) {
+        super(type, arg1, arg2, argReturn);
+    }
 
     /**
      * Deserialization constructor.
@@ -42,46 +41,40 @@ public class IsNotEq
      * @param aconst  an array of constants used within the method
      */
     public IsNotEq(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IS_NEQ;
-        }
+    }
 
     @Override
-    protected boolean isBinaryOp()
-        {
+    protected boolean isBinaryOp() {
         return true;
-        }
+    }
 
     @Override
     protected int completeBinaryOp(Frame frame, TypeConstant type,
-                                   ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        switch (type.callEquals(frame, hValue1, hValue2, A_STACK))
-            {
-            case R_NEXT:
-                {
-                return frame.assignValue(m_nRetValue,
-                    xBoolean.not((BooleanHandle) frame.popStack()));
-                }
-
-            case R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValue(m_nRetValue,
-                        xBoolean.not((BooleanHandle) frameCaller.popStack())));
-                return R_CALL;
-
-            case R_EXCEPTION:
-                return R_EXCEPTION;
-
-            default:
-                throw new IllegalStateException();
+                                   ObjectHandle hValue1, ObjectHandle hValue2) {
+        switch (type.callEquals(frame, hValue1, hValue2, A_STACK)) {
+        case R_NEXT: {
+            return frame.assignValue(m_nRetValue,
+                xBoolean.not((BooleanHandle) frame.popStack()));
             }
+
+        case R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                frameCaller.assignValue(m_nRetValue,
+                    xBoolean.not((BooleanHandle) frameCaller.popStack())));
+            return R_CALL;
+
+        case R_EXCEPTION:
+            return R_EXCEPTION;
+
+        default:
+            throw new IllegalStateException();
         }
     }
+}

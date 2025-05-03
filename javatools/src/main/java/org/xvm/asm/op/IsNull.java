@@ -19,18 +19,16 @@ import org.xvm.runtime.template.xNullable;
  * IS_NULL rvalue, lvalue-return ; T == null -> Boolean
  */
 public class IsNull
-        extends OpTest
-    {
+        extends OpTest {
     /**
      * Construct an IS_NULL op based on the specified arguments.
      *
      * @param arg        the value Argument
      * @param argReturn  the location to store the Boolean result
      */
-     public IsNull(Argument arg, Argument argReturn)
-        {
+     public IsNull(Argument arg, Argument argReturn) {
         super(arg, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class IsNull
      * @param aconst  an array of constants used within the method
      */
     public IsNull(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_IS_NULL;
-        }
-
-    @Override
-    protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
-        {
-        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue == xNullable.NULL));
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_IS_NULL;
+    }
+
+    @Override
+    protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
+        return frame.assignValue(m_nRetValue, xBoolean.makeHandle(hValue == xNullable.NULL));
+    }
+}

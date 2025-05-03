@@ -16,8 +16,7 @@ import org.xvm.runtime.ObjectHandle;
  * GP_IRANGEE rvalue1, rvalue2, lvalue ; T ..< T -> Range<T>
  */
 public class GP_IRangeE
-        extends OpGeneral
-    {
+        extends OpGeneral {
     /**
      * Construct a GP_IRANGEE op for the passed arguments.
      *
@@ -25,10 +24,9 @@ public class GP_IRangeE
      * @param argValue   the second value Argument
      * @param argReturn  the Argument to store the result into
      */
-    public GP_IRangeE(Argument argTarget, Argument argValue, Argument argReturn)
-        {
+    public GP_IRangeE(Argument argTarget, Argument argValue, Argument argReturn) {
         super(argTarget, argValue, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -37,19 +35,16 @@ public class GP_IRangeE
      * @param aconst  an array of constants used within the method
      */
     public GP_IRangeE(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_GP_IRANGEE;
-        }
-
-    protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
-        {
-        return hTarget.getOpSupport().invokeIRangeE(frame, hTarget, hArg, m_nRetValue);
-        }
     }
+
+    protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg) {
+        return hTarget.getOpSupport().invokeIRangeE(frame, hTarget, hArg, m_nRetValue);
+    }
+}

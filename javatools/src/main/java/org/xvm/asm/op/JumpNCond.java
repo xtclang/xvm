@@ -18,18 +18,16 @@ import org.xvm.runtime.Frame;
  * JMP_NCOND COND, addr
  */
 public class JumpNCond
-        extends OpCondJump
-    {
+        extends OpCondJump {
     /**
      * Construct a JMP_NCOND op.
      *
      * @param arg  the conditional constant to test
      * @param op   the op to conditionally jump to
      */
-    public JumpNCond(ConditionalConstant arg, Op op)
-        {
+    public JumpNCond(ConditionalConstant arg, Op op) {
         super(arg, op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -38,28 +36,24 @@ public class JumpNCond
      * @param aconst  an array of constants used within the method
      */
     public JumpNCond(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_JMP_NCOND;
-        }
+    }
 
     @Override
-    protected int processUnaryOp(Frame frame, int iPC)
-        {
-        if (m_cond == null)
-            {
+    protected int processUnaryOp(Frame frame, int iPC) {
+        if (m_cond == null) {
             m_cond = (ConditionalConstant) frame.getConstant(m_nArg);
-            }
+        }
 
         LinkerContext ctx = frame.f_context.getLinkerContext();
         return !m_cond.evaluate(ctx) ? jump(frame, iPC + m_ofJmp, m_cExits) : iPC + 1;
-        }
+    }
 
     private ConditionalConstant m_cond;
-    }
+}

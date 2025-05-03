@@ -22,18 +22,16 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
  * Note: at the moment, this op is only used to facilitate the virtual construction
  */
 public class MoveType
-        extends OpMove
-    {
+        extends OpMove {
     /**
      * Construct a MOV_TYPE op for the passed arguments.
      *
      * @param argSrc   the source Argument
      * @param argDest  the destination Argument
      */
-    public MoveType(Argument argSrc, Argument argDest)
-        {
+    public MoveType(Argument argSrc, Argument argDest) {
         super(argSrc, argDest);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -42,46 +40,38 @@ public class MoveType
      * @param aconst  an array of constants used within the method
      */
     public MoveType(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_MOV_TYPE;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hValue = frame.getArgument(m_nFromValue);
 
             return isDeferred(hValue)
                     ? hValue.proceed(frame, frameCaller ->
                         complete(frameCaller, frameCaller.popStack()))
                     : complete(frame, hValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, ObjectHandle hValue)
-        {
+    protected int complete(Frame frame, ObjectHandle hValue) {
         ConstantPool pool = frame.poolContext();
         int          nTo  = m_nToValue;
         TypeConstant type = hValue.getComposition().getType(); // don't augment the value type
 
-        if (frame.isNextRegister(nTo))
-            {
+        if (frame.isNextRegister(nTo)) {
             frame.introduceResolvedVar(nTo,
                 pool.ensureParameterizedTypeConstant(pool.typeType(), type));
-            }
-        return frame.assignValue(nTo, type.ensureTypeHandle(frame.f_context.f_container));
         }
+        return frame.assignValue(nTo, type.ensureTypeHandle(frame.f_context.f_container));
     }
+}

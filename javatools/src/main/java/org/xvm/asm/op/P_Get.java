@@ -26,8 +26,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * P_GET PROPERTY, rvalue-target, lvalue
  */
 public class P_Get
-        extends OpProperty
-    {
+        extends OpProperty {
     /**
      * Construct a P_GET op based on the specified arguments.
      *
@@ -35,13 +34,12 @@ public class P_Get
      * @param argTarget  the target Argument
      * @param argReturn  the return Argument
      */
-    public P_Get(PropertyConstant idProp, Argument argTarget, Argument argReturn)
-        {
+    public P_Get(PropertyConstant idProp, Argument argTarget, Argument argReturn) {
         super(idProp);
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -50,50 +48,43 @@ public class P_Get
      * @param aconst  an array of constants used within the method
      */
     public P_Get(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nTarget = readPackedInt(in);
         m_nRetValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argTarget != null)
-            {
+        if (m_argTarget != null) {
             m_nTarget = encodeArgument(m_argTarget, registry);
             m_nRetValue = encodeArgument(m_argReturn, registry);
-            }
+        }
 
         writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_P_GET;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-            if (frame.isNextRegister(m_nRetValue))
-                {
-                // TODO GG: the actual type needs to be injected by the compiler/verifier
-                if (m_nTarget == A_STACK)
-                    {
+            if (frame.isNextRegister(m_nRetValue)) {
+                // OLD TODO GG: the actual type needs to be injected by the compiler/verifier
+                // NEW TODO GG: change code emission to never generate "next register" with "A_STACK" combination
+                if (m_nTarget == A_STACK) {
                     TypeConstant typeTarget = hTarget.getType();
                     ConstantPool pool       = frame.poolContext();
                     TypeConstant typeProp   = typeTarget.containsGenericParam(constProperty.getName())
@@ -101,61 +92,52 @@ public class P_Get
                             : constProperty.getType().resolveGenerics(pool, typeTarget);
 
                     frame.introduceResolvedVar(m_nRetValue, typeProp);
-                    }
-                else
-                    {
+                } else {
                     frame.introducePropertyVar(m_nRetValue, m_nTarget, m_nPropId);
-                    }
                 }
+            }
 
             return isDeferred(hTarget)
-                    ? hTarget.proceed(frame, frameCaller ->
-                        {
+                    ? hTarget.proceed(frame, frameCaller -> {
                         ObjectHandle hT = frameCaller.popStack();
                         return hT.getTemplate().getPropertyValue(
                             frameCaller, hT, constProperty, m_nRetValue);
-                        })
+                    })
                     : hTarget.getTemplate().getPropertyValue(
                             frame, hTarget, constProperty, m_nRetValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void resetSimulation()
-        {
+    public void resetSimulation() {
         resetRegister(m_argReturn);
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         checkNextRegister(scope, m_argReturn, m_nRetValue);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_argTarget = registerArgument(m_argTarget, registry);
         m_argReturn = registerArgument(m_argReturn, registry);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString()
                 + ", " + Argument.toIdString(m_argTarget, m_nTarget)
                 + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
-        }
+    }
 
     private int m_nTarget;
     private int m_nRetValue;
 
     private Argument m_argTarget;
     private Argument m_argReturn;
-    }
+}

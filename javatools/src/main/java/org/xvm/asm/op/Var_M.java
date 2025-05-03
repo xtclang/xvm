@@ -27,8 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_M TYPE, #entries:(rvalue, rvalue) ; next register is an initialized anonymous Map variable
  */
 public class Var_M
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a VAR_M op for the specified register and arguments.
      *
@@ -36,20 +35,18 @@ public class Var_M
      * @param aArgVal  the key arguments
      * @param aArgVal  the value arguments
      */
-    public Var_M(Register reg, Argument[] aArgKey, Argument[] aArgVal)
-        {
+    public Var_M(Register reg, Argument[] aArgKey, Argument[] aArgVal) {
         super(reg);
 
-        if (aArgKey == null || aArgVal == null)
-            {
+        if (aArgKey == null || aArgVal == null) {
             throw new IllegalArgumentException("name, keys and values required");
-            }
+        }
 
         assert aArgKey.length == aArgVal.length;
 
         m_aArgKey = aArgKey;
         m_aArgVal = aArgVal;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -58,63 +55,53 @@ public class Var_M
      * @param aconst  an array of constants used within the method
      */
     public Var_M(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         int c = readMagnitude(in);
 
         int[] aiKey = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             aiKey[i] = readPackedInt(in);
-            }
+        }
         m_anArgKey = aiKey;
 
         int[] aiVal = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             aiVal[i] = readPackedInt(in);
-            }
-        m_anArgVal = aiVal;
         }
+        m_anArgVal = aiVal;
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgKey != null)
-            {
+        if (m_aArgKey != null) {
             m_anArgKey = encodeArguments(m_aArgKey, registry);
             m_anArgVal = encodeArguments(m_aArgVal, registry);
-            }
+        }
 
         int c = m_anArgKey.length;
         writePackedLong(out, c);
 
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             writePackedLong(out, m_anArgKey[i]);
-            }
-        for (int i = 0; i < c; ++i)
-            {
+        }
+        for (int i = 0; i < c; ++i) {
             writePackedLong(out, m_anArgVal[i]);
-            }
         }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_VAR_M;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             TypeConstant   typeMap = frame.resolveType(m_nType);
             ObjectHandle[] ahKey   = frame.getArguments(m_anArgKey, m_anArgKey.length);
             ObjectHandle[] ahValue = frame.getArguments(m_anArgVal, m_anArgVal.length);
@@ -123,25 +110,22 @@ public class Var_M
 
             return xListMap.INSTANCE.constructMap(frame, typeMap, ahKey, ahValue,
                     anyDeferred(ahKey), anyDeferred(ahValue), m_nVar);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         registerArguments(m_aArgKey, registry);
         registerArguments(m_aArgVal, registry);
-        }
+    }
 
     private int[] m_anArgKey;
     private int[] m_anArgVal;
 
     private Argument[] m_aArgKey;
     private Argument[] m_aArgVal;
-    }
+}

@@ -18,18 +18,16 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_INC PROPERTY, rvalue-target ; in-place increment; no result
  */
 public class PIP_Inc
-        extends OpPropInPlace
-    {
+        extends OpPropInPlace {
     /**
      * Construct a PIP_INC op based on the passed arguments.
      *
      * @param idProp     the property id
      * @param argTarget  the target Argument
      */
-    public PIP_Inc(PropertyConstant idProp, Argument argTarget)
-        {
+    public PIP_Inc(PropertyConstant idProp, Argument argTarget) {
         super(idProp, argTarget);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -38,26 +36,22 @@ public class PIP_Inc
      * @param aconst  an array of constants used within the method
      */
     public PIP_Inc(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_INC;
-        }
-
-    @Override
-    protected boolean isAssignOp()
-        {
-        return false;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
-        {
-        return hTarget.getTemplate().invokePreInc(frame, hTarget, idProp, A_IGNORE);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_INC;
+    }
+
+    @Override
+    protected boolean isAssignOp() {
+        return false;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp) {
+        return hTarget.getTemplate().invokePreInc(frame, hTarget, idProp, A_IGNORE);
+    }
+}

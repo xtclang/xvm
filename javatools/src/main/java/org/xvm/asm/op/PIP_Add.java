@@ -18,8 +18,7 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_ADD PROPERTY, rvalue-target, rvalue2 ; T += T
  */
 public class PIP_Add
-        extends OpPropInPlaceAssign
-    {
+        extends OpPropInPlaceAssign {
     /**
      * Construct a PIP_ADD op based on the passed arguments.
      *
@@ -27,10 +26,9 @@ public class PIP_Add
      * @param argTarget  the target Argument
      * @param argValue   the value Argument
      */
-    public PIP_Add(PropertyConstant idProp, Argument argTarget, Argument argValue)
-        {
+    public PIP_Add(PropertyConstant idProp, Argument argTarget, Argument argValue) {
         super(idProp, argTarget, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class PIP_Add
      * @param aconst  an array of constants used within the method
      */
     public PIP_Add(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_ADD;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
-        return hTarget.getTemplate().invokePropertyAdd(frame, hTarget, idProp, hValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_ADD;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
+        return hTarget.getTemplate().invokePropertyAdd(frame, hTarget, idProp, hValue);
+    }
+}

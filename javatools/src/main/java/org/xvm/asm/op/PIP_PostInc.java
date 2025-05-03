@@ -18,8 +18,7 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_INCA PROPERTY, rvalue-target, lvalue ; same as IP_INCA for a register
  */
 public class PIP_PostInc
-        extends OpPropInPlace
-    {
+        extends OpPropInPlace {
     /**
      * Construct a PIP_INCA op based on the passed arguments.
      *
@@ -27,10 +26,9 @@ public class PIP_PostInc
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to move the result into (Register or local property)
      */
-    public PIP_PostInc(PropertyConstant idProp, Argument argTarget, Argument argReturn)
-        {
+    public PIP_PostInc(PropertyConstant idProp, Argument argTarget, Argument argReturn) {
         super(idProp, argTarget, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class PIP_PostInc
      * @param aconst  an array of constants used within the method
      */
     public PIP_PostInc(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_INCA;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
-        {
-        return hTarget.getTemplate().invokePostInc(frame, hTarget, idProp, m_nRetValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_INCA;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp) {
+        return hTarget.getTemplate().invokePostInc(frame, hTarget, idProp, m_nRetValue);
+    }
+}

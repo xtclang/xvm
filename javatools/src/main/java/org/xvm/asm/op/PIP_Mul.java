@@ -18,8 +18,7 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_MUL PROPERTY, rvalue-target, rvalue2 ; T *= T
  */
 public class PIP_Mul
-        extends OpPropInPlaceAssign
-    {
+        extends OpPropInPlaceAssign {
     /**
      * Construct a PIP_MUL op based on the passed arguments.
      *
@@ -27,10 +26,9 @@ public class PIP_Mul
      * @param argTarget  the target Argument
      * @param argValue   the value Argument
      */
-    public PIP_Mul(PropertyConstant idProp, Argument argTarget, Argument argValue)
-        {
+    public PIP_Mul(PropertyConstant idProp, Argument argTarget, Argument argValue) {
         super(idProp, argTarget, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class PIP_Mul
      * @param aconst  an array of constants used within the method
      */
     public PIP_Mul(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_MUL;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
-        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, idProp, hValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_MUL;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
+        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, idProp, hValue);
+    }
+}

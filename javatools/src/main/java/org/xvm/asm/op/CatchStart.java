@@ -22,30 +22,26 @@ import org.xvm.runtime.Frame;
  * with a matching CATCH_END op.
  */
 public class CatchStart
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a CATCH op.
      *
      * @param reg        the register that will hold the caught exception
      * @param constName  the name constant for the catch exception variable
      */
-    public CatchStart(Register reg, StringConstant constName)
-        {
+    public CatchStart(Register reg, StringConstant constName) {
         super(reg);
 
-        if (!reg.getType().isA(reg.getType().getConstantPool().typeException()))
-            {
+        if (!reg.getType().isA(reg.getType().getConstantPool().typeException())) {
             throw new IllegalArgumentException("catch type must be an exception type");
-            }
+        }
 
-        if (constName == null)
-            {
+        if (constName == null) {
             throw new IllegalArgumentException("name required");
-            }
+        }
 
         m_constName = constName;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -54,95 +50,80 @@ public class CatchStart
      * @param aconst  an array of constants used within the method
      */
     public CatchStart(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
-    void preWrite(ConstantRegistry registry)
-        {
+    void preWrite(ConstantRegistry registry) {
         m_nType = encodeArgument(getRegisterType(), registry);
 
-        if (m_constName != null)
-            {
+        if (m_constName != null) {
             m_nNameId = encodeArgument(m_constName, registry);
-            }
         }
+    }
 
-    int getTypeId()
-        {
+    int getTypeId() {
         return m_nType;
-        }
+    }
 
-    void setTypeId(int nType)
-        {
+    void setTypeId(int nType) {
         m_nType = nType;
-        }
+    }
 
-    int getNameId()
-        {
+    int getNameId() {
         return m_nNameId;
-        }
+    }
 
-    void setNameId(int nName)
-        {
+    void setNameId(int nName) {
         m_nNameId = nName;
-        }
+    }
 
     @Override
-    protected boolean isTypeAware()
-        {
+    protected boolean isTypeAware() {
         return false;
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CATCH;
-        }
+    }
 
     @Override
-    public boolean isEnter()
-        {
+    public boolean isEnter() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         // all the logic is actually implemented by Frame.findGuard()
         return iPC + 1;
-        }
+    }
 
     @Override
-    public void markReachable(Op[] aop)
-        {
+    public void markReachable(Op[] aop) {
         super.markReachable(aop);
         findCorrespondingOp(aop, OP_CATCH_END).markNecessary();
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         scope.enter(this);
         super.simulate(scope);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_constName = (StringConstant) registerArgument(m_constName, registry);
-        }
+    }
 
     @Override
-    public String getName(Constant[] aconst)
-        {
+    public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
-        }
+    }
 
     private int m_nNameId;
 
     private StringConstant m_constName;
-    }
+}

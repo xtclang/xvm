@@ -18,8 +18,7 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_SUB PROPERTY, rvalue-target, rvalue2 ; T -= T
  */
 public class PIP_Sub
-        extends OpPropInPlaceAssign
-    {
+        extends OpPropInPlaceAssign {
     /**
      * Construct a PIP_SUB op based on the passed arguments.
      *
@@ -27,10 +26,9 @@ public class PIP_Sub
      * @param argTarget  the target Argument
      * @param argValue   the value Argument
      */
-    public PIP_Sub(PropertyConstant idProp, Argument argTarget, Argument argValue)
-        {
+    public PIP_Sub(PropertyConstant idProp, Argument argTarget, Argument argValue) {
         super(idProp, argTarget, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class PIP_Sub
      * @param aconst  an array of constants used within the method
      */
     public PIP_Sub(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_SUB;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
-        return hTarget.getTemplate().invokePropertySub(frame, hTarget, idProp, hValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_SUB;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
+        return hTarget.getTemplate().invokePropertySub(frame, hTarget, idProp, hValue);
+    }
+}

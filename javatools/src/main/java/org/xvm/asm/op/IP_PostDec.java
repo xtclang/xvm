@@ -20,18 +20,16 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_DECA lvalue-target, lvalue ; T-- -> T
  */
 public class IP_PostDec
-        extends OpInPlace
-    {
+        extends OpInPlace {
     /**
      * Construct an IP_DECA op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to store the result into
      */
-    public IP_PostDec(Argument argTarget, Argument argReturn)
-        {
+    public IP_PostDec(Argument argTarget, Argument argReturn) {
         super(argTarget, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,49 +38,43 @@ public class IP_PostDec
      * @param aconst  an array of constants used within the method
      */
     public IP_PostDec(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IP_DECA;
-        }
+    }
 
     @Override
-    protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
-        {
-        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, m_nTarget))
-            {
-            case R_NEXT:
-                return frame.assignValue(m_nRetValue, hTarget);
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget) {
+        switch (hTarget.getOpSupport().invokePrev(frame, hTarget, m_nTarget)) {
+        case R_NEXT:
+            return frame.assignValue(m_nRetValue, hTarget);
 
-            case R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.assignValue(m_nRetValue, hTarget));
-                return R_CALL;
+        case R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                frameCaller.assignValue(m_nRetValue, hTarget));
+            return R_CALL;
 
-            case R_EXCEPTION:
-                return R_EXCEPTION;
+        case R_EXCEPTION:
+            return R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
+    }
 
     @Override
-    protected int completeWithVar(Frame frame, RefHandle hTarget)
-        {
+    protected int completeWithVar(Frame frame, RefHandle hTarget) {
         return hTarget.getVarSupport().invokeVarPostDec(frame, hTarget, m_nRetValue);
-        }
+    }
 
     @Override
-    protected int completeWithProperty(Frame frame, PropertyConstant idProp)
-        {
+    protected int completeWithProperty(Frame frame, PropertyConstant idProp) {
         ObjectHandle hTarget = frame.getThis();
 
         return hTarget.getTemplate().invokePostDec(frame, hTarget, idProp, m_nRetValue);
-        }
     }
+}

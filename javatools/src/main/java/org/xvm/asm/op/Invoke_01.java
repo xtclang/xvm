@@ -23,8 +23,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * NVOK_01 rvalue-target, rvalue-method, lvalue-return
  */
 public class Invoke_01
-        extends OpInvocable
-    {
+        extends OpInvocable {
     /**
      * Construct an NVOKE_01 op based on the passed arguments.
      *
@@ -32,12 +31,11 @@ public class Invoke_01
      * @param constMethod  the method constant
      * @param argReturn    the return value register
      */
-    public Invoke_01(Argument argTarget, MethodConstant constMethod, Argument argReturn)
-        {
+    public Invoke_01(Argument argTarget, MethodConstant constMethod, Argument argReturn) {
         super(argTarget, constMethod);
 
         m_argReturn = argReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -46,55 +44,46 @@ public class Invoke_01
      * @param aconst  an array of constants used within the method
      */
     public Invoke_01(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nRetValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argReturn != null)
-            {
+        if (m_argReturn != null) {
             m_nRetValue = encodeArgument(m_argReturn, registry);
-            }
+        }
 
         writePackedLong(out, m_nRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NVOK_01;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             return isDeferred(hTarget)
                     ? hTarget.proceed(frame, frameCaller ->
                         complete(frameCaller, frameCaller.popStack()))
                     : complete(frame, hTarget);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, ObjectHandle hTarget)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget) {
         checkReturnRegister(frame, hTarget);
 
         return getCallChain(frame, hTarget).invoke(frame, hTarget, m_nRetValue);
-        }
     }
+}

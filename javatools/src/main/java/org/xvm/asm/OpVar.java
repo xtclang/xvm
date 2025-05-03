@@ -22,18 +22,16 @@ import static org.xvm.util.Handy.writePackedLong;
  * Base class for all "VAR" ops.
  */
 public abstract class OpVar
-        extends Op
-    {
+        extends Op {
     /**
      * Construct a variable that corresponds to the specified register.
      *
      * @param reg  the register for the variable
      */
-    protected OpVar(Register reg)
-        {
+    protected OpVar(Register reg) {
         assert reg != null;
         m_reg = reg;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -42,91 +40,77 @@ public abstract class OpVar
      * @param aconst  an array of constants used within the method
      */
     protected OpVar(DataInput in, Constant[] aconst)
-            throws IOException
-        {
-        if (isTypeAware())
-            {
+            throws IOException {
+        if (isTypeAware()) {
             m_nType = readPackedInt(in);
-            }
         }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (isTypeAware())
-            {
+        if (isTypeAware()) {
             m_nType = encodeArgument(getRegisterType(), registry);
 
             writePackedLong(out, m_nType);
-            }
         }
+    }
 
     /**
      * @param aconst  (optional) an array of constants to retrieve constants by index from
      *
      * @return the variable name, iff the variable has a name (otherwise null)
      */
-    protected String getName(Constant[] aconst)
-        {
+    protected String getName(Constant[] aconst) {
         return null;
-        }
+    }
 
     /**
      * @return the variable name based on any of the present information
      */
-    protected String getName(Constant[] aconst, StringConstant constName, int nNameId)
-        {
-        if (constName != null)
-            {
+    protected String getName(Constant[] aconst, StringConstant constName, int nNameId) {
+        if (constName != null) {
             return constName.getValue();
-            }
+        }
 
-        if (aconst != null)
-            {
+        if (aconst != null) {
             return ((StringConstant) aconst[convertId(nNameId)]).getValue();
-            }
+        }
 
         // we cannot use Argument.toIdString(), since it returns a quoted string
-        try
-            {
-            if (nNameId <= Op.CONSTANT_OFFSET)
-                {
+        try {
+            if (nNameId <= Op.CONSTANT_OFFSET) {
                 ServiceContext context = ServiceContext.getCurrentContext();
-                if (context != null)
-                    {
+                if (context != null) {
                     return ((StringConstant) context.getCurrentFrame().
                             localConstants()[convertId(nNameId)]).getValue();
-                    }
                 }
             }
-        catch (Throwable ignore) {}
+        } catch (Throwable ignore) {}
 
         return "?";
-        }
+    }
 
     /**
      * @param aconst  (optional) an array of constants to retrieve constants by index from
      *
      * @return the variable type
      */
-    protected TypeConstant getType(Constant[] aconst)
-        {
+    protected TypeConstant getType(Constant[] aconst) {
         return m_reg == null
                 ? (TypeConstant) aconst[convertId(m_nType)]
                 : m_reg.getType();
-        }
+    }
 
     /**
      * @return true iff this op carries the type information
      */
-    protected boolean isTypeAware()
-        {
+    protected boolean isTypeAware() {
         // majority of Var_* op-codes carry the type; only Var_C and Var_CN don't
         return true;
-        }
+    }
 
     /**
      * Helper method to calculate a TypeComposition for a sequence array.
@@ -136,99 +120,86 @@ public abstract class OpVar
      *
      * @return the corresponding array class composition
      */
-    protected TypeComposition getArrayClass(Frame frame, TypeConstant typeList)
-        {
+    protected TypeComposition getArrayClass(Frame frame, TypeConstant typeList) {
         ServiceContext  context  = frame.f_context;
         TypeComposition clzArray = (TypeComposition) context.getOpInfo(this, Category.Composition);
         TypeConstant    typePrev = (TypeConstant)    context.getOpInfo(this, Category.Type);
 
-        if (clzArray == null || !typeList.equals(typePrev))
-            {
+        if (clzArray == null || !typeList.equals(typePrev)) {
             TypeConstant typeEl = typeList.resolveGenericType("Element");
 
             clzArray = xArray.INSTANCE.ensureParameterizedClass(context.f_container, typeEl);
 
             context.setOpInfo(this, Category.Composition, clzArray);
             context.setOpInfo(this, Category.Type, typeList);
-            }
+        }
 
         return clzArray;
-        }
+    }
 
     /**
      * Note: Used only during compilation.
      *
      * @return the type of the register
      */
-    public TypeConstant getRegisterType()
-        {
+    public TypeConstant getRegisterType() {
         return m_reg.isVar()
                 ? m_reg.ensureRegType(!m_reg.isWritable())
                 : m_reg.getType();
-        }
+    }
 
     /**
      * Note: Used only during compilation.
      *
      * @return the Register that holds the variable's value
      */
-    public Register getRegister()
-        {
+    public Register getRegister() {
         return m_reg;
-        }
+    }
 
     @Override
-    public void resetSimulation()
-        {
+    public void resetSimulation() {
         resetRegister(m_reg);
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         m_nVar = m_reg == null
                 ? scope.allocVar()
                 : m_reg.assignIndex(scope.allocVar());
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         m_reg.registerConstants(registry);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder(super.toString());
 
         String sName = getName(null);
-        if (sName != null)
-            {
+        if (sName != null) {
             sb.append(' ')
               .append(sName)
               .append(',');
-            }
+        }
 
-        if (isTypeAware())
-            {
+        if (isTypeAware()) {
             sb.append(' ')
               .append(Argument.toIdString(null, m_nType))
               .append(',');
-            }
+        }
 
         sb.append(' ');
-        if (m_reg == null)
-            {
+        if (m_reg == null) {
             sb.append('#').append(m_nVar);
-            }
-        else
-            {
+        } else {
             sb.append(m_reg);
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     /**
      * The register that the VAR op is responsible for creating.
@@ -247,4 +218,4 @@ public abstract class OpVar
 
     // categories for cached info
     enum Category {Composition, Type}
-    }
+}

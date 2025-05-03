@@ -23,25 +23,22 @@ import org.xvm.runtime.template.collections.xTuple;
  * VAR_T #values:(TYPE, rvalue-src) ; next register is an initialized anonymous Tuple variable
  */
 public class Var_T
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a VAR_T op for the specified register and arguments.
      *
      * @param reg        the register
      * @param aArgValue  the value argument
      */
-    public Var_T(Register reg, Argument[] aArgValue)
-        {
+    public Var_T(Register reg, Argument[] aArgValue) {
         super(reg);
 
-        if (aArgValue == null)
-            {
+        if (aArgValue == null) {
             throw new IllegalArgumentException("values required");
-            }
+        }
 
         m_aArgValue = aArgValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -50,73 +47,62 @@ public class Var_T
      * @param aconst  an array of constants used within the method
      */
     public Var_T(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_anArgValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgValue != null)
-            {
+        if (m_aArgValue != null) {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            }
+        }
 
         writeIntArray(out, m_anArgValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_VAR_T;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         TypeComposition clzTuple = frame.resolveClass(m_nType);
 
-        try
-            {
+        try {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
 
-            if (anyDeferred(ahArg))
-                {
-                Frame.Continuation stepNext = frameCaller ->
-                    {
+            if (anyDeferred(ahArg)) {
+                Frame.Continuation stepNext = frameCaller -> {
                     frameCaller.introduceVar(m_nVar, convertId(m_nType), 0,
                         Frame.VAR_STANDARD, xTuple.makeHandle(clzTuple, ahArg));
                     return iPC + 1;
-                    };
+                };
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
+            }
 
             frame.introduceVar(m_nVar, convertId(m_nType), 0,
                 Frame.VAR_STANDARD, xTuple.makeHandle(clzTuple, ahArg));
             return iPC + 1;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
-    }
+}

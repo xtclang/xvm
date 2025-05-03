@@ -22,8 +22,7 @@ import org.xvm.runtime.Utils;
  * NVOK_N0 rvalue-target, CONST-METHOD, #params:(rvalue)
  */
 public class Invoke_N0
-        extends OpInvocable
-    {
+        extends OpInvocable {
     /**
      * Construct an NVOK_N0 op based on the passed arguments.
      *
@@ -31,12 +30,11 @@ public class Invoke_N0
      * @param constMethod  the method constant
      * @param aArgValue    the array of Argument values
      */
-    public Invoke_N0(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue)
-        {
+    public Invoke_N0(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue) {
         super(argTarget, constMethod);
 
         m_aArgValue = aArgValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -45,88 +43,73 @@ public class Invoke_N0
      * @param aconst  an array of constants used within the method
      */
     public Invoke_N0(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_anArgValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgValue != null)
-            {
+        if (m_aArgValue != null) {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            }
+        }
 
         writeIntArray(out, m_anArgValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NVOK_N0;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             return isDeferred(hTarget)
                     ? hTarget.proceed(frame, frameCaller ->
                          resolveArgs(frameCaller, frameCaller.popStack()))
                     : resolveArgs(frame, hTarget);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int resolveArgs(Frame frame, ObjectHandle hTarget)
-        {
+    protected int resolveArgs(Frame frame, ObjectHandle hTarget) {
         CallChain chain = getCallChain(frame, hTarget);
 
-        try
-            {
+        try {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, chain.getMaxVars());
 
-            if (anyDeferred(ahArg))
-                {
+            if (anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller ->
                     chain.invoke(frameCaller, hTarget, ahArg, A_IGNORE);
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
+            }
             return chain.invoke(frame, hTarget, ahArg, A_IGNORE);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     @Override
-    protected String getParamsString()
-        {
+    protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
-        }
+    }
 
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
-    }
+}

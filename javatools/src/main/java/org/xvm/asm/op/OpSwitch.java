@@ -27,8 +27,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Base class for switch (JmpVal_*) op-codes.
  */
 public abstract class OpSwitch
-        extends Op
-    {
+        extends Op {
     /**
      * Construct an op.
      *
@@ -36,14 +35,13 @@ public abstract class OpSwitch
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    protected OpSwitch(Constant[] aConstCase, Op[] aOpCase, Op opDefault)
-        {
+    protected OpSwitch(Constant[] aConstCase, Op[] aOpCase, Op opDefault) {
         assert aOpCase != null;
 
         m_aConstCase = aConstCase;
         m_aOpCase    = aOpCase;
         m_opDefault  = opDefault;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -52,126 +50,108 @@ public abstract class OpSwitch
      * @param aconst  an array of constants used within the method
      */
     protected OpSwitch(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         int   cCases    = readMagnitude(in);
         int[] anArgCase = new int[cCases];
         int[] aofCase   = new int[cCases];
-        for (int i = 0; i < cCases; ++i)
-            {
+        for (int i = 0; i < cCases; ++i) {
             anArgCase[i] = readPackedInt(in);
             aofCase  [i] = readPackedInt(in);
-            }
+        }
         m_anConstCase = anArgCase;
         m_aofCase     = aofCase;
 
         m_ofDefault = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aConstCase != null)
-            {
+        if (m_aConstCase != null) {
             m_anConstCase = encodeArguments(m_aConstCase, registry);
-            }
+        }
 
         int[] anArgCase = m_anConstCase;
         int[] aofCase   = m_aofCase;
         int   c         = anArgCase.length;
 
         writePackedLong(out, c);
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             writePackedLong(out, anArgCase[i]);
             writePackedLong(out, aofCase  [i]);
-            }
-
-        writePackedLong(out, m_ofDefault);
         }
 
+        writePackedLong(out, m_ofDefault);
+    }
+
     @Override
-    public void resolveAddresses(Op[] aop)
-        {
+    public void resolveAddresses(Op[] aop) {
         int cCases;
-        if (m_aOpCase == null)
-            {
+        if (m_aOpCase == null) {
             int ofThis = getAddress();
 
             cCases    = m_aofCase.length;
             m_aOpCase = new Op[cCases];
-            for (int i = 0; i < cCases; i++)
-                {
+            for (int i = 0; i < cCases; i++) {
                 int ofOp = adjustRelativeAddress(aop, m_aofCase[i]);
                 m_aofCase[i] = ofOp;
                 m_aOpCase[i] = aop[ofThis + ofOp];
-                }
+            }
             int ofOp = adjustRelativeAddress(aop, m_ofDefault);
             m_ofDefault = ofOp;
             m_opDefault = aop[ofThis + ofOp];
-            }
-        else
-            {
+        } else {
             cCases    = m_aOpCase.length;
             m_aofCase = new int[cCases];
-            for (int i = 0; i < cCases; i++)
-                {
+            for (int i = 0; i < cCases; i++) {
                 m_aofCase[i] = calcRelativeAddress(m_aOpCase[i]);
-                }
+            }
             m_ofDefault = calcRelativeAddress(m_opDefault);
-            }
-
-        m_acExits = new int[cCases];
-        for (int i = 0; i < cCases; i++)
-            {
-            m_acExits[i] = calcExits(m_aOpCase[i]);
-            }
-        m_cDefaultExits = calcExits(m_opDefault);
         }
 
+        m_acExits = new int[cCases];
+        for (int i = 0; i < cCases; i++) {
+            m_acExits[i] = calcExits(m_aOpCase[i]);
+        }
+        m_cDefaultExits = calcExits(m_opDefault);
+    }
+
     @Override
-    public void markReachable(Op[] aop)
-        {
+    public void markReachable(Op[] aop) {
         super.markReachable(aop);
 
         Op[]  aOpCase = m_aOpCase;
         int[] aofCase = m_aofCase;
-        for (int i = 0, c = aofCase.length; i < c; ++i)
-            {
+        for (int i = 0, c = aofCase.length; i < c; ++i) {
             aOpCase[i] = findDestinationOp(aop, aofCase[i]);
             aofCase[i] = calcRelativeAddress(aOpCase[i]);
-            }
+        }
 
         m_opDefault = findDestinationOp(aop, m_ofDefault);
         m_ofDefault = calcRelativeAddress(m_opDefault);
-        }
+    }
 
     @Override
-    public boolean branches(Op[] aop, List<Integer> list)
-        {
+    public boolean branches(Op[] aop, List<Integer> list) {
         resolveAddresses(aop);
-        for (int i : m_aofCase)
-            {
+        for (int i : m_aofCase) {
             list.add(i);
-            }
+        }
         list.add(m_ofDefault);
         return true;
-        }
+    }
 
     @Override
-    public boolean advances()
-        {
+    public boolean advances() {
         return false;
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         registerArguments(m_aConstCase, registry);
-        }
+    }
 
     /**
      * Make natural calls to determine if the specified value sits in the range (inclusive) between
@@ -185,64 +165,53 @@ public abstract class OpSwitch
     protected int checkRange(Frame frame, TypeConstant typeCompare, ObjectHandle hValue,
                              ObjectHandle hLo, ObjectHandle hHi,
                              boolean fLoEx,    boolean      fHiEx,
-                             boolean fLow, Frame.Continuation continuation)
-        {
-        switch (typeCompare.callCompare(frame, hValue, fLow ? hLo : hHi, Op.A_STACK))
-            {
+                             boolean fLow, Frame.Continuation continuation) {
+        switch (typeCompare.callCompare(frame, hValue, fLow ? hLo : hHi, Op.A_STACK)) {
             case Op.R_NEXT:
                 ObjectHandle hResult = frame.popStack();
-                if (fLow)
-                    {
+                if (fLow) {
                     boolean fMatch = fLoEx
                                         ? hResult == xOrdered.GREATER
                                         : hResult != xOrdered.LESSER;   // GREATER or EQUAL
-                    if (!fMatch)
-                        {
+                    if (!fMatch) {
                         // we're done; no match
                         frame.pushStack(xBoolean.FALSE);
                         return continuation.proceed(frame);
-                        }
+                    }
 
                     return checkRange(frame, typeCompare, hValue,
                             hLo, hHi, fLoEx, fHiEx, false, continuation);
-                    }
-                else
-                    {
+                } else {
                     boolean fMatch = fHiEx
                                         ? hResult == xOrdered.LESSER
                                         : hResult != xOrdered.GREATER;  // LESSER or EQUAL
                     frame.pushStack(xBoolean.makeHandle(fMatch));
                     return continuation.proceed(frame);
-                    }
+                }
 
             case Op.R_CALL:
-                Frame.Continuation stepNext = frameCaller ->
-                    {
+                Frame.Continuation stepNext = frameCaller -> {
                     ObjectHandle hR = frameCaller.popStack();
-                    if (fLow)
-                        {
+                    if (fLow) {
                         boolean fMatch = fLoEx
                                             ? hR == xOrdered.GREATER
                                             : hR != xOrdered.LESSER;   // GREATER or EQUAL
-                        if (!fMatch)
-                            {
+                        if (!fMatch) {
                             // we're done; no match
                             frameCaller.pushStack(xBoolean.FALSE);
                             return continuation.proceed(frameCaller);
-                            }
+                        }
 
                         return checkRange(frameCaller, typeCompare, hValue,
                                 hLo, hHi, fLoEx, fHiEx, false, continuation);
-                        }
-                    else
-                        {
+                    } else {
                         boolean fMatch = fHiEx
                                             ? hR == xOrdered.LESSER
                                             : hR != xOrdered.GREATER;  // LESSER or EQUAL
                         frameCaller.pushStack(xBoolean.makeHandle(fMatch));
                         return continuation.proceed(frameCaller);
-                        }
-                    };
+                    }
+                };
                 frame.m_frameNext.addContinuation(stepNext);
                 return Op.R_CALL;
 
@@ -251,12 +220,11 @@ public abstract class OpSwitch
 
             default:
                 throw new IllegalStateException();
-            }
         }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(super.toString())
@@ -275,28 +243,26 @@ public abstract class OpSwitch
         int cNConstCases = m_anConstCase == null ? 0 : m_anConstCase.length;
         assert Math.max(cConstCases, cNConstCases) == cLabels;
 
-        for (int i = 0; i < cLabels; ++i)
-            {
+        for (int i = 0; i < cLabels; ++i) {
             Constant arg  = i < cConstCases  ? m_aConstCase [i] : null;
             int      nArg = i < cNConstCases ? m_anConstCase[i] : Register.UNKNOWN;
             Op       op   = i < cOps         ? m_aOpCase    [i] : null;
             int      of   = i < cOffsets     ? m_aofCase    [i] : 0;
 
-            if (i > 0)
-                {
+            if (i > 0) {
                 sb.append(",\n");
-                }
+            }
 
             sb.append(Argument.toIdString(arg, nArg))
                     .append(": ")
                     .append(OpJump.getLabelDesc(op, of));
-            }
+        }
 
         sb.append("\ndefault: ")
                 .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
 
         return sb.toString();
-        }
+    }
 
     protected abstract void appendArgDescription(StringBuilder sb);
 
@@ -314,26 +280,22 @@ public abstract class OpSwitch
     protected transient int[] m_acExits;
     protected transient int   m_cDefaultExits;
 
-    enum Algorithm
-        {
+    enum Algorithm {
         NativeSimple, NativeRange, NaturalSimple, NaturalRange;
 
-        boolean isNative()
-            {
-            switch (this)
-                {
+        boolean isNative() {
+            switch (this) {
                 case NativeSimple:
                 case NativeRange:
                     return true;
 
                 default:
                     return false;
-                }
-            }
-
-        Algorithm worstOf(Algorithm that)
-            {
-            return this.compareTo(that) <= 0 ? that : this;
             }
         }
+
+        Algorithm worstOf(Algorithm that) {
+            return this.compareTo(that) <= 0 ? that : this;
+        }
     }
+}

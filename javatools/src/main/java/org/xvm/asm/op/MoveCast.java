@@ -25,8 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * CAST rvalue-src, lvalue-dest, TYPE
  */
 public class MoveCast
-        extends OpMove
-    {
+        extends OpMove {
     /**
      * Construct a CAST op for the passed arguments.
      *
@@ -34,12 +33,11 @@ public class MoveCast
      * @param argTo    the Argument to move to
      * @param typeTo   the type to cast to
      */
-    public MoveCast(Argument argFrom, Argument argTo, TypeConstant typeTo)
-        {
+    public MoveCast(Argument argFrom, Argument argTo, TypeConstant typeTo) {
         super(argFrom, argTo);
 
         m_typeTo = typeTo;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -48,83 +46,70 @@ public class MoveCast
      * @param aconst  an array of constants used within the method
      */
     public MoveCast(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nToType = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_typeTo != null)
-            {
+        if (m_typeTo != null) {
             m_nToType = encodeArgument(m_typeTo, registry);
-            }
+        }
         writePackedLong(out, m_nToType);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CAST;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hValue = frame.getArgument(m_nFromValue);
 
             return isDeferred(hValue)
                     ? hValue.proceed(frame, frameCaller ->
                         complete(frameCaller, frameCaller.popStack()))
                     : complete(frame, hValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, ObjectHandle hValue)
-        {
+    protected int complete(Frame frame, ObjectHandle hValue) {
         TypeConstant typeFrom = hValue.getUnsafeType();
         TypeConstant typeTo   = frame.resolveType(m_nToType);
 
-        if (!typeFrom.isA(typeTo))
-            {
+        if (!typeFrom.isA(typeTo)) {
             return frame.raiseException(xException.typeMismatch(frame, typeFrom.getValueString()));
-            }
-
-        if (frame.isNextRegister(m_nToValue))
-            {
-            frame.introduceResolvedVar(m_nToValue, typeTo);
-            }
-
-        return frame.assignValue(m_nToValue, hValue);
         }
 
+        if (frame.isNextRegister(m_nToValue)) {
+            frame.introduceResolvedVar(m_nToValue, typeTo);
+        }
+
+        return frame.assignValue(m_nToValue, hValue);
+    }
+
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_typeTo = (TypeConstant) registerArgument(m_typeTo, registry);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString() + ", " + Argument.toIdString(m_typeTo, m_nToType);
-        }
+    }
 
     protected int m_nToType;
 
     private TypeConstant m_typeTo;
-    }
+}

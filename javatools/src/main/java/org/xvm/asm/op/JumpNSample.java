@@ -24,18 +24,16 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  * <p/>TODO verify that inverse-sample-rate is a constant or a runtime constant
  */
 public class JumpNSample
-        extends OpCondJump
-    {
+        extends OpCondJump {
     /**
      * Construct a OP_JMP_NSAMPLE op.
      *
      * @param arg  the sample rate (must be a compile-time or run-time constant)
      * @param op   the op to conditionally jump to
      */
-    public JumpNSample(Argument arg, Op op)
-        {
+    public JumpNSample(Argument arg, Op op) {
         super(arg, op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -44,33 +42,29 @@ public class JumpNSample
      * @param aconst  an array of constants used within the method
      */
     public JumpNSample(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_JMP_NSAMPLE;
-        }
+    }
 
     @Override
-    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
-        {
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue) {
         int nEvery = m_nEvery;
-        if (nEvery == 0)
-            {
+        if (nEvery == 0) {
             long lEvery = ((JavaLong) hValue).getValue();
 
             // ignore illegal values (assume that the verifier will eventually flag those)
             m_nEvery = nEvery = Math.max(1, Math.min(Integer.MAX_VALUE, (int) lEvery));
-            }
+        }
 
         return f_rnd.nextInt(nEvery) == 0 ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
-        }
+    }
 
     private static final ThreadLocalRandom f_rnd = ThreadLocalRandom.current();
 
     private transient int m_nEvery;
-    }
+}

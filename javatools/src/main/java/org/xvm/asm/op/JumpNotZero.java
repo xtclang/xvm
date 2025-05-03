@@ -18,21 +18,19 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
  * JMP_NZERO rvalue, addr ; jump if value is NOT zero
  */
 public class JumpNotZero
-        extends OpCondJump
-    {
+        extends OpCondJump {
     /**
      * Construct a JMP_NZERO op.
      *
      * @param nValue    the value to test
      * @param nRelAddr  the relative address to jump to
      */
-    public JumpNotZero(int nValue, int nRelAddr)
-        {
+    public JumpNotZero(int nValue, int nRelAddr) {
         super((Argument) null, null);
 
         m_nArg  = nValue;
         m_ofJmp = nRelAddr;
-        }
+    }
 
     /**
      * Construct a JMP_NZERO op.
@@ -40,10 +38,9 @@ public class JumpNotZero
      * @param arg  the argument to test
      * @param op   the op to conditionally jump to
      */
-    public JumpNotZero(Argument arg, Op op)
-        {
+    public JumpNotZero(Argument arg, Op op) {
         super(arg, op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -52,21 +49,18 @@ public class JumpNotZero
      * @param aconst  an array of constants used within the method
      */
     public JumpNotZero(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_JMP_NZERO;
-        }
-
-    @Override
-    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
-        {
-        return ((JavaLong) hValue).getValue() == 0 ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
-        }
     }
+
+
+    @Override
+    public int getOpCode() {
+        return OP_JMP_NZERO;
+    }
+
+    @Override
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue) {
+        return ((JavaLong) hValue).getValue() == 0 ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+    }
+}

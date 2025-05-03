@@ -19,18 +19,16 @@ import org.xvm.runtime.template.xNullable;
  * JMP_NNULL rvalue, addr ; jump if value is NOT null
  */
 public class JumpNotNull
-        extends OpCondJump
-    {
+        extends OpCondJump {
     /**
      * Construct a JMP_NNULL op.
      *
      * @param arg  the argument to test
      * @param op   the op to conditionally jump to
      */
-    public JumpNotNull(Argument arg, Op op)
-        {
+    public JumpNotNull(Argument arg, Op op) {
         super(arg, op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class JumpNotNull
      * @param aconst  an array of constants used within the method
      */
     public JumpNotNull(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_JMP_NNULL;
-        }
-
-    @Override
-    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue)
-        {
-        return hValue == xNullable.NULL ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_JMP_NNULL;
+    }
+
+    @Override
+    protected int completeUnaryOp(Frame frame, int iPC, ObjectHandle hValue) {
+        return hValue == xNullable.NULL ? iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+    }
+}

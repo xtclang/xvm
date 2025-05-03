@@ -17,17 +17,15 @@ import org.xvm.runtime.Frame.AllGuard;
  * GUARDALL addr ; (implicit ENTER)
  */
 public class GuardAll
-        extends OpJump
-    {
+        extends OpJump {
     /**
      * Construct a GUARDALL op based on the destination Op.
      *
      * @param op  the Op to jump to when the guarded section completes
      */
-    public GuardAll(Op op)
-        {
+    public GuardAll(Op op) {
         super(op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -36,54 +34,47 @@ public class GuardAll
      * @param aconst  an array of constants used within the method
      */
     public GuardAll(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_GUARD_ALL;
-        }
+    }
 
     @Override
-    public boolean isEnter()
-        {
+    public boolean isEnter() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         int iScope = frame.enterScope(m_nNextVar);
 
         AllGuard guard = m_guard;
-        if (guard == null)
-            {
+        if (guard == null) {
             m_guard = guard = new AllGuard(iPC, iScope, m_ofJmp);
-            }
+        }
         frame.pushGuard(guard);
 
         return iPC + 1;
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         scope.enterGuardAll();
         scope.enter(this);
 
         m_nNextVar = scope.getCurVars();
-        }
+    }
 
     @Override
-    public boolean advances()
-        {
+    public boolean advances() {
         return true;
-        }
+    }
 
     private int m_nNextVar;
 
     private transient AllGuard m_guard; // cached struct
-    }
+}

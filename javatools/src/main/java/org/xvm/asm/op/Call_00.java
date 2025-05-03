@@ -22,17 +22,15 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  * CALL_00 rvalue-function.
  */
 public class Call_00
-        extends OpCallable
-    {
+        extends OpCallable {
     /**
      * Construct a CALL_00 op based on the passed arguments.
      *
      * @param argFunction the function Argument
      */
-    public Call_00(Argument argFunction)
-        {
+    public Call_00(Argument argFunction) {
         super(argFunction);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -41,68 +39,56 @@ public class Call_00
      * @param aconst  an array of constants used within the method
      */
     public Call_00(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CALL_00;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        if (m_nFunctionId == A_SUPER)
-            {
+    public int process(Frame frame, int iPC) {
+        if (m_nFunctionId == A_SUPER) {
             CallChain chain = frame.m_chain;
-            if (chain == null)
-                {
+            if (chain == null) {
                 throw new IllegalStateException();
-                }
-
-            return chain.callSuper01(frame, A_IGNORE);
             }
 
-        if (m_nFunctionId <= CONSTANT_OFFSET)
-            {
-            MethodStructure function = getMethodStructure(frame);
-            if (function == null)
-                {
-                return R_EXCEPTION;
-                }
+            return chain.callSuper01(frame, A_IGNORE);
+        }
 
-            if (function.isNative())
-                {
+        if (m_nFunctionId <= CONSTANT_OFFSET) {
+            MethodStructure function = getMethodStructure(frame);
+            if (function == null) {
+                return R_EXCEPTION;
+            }
+
+            if (function.isNative()) {
                 return getNativeTemplate(frame, function).
                     invokeNativeN(frame, function, null, Utils.OBJECTS_NONE, A_IGNORE);
-                }
+            }
 
             ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
             return frame.call1(function, null, ahVar, A_IGNORE);
-            }
+        }
 
-        try
-            {
+        try {
             ObjectHandle hFunction = frame.getArgument(m_nFunctionId);
 
             return isDeferred(hFunction)
                     ? hFunction.proceed(frame, CALL)
                     : callFunction(frame, (FunctionHandle) hFunction);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    private static int callFunction(Frame frame, FunctionHandle hFunction)
-        {
+    private static int callFunction(Frame frame, FunctionHandle hFunction) {
         return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], A_IGNORE);
-        }
+    }
 
     private static final Frame.Continuation CALL =
         frameCaller -> callFunction(frameCaller, (FunctionHandle) frameCaller.popStack());
-    }
+}

@@ -37,8 +37,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Note: No support for wild-cards or ranges.
  */
 public class JumpVal
-        extends OpSwitch
-    {
+        extends OpSwitch {
     /**
      * Construct a JMP_VAL op.
      *
@@ -47,12 +46,11 @@ public class JumpVal
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    public JumpVal(Argument argCond, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
-        {
+    public JumpVal(Argument argCond, Constant[] aConstCase, Op[] aOpCase, Op opDefault) {
         super(aConstCase, aOpCase, opDefault);
 
         m_argCond = argCond;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -61,238 +59,206 @@ public class JumpVal
      * @param aconst  an array of constants used within the method
      */
     public JumpVal(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nArgCond = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argCond != null)
-            {
+        if (m_argCond != null) {
             m_nArgCond = encodeArgument(m_argCond, registry);
-            }
+        }
 
         writePackedLong(out, m_nArgCond);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_JMP_VAL;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hValue = frame.getArgument(m_nArgCond);
 
             return isDeferred(hValue)
                     ? hValue.proceed(frame, frameCaller ->
                          ensureJumpMap(frame, iPC, frameCaller.popStack()))
                     : ensureJumpMap(frame, iPC, hValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle hValue)
-        {
+    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle hValue) {
         return m_algorithm == null
                 ? explodeConstants(frame, iPC, hValue)
                 : complete(frame, iPC, hValue);
+    }
+
+    protected int explodeConstants(Frame frame, int iPC, ObjectHandle hValue) {
+        ObjectHandle[] ahCase = new ObjectHandle[m_aofCase.length];
+        for (int iRow = 0, cRows = m_aofCase.length; iRow < cRows; iRow++) {
+            ahCase[iRow] = frame.getConstHandle(m_anConstCase[iRow]);
         }
 
-    protected int explodeConstants(Frame frame, int iPC, ObjectHandle hValue)
-        {
-        ObjectHandle[] ahCase = new ObjectHandle[m_aofCase.length];
-        for (int iRow = 0, cRows = m_aofCase.length; iRow < cRows; iRow++)
-            {
-            ahCase[iRow] = frame.getConstHandle(m_anConstCase[iRow]);
-            }
-
-        if (Op.anyDeferred(ahCase))
-            {
-            Frame.Continuation stepNext = frameCaller ->
-                {
+        if (Op.anyDeferred(ahCase)) {
+            Frame.Continuation stepNext = frameCaller -> {
                 buildJumpMap(frameCaller, ahCase);
                 return complete(frameCaller, iPC, hValue);
-                };
+            };
             return new Utils.GetArguments(ahCase, stepNext).doNext(frame);
-            }
+        }
 
         buildJumpMap(frame, ahCase);
         return complete(frame, iPC, hValue);
-        }
+    }
 
-    protected int complete(Frame frame, int iPC, ObjectHandle hValue)
-        {
+    protected int complete(Frame frame, int iPC, ObjectHandle hValue) {
         Map<ObjectHandle, Integer> mapJump = m_mapJump;
         Integer Index;
 
-        switch (m_algorithm)
-            {
-            case NativeSimple:
-                Index = mapJump.get(hValue);
-                break;
+        switch (m_algorithm) {
+        case NativeSimple:
+            Index = mapJump.get(hValue);
+            break;
 
-            case NativeRange:
-                {
-                // check the exact match first
-                Index = mapJump.get(hValue);
+        case NativeRange: {
+            // check the exact match first
+            Index = mapJump.get(hValue);
 
-                if (!hValue.isNativeEqual())
-                    {
-                    break; // REVIEW: should we assert instead?
-                    }
-                List<Object[]> listRanges = m_listRanges;
-                for (Object[] ao : listRanges)
-                    {
-                    int index = (Integer) ao[2];
-                    boolean fLoEx = (index & LO_EX) != 0;
-                    boolean fHiEx = (index & HI_EX) != 0;
-
-                    index &= ~EXCLUDE_MASK;
-
-                    // we only need to compare the range if there is a chance that it can impact
-                    // the result (the range case precedes the exact match case)
-                    if (Index == null || Index.intValue() > index)
-                        {
-                        ObjectHandle hLow  = (ObjectHandle) ao[0];
-                        ObjectHandle hHigh = (ObjectHandle) ao[1];
-
-                        int nCmpLo = hValue.compareTo(hLow);
-                        int nCmpHi = hValue.compareTo(hHigh);
-
-                        if ((fLoEx ? nCmpLo > 0 : nCmpLo >= 0) &&
-                            (fHiEx ? nCmpHi < 0 : nCmpHi <= 0))
-                            {
-                            return jump(frame, iPC + m_aofCase[index], m_acExits[index]);
-                            }
-                        }
-                    }
-                break;
-                }
-
-            default:
-                return findNatural(frame, iPC, hValue, 0);
+            if (!hValue.isNativeEqual()) {
+                break; // REVIEW: should we assert instead?
             }
+            List<Object[]> listRanges = m_listRanges;
+            for (Object[] ao : listRanges) {
+                int index = (Integer) ao[2];
+                boolean fLoEx = (index & LO_EX) != 0;
+                boolean fHiEx = (index & HI_EX) != 0;
+
+                index &= ~EXCLUDE_MASK;
+
+                // we only need to compare the range if there is a chance that it can impact
+                // the result (the range case precedes the exact match case)
+                if (Index == null || Index.intValue() > index) {
+                    ObjectHandle hLow  = (ObjectHandle) ao[0];
+                    ObjectHandle hHigh = (ObjectHandle) ao[1];
+
+                    int nCmpLo = hValue.compareTo(hLow);
+                    int nCmpHi = hValue.compareTo(hHigh);
+
+                    if ((fLoEx ? nCmpLo > 0 : nCmpLo >= 0) &&
+                        (fHiEx ? nCmpHi < 0 : nCmpHi <= 0)) {
+                        return jump(frame, iPC + m_aofCase[index], m_acExits[index]);
+                    }
+                }
+            }
+            break;
+        }
+
+        default:
+            return findNatural(frame, iPC, hValue, 0);
+        }
 
         return Index == null
                 ? jump(frame, iPC + m_ofDefault, m_cDefaultExits)
                 : jump(frame, iPC + m_aofCase[Index], m_acExits[Index]);
-        }
+    }
 
     /**
      * Check if the specified values matches any of the cases starting at the specified index.
      *
      * @return one of Op.R_NEXT, Op.R_CALL, Op.R_EXCEPTION or the next iPC value
      */
-    protected int findNatural(Frame frame, int iPC, ObjectHandle hValue, int iCase)
-        {
+    protected int findNatural(Frame frame, int iPC, ObjectHandle hValue, int iCase) {
         ObjectHandle[] ahCase = m_ahCase;
         int            cCases = ahCase.length;
 
-        for (; iCase < cCases; iCase++)
-            {
+        for (; iCase < cCases; iCase++) {
             ObjectHandle hCase    = ahCase[iCase];
             int          iCurrent = iCase; // effectively final
 
-            switch (m_algorithm)
-                {
-                case NaturalRange:
-                    {
-                    if (hCase.getType().isA(frame.poolContext().typeRange()))
-                        {
-                        GenericHandle hRange = (GenericHandle) hCase;
-                        ObjectHandle  hLo    = hRange.getField(null, "lowerBound");
-                        ObjectHandle  hHi    = hRange.getField(null, "upperBound");
-                        BooleanHandle hLoEx  = (BooleanHandle) hRange.getField(null, "lowerExclusive");
-                        BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
+            switch (m_algorithm) {
+            case NaturalRange: {
+                if (hCase.getType().isA(frame.poolContext().typeRange())) {
+                    GenericHandle hRange = (GenericHandle) hCase;
+                    ObjectHandle  hLo    = hRange.getField(null, "lowerBound");
+                    ObjectHandle  hHi    = hRange.getField(null, "upperBound");
+                    BooleanHandle hLoEx  = (BooleanHandle) hRange.getField(null, "lowerExclusive");
+                    BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
-                        Frame.Continuation stepNext =
-                            frameCaller -> findNatural(frameCaller, iPC, hValue, iCurrent + 1);
+                    Frame.Continuation stepNext =
+                        frameCaller -> findNatural(frameCaller, iPC, hValue, iCurrent + 1);
 
-                        switch (checkRange(frame, m_typeCond, hValue, hLo, hHi,
-                                    hLoEx.get(), hHiEx.get(), true, stepNext))
-                            {
-                            case Op.R_NEXT:
-                                if (frame.popStack() == xBoolean.TRUE)
-                                    {
-                                    // it's a match
-                                    return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
-                                    }
-                            continue;
-
-                            case Op.R_CALL:
-                                frame.m_frameNext.addContinuation(frameCaller ->
-                                    frameCaller.popStack() == xBoolean.TRUE
-                                        ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
-                                        : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
-                                return Op.R_CALL;
-
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
+                    switch (checkRange(frame, m_typeCond, hValue, hLo, hHi,
+                                hLoEx.get(), hHiEx.get(), true, stepNext)) {
+                    case Op.R_NEXT:
+                        if (frame.popStack() == xBoolean.TRUE) {
+                            // it's a match
+                            return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
                         }
-                    // fall through
-                    }
+                        continue;
 
-                case NaturalSimple:
-                    {
-                    switch (m_typeCond.callEquals(frame, hValue, hCase, Op.A_STACK))
-                        {
-                        case Op.R_NEXT:
-                            if (frame.popStack() == xBoolean.TRUE)
-                                {
-                                // it's a match
-                                return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
-                                }
-                            continue;
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            frameCaller.popStack() == xBoolean.TRUE
+                                ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
+                                : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
+                        return Op.R_CALL;
 
-                        case Op.R_CALL:
-                            frame.m_frameNext.addContinuation(frameCaller ->
-                                frameCaller.popStack() == xBoolean.TRUE
-                                    ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
-                                    : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
-                            return Op.R_CALL;
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
+                    default:
+                        throw new IllegalStateException();
                     }
                 }
+                // fall through
             }
+
+            case NaturalSimple: {
+                switch (m_typeCond.callEquals(frame, hValue, hCase, Op.A_STACK)) {
+                case Op.R_NEXT:
+                    if (frame.popStack() == xBoolean.TRUE) {
+                        // it's a match
+                        return jump(frame, iPC + m_aofCase[iCase], m_acExits[iCase]);
+                    }
+                    continue;
+
+                case Op.R_CALL:
+                    frame.m_frameNext.addContinuation(frameCaller ->
+                        frameCaller.popStack() == xBoolean.TRUE
+                            ? jump(frameCaller, iPC + m_aofCase[iCurrent], m_acExits[iCurrent])
+                            : findNatural(frameCaller, iPC, hValue, iCurrent + 1));
+                    return Op.R_CALL;
+
+                case Op.R_EXCEPTION:
+                    return Op.R_EXCEPTION;
+
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+            }
+        }
         // nothing matched
         return jump(frame, iPC + m_ofDefault, m_cDefaultExits);
-        }
+    }
 
     /**
      * This method is synchronized because it needs to update three different values atomically.
      */
-    private synchronized void buildJumpMap(Frame frame, ObjectHandle[] ahCase)
-        {
-        if (m_algorithm != null)
-            {
+    private synchronized void buildJumpMap(Frame frame, ObjectHandle[] ahCase) {
+        if (m_algorithm != null) {
             // the jump map was built concurrently
             return;
-            }
+        }
 
         int                        cCases  = ahCase.length;
         Map<ObjectHandle, Integer> mapJump = new HashMap<>(cCases);
@@ -303,68 +269,53 @@ public class JumpVal
         ConstHeap    heap       = frame.f_context.f_container.f_heap;
         ConstantPool poolTarget = frame.f_function.getConstantPool();
 
-        for (int iCase = 0; iCase < cCases; iCase++ )
-            {
+        for (int iCase = 0; iCase < cCases; iCase++ ) {
             ObjectHandle hCase = ahCase[iCase];
 
             assert !hCase.isMutable();
 
             // caching a constant linked to the current pool would "leak" the current container
-            if (hCase.getComposition().getConstantPool() != poolTarget)
-                {
+            if (hCase.getComposition().getConstantPool() != poolTarget) {
                 hCase = heap.relocateConst(hCase, frame.getConstant(m_anConstCase[iCase]));
 
                 assert hCase != null;
                 ahCase[iCase] = hCase;
-                }
+            }
 
             TypeConstant typeCase = hCase.getType();
             boolean      fRange   = typeCase.isA(typeRange) && !typeCond.isA(typeRange);
 
-            if (algorithm.isNative())
-                {
-                if (hCase.isNativeEqual())
-                    {
+            if (algorithm.isNative()) {
+                if (hCase.isNativeEqual()) {
                     mapJump.put(hCase, Integer.valueOf(iCase));
-                    }
-                else if (fRange)
-                    {
-                    if (addRange((GenericHandle) hCase, iCase))
-                        {
-                        algorithm = Algorithm.NativeRange;
-                        }
-                    else
-                        {
-                        algorithm = Algorithm.NaturalRange;
-                        }
-                    }
-                else
-                    {
-                    algorithm = Algorithm.NaturalSimple;
-                    }
                 }
-            else // natural comparison
-                {
-                if (fRange)
-                    {
+                else if (fRange) {
+                    if (addRange((GenericHandle) hCase, iCase)) {
+                        algorithm = Algorithm.NativeRange;
+                    } else {
+                        algorithm = Algorithm.NaturalRange;
+                    }
+                } else {
+                    algorithm = Algorithm.NaturalSimple;
+                }
+            } else { // natural comparison
+                if (fRange) {
                     algorithm = Algorithm.NaturalRange;
 
                     addRange((GenericHandle) hCase, iCase);
-                    }
-                else
-                    {
+                } else {
                     algorithm = algorithm.worstOf(Algorithm.NaturalSimple);
 
                     mapJump.put(hCase, Integer.valueOf(iCase));
-                    }
                 }
             }
+        }
 
         m_ahCase    = ahCase;
         m_mapJump   = mapJump;
         m_algorithm = algorithm;
         m_typeCond  = typeCond;
-        }
+    }
 
     /**
      * Add a range definition for the specified column.
@@ -374,8 +325,7 @@ public class JumpVal
      *
      * @return true iff the range element is native
      */
-    private boolean addRange(GenericHandle hRange, int index)
-        {
+    private boolean addRange(GenericHandle hRange, int index) {
         ObjectHandle  hLo   = hRange.getField(null, "lowerBound");
         ObjectHandle  hHi   = hRange.getField(null, "upperBound");
         BooleanHandle hLoEx = (BooleanHandle) hRange.getField(null, "lowerExclusive");
@@ -383,39 +333,34 @@ public class JumpVal
 
         // TODO: if the range is small and sequential (an interval), replace it with the exact hits for native values
         List<Object[]> list = m_listRanges;
-        if (list == null)
-            {
+        if (list == null) {
             list = m_listRanges = new ArrayList<>();
-            }
+        }
 
         assert (index & EXCLUDE_MASK) == 0;
-        if (hLoEx.get())
-            {
+        if (hLoEx.get()) {
             index |= LO_EX;
-            }
-        if (hHiEx.get())
-            {
+        }
+        if (hHiEx.get()) {
             index |= HI_EX;
-            }
+        }
 
         list.add(new Object[]{hLo, hHi, Integer.valueOf(index)});
         return hLo.isNativeEqual();
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         m_argCond = m_argCond.registerConstants(registry);
 
         super.registerConstants(registry);
-        }
+    }
 
     @Override
-    protected void appendArgDescription(StringBuilder sb)
-        {
+    protected void appendArgDescription(StringBuilder sb) {
         sb.append(Argument.toIdString(m_argCond, m_nArgCond))
           .append(", ");
-        }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -454,4 +399,4 @@ public class JumpVal
     private static final int EXCLUDE_MASK = 0xC000_0000;
     private static final int LO_EX        = 0x8000_0000;
     private static final int HI_EX        = 0x4000_0000;
-    }
+}

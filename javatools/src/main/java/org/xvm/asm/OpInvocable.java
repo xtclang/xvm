@@ -31,19 +31,17 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Common base for NVOK_ ops.
  */
-public abstract class OpInvocable extends Op
-    {
+public abstract class OpInvocable extends Op {
     /**
      * Construct an op based on the passed arguments.
      *
      * @param argTarget    the target Argument
      * @param constMethod  the method constant
      */
-    protected OpInvocable(Argument argTarget, MethodConstant constMethod)
-        {
+    protected OpInvocable(Argument argTarget, MethodConstant constMethod) {
         m_argTarget   = argTarget;
         m_constMethod = constMethod;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -52,92 +50,74 @@ public abstract class OpInvocable extends Op
      * @param aconst  an array of constants used within the method
      */
     protected OpInvocable(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         m_nTarget   = readPackedInt(in);
         m_nMethodId = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argTarget != null)
-            {
+        if (m_argTarget != null) {
             m_nTarget = encodeArgument(m_argTarget, registry);
             m_nMethodId = encodeArgument(m_constMethod, registry);
-            }
+        }
 
         writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nMethodId);
-        }
+    }
 
     /**
      * A "virtual constant" indicating whether or not this op has multiple return values.
      *
      * @return true iff the op has multiple return values.
      */
-    protected boolean isMultiReturn()
-        {
+    protected boolean isMultiReturn() {
         return false;
-        }
+    }
 
     @Override
-    public void resetSimulation()
-        {
-        if (isMultiReturn())
-            {
+    public void resetSimulation() {
+        if (isMultiReturn()) {
             resetRegisters(m_aArgReturn);
-            }
-        else
-            {
+        } else {
             resetRegister(m_argReturn);
-            }
         }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
-        if (isMultiReturn())
-            {
+    public void simulate(Scope scope) {
+        if (isMultiReturn()) {
             checkNextRegisters(scope, m_aArgReturn, m_anRetValue);
-            }
-        else
-            {
+        } else {
             checkNextRegister(scope, m_argReturn, m_nRetValue);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         m_argTarget = registerArgument(m_argTarget, registry);
         m_constMethod = (MethodConstant) registerArgument(m_constMethod, registry);
 
-        if (isMultiReturn())
-            {
+        if (isMultiReturn()) {
             registerArguments(m_aArgReturn, registry);
-            }
-        else
-            {
+        } else {
             m_argReturn = registerArgument(m_argReturn, registry);
-            }
         }
+    }
 
     // helper methods
-     protected CallChain getCallChain(Frame frame, ObjectHandle hTarget)
-        {
+     protected CallChain getCallChain(Frame frame, ObjectHandle hTarget) {
         ServiceContext  context   = frame.f_context;
         CallChain       chain     = (CallChain) context.getOpInfo(this, Category.Chain);
         TypeComposition clazzPrev = (TypeComposition) context.getOpInfo(this, Category.Composition);
         TypeComposition clazz     = hTarget.getComposition();
 
-        if (chain != null && clazz == clazzPrev)
-            {
+        if (chain != null && clazz == clazzPrev) {
             return chain;
-            }
+        }
 
         context.setOpInfo(this, Category.Composition, clazz);
 
@@ -146,112 +126,95 @@ public abstract class OpInvocable extends Op
 
         m_constMethod = idMethod; // used by "toString()" only
 
-        if (method != null && method.getAccess() == Access.PRIVATE)
-            {
+        if (method != null && method.getAccess() == Access.PRIVATE) {
             chain = new CallChain(method);
 
             context.setOpInfo(this, Category.Chain, chain);
             return chain;
-            }
+        }
 
-        if (idMethod.getName().equals("construct"))
-            {
+        if (idMethod.getName().equals("construct")) {
             chain = new VirtualConstructorChain(frame.poolContext(), idMethod, hTarget);
             context.setOpInfo(this, Category.Chain, chain);
             return chain;
-            }
+        }
 
         PropertyConstant idProp = clazz instanceof PropertyComposition
                 ? null
                 : checkPropertyAccessor(idMethod);
-        if (idProp == null)
-            {
+        if (idProp == null) {
             Object nid = idMethod.resolveNestedIdentity(
                             frame.poolContext(), frame.getGenericsResolver(true));
 
             chain = clazz.getMethodCallChain(nid);
-            if (chain.isEmpty())
-                {
-                if (hTarget instanceof RefHandle hRef && hRef.isProperty())
-                    {
+            if (chain.isEmpty()) {
+                if (hTarget instanceof RefHandle hRef && hRef.isProperty()) {
                     // this is likely an invocation on a dynamically created Ref for a non-inflated
                     // property; try to call the referent itself
                     chain = hRef.getReferentHolder().getComposition().getMethodCallChain(nid);
-                    }
-                else
-                    {
+                } else {
                     // try an unresolved nid
                     chain = clazz.getMethodCallChain(
                             idMethod.resolveNestedIdentity(frame.poolContext(), null));
-                    }
                 }
             }
-        else
-            {
+        } else {
             chain = "get".equals(idMethod.getName())
                     ? clazz.getPropertyGetterChain(idProp)
                     : clazz.getPropertySetterChain(idProp);
-            }
+        }
 
-        if (chain.isEmpty())
-            {
+        if (chain.isEmpty()) {
             return new CallChain.ExceptionChain(xException.makeHandle(frame,
                 "Missing method \"" + idMethod.getValueString() +
                 "\" on " + hTarget.getType().getValueString()));
-            }
+        }
 
         context.setOpInfo(this, Category.Chain, chain);
         return chain;
-        }
+    }
 
     /**
      * Ensure that register for the return value is allocated.
      *
      * TODO: the register type should be injected by the compiler/verifier
      */
-    protected void checkReturnRegister(Frame frame, ObjectHandle hTarget)
-        {
+    protected void checkReturnRegister(Frame frame, ObjectHandle hTarget) {
         assert !isMultiReturn();
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
+        if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceMethodReturnVar(m_nRetValue, m_nMethodId, 0);
-            }
         }
+    }
 
     /**
      * Ensure that register for the return Tuple value is allocated.
      *
      * TODO: the register type should be injected by the compiler/verifier
      */
-    protected void checkReturnTupleRegister(Frame frame, ObjectHandle hTarget)
-        {
+    protected void checkReturnTupleRegister(Frame frame, ObjectHandle hTarget) {
         assert !isMultiReturn();
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
+        if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceMethodReturnVar(m_nRetValue, m_nMethodId, -1);
-            }
         }
+    }
 
     /**
      * Ensure that registers for the return values are allocated.
      *
      * TODO: the register types should be injected by the compiler/verifier
      */
-    protected void checkReturnRegisters(Frame frame, ObjectHandle hTarget)
-        {
+    protected void checkReturnRegisters(Frame frame, ObjectHandle hTarget) {
         assert isMultiReturn();
 
         int[] anRet = m_anRetValue;
-        for (int i = 0, c = anRet.length; i < c; i++)
-            {
-            if (frame.isNextRegister(anRet[i]))
-                {
+        for (int i = 0, c = anRet.length; i < c; i++) {
+            if (frame.isNextRegister(anRet[i])) {
                 frame.introduceMethodReturnVar(anRet[i], m_nMethodId, i);
-                }
             }
         }
+    }
 
     /**
      * Check if the specified method represents a property accessor. Note that the actual accessor
@@ -262,85 +225,70 @@ public abstract class OpInvocable extends Op
      *
      * @return the corresponding PropertyConstant or null
      */
-    private PropertyConstant checkPropertyAccessor(MethodConstant idMethod)
-        {
+    private PropertyConstant checkPropertyAccessor(MethodConstant idMethod) {
         IdentityConstant idParent = idMethod.getNamespace();
-        if (idParent instanceof PropertyConstant idProp)
-            {
+        if (idParent instanceof PropertyConstant idProp) {
             SignatureConstant sig    = idMethod.getSignature();
             String            sName  = sig.getName();
 
-            if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType()))
-                {
+            if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType())) {
                 return idProp;
-                }
-
-            if ("set".equals(sName) && sig.getRawParams()[0].isA(idProp.getType()))
-                {
-                return idProp;
-                }
             }
-        return null;
+
+            if ("set".equals(sName) && sig.getRawParams()[0].isA(idProp.getType())) {
+                return idProp;
+            }
         }
+        return null;
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString() + ' ' + getTargetString() + '.' + getMethodString() +
                 '(' + getParamsString() + ") -> " + getReturnsString();
-        }
-    protected String getTargetString()
-        {
+    }
+    protected String getTargetString() {
         return Argument.toIdString(m_argTarget, m_nTarget);
-        }
-    protected String getMethodString()
-        {
+    }
+    protected String getMethodString() {
         return Argument.toIdString(m_constMethod, m_nMethodId);
-        }
-    protected String getParamsString()
-        {
+    }
+    protected String getParamsString() {
         return "";
-        }
-    protected static String getParamsString(int[] anArgValue, Argument[] aArgValue)
-        {
+    }
+    protected static String getParamsString(int[] anArgValue, Argument[] aArgValue) {
         StringBuilder sb = new StringBuilder();
         int cArgNums = anArgValue == null ? 0 : anArgValue.length;
         int cArgRefs = aArgValue == null ? 0 : aArgValue.length;
-        for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i)
-            {
-            if (i > 0)
-                {
+        for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i) {
+            if (i > 0) {
                 sb.append(", ");
-                }
+            }
             sb.append(Argument.toIdString(i < cArgRefs ? aArgValue[i] : null,
                                           i < cArgNums ? anArgValue[i] : Register.UNKNOWN));
-            }
-        return sb.toString();
         }
-    protected String getReturnsString()
-        {
-        if (m_anRetValue != null || m_aArgReturn != null)
-            {
+        return sb.toString();
+    }
+    protected String getReturnsString() {
+        if (m_anRetValue != null || m_aArgReturn != null) {
             // multi-return
             StringBuilder sb = new StringBuilder();
             int cArgNums = m_anRetValue == null ? 0 : m_anRetValue.length;
             int cArgRefs = m_aArgReturn == null ? 0 : m_aArgReturn.length;
-            for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i)
-                {
+            for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i) {
                 sb.append(i == 0 ? "(" : ", ")
                   .append(Argument.toIdString(i < cArgRefs ? m_aArgReturn[i] : null,
                                               i < cArgNums ? m_anRetValue[i] : Register.UNKNOWN));
-                }
+            }
             return sb.append(')').toString();
-            }
+        }
 
-        if (m_nRetValue != A_IGNORE || m_argReturn != null)
-            {
+        if (m_nRetValue != A_IGNORE || m_argReturn != null) {
             return Argument.toIdString(m_argReturn, m_nRetValue);
-            }
+        }
 
         return "void";
-        }
+    }
 
     protected int   m_nTarget;
     protected int   m_nMethodId;
@@ -354,4 +302,4 @@ public abstract class OpInvocable extends Op
 
     // categories for cached info
     enum Category {Chain, Composition}
-    }
+}

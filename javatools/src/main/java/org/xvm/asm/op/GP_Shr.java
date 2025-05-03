@@ -16,8 +16,7 @@ import org.xvm.runtime.ObjectHandle;
  * GP_SHR rvalue1, rvalue2, lvalue ; T >> T -> T
  */
 public class GP_Shr
-        extends OpGeneral
-    {
+        extends OpGeneral {
     /**
      * Construct a GP_SHR op for the passed arguments.
      *
@@ -25,10 +24,9 @@ public class GP_Shr
      * @param argValue   the second value Argument
      * @param argReturn  the Argument to store the result into
      */
-    public GP_Shr(Argument argTarget, Argument argValue, Argument argReturn)
-        {
+    public GP_Shr(Argument argTarget, Argument argValue, Argument argReturn) {
         super(argTarget, argValue, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -37,19 +35,16 @@ public class GP_Shr
      * @param aconst  an array of constants used within the method
      */
     public GP_Shr(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_GP_SHR;
-        }
-
-    protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
-        {
-        return hTarget.getOpSupport().invokeShr(frame, hTarget, hArg, m_nRetValue);
-        }
     }
+
+    protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg) {
+        return hTarget.getOpSupport().invokeShr(frame, hTarget, hArg, m_nRetValue);
+    }
+}

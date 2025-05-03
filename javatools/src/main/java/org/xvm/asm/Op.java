@@ -43,8 +43,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Base class for all XVM machine code instructions, each of which is called an "op".
  */
-public abstract class Op
-    {
+public abstract class Op {
     // ----- Op interface --------------------------------------------------------------------------
 
     /**
@@ -54,9 +53,8 @@ public abstract class Op
      * @param code    the code containing this op
      * @param aconst  the local constants used by the code
      */
-    public void resolveCode(Code code, Constant[] aconst)
-        {
-        }
+    public void resolveCode(Code code, Constant[] aconst) {
+    }
 
     /**
      * Write the op-code.
@@ -67,26 +65,23 @@ public abstract class Op
      * @throws IOException  if an error occurs while writing the op
      */
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         out.writeByte(getOpCode());
-        }
+    }
 
     /**
      * @return the actual "op" for this address (skipping over any labels or other prefix ops)
      */
-    public Op ensureOp()
-        {
+    public Op ensureOp() {
         return this;
-        }
+    }
 
     /**
      * @return the byte value that identifies the op-code, in the range 0-255
      */
-    public int getOpCode()
-        {
+    public int getOpCode() {
         throw new UnsupportedOperationException();
-        }
+    }
 
     /**
      * Process this op.
@@ -106,8 +101,7 @@ public abstract class Op
      * @param nGuardDepth     the Guard depth (zero-based)
      * @param nGuardAllDepth  the GuardAll depth (zero-based)
      */
-    public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth)
-        {
+    public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth) {
         assert nAddress >= 0;
         assert nAddress <= POSITION_BITS;
         assert nDepth > 0;
@@ -119,95 +113,84 @@ public abstract class Op
                     | ((long) nDepth         << SCOPE_DEPTH_SHIFT)
                     | ((long) nGuardDepth    << GUARD_DEPTH_SHIFT)
                     | ((long) nGuardAllDepth << GUARD_ALL_DEPTH_SHIFT);
-        }
+    }
 
     /**
      * @return the address (iPC) of the op
      */
-    public int getAddress()
-        {
+    public int getAddress() {
         return (int) (m_lStruct & POSITION_BITS);
-        }
+    }
 
     /**
      * @return the scope depth of the op (one-based)
      */
-    public int getDepth()
-        {
+    public int getDepth() {
         return (int) ((m_lStruct & SCOPE_DEPTH_BITS) >>> SCOPE_DEPTH_SHIFT);
-        }
+    }
 
     /**
      * @return the Guard depth of the op (zero-based)
      */
-    public int getGuardDepth()
-        {
+    public int getGuardDepth() {
         return (int) ((m_lStruct & GUARD_DEPTH_BITS) >>> GUARD_DEPTH_SHIFT);
-        }
+    }
 
     /**
      * @return the GuardAll depth of the op (zero-based)
      */
-    public int getGuardAllDepth()
-        {
+    public int getGuardAllDepth() {
         return (int) ((m_lStruct & GUARD_ALL_DEPTH_BITS) >>> GUARD_ALL_DEPTH_SHIFT);
-        }
+    }
 
     /**
      * @return true iff the op has been determined to be reachable
      */
-    public boolean isReachable()
-        {
+    public boolean isReachable() {
         return (m_lStruct & REACHABLE_BIT) != 0;
-        }
+    }
 
     /**
      * Mark the op as reachable.
      *
      * @param aop  the ops of the current method
      */
-    public void markReachable(Op[] aop)
-        {
+    public void markReachable(Op[] aop) {
         m_lStruct |= REACHABLE_BIT;
-        }
+    }
 
     /**
      * @return true iff the op has been determined to be necessary to keep, even if it's not
      *         reachable
      */
-    public boolean isNecessary()
-        {
+    public boolean isNecessary() {
         return (m_lStruct & NECESSARY_BIT) != 0;
-        }
+    }
 
     /**
      * Mark the op as necessary.
      */
-    public void markNecessary()
-        {
+    public void markNecessary() {
         m_lStruct |= NECESSARY_BIT;
-        }
+    }
 
     /**
      * @return true iff the op cannot be reached AND should be discarded as a result
      */
-    public boolean isDiscardable()
-        {
+    public boolean isDiscardable() {
         return !isReachable() && !isNecessary();
-        }
+    }
 
     /**
      * @return true iff the op has been determined to be redundant (removable)
      */
-    public boolean isRedundant()
-        {
+    public boolean isRedundant() {
         return (m_lStruct & REDUNDANT_BIT) != 0;
-        }
+    }
 
-    public void markRedundant()
-        {
+    public void markRedundant() {
         m_lStruct |= REDUNDANT_BIT;
-        }
+    }
 
     /**
      * Determine if this op is redundant, and if it is, mark itself as such.
@@ -216,10 +199,9 @@ public abstract class Op
      *
      * @return true if this op determined that it is redundant
      */
-    public boolean checkRedundant(Op[] aop)
-        {
+    public boolean checkRedundant(Op[] aop) {
         return false;
-        }
+    }
 
     /**
      * Find the destination op given a relative jump offset.
@@ -229,37 +211,30 @@ public abstract class Op
      *
      * @return the destination op
      */
-    public Op findDestinationOp(Op[] aop, int ofJmp)
-        {
+    public Op findDestinationOp(Op[] aop, int ofJmp) {
         int iPC = getAddress() + ofJmp;
         Op  opPrefix, opActual;
-        while (true)
-            {
+        while (true) {
             opPrefix = aop[iPC];
             opActual = opPrefix.ensureOp();
 
-            if (opActual == this)
-                {
+            if (opActual == this) {
                 // REVIEW: this indicates a probability of an infinite loop; should we report it?
-                }
+            }
 
-            if (opActual instanceof Jump opJump)
-                {
+            if (opActual instanceof Jump opJump) {
                 iPC += opJump.getRelativeAddress();
-                }
-            else
-                {
+            } else {
                 // make sure that the jump lands on a label; this is not strictly necessary, but
                 // some data structures were built assuming the label type
-                if (!(opPrefix instanceof Label))
-                    {
+                if (!(opPrefix instanceof Label)) {
                     aop[iPC] = opPrefix = new Label(iPC).append(opPrefix);
-                    }
+                }
 
                 return opPrefix;
-                }
             }
         }
+    }
 
     /**
      * Find the "closing" op that corresponds to this op.
@@ -269,10 +244,9 @@ public abstract class Op
      *
      * @return the "closing" op that corresponds to this op
      */
-    public Op findCorrespondingOp(Op[] aop, int nThat)
-        {
+    public Op findCorrespondingOp(Op[] aop, int nThat) {
         return findFirstUnmatchedOp(aop, getOpCode(), nThat);
-        }
+    }
 
     /**
      * Find the first unmatched "closing" op that corresponds to the "opening" op, ignoring
@@ -284,55 +258,47 @@ public abstract class Op
      *
      * @return the "closing" op that corresponds to "opening" op
      */
-    public Op findFirstUnmatchedOp(Op[] aop, int nOpen, int nClose)
-        {
+    public Op findFirstUnmatchedOp(Op[] aop, int nOpen, int nClose) {
         int iPC  = getAddress();
         int cReq = 1;
-        while (true)
-            {
+        while (true) {
             Op  op  = aop[++iPC];
             int nOp = op.ensureOp().getOpCode();
-            if (nOp == nOpen)
-                {
+            if (nOp == nOpen) {
                 ++cReq;
-                }
-            else if (nOp == nClose)
-                {
-                if (--cReq == 0)
-                    {
+            }
+            else if (nOp == nClose) {
+                if (--cReq == 0) {
                     return op;
-                    }
                 }
             }
         }
+    }
 
     /**
      * @return a "pass-through" op that removes this op from the resulting assembly
      */
-    public Prefix convertToPrefix()
-        {
+    public Prefix convertToPrefix() {
         // this is used to convert a redundant op to a label of sorts, so that anything that jumps
         // to the op will still be able to find it
         assert isRedundant();
 
         return new Redundant(this);
-        }
+    }
 
     /**
      * Prepare to simulate the effects of the op on the passed scope.
      */
-    public void resetSimulation()
-        {
-        }
+    public void resetSimulation() {
+    }
 
     /**
      * Simulate the effects of the op on the passed scope.
      *
      * @param scope  the variable scope
      */
-    public void simulate(Scope scope)
-        {
-        }
+    public void simulate(Scope scope) {
+    }
 
     /**
      * Determine if the op branches.
@@ -342,27 +308,24 @@ public abstract class Op
      *
      * @return true if the op branches, and those branches have been added to the passed list
      */
-    public boolean branches(Op[] aop, List<Integer> list)
-        {
+    public boolean branches(Op[] aop, List<Integer> list) {
         return false;
-        }
+    }
 
     /**
      * @return true iff the op can advance to the following op
      */
-    public boolean advances()
-        {
+    public boolean advances() {
         return true;
-        }
+    }
 
     /**
      * Invoked as part of the assembly process to register all constants being used by the ops.
      *
      * @param registry  the ConstantRegistry to use to register any constants used by this op
      */
-    public void registerConstants(ConstantRegistry registry)
-        {
-        }
+    public void registerConstants(ConstantRegistry registry) {
+    }
 
     /**
      * Before the op is assembled, it is given an opportunity to determine relative addresses to
@@ -370,9 +333,8 @@ public abstract class Op
      *
      * @param aop  the ops of the current method
      */
-    public void resolveAddresses(Op[] aop)
-        {
-        }
+    public void resolveAddresses(Op[] aop) {
+    }
 
     /**
      * Adjust the relative offset of a "jump to" op-code in such a way that it (i) takes into
@@ -384,21 +346,18 @@ public abstract class Op
      *
      * @return a potentially adjusted new offset
      */
-    protected int adjustRelativeAddress(Op[] aop, int of)
-        {
+    protected int adjustRelativeAddress(Op[] aop, int of) {
         int nAddr = getAddress() + of;
-        if (nAddr >= aop.length)
-            {
+        if (nAddr >= aop.length) {
             int nAdjust = nAddr - aop.length + 1;
             of    -= nAdjust;
             nAddr -= nAdjust;
-            }
-        if (aop[nAddr-1] instanceof Nop)
-            {
-            --of;
-            }
-        return of;
         }
+        if (aop[nAddr-1] instanceof Nop) {
+            --of;
+        }
+        return of;
+    }
 
     /**
      * Calculate a relative address from this Op to the specified destination Op.
@@ -407,10 +366,9 @@ public abstract class Op
      *
      * @return the offset from this Op's address (iPC) to the destination Op
      */
-    protected int calcRelativeAddress(Op opDest)
-        {
+    protected int calcRelativeAddress(Op opDest) {
         return opDest.getAddress() - this.getAddress();
-        }
+    }
 
     /**
      * Determine if the specified op is contained within this op, or is this op.
@@ -419,34 +377,30 @@ public abstract class Op
      *
      * @return true iff this op is the op being searched for, or contains the op being searched for
      */
-    public boolean contains(Op that)
-        {
+    public boolean contains(Op that) {
         return this == that;
-        }
+    }
 
     /**
      * @return true iff this op is using the {@link #A_SUPER} argument
      */
-    public boolean usesSuper()
-        {
+    public boolean usesSuper() {
         return false;
-        }
+    }
 
     /**
      * @return true iff this op represents an explicit or implicit ENTER
      */
-    public boolean isEnter()
-        {
+    public boolean isEnter() {
         return false;
-        }
+    }
 
     /**
      * @return true iff this op represents an explicit or implicit EXIT
      */
-    public boolean isExit()
-        {
+    public boolean isExit() {
         return false;
-        }
+    }
 
     /**
      * Calculate a number of scopes that must be exited by a jump from this Op to another.
@@ -455,16 +409,14 @@ public abstract class Op
      *
      * @return the number of scopes to exit
      */
-    protected int calcExits(Op opDest)
-        {
+    protected int calcExits(Op opDest) {
         return Math.abs(opDest.getDepth() - getDepth() - (isEnter() ? 1 : 0) + (isExit() ? 1 : 0));
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return toName(getOpCode());
-        }
+    }
 
 
     // ----- inner class: Prefix Op ----------------------------------------------------------------
@@ -473,237 +425,199 @@ public abstract class Op
      * An Op that can act as a Prefix to another op must implement the Prefix interface.
      */
     public abstract static class Prefix
-            extends Op
-        {
+            extends Op {
         // ----- Prefix methods ---------------------------------------------------------------
 
         /**
          * @return the op that this op is a prefix for, which may itself be a prefix op, or may be
          *         null if no op has been appended
          */
-        public Op getNextOp()
-            {
+        public Op getNextOp() {
             return m_op;
-            }
+        }
 
         /**
          * @return the non-prefix op that is at the end of the linked list of prefix ops, or null
          *         if there is no non-prefix op
          */
-        public Op getSuffix()
-            {
+        public Op getSuffix() {
             Op op = m_op;
             return op instanceof Prefix opPrefix
                     ? opPrefix.getSuffix()
                     : op;
-            }
+        }
 
         /**
          * Append an op to this prefix op.
          *
          * @param op  the op to append to this op
          */
-        public Prefix append(Op op)
-            {
+        public Prefix append(Op op) {
             assert op != this;
 
-            if (m_op == null)
-                {
+            if (m_op == null) {
                 m_op = op;
-                }
-            else if (m_op instanceof Prefix opPrefix)
-                {
+            }
+            else if (m_op instanceof Prefix opPrefix) {
                 opPrefix.append(op);
-                }
-            else
-                {
+            } else {
                 throw new IllegalStateException();
-                }
+            }
 
             return this;
-            }
+        }
 
         // ----- Op methods -------------------------------------------------------------------
 
         @Override
-        public void resolveCode(Code code, Constant[] aconst)
-            {
+        public void resolveCode(Code code, Constant[] aconst) {
             m_op.resolveCode(code, aconst);
-            }
+        }
 
         @Override
         public void write(DataOutput out, ConstantRegistry registry)
-                throws IOException
-            {
+                throws IOException {
             m_op.write(out, registry);
-            }
+        }
 
         @Override
-        public Op ensureOp()
-            {
-            if (m_op == null)
-                {
+        public Op ensureOp() {
+            if (m_op == null) {
                 throw new IllegalStateException("prefix requires a suffix: " + this);
-                }
+            }
             return m_op.ensureOp();
-            }
+        }
 
         @Override
-        public int getOpCode()
-            {
+        public int getOpCode() {
             return m_op.getOpCode();
-            }
+        }
 
         @Override
-        public int process(Frame frame, int iPC)
-            {
+        public int process(Frame frame, int iPC) {
             return m_op.process(frame, iPC);
-            }
+        }
 
         @Override
-        public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth)
-            {
+        public void initInfo(int nAddress, int nDepth, int nGuardDepth, int nGuardAllDepth) {
             super.initInfo(nAddress, nDepth, nGuardDepth, nGuardAllDepth);
             m_op .initInfo(nAddress, nDepth, nGuardDepth, nGuardAllDepth);
-            }
+        }
 
         @Override
-        public int getAddress()
-            {
+        public int getAddress() {
             return m_op.getAddress();
-            }
+        }
 
         @Override
-        public int getDepth()
-            {
+        public int getDepth() {
             return m_op.getDepth();
-            }
+        }
 
         @Override
-        public boolean isReachable()
-            {
+        public boolean isReachable() {
             return m_op.isReachable();
-            }
+        }
 
         @Override
-        public void markReachable(Op[] aop)
-            {
+        public void markReachable(Op[] aop) {
             super.markReachable(aop);
             m_op.markReachable(aop);
-            }
+        }
 
         @Override
-        public boolean isNecessary()
-            {
+        public boolean isNecessary() {
             return m_op.isNecessary();
-            }
+        }
 
         @Override
-        public void markNecessary()
-            {
+        public void markNecessary() {
             super.markNecessary();
             m_op.markNecessary();
-            }
+        }
 
         @Override
-        public boolean isDiscardable()
-            {
+        public boolean isDiscardable() {
             return m_op.isDiscardable();
-            }
+        }
 
         @Override
-        public boolean isRedundant()
-            {
+        public boolean isRedundant() {
             return m_op.isRedundant();
-            }
+        }
 
         @Override
-        public void markRedundant()
-            {
+        public void markRedundant() {
             super.markRedundant();
             m_op.markRedundant();
-            }
+        }
 
         @Override
-        public boolean checkRedundant(Op[] aop)
-            {
+        public boolean checkRedundant(Op[] aop) {
             boolean fRedundant = m_op.checkRedundant(aop);
-            if (fRedundant)
-                {
+            if (fRedundant) {
                 super.markRedundant();
-                }
+            }
             return fRedundant;
-            }
+        }
 
         @Override
-        public Prefix convertToPrefix()
-            {
-            if (m_op != null)
-                {
+        public Prefix convertToPrefix() {
+            if (m_op != null) {
                 m_op = m_op.convertToPrefix();
-                }
+            }
             return this;
-            }
+        }
 
         @Override
-        public void resetSimulation()
-            {
+        public void resetSimulation() {
             m_op.resetSimulation();
-            }
+        }
 
         @Override
-        public void simulate(Scope scope)
-            {
+        public void simulate(Scope scope) {
             m_op.simulate(scope);
-            }
+        }
 
         @Override
-        public boolean branches(Op[] aop, List<Integer> list)
-            {
+        public boolean branches(Op[] aop, List<Integer> list) {
             return m_op.branches(aop, list);
-            }
+        }
 
         @Override
-        public boolean advances()
-            {
+        public boolean advances() {
             return m_op.advances();
-            }
+        }
 
         @Override
-        public void registerConstants(ConstantRegistry registry)
-            {
+        public void registerConstants(ConstantRegistry registry) {
             m_op.registerConstants(registry);
-            }
+        }
 
         @Override
-        public void resolveAddresses(Op[] aop)
-            {
+        public void resolveAddresses(Op[] aop) {
             m_op.resolveAddresses(aop);
-            }
+        }
 
         @Override
-        public boolean contains(Op that)
-            {
+        public boolean contains(Op that) {
             return this == that || m_op != null && m_op.contains(that);
-            }
+        }
 
         @Override
-        public boolean usesSuper()
-            {
+        public boolean usesSuper() {
             return m_op != null && m_op.usesSuper();
-            }
+        }
 
         @Override
-        public boolean isEnter()
-            {
+        public boolean isEnter() {
             return m_op != null && m_op.isEnter();
-            }
+        }
 
         @Override
-        public boolean isExit()
-            {
+        public boolean isExit() {
             return m_op != null && m_op.isExit();
-            }
+        }
 
         // ----- fields -----------------------------------------------------------------------
 
@@ -712,7 +626,7 @@ public abstract class Op
          * prefix op, so this can act as a linked list.
          */
         private Op m_op;
-        }
+    }
 
 
     // ----- inner class: ConstantRegistry ---------------------------------------------------------
@@ -722,32 +636,28 @@ public abstract class Op
      * together all the constants used by the ops.
      */
     public static class ConstantRegistry
-            implements BinaryAST.ConstantResolver
-        {
+            implements BinaryAST.ConstantResolver {
         /**
          * Construct a ConstantRegistry.
          *
          * @param method  the MethodStructure
          * @param pool    the underlying ConstantPool
          */
-        public ConstantRegistry(MethodStructure method, ConstantPool pool)
-            {
+        public ConstantRegistry(MethodStructure method, ConstantPool pool) {
             f_method = method;
             f_pool   = pool;
 
             // create registers for the method parameters
             int cParams = f_method.getParamCount();
-            if (cParams > 0)
-                {
+            if (cParams > 0) {
                 RegisterAST[] aReg = new RegisterAST[cParams];
-                for (int i = 0; i < cParams; i++)
-                    {
+                for (int i = 0; i < cParams; i++) {
                     Parameter param = f_method.getParam(i);
                     aReg[i] = new RegisterAST(param.getType(), param.getNameConstant());
-                    }
-                init(aReg);
                 }
+                init(aReg);
             }
+        }
 
         /**
          * Register the specified constant. This is called once by each op for each constant that
@@ -758,53 +668,46 @@ public abstract class Op
          * @return the constant reference to use (may be different from the passed constant)
          */
         @Override
-        public Constant register(Constant constant)
-            {
+        public Constant register(Constant constant) {
             ensureRegistering();
 
-            if (constant == null)
-                {
+            if (constant == null) {
                 return null;
-                }
+            }
 
-            if (constant.containsUnresolved())
-                {
+            if (constant.containsUnresolved()) {
                 throw new IllegalStateException("Unresolved constant: " + constant);
-                }
+            }
 
             constant = f_pool.register(constant);
 
             // keep track of how many times each constant is registered
-            if (m_mapConstants == null)
-                {
+            if (m_mapConstants == null) {
                 m_mapConstants = new HashMap<>();
-                }
+            }
             m_mapConstants.compute(constant, (k, count) -> count == null ? 1 : 1 + count);
 
             return constant;
-            }
+        }
 
         /**
          * @return the array of constants, in optimized order
          */
-        public Constant[] getConstantArray()
-            {
+        public Constant[] getConstantArray() {
             ensureOptimized();
 
             return m_aconst;
-            }
+        }
 
         @Override
-        public Constant getConstant(int id)
-            {
+        public Constant getConstant(int id) {
             return getConstantArray()[id];
-            }
+        }
 
         @Override
-        public TypeConstant typeForName(String name)
-            {
+        public TypeConstant typeForName(String name) {
             return f_pool.getImplicitlyImportedIdentity(name).getType();
-            }
+        }
 
         /**
          * Obtain the index of the specified constant, as it appears in the optimized order.
@@ -814,250 +717,218 @@ public abstract class Op
          * @return the index of the constant in the array returned by {@link #getConstantArray()}
          */
         @Override
-        public int indexOf(Constant constant)
-            {
+        public int indexOf(Constant constant) {
             ensureOptimized();
 
             Map<Constant, Integer> map = m_mapConstants;
             Integer index = map == null ? null : map.get(constant);
-            if (index == null)
-                {
+            if (index == null) {
                 throw new IllegalArgumentException("missing constant: " + constant);
-                }
-            return index;
             }
+            return index;
+        }
 
         @Override
-        public void init(RegisterAST[] params)
-            {
+        public void init(RegisterAST[] params) {
             assert params != null && Arrays.stream(params).allMatch(Objects::nonNull);
             assert m_aregParams == BinaryAST.NO_REGS || m_aregParams.length == params.length;
             assert m_stackScopes.empty();
 
             m_aregParams = params;
             m_listRegs.clear();
-            for (RegisterAST reg : params)
-                {
+            for (RegisterAST reg : params) {
                 register(reg);
-                }
             }
+        }
 
         @Override
-        public void enter()
-            {
+        public void enter() {
             m_stackScopes.push(m_listRegs.size());
-            }
+        }
 
         @Override
-        public void register(RegisterAST reg)
-            {
+        public void register(RegisterAST reg) {
             assert reg != null;
             int regId = reg.getRegId();
-            if (regId < 0)
-                {
-                switch (regId)
-                    {
-                    case Op.A_IGNORE:
-                    case Op.A_IGNORE_ASYNC:
-                    case Op.A_DEFAULT:
-                    case Op.A_THIS:
-                    case Op.A_TARGET:
-                    case Op.A_PUBLIC:
-                    case Op.A_PROTECTED:
-                    case Op.A_PRIVATE:
-                    case Op.A_STRUCT:
-                    case Op.A_CLASS:
-                    case Op.A_SERVICE:
-                    case Op.A_SUPER:
-                        // weird that this is being set from the outside; just ignore it, since we
-                        // provide our own
-                        break;
+            if (regId < 0) {
+                switch (regId) {
+                case Op.A_IGNORE:
+                case Op.A_IGNORE_ASYNC:
+                case Op.A_DEFAULT:
+                case Op.A_THIS:
+                case Op.A_TARGET:
+                case Op.A_PUBLIC:
+                case Op.A_PROTECTED:
+                case Op.A_PRIVATE:
+                case Op.A_STRUCT:
+                case Op.A_CLASS:
+                case Op.A_SERVICE:
+                case Op.A_SUPER:
+                    // weird that this is being set from the outside; just ignore it, since we
+                    // provide our own
+                    break;
 
-                    default:
-                        throw new IllegalArgumentException("regId=" + regId);
-                    }
+                default:
+                    throw new IllegalArgumentException("regId=" + regId);
                 }
-            else
-                {
+            } else {
                 assert !reg.isRegIdAssigned() || regId == m_listRegs.size();
 
                 regId = m_listRegs.size();
                 reg.setRegId(regId);
                 m_listRegs.add(reg);
-                }
             }
+        }
 
         @Override
-        public RegisterAST getRegister(int regId)
-            {
+        public RegisterAST getRegister(int regId) {
             RegisterAST reg = regId >= 0 ? m_listRegs.get(regId) : m_aregSpecial[-1-regId];
-            if (reg == null)
-                {
+            if (reg == null) {
                 TypeConstant type = null;
                 String       name = null;
 
                 TypeConstant typeThis = f_method.getContainingClass().getFormalType();
-                switch (regId)
-                    {
-                    case Op.A_IGNORE:
-                    case Op.A_IGNORE_ASYNC:
-                        type = f_pool.typeObject();
-                        name = "_";
-                        break;
+                switch (regId) {
+                case Op.A_IGNORE:
+                case Op.A_IGNORE_ASYNC:
+                    type = f_pool.typeObject();
+                    name = "_";
+                    break;
 
-                    case Op.A_DEFAULT:
-                        type = f_pool.typeObject(); // technically wrong, but no better answer
-                        name = "?";
-                        break;
+                case Op.A_DEFAULT:
+                    type = f_pool.typeObject(); // technically wrong, but no better answer
+                    name = "?";
+                    break;
 
-                    case Op.A_THIS:
-                        assert !f_method.isConstructor() && !f_method.isValidator() &&
-                               !f_method.isStatic();
-                        type = typeThis;
-                        name = "this";
-                        break;
+                case Op.A_THIS:
+                    assert !f_method.isConstructor() && !f_method.isValidator() &&
+                           !f_method.isStatic();
+                    type = typeThis;
+                    name = "this";
+                    break;
 
-                    case Op.A_TARGET:
-                        assert !f_method.isConstructor() && !f_method.isValidator() &&
-                               !f_method.isStatic();
-                        type = typeThis;
-                        name = "this:target";
-                        break;
+                case Op.A_TARGET:
+                    assert !f_method.isConstructor() && !f_method.isValidator() &&
+                           !f_method.isStatic();
+                    type = typeThis;
+                    name = "this:target";
+                    break;
 
-                    case Op.A_PUBLIC:
-                        assert !f_method.isConstructor() && !f_method.isValidator() &&
-                               !f_method.isStatic();
-                        type = f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
-                        name = "this:public";
-                        break;
+                case Op.A_PUBLIC:
+                    assert !f_method.isConstructor() && !f_method.isValidator() &&
+                           !f_method.isStatic();
+                    type = f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
+                    name = "this:public";
+                    break;
 
-                    case Op.A_PROTECTED:
-                        assert !f_method.isConstructor() && !f_method.isValidator() &&
-                               !f_method.isStatic();
-                        type = f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
-                        name = "this:protected";
-                        break;
+                case Op.A_PROTECTED:
+                    assert !f_method.isConstructor() && !f_method.isValidator() &&
+                           !f_method.isStatic();
+                    type = f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
+                    name = "this:protected";
+                    break;
 
-                    case Op.A_PRIVATE:
-                        assert !f_method.isConstructor() && !f_method.isValidator() &&
-                               !f_method.isStatic();
-                        type = f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
-                        name = "this:private";
-                        break;
+                case Op.A_PRIVATE:
+                    assert !f_method.isConstructor() && !f_method.isValidator() &&
+                           !f_method.isStatic();
+                    type = f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
+                    name = "this:private";
+                    break;
 
-                    case Op.A_STRUCT:
-                        assert f_method.isConstructor() || f_method.isValidator() ||
-                               !f_method.isStatic();
-                        type = f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
-                                f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
-                        name = "this:struct";
-                        break;
+                case Op.A_STRUCT:
+                    assert f_method.isConstructor() || f_method.isValidator() ||
+                           !f_method.isStatic();
+                    type = f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
+                            f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
+                    name = "this:struct";
+                    break;
 
-                    case Op.A_CLASS:
-                        type = f_pool.ensureParameterizedTypeConstant(f_pool.typeClass(),
-                                f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
-                                f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
-                                f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
-                                f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
-                                    f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT)));
-                        name = "this:class";
-                        break;
+                case Op.A_CLASS:
+                    type = f_pool.ensureParameterizedTypeConstant(f_pool.typeClass(),
+                            f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
+                            f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
+                            f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
+                            f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
+                                f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT)));
+                    name = "this:class";
+                    break;
 
-                    case Op.A_SERVICE:
-                        type = f_pool.typeService();
-                        name = "this:service";
-                        break;
+                case Op.A_SERVICE:
+                    type = f_pool.typeService();
+                    name = "this:service";
+                    break;
 
-                    case Op.A_SUPER:
-                        assert f_method.isSuperAllowed();
-                        MethodConstant    idMethod   = f_method.getIdentityConstant();
-                        Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                        TypeConstant      typeCtx    = f_pool.ensureAccessTypeConstant(typeThis, access);
-                        TypeInfo          infoType   = typeCtx.ensureTypeInfo();
-                        MethodInfo        infoMethod = infoType.getMethodById(idMethod);
-                        SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
+                case Op.A_SUPER:
+                    assert f_method.isSuperAllowed();
+                    MethodConstant    idMethod   = f_method.getIdentityConstant();
+                    Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
+                    TypeConstant      typeCtx    = f_pool.ensureAccessTypeConstant(typeThis, access);
+                    TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                    MethodInfo        infoMethod = infoType.getMethodById(idMethod);
+                    SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 
-                        if (sigSuper == null)
-                            {
-                            if (f_method.isConstructor()
-                                    && f_method.getContainingClass().containsAnnotation(f_pool.clzOverride()))
-                                {
-                                // an "@Override" virtual child may not have a compile-time super;
-                                // assume an identical signature
-                                sigSuper = idMethod.getSignature();
-                                }
-                            else
-                                {
-                                return null;
-                                }
-                            }
-
-                        type = sigSuper.asFunctionType();
-                        name = "super";
-                        break;
+                    if (sigSuper == null) {
+                        if (f_method.isConstructor()
+                                && f_method.getContainingClass().containsAnnotation(f_pool.clzOverride())) {
+                            // an "@Override" virtual child may not have a compile-time super;
+                            // assume an identical signature
+                            sigSuper = idMethod.getSignature();
+                        } else {
+                            return null;
+                        }
                     }
 
-                if (type == null)
-                    {
+                    type = sigSuper.asFunctionType();
+                    name = "super";
+                    break;
+                }
+
+                if (type == null) {
                     throw new IllegalStateException("missing register " + regId);
-                    }
-                else
-                    {
+                } else {
                     reg = new RegisterAST(regId, type, name == null ? null : f_pool.ensureStringConstant(name));
                     m_aregSpecial[-1-regId] = reg;
-                    }
                 }
-                return reg;
             }
+                return reg;
+        }
 
         @Override
-        public void exit()
-            {
+        public void exit() {
             int cPrev = m_stackScopes.pop();
             int cCur  = m_listRegs.size();
             assert cCur >= cPrev;
-            while (cCur > cPrev)
-                {
+            while (cCur > cPrev) {
                 m_listRegs.remove(--cCur);
-                }
             }
+        }
 
         /**
          * Internal: Make sure this ConstantRegistry is still being used to register constants.
          */
-        private void ensureRegistering()
-            {
-            if (m_aconst != null)
-                {
+        private void ensureRegistering() {
+            if (m_aconst != null) {
                 throw new IllegalStateException("constants are no longer being registered");
-                }
             }
+        }
 
         /**
          * Internal: Make sure this ConstantRegistry is no longer being used to register constants,
          * and has settled on an optimized order for the constants that were registered.
          */
-        private synchronized void ensureOptimized()
-            {
-            if (m_aconst == null)
-                {
-                if (f_method.m_aconstLocal != null && m_mapConstants == null)
-                    {
+        private synchronized void ensureOptimized() {
+            if (m_aconst == null) {
+                if (f_method.m_aconstLocal != null && m_mapConstants == null) {
                     m_aconst = f_method.m_aconstLocal;
-                    }
-                else
-                    {
+                } else {
                     // first, create an array of all the constants, sorted by how often they are used
                     // (backwards order, such that the most often used come first, since the variable
                     // length index encoding uses fewer bytes for lower indexes, the result is more
                     // compact)
                     Map<Constant, Integer> mapConstants = m_mapConstants;
-                    if (mapConstants == null)
-                        {
+                    if (mapConstants == null) {
                         m_aconst = Constant.NO_CONSTS;
-                        }
-                    else
-                        {
+                    } else {
                         Constant[] aconst = mapConstants.keySet().toArray(Constant.NO_CONSTS);
                         Arrays.sort(aconst, Constants.DEBUG
                                 ? Comparator.naturalOrder()
@@ -1066,20 +937,18 @@ public abstract class Op
 
                         // now re-use the map of constants to point to the constant indexes, for when we
                         // need to look up index by constant
-                        for (int i = 0, c = aconst.length; i < c; ++i)
-                            {
+                        for (int i = 0, c = aconst.length; i < c; ++i) {
                             mapConstants.put(aconst[i], i);
-                            }
                         }
                     }
                 }
             }
+        }
 
         @Override
-        public String toString()
-            {
+        public String toString() {
             return "Resolver for " + f_method.getIdentityConstant().getPathString();
-            }
+        }
 
         /**
          * The method that this {@link ConstantRegistry} is resolving within the context of.
@@ -1125,7 +994,7 @@ public abstract class Op
          * The "special" registers, such as "this".
          */
         private final RegisterAST[] m_aregSpecial = new RegisterAST[-Op.CONSTANT_OFFSET];
-        }
+    }
 
 
     // ----- static helpers ------------------------------------------------------------------------
@@ -1137,42 +1006,35 @@ public abstract class Op
      *
      * @return true iff the argument is a Constant
      */
-    protected static boolean isConstant(Argument arg)
-        {
+    protected static boolean isConstant(Argument arg) {
         return arg instanceof Constant;
-        }
+    }
 
     /**
      * Check if the specified Argument is a register, and reset its index if it is.
      *
      * @param arg  the argument
      */
-    public static void resetRegister(Argument arg)
-        {
-        if (arg instanceof Register reg)
-            {
+    public static void resetRegister(Argument arg) {
+        if (arg instanceof Register reg) {
             reg.resetIndex();
-            }
         }
+    }
 
     /**
      * Check if any of the specified Arguments is a register, and for each such, reset its index.
      *
      * @param aArg   the argument array
      */
-    public static void resetRegisters(Argument[] aArg)
-        {
-        if (aArg != null)
-            {
-            for (Argument arg : aArg)
-                {
-                if (arg instanceof Register reg)
-                    {
+    public static void resetRegisters(Argument[] aArg) {
+        if (aArg != null) {
+            for (Argument arg : aArg) {
+                if (arg instanceof Register reg) {
                     reg.resetIndex();
-                    }
                 }
             }
         }
+    }
 
     /**
      * Check if the specified Argument represents "the next available" register and if
@@ -1182,18 +1044,15 @@ public abstract class Op
      * @param arg    the argument
      * @param nArg   the argument's id
      */
-    public static void checkNextRegister(Scope scope, Argument arg, int nArg)
-        {
-        if (arg == null)
-            {
+    public static void checkNextRegister(Scope scope, Argument arg, int nArg) {
+        if (arg == null) {
             // this means we have just loaded the ops from disk
             scope.ensureVar(nArg);
-            }
-        else if (arg instanceof Register reg && reg.isUnknown())
-            {
-            reg.assignIndex(scope.allocVar());
-            }
         }
+        else if (arg instanceof Register reg && reg.isUnknown()) {
+            reg.assignIndex(scope.allocVar());
+        }
+    }
 
     /**
      * Check if any of the specified Arguments represent "the next available" register and if
@@ -1203,27 +1062,20 @@ public abstract class Op
      * @param aArg   the argument array
      * @param anArg  the array of argument ids
      */
-    public static void checkNextRegisters(Scope scope, Argument[] aArg, int[] anArg)
-        {
-        if (aArg == null)
-            {
+    public static void checkNextRegisters(Scope scope, Argument[] aArg, int[] anArg) {
+        if (aArg == null) {
             // this means we have just loaded the ops from disk
-            for (int nArg : anArg)
-                {
+            for (int nArg : anArg) {
                 scope.ensureVar(nArg);
-                }
             }
-        else
-            {
-            for (Argument arg : aArg)
-                {
-                if (arg instanceof Register reg && reg.isUnknown())
-                    {
+        } else {
+            for (Argument arg : aArg) {
+                if (arg instanceof Register reg && reg.isUnknown()) {
                     reg.assignIndex(scope.allocVar());
-                    }
                 }
             }
         }
+    }
 
     /**
      * Determine if the specified Argument is readable. This is equivalent to the Ref for the
@@ -1233,10 +1085,9 @@ public abstract class Op
      *
      * @return true iff the argument is readable
      */
-    protected static boolean isReadable(Argument arg)
-        {
+    protected static boolean isReadable(Argument arg) {
         return !(arg instanceof Register reg) || reg.isReadable();
-        }
+    }
 
     /**
      * Determine if the specified Argument is readable. This is equivalent to the Ref for the
@@ -1246,10 +1097,9 @@ public abstract class Op
      *
      * @return true iff the argument is writable
      */
-    protected static boolean isWritable(Argument arg)
-        {
+    protected static boolean isWritable(Argument arg) {
         return arg instanceof Register reg && reg.isWritable();
-        }
+    }
 
     /**
      * Register the specified argument if it's a constant.
@@ -1257,10 +1107,9 @@ public abstract class Op
      * @param arg       the argument or null
      * @param registry  the ConstantRegistry to use to register any constants used by this op
      */
-    protected static Argument registerArgument(Argument arg, ConstantRegistry registry)
-        {
+    protected static Argument registerArgument(Argument arg, ConstantRegistry registry) {
         return arg == null ? null : arg.registerConstants(registry);
-        }
+    }
 
     /**
      * Register the specified arguments if they are constants.
@@ -1268,16 +1117,13 @@ public abstract class Op
      * @param aArg      the argument array
      * @param registry  the ConstantRegistry that represents all the constants used by the code
      */
-    protected static void registerArguments(Argument[] aArg, ConstantRegistry registry)
-        {
-        if (aArg != null)
-            {
-            for (int i = 0, c = aArg.length; i < c; i++)
-                {
+    protected static void registerArguments(Argument[] aArg, ConstantRegistry registry) {
+        if (aArg != null) {
+            for (int i = 0, c = aArg.length; i < c; i++) {
                 aArg[i] = registerArgument(aArg[i], registry);
-                }
             }
         }
+    }
 
     /**
      * Convert the specified argument to an index that will be used in the persistent form of the op
@@ -1289,12 +1135,11 @@ public abstract class Op
      *
      * @return the index of the argument
      */
-    protected static int encodeArgument(Argument arg, ConstantRegistry registry)
-        {
+    protected static int encodeArgument(Argument arg, ConstantRegistry registry) {
         return arg instanceof Constant
                 ? Op.CONSTANT_OFFSET - registry.indexOf((Constant) arg)
                 : ((Register) arg).getIndex();
-        }
+    }
 
     /**
      * Convert the specified argument array to an array if indexes that will be used in the
@@ -1306,16 +1151,14 @@ public abstract class Op
      *
      * @return the array of the arguments' indexes
      */
-    protected static int[] encodeArguments(Argument[] aArg, ConstantRegistry registry)
-        {
+    protected static int[] encodeArguments(Argument[] aArg, ConstantRegistry registry) {
         int c = aArg.length;
         int[] anArg = new int[c];
-        for (int i = 0; i < c; i++)
-            {
+        for (int i = 0; i < c; i++) {
             anArg[i] = encodeArgument(aArg[i], registry);
-            }
-        return anArg;
         }
+        return anArg;
+    }
 
     /**
      * Determine if the specified ObjectHandle represents a deferred action such as a property
@@ -1325,30 +1168,25 @@ public abstract class Op
      *
      * @return true iff the argument represents a deferred action
      */
-    public static boolean isDeferred(ObjectHandle handle)
-        {
+    public static boolean isDeferred(ObjectHandle handle) {
         return handle instanceof DeferredCallHandle;
-        }
+    }
 
     /**
      * @return true iff any of the specified handles represents a deferred action
      */
-    public static boolean anyDeferred(ObjectHandle[] aHandle)
-        {
-        for (ObjectHandle h : aHandle)
-            {
-            if (h == null)
-                {
+    public static boolean anyDeferred(ObjectHandle[] aHandle) {
+        for (ObjectHandle h : aHandle) {
+            if (h == null) {
                 // we reached the "tail"
                 return false;
-                }
-            if (h instanceof DeferredCallHandle)
-                {
-                return true;
-                }
             }
-        return false;
+            if (h instanceof DeferredCallHandle) {
+                return true;
+            }
         }
+        return false;
+    }
 
     /**
      * Helper method for "jump"-ing op codes.
@@ -1359,23 +1197,20 @@ public abstract class Op
      *
      * @return the next program counter
      */
-    protected static int jump(Frame frame, int iPCTo, int cExits)
-        {
-        while (cExits-- > 0)
-            {
+    protected static int jump(Frame frame, int iPCTo, int cExits) {
+        while (cExits-- > 0) {
             frame.exitScope();
-            }
-        return iPCTo;
         }
+        return iPCTo;
+    }
 
     /**
      * Convert a relative const id into an absolute one.
      */
-    protected static int convertId(int id)
-        {
+    protected static int convertId(int id) {
         assert id < 0;
         return CONSTANT_OFFSET - id;
-        }
+    }
 
     /**
      * Given two types that should have some point of immediate commonality, select a target type.
@@ -1386,52 +1221,44 @@ public abstract class Op
      *
      * @return a target type or null
      */
-    public static TypeConstant selectCommonType(TypeConstant type1, TypeConstant type2, ErrorListener errs)
-        {
-        if (type1 == null && type2 == null)
-            {
+    public static TypeConstant selectCommonType(TypeConstant type1, TypeConstant type2, ErrorListener errs) {
+        if (type1 == null && type2 == null) {
             return null;
+        }
+
+        if (type1 != null && type2 != null) {
+            if (type2.isAssignableTo(type1)) {
+                return type1;
             }
 
-        if (type1 != null && type2 != null)
-            {
-            if (type2.isAssignableTo(type1))
-                {
-                return type1;
-                }
-
-            if (type1.isAssignableTo(type2))
-                {
+            if (type1.isAssignableTo(type2)) {
                 return type2;
-                }
+            }
 
-            if (type1.isTypeOfType() && type2.isTypeOfType())
-                {
+            if (type1.isTypeOfType() && type2.isTypeOfType()) {
                 // types are always comparable
                 return type1.getConstantPool().typeType();
-                }
+            }
 
             TypeInfo info1 = type1.ensureTypeInfo(errs);
-            if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends()))
-                {
+            if (info1.getFormat() == Format.ENUMVALUE && type2.isAssignableTo(info1.getExtends())) {
                 return info1.getExtends();
-                }
+            }
 
             TypeInfo info2 = type2.ensureTypeInfo(errs);
-            if (info2.getFormat() == Format.ENUMVALUE && type1.isAssignableTo(info2.getExtends()))
-                {
+            if (info2.getFormat() == Format.ENUMVALUE && type1.isAssignableTo(info2.getExtends())) {
                 return info2.getExtends();
-                }
+            }
 
             return null;
-            }
+        }
 
         TypeConstant typeResult = type1 == null ? type2 : type1;
         TypeInfo     typeinfo   = typeResult.ensureTypeInfo(errs);
         return typeinfo.getFormat() == Format.ENUMVALUE
                 ? typeinfo.getExtends()
                 : typeResult;
-        }
+    }
 
     /**
      * Read the ops for a particular method.
@@ -1444,17 +1271,15 @@ public abstract class Op
      * @throws IOException  if an error occurs reading the ops
      */
     public static Op[] readOps(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         int cOps = readMagnitude(in);
         Op[] aop = new Op[cOps];
-        for (int i = 0; i < cOps; ++i)
-            {
+        for (int i = 0; i < cOps; ++i) {
             aop[i] = instantiate(in.readUnsignedByte(), in, aconst);
-            }
+        }
 
         return aop;
-        }
+    }
 
     /**
      * Instantiate an Op object for the specified op code.
@@ -1466,239 +1291,237 @@ public abstract class Op
      * @return the new op instance
      */
     public static Op instantiate(int nOp, DataInput in, Constant[] aconst)
-            throws IOException
-        {
-        switch (nOp)
-            {
-            case OP_NOP:         return new Nop         ();
-            case OP_LINE_1:      return new Nop         (1);
-            case OP_LINE_2:      return new Nop         (2);
-            case OP_LINE_3:      return new Nop         (3);
-            case OP_LINE_N:      return new Nop         (in, aconst);
-            case OP_ENTER:       return new Enter       ();
-            case OP_EXIT:        return new Exit        ();
-            case OP_GUARD:       return new GuardStart  (in, aconst);
-            case OP_GUARD_END:   return new GuardEnd    (in, aconst);
-            case OP_CATCH:       return new CatchStart  (in, aconst);
-            case OP_CATCH_END:   return new CatchEnd    (in, aconst);
-            case OP_GUARD_ALL:   return new GuardAll    (in, aconst);
-            case OP_FINALLY:     return new FinallyStart(in, aconst);
-            case OP_FINALLY_END: return new FinallyEnd  ();
-            case OP_THROW:       return new Throw       (in, aconst);
+            throws IOException {
+        switch (nOp) {
+        case OP_NOP:         return new Nop         ();
+        case OP_LINE_1:      return new Nop         (1);
+        case OP_LINE_2:      return new Nop         (2);
+        case OP_LINE_3:      return new Nop         (3);
+        case OP_LINE_N:      return new Nop         (in, aconst);
+        case OP_ENTER:       return new Enter       ();
+        case OP_EXIT:        return new Exit        ();
+        case OP_GUARD:       return new GuardStart  (in, aconst);
+        case OP_GUARD_END:   return new GuardEnd    (in, aconst);
+        case OP_CATCH:       return new CatchStart  (in, aconst);
+        case OP_CATCH_END:   return new CatchEnd    (in, aconst);
+        case OP_GUARD_ALL:   return new GuardAll    (in, aconst);
+        case OP_FINALLY:     return new FinallyStart(in, aconst);
+        case OP_FINALLY_END: return new FinallyEnd  ();
+        case OP_THROW:       return new Throw       (in, aconst);
 
-            case OP_ASSERT:      return new Assert      (in, aconst);
-            case OP_ASSERT_M:    return new AssertM     (in, aconst);
-            case OP_ASSERT_V:    return new AssertV     (in, aconst);
+        case OP_ASSERT:      return new Assert      (in, aconst);
+        case OP_ASSERT_M:    return new AssertM     (in, aconst);
+        case OP_ASSERT_V:    return new AssertV     (in, aconst);
 
-            case OP_RETURN_0:    return new Return_0    (in, aconst);
-            case OP_RETURN_1:    return new Return_1    (in, aconst);
-            case OP_RETURN_N:    return new Return_N    (in, aconst);
-            case OP_RETURN_T:    return new Return_T    (in, aconst);
+        case OP_RETURN_0:    return new Return_0    (in, aconst);
+        case OP_RETURN_1:    return new Return_1    (in, aconst);
+        case OP_RETURN_N:    return new Return_N    (in, aconst);
+        case OP_RETURN_T:    return new Return_T    (in, aconst);
 
-            case OP_MBIND:       return new MBind       (in, aconst);
-            case OP_FBIND:       return new FBind       (in, aconst);
+        case OP_MBIND:       return new MBind       (in, aconst);
+        case OP_FBIND:       return new FBind       (in, aconst);
 
-            case OP_JMP:         return new Jump        (in, aconst);
-            case OP_JMP_TRUE:    return new JumpTrue    (in, aconst);
-            case OP_JMP_FALSE:   return new JumpFalse   (in, aconst);
-            case OP_JMP_ZERO:    return new JumpZero    (in, aconst);
-            case OP_JMP_NZERO:   return new JumpNotZero (in, aconst);
-            case OP_JMP_NULL:    return new JumpNull    (in, aconst);
-            case OP_JMP_NNULL:   return new JumpNotNull (in, aconst);
-            case OP_JMP_EQ:      return new JumpEq      (in, aconst);
-            case OP_JMP_NEQ:     return new JumpNotEq   (in, aconst);
-            case OP_JMP_LT:      return new JumpLt      (in, aconst);
-            case OP_JMP_LTE:     return new JumpLte     (in, aconst);
-            case OP_JMP_GT:      return new JumpGt      (in, aconst);
-            case OP_JMP_GTE:     return new JumpGte     (in, aconst);
-            case OP_JMP_TYPE:    return new JumpType    (in, aconst);
-            case OP_JMP_NTYPE:   return new JumpNType   (in, aconst);
-            case OP_JMP_COND:    return new JumpCond    (in, aconst);
-            case OP_JMP_NCOND:   return new JumpNCond   (in, aconst);
-            case OP_JMP_NFIRST:  return new JumpNFirst  (in, aconst);
-            case OP_JMP_NSAMPLE: return new JumpNSample (in, aconst);
-            case OP_JMP_INT:     return new JumpInt     (in, aconst);
-            case OP_JMP_VAL:     return new JumpVal     (in, aconst);
-            case OP_JMP_ISA:     return new JumpIsA     (in, aconst);
-            case OP_JMP_VAL_N:   return new JumpVal_N   (in, aconst);
+        case OP_JMP:         return new Jump        (in, aconst);
+        case OP_JMP_TRUE:    return new JumpTrue    (in, aconst);
+        case OP_JMP_FALSE:   return new JumpFalse   (in, aconst);
+        case OP_JMP_ZERO:    return new JumpZero    (in, aconst);
+        case OP_JMP_NZERO:   return new JumpNotZero (in, aconst);
+        case OP_JMP_NULL:    return new JumpNull    (in, aconst);
+        case OP_JMP_NNULL:   return new JumpNotNull (in, aconst);
+        case OP_JMP_EQ:      return new JumpEq      (in, aconst);
+        case OP_JMP_NEQ:     return new JumpNotEq   (in, aconst);
+        case OP_JMP_LT:      return new JumpLt      (in, aconst);
+        case OP_JMP_LTE:     return new JumpLte     (in, aconst);
+        case OP_JMP_GT:      return new JumpGt      (in, aconst);
+        case OP_JMP_GTE:     return new JumpGte     (in, aconst);
+        case OP_JMP_TYPE:    return new JumpType    (in, aconst);
+        case OP_JMP_NTYPE:   return new JumpNType   (in, aconst);
+        case OP_JMP_COND:    return new JumpCond    (in, aconst);
+        case OP_JMP_NCOND:   return new JumpNCond   (in, aconst);
+        case OP_JMP_NFIRST:  return new JumpNFirst  (in, aconst);
+        case OP_JMP_NSAMPLE: return new JumpNSample (in, aconst);
+        case OP_JMP_INT:     return new JumpInt     (in, aconst);
+        case OP_JMP_VAL:     return new JumpVal     (in, aconst);
+        case OP_JMP_ISA:     return new JumpIsA     (in, aconst);
+        case OP_JMP_VAL_N:   return new JumpVal_N   (in, aconst);
 
-            case OP_IS_ZERO:     return new IsZero      (in, aconst);
-            case OP_IS_NZERO:    return new IsNotZero   (in, aconst);
-            case OP_IS_NULL:     return new IsNull      (in, aconst);
-            case OP_IS_NNULL:    return new IsNotNull   (in, aconst);
-            case OP_IS_EQ:       return new IsEq        (in, aconst);
-            case OP_IS_NEQ:      return new IsNotEq     (in, aconst);
-            case OP_IS_LT:       return new IsLt        (in, aconst);
-            case OP_IS_LTE:      return new IsLte       (in, aconst);
-            case OP_IS_GT:       return new IsGt        (in, aconst);
-            case OP_IS_GTE:      return new IsGte       (in, aconst);
-            case OP_IS_NOT:      return new IsNot       (in, aconst);
-            case OP_IS_TYPE:     return new IsType      (in, aconst);
-            case OP_IS_NTYPE:    return new IsNType     (in, aconst);
-            case OP_CMP:         return new Cmp         (in, aconst);
+        case OP_IS_ZERO:     return new IsZero      (in, aconst);
+        case OP_IS_NZERO:    return new IsNotZero   (in, aconst);
+        case OP_IS_NULL:     return new IsNull      (in, aconst);
+        case OP_IS_NNULL:    return new IsNotNull   (in, aconst);
+        case OP_IS_EQ:       return new IsEq        (in, aconst);
+        case OP_IS_NEQ:      return new IsNotEq     (in, aconst);
+        case OP_IS_LT:       return new IsLt        (in, aconst);
+        case OP_IS_LTE:      return new IsLte       (in, aconst);
+        case OP_IS_GT:       return new IsGt        (in, aconst);
+        case OP_IS_GTE:      return new IsGte       (in, aconst);
+        case OP_IS_NOT:      return new IsNot       (in, aconst);
+        case OP_IS_TYPE:     return new IsType      (in, aconst);
+        case OP_IS_NTYPE:    return new IsNType     (in, aconst);
+        case OP_CMP:         return new Cmp         (in, aconst);
 
-            case OP_VAR:         return new Var         (in, aconst);
-            case OP_VAR_I:       return new Var_I       (in, aconst);
-            case OP_VAR_N:       return new Var_N       (in, aconst);
-            case OP_VAR_IN:      return new Var_IN      (in, aconst);
-            case OP_VAR_D:       return new Var_D       (in, aconst);
-            case OP_VAR_DN:      return new Var_DN      (in, aconst);
-            case OP_VAR_C:       return new Var_C       (in, aconst);
-            case OP_VAR_CN:      return new Var_CN      (in, aconst);
-            case OP_VAR_S:       return new Var_S       (in, aconst);
-            case OP_VAR_SN:      return new Var_SN      (in, aconst);
-            case OP_VAR_T:       return new Var_T       (in, aconst);
-            case OP_VAR_TN:      return new Var_TN      (in, aconst);
-            case OP_VAR_M:       return new Var_M       (in, aconst);
-            case OP_VAR_MN:      return new Var_MN      (in, aconst);
+        case OP_VAR:         return new Var         (in, aconst);
+        case OP_VAR_I:       return new Var_I       (in, aconst);
+        case OP_VAR_N:       return new Var_N       (in, aconst);
+        case OP_VAR_IN:      return new Var_IN      (in, aconst);
+        case OP_VAR_D:       return new Var_D       (in, aconst);
+        case OP_VAR_DN:      return new Var_DN      (in, aconst);
+        case OP_VAR_C:       return new Var_C       (in, aconst);
+        case OP_VAR_CN:      return new Var_CN      (in, aconst);
+        case OP_VAR_S:       return new Var_S       (in, aconst);
+        case OP_VAR_SN:      return new Var_SN      (in, aconst);
+        case OP_VAR_T:       return new Var_T       (in, aconst);
+        case OP_VAR_TN:      return new Var_TN      (in, aconst);
+        case OP_VAR_M:       return new Var_M       (in, aconst);
+        case OP_VAR_MN:      return new Var_MN      (in, aconst);
 
-            case OP_MOV:         return new Move        (in, aconst);
-            case OP_MOV_VAR:     return new MoveVar     (in, aconst);
-            case OP_MOV_REF:     return new MoveRef     (in, aconst);
-            case OP_MOV_THIS:
-            case OP_MOV_THIS_A:  return new MoveThis    (in, aconst, nOp);
-            case OP_MOV_TYPE:    return new MoveType    (in, aconst);
-            case OP_CAST:        return new MoveCast    (in, aconst);
+        case OP_MOV:         return new Move        (in, aconst);
+        case OP_MOV_VAR:     return new MoveVar     (in, aconst);
+        case OP_MOV_REF:     return new MoveRef     (in, aconst);
+        case OP_MOV_THIS:
+        case OP_MOV_THIS_A:  return new MoveThis    (in, aconst, nOp);
+        case OP_MOV_TYPE:    return new MoveType    (in, aconst);
+        case OP_CAST:        return new MoveCast    (in, aconst);
 
-            case OP_GP_ADD:      return new GP_Add      (in, aconst);
-            case OP_GP_SUB:      return new GP_Sub      (in, aconst);
-            case OP_GP_MUL:      return new GP_Mul      (in, aconst);
-            case OP_GP_DIV:      return new GP_Div      (in, aconst);
-            case OP_GP_MOD:      return new GP_Mod      (in, aconst);
-            case OP_GP_SHL:      return new GP_Shl      (in, aconst);
-            case OP_GP_SHR:      return new GP_Shr      (in, aconst);
-            case OP_GP_USHR:     return new GP_ShrAll   (in, aconst);
-            case OP_GP_AND:      return new GP_And      (in, aconst);
-            case OP_GP_OR:       return new GP_Or       (in, aconst);
-            case OP_GP_XOR:      return new GP_Xor      (in, aconst);
-            case OP_GP_DIVREM:   return new GP_DivRem   (in, aconst);
-            case OP_GP_IRANGEI:  return new GP_IRangeI  (in, aconst);
-            case OP_GP_ERANGEI:  return new GP_ERangeI  (in, aconst);
-            case OP_GP_IRANGEE:  return new GP_IRangeE  (in, aconst);
-            case OP_GP_ERANGEE:  return new GP_ERangeE  (in, aconst);
-            case OP_GP_NEG:      return new GP_Neg      (in, aconst);
-            case OP_GP_COMPL:    return new GP_Compl    (in, aconst);
+        case OP_GP_ADD:      return new GP_Add      (in, aconst);
+        case OP_GP_SUB:      return new GP_Sub      (in, aconst);
+        case OP_GP_MUL:      return new GP_Mul      (in, aconst);
+        case OP_GP_DIV:      return new GP_Div      (in, aconst);
+        case OP_GP_MOD:      return new GP_Mod      (in, aconst);
+        case OP_GP_SHL:      return new GP_Shl      (in, aconst);
+        case OP_GP_SHR:      return new GP_Shr      (in, aconst);
+        case OP_GP_USHR:     return new GP_ShrAll   (in, aconst);
+        case OP_GP_AND:      return new GP_And      (in, aconst);
+        case OP_GP_OR:       return new GP_Or       (in, aconst);
+        case OP_GP_XOR:      return new GP_Xor      (in, aconst);
+        case OP_GP_DIVREM:   return new GP_DivRem   (in, aconst);
+        case OP_GP_IRANGEI:  return new GP_IRangeI  (in, aconst);
+        case OP_GP_ERANGEI:  return new GP_ERangeI  (in, aconst);
+        case OP_GP_IRANGEE:  return new GP_IRangeE  (in, aconst);
+        case OP_GP_ERANGEE:  return new GP_ERangeE  (in, aconst);
+        case OP_GP_NEG:      return new GP_Neg      (in, aconst);
+        case OP_GP_COMPL:    return new GP_Compl    (in, aconst);
 
-            case OP_IP_INC:      return new IP_Inc      (in, aconst);
-            case OP_IP_DEC:      return new IP_Dec      (in, aconst);
-            case OP_IP_INCA:     return new IP_PostInc  (in, aconst);
-            case OP_IP_DECA:     return new IP_PostDec  (in, aconst);
-            case OP_IP_INCB:     return new IP_PreInc   (in, aconst);
-            case OP_IP_DECB:     return new IP_PreDec   (in, aconst);
+        case OP_IP_INC:      return new IP_Inc      (in, aconst);
+        case OP_IP_DEC:      return new IP_Dec      (in, aconst);
+        case OP_IP_INCA:     return new IP_PostInc  (in, aconst);
+        case OP_IP_DECA:     return new IP_PostDec  (in, aconst);
+        case OP_IP_INCB:     return new IP_PreInc   (in, aconst);
+        case OP_IP_DECB:     return new IP_PreDec   (in, aconst);
 
-            case OP_IP_ADD:      return new IP_Add      (in, aconst);
-            case OP_IP_SUB:      return new IP_Sub      (in, aconst);
-            case OP_IP_MUL:      return new IP_Mul      (in, aconst);
-            case OP_IP_DIV:      return new IP_Div      (in, aconst);
-            case OP_IP_MOD:      return new IP_Mod      (in, aconst);
+        case OP_IP_ADD:      return new IP_Add      (in, aconst);
+        case OP_IP_SUB:      return new IP_Sub      (in, aconst);
+        case OP_IP_MUL:      return new IP_Mul      (in, aconst);
+        case OP_IP_DIV:      return new IP_Div      (in, aconst);
+        case OP_IP_MOD:      return new IP_Mod      (in, aconst);
 
-            case OP_IP_SHL:      return new IP_Shl      (in, aconst);
-            case OP_IP_SHR:      return new IP_Shr      (in, aconst);
-            case OP_IP_USHR:     return new IP_ShrAll   (in, aconst);
-            case OP_IP_AND:      return new IP_And      (in, aconst);
-            case OP_IP_OR:       return new IP_Or       (in, aconst);
-            case OP_IP_XOR:      return new IP_Xor      (in, aconst);
+        case OP_IP_SHL:      return new IP_Shl      (in, aconst);
+        case OP_IP_SHR:      return new IP_Shr      (in, aconst);
+        case OP_IP_USHR:     return new IP_ShrAll   (in, aconst);
+        case OP_IP_AND:      return new IP_And      (in, aconst);
+        case OP_IP_OR:       return new IP_Or       (in, aconst);
+        case OP_IP_XOR:      return new IP_Xor      (in, aconst);
 
-            case OP_L_GET:       return new L_Get       (in, aconst);
-            case OP_L_SET:       return new L_Set       (in, aconst);
-            case OP_P_GET:       return new P_Get       (in, aconst);
-            case OP_P_SET:       return new P_Set       (in, aconst);
-            case OP_P_VAR:       return new P_Var       (in, aconst);
-            case OP_P_REF:       return new P_Ref       (in, aconst);
+        case OP_L_GET:       return new L_Get       (in, aconst);
+        case OP_L_SET:       return new L_Set       (in, aconst);
+        case OP_P_GET:       return new P_Get       (in, aconst);
+        case OP_P_SET:       return new P_Set       (in, aconst);
+        case OP_P_VAR:       return new P_Var       (in, aconst);
+        case OP_P_REF:       return new P_Ref       (in, aconst);
 
-            case OP_PIP_INC:     return new PIP_Inc     (in, aconst);
-            case OP_PIP_DEC:     return new PIP_Dec     (in, aconst);
-            case OP_PIP_INCA:    return new PIP_PostInc (in, aconst);
-            case OP_PIP_DECA:    return new PIP_PostDec (in, aconst);
-            case OP_PIP_INCB:    return new PIP_PreInc  (in, aconst);
-            case OP_PIP_DECB:    return new PIP_PreDec  (in, aconst);
+        case OP_PIP_INC:     return new PIP_Inc     (in, aconst);
+        case OP_PIP_DEC:     return new PIP_Dec     (in, aconst);
+        case OP_PIP_INCA:    return new PIP_PostInc (in, aconst);
+        case OP_PIP_DECA:    return new PIP_PostDec (in, aconst);
+        case OP_PIP_INCB:    return new PIP_PreInc  (in, aconst);
+        case OP_PIP_DECB:    return new PIP_PreDec  (in, aconst);
 
-            case OP_PIP_ADD:     return new PIP_Add     (in, aconst);
-            case OP_PIP_SUB:     return new PIP_Sub     (in, aconst);
+        case OP_PIP_ADD:     return new PIP_Add     (in, aconst);
+        case OP_PIP_SUB:     return new PIP_Sub     (in, aconst);
 
-            case OP_I_GET:       return new I_Get       (in, aconst);
-            case OP_I_SET:       return new I_Set       (in, aconst);
+        case OP_I_GET:       return new I_Get       (in, aconst);
+        case OP_I_SET:       return new I_Set       (in, aconst);
 
-            case OP_IIP_INC:     return new IIP_Inc     (in, aconst);
-            case OP_IIP_DEC:     return new IIP_Dec     (in, aconst);
-            case OP_IIP_INCA:    return new IIP_PostInc (in, aconst);
-            case OP_IIP_INCB:    return new IIP_PreInc  (in, aconst);
-            case OP_IIP_DECA:    return new IIP_PostDec (in, aconst);
-            case OP_IIP_DECB:    return new IIP_PreDec  (in, aconst);
-            case OP_IIP_ADD:     return new IIP_Add     (in, aconst);
-            case OP_IIP_SUB:     return new IIP_Sub     (in, aconst);
-            case OP_IIP_MUL:     return new IIP_Mul     (in, aconst);
-            case OP_IIP_DIV:     return new IIP_Div     (in, aconst);
-            case OP_IIP_MOD:     return new IIP_Mod     (in, aconst);
-            case OP_IIP_SHL:     return new IIP_Shl     (in, aconst);
-            case OP_IIP_SHR:     return new IIP_Shr     (in, aconst);
-            case OP_IIP_USHR:    return new IIP_ShrAll  (in, aconst);
-            case OP_IIP_AND:     return new IIP_And     (in, aconst);
-            case OP_IIP_OR:      return new IIP_Or      (in, aconst);
-            case OP_IIP_XOR:     return new IIP_Xor     (in, aconst);
+        case OP_IIP_INC:     return new IIP_Inc     (in, aconst);
+        case OP_IIP_DEC:     return new IIP_Dec     (in, aconst);
+        case OP_IIP_INCA:    return new IIP_PostInc (in, aconst);
+        case OP_IIP_INCB:    return new IIP_PreInc  (in, aconst);
+        case OP_IIP_DECA:    return new IIP_PostDec (in, aconst);
+        case OP_IIP_DECB:    return new IIP_PreDec  (in, aconst);
+        case OP_IIP_ADD:     return new IIP_Add     (in, aconst);
+        case OP_IIP_SUB:     return new IIP_Sub     (in, aconst);
+        case OP_IIP_MUL:     return new IIP_Mul     (in, aconst);
+        case OP_IIP_DIV:     return new IIP_Div     (in, aconst);
+        case OP_IIP_MOD:     return new IIP_Mod     (in, aconst);
+        case OP_IIP_SHL:     return new IIP_Shl     (in, aconst);
+        case OP_IIP_SHR:     return new IIP_Shr     (in, aconst);
+        case OP_IIP_USHR:    return new IIP_ShrAll  (in, aconst);
+        case OP_IIP_AND:     return new IIP_And     (in, aconst);
+        case OP_IIP_OR:      return new IIP_Or      (in, aconst);
+        case OP_IIP_XOR:     return new IIP_Xor     (in, aconst);
 
-            case OP_CALL_00:     return new Call_00     (in, aconst);
-            case OP_CALL_01:     return new Call_01     (in, aconst);
-            case OP_CALL_0N:     return new Call_0N     (in, aconst);
-            case OP_CALL_0T:     return new Call_0T     (in, aconst);
-            case OP_CALL_10:     return new Call_10     (in, aconst);
-            case OP_CALL_11:     return new Call_11     (in, aconst);
-            case OP_CALL_1N:     return new Call_1N     (in, aconst);
-            case OP_CALL_1T:     return new Call_1T     (in, aconst);
-            case OP_CALL_N0:     return new Call_N0     (in, aconst);
-            case OP_CALL_N1:     return new Call_N1     (in, aconst);
-            case OP_CALL_NN:     return new Call_NN     (in, aconst);
-            case OP_CALL_NT:     return new Call_NT     (in, aconst);
-            case OP_CALL_T0:     return new Call_T0     (in, aconst);
-            case OP_CALL_T1:     return new Call_T1     (in, aconst);
-            case OP_CALL_TN:     return new Call_TN     (in, aconst);
-            case OP_CALL_TT:     return new Call_TT     (in, aconst);
+        case OP_CALL_00:     return new Call_00     (in, aconst);
+        case OP_CALL_01:     return new Call_01     (in, aconst);
+        case OP_CALL_0N:     return new Call_0N     (in, aconst);
+        case OP_CALL_0T:     return new Call_0T     (in, aconst);
+        case OP_CALL_10:     return new Call_10     (in, aconst);
+        case OP_CALL_11:     return new Call_11     (in, aconst);
+        case OP_CALL_1N:     return new Call_1N     (in, aconst);
+        case OP_CALL_1T:     return new Call_1T     (in, aconst);
+        case OP_CALL_N0:     return new Call_N0     (in, aconst);
+        case OP_CALL_N1:     return new Call_N1     (in, aconst);
+        case OP_CALL_NN:     return new Call_NN     (in, aconst);
+        case OP_CALL_NT:     return new Call_NT     (in, aconst);
+        case OP_CALL_T0:     return new Call_T0     (in, aconst);
+        case OP_CALL_T1:     return new Call_T1     (in, aconst);
+        case OP_CALL_TN:     return new Call_TN     (in, aconst);
+        case OP_CALL_TT:     return new Call_TT     (in, aconst);
 
-            case OP_NVOK_00:     return new Invoke_00   (in, aconst);
-            case OP_NVOK_01:     return new Invoke_01   (in, aconst);
-            case OP_NVOK_0N:     return new Invoke_0N   (in, aconst);
-            case OP_NVOK_0T:     return new Invoke_0T   (in, aconst);
-            case OP_NVOK_10:     return new Invoke_10   (in, aconst);
-            case OP_NVOK_11:     return new Invoke_11   (in, aconst);
-            case OP_NVOK_1N:     return new Invoke_1N   (in, aconst);
-            case OP_NVOK_1T:     return new Invoke_1T   (in, aconst);
-            case OP_NVOK_N0:     return new Invoke_N0   (in, aconst);
-            case OP_NVOK_N1:     return new Invoke_N1   (in, aconst);
-            case OP_NVOK_NN:     return new Invoke_NN   (in, aconst);
-            case OP_NVOK_NT:     return new Invoke_NT   (in, aconst);
-            case OP_NVOK_T0:     return new Invoke_T0   (in, aconst);
-            case OP_NVOK_T1:     return new Invoke_T1   (in, aconst);
-            case OP_NVOK_TN:     return new Invoke_TN   (in, aconst);
-            case OP_NVOK_TT:     return new Invoke_TT   (in, aconst);
+        case OP_NVOK_00:     return new Invoke_00   (in, aconst);
+        case OP_NVOK_01:     return new Invoke_01   (in, aconst);
+        case OP_NVOK_0N:     return new Invoke_0N   (in, aconst);
+        case OP_NVOK_0T:     return new Invoke_0T   (in, aconst);
+        case OP_NVOK_10:     return new Invoke_10   (in, aconst);
+        case OP_NVOK_11:     return new Invoke_11   (in, aconst);
+        case OP_NVOK_1N:     return new Invoke_1N   (in, aconst);
+        case OP_NVOK_1T:     return new Invoke_1T   (in, aconst);
+        case OP_NVOK_N0:     return new Invoke_N0   (in, aconst);
+        case OP_NVOK_N1:     return new Invoke_N1   (in, aconst);
+        case OP_NVOK_NN:     return new Invoke_NN   (in, aconst);
+        case OP_NVOK_NT:     return new Invoke_NT   (in, aconst);
+        case OP_NVOK_T0:     return new Invoke_T0   (in, aconst);
+        case OP_NVOK_T1:     return new Invoke_T1   (in, aconst);
+        case OP_NVOK_TN:     return new Invoke_TN   (in, aconst);
+        case OP_NVOK_TT:     return new Invoke_TT   (in, aconst);
 
-            case OP_NEW_0:       return new New_0       (in, aconst);
-            case OP_NEW_1:       return new New_1       (in, aconst);
-            case OP_NEW_N:       return new New_N       (in, aconst);
-            case OP_NEW_T:       return new New_T       (in, aconst);
-            case OP_NEWG_0:      return new NewG_0      (in, aconst);
-            case OP_NEWG_1:      return new NewG_1      (in, aconst);
-            case OP_NEWG_N:      return new NewG_N      (in, aconst);
-            case OP_NEWG_T:      return new NewG_T      (in, aconst);
-            case OP_NEWC_0:      return new NewC_0      (in, aconst);
-            case OP_NEWC_1:      return new NewC_1      (in, aconst);
-            case OP_NEWC_N:      return new NewC_N      (in, aconst);
-            case OP_NEWCG_0:     return new NewCG_0     (in, aconst);
-            case OP_NEWCG_1:     return new NewCG_1     (in, aconst);
-            case OP_NEWCG_N:     return new NewCG_N     (in, aconst);
-            case OP_NEWV_0:      return new NewV_0      (in, aconst);
-            case OP_NEWV_1:      return new NewV_1      (in, aconst);
-            case OP_NEWV_N:      return new NewV_N      (in, aconst);
+        case OP_NEW_0:       return new New_0       (in, aconst);
+        case OP_NEW_1:       return new New_1       (in, aconst);
+        case OP_NEW_N:       return new New_N       (in, aconst);
+        case OP_NEW_T:       return new New_T       (in, aconst);
+        case OP_NEWG_0:      return new NewG_0      (in, aconst);
+        case OP_NEWG_1:      return new NewG_1      (in, aconst);
+        case OP_NEWG_N:      return new NewG_N      (in, aconst);
+        case OP_NEWG_T:      return new NewG_T      (in, aconst);
+        case OP_NEWC_0:      return new NewC_0      (in, aconst);
+        case OP_NEWC_1:      return new NewC_1      (in, aconst);
+        case OP_NEWC_N:      return new NewC_N      (in, aconst);
+        case OP_NEWCG_0:     return new NewCG_0     (in, aconst);
+        case OP_NEWCG_1:     return new NewCG_1     (in, aconst);
+        case OP_NEWCG_N:     return new NewCG_N     (in, aconst);
+        case OP_NEWV_0:      return new NewV_0      (in, aconst);
+        case OP_NEWV_1:      return new NewV_1      (in, aconst);
+        case OP_NEWV_N:      return new NewV_N      (in, aconst);
 
-            case OP_CONSTR_0:    return new Construct_0 (in, aconst);
-            case OP_CONSTR_1:    return new Construct_1 (in, aconst);
-            case OP_CONSTR_N:    return new Construct_N (in, aconst);
-            case OP_CONSTR_T:    return new Construct_T (in, aconst);
-            case OP_SYN_INIT:    return new SynInit     ();
+        case OP_CONSTR_0:    return new Construct_0 (in, aconst);
+        case OP_CONSTR_1:    return new Construct_1 (in, aconst);
+        case OP_CONSTR_N:    return new Construct_N (in, aconst);
+        case OP_CONSTR_T:    return new Construct_T (in, aconst);
+        case OP_SYN_INIT:    return new SynInit     ();
 
-            default:
-                throw new IllegalStateException("op=" + byteToHexString(nOp));
-            }
+        default:
+            throw new IllegalStateException("op=" + byteToHexString(nOp));
         }
+    }
 
     /**
      * Obtain the name of a given op code.
@@ -1707,214 +1530,212 @@ public abstract class Op
      *
      * @return the op name
      */
-    public static String toName(int nOp)
-        {
-        switch (nOp)
-            {
-            case OP_NOP:         return "NOP";
-            case OP_LINE_1:      return "LINE_1";
-            case OP_LINE_2:      return "LINE_2";
-            case OP_LINE_3:      return "LINE_3";
-            case OP_LINE_N:      return "LINE_N";
-            case OP_ENTER:       return "ENTER";
-            case OP_EXIT:        return "EXIT";
-            case OP_GUARD:       return "GUARD";
-            case OP_GUARD_END:   return "GUARD_E";
-            case OP_CATCH:       return "CATCH";
-            case OP_CATCH_END:   return "CATCH_E";
-            case OP_GUARD_ALL:   return "GUARD_ALL";
-            case OP_FINALLY:     return "FINALLY";
-            case OP_FINALLY_END: return "FINALLY_E";
-            case OP_THROW:       return "THROW";
-            case OP_ASSERT:      return "ASSERT";
-            case OP_ASSERT_M:    return "ASSERT_M";
-            case OP_ASSERT_V:    return "ASSERT_V";
-            case OP_RETURN_0:    return "RETURN_0";
-            case OP_RETURN_1:    return "RETURN_1";
-            case OP_RETURN_N:    return "RETURN_N";
-            case OP_RETURN_T:    return "RETURN_T";
-            case OP_MBIND:       return "BIND_M";
-            case OP_FBIND:       return "BIND_F";
-            case OP_JMP:         return "JMP";
-            case OP_JMP_TRUE:    return "JMP_TRUE";
-            case OP_JMP_FALSE:   return "JMP_FALSE";
-            case OP_JMP_ZERO:    return "JMP_ZERO";
-            case OP_JMP_NZERO:   return "JMP_NZERO";
-            case OP_JMP_NULL:    return "JMP_NULL";
-            case OP_JMP_NNULL:   return "JMP_NNULL";
-            case OP_JMP_EQ:      return "JMP_EQ";
-            case OP_JMP_NEQ:     return "JMP_NEQ";
-            case OP_JMP_LT:      return "JMP_LT";
-            case OP_JMP_LTE:     return "JMP_LTE";
-            case OP_JMP_GT:      return "JMP_GT";
-            case OP_JMP_GTE:     return "JMP_GTE";
-            case OP_JMP_TYPE:    return "JMP_TYPE";
-            case OP_JMP_NTYPE:   return "JMP_NTYPE";
-            case OP_JMP_COND:    return "JMP_COND";
-            case OP_JMP_NCOND:   return "JMP_NCOND";
-            case OP_JMP_NFIRST:  return "JMP_NFIRST";
-            case OP_JMP_NSAMPLE: return "JMP_NSAMPLE";
-            case OP_JMP_INT:     return "JMP_INT";
-            case OP_JMP_VAL:     return "JMP_VAL";
-            case OP_JMP_ISA:     return "JMP_ISA";
-            case OP_JMP_VAL_N:   return "JMP_VAL_N";
-            case OP_IS_ZERO:     return "IS_ZERO";
-            case OP_IS_NZERO:    return "IS_NZERO";
-            case OP_IS_NULL:     return "IS_NULL";
-            case OP_IS_NNULL:    return "IS_NNULL";
-            case OP_IS_EQ:       return "IS_EQ";
-            case OP_IS_NEQ:      return "IS_NEQ";
-            case OP_IS_LT:       return "IS_LT";
-            case OP_IS_LTE:      return "IS_LTE";
-            case OP_IS_GT:       return "IS_GT";
-            case OP_IS_GTE:      return "IS_GTE";
-            case OP_IS_NOT:      return "IS_NOT";
-            case OP_IS_TYPE:     return "IS_TYPE";
-            case OP_IS_NTYPE:    return "IS_NTYPE";
-            case OP_CMP:         return "CMP";
-            case OP_VAR:         return "VAR";
-            case OP_VAR_I:       return "VAR_I";
-            case OP_VAR_N:       return "VAR_N";
-            case OP_VAR_IN:      return "VAR_IN";
-            case OP_VAR_D:       return "VAR_D";
-            case OP_VAR_DN:      return "VAR_DN";
-            case OP_VAR_C:       return "VAR_C";
-            case OP_VAR_CN:      return "VAR_CN";
-            case OP_VAR_S:       return "VAR_S";
-            case OP_VAR_SN:      return "VAR_SN";
-            case OP_VAR_T:       return "VAR_T";
-            case OP_VAR_TN:      return "VAR_TN";
-            case OP_VAR_M:       return "VAR_M";
-            case OP_VAR_MN:      return "VAR_MN";
-            case OP_MOV:         return "MOV";
-            case OP_MOV_VAR:     return "MOV_VAR";
-            case OP_MOV_REF:     return "MOV_REF";
-            case OP_MOV_THIS:    return "MOV_THIS";
-            case OP_MOV_THIS_A:  return "MOV_THIS_A";
-            case OP_MOV_TYPE:    return "MOV_TYPE";
-            case OP_CAST:        return "CAST";
-            case OP_GP_ADD:      return "GP_ADD";
-            case OP_GP_SUB:      return "GP_SUB";
-            case OP_GP_MUL:      return "GP_MUL";
-            case OP_GP_DIV:      return "GP_DIV";
-            case OP_GP_MOD:      return "GP_MOD";
-            case OP_GP_SHL:      return "GP_SHL";
-            case OP_GP_SHR:      return "GP_SHR";
-            case OP_GP_USHR:     return "GP_USHR";
-            case OP_GP_AND:      return "GP_AND";
-            case OP_GP_OR:       return "GP_OR";
-            case OP_GP_XOR:      return "GP_XOR";
-            case OP_GP_DIVREM:   return "GP_DIVREM";
-            case OP_GP_IRANGEI:  return "GP_IRANGEI";
-            case OP_GP_ERANGEI:  return "GP_ERANGEI";
-            case OP_GP_IRANGEE:  return "GP_IRANGEE";
-            case OP_GP_ERANGEE:  return "GP_ERANGEE";
-            case OP_GP_NEG:      return "GP_NEG";
-            case OP_GP_COMPL:    return "GP_COMPL";
-            case OP_L_GET:       return "L_GET";
-            case OP_L_SET:       return "L_SET";
-            case OP_P_GET:       return "P_GET";
-            case OP_P_SET:       return "P_SET";
-            case OP_P_VAR:       return "P_VAR";
-            case OP_P_REF:       return "P_REF";
-            case OP_IP_INC:      return "IP_INC";
-            case OP_IP_DEC:      return "IP_DEC";
-            case OP_IP_INCA:     return "IP_INCA";
-            case OP_IP_DECA:     return "IP_DECA";
-            case OP_IP_INCB:     return "IP_INCB";
-            case OP_IP_DECB:     return "IP_DECB";
-            case OP_IP_ADD:      return "IP_ADD";
-            case OP_IP_SUB:      return "IP_SUB";
-            case OP_IP_MUL:      return "IP_MUL";
-            case OP_IP_DIV:      return "IP_DIV";
-            case OP_IP_MOD:      return "IP_MOD";
-            case OP_IP_SHL:      return "IP_SHL";
-            case OP_IP_SHR:      return "IP_SHR";
-            case OP_IP_USHR:     return "IP_USHR";
-            case OP_IP_AND:      return "IP_AND";
-            case OP_IP_OR:       return "IP_OR";
-            case OP_IP_XOR:      return "IP_XOR";
-            case OP_PIP_INC:     return "PIP_INC";
-            case OP_PIP_DEC:     return "PIP_DEC";
-            case OP_PIP_INCA:    return "PIP_INCA";
-            case OP_PIP_DECA:    return "PIP_DECA";
-            case OP_PIP_INCB:    return "PIP_INCB";
-            case OP_PIP_DECB:    return "PIP_DECB";
-            case OP_PIP_ADD:     return "PIP_ADD";
-            case OP_PIP_SUB:     return "PIP_SUB";
-            case OP_I_GET:       return "I_GET";
-            case OP_I_SET:       return "I_SET";
-            case OP_IIP_INC:     return "IIP_INC";
-            case OP_IIP_DEC:     return "IIP_DEC";
-            case OP_IIP_INCB:    return "IIP_INCB";
-            case OP_IIP_INCA:    return "IIP_INCA";
-            case OP_IIP_DECB:    return "IIP_DECB";
-            case OP_IIP_DECA:    return "IIP_DECA";
-            case OP_IIP_ADD:     return "IIP_ADD";
-            case OP_IIP_SUB:     return "IIP_SUB";
-            case OP_IIP_MUL:     return "IIP_MUL";
-            case OP_IIP_DIV:     return "IIP_DIV";
-            case OP_CALL_00:     return "CALL_00";
-            case OP_CALL_01:     return "CALL_01";
-            case OP_CALL_0N:     return "CALL_0N";
-            case OP_CALL_0T:     return "CALL_0T";
-            case OP_CALL_10:     return "CALL_10";
-            case OP_CALL_11:     return "CALL_11";
-            case OP_CALL_1N:     return "CALL_1N";
-            case OP_CALL_1T:     return "CALL_1T";
-            case OP_CALL_N0:     return "CALL_N0";
-            case OP_CALL_N1:     return "CALL_N1";
-            case OP_CALL_NN:     return "CALL_NN";
-            case OP_CALL_NT:     return "CALL_NT";
-            case OP_CALL_T0:     return "CALL_T0";
-            case OP_CALL_T1:     return "CALL_T1";
-            case OP_CALL_TN:     return "CALL_TN";
-            case OP_CALL_TT:     return "CALL_TT";
-            case OP_NVOK_00:     return "NVOK_00";
-            case OP_NVOK_01:     return "NVOK_01";
-            case OP_NVOK_0N:     return "NVOK_0N";
-            case OP_NVOK_0T:     return "NVOK_0T";
-            case OP_NVOK_10:     return "NVOK_10";
-            case OP_NVOK_11:     return "NVOK_11";
-            case OP_NVOK_1N:     return "NVOK_1N";
-            case OP_NVOK_1T:     return "NVOK_1T";
-            case OP_NVOK_N0:     return "NVOK_N0";
-            case OP_NVOK_N1:     return "NVOK_N1";
-            case OP_NVOK_NN:     return "NVOK_NN";
-            case OP_NVOK_NT:     return "NVOK_NT";
-            case OP_NVOK_T0:     return "NVOK_T0";
-            case OP_NVOK_T1:     return "NVOK_T1";
-            case OP_NVOK_TN:     return "NVOK_TN";
-            case OP_NVOK_TT:     return "NVOK_TT";
-            case OP_NEW_0:       return "NEW_0";
-            case OP_NEW_1:       return "NEW_1";
-            case OP_NEW_N:       return "NEW_N";
-            case OP_NEW_T:       return "NEW_T";
-            case OP_NEWG_0:      return "NEWG_0";
-            case OP_NEWG_1:      return "NEWG_1";
-            case OP_NEWG_N:      return "NEWG_N";
-            case OP_NEWG_T:      return "NEWG_T";
-            case OP_NEWC_0:      return "NEWC_0";
-            case OP_NEWC_1:      return "NEWC_1";
-            case OP_NEWC_N:      return "NEWC_N";
-            case OP_NEWC_T:      return "NEWC_T";
-            case OP_NEWCG_0:     return "NEWCG_0";
-            case OP_NEWCG_1:     return "NEWCG_1";
-            case OP_NEWCG_N:     return "NEWCG_N";
-            case OP_NEWCG_T:     return "NEWCG_T";
-            case OP_NEWV_0:      return "NEWV_0";
-            case OP_NEWV_1:      return "NEWV_1";
-            case OP_NEWV_N:      return "NEWV_N";
-            case OP_CONSTR_0:    return "CONSTR_0";
-            case OP_CONSTR_1:    return "CONSTR_1";
-            case OP_CONSTR_N:    return "CONSTR_N";
-            case OP_CONSTR_T:    return "CONSTR_T";
-            case OP_SYN_INIT:    return "SYN_INIT";
+    public static String toName(int nOp) {
+        switch (nOp) {
+        case OP_NOP:         return "NOP";
+        case OP_LINE_1:      return "LINE_1";
+        case OP_LINE_2:      return "LINE_2";
+        case OP_LINE_3:      return "LINE_3";
+        case OP_LINE_N:      return "LINE_N";
+        case OP_ENTER:       return "ENTER";
+        case OP_EXIT:        return "EXIT";
+        case OP_GUARD:       return "GUARD";
+        case OP_GUARD_END:   return "GUARD_E";
+        case OP_CATCH:       return "CATCH";
+        case OP_CATCH_END:   return "CATCH_E";
+        case OP_GUARD_ALL:   return "GUARD_ALL";
+        case OP_FINALLY:     return "FINALLY";
+        case OP_FINALLY_END: return "FINALLY_E";
+        case OP_THROW:       return "THROW";
+        case OP_ASSERT:      return "ASSERT";
+        case OP_ASSERT_M:    return "ASSERT_M";
+        case OP_ASSERT_V:    return "ASSERT_V";
+        case OP_RETURN_0:    return "RETURN_0";
+        case OP_RETURN_1:    return "RETURN_1";
+        case OP_RETURN_N:    return "RETURN_N";
+        case OP_RETURN_T:    return "RETURN_T";
+        case OP_MBIND:       return "BIND_M";
+        case OP_FBIND:       return "BIND_F";
+        case OP_JMP:         return "JMP";
+        case OP_JMP_TRUE:    return "JMP_TRUE";
+        case OP_JMP_FALSE:   return "JMP_FALSE";
+        case OP_JMP_ZERO:    return "JMP_ZERO";
+        case OP_JMP_NZERO:   return "JMP_NZERO";
+        case OP_JMP_NULL:    return "JMP_NULL";
+        case OP_JMP_NNULL:   return "JMP_NNULL";
+        case OP_JMP_EQ:      return "JMP_EQ";
+        case OP_JMP_NEQ:     return "JMP_NEQ";
+        case OP_JMP_LT:      return "JMP_LT";
+        case OP_JMP_LTE:     return "JMP_LTE";
+        case OP_JMP_GT:      return "JMP_GT";
+        case OP_JMP_GTE:     return "JMP_GTE";
+        case OP_JMP_TYPE:    return "JMP_TYPE";
+        case OP_JMP_NTYPE:   return "JMP_NTYPE";
+        case OP_JMP_COND:    return "JMP_COND";
+        case OP_JMP_NCOND:   return "JMP_NCOND";
+        case OP_JMP_NFIRST:  return "JMP_NFIRST";
+        case OP_JMP_NSAMPLE: return "JMP_NSAMPLE";
+        case OP_JMP_INT:     return "JMP_INT";
+        case OP_JMP_VAL:     return "JMP_VAL";
+        case OP_JMP_ISA:     return "JMP_ISA";
+        case OP_JMP_VAL_N:   return "JMP_VAL_N";
+        case OP_IS_ZERO:     return "IS_ZERO";
+        case OP_IS_NZERO:    return "IS_NZERO";
+        case OP_IS_NULL:     return "IS_NULL";
+        case OP_IS_NNULL:    return "IS_NNULL";
+        case OP_IS_EQ:       return "IS_EQ";
+        case OP_IS_NEQ:      return "IS_NEQ";
+        case OP_IS_LT:       return "IS_LT";
+        case OP_IS_LTE:      return "IS_LTE";
+        case OP_IS_GT:       return "IS_GT";
+        case OP_IS_GTE:      return "IS_GTE";
+        case OP_IS_NOT:      return "IS_NOT";
+        case OP_IS_TYPE:     return "IS_TYPE";
+        case OP_IS_NTYPE:    return "IS_NTYPE";
+        case OP_CMP:         return "CMP";
+        case OP_VAR:         return "VAR";
+        case OP_VAR_I:       return "VAR_I";
+        case OP_VAR_N:       return "VAR_N";
+        case OP_VAR_IN:      return "VAR_IN";
+        case OP_VAR_D:       return "VAR_D";
+        case OP_VAR_DN:      return "VAR_DN";
+        case OP_VAR_C:       return "VAR_C";
+        case OP_VAR_CN:      return "VAR_CN";
+        case OP_VAR_S:       return "VAR_S";
+        case OP_VAR_SN:      return "VAR_SN";
+        case OP_VAR_T:       return "VAR_T";
+        case OP_VAR_TN:      return "VAR_TN";
+        case OP_VAR_M:       return "VAR_M";
+        case OP_VAR_MN:      return "VAR_MN";
+        case OP_MOV:         return "MOV";
+        case OP_MOV_VAR:     return "MOV_VAR";
+        case OP_MOV_REF:     return "MOV_REF";
+        case OP_MOV_THIS:    return "MOV_THIS";
+        case OP_MOV_THIS_A:  return "MOV_THIS_A";
+        case OP_MOV_TYPE:    return "MOV_TYPE";
+        case OP_CAST:        return "CAST";
+        case OP_GP_ADD:      return "GP_ADD";
+        case OP_GP_SUB:      return "GP_SUB";
+        case OP_GP_MUL:      return "GP_MUL";
+        case OP_GP_DIV:      return "GP_DIV";
+        case OP_GP_MOD:      return "GP_MOD";
+        case OP_GP_SHL:      return "GP_SHL";
+        case OP_GP_SHR:      return "GP_SHR";
+        case OP_GP_USHR:     return "GP_USHR";
+        case OP_GP_AND:      return "GP_AND";
+        case OP_GP_OR:       return "GP_OR";
+        case OP_GP_XOR:      return "GP_XOR";
+        case OP_GP_DIVREM:   return "GP_DIVREM";
+        case OP_GP_IRANGEI:  return "GP_IRANGEI";
+        case OP_GP_ERANGEI:  return "GP_ERANGEI";
+        case OP_GP_IRANGEE:  return "GP_IRANGEE";
+        case OP_GP_ERANGEE:  return "GP_ERANGEE";
+        case OP_GP_NEG:      return "GP_NEG";
+        case OP_GP_COMPL:    return "GP_COMPL";
+        case OP_L_GET:       return "L_GET";
+        case OP_L_SET:       return "L_SET";
+        case OP_P_GET:       return "P_GET";
+        case OP_P_SET:       return "P_SET";
+        case OP_P_VAR:       return "P_VAR";
+        case OP_P_REF:       return "P_REF";
+        case OP_IP_INC:      return "IP_INC";
+        case OP_IP_DEC:      return "IP_DEC";
+        case OP_IP_INCA:     return "IP_INCA";
+        case OP_IP_DECA:     return "IP_DECA";
+        case OP_IP_INCB:     return "IP_INCB";
+        case OP_IP_DECB:     return "IP_DECB";
+        case OP_IP_ADD:      return "IP_ADD";
+        case OP_IP_SUB:      return "IP_SUB";
+        case OP_IP_MUL:      return "IP_MUL";
+        case OP_IP_DIV:      return "IP_DIV";
+        case OP_IP_MOD:      return "IP_MOD";
+        case OP_IP_SHL:      return "IP_SHL";
+        case OP_IP_SHR:      return "IP_SHR";
+        case OP_IP_USHR:     return "IP_USHR";
+        case OP_IP_AND:      return "IP_AND";
+        case OP_IP_OR:       return "IP_OR";
+        case OP_IP_XOR:      return "IP_XOR";
+        case OP_PIP_INC:     return "PIP_INC";
+        case OP_PIP_DEC:     return "PIP_DEC";
+        case OP_PIP_INCA:    return "PIP_INCA";
+        case OP_PIP_DECA:    return "PIP_DECA";
+        case OP_PIP_INCB:    return "PIP_INCB";
+        case OP_PIP_DECB:    return "PIP_DECB";
+        case OP_PIP_ADD:     return "PIP_ADD";
+        case OP_PIP_SUB:     return "PIP_SUB";
+        case OP_I_GET:       return "I_GET";
+        case OP_I_SET:       return "I_SET";
+        case OP_IIP_INC:     return "IIP_INC";
+        case OP_IIP_DEC:     return "IIP_DEC";
+        case OP_IIP_INCB:    return "IIP_INCB";
+        case OP_IIP_INCA:    return "IIP_INCA";
+        case OP_IIP_DECB:    return "IIP_DECB";
+        case OP_IIP_DECA:    return "IIP_DECA";
+        case OP_IIP_ADD:     return "IIP_ADD";
+        case OP_IIP_SUB:     return "IIP_SUB";
+        case OP_IIP_MUL:     return "IIP_MUL";
+        case OP_IIP_DIV:     return "IIP_DIV";
+        case OP_CALL_00:     return "CALL_00";
+        case OP_CALL_01:     return "CALL_01";
+        case OP_CALL_0N:     return "CALL_0N";
+        case OP_CALL_0T:     return "CALL_0T";
+        case OP_CALL_10:     return "CALL_10";
+        case OP_CALL_11:     return "CALL_11";
+        case OP_CALL_1N:     return "CALL_1N";
+        case OP_CALL_1T:     return "CALL_1T";
+        case OP_CALL_N0:     return "CALL_N0";
+        case OP_CALL_N1:     return "CALL_N1";
+        case OP_CALL_NN:     return "CALL_NN";
+        case OP_CALL_NT:     return "CALL_NT";
+        case OP_CALL_T0:     return "CALL_T0";
+        case OP_CALL_T1:     return "CALL_T1";
+        case OP_CALL_TN:     return "CALL_TN";
+        case OP_CALL_TT:     return "CALL_TT";
+        case OP_NVOK_00:     return "NVOK_00";
+        case OP_NVOK_01:     return "NVOK_01";
+        case OP_NVOK_0N:     return "NVOK_0N";
+        case OP_NVOK_0T:     return "NVOK_0T";
+        case OP_NVOK_10:     return "NVOK_10";
+        case OP_NVOK_11:     return "NVOK_11";
+        case OP_NVOK_1N:     return "NVOK_1N";
+        case OP_NVOK_1T:     return "NVOK_1T";
+        case OP_NVOK_N0:     return "NVOK_N0";
+        case OP_NVOK_N1:     return "NVOK_N1";
+        case OP_NVOK_NN:     return "NVOK_NN";
+        case OP_NVOK_NT:     return "NVOK_NT";
+        case OP_NVOK_T0:     return "NVOK_T0";
+        case OP_NVOK_T1:     return "NVOK_T1";
+        case OP_NVOK_TN:     return "NVOK_TN";
+        case OP_NVOK_TT:     return "NVOK_TT";
+        case OP_NEW_0:       return "NEW_0";
+        case OP_NEW_1:       return "NEW_1";
+        case OP_NEW_N:       return "NEW_N";
+        case OP_NEW_T:       return "NEW_T";
+        case OP_NEWG_0:      return "NEWG_0";
+        case OP_NEWG_1:      return "NEWG_1";
+        case OP_NEWG_N:      return "NEWG_N";
+        case OP_NEWG_T:      return "NEWG_T";
+        case OP_NEWC_0:      return "NEWC_0";
+        case OP_NEWC_1:      return "NEWC_1";
+        case OP_NEWC_N:      return "NEWC_N";
+        case OP_NEWC_T:      return "NEWC_T";
+        case OP_NEWCG_0:     return "NEWCG_0";
+        case OP_NEWCG_1:     return "NEWCG_1";
+        case OP_NEWCG_N:     return "NEWCG_N";
+        case OP_NEWCG_T:     return "NEWCG_T";
+        case OP_NEWV_0:      return "NEWV_0";
+        case OP_NEWV_1:      return "NEWV_1";
+        case OP_NEWV_N:      return "NEWV_N";
+        case OP_CONSTR_0:    return "CONSTR_0";
+        case OP_CONSTR_1:    return "CONSTR_1";
+        case OP_CONSTR_N:    return "CONSTR_N";
+        case OP_CONSTR_T:    return "CONSTR_T";
+        case OP_SYN_INIT:    return "SYN_INIT";
 
-            default:
-                throw new IllegalStateException("op=" + byteToHexString(nOp));
-            }
+        default:
+            throw new IllegalStateException("op=" + byteToHexString(nOp));
         }
+    }
 
     /**
      * Read an array of packed integers from the provided stream.
@@ -1926,17 +1747,15 @@ public abstract class Op
      * @throws IOException  if an error occurs reading the array
      */
     public static int[] readIntArray(DataInput in)
-            throws IOException
-        {
+            throws IOException {
         int c = readMagnitude(in);
 
         int[] ai = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             ai[i] = readPackedInt(in);
-            }
-        return ai;
         }
+        return ai;
+    }
 
     /**
      * Write an array of integers to the provided stream in a packed format.
@@ -1947,16 +1766,14 @@ public abstract class Op
      * @throws IOException  if an error occurs writing the array
      */
     public static void writeIntArray(DataOutput out, int[] ai)
-            throws IOException
-        {
+            throws IOException {
         int c = ai.length;
         writePackedLong(out, c);
 
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             writePackedLong(out, ai[i]);
-            }
         }
+    }
 
 
     // ----- op-codes ------------------------------------------------------------------------------
@@ -2414,4 +2231,4 @@ public abstract class Op
      * A bunch of internal info munged into a long.
      */
     private long m_lStruct;
-    }
+}

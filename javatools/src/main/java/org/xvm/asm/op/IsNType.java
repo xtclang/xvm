@@ -23,8 +23,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  * NOTE: not currently used
  */
 public class IsNType
-        extends OpTest
-    {
+        extends OpTest {
     /**
      * Construct an IS_NTYPE op based on the specified arguments.
      *
@@ -32,10 +31,9 @@ public class IsNType
      * @param arg2       the type Argument
      * @param argReturn  the location to store the Boolean result
      */
-    public IsNType(Argument arg1, Argument arg2, Argument argReturn)
-        {
+    public IsNType(Argument arg1, Argument arg2, Argument argReturn) {
         super(arg1, arg2, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -44,59 +42,38 @@ public class IsNType
      * @param aconst  an array of constants used within the method
      */
     public IsNType(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IS_NTYPE;
-        }
+    }
 
     @Override
-    protected boolean isBinaryOp()
-        {
-        // while technically this op is not binary, we could re-use all the base logic
+    protected boolean hasSecondArgument() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        // while this Op has two arguments and is marked as a BinaryOp, the processing
-        // is identical to the UnaryOp
-        return processUnaryOp(frame);
-        }
-
-    @Override
-    protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
-        {
+    protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
         TypeConstant typeTest;
-        if (m_nValue2 <= CONSTANT_OFFSET)
-            {
+        if (m_nValue2 <= CONSTANT_OFFSET) {
             typeTest = frame.resolveType(m_nValue2);
-            }
-        else
-            {
-            try
-                {
+        } else {
+            try {
                 TypeHandle hType = (TypeHandle) frame.getArgument(m_nValue2);
                 typeTest = hType.getUnsafeDataType();
-                }
-            catch (ClassCastException e)
-                {
+            } catch (ClassCastException e) {
                 // should not happen
                 return frame.assignValue(m_nRetValue, xBoolean.FALSE);
-                }
-            catch (ExceptionHandle.WrapperException e)
-                {
+            } catch (ExceptionHandle.WrapperException e) {
                 return frame.raiseException(e);
-                }
             }
+        }
 
         return frame.assignValue(m_nRetValue,
                 xBoolean.makeHandle(!hValue.getUnsafeType().isA(typeTest)));
-        }
     }
+}

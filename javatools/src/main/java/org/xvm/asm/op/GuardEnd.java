@@ -21,17 +21,15 @@ import org.xvm.runtime.Frame;
  * "rel_addr".
  */
 public class GuardEnd
-        extends OpJump
-    {
+        extends OpJump {
     /**
      * Construct a GUARD_E op based on the destination Op.
      *
      * @param op  the Op to jump to when the guarded section completes
      */
-    public GuardEnd(Op op)
-        {
+    public GuardEnd(Op op) {
         super(op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,35 +38,30 @@ public class GuardEnd
      * @param aconst  an array of constants used within the method
      */
     public GuardEnd(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_GUARD_END;
-        }
+    }
 
     @Override
-    public boolean isExit()
-        {
+    public boolean isExit() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         frame.popGuard();
         frame.exitScope();
         return jump(frame, iPC + m_ofJmp, m_cExits);
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         scope.exitGuard();
         scope.exit(this);
-        }
     }
+}

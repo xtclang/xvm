@@ -26,18 +26,16 @@ import static org.xvm.util.Handy.writePackedLong;
  *                                    (A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE, A_STRUCT)
  */
 public class MoveThis
-        extends Op
-    {
+        extends Op {
     /**
      * Construct a MOV_THIS op for the passed arguments.
      *
      * @param cSteps   the count of this-to-outer-this steps (0=this, 1=ImmediatelyOuter.this, etc.)
      * @param argDest  the destination Argument
      */
-    public MoveThis(int cSteps, Argument argDest)
-        {
+    public MoveThis(int cSteps, Argument argDest) {
         this(cSteps, argDest, Access.PUBLIC);
-        }
+    }
 
     /**
      * Construct a MOV_THIS_A op for the passed arguments.
@@ -46,29 +44,27 @@ public class MoveThis
      * @param argDest  the destination Argument
      * @param access   the access modifier
      */
-    public MoveThis(int cSteps, Argument argDest, Access access)
-        {
+    public MoveThis(int cSteps, Argument argDest, Access access) {
         assert cSteps >= 0 && access != null;
 
         m_cSteps = cSteps;
         m_argTo  = argDest;
 
-        switch (access)
-            {
-            case PUBLIC:
-                m_nAccess = A_PUBLIC;
-                break;
-            case PROTECTED:
-                m_nAccess = A_PROTECTED;
-                break;
-            case PRIVATE:
-                m_nAccess = A_PRIVATE;
-                break;
-            case STRUCT:
-                m_nAccess = A_STRUCT;
-                break;
-            }
+        switch (access) {
+        case PUBLIC:
+            m_nAccess = A_PUBLIC;
+            break;
+        case PROTECTED:
+            m_nAccess = A_PROTECTED;
+            break;
+        case PRIVATE:
+            m_nAccess = A_PRIVATE;
+            break;
+        case STRUCT:
+            m_nAccess = A_STRUCT;
+            break;
         }
+    }
 
     /**
      * Deserialization constructor.
@@ -78,120 +74,101 @@ public class MoveThis
      * @param nOp     the op-code (OP_MOV_THIS or OP_MOV_THIS_A)
      */
     public MoveThis(DataInput in, Constant[] aconst, int nOp)
-            throws IOException
-        {
+            throws IOException {
         m_cSteps   = in.readUnsignedByte();
         m_nToValue = readPackedInt(in);
 
-        if (nOp == OP_MOV_THIS_A)
-            {
+        if (nOp == OP_MOV_THIS_A) {
             m_nAccess = readPackedInt(in);
-            }
         }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argTo != null)
-            {
+        if (m_argTo != null) {
             m_nToValue = encodeArgument(m_argTo, registry);
-            }
+        }
 
         out.writeByte(m_cSteps);
         writePackedLong(out, m_nToValue);
 
-        if (m_nAccess != 0)
-            {
+        if (m_nAccess != 0) {
             writePackedLong(out, m_nAccess);
-            }
         }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return m_nAccess == 0 ? OP_MOV_THIS : OP_MOV_THIS_A;
-        }
+    }
 
     @Override
-    public void resetSimulation()
-        {
+    public void resetSimulation() {
         resetRegister(m_argTo);
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         checkNextRegister(scope, m_argTo, m_nToValue);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         m_argTo = registerArgument(m_argTo, registry);
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hOuter = frame.getThis();
-            for (int c = m_cSteps; c > 0; c--)
-                {
+            for (int c = m_cSteps; c > 0; c--) {
                 hOuter = ((GenericHandle) hOuter).getField(frame, GenericHandle.OUTER);
-                }
+            }
 
-            if (m_nAccess != 0)
-                {
-                Access access = switch (m_nAccess)
-                    {
+            if (m_nAccess != 0) {
+                Access access = switch (m_nAccess) {
                     case A_PUBLIC    -> Access.PUBLIC;
                     case A_PROTECTED -> Access.PROTECTED;
                     case A_PRIVATE   -> Access.PRIVATE;
                     case A_STRUCT    -> Access.STRUCT;
                     default          -> throw new IllegalStateException();
-                    };
+                };
                 hOuter = hOuter.ensureAccess(access);
-                }
+            }
 
             int nToValue = m_nToValue;
-            if (frame.isNextRegister(nToValue))
-                {
+            if (frame.isNextRegister(nToValue)) {
                 frame.introduceResolvedVar(nToValue, hOuter.getType());
-                }
+            }
 
             return frame.assignValue(nToValue, hOuter);
-            }
-        catch (ClassCastException | NullPointerException e)
-            {
+        } catch (ClassCastException | NullPointerException e) {
             return frame.raiseException("Unknown outer at " +
                     frame.getThis().getType().getValueString());
-            }
         }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString()
                 + " #" + m_cSteps
                 + ", "
-                + (switch (m_nAccess)
-                    {
+                + (switch (m_nAccess) {
                     case A_PUBLIC    -> Access.PUBLIC;
                     case A_PROTECTED -> Access.PROTECTED;
                     case A_PRIVATE   -> Access.PRIVATE;
                     case A_STRUCT    -> Access.STRUCT;
                     default          -> throw new IllegalStateException();
-                    })
+                })
                 + " -> " + Argument.toIdString(m_argTo, m_nToValue);
-        }
+    }
 
     protected int m_cSteps;
     protected int m_nToValue;
     protected int m_nAccess;
 
     private Argument m_argTo;
-    }
+}

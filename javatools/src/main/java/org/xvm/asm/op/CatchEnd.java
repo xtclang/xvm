@@ -21,17 +21,15 @@ import org.xvm.runtime.Frame;
  * "rel_addr".
  */
 public class CatchEnd
-        extends OpJump
-    {
+        extends OpJump {
     /**
      * Construct a CATCH_END op based on the destination Op.
      *
      * @param op  the Op to jump to when the handler completes
      */
-    public CatchEnd(Op op)
-        {
+    public CatchEnd(Op op) {
         super(op);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,33 +38,28 @@ public class CatchEnd
      * @param aconst  an array of constants used within the method
      */
     public CatchEnd(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CATCH_END;
-        }
+    }
 
     @Override
-    public boolean isExit()
-        {
+    public boolean isExit() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         frame.exitScope();
         return jump(frame, iPC + m_ofJmp, m_cExits);
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         scope.exit(this);
-        }
     }
+}

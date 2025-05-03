@@ -13,14 +13,12 @@ import org.xvm.runtime.Frame;
  * RETURN_0 ; (no return value)
  */
 public class Return_0
-        extends OpReturn
-    {
+        extends OpReturn {
     /**
      * Construct a RETURN_0 op.
      */
-    public Return_0()
-        {
-        }
+    public Return_0() {
+    }
 
     /**
      * Deserialization constructor.
@@ -28,38 +26,32 @@ public class Return_0
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
-    public Return_0(DataInput in, Constant[] aconst)
-        {
-        }
+    public Return_0(DataInput in, Constant[] aconst) {
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_RETURN_0;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         return m_fCallFinally
             ? frame.processAllGuard(new Return0Action(m_ixAllGuard))
             : frame.returnVoid();
-        }
+    }
 
     protected static class Return0Action
-            extends Frame.DeferredGuardAction
-        {
-        protected Return0Action(int ixAllGuard)
-            {
+            extends Frame.DeferredGuardAction {
+        protected Return0Action(int ixAllGuard) {
             super(ixAllGuard);
-            }
-
-        @Override
-        public int complete(Frame frame)
-            {
-            return frame.returnVoid();
-            }
         }
 
-    public static final Return_0 INSTANCE = new Return_0();
+        @Override
+        public int complete(Frame frame) {
+            return frame.returnVoid();
+        }
     }
+
+    public static final Return_0 INSTANCE = new Return_0();
+}

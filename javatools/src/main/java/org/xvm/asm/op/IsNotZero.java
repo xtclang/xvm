@@ -19,18 +19,16 @@ import org.xvm.runtime.template.xBoolean;
  * IS_NZERO rvalue-int, lvalue-return ; T != 0 -> Boolean
  */
 public class IsNotZero
-        extends OpTest
-    {
+        extends OpTest {
     /**
      * Construct an IS_NZERO op based on the specified arguments.
      *
      * @param arg        the value Argument
      * @param argReturn  the location to store the Boolean result
      */
-     public IsNotZero(Argument arg, Argument argReturn)
-        {
+     public IsNotZero(Argument arg, Argument argReturn) {
         super(arg, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,21 +37,18 @@ public class IsNotZero
      * @param aconst  an array of constants used within the method
      */
     public IsNotZero(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IS_NZERO;
-        }
+    }
 
     @Override
-    protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
-        {
+    protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
         return frame.assignValue(m_nRetValue,
             xBoolean.makeHandle(((JavaLong) hValue).getValue() != 0));
-        }
     }
+}

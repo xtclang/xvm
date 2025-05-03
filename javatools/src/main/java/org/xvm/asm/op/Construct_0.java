@@ -19,17 +19,15 @@ import org.xvm.runtime.Utils;
  * CONSTR_0 CONSTRUCT
  */
 public class Construct_0
-        extends OpCallable
-    {
+    extends OpCallable {
     /**
      * Construct a CONSTR_0 op based on the passed arguments.
      *
      * @param constMethod  the constructor method
      */
-    public Construct_0(MethodConstant constMethod)
-        {
+    public Construct_0(MethodConstant constMethod) {
         super(constMethod);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -38,35 +36,29 @@ public class Construct_0
      * @param aconst  an array of constants used within the method
      */
     public Construct_0(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+        throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CONSTR_0;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         MethodStructure constructor = getConstructor(frame);
-        if (constructor == null)
-            {
+        if (constructor == null) {
             return R_EXCEPTION;
-            }
+        }
 
-        if (constructor.isNative())
-            {
+        if (constructor.isNative()) {
             return reportNonExtendable(frame, constructor);
-            }
+        }
 
-        if (constructor.isNoOp())
-            {
+        if (constructor.isNoOp()) {
             return iPC + 1;
-            }
+        }
 
         ObjectHandle    hStruct = frame.getThis();
         ObjectHandle[]  ahVar   = new ObjectHandle[constructor.getMaxVars()];
@@ -74,19 +66,17 @@ public class Construct_0
         frame.chainFinalizer(Utils.makeFinalizer(frame, constructor, ahVar));
 
         return frame.call1(constructor, hStruct, ahVar, A_IGNORE);
-        }
+    }
 
     /**
      * @return true iff this op calls into a no-op constructor
      */
-    public boolean isNoOp(Constant[] aconst)
-        {
+    public boolean isNoOp(Constant[] aconst) {
         MethodConstant idConstructor = (MethodConstant) m_argFunction;
-        if (idConstructor == null)
-            {
+        if (idConstructor == null) {
             idConstructor = (MethodConstant) aconst[CONSTANT_OFFSET - m_nFunctionId];
-            }
+        }
         MethodStructure constructor  = (MethodStructure) idConstructor.getComponent();
         return constructor != null && constructor.isNoOp();
-        }
     }
+}

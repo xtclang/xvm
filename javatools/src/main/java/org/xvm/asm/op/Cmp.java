@@ -18,19 +18,18 @@ import org.xvm.runtime.ObjectHandle;
  * CMP rvalue, rvalue, lvalue-return ; T &lt;=&gt; T -> Ordered
  */
 public class Cmp
-        extends OpTest
-    {
+        extends OpTest {
     /**
      * Construct a CMP op.
      *
+     * @param type       the compile-time type
      * @param arg1       the first value Argument
      * @param arg2       the second value Argument
      * @param argReturn  the location to store the Boolean result
      */
-    public Cmp(Argument arg1, Argument arg2, Argument argReturn)
-        {
-        super(arg1, arg2, argReturn);
-        }
+    public Cmp(TypeConstant type, Argument arg1, Argument arg2, Argument argReturn) {
+        super(type, arg1, arg2, argReturn);
+    }
 
     /**
      * Deserialization constructor.
@@ -39,33 +38,28 @@ public class Cmp
      * @param aconst  an array of constants used within the method
      */
     public Cmp(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CMP;
-        }
+    }
 
     @Override
-    protected boolean isBinaryOp()
-        {
+    protected boolean isBinaryOp() {
         return true;
-        }
+    }
 
     @Override
     protected int completeBinaryOp(Frame frame, TypeConstant type,
-                                   ObjectHandle hValue1, ObjectHandle hValue2)
-        {
+                                   ObjectHandle hValue1, ObjectHandle hValue2) {
         return type.callCompare(frame, hValue1, hValue2, m_nRetValue);
-        }
+    }
 
     @Override
-    protected TypeConstant getResultType(Frame frame)
-        {
+    protected TypeConstant getResultType(Frame frame) {
         return frame.poolContext().typeOrdered();
-        }
     }
+}

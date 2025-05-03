@@ -22,8 +22,7 @@ import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
  * Note: No support for wild-cards or ranges.
  */
 public class JumpIsA
-        extends JumpVal
-    {
+        extends JumpVal {
     /**
      * Construct a JMP_ISA op.
      *
@@ -32,10 +31,9 @@ public class JumpIsA
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    public JumpIsA(Argument argCond, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
-        {
+    public JumpIsA(Argument argCond, Constant[] aConstCase, Op[] aOpCase, Op opDefault) {
         super(argCond, aConstCase, aOpCase, opDefault);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -44,29 +42,24 @@ public class JumpIsA
      * @param aconst  an array of constants used within the method
      */
     public JumpIsA(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_JMP_ISA;
-        }
+    }
 
     @Override
-    protected int complete(Frame frame, int iPC, ObjectHandle hValue)
-        {
+    protected int complete(Frame frame, int iPC, ObjectHandle hValue) {
         ObjectHandle[] ahCase  = m_ahCase;
         TypeConstant   typeVal = hValue.getUnsafeType();
-        for (int i = 0, c = ahCase.length; i < c; ++i)
-            {
-            if (typeVal.isA(((TypeHandle) ahCase[i]).getDataType()))
-                {
+        for (int i = 0, c = ahCase.length; i < c; ++i) {
+            if (typeVal.isA(((TypeHandle) ahCase[i]).getDataType())) {
                 return iPC + m_aofCase[i];
-                }
             }
-        return iPC + m_ofDefault;
         }
+        return iPC + m_ofDefault;
     }
+}

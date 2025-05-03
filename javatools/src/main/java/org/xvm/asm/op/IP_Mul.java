@@ -20,18 +20,16 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_MUL rvalue-target, rvalue2 ; T *= T
  */
 public class IP_Mul
-        extends OpInPlaceAssign
-    {
+        extends OpInPlaceAssign {
     /**
      * Construct a IP_MUL op based on the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argValue   the value Argument
      */
-    public IP_Mul(Argument argTarget, Argument argValue)
-        {
+    public IP_Mul(Argument argTarget, Argument argValue) {
         super(argTarget, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,32 +38,27 @@ public class IP_Mul
      * @param aconst  an array of constants used within the method
      */
     public IP_Mul(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_IP_MUL;
-        }
-
-    @Override
-    protected int completeWithRegister(Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
-        {
-        return hTarget.getOpSupport().invokeMul(frame, hTarget, hValue, m_nTarget);
-        }
-
-    @Override
-    protected int completeWithVar(Frame frame, RefHandle hTarget, ObjectHandle hValue)
-        {
-        return hTarget.getVarSupport().invokeVarMul(frame, hTarget, hValue);
-        }
-
-    @Override
-    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
-        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, idProp, hValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_IP_MUL;
+    }
+
+    @Override
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget, ObjectHandle hValue) {
+        return hTarget.getOpSupport().invokeMul(frame, hTarget, hValue, m_nTarget);
+    }
+
+    @Override
+    protected int completeWithVar(Frame frame, RefHandle hTarget, ObjectHandle hValue) {
+        return hTarget.getVarSupport().invokeVarMul(frame, hTarget, hValue);
+    }
+
+    @Override
+    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
+        return hTarget.getTemplate().invokePropertyMul(frame, hTarget, idProp, hValue);
+    }
+}
