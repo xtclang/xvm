@@ -2,6 +2,8 @@ package org.xvm.asm;
 
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -27,6 +29,7 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -225,6 +228,17 @@ public class FileStructure
             {
             m_idModule = moduleClone.getIdentityConstant();
             m_file     = module.getFileStructure().m_file;
+
+            do
+                {
+                Version version = module.getVersion();
+                if (version != null)
+                    {
+                    f_vtree.put(version, Boolean.TRUE);
+                    }
+                module = (ModuleStructure) module.getNextSibling();
+                }
+            while (module != null);
             }
         }
 
@@ -318,7 +332,7 @@ public class FileStructure
      */
     public Set<ModuleConstant> moduleIds()
         {
-        Set<ModuleConstant> setIds = f_moduleByConstant.keySet();
+        Set<ModuleConstant> setIds = f_moduleById.keySet();
         assert (setIds = Collections.unmodifiableSet(setIds)) != null;
         return setIds;
         }
@@ -332,7 +346,7 @@ public class FileStructure
      */
     public ModuleStructure getModule(ModuleConstant id)
         {
-        return f_moduleByConstant.get(id);
+        return f_moduleById.get(id);
         }
 
     /**
@@ -375,7 +389,7 @@ public class FileStructure
      */
     public ModuleStructure findModule(String sName)
         {
-        for (ModuleStructure module : f_moduleByConstant.values())
+        for (ModuleStructure module : f_moduleById.values())
             {
             if (module.getName().equals(sName))
                 {
@@ -464,7 +478,8 @@ public class FileStructure
                 // corresponding fingerprints at the top file
                 if (!fRuntime)
                     {
-                    ModuleStructure moduleUnlinked = repository.loadModule(sModule);
+                    ModuleStructure moduleUnlinked = repository.loadModule(sModule,
+                                                        idModule.getVersion(), !fRuntime);
                     assert moduleUnlinked != null;
 
                     FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
@@ -533,26 +548,31 @@ public class FileStructure
                 return idModule;
                 }
 
-            ModuleStructure moduleUnlinked = repository.loadModule(
-                                                idModule.getName(), idModule.getVersion(), !fRuntime);
+            ModuleStructure moduleUnlinked =
+                    repository.loadModule(idModule.getName(), idModule.getVersion(), !fRuntime);
             if (moduleUnlinked == null)
                 {
                 return idModule;
                 }
 
             FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
+
+            if (idModule.getVersion() != null)
+                {
+                moduleUnlinked.registerConstants(fileTop.m_pool);
+                moduleUnlinked.registerChildrenConstants(fileTop.m_pool);
+                }
+
             if (fRuntime)
                 {
-                if (moduleFingerprint.isLinked())
+                if (!moduleFingerprint.isFingerprint())
                     {
                     // this module is already in our FileStructure as a real, fully loaded and linked
                     // module
                     continue;
                     }
-                listReplace.add(moduleUnlinked);
 
-                // TODO eventually we need to handle the case that these are actual modules and not
-                //      just pointers to the modules
+                listReplace.add(moduleUnlinked);
                 listModulesTodo.addAll(fileUnlinked.moduleIds());
                 }
             else // compile-time
@@ -720,7 +740,7 @@ public class FileStructure
             case 1:
                 // module is already labeled; it is either this version, or another version (which
                 // will be replaced with this version)
-                if (vtree.get(ver))
+                if (vtree.contains(ver))
                     {
                     // already has the right version number
                     return;
@@ -823,7 +843,7 @@ public class FileStructure
         final Version ver1 = ver = ver.normalize();
 
         VersionTree<Boolean> vtree = f_vtree;
-        if (!vtree.get(ver))
+        if (!vtree.contains(ver))
             {
             return;
             }
@@ -854,7 +874,7 @@ public class FileStructure
 
         VersionTree<Boolean> vtree = f_vtree;
         ver = ver.normalize();
-        if (!vtree.get(ver))
+        if (!vtree.contains(ver))
             {
             throw new IllegalArgumentException("version " + ver  + " does not exist in this file");
             }
@@ -999,6 +1019,70 @@ public class FileStructure
         return false;
         }
 
+    /**
+     * Create a copy of the main module and replace all occurrences of this module's id
+     * (versionless) with the specified (versioned) module id. This method is called when a
+     * versioned module fingerprint needs to be bound to an actual module.
+     *
+     * @param version   the version to extract
+     *
+     * @return a "versioned" ModuleStructure
+     */
+    public ModuleStructure extractVersion(Version version)
+        {
+        assert containsVersion(version);
+
+        ModuleStructure module   = getModule();
+        String          sName    = module.getName();
+        ModuleConstant  idModule = getConstantPool().ensureModuleConstant(sName, version);
+
+        FileStructure fileClone = new FileStructure(sName);
+        fileClone.removeChild(fileClone.getModule());
+        fileClone.merge(module, false, true);
+
+        ConstantPool    pool        = fileClone.getConstantPool();
+        ModuleStructure moduleClone = fileClone.replaceModuleId(idModule);
+        moduleClone.registerConstants(pool);
+        moduleClone.registerChildrenConstants(pool);
+
+        fileClone.purgeVersionsExcept(version);
+        return moduleClone;
+        }
+
+    /**
+     * Change the identity of the main (versionless) module in this FileStructure and all constants
+     * that refer to its id with the specified versioned module id.
+     *
+     * Note: this FileStructure must be temporary as it will be rendered unusable.
+     *
+     * @return the new ModuleStructure that has all the child components referring to it by the
+     *         new (versioned) id
+     */
+    public ModuleStructure replaceModuleId(ModuleConstant idNew)
+        {
+        ModuleStructure module = getModule();
+        ModuleConstant  idOld  = module.getIdentityConstant();
+
+        idNew = (ModuleConstant) m_pool.register(idNew);
+
+        module.replaceThisIdentityConstant(idNew);
+
+        f_moduleById.put(idNew, module);
+        m_pool.replaceModule(idOld, idNew);
+
+        ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+        try
+            {
+            assemble(new DataOutputStream(outBytes));
+            FileStructure fileStructure = new FileStructure(
+                    new DataInputStream(new ByteArrayInputStream(outBytes.toByteArray())));
+            return fileStructure.getModule();
+            }
+        catch (IOException e)
+            {
+            throw new RuntimeException(e);
+            }
+        }
 
     // ----- Component methods ---------------------------------------------------------------------
 
@@ -1025,18 +1109,50 @@ public class FileStructure
         }
 
     @Override
-    protected boolean addChild(Component child)
+    protected void replaceChildIdentityConstant(IdentityConstant idOld, IdentityConstant idNew)
+        {
+        assert idOld instanceof ModuleConstant;
+        assert idNew instanceof ModuleConstant;
+
+        Map<ModuleConstant, ModuleStructure> map = f_moduleById;
+
+        ModuleStructure child = map.remove(idOld);
+        if (child != null)
+            {
+            map.put((ModuleConstant) idNew, child);
+            }
+
+        if (m_idModule.equals(idOld))
+            {
+            m_idModule = (ModuleConstant) idNew;
+            }
+        }
+
+    @Override
+    public boolean addChild(Component child)
         {
         // FileStructure can only hold ModuleStructures
         assert child instanceof ModuleStructure;
 
-        ModuleStructure module = (ModuleStructure) child;
-        if (f_moduleByConstant.putIfAbsent(module.getIdentityConstant(), module) == null)
+        Map<ModuleConstant, ModuleStructure> kids    = f_moduleById;
+        ModuleStructure                      module  = (ModuleStructure) child;
+        ModuleConstant                       id      = module.getIdentityConstant();
+        ModuleStructure                      sibling = kids.get(id);
+        if (sibling == null)
             {
-            markModified();
-            return true;
+            kids.put(id, module);
             }
-        return false;
+        else if (isSiblingAllowed())
+            {
+            linkSibling(module, sibling);
+            }
+        else
+            {
+            return false;
+            }
+
+        markModified();
+        return true;
         }
 
     @Override
@@ -1045,8 +1161,12 @@ public class FileStructure
         assert child instanceof ModuleStructure;
         assert child.getParent() == this;
 
-        f_moduleByConstant.remove(((ModuleStructure) child).getIdentityConstant());
-        markModified();
+        Map<ModuleConstant, ModuleStructure> kids    = f_moduleById;
+        ModuleStructure                      module  = (ModuleStructure) child;
+        ModuleConstant                       id      = module.getIdentityConstant();
+        ModuleStructure                      sibling = kids.remove(id);
+
+        unlinkSibling(kids, id, module, sibling);
         }
 
     @Override
@@ -1058,21 +1178,19 @@ public class FileStructure
         assert childOld.getIdentityConstant().equals(childNew.getIdentityConstant());
 
         ModuleStructure module = (ModuleStructure) childNew;
-        f_moduleByConstant.put(module.getIdentityConstant(), module);
+        f_moduleById.put(module.getIdentityConstant(), module);
         }
 
     @Override
     public Component getChild(Constant constId)
         {
-        return constId instanceof ModuleConstant idModule
-                ? f_moduleByConstant.get(idModule)
-                : null;
+        return constId instanceof ModuleConstant idModule ? f_moduleById.get(idModule) : null;
         }
 
     @Override
     public ModuleStructure getChild(String sName)
         {
-        return f_moduleByConstant.get(new ModuleConstant(m_pool, sName));
+        return f_moduleById.get(new ModuleConstant(m_pool, sName));
         }
 
     @Override
@@ -1080,7 +1198,7 @@ public class FileStructure
         {
         ensureChildren();
 
-        return f_moduleByConstant.size();
+        return f_moduleById.size();
         }
 
     @Override
@@ -1092,7 +1210,7 @@ public class FileStructure
     @Override
     public Collection<? extends Component> children()
         {
-        return f_moduleByConstant.values();
+        return f_moduleById.values();
         }
 
 
@@ -1164,9 +1282,15 @@ public class FileStructure
         disassembleChildren(in, m_fLazyDeser);
 
         // must be at least one module (the first module is considered to be the "main" module)
-        if (getModule() == null)
+        ModuleStructure modulePrim = getModule();
+        if (modulePrim == null)
             {
             throw new IOException("the file does not contain a primary module");
+            }
+        Version version = modulePrim.getVersion();
+        if (version != null)
+            {
+            f_vtree.put(version, Boolean.TRUE);
             }
         }
 
@@ -1196,7 +1320,7 @@ public class FileStructure
         out.writeInt(VERSION_MAJOR_CUR);
         out.writeInt(VERSION_MINOR_CUR);
         m_pool.assemble(out);
-        writePackedLong(out, getModule().getIdentityConstant().getPosition());
+        writePackedLong(out, getModuleId().getPosition());
         assembleChildren(out);
         }
 
@@ -1334,7 +1458,7 @@ public class FileStructure
                     && this.m_nMinorVer == that.m_nMinorVer
                     && this.m_idModule.equals(that.m_idModule)
                     && this.f_vtree.equals(that.f_vtree)
-                    && this.f_moduleByConstant.equals(that.f_moduleByConstant);
+                    && this.f_moduleById.equals(that.f_moduleById);
             }
 
         return false;
@@ -1362,13 +1486,16 @@ public class FileStructure
      * The id of the main module that the FileStructure represents. There may be additional
      * modules in the FileStructure, but generally, they only represent imports (included embedded
      * modules) of the main module.
+     *
+     * Note: for persistent file structures the main module id is never versioned (its version is
+     * null).
      */
     private ModuleConstant m_idModule;
 
     /**
      * This holds all of the children modules.
      */
-    private final Map<ModuleConstant, ModuleStructure> f_moduleByConstant = new HashMap<>();
+    private final Map<ModuleConstant, ModuleStructure> f_moduleById = new HashMap<>();
 
     /**
      * Tree of versions held by this FileStructure.

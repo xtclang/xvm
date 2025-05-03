@@ -309,6 +309,12 @@ public class MethodConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new MethodConstant(getConstantPool(), (MultiMethodConstant) idParent, getSignature());
+        }
+
+    @Override
     public MultiMethodConstant getParentConstant()
         {
         return m_constParent;

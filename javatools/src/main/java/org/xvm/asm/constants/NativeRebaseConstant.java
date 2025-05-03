@@ -44,8 +44,17 @@ public class NativeRebaseConstant
         }
 
 
-    // ----- Constant methods ----------------------------------------------------------------------
+    // ----- IdentityConstant methods --------------------------------------------------------------
 
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new NativeRebaseConstant((ClassConstant)
+                getClassConstant().replaceParentConstant(idParent));
+        }
+
+
+    // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
     public boolean containsUnresolved()

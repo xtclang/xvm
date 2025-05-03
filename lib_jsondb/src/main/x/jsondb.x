@@ -282,12 +282,13 @@ module jsondb.xtclang.org {
      * [close](oodb.Connection.close()) it before terminating, at which point the database will be
      * shut down cleanly.
      *
-     * @param dbModuleName  the name of the database module
-     * @param dataDir       the directory to use for the database data
-     * @param buildDir      the directory to use for the auto-generated classes and modules
+     * @param moduleSpec  the name of the database module or the ModuleTemplate
+     * @param dataDir     the directory to use for the database data
+     * @param buildDir    the directory to use for the auto-generated classes and modules
+     * TODO
      */
     static oodb.Connection createConnection(String dbModuleName, Directory dataDir, Directory buildDir,
-                                            oodb.DBUser? user = Null) {
+                                            oodb.DBUser? user = Null, Version? version = Null) {
         import ecstasy.lang.src.Compiler;
 
         import ecstasy.mgmt.BasicResourceProvider;
@@ -306,7 +307,7 @@ module jsondb.xtclang.org {
 
         @Inject("repository") ModuleRepository coreRepo;
 
-        ModuleGenerator  gen  = new ModuleGenerator(dbModuleName);
+        ModuleGenerator  gen  = new ModuleGenerator(dbModuleName, version);
         ModuleRepository repo = new LinkedRepository([new DirRepository(buildDir), coreRepo].freeze(True));
         Log              log  = new SimpleLog();
 
@@ -316,9 +317,10 @@ module jsondb.xtclang.org {
             throw new Exception(log.toString());
         }
 
-        Container       container = new Container(dbTemplate, Lightweight, repo, new Injector(dataDir));
-        CatalogMetadata meta      = container.innerTypeSystem.primaryModule.as(CatalogMetadata);
-        Catalog         catalog   = meta.createCatalog(dataDir);
+        Container container = new Container(dbTemplate, Lightweight, repo, new Injector(dataDir));
+
+        CatalogMetadata meta    = container.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        Catalog         catalog = meta.createCatalog(dataDir);
 
         catalog.ensureOpenDB(dbModuleName);
 

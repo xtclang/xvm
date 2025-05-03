@@ -1412,7 +1412,7 @@ public abstract class Launcher
             log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
             }
 
-        FileStructure structTurtle = moduleTurtle .getFileStructure();
+        FileStructure structTurtle = moduleTurtle.getFileStructure();
         if (structTurtle != null)
             {
             ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);

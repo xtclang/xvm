@@ -16,20 +16,17 @@ import ecstasy.text.Log;
 
 import oodb.DBObject.DBCategory;
 
-
 /**
  * The jsondb-based ModuleGenerator.
+ *
+ * @param moduleName  the underlying (hosted) fully qualified module name
+ * @param version     (optional) the version of the underlying (hosted) module
  */
-class ModuleGenerator(String moduleName) {
+class ModuleGenerator(String moduleName, Version? version = Null) {
     /**
      * The implementation name.
      */
     protected String implName = "jsondb";
-
-    /**
-     * The underlying (hosted) fully qualified module name.
-     */
-    protected String moduleName;
 
     /**
      * Generic templates.
@@ -57,7 +54,8 @@ class ModuleGenerator(String moduleName) {
      */
     conditional ModuleTemplate ensureDBModule(
             ModuleRepository repository, Directory buildDir, Log errors) {
-        ModuleTemplate dbModule = repository.getResolvedModule(moduleName);
+
+        ModuleTemplate dbModule = repository.getResolvedModule(moduleName, version);
 
         String appName   = moduleName;
         String qualifier = "";
@@ -116,11 +114,13 @@ class ModuleGenerator(String moduleName) {
             ) :=
             createSchema(appName, moduleTemplate, appSchemaTemplate,
                          rootSchemaSourceTemplate, "", "", 0, errors)) {
-            String appSchema    = appSchemaTemplate.name;
-            String moduleSource = moduleSourceTemplate
+            String appSchema     = appSchemaTemplate.name;
+            String versionString = version == Null ? "" : $" v:{version}";
+            String moduleSource  = moduleSourceTemplate
                                     .replace("%appName%"             , appName)
                                     .replace("%appSchema%"           , appSchema)
                                     .replace("%qualifier%"           , qualifier)
+                                    .replace("%version%"             , versionString)
                                     .replace("%ChildrenIds%"         , childrenIds)
                                     .replace("%ChildrenNames%"       , childrenNames)
                                     .replace("%PropertyInfos%"       , propertyInfos)
@@ -518,7 +518,6 @@ class ModuleGenerator(String moduleName) {
         return customMethods;
     }
 
-
     // ----- common helper methods -----------------------------------------------------------------
 
     /**
@@ -709,7 +708,6 @@ class ModuleGenerator(String moduleName) {
         }
         return success;
     }
-
 
     // ----- constants -----------------------------------------------------------------------------
 

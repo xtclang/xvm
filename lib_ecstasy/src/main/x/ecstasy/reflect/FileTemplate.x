@@ -1,7 +1,7 @@
 import mgmt.ModuleRepository;
 
 /**
- * A FileTemplate is a representation of an Ecstasy portable binary (".xtc") file.
+ * `FileTemplate` is a representation of an Ecstasy portable binary (".xtc") file.
  */
 interface FileTemplate
         extends ComponentTemplate {
@@ -27,15 +27,20 @@ interface FileTemplate
     FileTemplate resolve(ModuleRepository repository);
 
     /**
-     * Obtain the specified module from the `FileTemplate`. Note that the returned template may not
-     * be [resolved](`ModuleTemplate.resolved`).
+     * Obtain the specified version of the main module from the `FileTemplate`.
      *
-     * @param name  the qualified module name
+     * If the version is specified, choose whichever of the present module versions
+     * [satisfies](Version.satisfies) it, otherwise take any available (latest) version.
      *
-     * @return True iff the module exists
-     * @return (conditional) the ModuleTemplate
+     * Note: the returned `ModuleTemplate` may not be [resolved](ModuleTemplate.resolved).
+     * Note2: the returned `ModuleTemplate` may have a different parent `FileTemplate`.
+     *
+     * @param version  (optional) the module version
+     *
+     * @return True iff there is a module that satisfies the specified version
+     * @return (conditional) the `ModuleTemplate`
      */
-    conditional ModuleTemplate getModule(String name);
+    conditional ModuleTemplate extractVersion(Version? version = Null);
 
     /**
      * The date/time at which the FileTemplate was created. The value is not `Null` for
@@ -49,12 +54,13 @@ interface FileTemplate
     @RO immutable Byte[] contents;
 
     /**
-     * An array of qualified module names contained within this `FileTemplate`.
+     * An array of modules contained within this `FileTemplate`.
+     *
+     * Note: the modules are most probably unresolved (fingerprints).
      */
-    @RO String[] moduleNames.get() {
+    @RO ModuleTemplate[] modules.get() {
         ComponentTemplate[] children = children();
-        return new String[](children.size, i -> children[i].as(ModuleTemplate).qualifiedName)
-                .freeze(True);
+        return new ModuleTemplate[](children.size, i -> children[i].as(ModuleTemplate)).freeze(True);
     }
 
     @Override

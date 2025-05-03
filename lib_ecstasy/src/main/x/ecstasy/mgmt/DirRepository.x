@@ -1,5 +1,6 @@
 import io.IOException;
 
+import reflect.FileTemplate;
 import reflect.ModuleTemplate;
 
 /**
@@ -42,18 +43,20 @@ service DirRepository
     }
 
     @Override
-    conditional ModuleTemplate getModule(String name) {
+    conditional ModuleTemplate getModule(String name, Version? version = Null) {
         Boolean fresh = ensureCache();
-        if (ModuleInfo info := modulesByName.get(name)) {
-            return True, info.template;
+        if (ModuleInfo     info     := modulesByName.get(name),
+            ModuleTemplate template := info.template.extractVersion(version)) {
+            return True, template;
         }
 
         if (!fresh) {
             // refresh the cache before blowing up
             lastScan = Time.EPOCH;
             ensureCache();
-            if (ModuleInfo info := modulesByName.get(name)) {
-                return True, info.template;
+            if (ModuleInfo     info     := modulesByName.get(name),
+                ModuleTemplate template := info.template.extractVersion(version)) {
+                return True, template;
             }
         }
         return False;
@@ -65,9 +68,7 @@ service DirRepository
     }
 
     @Override
-    String toString() {
-        return $"DirRepository({dir})";
-    }
+    String toString() = $"DirRepository({dir})";
 
 
     // ----- internal ------------------------------------------------------------------------------
@@ -102,7 +103,7 @@ service DirRepository
                              );
                 continue;
             }
-            newModules.put(info.template.qualifiedName, info);
+            newModules.put(info.template.mainModule.qualifiedName, info);
         }
 
         modulesByName = newModules;
@@ -136,10 +137,10 @@ service DirRepository
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
 
     static const ModuleInfo {
-        File           file;
-        Time           timestamp;
-        Int            size;
-        ModuleTemplate template;
+        File         file;
+        Time         timestamp;
+        Int          size;
+        FileTemplate template;
 
         construct(File file) {
             this.template  = tryLoad(file);
@@ -148,11 +149,11 @@ service DirRepository
             this.size      = file.size;
         }
 
-        static ModuleTemplate tryLoad(File xtcFile) {
+        static FileTemplate tryLoad(File xtcFile) {
             try {
                 @Inject Container.Linker linker;
 
-                return linker.loadFileTemplate(xtcFile).mainModule;
+                return linker.loadFileTemplate(xtcFile);
             } catch (Exception e) {
                 throw new IOException($"Error: Failed to resolve the module: {xtcFile} ({e.text})");
             }

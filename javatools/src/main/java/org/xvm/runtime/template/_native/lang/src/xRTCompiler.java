@@ -83,7 +83,7 @@ public class xRTCompiler
     public void initNative()
         {
         ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
-        GET_MODULE_ID = structRepo.findMethod("getModule", 1).getIdentityConstant();
+        GET_MODULE_ID = structRepo.findMethod("getModule", 2).getIdentityConstant();
 
         markNativeMethod("compileImpl", null, null);
 

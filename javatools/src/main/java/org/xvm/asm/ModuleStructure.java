@@ -304,12 +304,12 @@ public class ModuleStructure
     /**
      * Specify the ModuleStructure that corresponds to the fingerprint.
      *
-     * @param structModule  the actual ModuleStructure that the fingerprint is based on
+     * @param moduleActual  the actual ModuleStructure that the fingerprint is based on
      */
-    public void setFingerprintOrigin(ModuleStructure structModule)
+    public void setFingerprintOrigin(ModuleStructure moduleActual)
         {
         assert isFingerprint();
-        m_moduleActual = structModule;
+        m_moduleActual = moduleActual;
         }
 
     /**
@@ -422,8 +422,6 @@ public class ModuleStructure
         PackageStructure pkg = m_pkgImport;
         if (pkg == null)
             {
-            assert !isMainModule();
-
             ModuleStructure moduleMain = (ModuleStructure) idMainModule.getComponent();
 
             String sPath = moduleMain.collectDependencies().get(getIdentityConstant());

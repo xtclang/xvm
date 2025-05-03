@@ -2562,6 +2562,28 @@ public class ConstantPool
                 findMethod(sMethod, cParams).getIdentityConstant().getSignature());
         }
 
+    /**
+     * Replace the parent identity for all IdentityConstants that are children of the specified
+     * module.
+     *
+     * This method is absolutely destructive to the integrity of this ConstantPool and should only
+     * be called on a freshly created copy of a FileStructure that would be immediately discarded
+     * after serialization.
+     */
+    void replaceModule(ModuleConstant idOld, ModuleConstant idNew)
+        {
+        for (Constant constant : m_listConst)
+            {
+            if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld)
+                {
+                int nPos = id.getPosition();
+                id = id.replaceParentConstant(idNew);
+                id.setPosition(nPos);
+                m_listConst.set(nPos, id);
+                }
+            }
+        }
+
 
     // ----- XvmStructure methods ------------------------------------------------------------------
 

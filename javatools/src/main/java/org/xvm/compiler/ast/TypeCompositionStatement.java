@@ -1015,7 +1015,6 @@ public class TypeCompositionStatement
             }
 
         int                  cImports      = 0;
-        ModuleStructure      moduleImport  = null;
         boolean              fHasDefault   = false;
         Format               format        = component.getFormat();
         ComponentBifurcator  bifurcator    = new ComponentBifurcator(component);
@@ -1129,39 +1128,72 @@ public class TypeCompositionStatement
                         break;
                         }
 
-                    boolean fNewFingerprint = false;
+                    FileStructure        fileStruct = component.getFileStructure();
+                    List<Version>        listPrefer = compImport.getPreferVersionList();
+                    VersionTree<Boolean> vtreeAllow = compImport.getAllowVersionTree();
+                    Version              version    = vtreeAllow.isEmpty() ? null : vtreeAllow.findLowestVersion();
+
+                    boolean         fNewFingerprint = false;
+                    ModuleStructure moduleImport    = fileStruct.findModule(sModule);
                     if (moduleImport == null)
                         {
                         // create the fingerprint
-                        moduleImport = (ModuleStructure) component.getFileStructure().getChild(sModule);
-                        if (moduleImport == null)
-                            {
-                            moduleImport    = component.getFileStructure().ensureModule(sModule);
-                            fNewFingerprint = true;
-                            }
-                        // note that the component is not bifurcated because import compositions
-                        // are not allowed to be conditional
-                        ((PackageStructure) component).setImportedModule(moduleImport);
+                        fNewFingerprint = true;
+                        moduleImport    = fileStruct.ensureModule(pool.ensureModuleConstant(sModule, version));
                         }
+                    else
+                        {
+                        if (moduleImport.isMainModule())
+                            {
+                            // it is possible to import "this" module, which would be useful for
+                            // example if names within this module were inadvertently hidden;
+                            // however, an import of "this" module must not use version specifiers
+                            // or any modifiers e.g. "optional" or "desired"
+                            if (!listPrefer.isEmpty() || !vtreeAllow.isEmpty())
+                                {
+                                composition.log(errs, Severity.ERROR, Compiler.ILLEGAL_SELF_IMPORT);
+                                }
+                            }
+                        else
+                            {
+                            // - if there are two different version of the same module, the versions
+                            //      *must* be orthogonal (neither can "substitute" the other)
+                            // - the same module cannot be imported twice as a different package
+                            assert moduleImport.isFingerprint();
+
+                            VersionTree<Boolean> vtreePrev = moduleImport.getFingerprintVersions();
+                            if (vtreePrev.isEmpty() == vtreeAllow.isEmpty())
+                                {
+                                if (!vtreePrev.isEmpty())
+                                    {
+                                    Version verPrev = vtreePrev.findLowestVersion();
+                                    if (verPrev.isSubstitutableFor(version) ||
+                                                version.isSubstitutableFor(verPrev))
+                                        {
+                                        composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
+                                        }
+                                    else
+                                        {
+                                        fNewFingerprint = true;
+                                        moduleImport    = fileStruct.ensureModule(
+                                                pool.ensureModuleConstant(sModule, version));
+                                        }
+                                    }
+                                }
+                            else
+                                {
+                                composition.log(errs, Severity.ERROR, Compiler.CONFLICTING_VERSIONS);
+                                }
+                            }
+                        }
+
+                    // note that the component is not bifurcated because import compositions
+                    // are not allowed to be conditional
+                    ((PackageStructure) component).setImportedModule(moduleImport);
 
                     // incorporate version requirements into the package information where the
                     // module is being mounted
-                    List<Version>        listPrefer = compImport.getPreferVersionList();
-                    VersionTree<Boolean> vtreeAllow = compImport.getAllowVersionTree();
-                    if (moduleImport.isMainModule())
-                        {
-                        // it is possible to import "this" module, which would be useful
-                        // for example if names within this module were inadvertently
-                        // hidden; however, an import of "this" module must not use
-                        // version specifiers or any modifiers e.g. "optional" or
-                        // "desired"
-                        if (keyword != Token.Id.IMPORT
-                                || !listPrefer.isEmpty() || !vtreeAllow.isEmpty())
-                            {
-                            composition.log(errs, Severity.ERROR, Compiler.ILLEGAL_SELF_IMPORT);
-                            }
-                        }
-                    else
+                    if (fNewFingerprint)
                         {
                         switch (compImport.getImplicitModifier())
                             {
@@ -1192,7 +1224,7 @@ public class TypeCompositionStatement
                         if (!listPrefer.isEmpty())
                             {
                             List<Version> listOld = moduleImport.getFingerprintVersionPrefs();
-                            if (listOld == null || listOld.isEmpty())
+                            if (listOld.isEmpty())
                                 {
                                 moduleImport.setFingerprintVersionPrefs(listPrefer);
                                 }
@@ -1204,7 +1236,7 @@ public class TypeCompositionStatement
                         if (!vtreeAllow.isEmpty())
                             {
                             VersionTree<Boolean> vtreeOld = moduleImport.getFingerprintVersions();
-                            if (vtreeOld == null || vtreeOld.isEmpty())
+                            if (vtreeOld.isEmpty())
                                 {
                                 moduleImport.setFingerprintVersions(vtreeAllow);
                                 }
@@ -1810,7 +1842,7 @@ public class TypeCompositionStatement
                     fModuleImport = true;
                     }
                 }
-            compositions.clear(); // no longer of any use
+            // compositions.clear(); // no longer of any use, except "toString()" for debugging
             }
 
         if (m_fVirtChild)
