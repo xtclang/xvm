@@ -27,9 +27,9 @@ service LinkedRepository(List<ModuleRepository> repos)
     }
 
     @Override
-    conditional ModuleTemplate getModule(String name) {
+    conditional ModuleTemplate getModule(String name, Version? version = Null) {
         for (ModuleRepository repo : repos) {
-            if (ModuleTemplate template := repo.getModule(name)) {
+            if (ModuleTemplate template := repo.getModule(name, version)) {
                 return True, template;
             }
         }
@@ -37,12 +37,8 @@ service LinkedRepository(List<ModuleRepository> repos)
     }
 
     @Override
-    void storeModule(ModuleTemplate template) {
-        repos[0].storeModule(template);
-    }
+    void storeModule(ModuleTemplate template) = repos[0].storeModule(template);
 
     @Override
-    String toString() {
-        return $"LinkRepository({repos})";
-    }
+    String toString() = $"LinkRepository({repos})";
 }

@@ -127,9 +127,9 @@ public class NativeContainer
         fileRoot.linkModules(f_repository, true);
 
         // obtain the cloned modules that belong to the merged container
-        m_moduleSystem = (ModuleStructure) fileRoot.getChild(ECSTASY_MODULE);
-        m_moduleTurtle = (ModuleStructure) fileRoot.getChild(TURTLE_MODULE);
-        m_moduleNative = (ModuleStructure) fileRoot.getChild(NATIVE_MODULE);
+        m_moduleSystem = fileRoot.getChild(ECSTASY_MODULE);
+        m_moduleTurtle = fileRoot.getChild(TURTLE_MODULE);
+        m_moduleNative = fileRoot.getChild(NATIVE_MODULE);
 
         ConstantPool pool = fileRoot.getConstantPool();
         ConstantPool.setCurrentPool(pool);

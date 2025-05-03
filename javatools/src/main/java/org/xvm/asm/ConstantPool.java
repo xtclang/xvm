@@ -2563,6 +2563,26 @@ public class ConstantPool
         }
 
 
+    /**
+     * TODO
+     *
+     * @param idNew
+     */
+    public void replaceModule(ModuleConstant idOld, ModuleConstant idNew)
+        {
+        for (Constant constant : m_listConst)
+            {
+            if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld)
+                {
+                int nPos = id.getPosition();
+                id = id.replaceParentConstant(idNew);
+                id.setPosition(nPos);
+                m_listConst.set(nPos, id);
+                }
+            }
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override

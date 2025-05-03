@@ -17,6 +17,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -74,7 +75,7 @@ public class xRTFileTemplate
         markNativeProperty("contents");
         markNativeProperty("createdMillis");
 
-        markNativeMethod("getModule", STRING, null);
+        markNativeMethod("extractVersionImpl", STRING, null);
         markNativeMethod("resolve", null, null);
         markNativeMethod("replace", null, null);
 
@@ -145,10 +146,27 @@ public class xRTFileTemplate
         FileStructure           file  = (FileStructure) hFile.getComponent();
         switch (method.getName())
             {
-            case "getModule": // conditional ModuleTemplate getModule(String name)
+            case "extractVersionImpl": // conditional ModuleTemplate extractVersionImpl(String version)
                 {
-                StringHandle    hName  = (StringHandle) ahArg[0];
-                ModuleStructure module = file.getChild(hName.getStringValue());
+                String sVersion = ((StringHandle) ahArg[0]).getStringValue();
+
+                ModuleStructure module;
+                if (sVersion.isEmpty())
+                    {
+                    module = file.getModule();
+                    }
+                else
+                    {
+                    Version version = new Version(sVersion);
+                    if (file.containsVersion(version))
+                        {
+                        module = file.extractVersion(version);
+                        }
+                    else
+                        {
+                        module = null;
+                        }
+                    }
                 return module == null
                     ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
                     : frame.assignValues(aiReturn,
@@ -264,16 +282,20 @@ public class xRTFileTemplate
         GenericArrayDelegate haGeneric = (GenericArrayDelegate) hArray.m_hDelegate;
         for (long i = 0, c = haGeneric.m_cSize; i < c; i++)
             {
-            ComponentTemplateHandle hModule           = (ComponentTemplateHandle) haGeneric.get(i);
-            ModuleStructure         moduleUnlinked    = (ModuleStructure) hModule.getComponent();
-            ModuleStructure         moduleFingerprint = file.getChild(moduleUnlinked.getName());
-            if (moduleFingerprint == null || !moduleFingerprint.isFingerprint())
+            ComponentTemplateHandle hModule        = (ComponentTemplateHandle) haGeneric.get(i);
+            ModuleStructure         moduleUnlinked = (ModuleStructure) hModule.getComponent();
+            ModuleStructure         moduleReplace  = file.getModule(moduleUnlinked.getIdentityConstant());
+
+            if (moduleReplace == null)
                 {
-                return frame.raiseException(
-                        (moduleFingerprint == null ? "Missing" : "Not a fingerprint") +
-                        " module \"" + moduleUnlinked.getName() + "\" at " + file.getModuleId());
+                return frame.raiseException("Missing module \"" + moduleUnlinked.getName() +
+                                            "\" at " + file.getModuleId());
                 }
-            listUnlinked.add(moduleUnlinked);
+
+            if (moduleReplace.isFingerprint())
+                {
+                listUnlinked.add(moduleUnlinked);
+                }
             }
         file.replace(listUnlinked);
         return Op.R_NEXT;
@@ -299,7 +321,7 @@ public class xRTFileTemplate
             {
             if (!idDep.equals(module.getIdentityConstant()))
                 {
-                ahModule[index++] = makeComponentHandle(container, file.getChild(idDep.getName()));
+                ahModule[index++] = makeComponentHandle(container, file.getModule(idDep));
                 }
             }
         assert index == cModules;

@@ -158,6 +158,12 @@ public class ModuleConstant
         return null;
         }
 
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return this;
+        }
+
     /**
      * Get the qualified name of the Module.
      * <p/>

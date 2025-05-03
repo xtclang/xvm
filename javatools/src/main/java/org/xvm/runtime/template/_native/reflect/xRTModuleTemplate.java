@@ -6,6 +6,7 @@ import java.util.Map;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -17,8 +18,11 @@ import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
+import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
@@ -50,7 +54,8 @@ public class xRTModuleTemplate
         MODULE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.ModuleTemplate");
 
         markNativeProperty("qualifiedName");
-        markNativeProperty("moduleNamesByPath");
+        markNativeProperty("versionString");
+        markNativeProperty("modulesByPath");
         markNativeProperty("resolved");
 
         invalidateTypeInfo();
@@ -69,8 +74,28 @@ public class xRTModuleTemplate
                     xString.makeHandle(module.getIdentityConstant().getName()));
                 }
 
-            case "moduleNamesByPath":
-                return getPropertyModuleNamesByPath(frame, hTemplate, iReturn);
+            case "versionString":
+                {
+                ModuleStructure module   = (ModuleStructure) hTemplate.getComponent();
+                String          sVersion;
+                if (module.isFingerprint())
+                    {
+                    VersionTree vtree = module.getFingerprintVersions();
+                    sVersion = vtree.isEmpty()
+                            ? null
+                            : vtree.findLowestVersion().toString();
+                    }
+                else
+                    {
+                    sVersion = module.getVersionString();
+                    }
+                return frame.assignValue(iReturn, sVersion == null
+                    ? xNullable.NULL
+                    : xString.makeHandle(sVersion));
+                }
+
+            case "modulesByPath":
+                return getPropertyModulesByPath(frame, hTemplate, iReturn);
 
             case "resolved":
                 {
@@ -83,45 +108,42 @@ public class xRTModuleTemplate
         }
 
     /**
-     * Implements property: moduleNamesByPath.get()
+     * Implements property: modulesByPath.get()
      */
-    public int getPropertyModuleNamesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn)
+    public int getPropertyModulesByPath(Frame frame, ComponentTemplateHandle hTemplate, int iReturn)
         {
         // TODO GG: how to cache the result?
-        ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
-        TypeComposition clzMap = frame.f_context.f_container.resolveClass(ensureListMapType());
+        ModuleStructure module    = (ModuleStructure) hTemplate.getComponent();
+        Container       container = frame.f_context.f_container;
+        TypeComposition clzMap    = container.resolveClass(ensureListMapType());
 
         // starting with this module, find all module dependencies, and the shortest path to each
         Map<ModuleConstant, String> mapModulePaths = module.collectDependencies();
-        int cModules = mapModulePaths.size() - 1;
-        if (cModules == 0)
-            {
-            return Utils.constructListMap(frame, clzMap,
-                    xString.ensureEmptyArray(), xString.ensureEmptyArray(), iReturn);
-            }
+        int                         cModules       = mapModulePaths.size() - 1;
 
-        StringHandle[] ahPaths = new StringHandle[cModules];
-        StringHandle[] ahNames = new StringHandle[cModules];
-        int            index       = 0;
+        StringHandle[]            ahPaths    = new StringHandle[cModules];
+        ComponentTemplateHandle[] ahTemplate = new ComponentTemplateHandle[cModules];
+        int                       index      = 0;
         for (Map.Entry<ModuleConstant, String> entry : mapModulePaths.entrySet())
             {
             ModuleConstant idDep = entry.getKey();
             if (!idDep.equals(module.getIdentityConstant()))
                 {
-                ahPaths[index] = xString.makeHandle(entry.getValue());
-                ahNames[index] = xString.makeHandle(idDep.getName());
+                ModuleStructure moduleDep = module.getFileStructure().getModule(idDep);
+
+                ahPaths[index]    = xString.makeHandle(entry.getValue());
+                ahTemplate[index] = makeHandle(container, moduleDep);
                 ++index;
                 }
             }
+        ObjectHandle haPaths     = xArray.makeStringArrayHandle(ahPaths);
+        ObjectHandle haTemplates = makeTemplateArrayHandle(container, ahTemplate);
 
-        ObjectHandle haPaths = xArray.makeStringArrayHandle(ahPaths);
-        ObjectHandle haNames = xArray.makeStringArrayHandle(ahNames);
-
-        return Utils.constructListMap(frame, clzMap, haPaths, haNames, iReturn);
+        return Utils.constructListMap(frame, clzMap, haPaths, haTemplates, iReturn);
         }
 
     /**
-     * @return the TypeConstant for ListMap<String, String>
+     * @return the TypeConstant for ListMap<String, ModuleTemplate>
      */
     private static TypeConstant ensureListMapType()
         {
@@ -131,11 +153,17 @@ public class xRTModuleTemplate
             ConstantPool pool = INSTANCE.pool();
             LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
                     pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeString(), pool.typeString());
+                    pool.typeString(), MODULE_TEMPLATE_TYPE);
             }
         return type;
         }
 
+    private static ArrayHandle makeTemplateArrayHandle(Container container, ObjectHandle[] ahTemplate)
+        {
+        TypeComposition clzArray = container.ensureClassComposition(
+                container.getConstantPool().ensureArrayType(MODULE_TEMPLATE_TYPE), xArray.INSTANCE);
+        return xArray.makeArrayHandle(clzArray, ahTemplate.length, ahTemplate, Mutability.Constant);
+        }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
 

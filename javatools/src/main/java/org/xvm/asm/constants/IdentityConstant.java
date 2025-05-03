@@ -46,6 +46,13 @@ public abstract class IdentityConstant
     public abstract IdentityConstant getParentConstant();
 
     /**
+     * Create a new IdentityConstant that is a child for the specified parent.
+     *
+     * @return the new IdentityConstant that is equivalent to this one, but has the specified parent
+     */
+    public abstract IdentityConstant replaceParentConstant(IdentityConstant idParent);
+
+    /**
      * Determine the constant within which the name of this constant is registered. In most cases,
      * the namespace is the parent, but in the case of the MethodConstant, the namespace is the
      * grandparent, because the parent is the MultiMethodConstant.

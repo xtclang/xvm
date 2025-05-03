@@ -64,6 +64,15 @@ public class MultiMethodConstant
         }
 
 
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new MultiMethodConstant(getConstantPool(), idParent, getName());
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

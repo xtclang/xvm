@@ -55,7 +55,7 @@ public class xCoreRepository
         m_clzRepo = ensureClass(f_container, typeInception, typeMask);
 
         markNativeProperty("moduleNames");
-        markNativeMethod("getModule", STRING, null);
+        markNativeMethod("getModule", null, null);
 
         typeInception.invalidateTypeInfo();
         }
@@ -89,7 +89,7 @@ public class xCoreRepository
         {
         switch (method.getName())
             {
-            case "getModule": // conditional ModuleTemplate getModule(String name)
+            case "getModule": // conditional ModuleTemplate getModule(String name, Version? version = Null)
                 {
                 String           sName  = ((StringHandle) ahArg[0]).getStringValue();
                 ModuleRepository repo   = f_container.getModuleRepository();
