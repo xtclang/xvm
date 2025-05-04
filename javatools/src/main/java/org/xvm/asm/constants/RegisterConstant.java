@@ -169,7 +169,7 @@ public class RegisterConstant
     @Override
     public int computeHashCode()
         {
-        return Hash.of(f_nReg);
+        return Hash.of(getRegisterIndex());
         }
 
 

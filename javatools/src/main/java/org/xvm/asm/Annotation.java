@@ -148,6 +148,7 @@ public class Annotation
             // note that this TerminalTypeConstant could not have previously been registered
             // with the pool because it was not resolved, so changing the reference to the
             // underlying constant is still safe at this point
+            assert constClass.getPosition() == -1;
             m_constClass = constClass = resolved;
             }
 
@@ -198,7 +199,7 @@ public class Annotation
         {
         if (!Arrays.equals(aParams, m_aParams))
             {
-            if (getPosition() >= 0)
+            if (isHashCached())
                 {
                 // we must never change the hashCode/equality for already registered constants
                 return getConstantPool().ensureAnnotation(getAnnotationClass(), aParams);
