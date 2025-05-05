@@ -24,8 +24,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * P_REF PROPERTY, rvalue-target, lvalue ; move Ref-to-property to destination
  */
 public class P_Ref
-        extends OpProperty
-    {
+        extends OpProperty {
     /**
      * Construct a P_REF op based on the specified arguments.
      *
@@ -33,13 +32,12 @@ public class P_Ref
      * @param argTarget  the target Argument
      * @param argReturn  the return Argument
      */
-    public P_Ref(PropertyConstant idProp, Argument argTarget, Argument argReturn)
-        {
+    public P_Ref(PropertyConstant idProp, Argument argTarget, Argument argReturn) {
         super(idProp);
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -48,99 +46,85 @@ public class P_Ref
      * @param aconst  an array of constants used within the method
      */
     public P_Ref(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nTarget = readPackedInt(in);
         m_nRetValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argTarget != null)
-            {
+        if (m_argTarget != null) {
             m_nTarget = encodeArgument(m_argTarget, registry);
             m_nRetValue = encodeArgument(m_argReturn, registry);
-            }
+        }
 
         writePackedLong(out, m_nTarget);
         writePackedLong(out, m_nRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_P_REF;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             return isDeferred(hTarget)
                     ? hTarget.proceed(frame, frameCaller ->
                         complete(frameCaller, frameCaller.popStack()))
                     : complete(frame, hTarget);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, ObjectHandle hTarget)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget) {
         PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
+        if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceResolvedVar(m_nRetValue, constProperty.getRefType(null));
-            }
+        }
 
         return hTarget.getTemplate().
             createPropertyRef(frame, hTarget, constProperty, true, m_nRetValue);
-        }
+    }
 
     @Override
-    public void resetSimulation()
-        {
+    public void resetSimulation() {
         resetRegister(m_argReturn);
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         checkNextRegister(scope, m_argReturn, m_nRetValue);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_argTarget = registerArgument(m_argTarget, registry);
         m_argReturn = registerArgument(m_argReturn, registry);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString()
                 + ", " + Argument.toIdString(m_argTarget, m_nTarget)
                 + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
-        }
+    }
 
     private int m_nTarget;
     private int m_nRetValue;
 
     private Argument m_argTarget;
     private Argument m_argReturn;
-    }
+}

@@ -16,8 +16,7 @@ import org.xvm.runtime.ObjectHandle;
  * GP_OR rvalue1, rvalue2, lvalue ; T | T -> T
  */
 public class GP_Or
-        extends OpGeneral
-    {
+        extends OpGeneral {
     /**
      * Construct a GP_OR op for the passed arguments.
      *
@@ -25,10 +24,9 @@ public class GP_Or
      * @param argValue   the second value Argument
      * @param argReturn  the Argument to store the result into
      */
-    public GP_Or(Argument argTarget, Argument argValue, Argument argReturn)
-        {
+    public GP_Or(Argument argTarget, Argument argValue, Argument argReturn) {
         super(argTarget, argValue, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -37,19 +35,16 @@ public class GP_Or
      * @param aconst  an array of constants used within the method
      */
     public GP_Or(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_GP_OR;
-        }
-
-    protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg)
-        {
-        return hTarget.getOpSupport().invokeOr(frame, hTarget, hArg, m_nRetValue);
-        }
     }
+
+    protected int completeBinary(Frame frame, ObjectHandle hTarget, ObjectHandle hArg) {
+        return hTarget.getOpSupport().invokeOr(frame, hTarget, hArg, m_nRetValue);
+    }
+}

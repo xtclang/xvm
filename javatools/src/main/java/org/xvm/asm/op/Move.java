@@ -19,18 +19,16 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
  * MOV rvalue-src, lvalue-dest
  */
 public class Move
-        extends OpMove
-    {
+        extends OpMove {
     /**
      * Construct a MOV op for the passed arguments.
      *
      * @param argFrom  the Argument to move from
      * @param argTo    the Argument to move to
      */
-    public Move(Argument argFrom, Argument argTo)
-        {
+    public Move(Argument argFrom, Argument argTo) {
         super(argFrom, argTo);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,48 +37,39 @@ public class Move
      * @param aconst  an array of constants used within the method
      */
     public Move(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_MOV;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             int nFrom = m_nFromValue;
             int nTo   = m_nToValue;
 
             ObjectHandle hValue = frame.getArgument(nFrom);
 
-            if (frame.isNextRegister(nTo))
-                {
+            if (frame.isNextRegister(nTo)) {
                 frame.introduceVarCopy(nTo, nFrom);
-                }
+            }
 
             return frame.assignDeferredValue(nTo, hValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
-        }
-
-    @Override
-    public boolean checkRedundant(Op[] aop)
-        {
-        if (m_argFrom instanceof Register && m_argFrom.equals(m_argTo))
-            {
-            markRedundant();
-            return true;
-            }
-        return false;
         }
     }
+
+    @Override
+    public boolean checkRedundant(Op[] aop) {
+        if (m_argFrom instanceof Register && m_argFrom.equals(m_argTo)) {
+            markRedundant();
+            return true;
+        }
+        return false;
+    }
+}

@@ -24,8 +24,7 @@ import static org.xvm.util.Handy.checkElementsNonNull;
  *NVOK_NN rvalue-target, CONST-METHOD, #params:(rvalue), #returns:(lvalue)
  */
 public class Invoke_NN
-        extends OpInvocable
-    {
+        extends OpInvocable {
     /**
      * Construct an NVOK_NN op based on the passed arguments.
      *
@@ -34,8 +33,7 @@ public class Invoke_NN
      * @param aArgValue    the array of Argument values
      * @param aArgReturn   the Register array to move the results into
      */
-    public Invoke_NN(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Argument[] aArgReturn)
-        {
+    public Invoke_NN(Argument argTarget, MethodConstant constMethod, Argument[] aArgValue, Argument[] aArgReturn) {
         super(argTarget, constMethod);
 
         checkElementsNonNull(aArgValue);
@@ -43,7 +41,7 @@ public class Invoke_NN
 
         m_aArgValue  = aArgValue;
         m_aArgReturn = aArgReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -52,99 +50,83 @@ public class Invoke_NN
      * @param aconst  an array of constants used within the method
      */
     public Invoke_NN(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_anArgValue = readIntArray(in);
         m_anRetValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgValue != null)
-            {
+        if (m_aArgValue != null) {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
             m_anRetValue = encodeArguments(m_aArgReturn, registry);
-            }
+        }
 
         writeIntArray(out, m_anArgValue);
         writeIntArray(out, m_anRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NVOK_NN;
-        }
+    }
 
     @Override
-    protected boolean isMultiReturn()
-        {
+    protected boolean isMultiReturn() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             return isDeferred(hTarget)
                     ? hTarget.proceed(frame, frameCaller ->
                          resolveArgs(frameCaller, frameCaller.popStack()))
                     : resolveArgs(frame, hTarget);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int resolveArgs(Frame frame, ObjectHandle hTarget)
-        {
+    protected int resolveArgs(Frame frame, ObjectHandle hTarget) {
         checkReturnRegisters(frame, hTarget);
 
         CallChain chain = getCallChain(frame, hTarget);
 
-        try
-            {
+        try {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, chain.getMaxVars());
 
-            if (anyDeferred(ahArg))
-                {
+            if (anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller ->
                     chain.invoke(frameCaller, hTarget, ahArg, m_anRetValue);
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
+            }
             return chain.invoke(frame, hTarget, ahArg, m_anRetValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     @Override
-    protected String getParamsString()
-        {
+    protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
-        }
+    }
 
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
-    }
+}

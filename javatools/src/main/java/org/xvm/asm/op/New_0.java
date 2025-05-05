@@ -26,20 +26,18 @@ import static org.xvm.util.Handy.writePackedLong;
  * NEW_0 CONSTRUCT, lvalue-return
  */
 public class New_0
-        extends OpCallable
-    {
+        extends OpCallable {
     /**
      * Construct a NEW_0 op based on the passed arguments.
      *
      * @param constMethod  the constructor method
      * @param argReturn    the return Argument
      */
-    public New_0(MethodConstant constMethod, Argument argReturn)
-        {
+    public New_0(MethodConstant constMethod, Argument argReturn) {
         super(constMethod);
 
         m_argReturn = argReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -48,41 +46,35 @@ public class New_0
      * @param aconst  an array of constants used within the method
      */
     public New_0(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nRetValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argReturn != null)
-            {
+        if (m_argReturn != null) {
             m_nRetValue = encodeArgument(m_argReturn, registry);
-            }
+        }
 
         writePackedLong(out, m_nRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NEW_0;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         MethodStructure constructor = getMethodStructure(frame);
-        if (constructor == null)
-            {
+        if (constructor == null) {
             return R_EXCEPTION;
-            }
+        }
 
         ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
 
@@ -90,11 +82,10 @@ public class New_0
         ClassTemplate    template  = frame.ensureTemplate(constClz);
         ClassComposition clzTarget = template.getCanonicalClass(frame.f_context.f_container);
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
+        if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
-            }
+        }
 
         return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);
-        }
     }
+}

@@ -28,8 +28,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_TN STRING, #values:(TYPE, rvalue-src) ; next register is an initialized named Tuple variable
  */
 public class Var_TN
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a VAR_TN op for the specified register, name and arguments.
      *
@@ -37,18 +36,16 @@ public class Var_TN
      * @param constName  the name constant
      * @param aArgValue  the value arguments
      */
-    public Var_TN(Register reg, StringConstant constName, Argument[] aArgValue)
-        {
+    public Var_TN(Register reg, StringConstant constName, Argument[] aArgValue) {
         super(reg);
 
-        if (constName == null || aArgValue == null)
-            {
+        if (constName == null || aArgValue == null) {
             throw new IllegalArgumentException("name and values required");
-            }
+        }
 
         m_constName = constName;
         m_aArgValue = aArgValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -57,85 +54,73 @@ public class Var_TN
      * @param aconst  an array of constants used within the method
      */
     public Var_TN(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nNameId    = readPackedInt(in);
         m_anArgValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_constName != null)
-            {
+        if (m_constName != null) {
             m_nNameId    = encodeArgument(m_constName, registry);
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            }
+        }
 
         writePackedLong(out, m_nNameId);
         writeIntArray(out, m_anArgValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_VAR_TN;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         TypeComposition clzTuple = frame.resolveClass(m_nType);
 
-        try
-            {
+        try {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
 
-            if (anyDeferred(ahArg))
-                {
-                Frame.Continuation stepNext = frameCaller ->
-                    {
+            if (anyDeferred(ahArg)) {
+                Frame.Continuation stepNext = frameCaller -> {
                     frameCaller.introduceVar(m_nVar, convertId(m_nType), m_nNameId,
                         Frame.VAR_STANDARD, xTuple.makeHandle(clzTuple, ahArg));
                     return iPC + 1;
-                    };
+                };
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
+            }
 
             frame.introduceVar(m_nVar, convertId(m_nType), m_nNameId,
                 Frame.VAR_STANDARD, xTuple.makeHandle(clzTuple, ahArg));
             return iPC + 1;
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_constName = (StringConstant) registerArgument(m_constName, registry);
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     @Override
-    public String getName(Constant[] aconst)
-        {
+    public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
-        }
+    }
 
     private int   m_nNameId;
     private int[] m_anArgValue;
 
     private StringConstant m_constName;
     private Argument[]     m_aArgValue;
-    }
+}

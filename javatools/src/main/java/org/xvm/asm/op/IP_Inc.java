@@ -20,17 +20,15 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_INC lvalue-target ; in-place increment; no result
  */
 public class IP_Inc
-        extends OpInPlace
-    {
+        extends OpInPlace {
     /**
      * Construct an IP_INC op for the passed arguments.
      *
      * @param argTarget  the target Argument
      */
-    public IP_Inc(Argument argTarget)
-        {
+    public IP_Inc(Argument argTarget) {
         super(argTarget);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,40 +37,33 @@ public class IP_Inc
      * @param aconst  an array of constants used within the method
      */
     public IP_Inc(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_IP_INC;
-        }
-
-    @Override
-    protected boolean isAssignOp()
-        {
-        return false;
-        }
-
-    @Override
-    protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
-        {
-        return hTarget.getOpSupport().invokeNext(frame, hTarget, m_nTarget);
-        }
-
-    @Override
-    protected int completeWithVar(Frame frame, RefHandle hTarget)
-        {
-        return hTarget.getVarSupport().invokeVarPreInc(frame, hTarget, A_IGNORE);
-        }
-
-    @Override
-    protected int completeWithProperty(Frame frame, PropertyConstant idProp)
-        {
-        ObjectHandle hTarget = frame.getThis();
-
-        return hTarget.getTemplate().invokePostInc(frame, hTarget, idProp, A_IGNORE);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_IP_INC;
+    }
+
+    @Override
+    protected boolean isAssignOp() {
+        return false;
+    }
+
+    @Override
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget) {
+        return hTarget.getOpSupport().invokeNext(frame, hTarget, m_nTarget);
+    }
+
+    @Override
+    protected int completeWithVar(Frame frame, RefHandle hTarget) {
+        return hTarget.getVarSupport().invokeVarPreInc(frame, hTarget, A_IGNORE);
+    }
+
+    @Override
+    protected int completeWithProperty(Frame frame, PropertyConstant idProp) {
+        ObjectHandle hTarget = frame.getThis();
+        return hTarget.getTemplate().invokePostInc(frame, hTarget, idProp, A_IGNORE);
+    }
+}

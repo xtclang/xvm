@@ -18,8 +18,7 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_USHR PROPERTY, rvalue-target, rvalue2 ; T >>>= T
  */
 public class PIP_ShrAll
-        extends OpPropInPlaceAssign
-    {
+        extends OpPropInPlaceAssign {
     /**
      * Construct a PIP_SHRALL op based on the passed arguments.
      *
@@ -27,10 +26,9 @@ public class PIP_ShrAll
      * @param argTarget  the target Argument
      * @param argValue   the value Argument
      */
-    public PIP_ShrAll(PropertyConstant idProp, Argument argTarget, Argument argValue)
-        {
+    public PIP_ShrAll(PropertyConstant idProp, Argument argTarget, Argument argValue) {
         super(idProp, argTarget, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class PIP_ShrAll
      * @param aconst  an array of constants used within the method
      */
     public PIP_ShrAll(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_USHR;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
-        return hTarget.getTemplate().invokePropertyShrAll(frame, hTarget, idProp, hValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_USHR;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
+        return hTarget.getTemplate().invokePropertyShrAll(frame, hTarget, idProp, hValue);
+    }
+}

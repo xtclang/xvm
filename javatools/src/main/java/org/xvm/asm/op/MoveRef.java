@@ -23,18 +23,16 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * MOV_REF rvalue-src, lvalue-dest ; move Ref-to-source to destination (read-only)
  */
 public class MoveRef
-        extends OpMove
-    {
+        extends OpMove {
     /**
      * Construct a REF op for the passed arguments.
      *
      * @param regSrc   the source Register
      * @param argDest  the destination Argument
      */
-    public MoveRef(Register regSrc, Argument argDest)
-        {
+    public MoveRef(Register regSrc, Argument argDest) {
         super(regSrc, argDest);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -43,66 +41,54 @@ public class MoveRef
      * @param aconst  an array of constants used within the method
      */
     public MoveRef(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_MOV_REF;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         RefHandle    hRef;
         boolean      fNextReg = frame.isNextRegister(m_nToValue);
         TypeConstant typeReg  = null;
-        if (m_nFromValue >= 0)
-            {
+        if (m_nFromValue >= 0) {
             Frame.VarInfo infoSrc = frame.getVarInfo(m_nFromValue);
-            if (infoSrc.isDynamicVar())
-                {
+            if (infoSrc.isDynamicVar()) {
                 // the "dynamic ref" register must contain a RefHandle itself
                 hRef = (RefHandle) frame.f_ahVar[m_nFromValue];
-                if (fNextReg)
-                    {
+                if (fNextReg) {
                     typeReg = infoSrc.getType();
-                    }
                 }
-            else
-                {
+            } else {
                 TypeComposition clzRef = xRef.INSTANCE.ensureParameterizedClass(
                         frame.f_context.f_container, infoSrc.getType());
                 hRef    = new RefHandle(clzRef, frame, m_nFromValue);
                 typeReg = hRef.getType();
-                }
             }
-        else
-            {
-            ObjectHandle hReferent = switch (m_nFromValue)
-                {
+        } else {
+            ObjectHandle hReferent = switch (m_nFromValue) {
                 case A_SUPER, A_THIS, A_TARGET, A_PUBLIC, A_PROTECTED, A_PRIVATE, A_STRUCT, A_CLASS,
                      A_SERVICE, A_STACK -> frame.getPredefinedArgument(m_nFromValue);
                 default -> throw new IllegalStateException();
-                };
+            };
 
             ConstantPool pool = frame.poolContext();
 
             typeReg = pool.ensureParameterizedTypeConstant(pool.typeRef(), hReferent.getType());
             hRef    = new RefHandle(typeReg.ensureClass(frame), null, hReferent);
-            }
+        }
 
-        if (fNextReg)
-            {
+        if (fNextReg) {
             frame.introduceResolvedVar(m_nToValue, typeReg);
-            }
+        }
 
         // the destination type must be the same as the source
         frame.assignValue(m_nToValue, hRef);
 
         return iPC + 1;
-        }
     }
+}

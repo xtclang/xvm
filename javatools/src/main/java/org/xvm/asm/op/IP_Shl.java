@@ -20,18 +20,16 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_SHL rvalue-target, rvalue2 ; T <<= T
  */
 public class IP_Shl
-        extends OpInPlaceAssign
-    {
+        extends OpInPlaceAssign {
     /**
      * Construct a IP_SHL op based on the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argValue   the value Argument
      */
-    public IP_Shl(Argument argTarget, Argument argValue)
-        {
+    public IP_Shl(Argument argTarget, Argument argValue) {
         super(argTarget, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,32 +38,27 @@ public class IP_Shl
      * @param aconst  an array of constants used within the method
      */
     public IP_Shl(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_IP_SHL;
-        }
-
-    @Override
-    protected int completeWithRegister(Frame frame, ObjectHandle hTarget, ObjectHandle hValue)
-        {
-        return hTarget.getOpSupport().invokeShl(frame, hTarget, hValue, m_nTarget);
-        }
-
-    @Override
-    protected int completeWithVar(Frame frame, RefHandle hTarget, ObjectHandle hValue)
-        {
-        return hTarget.getVarSupport().invokeVarShl(frame, hTarget, hValue);
-        }
-
-    @Override
-    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue)
-        {
-        return hTarget.getTemplate().invokePropertyShl(frame, hTarget, idProp, hValue);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_IP_SHL;
+    }
+
+    @Override
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget, ObjectHandle hValue) {
+        return hTarget.getOpSupport().invokeShl(frame, hTarget, hValue, m_nTarget);
+    }
+
+    @Override
+    protected int completeWithVar(Frame frame, RefHandle hTarget, ObjectHandle hValue) {
+        return hTarget.getVarSupport().invokeVarShl(frame, hTarget, hValue);
+    }
+
+    @Override
+    protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
+        return hTarget.getTemplate().invokePropertyShl(frame, hTarget, idProp, hValue);
+    }
+}

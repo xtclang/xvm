@@ -22,20 +22,18 @@ import org.xvm.runtime.Utils;
  * CONSTR_N CONSTRUCT, #params:(rvalue)
  */
 public class Construct_N
-        extends OpCallable
-    {
+        extends OpCallable {
     /**
      * Construct a CONSTR_N op based on the passed arguments.
      *
      * @param constMethod  the constructor method
      * @param aArgValue       the array of value Arguments
      */
-    public Construct_N(MethodConstant constMethod, Argument[] aArgValue)
-        {
+    public Construct_N(MethodConstant constMethod, Argument[] aArgValue) {
         super(constMethod);
 
         m_aArgValue = aArgValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -44,43 +42,36 @@ public class Construct_N
      * @param aconst  an array of constants used within the method
      */
     public Construct_N(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_anArgValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgValue != null)
-            {
+        if (m_aArgValue != null) {
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            }
+        }
 
         writeIntArray(out, m_anArgValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_CONSTR_N;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             MethodStructure constructor = getConstructor(frame);
-            if (constructor == null)
-                {
+            if (constructor == null) {
                 return R_EXCEPTION;
-                }
+            }
 
             if (constructor.isNative())
                 {
@@ -89,50 +80,43 @@ public class Construct_N
 
             ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
 
-            if (anyDeferred(ahVar))
-                {
+            if (anyDeferred(ahVar)) {
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, constructor, ahVar);
                 return new Utils.GetArguments(ahVar, stepNext).doNext(frame);
-                }
+            }
 
             return complete(frame, constructor, ahVar);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar)
-        {
-        if (constructor.isNoOp())
-            {
+    protected int complete(Frame frame, MethodStructure constructor, ObjectHandle[] ahVar) {
+        if (constructor.isNoOp()) {
             return R_NEXT;
-            }
+        }
 
         ObjectHandle hStruct = frame.getThis();
 
         frame.chainFinalizer(Utils.makeFinalizer(frame, constructor, ahVar));
 
         return frame.call1(constructor, hStruct, ahVar, A_IGNORE);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     @Override
-    protected String getParamsString()
-        {
+    protected String getParamsString() {
         return getParamsString(m_anArgValue, m_aArgValue);
-        }
+    }
 
     private int[] m_anArgValue;
 
     private Argument[] m_aArgValue;
-    }
+}

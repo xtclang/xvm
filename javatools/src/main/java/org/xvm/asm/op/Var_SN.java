@@ -31,8 +31,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_SN TYPE, STRING, #values:(rvalue-src) ; next register is an initialized named Array variable
  */
 public class Var_SN
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a VAR_SN op for the specified register, name and arguments.
      *
@@ -40,18 +39,16 @@ public class Var_SN
      * @param constName  the name constant
      * @param aArgValue  the value arguments
      */
-    public Var_SN(Register reg, StringConstant constName, Argument[] aArgValue)
-        {
+    public Var_SN(Register reg, StringConstant constName, Argument[] aArgValue) {
         super(reg);
 
-        if (constName == null || aArgValue == null)
-            {
+        if (constName == null || aArgValue == null) {
             throw new IllegalArgumentException("name and values required");
-            }
+        }
 
         m_constName = constName;
         m_aArgValue = aArgValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -60,70 +57,58 @@ public class Var_SN
      * @param aconst  an array of constants used within the method
      */
     public Var_SN(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nNameId    = readPackedInt(in);
         m_anArgValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_constName != null)
-            {
+        if (m_constName != null) {
             m_nNameId    = encodeArgument(m_constName, registry);
             m_anArgValue = encodeArguments(m_aArgValue, registry);
-            }
+        }
 
         writePackedLong(out, m_nNameId);
         writeIntArray(out, m_anArgValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_VAR_SN;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, m_anArgValue.length);
 
-            if (anyDeferred(ahArg))
-                {
+            if (anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller ->
                     complete(frameCaller, iPC, ahArg);
 
                 return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
-                }
+            }
 
             return complete(frame, iPC, ahArg);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg)
-        {
+    protected int complete(Frame frame, int iPC, ObjectHandle[] ahArg) {
         boolean fImmutable = true;
-        for (ObjectHandle hValue : ahArg)
-            {
-            if (!hValue.isPassThrough())
-                {
+        for (ObjectHandle hValue : ahArg) {
+            if (!hValue.isPassThrough()) {
                 fImmutable = false;
                 break;
-                }
             }
+        }
 
         TypeConstant    typeList = frame.resolveType(m_nType);
         TypeComposition clzArray = getArrayClass(frame, typeList);
@@ -131,36 +116,33 @@ public class Var_SN
         ArrayHandle hArray = xArray.makeArrayHandle(clzArray, ahArg.length, ahArg,
                 fImmutable ? Mutability.Constant : Mutability.Persistent);
 
-        if (typeList.isA(frame.poolContext().typeSet()))
-            {
+        if (typeList.isA(frame.poolContext().typeSet())) {
             frame.introduceResolvedVar(m_nVar, typeList,
                     frame.getString(m_nNameId), Frame.VAR_STANDARD, null);
             return xArray.createListSet(frame, hArray, m_nVar);
-            }
+        }
 
         frame.introduceResolvedVar(m_nVar, typeList,
                 frame.getString(m_nNameId), Frame.VAR_STANDARD, hArray);
         return iPC + 1;
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_constName = (StringConstant) registerArgument(m_constName, registry);
         registerArguments(m_aArgValue, registry);
-        }
+    }
 
     @Override
-    public String getName(Constant[] aconst)
-        {
+    public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
-        }
+    }
 
     private int   m_nNameId;
     private int[] m_anArgValue;
 
     private StringConstant m_constName;
     private Argument[]     m_aArgValue;
-    }
+}

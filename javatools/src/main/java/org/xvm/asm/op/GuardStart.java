@@ -29,17 +29,15 @@ import static org.xvm.util.Handy.writePackedLong;
  * The section of guarded ops concludes with a matching GUARD_END op.
  */
 public class GuardStart
-        extends Op
-    {
+        extends Op {
     /**
      * Construct a GUARD op for multiple exceptions.
      *
      * @param aOpCatch  the first op of the catch handlers
      */
-    public GuardStart(CatchStart[] aOpCatch)
-        {
+    public GuardStart(CatchStart[] aOpCatch) {
         m_aOpCatch = aOpCatch;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -48,151 +46,129 @@ public class GuardStart
      * @param aconst  an array of constants used within the method
      */
     public GuardStart(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         int c = readPackedInt(in);
 
         m_anTypeId = new int[c];
         m_anNameId = new int[c];
         m_aofCatch = new int[c];
-        for (int i = 0; i < c; i++)
-            {
+        for (int i = 0; i < c; i++) {
             m_anTypeId[i] = readPackedInt(in);
             m_anNameId[i] = readPackedInt(in);
             m_aofCatch[i] = readPackedInt(in);
-            }
         }
+    }
 
     @Override
-    public void resolveCode(Code code, Constant[] aconst)
-        {
+    public void resolveCode(Code code, Constant[] aconst) {
         super.resolveCode(code, aconst);
 
         int ofThis = getAddress();
         int c      = m_aofCatch.length;
         m_aOpCatch = new CatchStart[c];
-        for (int i = 0; i < c; i++)
-            {
+        for (int i = 0; i < c; i++) {
             CatchStart op = (CatchStart) code.get(ofThis + m_aofCatch[i]);
             op.setNameId(m_anNameId[i]);
             op.setTypeId(m_anTypeId[i]);
             m_aOpCatch[i] = op;
-            }
         }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aOpCatch != null)
-            {
+        if (m_aOpCatch != null) {
             int   cCatch   = m_aOpCatch.length;
             int[] anTypeId = new int[cCatch];
             int[] anNameId = new int[cCatch];
-            for (int i = 0; i < cCatch; ++i)
-                {
+            for (int i = 0; i < cCatch; ++i) {
                 CatchStart op = m_aOpCatch[i];
                 op.preWrite(registry);
                 anTypeId[i] = op.getTypeId();
                 anNameId[i] = op.getNameId();
-                }
+            }
             m_anTypeId = anTypeId;
             m_anNameId = anNameId;
-            }
+        }
 
         int c = m_anTypeId.length;
         writePackedLong(out, c);
 
-        for (int i = 0; i < c; i++)
-            {
+        for (int i = 0; i < c; i++) {
             writePackedLong(out, m_anTypeId[i]);
             writePackedLong(out, m_anNameId[i]);
             writePackedLong(out, m_aofCatch[i]);
-            }
         }
+    }
 
     @Override
-    public void resolveAddresses(Op[] aop)
-        {
-        if (m_aOpCatch == null)
-            {
+    public void resolveAddresses(Op[] aop) {
+        if (m_aOpCatch == null) {
             int ofThis = getAddress();
             int c      = m_aofCatch.length;
             m_aOpCatch = new CatchStart[c];
-            for (int i = 0; i < c; i++)
-                {
+            for (int i = 0; i < c; i++) {
                 int ofOp = adjustRelativeAddress(aop, m_aofCatch[i]);
                 m_aofCatch[i] = ofOp;
                 m_aOpCatch[i] = (CatchStart) aop[ofThis + ofOp];
-                }
             }
-        else
-            {
+        } else {
             int c = m_aOpCatch.length;
 
             m_aofCatch = new int[c];
-            for (int i = 0; i < c; i++)
-                {
+            for (int i = 0; i < c; i++) {
                 m_aofCatch[i] = calcRelativeAddress(m_aOpCatch[i]);
-                }
             }
         }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_GUARD;
-        }
+    }
 
     @Override
-    public boolean isEnter()
-        {
+    public boolean isEnter() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         int iScope = frame.enterScope(m_nNextVar);
 
         MultiGuard guard = m_guard;
-        if (guard == null)
-            {
+        if (guard == null) {
             m_guard = guard = new MultiGuard(iPC, iScope, m_anTypeId, m_anNameId, m_aofCatch);
-            }
+        }
         frame.pushGuard(guard);
 
         return iPC + 1;
-        }
+    }
 
     @Override
-    public void markReachable(Op[] aop)
-        {
+    public void markReachable(Op[] aop) {
         super.markReachable(aop);
         findCorrespondingOp(aop, OP_GUARD_END).markNecessary();
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         scope.enterGuard();
         scope.enter(this);
 
         m_nNextVar = scope.getCurVars();
-        }
+    }
 
     @Override
-    public boolean branches(Op[] aop, List<Integer> list)
-        {
+    public boolean branches(Op[] aop, List<Integer> list) {
         resolveAddresses(aop);
-        for (int i : m_aofCatch)
-            {
+        for (int i : m_aofCatch) {
             list.add(i);
-            }
-        return true;
         }
+        return true;
+    }
 
     private int[] m_anTypeId;
     private int[] m_anNameId;
@@ -203,4 +179,4 @@ public class GuardStart
     private int m_nNextVar;
 
     private transient MultiGuard m_guard; // cached struct
-    }
+}

@@ -47,8 +47,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * </ul>
  */
 public class JumpVal_N
-        extends OpSwitch
-    {
+        extends OpSwitch {
     /**
      * Construct a JMP_VAL_N op.
      *
@@ -58,13 +57,12 @@ public class JumpVal_N
      * @param aOpCase     an array of Ops to jump to
      * @param opDefault   an Op to jump to in the "default" case
      */
-    public JumpVal_N(Argument[] aArgVal, long afIsSwitch, Constant[] aConstCase, Op[] aOpCase, Op opDefault)
-        {
+    public JumpVal_N(Argument[] aArgVal, long afIsSwitch, Constant[] aConstCase, Op[] aOpCase, Op opDefault) {
         super(aConstCase, aOpCase, opDefault);
 
         m_aArgCond   = aArgVal;
         m_afIsSwitch = afIsSwitch;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -73,86 +71,72 @@ public class JumpVal_N
      * @param aconst  an array of constants used within the method
      */
     public JumpVal_N(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         int   cArgs = readMagnitude(in);
         int[] anArg = new int[cArgs];
 
         m_afIsSwitch = readPackedLong(in);
-        for (int i = 0; i < cArgs; ++i)
-            {
+        for (int i = 0; i < cArgs; ++i) {
             anArg[i] = readPackedInt(in);
-            }
-        m_anArgCond = anArg;
         }
+        m_anArgCond = anArg;
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgCond != null)
-            {
+        if (m_aArgCond != null) {
             m_anArgCond = encodeArguments(m_aArgCond, registry);
-            }
+        }
 
         int[] anArg = m_anArgCond;
         int   cArgs = anArg.length;
         writePackedLong(out, cArgs);
         writePackedLong(out, m_afIsSwitch);
-        for (int i = 0; i < cArgs; ++i)
-            {
+        for (int i = 0; i < cArgs; ++i) {
             writePackedLong(out, anArg[i]);
-            }
         }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_JMP_VAL_N;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle[] ahValue = frame.getArguments(m_anArgCond, m_anArgCond.length);
 
-            if (anyDeferred(ahValue))
-                {
+            if (anyDeferred(ahValue)) {
                 Frame.Continuation stepNext = frameCaller ->
                         ensureJumpMap(frame, iPC, ahValue);
 
                 return new Utils.GetArguments(ahValue, stepNext).doNext(frame);
-                }
+            }
 
             return ensureJumpMap(frame, iPC, ahValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle[] ahValue)
-        {
+    protected int ensureJumpMap(Frame frame, int iPC, ObjectHandle[] ahValue) {
         return m_algorithm == null
                 ? explodeConstants(frame, iPC, ahValue, 0, new ObjectHandle[m_aofCase.length][])
                 : complete(frame, iPC, ahValue);
-        }
+    }
 
     protected int explodeConstants(Frame frame, int iPC, ObjectHandle[] ahValue, int iRow,
-                                   ObjectHandle[][] aahCases)
-        {
+                                   ObjectHandle[][] aahCases) {
         ConstHeap    heap       = frame.f_context.f_container.f_heap;
         ConstantPool poolTarget = frame.f_function.getConstantPool();
 
-        for (int cRows = m_aofCase.length; iRow < cRows; iRow++)
-            {
+        for (int cRows = m_aofCase.length; iRow < cRows; iRow++) {
             int            cColumns     = ahValue.length;
             ArrayConstant  contValues   = (ArrayConstant) frame.getConstant(m_anConstCase[iRow]);
             Constant[]     aconstValues = contValues.getValue();
@@ -163,63 +147,51 @@ public class JumpVal_N
             assert aconstValues.length == cColumns;
 
             boolean fDeferred = false;
-            for (int iC = 0; iC < cColumns; iC++)
-                {
+            for (int iC = 0; iC < cColumns; iC++) {
                 Constant constCase = aconstValues[iC];
-                if (constCase instanceof MatchAnyConstant)
-                    {
+                if (constCase instanceof MatchAnyConstant) {
                     ahCases[iC] = ObjectHandle.DEFAULT;
                     continue;
-                    }
+                }
 
                 ObjectHandle hCase = ahCases[iC] = frame.getConstHandle(constCase);
-                if (isDeferred(hCase))
-                    {
+                if (isDeferred(hCase)) {
                     fDeferred = true;
-                    }
-                else
-                    {
+                } else {
                     // caching a constant linked to the current pool would "leak" the current container
-                    if (hCase.getComposition().getConstantPool() != poolTarget)
-                        {
+                    if (hCase.getComposition().getConstantPool() != poolTarget) {
                         hCase = heap.relocateConst(hCase, constCase);
 
                         assert hCase != null;
                         ahCases[iC] = hCase;
-                        }
                     }
                 }
+            }
 
-            if (fDeferred)
-                {
+            if (fDeferred) {
                 final int iRowNext = iRow + 1;
                 Frame.Continuation stepNext =
                     frameCaller -> explodeConstants(frame, iPC, ahValue, iRowNext, aahCases);
                 return new Utils.GetArguments(ahCases, stepNext).doNext(frame);
-                }
             }
-
-        m_aahCases = aahCases;
-        if (m_aofCase.length < 64)
-            {
-            buildSmallJumpMaps(frame);
-            }
-        else
-            {
-            buildLargeJumpMaps(frame);
-            }
-        return complete(frame, iPC, ahValue);
         }
 
-    protected int complete(Frame frame, int iPC, ObjectHandle[] ahValue)
-        {
+        m_aahCases = aahCases;
+        if (m_aofCase.length < 64) {
+            buildSmallJumpMaps(frame);
+        } else {
+            buildLargeJumpMaps(frame);
+        }
+        return complete(frame, iPC, ahValue);
+    }
+
+    protected int complete(Frame frame, int iPC, ObjectHandle[] ahValue) {
         return m_aofCase.length < 64
                 ? findSmall(frame, iPC, ahValue)
                 : findLarge(frame, iPC, ahValue);
-        }
+    }
 
-    protected int findSmall(Frame frame, int iPC, ObjectHandle[] ahValue)
-        {
+    protected int findSmall(Frame frame, int iPC, ObjectHandle[] ahValue) {
         Algorithm[]               aAlg   = m_aAlgorithm;
         Map<ObjectHandle, Long>[] aMap   = m_amapJumpSmall;
         long[]                    alWild = m_alWildcardSmall;
@@ -227,221 +199,190 @@ public class JumpVal_N
         long                      ixBits = -1;
 
         // first go over the native columns
-        for (int iCol = 0, cCols = ahValue.length; iCol < cCols; iCol++)
-            {
+        for (int iCol = 0, cCols = ahValue.length; iCol < cCols; iCol++) {
             ObjectHandle hValue   = ahValue[iCol];
             long         ixColumn = 0; // matching cases in this column
-            switch (aAlg[iCol])
-                {
-                case NativeRange:
-                    {
-                    List<Object[]> listRange = m_alistRangeSmall[iCol];
-                    for (int iRange = 0, cR = listRange.size(); iRange < cR; iRange++)
-                        {
-                        Object[] ao = listRange.get(iRange);
+            switch (aAlg[iCol]) {
+            case NativeRange: {
+                List<Object[]> listRange = m_alistRangeSmall[iCol];
+                for (int iRange = 0, cR = listRange.size(); iRange < cR; iRange++) {
+                    Object[] ao = listRange.get(iRange);
 
-                        // we only need to compare the range if there is a chance that it can impact
-                        // the result
-                        long lBit = (Long) ao[2];
-                        if ((lBit & ixBits) != 0)
-                            {
-                            ObjectHandle hLow  = (ObjectHandle) ao[0];
-                            ObjectHandle hHigh = (ObjectHandle) ao[1];
+                    // we only need to compare the range if there is a chance that it can impact
+                    // the result
+                    long lBit = (Long) ao[2];
+                    if ((lBit & ixBits) != 0) {
+                        ObjectHandle hLow  = (ObjectHandle) ao[0];
+                        ObjectHandle hHigh = (ObjectHandle) ao[1];
 
-                            if (hValue.isNativeEqual() &&
-                                hValue.compareTo(hLow) >= 0 && hValue.compareTo(hHigh) <= 0)
-                                {
-                                ixColumn |= lBit;
-                                }
-                            }
+                        if (hValue.isNativeEqual() &&
+                            hValue.compareTo(hLow) >= 0 && hValue.compareTo(hHigh) <= 0) {
+                            ixColumn |= lBit;
                         }
-                    // fall through and process the exact match
                     }
-
-                case NativeSimple:
-                    {
-                    if ((afIs & (1L << iCol)) == 0)
-                        {
-                        Long LBits = aMap[iCol].get(hValue);
-                        if (LBits != null)
-                            {
-                            ixColumn |= LBits.longValue();
-                            }
-                        }
-                    else
-                        {
-                        // this is an "is(_)" column
-                        TypeConstant     typeVal  = hValue.getType();
-                        ObjectHandle[][] aahCases = m_aahCases;
-
-                        for (int iRow = 0, cRows = aahCases.length; iRow < cRows; iRow++)
-                            {
-                            TypeHandle hCase = (TypeHandle) aahCases[iRow][iCol];
-                            if (typeVal.isA(hCase.getDataType()))
-                                {
-                                ixColumn |= (1L << iRow);
-                                }
-                            }
-                        }
-                    break;
-                    }
-
-                default:
-                    continue;
                 }
+                // fall through and process the exact match
+            }
+
+            case NativeSimple: {
+                if ((afIs & (1L << iCol)) == 0) {
+                    Long LBits = aMap[iCol].get(hValue);
+                    if (LBits != null) {
+                        ixColumn |= LBits.longValue();
+                    }
+                } else {
+                    // this is an "is(_)" column
+                    TypeConstant     typeVal  = hValue.getType();
+                    ObjectHandle[][] aahCases = m_aahCases;
+
+                    for (int iRow = 0, cRows = aahCases.length; iRow < cRows; iRow++) {
+                        TypeHandle hCase = (TypeHandle) aahCases[iRow][iCol];
+                        if (typeVal.isA(hCase.getDataType())) {
+                            ixColumn |= (1L << iRow);
+                        }
+                    }
+                }
+                break;
+            }
+
+            default:
+                continue;
+            }
 
             // ixWild[i] == 0 means "no wildcards in column i"
             ixColumn |= alWild[iCol];
             ixBits   &= ixColumn;
-            }
+        }
 
-        if (ixBits == 0)
-            {
+        if (ixBits == 0) {
             // no match
             return iPC + m_ofDefault;
-            }
+        }
 
-        if (m_algorithm.isNative())
-            {
+        if (m_algorithm.isNative()) {
             // even if the value is not "isNativeEqual", there was not a single non-native value
             // among all the case values and ranges, which means that wildcards took care of it
 
             long lCaseBit = Long.lowestOneBit(ixBits);
             return iPC + m_aofCase[Long.numberOfTrailingZeros(lCaseBit)];
-            }
-
-        return findSmallNatural(frame, iPC, ahValue, ixBits, 0, 0);
         }
 
+        return findSmallNatural(frame, iPC, ahValue, ixBits, 0, 0);
+    }
+
     protected int findSmallNatural(Frame frame, int iPC, ObjectHandle[] ahValue, long ixBits,
-                                   int iRow, int iCol)
-        {
+                                   int iRow, int iCol) {
         ObjectHandle[][] aahCases = m_aahCases;
         Algorithm[]      aAlg     = m_aAlgorithm;
         int              cRows    = aahCases.length;
         int              cColumns = ahValue.length;
 
         NextRow:
-        for (; iRow < cRows; iRow++)
-            {
+        for (; iRow < cRows; iRow++) {
             long lCaseBit = 1L << iRow;
-            if ((ixBits & lCaseBit) == 0)
-                {
+            if ((ixBits & lCaseBit) == 0) {
                 // this row has already been rejected
                 continue;
-                }
+            }
             ObjectHandle[] ahCases     = aahCases[iRow];
             int            iCurrentRow = iRow; // effectively final
 
             NextColumn:
-            for (; iCol < cColumns; iCol++)
-                {
+            for (; iCol < cColumns; iCol++) {
                 ObjectHandle hCase = ahCases[iCol];
-                if (hCase == ObjectHandle.DEFAULT)
-                    {
+                if (hCase == ObjectHandle.DEFAULT) {
                     continue;
-                    }
+                }
                 TypeConstant typeColumn  = m_atypeColumn[iCol];
                 ObjectHandle hValue      = ahValue[iCol];
                 int          iCurrentCol = iCol;
 
-                switch (aAlg[iCol])
-                    {
-                    case NaturalRange:
-                        {
-                        if (hCase.getType().isA(frame.poolContext().typeRange()))
-                            {
-                            GenericHandle hRange = (GenericHandle) hCase;
-                            ObjectHandle  hLo    = hRange.getField(null, "lowerBound");
-                            ObjectHandle  hHi    = hRange.getField(null, "upperBound");
-                            BooleanHandle hLoEx  = (BooleanHandle) hRange.getField(null, "lowerExclusive");
-                            BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
+                switch (aAlg[iCol]) {
+                case NaturalRange: {
+                    if (hCase.getType().isA(frame.poolContext().typeRange())) {
+                        GenericHandle hRange = (GenericHandle) hCase;
+                        ObjectHandle  hLo    = hRange.getField(null, "lowerBound");
+                        ObjectHandle  hHi    = hRange.getField(null, "upperBound");
+                        BooleanHandle hLoEx  = (BooleanHandle) hRange.getField(null, "lowerExclusive");
+                        BooleanHandle hHiEx  = (BooleanHandle) hRange.getField(null, "upperExclusive");
 
-                            Frame.Continuation stepNext =
-                                frameCaller -> findSmallNatural(frameCaller, iPC, ahValue, ixBits,
-                                    iCurrentRow, iCurrentCol + 1);
+                        Frame.Continuation stepNext =
+                            frameCaller -> findSmallNatural(frameCaller, iPC, ahValue, ixBits,
+                                iCurrentRow, iCurrentCol + 1);
 
-                            switch (checkRange(frame, typeColumn, hValue, hLo, hHi,
-                                        hLoEx.get(), hHiEx.get(), true, stepNext))
-                                {
-                                case Op.R_NEXT:
-                                    if (frame.popStack() == xBoolean.TRUE)
-                                        {
-                                        continue NextColumn;
-                                        }
-                                    continue NextRow;
-
-                                case Op.R_CALL:
-                                    frame.m_frameNext.addContinuation(frameCaller ->
-                                        frameCaller.popStack() == xBoolean.TRUE
-                                            ? findSmallNatural(frameCaller, iPC, ahValue, ixBits,
-                                                iCurrentRow, iCurrentCol + 1)
-                                            : findSmallNatural(frameCaller, iPC, ahValue, ixBits,
-                                                iCurrentRow + 1, 0));
-                                    return Op.R_CALL;
-
-                                case Op.R_EXCEPTION:
-                                    return Op.R_EXCEPTION;
-
-                                default:
-                                    throw new IllegalStateException();
-                                }
+                        switch (checkRange(frame, typeColumn, hValue, hLo, hHi,
+                                    hLoEx.get(), hHiEx.get(), true, stepNext)) {
+                        case Op.R_NEXT:
+                            if (frame.popStack() == xBoolean.TRUE) {
+                                continue NextColumn;
                             }
-                        // fall through
-                        }
+                            continue NextRow;
 
-                    case NaturalSimple:
-                        {
-                        switch (typeColumn.callEquals(frame, hValue, hCase, Op.A_STACK))
-                            {
-                            case Op.R_NEXT:
-                                if (frame.popStack() == xBoolean.TRUE)
-                                    {
-                                    continue NextColumn;
-                                    }
-                                continue NextRow;
+                        case Op.R_CALL:
+                            frame.m_frameNext.addContinuation(frameCaller ->
+                                frameCaller.popStack() == xBoolean.TRUE
+                                    ? findSmallNatural(frameCaller, iPC, ahValue, ixBits,
+                                        iCurrentRow, iCurrentCol + 1)
+                                    : findSmallNatural(frameCaller, iPC, ahValue, ixBits,
+                                        iCurrentRow + 1, 0));
+                            return Op.R_CALL;
 
-                            case Op.R_CALL:
-                                frame.m_frameNext.addContinuation(frameCaller ->
-                                    frameCaller.popStack() == xBoolean.TRUE
-                                        ? findSmallNatural(frameCaller, iPC, ahValue, ixBits,
-                                            iCurrentRow, iCurrentCol + 1)
-                                        : findSmallNatural(frameCaller, iPC, ahValue, ixBits,
-                                            iCurrentRow + 1, 0));
-                                return Op.R_CALL;
+                        case Op.R_EXCEPTION:
+                            return Op.R_EXCEPTION;
 
-                            case Op.R_EXCEPTION:
-                                return Op.R_EXCEPTION;
-
-                            default:
-                                throw new IllegalStateException();
-                            }
+                        default:
+                            throw new IllegalStateException();
                         }
                     }
+                    // fall through
                 }
+
+                case NaturalSimple: {
+                    switch (typeColumn.callEquals(frame, hValue, hCase, Op.A_STACK)) {
+                    case Op.R_NEXT:
+                        if (frame.popStack() == xBoolean.TRUE) {
+                            continue NextColumn;
+                        }
+                        continue NextRow;
+
+                    case Op.R_CALL:
+                        frame.m_frameNext.addContinuation(frameCaller ->
+                            frameCaller.popStack() == xBoolean.TRUE
+                                ? findSmallNatural(frameCaller, iPC, ahValue, ixBits,
+                                    iCurrentRow, iCurrentCol + 1)
+                                : findSmallNatural(frameCaller, iPC, ahValue, ixBits,
+                                    iCurrentRow + 1, 0));
+                        return Op.R_CALL;
+
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
+
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+                }
+            }
             // this row matched
             return iPC + m_aofCase[Long.numberOfTrailingZeros(lCaseBit)];
-            }
+        }
 
         // nothing matched
         return iPC + m_ofDefault;
-        }
+    }
 
-    protected int findLarge(Frame frame, int iPC, ObjectHandle[] ahValue)
-        {
+    protected int findLarge(Frame frame, int iPC, ObjectHandle[] ahValue) {
         throw new UnsupportedOperationException();
-        }
+    }
 
     /**
      * This method is synchronized because it needs to update four different values atomically.
      */
-    private synchronized void buildSmallJumpMaps(Frame frame)
-        {
-        if (m_algorithm != null)
-            {
+    private synchronized void buildSmallJumpMaps(Frame frame) {
+        if (m_algorithm != null) {
             // the jump map was built concurrently
             return;
-            }
+        }
 
         ObjectHandle[][] aahCases    = m_aahCases;
         int[]            anConstCase = m_anConstCase;
@@ -457,32 +398,27 @@ public class JumpVal_N
         TypeConstant[]            atypeColumn = new TypeConstant[cColumns];
 
         Arrays.fill(aAlgorithm, Algorithm.NativeSimple); // assume native
-        for (int iC = 0; iC < cColumns; iC++)
-            {
-            if ((afIs & (1L << iC)) == 0)
-                {
+        for (int iC = 0; iC < cColumns; iC++) {
+            if ((afIs & (1L << iC)) == 0) {
                 amapJump[iC] = new HashMap<>(cRows);
-                }
-            atypeColumn[iC] = frame.getLocalType(anArg[iC], null);
             }
+            atypeColumn[iC] = frame.getLocalType(anArg[iC], null);
+        }
 
         // now check for native/natural/ranges among the rows (cases)
         TypeConstant typeRange = frame.poolContext().typeRange();
 
-        for (int iR = 0; iR < cRows; iR++ )
-            {
+        for (int iR = 0; iR < cRows; iR++ ) {
             long           lCaseBit = 1L << iR;
             ObjectHandle[] ahCases  = aahCases[iR];
 
-            for (int iC = 0; iC < cColumns; iC++)
-                {
+            for (int iC = 0; iC < cColumns; iC++) {
                 ObjectHandle hCase = ahCases[iC];
 
-                if (hCase == ObjectHandle.DEFAULT)
-                    {
+                if (hCase == ObjectHandle.DEFAULT) {
                     alWild[iC] |= lCaseBit;
                     continue;
-                    }
+                }
 
                 assert !hCase.isMutable();
 
@@ -490,58 +426,44 @@ public class JumpVal_N
                 TypeConstant typeColumn  = atypeColumn[iC];
                 boolean      fRange      = typeCase.isA(typeRange) && !typeColumn.isA(typeRange);
 
-                if (aAlgorithm[iC].isNative())
-                    {
-                    if (hCase.isNativeEqual())
-                        {
+                if (aAlgorithm[iC].isNative()) {
+                    if (hCase.isNativeEqual()) {
                         Map<ObjectHandle, Long> mapJump = amapJump[iC];
-                        if (mapJump != null)
-                            {
+                        if (mapJump != null) {
                             mapJump.compute(hCase, (h, LOld) ->
                                 Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
-                            }
-                        }
-                    else if (fRange)
-                        {
-                        // assume native element
-                        if (addRange((GenericHandle) hCase, lCaseBit, cColumns, iC))
-                            {
-                            aAlgorithm[iC] = aAlgorithm[iC].worstOf(Algorithm.NativeRange);
-                            }
-                        else
-                            {
-                            aAlgorithm[iC] = Algorithm.NaturalRange;
-                            }
-                        }
-                    else
-                        {
-                        aAlgorithm[iC] = Algorithm.NaturalSimple;
                         }
                     }
-                else // natural comparison
-                    {
-                    if (fRange)
-                        {
+                    else if (fRange) {
+                        // assume native element
+                        if (addRange((GenericHandle) hCase, lCaseBit, cColumns, iC)) {
+                            aAlgorithm[iC] = aAlgorithm[iC].worstOf(Algorithm.NativeRange);
+                        } else {
+                            aAlgorithm[iC] = Algorithm.NaturalRange;
+                        }
+                    } else {
+                        aAlgorithm[iC] = Algorithm.NaturalSimple;
+                    }
+                } else { // natural comparison
+                    if (fRange) {
                         aAlgorithm[iC] = Algorithm.NaturalRange;
 
                         addRange((GenericHandle) hCase, lCaseBit, cColumns, iC);
-                        }
-                    else
-                        {
+                    } else {
                         amapJump[iC].compute(hCase, (h, LOld) ->
                             Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
-                        }
                     }
-                algorithm = algorithm.worstOf(aAlgorithm[iC]);
                 }
+                algorithm = algorithm.worstOf(aAlgorithm[iC]);
             }
+        }
 
         m_atypeColumn     = atypeColumn;
         m_amapJumpSmall   = amapJump;
         m_alWildcardSmall = alWild;
         m_aAlgorithm      = aAlgorithm;
         m_algorithm       = algorithm;
-        }
+    }
 
     /**
      * Add a range definition for the specified column.
@@ -553,8 +475,7 @@ public class JumpVal_N
      *
      * @return true iff the range element is native
      */
-    private boolean addRange(GenericHandle hRange, long lCaseBit, int cColumns, int iC)
-        {
+    private boolean addRange(GenericHandle hRange, long lCaseBit, int cColumns, int iC) {
         ObjectHandle hLow  = hRange.getField(null, "lowerBound");
         ObjectHandle hHigh = hRange.getField(null, "upperBound");
 
@@ -562,52 +483,45 @@ public class JumpVal_N
         ensureRangeList(cColumns, iC).add(
                 new Object[]{hLow, hHigh, Long.valueOf(lCaseBit)});
         return hLow.isNativeEqual();
-        }
+    }
 
-    private List<Object[]> ensureRangeList(int cColumns, int iCol)
-        {
+    private List<Object[]> ensureRangeList(int cColumns, int iCol) {
         List<Object[]>[] alist = m_alistRangeSmall;
-        if (alist == null)
-            {
+        if (alist == null) {
             alist = m_alistRangeSmall = new List[cColumns];
-            }
-        List<Object[]> list = alist[iCol];
-        if (list == null)
-            {
-            list = alist[iCol] = new ArrayList<>();
-            }
-        return list;
         }
+        List<Object[]> list = alist[iCol];
+        if (list == null) {
+            list = alist[iCol] = new ArrayList<>();
+        }
+        return list;
+    }
 
-    private synchronized void buildLargeJumpMaps(Frame frame)
-        {
+    private synchronized void buildLargeJumpMaps(Frame frame) {
         assert frame != null; // just to mitigate IDEA errors
         throw new UnsupportedOperationException();
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         registerArguments(m_aArgCond, registry);
 
         super.registerConstants(registry);
-        }
+    }
 
     @Override
-    protected void appendArgDescription(StringBuilder sb)
-        {
+    protected void appendArgDescription(StringBuilder sb) {
         int cArgConds  = m_aArgCond  == null ? 0 : m_aArgCond.length;
         int cNArgConds = m_anArgCond == null ? 0 : m_anArgCond.length;
         int cArgs      = Math.max(cArgConds, cNArgConds);
 
-        for (int i = 0; i < cArgs; ++i)
-            {
+        for (int i = 0; i < cArgs; ++i) {
             Argument arg  = i < cArgConds  ? m_aArgCond [i] : null;
             int      nArg = i < cNArgConds ? m_anArgCond[i] : Register.UNKNOWN;
             sb.append(Argument.toIdString(arg, nArg))
                     .append(", ");
-            }
         }
+    }
 
 
     // ----- fields --------------------------------------------------------------------------------
@@ -652,4 +566,4 @@ public class JumpVal_N
 
     private transient Algorithm[] m_aAlgorithm; // algorithm per column
     private transient Algorithm   m_algorithm;  // the "worst" of the column algorithms
-    }
+}

@@ -363,35 +363,29 @@ public class CmpChainExpression
 
                 if (iCmp == cOps - 1) // last
                     {
-                    OpTest opTest = switch (tok.getId())
+                    code.add(switch (tok.getId())
                         {
-                        case COMP_EQ   -> new IsEq(arg1, arg2, argResult);
-                        case COMP_NEQ  -> new IsNotEq(arg1, arg2, argResult);
-                        case COMP_LT   -> new IsLt(arg1, arg2, argResult);
-                        case COMP_GT   -> new IsGt(arg1, arg2, argResult);
-                        case COMP_LTEQ -> new IsLte(arg1, arg2, argResult);
-                        case COMP_GTEQ -> new IsGte(arg1, arg2, argResult);
+                        case COMP_EQ   -> new IsEq(typeCmp, arg1, arg2, argResult);
+                        case COMP_NEQ  -> new IsNotEq(typeCmp, arg1, arg2, argResult);
+                        case COMP_LT   -> new IsLt(typeCmp, arg1, arg2, argResult);
+                        case COMP_GT   -> new IsGt(typeCmp, arg1, arg2, argResult);
+                        case COMP_LTEQ -> new IsLte(typeCmp, arg1, arg2, argResult);
+                        case COMP_GTEQ -> new IsGte(typeCmp, arg1, arg2, argResult);
                         default        -> throw new IllegalStateException();
-                        };
-
-                    opTest.setCommonType(typeCmp);
-                    code.add(opTest);
+                        });
                     }
                 else
                     {
-                    OpCondJump opCondJump = switch (tok.getId())
+                    code.add(switch (tok.getId())
                         {
-                        case COMP_EQ   -> new JumpNotEq(arg1, arg2, labelFalse);
-                        case COMP_NEQ  -> new JumpEq(arg1, arg2, labelFalse);
-                        case COMP_LT   -> new JumpGte(arg1, arg2, labelFalse);
-                        case COMP_GT   -> new JumpLte(arg1, arg2, labelFalse);
-                        case COMP_LTEQ -> new JumpGt(arg1, arg2, labelFalse);
-                        case COMP_GTEQ -> new JumpLt(arg1, arg2, labelFalse);
+                        case COMP_EQ   -> new JumpNotEq(typeCmp, arg1, arg2, labelFalse);
+                        case COMP_NEQ  -> new JumpEq(typeCmp, arg1, arg2, labelFalse);
+                        case COMP_LT   -> new JumpGte(typeCmp, arg1, arg2, labelFalse);
+                        case COMP_GT   -> new JumpLte(typeCmp, arg1, arg2, labelFalse);
+                        case COMP_LTEQ -> new JumpGt(typeCmp, arg1, arg2, labelFalse);
+                        case COMP_GTEQ -> new JumpLt(typeCmp, arg1, arg2, labelFalse);
                         default        -> throw new IllegalStateException();
-                        };
-
-                    opCondJump.setCommonType(typeCmp);
-                    code.add(opCondJump);
+                        });
                     }
                 }
             }
@@ -406,16 +400,14 @@ public class CmpChainExpression
                     {
                     OpTest opTest = fNull
                             ? new IsNull(arg, argResult)
-                            : new IsEq(arg, constVal, argResult);
-                    opTest.setCommonType(typeCmp);
+                            : new IsEq(typeCmp, arg, constVal, argResult);
                     code.add(opTest);
                     }
                 else
                     {
                     OpCondJump opCondJump = fNull
                             ? new JumpNotNull(arg, labelFalse)
-                            : new JumpNotEq(arg, constVal, labelFalse);
-                    opCondJump.setCommonType(typeCmp);
+                            : new JumpNotEq(typeCmp, arg, constVal, labelFalse);
                     code.add(opCondJump);
                     }
                 }
@@ -460,8 +452,7 @@ public class CmpChainExpression
                 Argument   arg = aArgs[i];
                 OpCondJump op  = fNull
                         ? new JumpNull(arg, label)
-                        : new JumpEq(arg, constVal, label);
-                op.setCommonType(typeCmp);
+                        : new JumpEq(typeCmp, arg, constVal, label);
                 code.add(op);
                 }
             return;
@@ -475,44 +466,41 @@ public class CmpChainExpression
             Argument arg2 = aArgs[iCmp + 1];
 
             // generate the op that combines the two sub-expressions
-            OpCondJump op = switch (aTokOp[iCmp].getId())
+            code.add(switch (aTokOp[iCmp].getId())
                 {
                 case COMP_EQ ->
                     fWhenTrue
-                        ? new JumpEq(arg1, arg2, label)
-                        : new JumpNotEq(arg1, arg2, label);
+                        ? new JumpEq(typeCmp, arg1, arg2, label)
+                        : new JumpNotEq(typeCmp, arg1, arg2, label);
 
                 case COMP_NEQ ->
                     fWhenTrue
-                        ? new JumpNotEq(arg1, arg2, label)
-                        : new JumpEq(arg1, arg2, label);
+                        ? new JumpNotEq(typeCmp, arg1, arg2, label)
+                        : new JumpEq(typeCmp, arg1, arg2, label);
 
                 case COMP_LT ->
                     fWhenTrue
-                        ? new JumpLt(arg1, arg2, label)
-                        : new JumpGte(arg1, arg2, label);
+                        ? new JumpLt(typeCmp, arg1, arg2, label)
+                        : new JumpGte(typeCmp, arg1, arg2, label);
 
                 case COMP_GT ->
                     fWhenTrue
-                        ? new JumpGt(arg1, arg2, label)
-                        : new JumpLte(arg1, arg2, label);
+                        ? new JumpGt(typeCmp, arg1, arg2, label)
+                        : new JumpLte(typeCmp, arg1, arg2, label);
 
                 case COMP_LTEQ ->
                     fWhenTrue
-                        ? new JumpLte(arg1, arg2, label)
-                        : new JumpGt(arg1, arg2, label);
+                        ? new JumpLte(typeCmp, arg1, arg2, label)
+                        : new JumpGt(typeCmp, arg1, arg2, label);
 
                 case COMP_GTEQ ->
                     fWhenTrue
-                        ? new JumpGte(arg1, arg2, label)
-                        : new JumpLt(arg1, arg2, label);
+                        ? new JumpGte(typeCmp, arg1, arg2, label)
+                        : new JumpLt(typeCmp, arg1, arg2, label);
 
                 default ->
                     throw new IllegalStateException();
-                };
-
-            op.setCommonType(typeCmp);
-            code.add(op);
+                });
             }
         }
 

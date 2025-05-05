@@ -15,33 +15,29 @@ import org.xvm.compiler.ast.Context;
  * not actually exist in the opcode stream, in that it does not generate any bytes.
  */
 public class Label
-        extends Op.Prefix
-    {
+        extends Op.Prefix {
     /**
      * Construct a label op based on a unique counter value.
      */
-    public Label(int counter)
-        {
+    public Label(int counter) {
         this(String.valueOf(counter));
-        }
+    }
 
     /**
      * Construct a label op with a name for the label (useful for debugging).
      *
      * @param sName the label name
      */
-    public Label(String sName)
-        {
+    public Label(String sName) {
         f_sName = sName;
-        }
+    }
 
     /**
      * @return the name of the label, for debugging purposes
      */
-    public String getName()
-        {
+    public String getName() {
         return f_sName;
-        }
+    }
 
     /**
      * Save off the original register to be restored when this label is reached,
@@ -49,49 +45,42 @@ public class Label
      * @param sName  the register name
      * @param reg    the register
      */
-    public void addRestore(String sName, Register reg)
-        {
+    public void addRestore(String sName, Register reg) {
         Map<String, Register> map = m_mapRestore;
-        if (map == null)
-            {
+        if (map == null) {
             m_mapRestore = map = new HashMap<>();
-            }
-        map.putIfAbsent(sName, reg);
         }
+        map.putIfAbsent(sName, reg);
+    }
 
     /**
      * Restore the original registers at the specified context.
      *
      * @param context  the current compilation context
      */
-    public void restoreNarrowed(Context context)
-        {
+    public void restoreNarrowed(Context context) {
         Map<String, Register> map = m_mapRestore;
-        if (map != null)
-            {
-            for (Map.Entry<String, Register> entry : map.entrySet())
-                {
+        if (map != null) {
+            for (Map.Entry<String, Register> entry : map.entrySet()) {
                 context.restoreArgument(entry.getKey(), entry.getValue());
-                }
             }
         }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         StringBuilder sb = new StringBuilder();
 
         sb.append(f_sName)
           .append(": ");
 
         Op op = getNextOp();
-        if (op != null)
-            {
+        if (op != null) {
             sb.append(op);
-            }
+        }
 
         return sb.toString();
-        }
+    }
 
     /**
      * A name of the label, which is typically auto-generated. This is only for debugging; it is
@@ -103,4 +92,4 @@ public class Label
      * Saved off registers to be restored when the label is reached.
      */
     transient public Map<String, Register> m_mapRestore;
-    }
+}

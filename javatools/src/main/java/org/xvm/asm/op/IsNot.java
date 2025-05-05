@@ -19,18 +19,16 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
  * IS_NOT rvalue, lvalue-return ; !T -> Boolean
  */
 public class IsNot
-        extends OpTest
-    {
+        extends OpTest {
     /**
      * Construct an IS_NOT op based on the specified arguments.
      *
      * @param arg        the value Argument
      * @param argReturn  the location to store the Boolean result
      */
-     public IsNot(Argument arg, Argument argReturn)
-        {
+     public IsNot(Argument arg, Argument argReturn) {
         super(arg, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,20 +37,17 @@ public class IsNot
      * @param aconst  an array of constants used within the method
      */
     public IsNot(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_IS_NOT;
-        }
-
-    @Override
-    protected int completeUnaryOp(Frame frame, ObjectHandle hValue)
-        {
-        return frame.assignValue(m_nRetValue, xBoolean.not((BooleanHandle) hValue));
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_IS_NOT;
+    }
+
+    @Override
+    protected int completeUnaryOp(Frame frame, ObjectHandle hValue) {
+        return frame.assignValue(m_nRetValue, xBoolean.not((BooleanHandle) hValue));
+    }
+}

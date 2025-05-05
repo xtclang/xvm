@@ -17,18 +17,16 @@ import org.xvm.runtime.ObjectHandle;
  * PIP_DEC PROPERTY, rvalue-target ; in-place decrement; no result
  */
 public class PIP_Dec
-        extends OpPropInPlace
-    {
+        extends OpPropInPlace {
     /**
      * Construct a PIP_DEC op based on the passed arguments.
      *
      * @param idProp     the property id
      * @param argTarget  the target Argument
      */
-    public PIP_Dec(PropertyConstant idProp, Argument argTarget)
-        {
+    public PIP_Dec(PropertyConstant idProp, Argument argTarget) {
         super(idProp, argTarget);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -37,26 +35,22 @@ public class PIP_Dec
      * @param aconst  an array of constants used within the method
      */
     public PIP_Dec(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
-
-    @Override
-    public int getOpCode()
-        {
-        return OP_PIP_DEC;
-        }
-
-    @Override
-    protected boolean isAssignOp()
-        {
-        return false;
-        }
-
-    @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp)
-        {
-        return hTarget.getTemplate().invokePreDec(frame, hTarget, idProp, A_IGNORE);
-        }
     }
+
+    @Override
+    public int getOpCode() {
+        return OP_PIP_DEC;
+    }
+
+    @Override
+    protected boolean isAssignOp() {
+        return false;
+    }
+
+    @Override
+    protected int complete(Frame frame, ObjectHandle hTarget, PropertyConstant idProp) {
+        return hTarget.getTemplate().invokePreDec(frame, hTarget, idProp, A_IGNORE);
+    }
+}

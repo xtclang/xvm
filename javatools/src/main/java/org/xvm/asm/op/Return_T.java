@@ -27,17 +27,15 @@ import static org.xvm.util.Handy.writePackedLong;
  * of return values and whose field types match the return types)
  */
 public class Return_T
-        extends OpReturn
-    {
+        extends OpReturn {
     /**
      * Construct a RETURN_T op.
      *
      * @param argT  the tuple value to return
      */
-    public Return_T(Argument argT)
-        {
+    public Return_T(Argument argT) {
         m_argT = argT;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -46,82 +44,69 @@ public class Return_T
      * @param aconst  an array of constants used within the method
      */
     public Return_T(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         m_nArg = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argT != null)
-            {
+        if (m_argT != null) {
             m_nArg = encodeArgument(m_argT, registry);
-            }
+        }
 
         writePackedLong(out, m_nArg);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_RETURN_T;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         ObjectHandle hArg;
-        try
-            {
+        try {
             hArg = frame.getReturnValue(m_nArg);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
+        }
 
         return isDeferred(hArg)
                 ? hArg.proceed(frame, frameCaller ->
                     complete(frameCaller, (TupleHandle) frameCaller.popStack()))
                 :  complete(frame, (TupleHandle) hArg);
-        }
+    }
 
-    protected int complete(Frame frame, TupleHandle hValue)
-        {
+    protected int complete(Frame frame, TupleHandle hValue) {
         return m_fCallFinally
             ? frame.processAllGuard(new ReturnTAction(hValue, m_ixAllGuard))
             : frame.returnTuple(hValue);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         m_argT = registerArgument(m_argT, registry);
-        }
+    }
 
     protected static class ReturnTAction
-            extends Frame.DeferredGuardAction
-        {
-        public ReturnTAction(TupleHandle hValue, int ixAllGuard)
-            {
+            extends Frame.DeferredGuardAction {
+        public ReturnTAction(TupleHandle hValue, int ixAllGuard) {
             super(ixAllGuard);
 
             this.m_hValue = hValue;
-            }
+        }
 
         @Override
-        public int complete(Frame frame)
-            {
+        public int complete(Frame frame) {
             return frame.returnTuple(m_hValue);
-            }
+        }
 
         private final TupleHandle m_hValue;
-        }
+    }
 
     private int      m_nArg;
     private Argument m_argT;
-    }
+}

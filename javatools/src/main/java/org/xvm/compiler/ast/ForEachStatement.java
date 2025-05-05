@@ -952,7 +952,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regVal, range.getEffectiveLast(), regLast, regVal.getType()));
+        code.add(new IsEq(regVal.getType(), regVal, range.getEffectiveLast(), regLast));
         LVal.assign(regVal, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -1042,7 +1042,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regVal, regLastValue, regLast, regVal.getType()));
+        code.add(new IsEq(regVal.getType(), regVal, regLastValue, regLast));
         LVal.assign(regVal, code, errs);
 
         // we explicitly do NOT check the block completion, since our completion is not dependent on
@@ -1119,7 +1119,7 @@ public class ForEachStatement
         m_exprRValue.generateAssignment(ctx, code, m_exprRValue.new Assignable(regList), errs);
 
         code.add(new P_Get(idSize, regList, regEnd));
-        code.add(new JumpGte(regCount, regEnd, getEndLabel(), pool.typeInt64()));
+        code.add(new JumpGte(pool.typeInt64(), regCount, regEnd, getEndLabel()));
         code.add(new IP_Dec(regEnd));
 
         Assignable   lvalVal  = null;
@@ -1155,7 +1155,7 @@ public class ForEachStatement
 
         Label lblRepeat = new Label("repeat_foreach_" + getLabelId());
         code.add(lblRepeat);
-        code.add(new IsEq(regCount, regEnd, regLast, pool.typeInt64()));
+        code.add(new IsEq(pool.typeInt64(), regCount, regEnd, regLast));
 
         MethodConstant idConv = m_aidConvKey == null ? null : m_aidConvKey[0];
         if (idConv == null)

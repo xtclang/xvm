@@ -15,17 +15,15 @@ import org.xvm.runtime.Frame;
  * VAR TYPE ; (next register is an uninitialized anonymous variable)
  */
 public class Var
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a VAR op for the specified register.
      *
      * @param reg  the register
      */
-    public Var(Register reg)
-        {
+    public Var(Register reg) {
         super(reg);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -34,22 +32,19 @@ public class Var
      * @param aconst  an array of constants used within the method
      */
     public Var(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_VAR;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         frame.introduceVar(m_nVar, convertId(m_nType), 0, Frame.VAR_STANDARD, null);
 
         return iPC + 1;
-        }
     }
+}

@@ -21,8 +21,7 @@ import org.xvm.runtime.Utils;
  * NVOK_0N rvalue-target, CONST-METHOD, #returns:(lvalue)
  */
 public class Invoke_0N
-        extends OpInvocable
-    {
+        extends OpInvocable {
     /**
      * Construct an NVOK_0N op based on the passed arguments.
      *
@@ -30,12 +29,11 @@ public class Invoke_0N
      * @param constMethod  the method constant
      * @param aArgReturn   the array of Registers to move the results into
      */
-    public Invoke_0N(Argument argTarget, MethodConstant constMethod, Argument[] aArgReturn)
-        {
+    public Invoke_0N(Argument argTarget, MethodConstant constMethod, Argument[] aArgReturn) {
         super(argTarget, constMethod);
 
         m_aArgReturn = aArgReturn;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -44,61 +42,51 @@ public class Invoke_0N
      * @param aconst  an array of constants used within the method
      */
     public Invoke_0N(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_anRetValue = readIntArray(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_aArgReturn != null)
-            {
+        if (m_aArgReturn != null) {
             m_anRetValue = encodeArguments(m_aArgReturn, registry);
-            }
+        }
 
         writeIntArray(out, m_anRetValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_NVOK_0N;
-        }
+    }
 
     @Override
-    protected boolean isMultiReturn()
-        {
+    protected boolean isMultiReturn() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hTarget = frame.getArgument(m_nTarget);
 
             return isDeferred(hTarget)
                     ? hTarget.proceed(frame, frameCaller ->
                         complete(frameCaller, frameCaller.popStack()))
                     : complete(frame, hTarget);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
-    protected int complete(Frame frame, ObjectHandle hTarget)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget) {
         checkReturnRegisters(frame, hTarget);
 
         return getCallChain(frame, hTarget).invoke(frame, hTarget, Utils.OBJECTS_NONE, m_anRetValue);
-        }
     }
+}

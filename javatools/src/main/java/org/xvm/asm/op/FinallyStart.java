@@ -24,15 +24,13 @@ import org.xvm.runtime.template.xNullable;
  * concludes with a matching FINALLY_END op.
  */
 public class FinallyStart
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a FINALLY op.
      */
-    public FinallyStart(Register reg)
-        {
+    public FinallyStart(Register reg) {
         super(reg);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -41,38 +39,32 @@ public class FinallyStart
      * @param aconst  an array of constants used within the method
      */
     public FinallyStart(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    protected boolean isTypeAware()
-        {
+    protected boolean isTypeAware() {
         return false;
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_FINALLY;
-        }
+    }
 
     @Override
-    public boolean isEnter()
-        {
+    public boolean isEnter() {
         return true;
-        }
+    }
 
     @Override
-    public boolean isExit()
-        {
+    public boolean isExit() {
         return true;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
+    public int process(Frame frame, int iPC) {
         frame.exitScope();
         frame.popGuard();
 
@@ -87,23 +79,21 @@ public class FinallyStart
                 Frame.VAR_STANDARD, xNullable.NULL);
 
         return iPC + 1;
-        }
+    }
 
     @Override
-    public void markReachable(Op[] aop)
-        {
+    public void markReachable(Op[] aop) {
         super.markReachable(aop);
         findCorrespondingOp(aop, OP_FINALLY_END).markNecessary();
-        }
+    }
 
     @Override
-    public void simulate(Scope scope)
-        {
+    public void simulate(Scope scope) {
         scope.exit(this);
         scope.exitGuardAll();
         scope.enter(this);
 
         // super call allocates a var for the exception
         super.simulate(scope);
-        }
     }
+}

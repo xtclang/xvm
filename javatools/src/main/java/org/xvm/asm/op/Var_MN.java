@@ -28,8 +28,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * VAR_MN TYPE, STRING, #entries:(rvalue, rvalue) ; next register is an initialized named Map variable
  */
 public class Var_MN
-        extends OpVar
-    {
+        extends OpVar {
     /**
      * Construct a VAR_MN op for the specified register, name and arguments.
      *
@@ -38,21 +37,19 @@ public class Var_MN
      * @param aArgVal    the key arguments
      * @param aArgVal    the value arguments
      */
-    public Var_MN(Register reg, StringConstant constName, Argument[] aArgKey, Argument[] aArgVal)
-        {
+    public Var_MN(Register reg, StringConstant constName, Argument[] aArgKey, Argument[] aArgVal) {
         super(reg);
 
-        if (constName == null || aArgKey == null || aArgVal == null)
-            {
+        if (constName == null || aArgKey == null || aArgVal == null) {
             throw new IllegalArgumentException("name, keys and values required");
-            }
+        }
 
         assert aArgKey.length == aArgVal.length;
 
         m_constName = constName;
         m_aArgKey   = aArgKey;
         m_aArgVal   = aArgVal;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -61,8 +58,7 @@ public class Var_MN
      * @param aconst  an array of constants used within the method
      */
     public Var_MN(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nNameId = readPackedInt(in);
@@ -70,59 +66,50 @@ public class Var_MN
         int c = readMagnitude(in);
 
         int[] aiKey = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             aiKey[i] = readPackedInt(in);
-            }
+        }
         m_anArgKey = aiKey;
 
         int[] aiVal = new int[c];
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             aiVal[i] = readPackedInt(in);
-            }
-        m_anArgVal = aiVal;
         }
+        m_anArgVal = aiVal;
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_constName != null)
-            {
+        if (m_constName != null) {
             m_nNameId  = encodeArgument(m_constName, registry);
             m_anArgKey = encodeArguments(m_aArgKey, registry);
             m_anArgVal = encodeArguments(m_aArgVal, registry);
-            }
+        }
 
         writePackedLong(out, m_nNameId);
 
         int c = m_anArgKey.length;
         writePackedLong(out, c);
 
-        for (int i = 0; i < c; ++i)
-            {
+        for (int i = 0; i < c; ++i) {
             writePackedLong(out, m_anArgKey[i]);
-            }
-        for (int i = 0; i < c; ++i)
-            {
+        }
+        for (int i = 0; i < c; ++i) {
             writePackedLong(out, m_anArgVal[i]);
-            }
         }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_VAR_MN;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             TypeConstant   typeMap = frame.resolveType(m_nType);
             ObjectHandle[] ahKey   = frame.getArguments(m_anArgKey, m_anArgKey.length);
             ObjectHandle[] ahValue = frame.getArguments(m_anArgVal, m_anArgVal.length);
@@ -132,28 +119,24 @@ public class Var_MN
 
             return xListMap.INSTANCE.constructMap(frame, typeMap, ahKey, ahValue,
                     anyDeferred(ahKey), anyDeferred(ahValue), m_nVar);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_constName = (StringConstant) registerArgument(m_constName, registry);
         registerArguments(m_aArgKey, registry);
         registerArguments(m_aArgVal, registry);
-        }
+    }
 
     @Override
-    public String getName(Constant[] aconst)
-        {
+    public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
-        }
+    }
 
     private int   m_nNameId;
     private int[] m_anArgKey;
@@ -162,4 +145,4 @@ public class Var_MN
     private StringConstant m_constName;
     private Argument[]     m_aArgKey;
     private Argument[]     m_aArgVal;
-    }
+}

@@ -20,17 +20,15 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_DEC lvalue-target ; in-place decrement; no result
  */
 public class IP_Dec
-        extends OpInPlace
-    {
+        extends OpInPlace {
     /**
      * Construct an IP_DEC op for the passed arguments.
      *
      * @param argTarget  the target Argument
      */
-    public IP_Dec(Argument argTarget)
-        {
+    public IP_Dec(Argument argTarget) {
         super(argTarget);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,40 +37,34 @@ public class IP_Dec
      * @param aconst  an array of constants used within the method
      */
     public IP_Dec(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IP_DEC;
-        }
+    }
 
     @Override
-    protected boolean isAssignOp()
-        {
+    protected boolean isAssignOp() {
         return false;
-        }
+    }
 
     @Override
-    protected int completeWithRegister(Frame frame, ObjectHandle hTarget)
-        {
+    protected int completeWithRegister(Frame frame, ObjectHandle hTarget) {
         return hTarget.getOpSupport().invokePrev(frame, hTarget, m_nTarget);
-        }
+    }
 
     @Override
-    protected int completeWithVar(Frame frame, RefHandle hTarget)
-        {
+    protected int completeWithVar(Frame frame, RefHandle hTarget) {
         return hTarget.getVarSupport().invokeVarPreDec(frame, hTarget, A_IGNORE);
-        }
+    }
 
     @Override
-    protected int completeWithProperty(Frame frame, PropertyConstant idProp)
-        {
+    protected int completeWithProperty(Frame frame, PropertyConstant idProp) {
         ObjectHandle hTarget = frame.getThis();
 
         return hTarget.getTemplate().invokePostDec(frame, hTarget, idProp, A_IGNORE);
-        }
     }
+}

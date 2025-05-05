@@ -19,8 +19,7 @@ import org.xvm.runtime.template.IndexSupport;
  * IIP_XOR rvalue-target, rvalue-ix, rvalue2 ; T[ix] ^= T
  */
 public class IIP_Xor
-        extends OpIndexInPlace
-    {
+        extends OpIndexInPlace {
     /**
      * Construct an IIP_XOR op for the passed target.
      *
@@ -28,10 +27,9 @@ public class IIP_Xor
      * @param argIndex   the index Argument
      * @param argValue   the value Argument
      */
-    public IIP_Xor(Argument argTarget, Argument argIndex, Argument argValue)
-        {
+    public IIP_Xor(Argument argTarget, Argument argIndex, Argument argValue) {
         super(argTarget, argIndex, argValue);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,53 +38,48 @@ public class IIP_Xor
      * @param aconst  an array of constants used within the method
      */
     public IIP_Xor(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IIP_XOR;
-        }
+    }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex, ObjectHandle hValue)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget, JavaLong hIndex, ObjectHandle hValue) {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
         long lIndex = hIndex.getValue();
 
         ObjectHandle hCurrent;
-        switch (template.extractArrayValue(frame, hTarget, lIndex, A_STACK))
-            {
-            case R_NEXT:
-                hCurrent = frame.popStack();
-                break;
+        switch (template.extractArrayValue(frame, hTarget, lIndex, A_STACK)) {
+        case R_NEXT:
+            hCurrent = frame.popStack();
+            break;
 
-            case R_EXCEPTION:
-                return R_EXCEPTION;
+        case R_EXCEPTION:
+            return R_EXCEPTION;
 
-            default:
-                // for now, virtual array ops are not supported
-                throw new IllegalStateException();
-            }
+        default:
+            // for now, virtual array ops are not supported
+            throw new IllegalStateException();
+        }
 
-        switch (hCurrent.getOpSupport().invokeXor(frame, hCurrent, hValue, A_STACK))
-            {
-            case R_NEXT:
-                return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
+        switch (hCurrent.getOpSupport().invokeXor(frame, hCurrent, hValue, A_STACK)) {
+        case R_NEXT:
+            return template.assignArrayValue(frame, hTarget, lIndex, frame.popStack());
 
-            case R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    template.assignArrayValue(frameCaller, hTarget, lIndex, frameCaller.popStack()));
-                return R_CALL;
+        case R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                template.assignArrayValue(frameCaller, hTarget, lIndex, frameCaller.popStack()));
+            return R_CALL;
 
-            case R_EXCEPTION:
-                return R_EXCEPTION;
+        case R_EXCEPTION:
+            return R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
     }
+}

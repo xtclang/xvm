@@ -21,22 +21,19 @@ import static org.xvm.util.Handy.writePackedLong;
  * THROW rvalue
  */
 public class Throw
-        extends Op
-    {
+        extends Op {
     /**
      * Construct a THROW op for the passed argument.
      *
      * @param argValue  the throw value Argument
      */
-    public Throw(Argument argValue)
-        {
-        if (argValue == null)
-            {
+    public Throw(Argument argValue) {
+        if (argValue == null) {
             throw new IllegalArgumentException("argument required");
-            }
+        }
 
         m_argValue = argValue;
-        }
+    }
     /**
      * Deserialization constructor.
      *
@@ -44,61 +41,51 @@ public class Throw
      * @param aconst  an array of constants used within the method
      */
     public Throw(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         m_nArgValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argValue != null)
-            {
+        if (m_argValue != null) {
             m_nArgValue = encodeArgument(m_argValue, registry);
-            }
+        }
 
         writePackedLong(out, m_nArgValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_THROW;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hException = frame.getArgument(m_nArgValue);
             return isDeferred(hException)
                     ? hException.proceed(frame, frameCaller ->
                         frameCaller.raiseException((ExceptionHandle) frameCaller.popStack()))
                     : frame.raiseException((ExceptionHandle) hException);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public boolean advances()
-        {
+    public boolean advances() {
         return false;
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString() + " " + Argument.toIdString(m_argValue, m_nArgValue);
-        }
+    }
 
     private int m_nArgValue;
 
     private Argument m_argValue; // never a Constant
-    }
+}

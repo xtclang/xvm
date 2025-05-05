@@ -19,18 +19,16 @@ import org.xvm.runtime.template.IndexSupport;
  * IIP_DEC rvalue-target, rvalue-ix ; --T[ix] (no result)
  */
 public class IIP_Dec
-        extends OpIndex
-    {
+        extends OpIndex {
     /**
      * Construct an IIP_INC op for the passed arguments.
      *
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      */
-    public IIP_Dec(Argument argTarget, Argument argIndex)
-        {
+    public IIP_Dec(Argument argTarget, Argument argIndex) {
         super(argTarget, argIndex);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -39,29 +37,25 @@ public class IIP_Dec
      * @param aconst  an array of constants used within the method
      */
     public IIP_Dec(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IIP_DEC;
-        }
+    }
 
     @Override
-    protected boolean isAssignOp()
-        {
+    protected boolean isAssignOp() {
         return false;
-        }
+    }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex) {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
         long         lIndex   = ((JavaLong) hIndex).getValue();
 
         return template.invokePreDec(frame, hTarget, lIndex, A_IGNORE);
-        }
     }
+}

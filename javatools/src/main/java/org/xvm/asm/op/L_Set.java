@@ -23,20 +23,18 @@ import static org.xvm.util.Handy.writePackedLong;
  * L_SET PROPERTY, rvalue ; set local property
  */
 public class L_Set
-        extends OpProperty
-    {
+        extends OpProperty {
     /**
      * Construct an L_SET op based on the specified arguments.
      *
      * @param idProp    the property id
      * @param argValue  the value Argument
      */
-    public L_Set(PropertyConstant idProp, Argument argValue)
-        {
+    public L_Set(PropertyConstant idProp, Argument argValue) {
         super(idProp);
 
         m_argValue = argValue;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -45,38 +43,32 @@ public class L_Set
      * @param aconst  an array of constants used within the method
      */
     public L_Set(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
 
         m_nValue = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_argValue != null)
-            {
+        if (m_argValue != null) {
             m_nValue = encodeArgument(m_argValue, registry);
-            }
+        }
 
         writePackedLong(out, m_nValue);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_L_SET;
-        }
+    }
 
     @Override
-    public int process(Frame frame, int iPC)
-        {
-        try
-            {
+    public int process(Frame frame, int iPC) {
+        try {
             ObjectHandle hValue  = frame.getArgument(m_nValue);
             ObjectHandle hTarget = frame.getThis();
 
@@ -88,28 +80,24 @@ public class L_Set
                             setPropertyValue(frameCaller, hTarget, idProp, frameCaller.popStack()))
                     : hTarget.getTemplate().
                         setPropertyValue(frame, hTarget, idProp, hValue);
-            }
-        catch (ExceptionHandle.WrapperException e)
-            {
+        } catch (ExceptionHandle.WrapperException e) {
             return frame.raiseException(e);
-            }
         }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_argValue = registerArgument(m_argValue, registry);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString()+ ", " + Argument.toIdString(m_argValue, m_nValue);
-        }
+    }
 
     private int m_nValue;
 
     private Argument m_argValue;
-    }
+}

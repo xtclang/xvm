@@ -19,8 +19,7 @@ import org.xvm.runtime.template.IndexSupport;
  * IIP_INCB rvalue-target, rvalue-ix, lvalue ; ++T[ix] -> T
  */
 public class IIP_PreInc
-        extends OpIndex
-    {
+        extends OpIndex {
     /**
      * Construct an IIP_INCB op for the passed arguments.
      *
@@ -28,10 +27,9 @@ public class IIP_PreInc
      * @param argIndex   the index Argument
      * @param argReturn  the Argument to store the result into
      */
-    public IIP_PreInc(Argument argTarget, Argument argIndex, Argument argReturn)
-        {
+    public IIP_PreInc(Argument argTarget, Argument argIndex, Argument argReturn) {
         super(argTarget, argIndex, argReturn);
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -40,28 +38,24 @@ public class IIP_PreInc
      * @param aconst  an array of constants used within the method
      */
     public IIP_PreInc(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_IIP_INCB;
-        }
+    }
 
     @Override
-    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex)
-        {
+    protected int complete(Frame frame, ObjectHandle hTarget, ObjectHandle hIndex) {
         IndexSupport template = (IndexSupport) hTarget.getOpSupport();
         long         lIndex   = ((JavaLong) hIndex).getValue();
 
-        if (frame.isNextRegister(m_nRetValue))
-            {
+        if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceElementVar(m_nTarget, (int) lIndex);
-            }
+        }
 
         return template.invokePreInc(frame, hTarget, lIndex, m_nRetValue);
-        }
     }
+}

@@ -21,35 +21,18 @@ import org.xvm.runtime.template.xOrdered;
  * JMP_LTE rvalue1, rvalue2, addr ; jump if value1 is less than or equal than value2
  */
 public class JumpLte
-        extends OpCondJump
-    {
+        extends OpCondJump {
     /**
      * Construct a JMP_LTE op.
      *
-     * @param nValue1   the first value to compare
-     * @param nValue2   the second value to compare
-     * @param nRelAddr  the relative address to jump to
-     */
-    public JumpLte(int nValue1, int nValue2, int nRelAddr)
-        {
-        super(null, null, null);
-
-        m_nArg  = nValue1;
-        m_nArg2 = nValue2;
-        m_ofJmp = nRelAddr;
-        }
-
-    /**
-     * Construct a JMP_LTE op.
-     *
+     * @param type  the compile-time type
      * @param arg1  the first argument to compare
      * @param arg2  the second argument to compare
      * @param op    the op to conditionally jump to
      */
-    public JumpLte(Argument arg1, Argument arg2, Op op)
-        {
-        super(arg1, arg2, op);
-        }
+    public JumpLte(TypeConstant type, Argument arg1, Argument arg2, Op op) {
+        super(type, arg1, arg2, op);
+    }
 
     /**
      * Deserialization constructor.
@@ -58,44 +41,39 @@ public class JumpLte
      * @param aconst  an array of constants used within the method
      */
     public JumpLte(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_JMP_LTE;
-        }
+    }
 
     @Override
-    protected boolean isBinaryOp()
-        {
+    protected boolean isBinaryOp() {
         return true;
-        }
+    }
 
     @Override
     protected int completeBinaryOp(Frame frame, int iPC, TypeConstant type,
-                                   ObjectHandle hValue1, ObjectHandle hValue2)
-        {
-        switch (type.callCompare(frame, hValue1, hValue2, A_STACK))
-            {
-            case R_NEXT:
-                return frame.popStack() == xOrdered.GREATER ?
-                    iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
+                                   ObjectHandle hValue1, ObjectHandle hValue2) {
+        switch (type.callCompare(frame, hValue1, hValue2, A_STACK)) {
+        case R_NEXT:
+            return frame.popStack() == xOrdered.GREATER ?
+                iPC + 1 : jump(frame, iPC + m_ofJmp, m_cExits);
 
-            case R_CALL:
-                frame.m_frameNext.addContinuation(frameCaller ->
-                    frameCaller.popStack() == xOrdered.GREATER ?
-                        iPC + 1 : jump(frameCaller, iPC + m_ofJmp, m_cExits));
-                return R_CALL;
+        case R_CALL:
+            frame.m_frameNext.addContinuation(frameCaller ->
+                frameCaller.popStack() == xOrdered.GREATER ?
+                    iPC + 1 : jump(frameCaller, iPC + m_ofJmp, m_cExits));
+            return R_CALL;
 
-            case R_EXCEPTION:
-                return R_EXCEPTION;
+        case R_EXCEPTION:
+            return R_EXCEPTION;
 
-            default:
-                throw new IllegalStateException();
-            }
+        default:
+            throw new IllegalStateException();
         }
     }
+}

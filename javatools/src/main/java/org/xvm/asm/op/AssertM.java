@@ -21,8 +21,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * ASSERT_M rvalue, STRING
  */
 public class AssertM
-        extends Assert
-    {
+        extends Assert {
     /**
      * Construct an ASSERT_M op based on the specified arguments.
      *
@@ -30,11 +29,10 @@ public class AssertM
      * @param constructor  the exception constructor (or null for a breakpoint)
      * @param constMsg     the message StringConstant
      */
-    public AssertM(Argument argTest, MethodConstant constructor, StringConstant constMsg)
-        {
+    public AssertM(Argument argTest, MethodConstant constructor, StringConstant constMsg) {
         super(argTest, constructor);
         m_constMsg = constMsg;
-        }
+    }
 
     /**
      * Deserialization constructor.
@@ -43,53 +41,46 @@ public class AssertM
      * @param aconst  an array of constants used within the method
      */
     public AssertM(DataInput in, Constant[] aconst)
-            throws IOException
-        {
+            throws IOException {
         super(in, aconst);
         m_nMsgConstId = readPackedInt(in);
-        }
+    }
 
     @Override
     public void write(DataOutput out, ConstantRegistry registry)
-            throws IOException
-        {
+            throws IOException {
         super.write(out, registry);
 
-        if (m_constMsg != null)
-            {
+        if (m_constMsg != null) {
             m_nMsgConstId = encodeArgument(m_constMsg, registry);
-            }
+        }
 
         writePackedLong(out, m_nMsgConstId);
-        }
+    }
 
     @Override
-    public int getOpCode()
-        {
+    public int getOpCode() {
         return OP_ASSERT_M;
-        }
+    }
 
     @Override
-    protected String buildMessage(Frame frame)
-        {
+    protected String buildMessage(Frame frame) {
         return frame.getString(m_nMsgConstId);
-        }
+    }
 
     @Override
-    public void registerConstants(ConstantRegistry registry)
-        {
+    public void registerConstants(ConstantRegistry registry) {
         super.registerConstants(registry);
 
         m_constMsg = (StringConstant) registerArgument(m_constMsg, registry);
-        }
+    }
 
     @Override
-    public String toString()
-        {
+    public String toString() {
         return super.toString() + ' ' + Argument.toIdString(m_constMsg, m_nMsgConstId);
-        }
+    }
 
     protected int m_nMsgConstId;
 
     private StringConstant m_constMsg;
-    }
+}

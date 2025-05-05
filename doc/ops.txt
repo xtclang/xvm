@@ -139,39 +139,36 @@
 // Value comparisons (mostly Boolean checks)
 // - rvalues support a local-property mode
 // - lvalue return values can specify the "next register" to allocate
-+CMP        rvalue1, rvalue2, lvalue-return         ; T <=> T -> Ordered
++CMP        type, rvalue1, rvalue2, lvalue-return   ; T <=> T -> Ordered
++IS_EQ      type, rvalue, rvalue, lvalue-return     ; T == T -> Boolean
++IS_NEQ     type, rvalue, rvalue, lvalue-return     ; T != T -> Boolean
++IS_LT      type, rvalue, rvalue, lvalue-return     ; T < T -> Boolean
++IS_LTE     type, rvalue, rvalue, lvalue-return     ; T <= T -> Boolean
++IS_GT      type, rvalue, rvalue, lvalue-return     ; T > T -> Boolean
++IS_GTE     type, rvalue, rvalue, lvalue-return     ; T >= T -> Boolean
 +IS_ZERO    rvalue-int, lvalue-return               ; T == 0 -> Boolean
 +IS_NZERO   rvalue-int, lvalue-return               ; T != 0 -> Boolean
 +IS_NULL    rvalue, lvalue-return                   ; T == null -> Boolean
 +IS_NNULL   rvalue, lvalue-return                   ; T != null -> Boolean
-+IS_EQ      rvalue, rvalue, lvalue-return           ; T == T -> Boolean
-+IS_NEQ     rvalue, rvalue, lvalue-return           ; T != T -> Boolean
-+IS_LT      rvalue, rvalue, lvalue-return           ; T < T -> Boolean
-+IS_LTE     rvalue, rvalue, lvalue-return           ; T <= T -> Boolean
-+IS_GT      rvalue, rvalue, lvalue-return           ; T > T -> Boolean
-+IS_GTE     rvalue, rvalue, lvalue-return           ; T >= T -> Boolean
 +IS_NOT     rvalue, lvalue-return                   ; !T -> Boolean
 +IS_TYPE    rvalue, rvalue-type, lvalue-return      ; T instanceof Type -> Boolean
 +IS_NTYPE   rvalue, rvalue-type, lvalue-return      ; !(T instanceof Type) -> Boolean
-+IS_SVC     rvalue, lvalue-return                   ; (T is a service) -> Boolean
-+IS_CONST   rvalue, lvalue-return                   ; (T is a const) -> Boolean
-+IS_IMMUT   rvalue, lvalue-return                   ; (T is an immutable) -> Boolean
 
 // jumps (all addresses are relative to the PC of the jump op)
 // - rvalues support a local-property mode
 +JMP        addr                                    ; unconditional relative jump
++JMP_EQ     type, rvalue1, rvalue2, addr            ; jump if value-1 is equal to value-2
++JMP_NEQ    type, rvalue1, rvalue2, addr            ; jump if value-1 is NOT equal to value-2
++JMP_LT     type, rvalue1, rvalue2, addr            ; jump if value-1 is less than value-2
++JMP_LTE    type, rvalue1, rvalue2, addr            ; jump if value-1 is less than or equal to value-2
++JMP_GT     type, rvalue1, rvalue2, addr            ; jump if value-1 is greater than value-2
++JMP_GTE    type, rvalue1, rvalue2, addr            ; jump if value-1 is greater than or equal to value-2
 +JMP_TRUE   rvalue, addr                            ; jump if Boolean value is Boolean.True
 +JMP_FALSE  rvalue, addr                            ; jump if Boolean value is Boolean.False
 +JMP_ZERO   rvalue, addr                            ; jump if value is zero
 +JMP_NZERO  rvalue, addr                            ; jump if value is NOT zero
 +JMP_NULL   rvalue, addr                            ; jump if value is null
 +JMP_NNULL  rvalue, addr                            ; jump if value is NOT null
-+JMP_EQ     rvalue1, rvalue2, addr                  ; jump if value-1 is equal to value-2
-+JMP_NEQ    rvalue1, rvalue2, addr                  ; jump if value-1 is NOT equal to value-2
-+JMP_LT     rvalue1, rvalue2, addr                  ; jump if value-1 is less than value-2
-+JMP_LTE    rvalue1, rvalue2, addr                  ; jump if value-1 is less than or equal to value-2
-+JMP_GT     rvalue1, rvalue2, addr                  ; jump if value-1 is greater than value-2
-+JMP_GTE    rvalue1, rvalue2, addr                  ; jump if value-1 is greater than or equal to value-2
 +JMP_TYPE   rvalue, TYPE, addr                      ; jump if type of the value is "instanceof" specified type
 +JMP_NTYPE  rvalue, TYPE, addr                      ; jump if type of the value is NOT "instanceof" specified type
 +JMP_COND   COND, addr                              ; jump if the link-time condition evaluates to True
@@ -303,12 +300,14 @@
 +IIP_XOR     rvalue-target, rvalue-ix, rvalue2
 
 // ("M"=) multi-dimensioned array ops
+// TODO GG these do not exist
  M_GET       rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
  M_SET       rvalue-target, #:(rvalue-ix), rvalue    ; T[ix*] = T
  M_VAR       rvalue-target, #:(rvalue-ix), lvalue    ; Var<T> = &T[ix*]
  M_REF       rvalue-target, #:(rvalue-ix), lvalue    ; Ref<T> = &T[ix*]
 
 // ("M"=) multi-dimensioned array ("IP"=) in-place ops:
+// TODO GG these do not exist
  MIP_INC     rvalue-target, #:(rvalue-ix)            ; ++T[ix] (no result)
  MIP_DEC     rvalue-target, #:(rvalue-ix)            ; --T[ix] (no result)
  MIP_INCA    rvalue-target, #:(rvalue-ix), lvalue    ; T[ix]++ -> T
