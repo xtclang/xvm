@@ -2412,7 +2412,7 @@ public class ServiceContext
     /**
      * The queue of suspended fibers.
      */
-    private final FiberQueue f_queueSuspended = new FiberQueue(this);
+    protected final FiberQueue f_queueSuspended = new FiberQueue(this);
 
     /**
      * The reentrancy policy. Must be the same names as in natural Service.Synchronicity.
