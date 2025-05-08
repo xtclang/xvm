@@ -452,7 +452,8 @@ public class HandyTest
         {
         assertEquals("'x'", quotedChar('x'));
         assertEquals("'\\n'", quotedChar('\n'));
-        assertEquals("'\\".concat("u0000'"), quotedChar((char) 0));
+        assertEquals("'\\0'", quotedChar((char) 0));
+        assertEquals("'\\".concat("u0001'"), quotedChar((char) 1));
         }
 
     @Test
