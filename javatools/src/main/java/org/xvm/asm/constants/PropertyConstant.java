@@ -286,6 +286,12 @@ public class PropertyConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new PropertyConstant(getConstantPool(), idParent, getName());
+        }
+
+    @Override
     public TypeConstant getValueType(ConstantPool pool, TypeConstant typeTarget)
         {
         if (typeTarget == null)

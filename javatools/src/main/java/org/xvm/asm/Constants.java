@@ -33,7 +33,7 @@ public interface Constants
      * will be displayed if there is a version mismatch, which should save some frustration -- since
      * otherwise the resulting error(s) can be very hard to diagnose.
      */
-    int VERSION_MINOR_CUR = 2025_05_05;
+    int VERSION_MINOR_CUR = 2025_05_08;
 
 
     // ----- names ---------------------------------------------------------------------------------

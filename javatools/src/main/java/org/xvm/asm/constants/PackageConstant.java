@@ -51,6 +51,15 @@ public class PackageConstant
         }
 
 
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new PackageConstant(getConstantPool(), idParent, getName());
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

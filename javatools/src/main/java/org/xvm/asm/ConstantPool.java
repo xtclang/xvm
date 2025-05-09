@@ -270,9 +270,9 @@ public class ConstantPool
         if (set.add(this))
             {
             FileStructure file = getFileStructure();
-            for (String sModule : file.moduleNames())
+            for (ModuleConstant idModule : file.moduleIds())
                 {
-                ModuleStructure moduleFingerprint = file.getModule(sModule);
+                ModuleStructure moduleFingerprint = file.getModule(idModule);
                 if (moduleFingerprint.isFingerprint())
                     {
                     ModuleStructure moduleUpstream = moduleFingerprint.getFingerprintOrigin();
@@ -1086,17 +1086,25 @@ public class ConstantPool
      */
     public ModuleConstant ensureModuleConstant(String sName)
         {
+        return ensureModuleConstant(sName, null);
+        }
+
+    /**
+     * Obtain a Constant that represents the specified module for a specified version.
+     *
+     * @param sName    a fully qualified module name
+     * @param version  a module version
+     *
+     * @return the ModuleConstant for the specified qualified module name and version
+     */
+    public ModuleConstant ensureModuleConstant(String sName, Version version)
+        {
         if (!isValidQualifiedModule(sName))
             {
             throw new IllegalArgumentException("illegal qualified module name: " + quotedString(sName));
             }
 
-        ModuleConstant constant = (ModuleConstant) ensureLocatorLookup(Format.Module).get(sName);
-        if (constant == null)
-            {
-            constant = (ModuleConstant) register(new ModuleConstant(this, sName));
-            }
-        return constant;
+        return (ModuleConstant) register(new ModuleConstant(this, sName, version));
         }
 
     /**
@@ -2555,6 +2563,26 @@ public class ConstantPool
         }
 
 
+    /**
+     * TODO
+     *
+     * @param idNew
+     */
+    public void replaceModule(ModuleConstant idOld, ModuleConstant idNew)
+        {
+        for (Constant constant : m_listConst)
+            {
+            if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld)
+                {
+                int nPos = id.getPosition();
+                id = id.replaceParentConstant(idNew);
+                id.setPosition(nPos);
+                m_listConst.set(nPos, id);
+                }
+            }
+        }
+
+
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -3023,7 +3051,7 @@ public class ConstantPool
         {
         StringBuilder sb = new StringBuilder();
         sb.append("module=")
-          .append(getFileStructure().getModuleName())
+          .append(getFileStructure().getModuleId().getName())
           .append(", size=")
           .append(m_listConst.size());
 
@@ -4015,9 +4043,8 @@ public class ConstantPool
         Constant[] aconst = new Constant[cBefore];
         int cAfter        = 0;
 
-        for (int i = 0; i < cBefore; i++)
+        for (Constant constant : list)
             {
-            Constant constant = list.get(i);
             if (constant.hasRefs())
                 {
                 aconst[cAfter++] = constant;

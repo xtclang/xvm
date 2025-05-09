@@ -1,13 +1,17 @@
 package org.xvm.compiler;
 
 
-import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
+import java.util.stream.Collectors;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Version;
+
+import org.xvm.asm.constants.ModuleConstant;
 
 
 /**
@@ -21,20 +25,62 @@ public class BuildRepository
     @Override
     public Set<String> getModuleNames()
         {
-        return Collections.unmodifiableSet(modulesByName.keySet());
+        return modulesById.keySet().stream().map(ModuleConstant::getName).collect(Collectors.toSet());
         }
 
     @Override
     public ModuleStructure loadModule(String sModule)
         {
-        return modulesByName.get(sModule);
+        for (Map.Entry<ModuleConstant, ModuleStructure> entry : modulesById.entrySet())
+            {
+            if (entry.getKey().getName().equals(sModule))
+                {
+                return entry.getValue();
+                }
+            }
+        return null;
+        }
+
+    @Override
+    public ModuleStructure loadModule(String sModule, Version version, boolean fExact)
+        {
+        if (version == null)
+            {
+            return loadModule(sModule);
+            }
+
+        for (Map.Entry<ModuleConstant, ModuleStructure> entry : modulesById.entrySet())
+            {
+            if (entry.getKey().getName().equals(sModule))
+                {
+                ModuleStructure module = entry.getValue();
+                if (fExact
+                        ? module.getVersion().equals(version)
+                        : module.getVersion().isSubstitutableFor(version))
+                    {
+                    return module;
+                    }
+                }
+            }
+        return null;
         }
 
     @Override
     public void storeModule(ModuleStructure module)
         {
         assert module != null;
-        modulesByName.put(module.getIdentityConstant().getName(), module);
+
+        ModuleConstant idModule = module.getIdentityConstant();
+        if (idModule.getVersion() == null)
+            {
+            Version version = module.getVersion();
+            if (version != null)
+                {
+                idModule = idModule.getConstantPool().
+                                ensureModuleConstant(idModule.getName(), version);
+                }
+            }
+        modulesById.put(idModule, module);
         }
 
 
@@ -45,12 +91,12 @@ public class BuildRepository
      */
     public void storeAll(BuildRepository repoThat)
         {
-        modulesByName.putAll(repoThat.modulesByName);
+        modulesById.putAll(repoThat.modulesById);
         }
 
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private final Map<String, ModuleStructure> modulesByName = new TreeMap<>();
+    private final Map<ModuleConstant, ModuleStructure> modulesById = new TreeMap<>();
     }
 

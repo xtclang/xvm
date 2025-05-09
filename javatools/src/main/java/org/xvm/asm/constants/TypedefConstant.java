@@ -106,6 +106,15 @@ public class TypedefConstant
         }
 
 
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new TypedefConstant(getConstantPool(), idParent, getName());
+        }
+
+
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override

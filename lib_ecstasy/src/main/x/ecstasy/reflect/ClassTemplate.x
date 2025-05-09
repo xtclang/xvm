@@ -629,8 +629,8 @@ interface ClassTemplate
                 return True, relPath;
             }
 
-            for ((String name, String qualifiedName) : mainModule.moduleNamesByPath) {
-                if (qualifiedName == moduleName) {
+            for ((String name, ModuleTemplate moduleDepends) : mainModule.modulesByPath) {
+                if (moduleDepends.qualifiedName == moduleName) {
                     return True, name + '.' + relPath;
                 }
             }

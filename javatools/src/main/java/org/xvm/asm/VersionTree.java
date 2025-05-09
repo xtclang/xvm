@@ -209,6 +209,18 @@ public class VersionTree<V>
         }
 
     /**
+     * Retrieve the lowest version in the tree.
+     *
+     * @return the lowest version, or null
+     */
+    public Version findLowestVersion()
+        {
+        return isEmpty()
+                ? null
+                : root.kids[0].firstContainedPresent().getVersion();
+        }
+
+    /**
      * Find the latest (preferably GA) version in the tree.
      *
      * @return the latest version, or null

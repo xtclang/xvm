@@ -303,7 +303,6 @@ public class ClassConstant
         return getConstantPool().ensureChildClassConstant(constPath, constChild.getName());
         }
 
-
     /**
      * @return if this ClassConstant represents an implicitly imported class return it's
      *         implicit name; null otherwise
@@ -313,6 +312,15 @@ public class ClassConstant
         return getModuleConstant().isEcstasyModule()
                 ? ConstantPool.getImplicitImportName("ecstasy." + getPathString())
                 : null;
+        }
+
+
+    // ----- IdentityConstant methods --------------------------------------------------------------
+
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new ClassConstant(getConstantPool(), idParent, getName());
         }
 
 

@@ -97,21 +97,21 @@ public interface ModuleRepository
     default ModuleStructure loadModule(String sModule, Version version, boolean fExact)
         {
         ModuleStructure module = loadModule(sModule);
-        if (module == null)
+        if (module == null || version == null)
             {
-            return null;
+            return module;
             }
 
         Version       useVersion = null;
-        FileStructure container  = module.getFileStructure();
-        if (container.containsVersion(version))
+        FileStructure file       = module.getFileStructure();
+        if (file.containsVersion(version))
             {
             useVersion = version;
             }
         else
             {
             // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : container.getVersionTree())
+            for (Version possibleVer : file.getVersionTree())
                 {
                 if (possibleVer.isSubstitutableFor(version))
                     {
@@ -139,12 +139,7 @@ public interface ModuleRepository
                 }
             }
 
-        if (container.getVersionTree().size() > 1)
-            {
-            container.purgeVersionsExcept(useVersion);
-            }
-
-        return module;
+        return file.extractVersion(useVersion);
         }
 
     /**

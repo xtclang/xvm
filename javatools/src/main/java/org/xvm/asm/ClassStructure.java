@@ -1425,7 +1425,7 @@ public class ClassStructure
      */
     public TypeConstant getRebaseType()
         {
-        ConstantPool pool   = getConstantPool();
+        ConstantPool pool   = ConstantPool.getCurrentPool();
         Format       format = getFormat();
 
         switch (format)

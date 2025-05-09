@@ -780,7 +780,7 @@ public class NameResolver
                             m_stage = Stage.ERROR;
                             return ResolutionResult.ERROR;
                             }
-                        id = component.getIdentityConstant();
+                        id = module.getIdentityConstant();
                         }
                     break;
 

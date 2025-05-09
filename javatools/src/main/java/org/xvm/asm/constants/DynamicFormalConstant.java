@@ -217,6 +217,13 @@ public class DynamicFormalConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new DynamicFormalConstant(getConstantPool(), (MethodConstant) idParent, getName(),
+                getRegister(), getFormalConstant());
+        }
+
+    @Override
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
         {
         throw new IllegalStateException();
