@@ -45,6 +45,7 @@ module TestIO {
         testJSONPrint();
         testJSONBuild();
         testPoint();
+        testObject();
         testTuple();
         testMap();
         testMetadata();
@@ -353,6 +354,23 @@ module TestIO {
                 }
             }
         }
+    }
+
+    void testObject() {
+        console.print("\n*** testObject()");
+
+        private Object objectOf(Object o) = o;
+
+        Schema schema = Schema.DEFAULT;
+
+        Object o = objectOf(Int:1);
+        testSer(Schema.DEFAULT, "o", o);
+
+        Map<Int, Object> map = [1=2, 2=4.5, 3="hello"];
+        testSer(schema, "map", map);
+
+        Object[] ao = ["hello", 123, 456.789];
+        testSer(schema, "ao", ao);
     }
 
     void testTuple() {

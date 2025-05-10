@@ -1013,6 +1013,12 @@ public abstract class TypeConstant
             {
             TypeConstant[] atype1 = t1.getParamTypesArray();
             ClassStructure clz2   = (ClassStructure) t2.getSingleUnderlyingClass(true).getComponent();
+            if (!clz2.isParameterized())
+                {
+                // nothing we can do here
+                return null;
+                }
+
             TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
             boolean        fClone = false;
             for (int i = 0, c = atype2.length; i < c; i++)

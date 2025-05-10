@@ -26,9 +26,17 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
 
     @Override
     Serializable read(ElementInput in) {
-        Schema schema = in.schema;
+        Schema     schema = in.schema;
+        StructType structure;
+        if (!(structure := clazz.allocate())) {
+            // as a last resort, try to read the value as a json.Doc
+            try {
+                return in.readDoc().as(Serializable);
+            } catch (Exception e) {
+                throw new IllegalJSON($"Invalid mapping for type \"{Serializable}\"");
+            }
+        }
 
-        assert StructType structure := clazz.allocate();
         using (FieldInput fieldInput = in.openObject()) {
             for (PropertyMapping<StructType> field : fields) {
                 field.Value value;
@@ -109,48 +117,14 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             TODO
 
         case Class:
-            if (type.is(Type<Array>)) {
-                assert Type elementType := type.resolveFormalType("Element");
-                if (val elementMapping := schema.findMapping(elementType)) {
-                    return True, new ArrayMapping<elementType.DataType>(elementMapping).as(Mapping<SubType>);
-                }
-                return False;
+            if (Mapping mapping := isWellKnownType(schema, type)) {
+                return True, mapping.as(Mapping<SubType>);
             }
 
-            if (type.is(Type<Map>)) {
-                assert Type keyType   := type.resolveFormalType("Key");
-                assert Type valueType := type.resolveFormalType("Value");
-                if (val keyMapping   := schema.findMapping(keyType),
-                    val valueMapping := schema.findMapping(valueType)) {
-                    return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType, type.DataType>
-                            (keyMapping, valueMapping).as(Mapping<SubType>);
-                }
-                return False;
-            }
-
-            if (type.is(Type<Tuple>)) {
-                assert Type[] types := type.DataType.parameterized();
-                try {
-                    Mapping[] mappings = new Mapping[types.size] (i ->
-                        {
-                        Type                        valueType = types[i];
-                        Mapping<valueType.DataType> mapping   = schema.findMapping(valueType) ?: assert;
-                        return mapping;
-                        });
-                    return True, new TupleMapping<type.DataType>(mappings).as(Mapping<SubType>);
-                } catch (Exception e) {
-                    return False;
-                }
-            }
-
-            assert val clazz := type.fromClass();
-
+            assert val clazz := type.fromClass() as "Unsupported type \"{type}\"";
             if (clazz.is(Enumeration)) {
                 return True, new EnumMapping<clazz.Value>().as(Mapping<SubType>);
             }
-
-            // TODO CP other singletons
-            // TODO CP disallow services
 
             val structType = clazz.StructType;
 
@@ -196,6 +170,57 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             }
             if (Class<Value> clz := Value.fromClass(), Value value := clz.defaultValue()) {
                 return True, value;
+            }
+            return False;
+        }
+    }
+
+    /**
+     * Check if the type has a well-known [Mapping] within the specified [Schema].
+     *
+     * @return True iff there is a `Mapping` for the specified type
+     * @return (conditional) the `Mapping` object
+     */
+    static conditional Mapping isWellKnownType(Schema schema, Type type) {
+        switch (type.is(_)) {
+        case Type<Array>:
+            assert Type elementType := type.resolveFormalType("Element");
+            if (val elementMapping := schema.findMapping(elementType)) {
+                return True, new ArrayMapping<elementType.DataType>(elementMapping);
+            }
+            return False;
+
+        case Type<Map>:
+            assert Type keyType   := type.resolveFormalType("Key");
+            assert Type valueType := type.resolveFormalType("Value");
+            if (val keyMapping   := schema.findMapping(keyType),
+                val valueMapping := schema.findMapping(valueType)) {
+                return True, new @Narrowable MapMapping<keyType.DataType, valueType.DataType, type.DataType>
+                        (keyMapping, valueMapping);
+            }
+            return False;
+
+        case Type<Tuple>:
+            assert Type[] types := type.DataType.parameterized();
+            try {
+                Mapping[] mappings = new Mapping[types.size] (i ->
+                    {
+                    Type                        valueType = types[i];
+                    Mapping<valueType.DataType> mapping   = schema.findMapping(valueType) ?: assert;
+                    return mapping;
+                    });
+                return True, new TupleMapping<type.DataType>(mappings);
+            } catch (Exception e) {
+                return False;
+            }
+
+        case Type<service>:
+            throw new IllegalJSON("Service type \"{type}\" is not serializable");
+
+        default:
+            if (Mapping mapping := schema.findMapping(type),
+                       !mapping.is(ChickenOrEggMapping)) {
+                return True, mapping;
             }
             return False;
         }
