@@ -324,15 +324,20 @@ const Schema
          * @throws MissingMapping  if no appropriate mapping can be provided
          */
         <Serializable> conditional Mapping<Serializable> findMapping(Type<Serializable> type) {
+            import mappings.ChickenOrEggMapping;
+
             Mapping<Serializable>? backupPlan = Null;
 
             if (val mapping := allMappingsByType.get(type)) {
+                if (mapping.is(ChickenOrEggMapping)) {
+                    return False;
+                }
                 return True, mapping.as(Mapping<Serializable>);
             }
 
             // to avoid the chicken-and-the-egg problem with recursion, register a temporary mapping
             // for this type
-            allMappingsByType.put(type, new mappings.ChickenOrEggMapping<Serializable>(() -> {
+            allMappingsByType.put(type, new ChickenOrEggMapping<Serializable>(() -> {
                 assert Mapping<Serializable> mapping := findMapping(type);
                 return mapping;
             }));
