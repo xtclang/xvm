@@ -204,11 +204,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             assert Type[] types := type.DataType.parameterized();
             try {
                 Mapping[] mappings = new Mapping[types.size] (i ->
-                    {
-                    Type                        valueType = types[i];
-                    Mapping<valueType.DataType> mapping   = schema.findMapping(valueType) ?: assert;
-                    return mapping;
-                    });
+                                        schema.findMapping(types[i]) ?: assert);
                 return True, new TupleMapping<type.DataType>(mappings);
             } catch (Exception e) {
                 return False;
@@ -218,11 +214,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             throw new IllegalJSON("Service type \"{type}\" is not serializable");
 
         default:
-            if (Mapping mapping := schema.findMapping(type),
-                       !mapping.is(ChickenOrEggMapping)) {
-                return True, mapping;
-            }
-            return False;
+            return schema.findMapping(type);
         }
     }
 }
