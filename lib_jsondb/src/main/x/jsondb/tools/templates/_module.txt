@@ -10,7 +10,7 @@ module %appName%_jsondb%qualifier%
     import jsondb_.Client        as Client_;
     import jsondb_.model.DboInfo as DboInfo_;
 
-    package %appName%_ import %appName%%qualifier%;
+    package %appName%_ import %appName%%qualifier%%version%;
 
     import %appName%_.%appSchema% as RootSchema_;
 

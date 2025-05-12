@@ -193,6 +193,13 @@ public class TypeParameterConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new TypeParameterConstant(getConstantPool(), (MethodConstant) idParent, getName(),
+                getRegister());
+        }
+
+    @Override
     public IdentityConstant appendTrailingSegmentTo(IdentityConstant that)
         {
         return that.getConstantPool().ensureRegisterConstant(

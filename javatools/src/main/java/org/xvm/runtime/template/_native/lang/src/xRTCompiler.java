@@ -20,6 +20,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Version;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
@@ -82,7 +83,7 @@ public class xRTCompiler
     public void initNative()
         {
         ClassStructure structRepo = f_container.getClassStructure("mgmt.ModuleRepository");
-        GET_MODULE_ID = structRepo.findMethod("getModule", 1).getIdentityConstant();
+        GET_MODULE_ID = structRepo.findMethod("getModule", 2).getIdentityConstant();
 
         markNativeMethod("compileImpl", null, null);
 
@@ -485,14 +486,14 @@ public class xRTCompiler
             // inline linkModules() implementation
             for (var compiler : compilers)
                 {
-                String sMissing = compiler.linkModules(repoLib);
-                if (sMissing != null)
+                ModuleConstant idMissing = compiler.linkModules(repoLib);
+                if (idMissing != null)
                     {
                     // save off the necessary state
                     m_compilers  = compilers;
                     m_repoOutput = repoOutput;
                     m_allNodes   = allNodes;
-                    return sMissing;
+                    return idMissing.getName();
                     }
                 }
 

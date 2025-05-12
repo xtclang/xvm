@@ -27,10 +27,10 @@ const InstantRepository
     public/private immutable Set<String> moduleNames;
 
     @Override
-    conditional ModuleTemplate getModule(String name) {
+    conditional ModuleTemplate getModule(String name, Version? version = Null) {
         return name == moduleName
                 ? (True, template)
-                : (repository?.getModule(name) : False);
+                : (repository?.getModule(name, version) : False);
     }
 
     @Override

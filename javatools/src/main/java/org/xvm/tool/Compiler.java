@@ -18,6 +18,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Token;
@@ -396,7 +397,7 @@ public class Compiler
                 return null;
                 }
 
-            String name = struct.getModuleName();
+            String name = struct.getModuleId().getName();
             if (mapCompilers.containsKey(name))
                 {
                 log(Severity.ERROR, "Duplicate module name: \"" + name + "\"");
@@ -446,11 +447,11 @@ public class Compiler
         {
         for (var compiler : compilers)
             {
-            String sMissing = compiler.linkModules(repo);
-            if (sMissing != null)
+            ModuleConstant idMissing = compiler.linkModules(repo);
+            if (idMissing != null)
                 {
                 compiler.getErrorListener().log(Severity.FATAL,
-                        org.xvm.compiler.Compiler.MODULE_MISSING, new String[]{sMissing}, null);
+                        org.xvm.compiler.Compiler.MODULE_MISSING, new String[]{idMissing.getName()}, null);
                 return;
                 }
             }

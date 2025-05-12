@@ -9,10 +9,16 @@ interface ModuleTemplate
     @RO String qualifiedName;
 
     /**
-     * The modules that this module depends on by linkage, both directly and indirectly.
-     * The map's key is a module path; the value is the module qualified name.
+     * (Optional) The module version. For unresolved modules (fingerprints) it would indicate a
+     *            desired version.
      */
-    @RO immutable Map<String, String> moduleNamesByPath;
+    @RO Version? version;
+
+    /**
+     * The modules that this module depends on by linkage, both directly and indirectly.
+     * The map's key is a module path.
+     */
+    @RO immutable Map<String, ModuleTemplate> modulesByPath;
 
     /**
      * Module's parent is always a FileTemplate.
@@ -21,14 +27,10 @@ interface ModuleTemplate
     @RO FileTemplate parent;
 
     @Override
-    @RO ModuleTemplate containingModule.get() {
-        return this;
-    }
+    @RO ModuleTemplate containingModule.get() = this;
 
     @Override
-    @RO String path.get() {
-        return qualifiedName + ':';
-    }
+    @RO String path.get() = qualifiedName + ':';
 
     @Override
     @RO String displayName.get() {
@@ -44,13 +46,10 @@ interface ModuleTemplate
      */
     @RO Boolean resolved;
 
-
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return qualifiedName.size;
-    }
+    Int estimateStringLength() = qualifiedName.size;
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) = qualifiedName.appendTo(buf);

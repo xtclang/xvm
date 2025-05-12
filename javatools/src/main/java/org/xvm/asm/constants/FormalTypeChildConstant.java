@@ -177,6 +177,12 @@ public class FormalTypeChildConstant
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return new FormalTypeChildConstant(getConstantPool(), (FormalConstant) idParent, getName());
+        }
+
+    @Override
     public FormalConstant getParentConstant()
         {
         return (FormalConstant) super.getParentConstant();

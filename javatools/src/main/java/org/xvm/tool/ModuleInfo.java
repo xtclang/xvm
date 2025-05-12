@@ -670,13 +670,10 @@ public class ModuleInfo
                 try
                     {
                     FileStructure struct = new FileStructure(file);
-                    moduleName = struct.getModuleName();
-                    if (moduleName != null)
-                        {
-                        binaryVersion = struct.getModule().getVersion();
-                        binaryContent = Content.Module;
-                        return true;
-                        }
+                    moduleName    = struct.getModuleId().getName();
+                    binaryVersion = struct.getModule().getVersion();
+                    binaryContent = Content.Module;
+                    return true;
                     }
                 catch (Exception ignore) {}
                 }
@@ -1750,7 +1747,7 @@ public class ModuleInfo
                 {
                 try
                     {
-                    return new FileStructure(file).getModuleName();
+                    return new FileStructure(file).getModuleId().getName();
                     }
                 catch (IOException ignore) {}
                 }
@@ -2002,7 +1999,7 @@ public class ModuleInfo
         }
 
     /**
-     * Walk up the directory tree to find a project directory (or make a best guess).
+     * Walk up the directory tree to find a project directory (or make the best guess).
      *
      * @param dir  the directory to start from
      *
@@ -2012,8 +2009,8 @@ public class ModuleInfo
         {
         assert dir != null;
 
-        File   prjDir = null;
-        String name   = dir.getName();
+        String name = dir.getName();
+        File   prjDir;
         if (   "build" .equalsIgnoreCase(name)
             || "target".equalsIgnoreCase(name))
             {

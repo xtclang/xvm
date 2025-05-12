@@ -65,6 +65,12 @@ public class DecoratedClassConstant
 
     // ----- IdentityConstant methods --------------------------------------------------------------
 
+    @Override
+    public IdentityConstant replaceParentConstant(IdentityConstant idParent)
+        {
+        return this;
+        }
+
     /**
      * @return the IdentityConstant that this DecoratedClassConstant represents a class of
      */

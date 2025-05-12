@@ -7,6 +7,8 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 
+import org.xvm.asm.constants.ModuleConstant;
+
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
@@ -154,9 +156,9 @@ public class Compiler
      *
      * @param repo  the module repository to use
      *
-     * @return a name of a first missing module, if any
+     * @return an id of a first missing module, if any
      */
-    public String linkModules(ModuleRepository repo)
+    public ModuleConstant linkModules(ModuleRepository repo)
         {
         validateCompiler();
         ensureReached(Stage.Registered);
@@ -171,14 +173,14 @@ public class Compiler
             {
             // first time through, load any module dependencies
             setStage(Stage.Loading);
-            String sMissing = m_structFile.linkModules(repo, false);
+            ModuleConstant idMissing = m_structFile.linkModules(repo, false);
 
-            if (sMissing == null)
+            if (idMissing == null)
                 {
                 setStage(Stage.Loaded);
                 }
 
-            return sMissing;
+            return idMissing;
             }
         }
 
