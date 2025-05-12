@@ -132,6 +132,9 @@ interface ComponentTemplate
      */
     @RO Boolean synthetic;
 
+    /**
+     * An optional description.
+     */
     @RO String? doc;
 
     /**

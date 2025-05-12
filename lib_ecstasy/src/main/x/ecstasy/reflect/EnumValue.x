@@ -1,7 +1,7 @@
 import ClassTemplate.Composition;
 
 /**
- * An EnumValue is a class of singleton Enum value objects.
+ * An EnumValue is a class of singleton [Enum] value objects.
  *
  * @see Enumeration
  */
@@ -15,12 +15,12 @@ const EnumValue<Value extends Enum>
     }
 
     /**
-     * The Enumeration that contains this Enum value.
+     * The `Enumeration` that contains this `Enum` value.
      */
     Enumeration<Value> enumeration;
 
     /**
-     * The singleton Enum value of this EnumValue class.
+     * The singleton `Enum` value of this `EnumValue` class.
      */
     Value value.get() {
         assert Value value := enumeration.byName.get(name);

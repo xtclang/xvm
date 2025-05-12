@@ -75,9 +75,7 @@ const Enumeration<Value extends Enum>
      * * 2 for [Boolean]
      * * 3 for [Ordered]
      */
-    @Lazy Int count.calc() {
-        return byName.size;
-    }
+    @Lazy Int count.calc() = byName.size;
 
     /**
      * The names of the Enum values in the Enumeration. These correspond in their positions to the
@@ -88,9 +86,7 @@ const Enumeration<Value extends Enum>
      * * {"False", "True"} for [Boolean]
      * * {"Lesser", "Equal", "Greater"} for [Ordered]
      */
-    @Lazy String[] names.calc() {
-        return byName.keys.toArray();
-    }
+    @Lazy String[] names.calc() = byName.keys.toArray();
 
     /**
      * The Enum values of the Enumeration. These correspond in their positions to the [names].
@@ -100,9 +96,7 @@ const Enumeration<Value extends Enum>
      * * {False, True} for [Boolean]
      * * {Lesser, Equal, Greater} for [Ordered]
      */
-    @Lazy Value[] values.calc() {
-        return byName.values.toArray();
-    }
+    @Lazy Value[] values.calc() = byName.values.toArray();
 
     /**
      * The Enum values of the Enumeration, indexed by their names.

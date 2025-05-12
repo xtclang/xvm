@@ -15,35 +15,33 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
      */
     @RO Boolean present.get() = True;
 
-
     // ----- dynamic invocation support ------------------------------------------------------------
 
     /**
-     * Given an object reference of a type that contains this method, obtain the invocable function
-     * that corresponds to this method on that object.
+     * Given an object reference of a type that contains this `Method`, obtain the invocable function
+     * that corresponds to this `Method` on that object.
      */
     Function<ParamTypes, ReturnTypes> bindTarget(Target target);
 
     /**
-     * Given an object reference of a type that contains this method, invoke that method passing
+     * Given an object reference of a type that contains this `Method`, invoke that `Method` passing
      * the specified arguments, and returning the results.
      *
-     * @param target  the object reference to invoke this method on
-     * @param args    a tuple of the arguments to invoke the method
+     * @param target  the object reference to invoke this `Method` on
+     * @param args    a tuple of the arguments to invoke the `Method`
      *
-     * @return the return values from the method
+     * @return the return values from the `Method`
      */
     ReturnTypes invoke(Target target, ParamTypes args) {
         return bindTarget(target).invoke(args);
     }
 
-
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
-     * Determine if this method _consumes_ a formal type with the specified name.
+     * Determine if this `Method` _consumes_ a formal type with the specified name.
      *
-     * A method _m_ "consumes" type _T_ if any of the following holds true:
+     * A `Method` _m_ "consumes" type _T_ if any of the following holds true:
      * 1. _m_ has a parameter type declared as _T_;
      * 2. _m_ has a parameter type that _"produces T"_.
      * 3. _m_ has a return type that _"consumes T"_;
@@ -79,9 +77,9 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
     }
 
     /**
-     * Determine if this method _produces_ a formal type with the specified name.
+     * Determine if this `Method` _produces_ a formal type with the specified name.
      *
-     * A method _m_ "produces" type _T_ if any of the following holds true:
+     * A `Method` _m_ "produces" type _T_ if any of the following holds true:
      * 1. _m_ has a return type declared as _T_;
      * 2. _m_ has a return type that _"produces T"_;
      * 3. _m_ has a parameter type that _"consumes T"_.
@@ -117,7 +115,7 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
     }
 
     /**
-     * Determine if this method could act as a substitute for the specified method.
+     * Determine if this `Method` could act as a substitute for the specified `Method`.
      *
      * @see Type.isA
      */
@@ -196,13 +194,13 @@ interface Method<Target, ParamTypes extends Tuple<ParamTypes>, ReturnTypes exten
 
     /**
      * Return an array of formal type names for the parameter type at the specified index.
-     * If the parameter type is not a formal one, this method will return False.
+     * If the parameter type is not a formal one, this `Method` will return False.
      */
     conditional String[] formalParamNames(Int i);
 
     /**
      * Return an array of formal type names for the return type at the specified index.
-     * If the return type is not a formal one, this method will return False.
+     * If the return type is not a formal one, this `Method` will return False.
      */
     conditional String[] formalReturnNames(Int i);
 }

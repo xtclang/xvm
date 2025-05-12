@@ -121,26 +121,20 @@ const Class<PublicType, ProtectedType extends PublicType,
     /**
      * The simple unqualified name of the Class.
      */
-    @RO String name.get() {
-        return baseTemplate.name;
-    }
+    @RO String name.get() = baseTemplate.name;
 
     /**
      * A name by which the Class is globally visible at compile time. This only applies to a small
      * subset of classes in the core Ecstasy module; for example, `numbers.Int64` has the implicit
      * name `Int`.
      */
-    @RO String? implicitName.get() {
-        return baseTemplate.implicitName;
-    }
+    @RO String? implicitName.get() = baseTemplate.implicitName;
 
     /**
      * The path of a class is composed of its module qualified name followed by a colon, followed
      * by a dot-delimited sequence of names necessary to identify this class within its module.
      */
-    @RO String path.get() {
-        return baseTemplate.path;
-    }
+    @RO String path.get() = baseTemplate.path;
 
     /**
      * A name intended to be more easily human-readable than a fully qualified path (if possible),
@@ -480,7 +474,6 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @RO Boolean present.get() = True;
 
-
     // ----- construction --------------------------------------------------------------------------
 
     /**
@@ -567,7 +560,6 @@ const Class<PublicType, ProtectedType extends PublicType,
         return constructor(structure);
     }
 
-
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
@@ -581,7 +573,6 @@ const Class<PublicType, ProtectedType extends PublicType,
      */
     @Auto
     Type toType() = PublicType;
-
 
     // ----- Stringable methods --------------------------------------------------------------------
 

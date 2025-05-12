@@ -29,7 +29,6 @@ interface Parameter<ParamType>
      */
     conditional ParamType defaultValue();
 
-
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override

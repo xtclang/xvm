@@ -14,28 +14,20 @@ interface Package
     /**
      * The classes contained immediately within this package.
      */
-    @RO immutable Class[] classes.get() {
-        return classByName.values.toArray(Constant).as(immutable Class[]);
-    }
+    @RO immutable Class[] classes.get() = classByName.values.toArray(Constant).as(immutable Class[]);
 
     /**
      * A mapping from simple name to class within this package.
      */
     @RO immutable Map<String, Class> classByName;
 
-
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return &this.class.name.size;
-    }
+    Int estimateStringLength() = &this.class.name.size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return &this.class.name.appendTo(buf);
-    }
-
+    Appender<Char> appendTo(Appender<Char> buf) = &this.class.name.appendTo(buf);
 
     // ----- Hashable functions --------------------------------------------------------------------
 

@@ -17,12 +17,11 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
      */
     @RO Boolean present.get() = True;
 
-
     // ----- dynamic invocation support ------------------------------------------------------------
 
     /**
-     * Binds a single parameter of the Function, resulting in a new Function that does not contain
-     * that parameter.
+     * Binds a single parameter of the `Function`, resulting in a new `Function` that does not
+     ( contain that parameter.
      *
      * @param param  a parameter of this function
      * @param value  a corresponding argument value
@@ -32,7 +31,7 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
     <ParamType> Function!<> bind(Parameter<ParamType> param, ParamType value);
 
     /**
-     * Binds any number of parameters of the Function, resulting in a new Function that does not
+     * Binds any number of parameters of the `Function`, resulting in a new `Function` that does not
      * contain any of those parameters.
      *
      * @param params  a map from parameter to argument value for each parameter to bind
@@ -48,8 +47,8 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
     Function!<> bind(Map<Parameter, Object> params);
 
     /**
-     * Invokes the function passing the specified arguments as a Tuple that matches the function's
-     * `ParamTypes`, and returns a Tuple that matches the function's `ReturnTypes`.
+     * Invokes the function passing the specified arguments as a `Tuple` that matches the function's
+     * `ParamTypes`, and returns a `Tuple` that matches the function's `ReturnTypes`.
      *
      * @param args  a tuple of the arguments to invoke the function
      *
@@ -64,20 +63,20 @@ interface Function<ParamTypes extends Tuple<ParamTypes>, ReturnTypes extends Tup
     /**
      * Performs an operation that is inverse to the "bind" on a function.
      *
-     * @return True if this Function can be "unbound" to a Function that [has a template](hasTemplate)
-     * @return (conditional) the MethodTemplate for the Function
-     * @return (conditional) the Function that [has a template](hasTemplate)
+     * @return True if this `Function` can be "unbound" to a `Function` that [has a template](hasTemplate)
+     * @return (conditional) the `MethodTemplate` for the `Function`
+     * @return (conditional) the `Function` that [has a template](hasTemplate)
      * @return (conditional) a map of parameter values
      */
     conditional (MethodTemplate, Function!<>, Map<Parameter, Object>) isFunction();
 
     /**
      * Performs an operation that is inverse to the "bind" on a method, potentially followed by
-     * a bind on the resulting Function.
+     * a bind on the resulting `Function`.
      *
-     * @return True if this Function can be "unbound" to a Method that [has a template](hasTemplate)
+     * @return True if this `Function` can be "unbound" to a Method that [has a template](hasTemplate)
      * @return (conditional) the target reference
-     * @return (conditional) the Method for that target that [has a template](hasTemplate)
+     * @return (conditional) the `Method` for that target that [has a template](hasTemplate)
      * @return (conditional) a map of parameter values
      */
     <Target> conditional (Target, Method<Target>, Map<Parameter, Object>) isMethod();

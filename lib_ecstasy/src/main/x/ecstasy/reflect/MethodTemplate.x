@@ -7,8 +7,8 @@ interface MethodTemplate
     @RO MultiMethodTemplate parent;
 
     /**
-    * The method annotations. The order of the annotations in the array is
-    * "left-to-right"; so for example an annotated method
+    * The method annotations. The order of the annotations in the array is "left-to-right"; so for
+    * example an annotated method
     *     @A1 @A2 void foo();
     * would produce the `annotations` array holding `A1` at index zero.
     */
@@ -17,9 +17,7 @@ interface MethodTemplate
     /**
      * True iff the method is a constructor.
      */
-    @RO Boolean isConstructor.get() {
-        return name == "construct";
-    }
+    @RO Boolean isConstructor.get() = name == "construct";
 
     /**
      * True iff the method has code.

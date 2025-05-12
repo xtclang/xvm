@@ -6,28 +6,28 @@ import mgmt.ModuleRepository;
 interface FileTemplate
         extends ComponentTemplate {
     /**
-     * The primary module that the FileTemplate represents.
+     * The primary module that the `FileTemplate` represents.
      */
     @RO ModuleTemplate mainModule;
 
     /**
-     * Indicates whether the FileTemplate has been "resolved", which means that it is ready to
+     * Indicates whether the `FileTemplate` has been "resolved", which means that it is ready to
      * answer all questions about the contained modules.
      */
     @RO Boolean resolved;
 
     /**
-     * Resolve the dependent modules for this module, which means that the FileTemplate will
+     * Resolve the dependent modules for this module, which means that the `FileTemplate` will
      * be ready to answer all questions about its children and their contributions.
      *
-     * @return the resolved FileTemplate
+     * @return the resolved `FileTemplate`
      *
      * @throws Exception if some of the dependent modules cannot be resolved
      */
     FileTemplate resolve(ModuleRepository repository);
 
     /**
-     * Obtain the specified module from the FileTemplate. Note that the returned template may not
+     * Obtain the specified module from the `FileTemplate`. Note that the returned template may not
      * be [resolved](`ModuleTemplate.resolved`).
      *
      * @param name  the qualified module name
@@ -38,8 +38,8 @@ interface FileTemplate
     conditional ModuleTemplate getModule(String name);
 
     /**
-     * The date/time at which the FileTemplate was created. The value is not Null for FileTemplates
-     * that are read from a persistent storage.
+     * The date/time at which the FileTemplate was created. The value is not `Null` for
+     * `FileTemplate`s that are read from a persistent storage.
      */
     @RO Time? created;
 
@@ -49,7 +49,7 @@ interface FileTemplate
     @RO immutable Byte[] contents;
 
     /**
-     * An array of qualified module names contained within this FileTemplate.
+     * An array of qualified module names contained within this `FileTemplate`.
      */
     @RO String[] moduleNames.get() {
         ComponentTemplate[] children = children();
@@ -58,7 +58,5 @@ interface FileTemplate
     }
 
     @Override
-    @RO FileTemplate containingFile.get() {
-        return this;
-    }
+    @RO FileTemplate containingFile.get() = this;
 }

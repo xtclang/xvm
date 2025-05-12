@@ -53,8 +53,5 @@ interface ModuleTemplate
     }
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        qualifiedName.appendTo(buf);
-        return buf;
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = qualifiedName.appendTo(buf);
 }

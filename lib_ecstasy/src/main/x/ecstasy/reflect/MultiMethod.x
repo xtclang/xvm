@@ -1,3 +1,7 @@
+/**
+ * A MultiMethod represents a set of methods of a particular class or type that are identified by
+ * a common name.
+ */
 const MultiMethod<Target>(String name, Callable[] callables) {
     typedef (Method<Target> | Function) as Callable;
 
@@ -13,7 +17,7 @@ const MultiMethod<Target>(String name, Callable[] callables) {
     }
 
     /**
-     * The array of methods represented by the MultiMethod.
+     * The array of methods represented by the `MultiMethod`.
      */
     @Lazy Method<Target>[] methods.calc() {
         Method<Target>[] methods = new Method<Target>[];
@@ -26,7 +30,7 @@ const MultiMethod<Target>(String name, Callable[] callables) {
     }
 
     /**
-     * The array of functions represented by the MultiMethod.
+     * The array of functions represented by the `MultiMethod`.
      */
     @Lazy Function[] functions.calc() {
         Function[] functions = new Function[];
@@ -39,11 +43,11 @@ const MultiMethod<Target>(String name, Callable[] callables) {
     }
 
     /**
-     * Create a new MultiMethod by adding a callable to this MultiMethod.
+     * Create a new `MultiMethod` by adding a callable to this `MultiMethod`.
      *
      * @param callable  the [Callable] method or function to add
      *
-     * @return the new MultiMethod
+     * @return the new `MultiMethod`
      */
     @Op("+")
     MultiMethod!<Target> add(Callable callable) {

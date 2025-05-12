@@ -15,7 +15,7 @@ import reflect.TypeTemplate;
  */
 const TypeSystem {
     /**
-     * Construct a TypeSystem from an array of modules.
+     * Construct a `TypeSystem` from an array of modules.
      *
      * @param modules  an array of modules
      * @param shared   (optional) an array of indicators of which modules are shared
@@ -46,7 +46,7 @@ const TypeSystem {
         Module ecstasy = this:module;
         assert ecstasy.qualifiedName == MackKernel;
         if (moduleByQualifiedName.putIfAbsent(MackKernel, ecstasy)) {
-            modules = modules + ecstasy;
+            modules += ecstasy;
             sharedModules.add(ecstasy);
         }
 
@@ -136,20 +136,21 @@ const TypeSystem {
      * The primary module is the module that is assumed to have defined the set of modules in the
      * type system, based on its module dependencies.
      *
-     * Generally, all modules within the TypeSystem are imported as packages within the primary
+     * Generally, all modules within the `TypeSystem` are imported as packages within the primary
      * module (or imported within modules that in turn are imported into the primary module), such
      * that they are within the namespace of the primary module. (The recursion of module importing
      * can be arbitrarily deep, and there is no particular limit on the complexity of the module
      * graph, or even on the number of times that any given module is imported into any other given
      * module.)
      */
-    Module primaryModule.get() {
-        return modules[0];
-    }
+    Module primaryModule.get() = modules[0];
 
     /**
      * A look-up of modules in the type system, by their qualified names, in the same order that
      * they appear in the [modules] array.
+     *
+     * Note: if the `TypeSystem` contains multiple versions of the same module, the module name
+     *       will not be present in this map.
      */
     ListMap<String, Module> moduleByQualifiedName;
 
@@ -265,16 +266,12 @@ const TypeSystem {
      * @return True iff the name identifies a `Type` that is implicitly defined
      * @return (conditional) the specified `Type`
      */
-    conditional Type typeForImplicitName(String name) {
-        return implicitTypes.get(name);
-    }
+    conditional Type typeForImplicitName(String name) = implicitTypes.get(name);
 
     /**
      * A lazily instantiated cache for looking up type information by name.
      */
-    private @Lazy LookupCache lookupCache.calc() {
-        return new LookupCache();
-    }
+    private @Lazy LookupCache lookupCache.calc() = new LookupCache();
 
     /**
      * A lightweight caching service implementation for looking up type information by name.
@@ -302,7 +299,7 @@ const TypeSystem {
     HashSet<Module> sharedModules;
 
     /**
-     * A set of String values that represent named options used to form this TypeSystem.
+     * A set of String values that represent named options used to form this `TypeSystem`.
      */
     ListSet<String> definedNames;
 

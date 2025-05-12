@@ -425,7 +425,7 @@ interface ClassTemplate
          * @param composition  a composition representing an class, annotation, mixin, or interface
          *
          * @return True iff this (or something that this derives from) extends the specified class,
-         *         annotated by the specifed annotation, incorporates the specified mixin, or
+         *         annotated by the specified annotation, incorporates the specified mixin, or
          *         implements the specified interface
          */
         Boolean derivesFrom(Composition! composition) {

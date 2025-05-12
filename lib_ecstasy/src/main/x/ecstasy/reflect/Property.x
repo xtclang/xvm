@@ -109,9 +109,7 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
      * Given an object reference of a type that contains this property, obtain the value of the
      * property.
      */
-    Referent get(Target target) {
-        return this.of(target).get();
-    }
+    Referent get(Target target) = this.of(target).get();
 
     /**
      * Given an object reference of a type that contains this property, modify the value of the
@@ -129,9 +127,7 @@ interface Property<Target, Referent, Implementation extends Ref<Referent>>
     // ----- Stringable methods --------------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return Referent.estimateStringLength() + 1 + name.size;
-    }
+    Int estimateStringLength() = Referent.estimateStringLength() + 1 + name.size;
 
     @Override
     Appender<Char> appendTo(Appender<Char> buf) {

@@ -31,9 +31,7 @@ interface FileNode
     /**
      * The name of this file-node within its directory. (The root directory name may be blank.)
      */
-    @RO String name.get() {
-        return path.form == Root ? "" : path.name;
-    }
+    @RO String name.get() = path.form == Root ? "" : path.name;
 
     /**
      * True iff the file-node entry actually exists in the directory that contains it.
@@ -119,6 +117,9 @@ interface FileNode
     /**
      * Delete the file-node if and only if it exists. This operation may not be atomic.
      *
+     * If this node represents a directory, then it must be empty in order to be deleted; otherwise
+     * [Directory.deleteRecursively] method could be used.
+     *
      * @return True iff the file-node did exist, and now does not
      *
      * @throws AccessDenied  if permission to delete the file has not been granted
@@ -157,13 +158,10 @@ interface FileNode
      */
     Appender<Char> emitListing(Appender<Char> buf, Boolean recursive = False, String indent = "");
 
-
     // ----- equality ------------------------------------------------------------------------------
 
     @Override
-    static <CompileType extends FileNode> Int64 hashCode(CompileType node) {
-        return node.path.hashCode();
-    }
+    static <CompileType extends FileNode> Int64 hashCode(CompileType node) = node.path.hashCode();
 
     /**
      * Two file nodes are equal iff they belong to the same store, have the same path and both are

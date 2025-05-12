@@ -7,16 +7,12 @@ interface Module
     /**
      * The simple qualified name of the module, such as "ecstasy".
      */
-    @RO String simpleName.get() {
-        return qualifiedName.split('.')[0];
-    }
+    @RO String simpleName.get() = qualifiedName.split('.')[0];
 
     /**
      * The fully qualified name of the module, such as "ecstasy.xtclang.org".
      */
-    @RO String qualifiedName.get() {
-        return &this.class.name;
-    }
+    @RO String qualifiedName.get() = &this.class.name;
 
     /**
      * The version of the module.
@@ -49,16 +45,11 @@ interface Module
      */
     conditional Type typeForName(String name);
 
-
     // ----- Stringable methods ----------------------------------------------------------------
 
     @Override
-    Int estimateStringLength() {
-        return qualifiedName.size;
-    }
+    Int estimateStringLength() = qualifiedName.size;
 
     @Override
-    Appender<Char> appendTo(Appender<Char> buf) {
-        return qualifiedName.appendTo(buf);
-    }
+    Appender<Char> appendTo(Appender<Char> buf) = qualifiedName.appendTo(buf);
 }
