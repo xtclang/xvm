@@ -54,7 +54,7 @@ public class PropertyInfo
      */
     public PropertyInfo(PropertyInfo that, PropertyBody body)
         {
-        this(Handy.appendHead(that.getPropertyBodies(), body),
+        this(Handy.prepend(that.getPropertyBodies(), body),
                 body.getType(), body.hasField(), body.isSetterBlockingSuper(), that.f_nRank);
         }
 

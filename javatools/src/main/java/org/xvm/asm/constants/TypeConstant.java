@@ -4646,7 +4646,7 @@ public abstract class TypeConstant
                         MethodBody bodyDelegate = new MethodBody(
                             idMethod, head.getSignature(), Implementation.Delegating, idDelegate);
                         methodResult = new MethodInfo(
-                            Handy.appendHead(methodResult.getChain(), bodyDelegate), methodResult.getRank());
+                            Handy.prepend(methodResult.getChain(), bodyDelegate), methodResult.getRank());
                         }
                     }
                 }

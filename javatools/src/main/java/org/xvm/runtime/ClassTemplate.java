@@ -2607,7 +2607,7 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 3: // call the base constructor
+                    case 3: // call class constructor (what developers think of as "the" constructor)
                         if (constructor != null && !constructor.isNoOp() && !fAnonymous)
                             {
                             Frame frameCD = frameCaller.createFrame1(
@@ -2621,7 +2621,7 @@ public abstract class ClassTemplate
                         ixStep++;
                         // fall through
 
-                    case 4: // validation
+                    case 4: // validation (aka the "assert()" method)
                         iResult = callValidator(frameCaller, hStruct);
                         break;
 
@@ -2637,11 +2637,11 @@ public abstract class ClassTemplate
                         // fall through
                         }
 
-                    case 6: // native post-construction validation
+                    case 6: // native post-construction validation (e.g. const-freezing)
                         iResult = postValidate(frameCaller, hStruct);
                         break;
 
-                    case 7:
+                    case 7: // the "} finally { ... }" code (collected as a chain by step 3)
                         {
                         ObjectHandle hPublic      = hStruct.ensureAccess(Access.PUBLIC);
                         List<Frame>  listFinalize = listFinalizable;
